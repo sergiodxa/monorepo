@@ -39,6 +39,11 @@ export const apiProblems = defineProblems("https://uptime.sergiodxa.com/docs/api
 	forbidden: { slug: "forbidden", status: 403, title: "The API key lacks the required scope" },
 	notFound: { slug: "not-found", status: 404, title: "The resource does not exist" },
 	conflict: { slug: "conflict", status: 409, title: "The resource's state prevents this request" },
+	unsupportedMediaType: {
+		slug: "unsupported-media-type",
+		status: 415,
+		title: "The request body's media type is not accepted",
+	},
 	rateLimited: { slug: "rate-limited", status: 429, title: "Too many requests" },
 	internal: { slug: "internal", status: 500, title: "The request failed on the server" },
 	internalError: {

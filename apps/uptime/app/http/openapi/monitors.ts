@@ -117,8 +117,8 @@ export const CONTENT_CHECK_PARAMS = s.object({
 	contentCheckId: typedId("chk"),
 });
 
-/** The body `POST /api/v1/monitors` accepts; omitted fields take their defaults. */
-export const CREATE_MONITOR_BODY = s.object({
+/** The members a monitor is created with; omitted ones take their defaults. */
+const MONITOR_FIELDS = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	url: s.string().pipe(checks.url()),
 	method: s.defaulted(s.enum_(HTTP_METHODS), "HEAD"),
@@ -129,6 +129,18 @@ export const CREATE_MONITOR_BODY = s.object({
 	locationHint: s.defaulted(s.enum_(LOCATION_HINTS), "wnam"),
 	sslMonitoringEnabled: s.defaulted(s.boolean(), false),
 	sslExpiryWarningDays: s.defaulted(s.number().pipe(checks.min(1), checks.max(365)), 30),
+};
+
+/** The body `POST /api/v1/monitors` accepts. */
+export const CREATE_MONITOR_BODY = s.object(MONITOR_FIELDS);
+
+/**
+ * A monitor's writable members, which an update's merge patch must leave valid. `enabled`
+ * stands for `enabledAt`, the one member an update sets that a create does not.
+ */
+export const WRITABLE_MONITOR = s.object({
+	...MONITOR_FIELDS,
+	enabled: s.defaulted(s.boolean().meta({ description: "`false` pauses checks" }), true),
 });
 
 /** The body `PUT /api/v1/monitors/{monitorId}` accepts; every field is optional. */
@@ -144,6 +156,25 @@ export const UPDATE_MONITOR_BODY = s.object({
 	enabled: s.optional(s.boolean().meta({ description: "`false` pauses checks" })),
 	sslMonitoringEnabled: s.optional(s.boolean()),
 	sslExpiryWarningDays: s.optional(s.number().pipe(checks.min(1), checks.max(365))),
+});
+
+/**
+ * The patch an update documents: every member optional, and `null` removing one, which
+ * gives it its default. The handler validates the patched monitor with
+ * {@link WRITABLE_MONITOR}, so the limits are the create body's.
+ */
+const MONITOR_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	url: s.optional(s.string().pipe(checks.url())),
+	method: s.optional(s.nullable(s.enum_(HTTP_METHODS))),
+	expectedStatus: s.optional(s.nullable(s.number().pipe(checks.min(100), checks.max(599)))),
+	intervalSeconds: s.optional(s.nullable(s.number().pipe(checks.min(60), checks.max(3600)))),
+	degradedAfterMs: s.optional(s.nullable(s.number().pipe(checks.min(1000), checks.max(30_000)))),
+	timeoutSeconds: s.optional(s.nullable(s.number().pipe(checks.min(1), checks.max(60)))),
+	locationHint: s.optional(s.nullable(s.enum_(LOCATION_HINTS))),
+	enabled: s.optional(s.nullable(s.boolean().meta({ description: "`false` pauses checks" }))),
+	sslMonitoringEnabled: s.optional(s.nullable(s.boolean())),
+	sslExpiryWarningDays: s.optional(s.nullable(s.number().pipe(checks.min(1), checks.max(365)))),
 });
 
 /** The body a content-check create accepts; a `regex` value must compile. */
@@ -199,8 +230,20 @@ const MONITOR_SHOW = defineOperation("monitorShow", routes.api.v1.monitors.show,
 	security: [{ apiKey: ["monitors:read"] }],
 });
 
-const MONITOR_UPDATE = defineOperation("monitorUpdate", routes.api.v1.monitors.update, {
+const MONITOR_PATCH_OPERATION = defineOperation("monitorPatch", routes.api.v1.monitors.patch, {
 	summary: "Update an HTTP monitor",
+	description:
+		"An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+	tags: TAGS,
+	params: MONITOR_ID_PARAMS,
+	body: { "application/merge-patch+json": MONITOR_PATCH, "application/json": MONITOR_PATCH },
+	responses: { 200: { description: "The updated monitor", body: envelope({ monitor: MONITOR }) } },
+	problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "unsupportedMediaType"],
+	security: [{ apiKey: ["monitors:write"] }],
+});
+
+const MONITOR_UPDATE = defineOperation("monitorUpdate", routes.api.v1.monitors.update, {
+	summary: "Update an HTTP monitor (PUT)",
 	tags: TAGS,
 	params: MONITOR_ID_PARAMS,
 	body: UPDATE_MONITOR_BODY,
@@ -339,6 +382,7 @@ export const OPERATIONS = [
 	MONITORS_CREATE,
 	MONITORS_STATS,
 	MONITOR_SHOW,
+	MONITOR_PATCH_OPERATION,
 	MONITOR_UPDATE,
 	MONITOR_DESTROY,
 	MONITOR_STATS,

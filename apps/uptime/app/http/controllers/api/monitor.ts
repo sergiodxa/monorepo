@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RequestContext } from "remix/router";
+
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
@@ -21,9 +23,14 @@ import AlertEvent from "~/app/data/alert-event";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { MONITOR_ID_PARAMS, UPDATE_MONITOR_BODY } from "~/app/http/openapi/monitors";
+import {
+	MONITOR_ID_PARAMS,
+	UPDATE_MONITOR_BODY,
+	WRITABLE_MONITOR,
+} from "~/app/http/openapi/monitors";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { monitorRoutes } from "~/routes/api-groups";
@@ -52,6 +59,62 @@ function serializeMonitor(monitor: SelectMonitor) {
 	};
 }
 
+/**
+ * The monitor's writable members as the API reads them, the target an update's merge
+ * patch applies to.
+ */
+function writableMonitor(monitor: SelectMonitor) {
+	return {
+		name: monitor.name,
+		url: monitor.url,
+		method: monitor.method,
+		expectedStatus: monitor.expected_status,
+		intervalSeconds: monitor.interval_seconds,
+		degradedAfterMs: monitor.degraded_after_ms,
+		timeoutSeconds: monitor.timeout_seconds,
+		locationHint: monitor.location_hint,
+		enabled: monitor.enabled_at !== null,
+		sslMonitoringEnabled: monitor.ssl_monitoring_enabled,
+		sslExpiryWarningDays: monitor.ssl_expiry_warning_days,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one monitor. Only the members the patch changed are
+ * written, so re-sending `enabled: true` keeps the instant checks resumed.
+ *
+ * @param ctx - The request, after `requireApiKey("monitors:write")`.
+ * @returns The updated monitor; a 404 for a monitor outside the team, before the body is read.
+ */
+async function patchMonitor(ctx: RequestContext): Promise<Response> {
+	let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
+	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(ctx.request, writableMonitor(existing), WRITABLE_MONITOR);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	let changes: Partial<InsertMonitor> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("url")) changes.url = value.url;
+	if (changed.has("method")) changes.method = value.method;
+	if (changed.has("expectedStatus")) changes.expected_status = value.expectedStatus;
+	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
+	if (changed.has("degradedAfterMs")) changes.degraded_after_ms = value.degradedAfterMs;
+	if (changed.has("timeoutSeconds")) changes.timeout_seconds = value.timeoutSeconds;
+	if (changed.has("locationHint")) changes.location_hint = value.locationHint;
+	if (changed.has("enabled")) changes.enabled_at = value.enabled ? Date.now() : null;
+	if (changed.has("sslMonitoringEnabled"))
+		changes.ssl_monitoring_enabled = value.sslMonitoringEnabled;
+	if (changed.has("sslExpiryWarningDays"))
+		changes.ssl_expiry_warning_days = value.sslExpiryWarningDays;
+
+	let monitor = await Monitor.updateById(ctx.db, monitorId, changes);
+	return apiSuccess({ monitor: serializeMonitor(monitor) });
+}
+
 export default createController(monitorRoutes, {
 	middleware: [catchValidationError()],
 	actions: {
@@ -65,6 +128,12 @@ export default createController(monitorRoutes, {
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
 			},
+		},
+
+		/** PATCH /api/v1/monitors/:monitorId — merge-patches an HTTP monitor. */
+		monitorPatch: {
+			middleware: [requireApiKey("monitors:write")],
+			handler: patchMonitor,
 		},
 
 		/** PUT /api/v1/monitors/:monitorId — updates an HTTP monitor's editable fields. */

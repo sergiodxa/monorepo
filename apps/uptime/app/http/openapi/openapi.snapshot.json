@@ -520,9 +520,305 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "monitorPatch",
+        "summary": "Update an HTTP monitor",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+        "tags": [
+          "HTTP monitors"
+        ],
+        "parameters": [
+          {
+            "name": "monitorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mon_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE",
+                      "HEAD",
+                      null
+                    ]
+                  },
+                  "expectedStatus": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 100,
+                    "maximum": 599
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 3600
+                  },
+                  "degradedAfterMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1000,
+                    "maximum": 30000
+                  },
+                  "timeoutSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "locationHint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "wnam",
+                      "enam",
+                      "sam",
+                      "weur",
+                      "eeur",
+                      "apac",
+                      "oc",
+                      "afr",
+                      "me",
+                      null
+                    ]
+                  },
+                  "enabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ],
+                    "description": "`false` pauses checks"
+                  },
+                  "sslMonitoringEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "sslExpiryWarningDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "method": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "GET",
+                      "POST",
+                      "PUT",
+                      "PATCH",
+                      "DELETE",
+                      "HEAD",
+                      null
+                    ]
+                  },
+                  "expectedStatus": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 100,
+                    "maximum": 599
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 3600
+                  },
+                  "degradedAfterMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1000,
+                    "maximum": 30000
+                  },
+                  "timeoutSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 60
+                  },
+                  "locationHint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "wnam",
+                      "enam",
+                      "sam",
+                      "weur",
+                      "eeur",
+                      "apac",
+                      "oc",
+                      "afr",
+                      "me",
+                      null
+                    ]
+                  },
+                  "enabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ],
+                    "description": "`false` pauses checks"
+                  },
+                  "sslMonitoringEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "sslExpiryWarningDays": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 365
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "monitor": {
+                          "$ref": "#/components/schemas/Monitor"
+                        }
+                      },
+                      "required": [
+                        "monitor"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "monitors:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "monitorUpdate",
-        "summary": "Update an HTTP monitor",
+        "summary": "Update an HTTP monitor (PUT)",
         "tags": [
           "HTTP monitors"
         ],
@@ -1706,10 +2002,6 @@
                     "minLength": 1,
                     "maxLength": 255
                   },
-                  "zoneFile": {
-                    "type": "string",
-                    "description": "A BIND zone file, parsed once; only the records it declares persist"
-                  },
                   "intervalSeconds": {
                     "type": "number",
                     "minimum": 900,
@@ -1719,6 +2011,10 @@
                   "isEnabled": {
                     "type": "boolean",
                     "default": true
+                  },
+                  "zoneFile": {
+                    "type": "string",
+                    "description": "A BIND zone file, parsed once; only the records it declares persist"
                   }
                 },
                 "required": [
@@ -1904,9 +2200,163 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "dnsMonitorPatch",
+        "summary": "Update a DNS monitor",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+        "tags": [
+          "DNS monitors"
+        ],
+        "parameters": [
+          {
+            "name": "dnsMonitorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^dns_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "domain": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 900,
+                    "maximum": 86400
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "domain": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 900,
+                    "maximum": 86400
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "dnsMonitor": {
+                          "$ref": "#/components/schemas/DnsMonitor"
+                        }
+                      },
+                      "required": [
+                        "dnsMonitor"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "dns-monitors:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "dnsMonitorUpdate",
-        "summary": "Update a DNS monitor",
+        "summary": "Update a DNS monitor (PUT)",
         "tags": [
           "DNS monitors"
         ],
@@ -2384,6 +2834,7 @@
       "patch": {
         "operationId": "dnsMonitorRecordUpdate",
         "summary": "Enable or decline a tracked DNS record",
+        "description": "`isEnabled` is required and no other member is accepted; a merge patch reads the same as a JSON body.",
         "tags": [
           "DNS monitors"
         ],
@@ -2410,6 +2861,20 @@
         "requestBody": {
           "required": true,
           "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "isEnabled": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "isEnabled"
+                ],
+                "additionalProperties": false
+              }
+            },
             "application/json": {
               "schema": {
                 "type": "object",
@@ -2827,9 +3292,189 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "tcpMonitorPatch",
+        "summary": "Update a TCP monitor",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+        "tags": [
+          "TCP monitors"
+        ],
+        "parameters": [
+          {
+            "name": "tcpMonitorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^tcpm_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "host": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "port": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "timeoutMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 100,
+                    "maximum": 60000
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 86400
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "host": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "port": {
+                    "type": "number",
+                    "minimum": 1,
+                    "maximum": 65535
+                  },
+                  "timeoutMs": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 100,
+                    "maximum": 60000
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 86400
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "monitor": {
+                          "$ref": "#/components/schemas/TcpMonitor"
+                        }
+                      },
+                      "required": [
+                        "monitor"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "tcp-monitors:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "tcpMonitorUpdate",
-        "summary": "Update a TCP monitor",
+        "summary": "Update a TCP monitor (PUT)",
         "tags": [
           "TCP monitors"
         ],
@@ -3503,9 +4148,179 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "flowMonitorPatch",
+        "summary": "Update a flow monitor",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` resets one to its default.",
+        "tags": [
+          "Flow monitors"
+        ],
+        "parameters": [
+          {
+            "name": "flowMonitorId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^flow_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20000
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "enum": [
+                      900,
+                      1800,
+                      3600,
+                      10800,
+                      21600,
+                      43200,
+                      86400,
+                      null
+                    ]
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "source": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 20000
+                  },
+                  "intervalSeconds": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "enum": [
+                      900,
+                      1800,
+                      3600,
+                      10800,
+                      21600,
+                      43200,
+                      86400,
+                      null
+                    ]
+                  },
+                  "isEnabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated flow monitor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "flowMonitor": {
+                          "$ref": "#/components/schemas/FlowMonitor"
+                        }
+                      },
+                      "required": [
+                        "flowMonitor"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "flow-monitors:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "flowMonitorUpdate",
-        "summary": "Update a flow monitor",
+        "summary": "Update a flow monitor (PUT)",
         "tags": [
           "Flow monitors"
         ],
@@ -4180,9 +4995,199 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "cronJobPatch",
+        "summary": "Update a cron job",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` clears `description` and resets any other optional member to its default.",
+        "tags": [
+          "Cron jobs"
+        ],
+        "parameters": [
+          {
+            "name": "cronJobId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^cron_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "cronExpression": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "gracePeriodSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 86400
+                  },
+                  "timezone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "alertOnLate": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "enabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "cronExpression": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "gracePeriodSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 60,
+                    "maximum": 86400
+                  },
+                  "timezone": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "alertOnLate": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "enabled": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated cron job",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "cronJob": {
+                          "$ref": "#/components/schemas/CronJob"
+                        }
+                      },
+                      "required": [
+                        "cronJob"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "cron-jobs:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "cronJobUpdate",
-        "summary": "Update a cron job",
+        "summary": "Update a cron job (PUT)",
         "tags": [
           "Cron jobs"
         ],
@@ -4972,9 +5977,289 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "alertPatch",
+        "summary": "Update an alert",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+        "tags": [
+          "Alerts"
+        ],
+        "parameters": [
+          {
+            "name": "alertId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^alt_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "notifyOnRecovery": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "cooldownMinutes": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1440
+                  },
+                  "monitorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "http",
+                      "dns",
+                      "tcp",
+                      "cron",
+                      "flow",
+                      null
+                    ],
+                    "description": "Sent without `monitorId`, widens the alert to the whole type"
+                  },
+                  "monitorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "`null` widens the alert to every monitor"
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "webhook",
+                      "slack",
+                      "discord"
+                    ],
+                    "description": "Switching strategy requires the new strategy's settings"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "`email` strategy"
+                  },
+                  "subjectPrefix": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "`webhook` strategy"
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 255
+                  },
+                  "webhookUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "`slack` and `discord` strategies"
+                  },
+                  "channel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "notifyOnRecovery": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "cooldownMinutes": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1440
+                  },
+                  "monitorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "http",
+                      "dns",
+                      "tcp",
+                      "cron",
+                      "flow",
+                      null
+                    ],
+                    "description": "Sent without `monitorId`, widens the alert to the whole type"
+                  },
+                  "monitorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "`null` widens the alert to every monitor"
+                  },
+                  "strategy": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "webhook",
+                      "slack",
+                      "discord"
+                    ],
+                    "description": "Switching strategy requires the new strategy's settings"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email",
+                    "description": "`email` strategy"
+                  },
+                  "subjectPrefix": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  },
+                  "url": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "`webhook` strategy"
+                  },
+                  "secret": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 255
+                  },
+                  "webhookUrl": {
+                    "type": "string",
+                    "format": "uri",
+                    "description": "`slack` and `discord` strategies"
+                  },
+                  "channel": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 100
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated alert",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "alert": {
+                          "$ref": "#/components/schemas/AlertSummary"
+                        }
+                      },
+                      "required": [
+                        "alert"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "alerts:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "alertUpdate",
-        "summary": "Update an alert",
+        "summary": "Update an alert (PUT)",
         "tags": [
           "Alerts"
         ],
@@ -5664,9 +6949,209 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "maintenancePatch",
+        "summary": "Update a maintenance window",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+        "tags": [
+          "Maintenance windows"
+        ],
+        "parameters": [
+          {
+            "name": "maintenanceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^mnt_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "At least one character"
+                  },
+                  "monitorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "http",
+                      "dns",
+                      "tcp",
+                      "cron",
+                      "flow",
+                      null
+                    ],
+                    "description": "Sent without `monitorId`, widens the window to the whole type"
+                  },
+                  "monitorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "`null` widens the window to every monitor"
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Must follow `startsAt`"
+                  },
+                  "suppressAlerts": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "showOnStatusPage": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "description": "At least one character"
+                  },
+                  "monitorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "http",
+                      "dns",
+                      "tcp",
+                      "cron",
+                      "flow",
+                      null
+                    ],
+                    "description": "Sent without `monitorId`, widens the window to the whole type"
+                  },
+                  "monitorId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "`null` widens the window to every monitor"
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Must follow `startsAt`"
+                  },
+                  "suppressAlerts": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "showOnStatusPage": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated maintenance window",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "maintenanceWindow": {
+                          "$ref": "#/components/schemas/MaintenanceWindow"
+                        }
+                      },
+                      "required": [
+                        "maintenanceWindow"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "maintenance:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "maintenanceUpdate",
-        "summary": "Update a maintenance window",
+        "summary": "Update a maintenance window (PUT)",
         "tags": [
           "Maintenance windows"
         ],
@@ -6102,7 +7587,8 @@
                   "title": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 255
+                    "maxLength": 255,
+                    "description": "Defaults to `name`"
                   },
                   "description": {
                     "type": "string",
@@ -6315,9 +7801,220 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "statusPagePatch",
+        "summary": "Update a status page",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+        "tags": [
+          "Status pages"
+        ],
+        "parameters": [
+          {
+            "name": "statusPageId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^sp_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9-]+$"
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "logoUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri"
+                  },
+                  "customDomain": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  },
+                  "isPublic": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "showOverallStatus": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "pattern": "^[a-z0-9-]+$"
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "maxLength": 500
+                  },
+                  "logoUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri"
+                  },
+                  "customDomain": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 1
+                  },
+                  "isPublic": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  },
+                  "showOverallStatus": {
+                    "type": [
+                      "boolean",
+                      "null"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated status page with its attachments",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "statusPage": {
+                          "$ref": "#/components/schemas/StatusPageDetail"
+                        }
+                      },
+                      "required": [
+                        "statusPage"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "status-pages:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "statusPageUpdate",
-        "summary": "Update a status page",
+        "summary": "Update a status page (PUT)",
         "tags": [
           "Status pages"
         ],
@@ -6736,9 +8433,127 @@
           }
         ]
       },
+      "patch": {
+        "operationId": "teamPatch",
+        "summary": "Update the team",
+        "description": "An RFC 7396 JSON merge patch: send the members to change; `null` on `logoUrl` clears it.",
+        "tags": [
+          "Team"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/merge-patch+json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "logoUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri",
+                    "description": "`null` clears the logo"
+                  }
+                }
+              }
+            },
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255
+                  },
+                  "logoUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uri",
+                    "description": "`null` clears the logo"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated team",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "team": {
+                          "$ref": "#/components/schemas/Team"
+                        }
+                      },
+                      "required": [
+                        "team"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "teams:write"
+            ]
+          }
+        ]
+      },
       "put": {
         "operationId": "teamUpdate",
-        "summary": "Update the team",
+        "summary": "Update the team (PUT)",
         "tags": [
           "Team"
         ],
@@ -8480,6 +10295,32 @@
               },
               "status": {
                 "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnsupportedMediaTypeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://uptime.sergiodxa.com/docs/api/errors/unsupported-media-type"
+              },
+              "title": {
+                "const": "The request body's media type is not accepted"
+              },
+              "status": {
+                "const": 415
               }
             },
             "required": [
@@ -10652,6 +12493,16 @@
           "application/problem+json": {
             "schema": {
               "$ref": "#/components/schemas/ConflictProblem"
+            }
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "description": "The request body's media type is not accepted",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnsupportedMediaTypeProblem"
             }
           }
         }

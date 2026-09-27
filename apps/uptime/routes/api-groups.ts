@@ -19,6 +19,7 @@ export const monitorsRoutes = {
 export const monitorRoutes = {
 	monitorShow: routes.api.v1.monitors.show,
 	monitorUpdate: routes.api.v1.monitors.update,
+	monitorPatch: routes.api.v1.monitors.patch,
 	monitorDestroy: routes.api.v1.monitors.destroy,
 	monitorStats: routes.api.v1.monitors.itemStats,
 	monitorResults: routes.api.v1.monitors.results,
@@ -39,6 +40,7 @@ export const dnsMonitorsRoutes = {
 export const dnsMonitorRoutes = {
 	dnsMonitorShow: routes.api.v1.dnsMonitors.show,
 	dnsMonitorUpdate: routes.api.v1.dnsMonitors.update,
+	dnsMonitorPatch: routes.api.v1.dnsMonitors.patch,
 	dnsMonitorDestroy: routes.api.v1.dnsMonitors.destroy,
 	dnsMonitorResults: routes.api.v1.dnsMonitors.results,
 };
@@ -56,6 +58,7 @@ export const tcpMonitorsRoutes = {
 export const tcpMonitorRoutes = {
 	tcpMonitorShow: routes.api.v1.tcpMonitors.show,
 	tcpMonitorUpdate: routes.api.v1.tcpMonitors.update,
+	tcpMonitorPatch: routes.api.v1.tcpMonitors.patch,
 	tcpMonitorDestroy: routes.api.v1.tcpMonitors.destroy,
 	tcpMonitorResults: routes.api.v1.tcpMonitors.results,
 };
@@ -65,6 +68,7 @@ export const flowMonitorsRoutes = {
 	flowMonitorsCreate: routes.api.v1.flowMonitors.create,
 	flowMonitorShow: routes.api.v1.flowMonitors.show,
 	flowMonitorUpdate: routes.api.v1.flowMonitors.update,
+	flowMonitorPatch: routes.api.v1.flowMonitors.patch,
 	flowMonitorDestroy: routes.api.v1.flowMonitors.destroy,
 	flowMonitorResults: routes.api.v1.flowMonitors.results,
 };
@@ -77,6 +81,7 @@ export const cronJobsRoutes = {
 export const cronJobRoutes = {
 	cronJobShow: routes.api.v1.cronJobs.show,
 	cronJobUpdate: routes.api.v1.cronJobs.update,
+	cronJobPatch: routes.api.v1.cronJobs.patch,
 	cronJobDestroy: routes.api.v1.cronJobs.destroy,
 };
 
@@ -88,6 +93,7 @@ export const alertsRoutes = {
 export const alertRoutes = {
 	alertShow: routes.api.v1.alerts.show,
 	alertUpdate: routes.api.v1.alerts.update,
+	alertPatch: routes.api.v1.alerts.patch,
 	alertDestroy: routes.api.v1.alerts.destroy,
 	alertEvents: routes.api.v1.alerts.events,
 };
@@ -100,6 +106,7 @@ export const maintenanceRoutes = {
 export const maintenanceWindowRoutes = {
 	maintenanceShow: routes.api.v1.maintenance.show,
 	maintenanceUpdate: routes.api.v1.maintenance.update,
+	maintenancePatch: routes.api.v1.maintenance.patch,
 	maintenanceDestroy: routes.api.v1.maintenance.destroy,
 	maintenanceEnd: routes.api.v1.maintenance.end,
 };
@@ -111,6 +118,7 @@ export const statusPagesRoutes = {
 
 export const statusPageRoutes = {
 	statusPageShow: routes.api.v1.statusPages.show,
+	statusPagePatch: routes.api.v1.statusPages.patch,
 	statusPageUpdate: routes.api.v1.statusPages.update,
 	statusPageDestroy: routes.api.v1.statusPages.destroy,
 	statusPageMonitors: routes.api.v1.statusPages.monitors,
@@ -124,6 +132,7 @@ export const invitesRoutes = {
 export const teamRoutes = {
 	teamShow: routes.api.v1.teamShow,
 	teamUpdate: routes.api.v1.teamUpdate,
+	teamPatch: routes.api.v1.teamPatch,
 };
 
 export const teamDomainsRoutes = {

@@ -211,29 +211,29 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
 
 ## Update Monitor
 
-Update an existing HTTP monitor.
+Update an existing HTTP monitor with a [JSON merge patch](/docs/api/overview#updating-resources).
 
 ```
-PUT /api/v1/monitors/:id
+PATCH /api/v1/monitors/:id
 ```
 
-<!-- operation: monitorUpdate -->
+<!-- operation: monitorPatch -->
 
 ### Request Body
 
-All fields from [Create Monitor](#create-monitor) are accepted, plus `enabled`. Only include fields you want to change.
+All fields from [Create Monitor](#create-monitor) are accepted, plus `enabled`, with the same limits. Include only the fields you want to change; `null` resets a field to its default, and `name` and `url` cannot be removed.
 
-| Field     | Type    | Required | Description                                                                          |
-| --------- | ------- | -------- | ------------------------------------------------------------------------------------ |
-| `enabled` | boolean | No       | `true` resumes checks and sets `enabledAt` to now; `false` pauses them and clears it |
+| Field     | Type    | Required | Description                                                                              |
+| --------- | ------- | -------- | ---------------------------------------------------------------------------------------- |
+| `enabled` | boolean | No       | `false` pauses checks and clears `enabledAt`; `true` resumes them and sets it, if paused |
 
 ### cURL
 
 ```bash
 curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
-  -X PUT \
+  -X PATCH \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "name": "Production API v2",
     "intervalSeconds": 120
@@ -272,6 +272,12 @@ curl https://uptime.sergiodxa.com/api/v1/monitors/mon_abc123 \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/monitors/:id` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, `null` is refused, and `enabled: true` sets `enabledAt` to now on every request.
+
+<!-- operation: monitorUpdate -->
 
 ## Delete Monitor
 

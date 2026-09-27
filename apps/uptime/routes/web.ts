@@ -422,6 +422,8 @@ export default route({
 
 			monitors: {
 				...resources("/api/v1/monitors", { param: "monitorId", exclude: ["new", "edit"] }),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/monitors/:monitorId"),
 				stats: get("/api/v1/monitors/stats"),
 				itemStats: get("/api/v1/monitors/:monitorId/stats"),
 				results: get("/api/v1/monitors/:monitorId/results"),
@@ -438,6 +440,8 @@ export default route({
 					param: "dnsMonitorId",
 					exclude: ["new", "edit"],
 				}),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/dns-monitors/:dnsMonitorId"),
 				results: get("/api/v1/dns-monitors/:dnsMonitorId/results"),
 				/**
 				 * The monitor's tracked records and the toggle deciding which of them alert, kept
@@ -455,6 +459,8 @@ export default route({
 					param: "tcpMonitorId",
 					exclude: ["new", "edit"],
 				}),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/tcp-monitors/:tcpMonitorId"),
 				results: get("/api/v1/tcp-monitors/:tcpMonitorId/results"),
 			},
 
@@ -467,13 +473,21 @@ export default route({
 					param: "flowMonitorId",
 					exclude: ["new", "edit"],
 				}),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/flow-monitors/:flowMonitorId"),
 				results: get("/api/v1/flow-monitors/:flowMonitorId/results"),
 			},
 
-			cronJobs: resources("/api/v1/cron-jobs", { param: "cronJobId", exclude: ["new", "edit"] }),
+			cronJobs: {
+				...resources("/api/v1/cron-jobs", { param: "cronJobId", exclude: ["new", "edit"] }),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/cron-jobs/:cronJobId"),
+			},
 
 			alerts: {
 				...resources("/api/v1/alerts", { param: "alertId", exclude: ["new", "edit"] }),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/alerts/:alertId"),
 				events: get("/api/v1/alerts/:alertId/events"),
 			},
 
@@ -482,6 +496,8 @@ export default route({
 					param: "maintenanceId",
 					exclude: ["new", "edit"],
 				}),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/maintenance/:maintenanceId"),
 				end: post("/api/v1/maintenance/:maintenanceId/end"),
 			},
 
@@ -490,6 +506,8 @@ export default route({
 					param: "statusPageId",
 					exclude: ["new", "edit"],
 				}),
+				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
+				patch: patch("/api/v1/status-pages/:statusPageId"),
 				monitors: put("/api/v1/status-pages/:statusPageId/monitors"),
 			},
 
@@ -502,6 +520,8 @@ export default route({
 
 			teamShow: get("/api/v1/team"),
 			teamUpdate: put("/api/v1/team"),
+			/** RFC 7396 merge patch, served by the same action as `teamUpdate`'s partial `PUT`. */
+			teamPatch: patch("/api/v1/team"),
 
 			/**
 			 * `destroy` reads the id from the JSON body, since `DELETE /api/v1/team-domains`

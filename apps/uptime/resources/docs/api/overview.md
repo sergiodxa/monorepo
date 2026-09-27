@@ -52,6 +52,17 @@ The whole API is described by an [OpenAPI 3.1](https://spec.openapis.org/oas/v3.
 - [Invites](/docs/api/resources/invites) - Send and manage team invitations
 - [API Keys](/docs/api/resources/api-keys) - Create and revoke API keys
 
+## Updating Resources
+
+Resources are updated with `PATCH` and an [RFC 7396](https://www.rfc-editor.org/rfc/rfc7396) JSON merge patch, sent as `Content-Type: application/merge-patch+json` (`application/json` is read the same way):
+
+- A field you include is set to its new value; a field you leave out keeps its value.
+- `null` removes a field: a nullable field is cleared, and a field with a default takes that default.
+- The patched resource must satisfy the same rules as a new one, so a required field cannot be removed.
+- Arrays are replaced whole.
+
+Any other media type answers `415` with an `Accept-Patch` header. The `PUT` endpoints that predate `PATCH` keep working with their own rules, described on each resource's page.
+
 ## Pagination
 
 Every endpoint that returns a list serves one page at a time and advertises the next in the `Link` header. See [Pagination](/docs/api/pagination) for how to walk a list from end to end.
