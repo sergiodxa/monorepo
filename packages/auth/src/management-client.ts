@@ -993,7 +993,7 @@ export class ManagementClient {
 			ManagementError | ManagementProblem
 		>
 	> {
-		return this.#call("POST", tenantPath(tenantId, "identifiers", "verify"), {
+		return this.#call("POST", tenantPath(tenantId, "subjects", "identifiers", "verify"), {
 			body: input,
 			schema: VERIFY_TENANT_SUBJECT_IDENTIFIER_RESULT_SCHEMA,
 		});
@@ -1065,9 +1065,11 @@ export class ManagementClient {
 		input: { reason: string },
 	): Promise<Result<void, ManagementError | ManagementProblem>> {
 		return this.#call(
-			"POST",
-			tenantPath(tenantId, "subjects", subjectId, "sessions", sessionId, "revoke"),
-			{ body: input },
+			"DELETE",
+			tenantPath(tenantId, "subjects", subjectId, "sessions", sessionId),
+			{
+				query: { reason: input.reason },
+			},
 		);
 	}
 
@@ -1081,7 +1083,7 @@ export class ManagementClient {
 	async revokeAllTenantSubjectSessions(
 		tenantId: string,
 		subjectId: string,
-		input: { reason?: string } = {},
+		input: { reason: string },
 	): Promise<Result<{ revoked: number }, ManagementError | ManagementProblem>> {
 		return this.#call(
 			"POST",
@@ -1244,7 +1246,7 @@ export class ManagementClient {
 			ManagementError | ManagementProblem
 		>
 	> {
-		return this.#call("POST", tenantPath(tenantId, "clients", clientId, "secrets", "rotate"), {
+		return this.#call("POST", tenantPath(tenantId, "clients", clientId, "rotate-secret"), {
 			body: input,
 			idempotencyKey: options.idempotencyKey,
 			schema: ROTATE_TENANT_CLIENT_SECRET_RESULT_SCHEMA,
@@ -1264,7 +1266,10 @@ export class ManagementClient {
 		clientId: string,
 		secretId: string,
 	): Promise<Result<void, ManagementError | ManagementProblem>> {
-		return this.#call("DELETE", tenantPath(tenantId, "clients", clientId, "secrets", secretId));
+		return this.#call(
+			"POST",
+			tenantPath(tenantId, "clients", clientId, "secrets", secretId, "revoke"),
+		);
 	}
 
 	/**
@@ -1335,7 +1340,10 @@ export class ManagementClient {
 		subjectId: string,
 		clientId: string,
 	): Promise<Result<void, ManagementError | ManagementProblem>> {
-		return this.#call("DELETE", tenantPath(tenantId, "subjects", subjectId, "grants", clientId));
+		return this.#call(
+			"POST",
+			tenantPath(tenantId, "subjects", subjectId, "grants", clientId, "revoke"),
+		);
 	}
 
 	// -- Audit events -----------------------------------------------------------------

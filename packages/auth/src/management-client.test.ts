@@ -531,7 +531,7 @@ describe("ManagementClient tenant-scoped surface", () => {
 			let requestedPath: string | null = null;
 
 			server.use(
-				http.post(tenantUrl("identifiers", "verify"), ({ request }) => {
+				http.post(tenantUrl("subjects", "identifiers", "verify"), ({ request }) => {
 					requestedPath = new URL(request.url).pathname;
 					return HttpResponse.json({ subjectId: "sub_1", promotedPrimary: true });
 				}),
@@ -542,7 +542,7 @@ describe("ManagementClient tenant-scoped surface", () => {
 			});
 
 			if (isFailure(result)) throw result.error;
-			expect(requestedPath).toBe("/tenants/ten_1/identifiers/verify");
+			expect(requestedPath).toBe("/tenants/ten_1/subjects/identifiers/verify");
 			expect(result.data).toEqual({ subjectId: "sub_1", promotedPrimary: true });
 		});
 	});
@@ -584,7 +584,7 @@ describe("ManagementClient tenant-scoped surface", () => {
 
 		test("answers revoking a missing session with a not-found problem", async () => {
 			server.use(
-				http.post(tenantUrl("subjects", "sub_1", "sessions", "sess_x", "revoke"), () =>
+				http.delete(tenantUrl("subjects", "sub_1", "sessions", "sess_x"), () =>
 					problem({ type: "https://api.test/errors/session-not-found", title: "Not found" }, 404),
 				),
 			);
@@ -792,7 +792,7 @@ describe("ManagementClient tenant-scoped surface", () => {
 
 		test("answers revoking an unknown grant with a not-found problem", async () => {
 			server.use(
-				http.delete(tenantUrl("subjects", "sub_1", "grants", "client_x"), () =>
+				http.post(tenantUrl("subjects", "sub_1", "grants", "client_x", "revoke"), () =>
 					problem({ type: "https://api.test/errors/grant-not-found", title: "Not found" }, 404),
 				),
 			);
@@ -999,6 +999,278 @@ describe("ManagementClient tenant-scoped surface", () => {
 
 			if (isFailure(result)) throw result.error;
 			expect(result.data).toBeUndefined();
+		});
+	});
+
+	describe("routes", () => {
+		/**
+		 * Every tenant-scoped method beside the method and path pattern the management
+		 * API's route table serves it at, copied verbatim so a client calling a route
+		 * the server never mapped fails here instead of in production.
+		 */
+		const ROUTES: {
+			name: string;
+			method: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+			path: string;
+			call: (client: ManagementClient) => Promise<unknown>;
+		}[] = [
+			{
+				name: "fetchTenantSubjectById",
+				method: "GET",
+				path: "/tenants/:tenantId/subjects/:subjectId",
+				call: (client) => client.fetchTenantSubjectById(TENANT_ID, "sub_1"),
+			},
+			{
+				name: "createTenantSubject",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects",
+				call: (client) => client.createTenantSubject(TENANT_ID, { identifiers: [] }),
+			},
+			{
+				name: "updateTenantSubject",
+				method: "PATCH",
+				path: "/tenants/:tenantId/subjects/:subjectId",
+				call: (client) => client.updateTenantSubject(TENANT_ID, "sub_1", { attributes: {} }),
+			},
+			{
+				name: "blockTenantSubject",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/block",
+				call: (client) => client.blockTenantSubject(TENANT_ID, "sub_1", { reason: "abuse" }),
+			},
+			{
+				name: "unblockTenantSubject",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/unblock",
+				call: (client) => client.unblockTenantSubject(TENANT_ID, "sub_1"),
+			},
+			{
+				name: "deleteTenantSubject",
+				method: "DELETE",
+				path: "/tenants/:tenantId/subjects/:subjectId",
+				call: (client) => client.deleteTenantSubject(TENANT_ID, "sub_1"),
+			},
+			{
+				name: "addTenantSubjectIdentifier",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
+				call: (client) =>
+					client.addTenantSubjectIdentifier(TENANT_ID, "sub_1", { kind: "username", value: "ada" }),
+			},
+			{
+				name: "verifyTenantSubjectIdentifier",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/identifiers/verify",
+				call: (client) => client.verifyTenantSubjectIdentifier(TENANT_ID, { ticket: "t" }),
+			},
+			{
+				name: "removeTenantSubjectIdentifier",
+				method: "DELETE",
+				path: "/tenants/:tenantId/subjects/:subjectId/identifiers",
+				call: (client) =>
+					client.removeTenantSubjectIdentifier(TENANT_ID, "sub_1", { value: "ada" }),
+			},
+			{
+				name: "listTenantSubjectSessions",
+				method: "GET",
+				path: "/tenants/:tenantId/subjects/:subjectId/sessions",
+				call: (client) => client.listTenantSubjectSessions(TENANT_ID, "sub_1"),
+			},
+			{
+				name: "revokeTenantSubjectSession",
+				method: "DELETE",
+				path: "/tenants/:tenantId/subjects/:subjectId/sessions/:sessionId",
+				call: (client) =>
+					client.revokeTenantSubjectSession(TENANT_ID, "sub_1", "sess_1", { reason: "lost" }),
+			},
+			{
+				name: "revokeAllTenantSubjectSessions",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/sessions/revoke-all",
+				call: (client) =>
+					client.revokeAllTenantSubjectSessions(TENANT_ID, "sub_1", { reason: "lost" }),
+			},
+			{
+				name: "revokeTenantSubjectPasskey",
+				method: "DELETE",
+				path: "/tenants/:tenantId/subjects/:subjectId/passkeys/:credentialId",
+				call: (client) => client.revokeTenantSubjectPasskey(TENANT_ID, "sub_1", "cred_1"),
+			},
+			{
+				name: "forceTenantSubjectPasswordReset",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/password/force-reset",
+				call: (client) =>
+					client.forceTenantSubjectPasswordReset(TENANT_ID, "sub_1", { reason: "leak" }),
+			},
+			{
+				name: "resetTenantSubjectSecondFactor",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/second-factor/reset",
+				call: (client) =>
+					client.resetTenantSubjectSecondFactor(TENANT_ID, "sub_1", { reason: "lost" }),
+			},
+			{
+				name: "listTenantClients",
+				method: "GET",
+				path: "/tenants/:tenantId/clients",
+				call: (client) => client.listTenantClients(TENANT_ID),
+			},
+			{
+				name: "registerTenantClient",
+				method: "POST",
+				path: "/tenants/:tenantId/clients",
+				call: (client) =>
+					client.registerTenantClient(TENANT_ID, {
+						name: "Acme Dashboard",
+						kind: "confidential",
+						redirectUris: ["https://acme.test/callback"],
+						postLogoutRedirectUris: [],
+						grantTypes: ["authorization_code"],
+						responseTypes: ["code"],
+						scopes: ["openid"],
+						tokenEndpointAuthMethod: "client_secret_basic",
+						requireConsent: true,
+					}),
+			},
+			{
+				name: "updateTenantClient",
+				method: "PATCH",
+				path: "/tenants/:tenantId/clients/:clientId",
+				call: (client) => client.updateTenantClient(TENANT_ID, "client_1", { redirectUris: [] }),
+			},
+			{
+				name: "rotateTenantClientSecret",
+				method: "POST",
+				path: "/tenants/:tenantId/clients/:clientId/rotate-secret",
+				call: (client) => client.rotateTenantClientSecret(TENANT_ID, "client_1"),
+			},
+			{
+				name: "revokeTenantClientSecret",
+				method: "POST",
+				path: "/tenants/:tenantId/clients/:clientId/secrets/:secretId/revoke",
+				call: (client) => client.revokeTenantClientSecret(TENANT_ID, "client_1", "secret_1"),
+			},
+			{
+				name: "disableTenantClient",
+				method: "POST",
+				path: "/tenants/:tenantId/clients/:clientId/disable",
+				call: (client) => client.disableTenantClient(TENANT_ID, "client_1"),
+			},
+			{
+				name: "deleteTenantClient",
+				method: "DELETE",
+				path: "/tenants/:tenantId/clients/:clientId",
+				call: (client) => client.deleteTenantClient(TENANT_ID, "client_1"),
+			},
+			{
+				name: "listTenantGrants",
+				method: "GET",
+				path: "/tenants/:tenantId/subjects/:subjectId/grants",
+				call: (client) => client.listTenantGrants(TENANT_ID, "sub_1"),
+			},
+			{
+				name: "revokeTenantGrant",
+				method: "POST",
+				path: "/tenants/:tenantId/subjects/:subjectId/grants/:clientId/revoke",
+				call: (client) => client.revokeTenantGrant(TENANT_ID, "sub_1", "client_1"),
+			},
+			{
+				name: "readTenantAuditPage",
+				method: "GET",
+				path: "/tenants/:tenantId/audit-events",
+				call: (client) => client.readTenantAuditPage(TENANT_ID, { from: 0, to: 1 }),
+			},
+			{
+				name: "fetchTenant",
+				method: "GET",
+				path: "/tenants/:tenantId",
+				call: (client) => client.fetchTenant(TENANT_ID),
+			},
+			{
+				name: "listTenantMembers",
+				method: "GET",
+				path: "/tenants/:tenantId/members",
+				call: (client) => client.listTenantMembers(TENANT_ID),
+			},
+			{
+				name: "inviteTenantMember",
+				method: "POST",
+				path: "/tenants/:tenantId/members",
+				call: (client) =>
+					client.inviteTenantMember(TENANT_ID, { subjectId: "sub_1", role: "admin" }),
+			},
+			{
+				name: "updateTenantMemberRole",
+				method: "PUT",
+				path: "/tenants/:tenantId/members/:membershipId",
+				call: (client) => client.updateTenantMemberRole(TENANT_ID, "mem_1", { role: "member" }),
+			},
+			{
+				name: "removeTenantMember",
+				method: "DELETE",
+				path: "/tenants/:tenantId/members/:membershipId",
+				call: (client) => client.removeTenantMember(TENANT_ID, "mem_1"),
+			},
+			{
+				name: "listTenantDomains",
+				method: "GET",
+				path: "/tenants/:tenantId/domains",
+				call: (client) => client.listTenantDomains(TENANT_ID),
+			},
+			{
+				name: "attachTenantDomain",
+				method: "POST",
+				path: "/tenants/:tenantId/domains",
+				call: (client) =>
+					client.attachTenantDomain(TENANT_ID, { hostname: "auth.acme.test", kind: "custom" }),
+			},
+			{
+				name: "fetchTenantDomainVerification",
+				method: "GET",
+				path: "/tenants/:tenantId/domains/:domainId/verification",
+				call: (client) => client.fetchTenantDomainVerification(TENANT_ID, "dom_1"),
+			},
+			{
+				name: "updateTenantMfaPolicy",
+				method: "POST",
+				path: "/tenants/:tenantId/mfa-policy",
+				call: (client) => client.updateTenantMfaPolicy(TENANT_ID, { policy: "required" }),
+			},
+		];
+
+		test.each(ROUTES)("$name calls $method $path", async ({ method, path, call }) => {
+			let matched = false;
+
+			server.use(
+				http.all(`${MANAGEMENT_BASE_URL}${path}`, ({ request }) => {
+					if (request.method !== method) return;
+					matched = true;
+					return problem({ type: "https://api.test/errors/stop", title: "Stop" }, 418);
+				}),
+			);
+
+			await call(tenantClient());
+
+			expect(matched).toBe(true);
+		});
+
+		test("sends a session revocation's reason as a query parameter", async () => {
+			let reason: string | null = null;
+
+			server.use(
+				http.delete(tenantUrl("subjects", "sub_1", "sessions", "sess_1"), ({ request }) => {
+					reason = new URL(request.url).searchParams.get("reason");
+					return new HttpResponse(null, { status: 204 });
+				}),
+			);
+
+			let result = await tenantClient().revokeTenantSubjectSession(TENANT_ID, "sub_1", "sess_1", {
+				reason: "lost device",
+			});
+
+			expect(isSuccess(result)).toBe(true);
+			expect(reason).toBe("lost device");
 		});
 	});
 

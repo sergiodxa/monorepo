@@ -531,7 +531,7 @@ Every method takes a `tenantId` first and answers a `Result` whose failure is
 
 - `listTenantSubjectSessions(tenantId, subjectId, options?)` — a page of a subject's live sessions
 - `revokeTenantSubjectSession(tenantId, subjectId, sessionId, input)` — revokes one session
-- `revokeAllTenantSubjectSessions(tenantId, subjectId, input?)` — revokes every live session a subject holds
+- `revokeAllTenantSubjectSessions(tenantId, subjectId, input)` — revokes every live session a subject holds
 - `revokeTenantSubjectPasskey(tenantId, subjectId, credentialId)` — removes a passkey
 - `forceTenantSubjectPasswordReset(tenantId, subjectId, input)` — marks the current password as owing a change
 - `resetTenantSubjectSecondFactor(tenantId, subjectId, input)` — removes the second factor and marks a fresh enrolment owed
