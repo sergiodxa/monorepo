@@ -19,6 +19,7 @@ import { redirect } from "@sdxc/http/response";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
@@ -104,7 +105,8 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
  * Builds the blog HTTP router with global middleware, route mappings, CMS auth
  * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
  * middleware sees a plain `GET` and treats a `HEAD` probe as the page request;
- * `log(logger)` follows it and opens the request's wide event around everything else.
+ * `log(logger)` follows it and opens the request's wide event around everything else,
+ * and `trace()` then continues the caller's W3C trace (or starts one) and sets its IDs on it.
  * `wellKnown()` answers the registered documents it lists before any session or cache
  * work, since they are static and the same for every visitor.
  * `securityHeaders` sits just before the renderer, so it decorates the rendered response
@@ -120,6 +122,7 @@ export default function createApplication(env: App.Env) {
 	let globalMiddleware: Array<Middleware<any>> = [
 		headRequests(),
 		log(logger),
+		trace(),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),

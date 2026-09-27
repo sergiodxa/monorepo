@@ -11,7 +11,7 @@
 import { isFailure } from "@sdxc/result";
 import { parse } from "@sdxc/well-known/security-txt";
 import { env } from "cloudflare:test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
@@ -107,5 +107,25 @@ describe("the blog router", () => {
 		let reported = response.headers.get("content-security-policy-report-only");
 		expect(reported).toContain("default-src 'self'");
 		expect(reported).not.toContain("nonce-");
+	});
+
+	test("logs the request under the trace its caller sent", async () => {
+		let records: unknown[] = [];
+		let spy = vi.spyOn(console, "log").mockImplementation((record) => records.push(record));
+
+		try {
+			await fetchPath("/mcp.md", {
+				headers: { traceparent: "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01" },
+			});
+		} finally {
+			spy.mockRestore();
+		}
+
+		expect(records).toContainEqual(
+			expect.objectContaining({
+				trace_id: "4bf92f3577b34da6a3ce929d0e0e4736",
+				parent_span_id: "00f067aa0ba902b7",
+			}),
+		);
 	});
 });
