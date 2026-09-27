@@ -439,7 +439,8 @@ control; only a public resolver sees them.
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package (`packages/doh`)
-- [ ] Phase 2: Migrate call sites (uptime done; auth-saas pending)
+- [x] Phase 2: Migrate call sites (uptime and auth-saas; auth-saas reads a resolver failure as
+      no match, the outcome it gave before)
 - [ ] Phase 3: Publish
 
 ## Notes

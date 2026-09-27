@@ -510,7 +510,7 @@ Two commits, one per workspace.
       `idempotencyClaim`/`idempotencyComplete`/`idempotencyRelease` on `Tenant`, purged by the
       daily alarm; every route in the table but subject import, whose fingerprint would buffer
       the upload. `@sdxc/auth` declares the four entries itself and formats the sf-string
-      itself, since a published package cannot depend on the private `@sdxc/idempotency`;
+      itself, since `@sdxc/auth` does not depend on `@sdxc/idempotency`;
       `idempotencyKey` is on `createTenantSubject`, `registerTenantClient`,
       `rotateTenantClientSecret` and `inviteTenantMember`)
 - [ ] Phase 4: Publish
