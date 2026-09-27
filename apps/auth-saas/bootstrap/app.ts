@@ -12,6 +12,7 @@ import type { Middleware } from "remix/router";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -49,6 +50,7 @@ let globalMiddleware: Middleware[] = [
 	headRequests(),
 	trailingSlash,
 	log(logger) as Middleware,
+	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(PLATFORM_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),

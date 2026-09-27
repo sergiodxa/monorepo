@@ -502,6 +502,7 @@ most joins.
 - [x] Phase 2: Jobs
 - [x] Phase 3: API client
 - [ ] Phase 4: Adopt in the workers
+  - [x] auth-saas: `trace()` after `log(logger)` on the platform, tenant and management routers
   - [x] reader: `trace()` after `log(logger)`
 - [ ] Phase 5: Publish
 

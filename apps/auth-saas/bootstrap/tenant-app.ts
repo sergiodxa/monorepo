@@ -16,6 +16,7 @@ import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { redirect } from "@sdxc/well-known/change-password";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
@@ -99,6 +100,7 @@ let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
+	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 	/**

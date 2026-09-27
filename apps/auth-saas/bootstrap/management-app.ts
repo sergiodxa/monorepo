@@ -17,6 +17,7 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -155,6 +156,7 @@ let issuer = `https://api.${env.PLATFORM_DOMAIN}`;
 let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	log(logger) as Middleware,
+	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(MANAGEMENT_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
