@@ -45,7 +45,7 @@ Smart Placement and Observability are enabled.
   for posts whose scheduled publish date has arrived.
 - Encore support page (`/apps/encore/support`), the Support URL of the Encore App Store
   listings: a public form that mails each request to `SUPPORT_INBOX` from
-  `support@sergiodxa.com` with the visitor as Reply-To, behind same-origin checks, a
+  `encore@support.sergiodxa.com` with the visitor as Reply-To, behind same-origin checks, a
   honeypot, and a per-address rate limit. An unset inbox makes the form report a failure.
 
 ## Routes
