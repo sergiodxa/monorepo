@@ -19,6 +19,7 @@ import { get, post, route } from "remix/routes";
 export default route({
 	index: get("/"),
 	health: get("/health"),
+	cspReports: post("/reports/csp"),
 
 	/**
 	 * Per-tenant subscriptions (ADR-018). Backend endpoints only — there is no

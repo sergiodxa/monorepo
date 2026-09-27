@@ -11,6 +11,7 @@ import type { Middleware } from "remix/router";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -21,12 +22,14 @@ import billingCheckout from "~/app/http/controllers/billing/checkout";
 import billingCheckoutReturn from "~/app/http/controllers/billing/checkout-return";
 import billingPortal from "~/app/http/controllers/billing/portal";
 import billingWebhook from "~/app/http/controllers/billing/webhook";
+import { cspReports } from "~/app/http/controllers/csp-reports";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
 import notFound from "~/app/http/controllers/not-found";
 import { database } from "~/app/http/middleware/database";
 import render from "~/app/http/middleware/render";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
+import { PLATFORM_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
 import { securityTxtEntry } from "~/app/lib/security-txt";
 import routes from "~/routes/web";
@@ -47,6 +50,7 @@ let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	log(logger) as Middleware,
 	asyncContext(),
+	securityHeaders(PLATFORM_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
 	render as Middleware,
@@ -69,6 +73,7 @@ export const router = createRouter({
 
 router.map(routes.index, index);
 router.map(routes.health, health);
+router.map(routes.cspReports, cspReports);
 router.map(routes.billing.checkout, billingCheckout);
 router.map(routes.billing.checkoutReturn, billingCheckoutReturn);
 router.map(routes.billing.portal, billingPortal);

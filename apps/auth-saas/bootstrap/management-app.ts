@@ -16,6 +16,7 @@
 import type { Middleware, RequestContext } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -121,6 +122,7 @@ import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/management-mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
+import { MANAGEMENT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
 import { createHostnameClient } from "~/app/lib/hostnames";
 import { requestOrigin } from "~/app/lib/request-origin";
@@ -154,6 +156,7 @@ let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	log(logger) as Middleware,
 	asyncContext(),
+	securityHeaders(MANAGEMENT_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
 	managementWellKnown(issuer),

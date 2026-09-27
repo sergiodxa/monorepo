@@ -16,6 +16,7 @@ import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { Database } from "remix/data-table";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -59,6 +60,7 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
+import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import Tenant from "~/database/tenant-do";
 import routes from "~/routes/tenant";
 
@@ -72,6 +74,7 @@ export const TEST_MAIL_FROM = { email: "no-reply@example.com", name: "Test Sende
 /** Builds the tenant router wired to a constructed Durable Object, mapping every hosted route. */
 function buildRouter(tenantDO: Tenant, transport: Transport) {
 	let middleware: Middleware[] = [
+		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
 		render as Middleware,
 		formData() as Middleware,

@@ -15,6 +15,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { redirect } from "@sdxc/well-known/change-password";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
@@ -23,6 +24,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
 import authorize from "~/app/http/controllers/authorize";
+import { cspReports } from "~/app/http/controllers/csp-reports";
 import { consentShow, consentSubmit } from "~/app/http/controllers/hosted/consent";
 import { hostedDeviceShow, hostedDeviceSubmit } from "~/app/http/controllers/hosted/device";
 import { errorShow } from "~/app/http/controllers/hosted/error";
@@ -83,6 +85,7 @@ import {
 	tokenRateLimit,
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
+import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { securityTxtEntry } from "~/app/lib/security-txt";
 import { userinfoMetadataEntry } from "~/app/lib/userinfo-resource";
 import { parseSenderAddress } from "~/app/mail/sender";
@@ -97,6 +100,7 @@ let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
 	asyncContext(),
+	securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 	/**
 	 * The hosted reset flow is the one page where a person sets a new password on a
 	 * tenant host, so password managers are sent there.
@@ -255,6 +259,7 @@ tenantRouter.map(routes.hostedMagicLinkCompleteSubmit, {
 	handler: magicLinkCompleteSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedError, errorShow);
+tenantRouter.map(routes.cspReports, cspReports);
 
 /**
  * The write budget every `/scim/v2/*` resource route shares, keyed on the

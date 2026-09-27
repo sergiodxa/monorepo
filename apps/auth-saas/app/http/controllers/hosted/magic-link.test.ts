@@ -327,7 +327,7 @@ describe("magic-link", () => {
 		expect(completed.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
 
-	test("Referrer-Policy: no-referrer is present on the link-landing GET and absent elsewhere", async () => {
+	test("Referrer-Policy: no-referrer is on every screen of the flow, the link-landing GET included", async () => {
 		let client = await createTestClient(harness.tenantDO, ["openid"]);
 		await createTestSubjectWithPassword(harness.tenantDO, {
 			email: "margaret@example.com",
@@ -336,7 +336,7 @@ describe("magic-link", () => {
 		let { magicLinkPath } = await reachMagicLinkRequest(harness, client.id);
 
 		let requestShow = await harness.router.fetch(harness.request(magicLinkPath));
-		expect(requestShow.headers.get("Referrer-Policy")).toBeNull();
+		expect(requestShow.headers.get("Referrer-Policy")).toBe("no-referrer");
 
 		let submitted = await harness.router.fetch(
 			harness.request(magicLinkPath, {
@@ -344,7 +344,7 @@ describe("magic-link", () => {
 				body: form({ email: "margaret@example.com" }),
 			}),
 		);
-		expect(submitted.headers.get("Referrer-Policy")).toBeNull();
+		expect(submitted.headers.get("Referrer-Policy")).toBe("no-referrer");
 
 		let transport = harness.mailTransport as MemoryTransport;
 		let url = extractMagicLinkUrl(transport.last as NormalizedMessage);

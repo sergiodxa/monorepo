@@ -589,6 +589,13 @@ Both start with `contentSecurityPolicyReportOnly` and a report route, then enfor
 - [x] Phase 1: Specify and build the package
 - [x] Phase 2: Migrate the reader
 - [ ] Phase 3: Adopt in r3-auth and auth-saas
+  - [x] `apps/auth-saas`: the tenant and platform routers send their CSP Report-Only with a
+        `/reports/csp` route logging each violation; the JSON-only management router enforces
+        `default-src 'none'; frame-ancestors 'none'`. The tenant policy leaves `form-action` open
+        (an authorization ends in a form-submission redirect to the client) and sends no COOP
+        (popup-based relying parties keep their opener); `no-referrer` there replaces the
+        magic-link page's own header. No inline script or ImportMap renders today, so the
+        nonce source is advertised only once a page reads it
 - [ ] Phase 4: Adopt in uptime and blog
 - [ ] Phase 5: Publish
 

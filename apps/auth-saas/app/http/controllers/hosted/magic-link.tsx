@@ -246,9 +246,9 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
 
 /**
  * The mailed link's own landing page: renders a form holding the token in a
- * hidden field, consuming nothing on this `GET`. Sent with `Referrer-Policy:
- * no-referrer`, since this is the one response in this flow whose URL carries
- * the token.
+ * hidden field, consuming nothing on this `GET`. The tenant's security policy
+ * sends `Referrer-Policy: no-referrer`, keeping the token in this URL out of
+ * `Referer`.
  *
  * @param ctx - The request context (provides `render`, `locale` and `intl`).
  * @returns The rendered landing page, or a redirect back to the request screen
@@ -278,7 +278,6 @@ export const magicLinkCompleteShow = createAction(
 					token={token}
 				/>
 			</HostedDocument>,
-			{ headers: { "Referrer-Policy": "no-referrer" } },
 		);
 	},
 );

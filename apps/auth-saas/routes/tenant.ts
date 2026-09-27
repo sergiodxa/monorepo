@@ -56,6 +56,7 @@ export default route({
 	hostedMagicLinkCompleteShow: get("/u/magic-link/complete"),
 	hostedMagicLinkCompleteSubmit: post("/u/magic-link/complete"),
 	hostedError: get("/u/error"),
+	cspReports: post("/reports/csp"),
 
 	scimUsersCreate: post("/scim/v2/Users"),
 	scimUsersList: get("/scim/v2/Users"),
