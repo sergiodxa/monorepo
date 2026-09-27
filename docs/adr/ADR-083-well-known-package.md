@@ -838,6 +838,8 @@ the discovery parsers come attached to a client `@sdxc/auth` already is.
 - [x] Phase 3: `./security-txt` and `./middleware`
 - [ ] Phase 3: security.txt adoption in the apps
   - [x] `apps/auth-saas`: platform, management and tenant hosts, plus `change-password` to `/u/reset`
+  - [x] `apps/reader`: `reader.sergiodxa.com`, served inside the security headers
+  - [x] `apps/uptime`: `uptime.sergiodxa.com`, with the 30-days-before-`Expires` test
 - [x] Phase 4: `./webfinger`
 - [x] Phase 4: `apps/blog` WebFinger extraction
 - [x] Phase 5: `./change-password` and `./passkey-endpoints`, plus `./oauth-protected-resource` for ADR-084

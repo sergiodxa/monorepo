@@ -19,6 +19,7 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -35,6 +36,7 @@ import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { createHtmlRenderer } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
+import { securityTxtEntry } from "~/app/lib/security-txt";
 import requireAgent from "~/app/mcp/agent";
 import agentRateLimit from "~/app/mcp/rate-limit";
 import routes from "~/routes/web";
@@ -118,6 +120,11 @@ export default function application(options: application.Options) {
 		 * produced and every surface this app adds later is covered without being asked.
 		 */
 		securityHeaders(SECURITY_POLICY) as Middleware,
+		/**
+		 * Inside the security headers, so `/.well-known/security.txt` is served under the same
+		 * policy as every other response.
+		 */
+		wellKnown({ "security.txt": securityTxtEntry }) as Middleware,
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 
