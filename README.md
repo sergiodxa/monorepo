@@ -110,7 +110,7 @@ Run from the repository root:
 | [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
 | [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                                                       | ✅  |
-| [email-address](packages/email-address)                         | Email address parsing and normalization, disposable-domain detection and mail-server checks                       |     |
+| [email-address](packages/email-address)                         | Email address parsing and normalization, disposable-domain detection and mail-server checks                       | ✅  |
 | [feed](packages/feed)                                           | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery                            | ✅  |
 | [flags](packages/flags)                                         | Feature flag evaluation implementing the OpenFeature specification                                                | ✅  |
 | [flags-engine](packages/flags-engine)                           | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                             | ✅  |
