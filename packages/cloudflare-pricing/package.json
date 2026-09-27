@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/cloudflare-pricing",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Cloudflare Developer Platform list prices, one module per service",
 	"license": "MIT",
 	"type": "module",

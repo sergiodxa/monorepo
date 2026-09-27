@@ -101,7 +101,7 @@ Run from the repository root:
 | [captcha](packages/captcha)                                     | CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider   |     |
 | [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response                                      | ✅  |
 | [cloudflare-mocks](packages/cloudflare-mocks)                   | In-memory Cloudflare binding mocks for tests                                                                      | ✅  |
-| [cloudflare-pricing](packages/cloudflare-pricing)               | Cloudflare Developer Platform list prices, one module per service                                                 |     |
+| [cloudflare-pricing](packages/cloudflare-pricing)               | Cloudflare Developer Platform list prices, one module per service                                                 | ✅  |
 | [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                                                        | ✅  |
 | [crypto](packages/crypto)                                       | Web Crypto primitives — hashing, HMAC, tokens, TOTP, AES-GCM — plus scrypt passwords                              | ✅  |
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                                                        | ✅  |
