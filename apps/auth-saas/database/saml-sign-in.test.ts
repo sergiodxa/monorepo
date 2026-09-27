@@ -14,10 +14,12 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { Certificate } from "@sdxc/saml";
-import { buildResponse, signDocument } from "@sdxc/saml/testing";
 import { beforeAll, beforeEach, describe, expect, test } from "vitest";
 
+import type { ResponseFixture } from "./test/saml-fixtures";
+
 import Tenant from "./tenant-do";
+import { signResponse } from "./test/saml-fixtures";
 
 /** The tenant's own platform-subdomain origin, which every identifier is built from. */
 const ORIGIN = "https://acme.example";
@@ -98,14 +100,11 @@ function relayStateOf(redirectUrl: string): string {
 }
 
 /** Signs a response addressed to this tenant's own connection identifiers. */
-async function respond(
-	requestId: string | null,
-	overrides: Parameters<typeof buildResponse>[0] = {},
-): Promise<string> {
+async function respond(requestId: string | null, overrides: ResponseFixture = {}): Promise<string> {
 	let acs = `${ORIGIN}/u/sso/${SLUG}/acs`;
 	let now = Date.now();
 
-	let tree = buildResponse(
+	return signResponse(
 		{
 			issuer: IDP_ENTITY_ID,
 			audience: `${ORIGIN}/u/sso/${SLUG}`,
@@ -116,10 +115,8 @@ async function respond(
 			notOnOrAfter: new Date(now + 120_000),
 			...overrides,
 		},
-		"assertion",
+		idp.privateKey,
 	);
-
-	return signDocument(tree, idp.privateKey);
 }
 
 describe("enterprise connection configuration", () => {
@@ -373,18 +370,15 @@ describe("signing in through an enterprise connection", () => {
 		if (!started.ok) throw new Error("begin refused");
 
 		let acs = `${ORIGIN}/u/sso/${SLUG}/acs`;
-		let forged = await signDocument(
-			buildResponse(
-				{
-					issuer: IDP_ENTITY_ID,
-					audience: `${ORIGIN}/u/sso/${SLUG}`,
-					destination: acs,
-					recipient: acs,
-					inResponseTo: started.requestId,
-					notOnOrAfter: new Date(Date.now() + 120_000),
-				},
-				"assertion",
-			),
+		let forged = await signResponse(
+			{
+				issuer: IDP_ENTITY_ID,
+				audience: `${ORIGIN}/u/sso/${SLUG}`,
+				destination: acs,
+				recipient: acs,
+				inResponseTo: started.requestId,
+				notOnOrAfter: new Date(Date.now() + 120_000),
+			},
 			stranger.privateKey,
 		);
 
