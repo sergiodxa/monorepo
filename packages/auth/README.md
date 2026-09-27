@@ -511,7 +511,7 @@ Every method takes a `tenantId` first and answers a `Result` whose failure is
 
 - `fetchTenantSubjectById(tenantId, subjectId)` — a subject's profile, identifiers, attributes and second-factor state
 - `createTenantSubject(tenantId, input)` — creates a subject with the given identifiers, profile and attributes
-- `updateTenantSubject(tenantId, subjectId, input)` — writes a subject's profile and declared attributes
+- `updateTenantSubject(tenantId, subjectId, input)` — writes a subject's profile and declared attributes as a JSON Merge Patch (RFC 7396): `null` clears a claim and removes an attribute
 - `blockTenantSubject(tenantId, subjectId, input)` — blocks a subject and revokes every session it holds
 - `unblockTenantSubject(tenantId, subjectId)` — restores a blocked subject to active
 - `deleteTenantSubject(tenantId, subjectId)` — deletes a subject, its identifiers, attributes and sessions
@@ -532,7 +532,7 @@ Every method takes a `tenantId` first and answers a `Result` whose failure is
 
 - `listTenantClients(tenantId, options?)` — a page of the tenant's registered clients
 - `registerTenantClient(tenantId, input)` — registers a client, minting its first secret when confidential
-- `updateTenantClient(tenantId, clientId, input)` — replaces a client's editable fields as one set
+- `updateTenantClient(tenantId, clientId, input)` — changes only the given editable fields, sent as a JSON Merge Patch; a list replaces the stored one whole
 - `rotateTenantClientSecret(tenantId, clientId, input?)` — mints a successor secret and opens the incumbent's overlap window
 - `revokeTenantClientSecret(tenantId, clientId, secretId)` — closes one secret immediately
 - `disableTenantClient(tenantId, clientId)` — marks a client disabled

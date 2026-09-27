@@ -637,9 +637,49 @@ describe("ManagementClient tenant-scoped surface", () => {
 			expect(result.data.secret).toBe("csec_abc");
 		});
 
+		test("sends a client update as a merge patch naming only the changed fields", async () => {
+			let received: { contentType: string | null; body: unknown } | null = null;
+			server.use(
+				http.patch(tenantUrl("clients", "client_x"), async ({ request }) => {
+					received = {
+						contentType: request.headers.get("content-type"),
+						body: await request.json(),
+					};
+					return HttpResponse.json({ client: CLIENT_RECORD });
+				}),
+			);
+
+			let result = await tenantClient().updateTenantClient(TENANT_ID, "client_x", {
+				redirectUris: ["https://acme.test/callback"],
+			});
+
+			expect(isSuccess(result)).toBe(true);
+			expect(received).toEqual({
+				contentType: "application/merge-patch+json",
+				body: { redirectUris: ["https://acme.test/callback"] },
+			});
+		});
+
+		test("sends a subject update as a merge patch whose null removes an attribute", async () => {
+			let contentType: string | null = null;
+			server.use(
+				http.patch(tenantUrl("subjects", "sub_1"), ({ request }) => {
+					contentType = request.headers.get("content-type");
+					return new HttpResponse(null, { status: 204 });
+				}),
+			);
+
+			let result = await tenantClient().updateTenantSubject(TENANT_ID, "sub_1", {
+				attributes: { department: null },
+			});
+
+			expect(isSuccess(result)).toBe(true);
+			expect(contentType).toBe("application/merge-patch+json");
+		});
+
 		test("answers updating a missing client with a not-found problem", async () => {
 			server.use(
-				http.put(tenantUrl("clients", "client_x"), () =>
+				http.patch(tenantUrl("clients", "client_x"), () =>
 					problem({ type: "https://api.test/errors/client-not-found", title: "Not found" }, 404),
 				),
 			);

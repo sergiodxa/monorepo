@@ -27,6 +27,9 @@ import { ServiceClient } from "./service-client.js";
 
 export { managementProblems } from "./management-problems.js";
 
+/** RFC 7396's media type, which every tenant-scoped `PATCH` body is sent as. */
+const MERGE_PATCH_MEDIA_TYPE = "application/merge-patch+json";
+
 /** Path the management API serves one subject at, with the id appended to it. */
 const SUBJECT_PATH = "/api/subjects";
 
@@ -651,7 +654,7 @@ export class ManagementClient {
 
 		let init: RequestInit = { method, headers };
 		if (options.body !== undefined) {
-			headers.set("content-type", "application/json");
+			headers.set("content-type", method === "PATCH" ? MERGE_PATCH_MEDIA_TYPE : "application/json");
 			init.body = JSON.stringify(options.body);
 		}
 
@@ -852,7 +855,8 @@ export class ManagementClient {
 	}
 
 	/**
-	 * Writes a subject's profile and declared attributes. Requires `subjects:write`.
+	 * Writes a subject's profile and declared attributes as an RFC 7396 merge patch:
+	 * `null` clears a profile claim and removes an attribute. Requires `subjects:write`.
 	 *
 	 * @param tenantId - The tenant the subject belongs to.
 	 * @param subjectId - The subject to update.
@@ -1157,11 +1161,12 @@ export class ManagementClient {
 	}
 
 	/**
-	 * Replaces a client's editable fields as one set. Requires `clients:write`.
+	 * Changes a client's editable fields through an RFC 7396 merge patch, so only the
+	 * named fields change and a list replaces the stored one whole. Requires `clients:write`.
 	 *
 	 * @param tenantId - The tenant the client belongs to.
 	 * @param clientId - The client to update.
-	 * @param input - The whole new editable record.
+	 * @param input - The fields to change; the whole record is a valid patch too.
 	 */
 	async updateTenantClient(
 		tenantId: string,
@@ -1170,7 +1175,7 @@ export class ManagementClient {
 	): Promise<
 		Result<{ client: ManagementClient.TenantClientRecord }, ManagementError | ManagementProblem>
 	> {
-		return this.#call("PUT", tenantPath(tenantId, "clients", clientId), {
+		return this.#call("PATCH", tenantPath(tenantId, "clients", clientId), {
 			body: input,
 			schema: UPDATE_TENANT_CLIENT_RESULT_SCHEMA,
 		});
@@ -1606,10 +1611,13 @@ export namespace ManagementClient {
 		identifiers: TenantIdentifierState[];
 	}
 
-	/** What {@link ManagementClient#updateTenantSubject} takes: only the fields being changed. */
+	/**
+	 * What {@link ManagementClient#updateTenantSubject} takes: a merge patch naming only the
+	 * fields being changed, where `null` clears a claim or removes an attribute.
+	 */
 	export interface UpdateTenantSubjectInput {
 		profile?: TenantSubjectProfile;
-		attributes?: Record<string, unknown>;
+		attributes?: Record<string, TenantAttributeValue>;
 	}
 
 	/** What adding an identifier answers: a ticket to deliver for an email, nothing extra for a username. */
@@ -1698,8 +1706,11 @@ export namespace ManagementClient {
 		requireConsent: boolean;
 	}
 
-	/** The whole record {@link ManagementClient#updateTenantClient} takes. */
-	export type UpdateTenantClientInput = RegisterTenantClientInput;
+	/**
+	 * The merge patch {@link ManagementClient#updateTenantClient} takes: any subset of the
+	 * record, since every member is required and none may be removed.
+	 */
+	export type UpdateTenantClientInput = Partial<RegisterTenantClientInput>;
 
 	// -- Scopes, grants and roles ------------------------------------------------------
 
