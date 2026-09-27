@@ -15,7 +15,12 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import { clients, registerClient } from "./clients";
 import { scopes } from "./consent";
-import { publishMetadata, resolveUserInfo } from "./metadata";
+import {
+	authorizationServerMetadataFor,
+	openIdConfigurationFor,
+	publishMetadata,
+	resolveUserInfo,
+} from "./metadata";
 import { organizationMembers, organizations } from "./organizations";
 import { assignRole } from "./roles";
 import { openSession, sessions } from "./sessions";
@@ -76,17 +81,15 @@ describe("publishMetadata", () => {
 		await advanceSigningKeys(db, { now: T0 });
 
 		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
+		let openid = openIdConfigurationFor(published);
+		let oauth = authorizationServerMetadataFor(published);
 
-		expect(published.openidConfiguration.issuer).toBe(ISSUER);
-		expect(published.oauthMetadata.issuer).toBe(ISSUER);
-		expect(published.openidConfiguration.authorization_endpoint).toBe(
-			published.oauthMetadata.authorization_endpoint,
-		);
-		expect(published.openidConfiguration.token_endpoint).toBe(
-			published.oauthMetadata.token_endpoint,
-		);
-		expect(published.openidConfiguration.authorization_endpoint).toBe(`${ISSUER}/authorize`);
-		expect(published.openidConfiguration.token_endpoint).toBe(`${ISSUER}/oauth/token`);
+		expect(openid.issuer).toBe(ISSUER);
+		expect(oauth.issuer).toBe(ISSUER);
+		expect(openid.authorizationEndpoint.href).toBe(oauth.authorizationEndpoint?.href);
+		expect(openid.tokenEndpoint?.href).toBe(oauth.tokenEndpoint?.href);
+		expect(openid.authorizationEndpoint.href).toBe(`${ISSUER}/authorize`);
+		expect(openid.tokenEndpoint?.href).toBe(`${ISSUER}/oauth/token`);
 	});
 
 	test("scopes_supported and claims_supported reflect the tenant's scope catalog, including a tenant-defined scope", async () => {
@@ -102,8 +105,9 @@ describe("publishMetadata", () => {
 		});
 
 		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
+		let openid = openIdConfigurationFor(published);
 
-		expect(published.openidConfiguration.scopes_supported).toEqual(
+		expect(openid.scopesSupported).toEqual(
 			expect.arrayContaining([
 				"openid",
 				"profile",
@@ -113,7 +117,7 @@ describe("publishMetadata", () => {
 				"read:roles",
 			]),
 		);
-		expect(published.openidConfiguration.claims_supported).toEqual(
+		expect(openid.claimsSupported).toEqual(
 			expect.arrayContaining([
 				"sub",
 				"iss",
@@ -127,7 +131,7 @@ describe("publishMetadata", () => {
 		);
 	});
 
-	test("changes version once a rotation publishes a new key", async () => {
+	test("publishes a staged successor beside the incumbent once a rotation stages one", async () => {
 		await advanceSigningKeys(db, { now: T0 });
 		let before = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
 
@@ -140,7 +144,7 @@ describe("publishMetadata", () => {
 			hasDeviceGrant: false,
 		});
 
-		expect(afterStaging.version).not.toBe(before.version);
+		expect(before.jwks.keys).toHaveLength(1);
 		expect(afterStaging.jwks.keys).toHaveLength(2);
 	});
 
@@ -148,36 +152,30 @@ describe("publishMetadata", () => {
 		await advanceSigningKeys(db, { now: T0 });
 
 		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: false });
+		let openid = openIdConfigurationFor(published);
+		let oauth = authorizationServerMetadataFor(published);
 
-		expect(published.openidConfiguration).not.toHaveProperty("device_authorization_endpoint");
-		expect(published.oauthMetadata).not.toHaveProperty("device_authorization_endpoint");
-		expect(published.openidConfiguration.grant_types_supported).toEqual([
-			"authorization_code",
-			"refresh_token",
-		]);
-		expect(published.oauthMetadata.grant_types_supported).toEqual([
-			"authorization_code",
-			"refresh_token",
-		]);
+		expect(openid.deviceAuthorizationEndpoint).toBeNull();
+		expect(oauth.deviceAuthorizationEndpoint).toBeNull();
+		expect(openid.grantTypesSupported).toEqual(["authorization_code", "refresh_token"]);
+		expect(oauth.grantTypesSupported).toEqual(["authorization_code", "refresh_token"]);
 	});
 
 	test("advertises device_authorization_endpoint and the device grant URN once the entitlement holds", async () => {
 		await advanceSigningKeys(db, { now: T0 });
 
 		let published = await publishMetadata(db, { now: T0, issuer: ISSUER, hasDeviceGrant: true });
+		let openid = openIdConfigurationFor(published);
+		let oauth = authorizationServerMetadataFor(published);
 
-		expect(published.openidConfiguration.device_authorization_endpoint).toBe(
-			`${ISSUER}/oauth/device_authorization`,
-		);
-		expect(published.oauthMetadata.device_authorization_endpoint).toBe(
-			`${ISSUER}/oauth/device_authorization`,
-		);
-		expect(published.openidConfiguration.grant_types_supported).toEqual([
+		expect(openid.deviceAuthorizationEndpoint?.href).toBe(`${ISSUER}/oauth/device_authorization`);
+		expect(oauth.deviceAuthorizationEndpoint?.href).toBe(`${ISSUER}/oauth/device_authorization`);
+		expect(openid.grantTypesSupported).toEqual([
 			"authorization_code",
 			"refresh_token",
 			"urn:ietf:params:oauth:grant-type:device_code",
 		]);
-		expect(published.oauthMetadata.grant_types_supported).toEqual([
+		expect(oauth.grantTypesSupported).toEqual([
 			"authorization_code",
 			"refresh_token",
 			"urn:ietf:params:oauth:grant-type:device_code",

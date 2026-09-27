@@ -1,17 +1,21 @@
 /**
  * Discovery and `/userinfo`: the read-only surfaces that describe a tenant to the clients
- * that use it. `publishMetadata` renders both metadata documents and the JWKS document in
- * one call, built from the same tenant facts so the two documents can never disagree about
- * what they describe. `resolveUserInfo` assembles the claims a subject's granted scopes
- * carry, omitting a claim rather than nulling it whenever the tenant's schema has nowhere
- * for its value to come from.
+ * that use it. `publishMetadata` reads the tenant facts and key set in one call, and both
+ * metadata documents are built from those same facts, so they never disagree.
+ * `resolveUserInfo` assembles the claims a subject's granted scopes carry, omitting a
+ * claim rather than nulling it whenever the tenant's schema has nowhere for its value.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AuthorizationServerMetadata } from "@sdxc/well-known/oauth-authorization-server";
+import type { OpenIdProviderMetadata } from "@sdxc/well-known/openid-configuration";
 import type { Database } from "remix/data-table";
 
+import { JWK } from "@sdxc/jwt";
+import { define as defineAuthorizationServerMetadata } from "@sdxc/well-known/oauth-authorization-server";
+import { define as defineOpenIdConfiguration } from "@sdxc/well-known/openid-configuration";
 import * as s from "remix/data-schema";
 import { and, eq } from "remix/data-table";
 
@@ -51,14 +55,18 @@ export interface PublishMetadataInput {
 	hasDeviceGrant: boolean;
 }
 
-/** A discovery document's field values: every field here is a string or a list of them. */
-export type MetadataDocument = Record<string, string | string[]>;
-
+/**
+ * The tenant facts both discovery documents are built from, in plain values so the
+ * result crosses the Durable Object's RPC boundary; {@link openIdConfigurationFor} and
+ * {@link authorizationServerMetadataFor} turn it into the typed documents.
+ */
 export interface PublishMetadataResult {
-	openidConfiguration: MetadataDocument;
-	oauthMetadata: MetadataDocument;
+	issuer: string;
+	scopesSupported: string[];
+	claimsSupported: string[];
+	hasDeviceGrant: boolean;
 	jwks: PublishedKeySet;
-	version: string;
+	/** How long the documents may be cached for, in seconds. */
 	maxAge: number;
 }
 
@@ -69,19 +77,16 @@ let PublishMetadataSchema = s.object({
 });
 
 /**
- * Renders the OpenID configuration, the OAuth authorization server metadata, and the JWKS
- * document in one call, so a cold cache costs one round trip rather than three. Both
- * metadata documents are built from the same endpoint URLs and the same tenant scope
- * catalog, so nothing about them can drift apart the way two separately written literals
- * could.
+ * Reads the facts both metadata documents and the JWKS document are built from in one
+ * call, so a cold cache costs one round trip rather than three.
  *
  * @param db - The tenant's database.
  * @param input - The clock the key set's publish window is measured against, the
  * issuer the Worker resolved for this tenant's hostname, and whether this tenant
  * currently holds the device grant add-on, which is what gates whether
  * `device_authorization_endpoint` and its grant type URN appear at all.
- * @returns Both metadata documents, the published key set, a version a caller can compare
- * against what it has cached, and how long the documents may be cached for.
+ * @returns The tenant's scope and claim catalog, the published key set, and how long
+ * the documents may be cached for.
  */
 export async function publishMetadata(
 	db: Database,
@@ -90,70 +95,73 @@ export async function publishMetadata(
 	let parsed = s.parse(PublishMetadataSchema, input);
 
 	let scopeRows = await db.findMany(scopes);
-	let scopesSupported = scopeRows.map((row) => row.name);
 
 	let claimsSupported = new Set(REGISTERED_CLAIMS);
 	for (let row of scopeRows) for (let claim of row.claims as string[]) claimsSupported.add(claim);
 
-	let endpoints = {
-		issuer: parsed.issuer,
-		authorizationEndpoint: `${parsed.issuer}/authorize`,
-		tokenEndpoint: `${parsed.issuer}/oauth/token`,
-		userinfoEndpoint: `${parsed.issuer}/userinfo`,
-		jwksUri: `${parsed.issuer}/.well-known/jwks.json`,
-		deviceAuthorizationEndpoint: `${parsed.issuer}/oauth/device_authorization`,
-	};
-
-	let responseTypesSupported = ["code"];
-	let grantTypesSupported = parsed.hasDeviceGrant
-		? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE]
-		: ["authorization_code", "refresh_token"];
-	let tokenEndpointAuthMethodsSupported = ["client_secret_basic", "client_secret_post", "none"];
-	let codeChallengeMethodsSupported = ["S256"];
-
-	let openidConfiguration: MetadataDocument = {
-		issuer: endpoints.issuer,
-		authorization_endpoint: endpoints.authorizationEndpoint,
-		token_endpoint: endpoints.tokenEndpoint,
-		userinfo_endpoint: endpoints.userinfoEndpoint,
-		jwks_uri: endpoints.jwksUri,
-		response_types_supported: responseTypesSupported,
-		subject_types_supported: ["public"],
-		id_token_signing_alg_values_supported: ["ES256"],
-		grant_types_supported: grantTypesSupported,
-		token_endpoint_auth_methods_supported: tokenEndpointAuthMethodsSupported,
-		code_challenge_methods_supported: codeChallengeMethodsSupported,
-		scopes_supported: scopesSupported,
-		claims_supported: [...claimsSupported],
-		...(parsed.hasDeviceGrant
-			? { device_authorization_endpoint: endpoints.deviceAuthorizationEndpoint }
-			: {}),
-	};
-
-	let oauthMetadata: MetadataDocument = {
-		issuer: endpoints.issuer,
-		authorization_endpoint: endpoints.authorizationEndpoint,
-		token_endpoint: endpoints.tokenEndpoint,
-		jwks_uri: endpoints.jwksUri,
-		response_types_supported: responseTypesSupported,
-		grant_types_supported: grantTypesSupported,
-		token_endpoint_auth_methods_supported: tokenEndpointAuthMethodsSupported,
-		code_challenge_methods_supported: codeChallengeMethodsSupported,
-		scopes_supported: scopesSupported,
-		...(parsed.hasDeviceGrant
-			? { device_authorization_endpoint: endpoints.deviceAuthorizationEndpoint }
-			: {}),
-	};
-
-	let jwks = await publishKeySet(db, { now: parsed.now });
-
 	return {
-		openidConfiguration,
-		oauthMetadata,
-		jwks,
-		version: jwks.keys.map((key) => String(key.kid)).join(","),
+		issuer: parsed.issuer,
+		scopesSupported: scopeRows.map((row) => row.name),
+		claimsSupported: [...claimsSupported],
+		hasDeviceGrant: parsed.hasDeviceGrant,
+		jwks: await publishKeySet(db, { now: parsed.now }),
 		maxAge: MAX_AGE_SECONDS,
 	};
+}
+
+/**
+ * The members the OpenID configuration and the RFC 8414 document share, built once so
+ * the two documents can never disagree about an endpoint or a supported value.
+ */
+function sharedMembers(published: PublishMetadataResult) {
+	let endpoint = (path: string) => new URL(path, published.issuer);
+
+	return {
+		issuer: published.issuer,
+		authorizationEndpoint: endpoint("/authorize"),
+		tokenEndpoint: endpoint("/oauth/token"),
+		jwksUri: endpoint("/.well-known/jwks.json"),
+		deviceAuthorizationEndpoint: published.hasDeviceGrant
+			? endpoint("/oauth/device_authorization")
+			: null,
+		responseTypesSupported: ["code"],
+		grantTypesSupported: published.hasDeviceGrant
+			? ["authorization_code", "refresh_token", DEVICE_CODE_GRANT_TYPE]
+			: ["authorization_code", "refresh_token"],
+		tokenEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post", "none"],
+		codeChallengeMethodsSupported: ["S256"],
+		scopesSupported: published.scopesSupported,
+	};
+}
+
+/**
+ * The tenant's OpenID Connect discovery document. `request_uri` is stated unsupported,
+ * since OIDC Discovery reads an absent member as supported.
+ *
+ * @param published - The facts {@link publishMetadata} read.
+ * @returns The document `/.well-known/openid-configuration` serves.
+ */
+export function openIdConfigurationFor(published: PublishMetadataResult): OpenIdProviderMetadata {
+	return defineOpenIdConfiguration({
+		...sharedMembers(published),
+		userinfoEndpoint: new URL("/userinfo", published.issuer),
+		subjectTypesSupported: ["public"],
+		idTokenSigningAlgValuesSupported: [JWK.Algorithm.ES256],
+		claimsSupported: published.claimsSupported,
+		requestUriParameterSupported: false,
+	});
+}
+
+/**
+ * The tenant's RFC 8414 authorization server metadata.
+ *
+ * @param published - The facts {@link publishMetadata} read.
+ * @returns The document `/.well-known/oauth-authorization-server` serves.
+ */
+export function authorizationServerMetadataFor(
+	published: PublishMetadataResult,
+): AuthorizationServerMetadata {
+	return defineAuthorizationServerMetadata(sharedMembers(published));
 }
 
 export interface ResolveUserInfoInput {

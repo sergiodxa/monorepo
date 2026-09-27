@@ -11,6 +11,7 @@ import type { Middleware } from "remix/router";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
@@ -27,6 +28,7 @@ import { database } from "~/app/http/middleware/database";
 import render from "~/app/http/middleware/render";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { createDatabase } from "~/app/lib/database";
+import { securityTxtEntry } from "~/app/lib/security-txt";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -45,6 +47,7 @@ let globalMiddleware: Middleware[] = [
 	trailingSlash,
 	log(logger) as Middleware,
 	asyncContext(),
+	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
 	render as Middleware,
 	formData() as Middleware,

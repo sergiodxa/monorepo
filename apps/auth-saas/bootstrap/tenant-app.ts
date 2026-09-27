@@ -15,6 +15,8 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
+import { redirect } from "@sdxc/well-known/change-password";
+import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -81,6 +83,7 @@ import {
 	tokenRateLimit,
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
+import { securityTxtEntry } from "~/app/lib/security-txt";
 import { parseSenderAddress } from "~/app/mail/sender";
 import routes from "~/routes/tenant";
 
@@ -93,6 +96,14 @@ let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
 	asyncContext(),
+	/**
+	 * The hosted reset flow is the one page where a person sets a new password on a
+	 * tenant host, so password managers are sent there.
+	 */
+	wellKnown({
+		"security.txt": securityTxtEntry,
+		"change-password": () => redirect(routes.hostedResetShow.href()),
+	}),
 	tenant((tenantId) => env.TENANT.getByName(tenantId)),
 	render as Middleware,
 	formData() as Middleware,

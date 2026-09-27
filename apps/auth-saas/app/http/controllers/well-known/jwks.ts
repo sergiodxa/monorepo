@@ -5,32 +5,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { etag } from "@sdxc/http/cache";
-import { ok } from "@sdxc/http/response/json";
-import { isSuccess } from "@sdxc/result";
+import { jwks as jwkSet } from "@sdxc/well-known/jwks";
+import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
 import routes from "~/routes/tenant";
 
 /**
- * Renders the tenant's currently published key set, assembled fresh from its
- * Durable Object on every request: the caching layer this document deserves is
- * not built yet, so a cold cache here costs one round trip rather than none.
+ * Renders the tenant's currently published key set, read fresh from its Durable Object
+ * on every request, cached for the lifetime the tenant publishes. The descriptor writes
+ * each key's public half only, so the response carries no private material.
  *
  * @param ctx - The request context (provides `tenantStub`).
- * @returns The JWKS document as JSON, with the caching headers the tenant
- * published alongside it.
  * @example
  * router.map(routes.jwks, jwks);
  */
 export default createAction(routes.jwks, async (ctx) => {
 	let metadata = await ctx.tenantStub.publishMetadata({ now: Date.now() });
-	let tag = await etag(metadata.version);
 
-	let headers: Record<string, string> = {
-		"Cache-Control": `public, max-age=${metadata.maxAge}`,
-	};
-	if (isSuccess(tag)) headers.ETag = tag.data;
-
-	return ok(metadata.jwks, { headers });
+	return respond(jwkSet, metadata.jwks, {
+		request: ctx.request,
+		cache: { visibility: "public", maxAge: metadata.maxAge * 1000 },
+	});
 });

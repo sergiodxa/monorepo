@@ -834,8 +834,10 @@ the discovery parsers come attached to a client `@sdxc/auth` already is.
       `./response`, with tests and README
 - [x] Phase 1: the `JWK.toJSON` type test
 - [ ] Phase 2: Migrate the auth call sites
+  - [x] `apps/auth-saas`: typed discovery documents built from tenant facts, `respond(...)` on all three
 - [x] Phase 3: `./security-txt` and `./middleware`
 - [ ] Phase 3: security.txt adoption in the apps
+  - [x] `apps/auth-saas`: platform, management and tenant hosts, plus `change-password` to `/u/reset`
 - [x] Phase 4: `./webfinger`
 - [x] Phase 4: `apps/blog` WebFinger extraction
 - [x] Phase 5: `./change-password` and `./passkey-endpoints`, plus `./oauth-protected-resource` for ADR-084

@@ -6,32 +6,27 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { etag } from "@sdxc/http/cache";
-import { ok } from "@sdxc/http/response/json";
-import { isSuccess } from "@sdxc/result";
+import { authorizationServerMetadata } from "@sdxc/well-known/oauth-authorization-server";
+import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
+import { authorizationServerMetadataFor } from "~/database/metadata";
 import routes from "~/routes/tenant";
 
 /**
- * Renders the tenant's OAuth authorization server metadata, assembled fresh from
- * its Durable Object on every request: the caching layer this document deserves
- * is not built yet, so a cold cache here costs one round trip rather than none.
+ * Renders the tenant's OAuth authorization server metadata from facts read fresh from
+ * its Durable Object on every request, cached for the lifetime the tenant publishes and
+ * answered with a `304` for a client whose `ETag` still matches.
  *
  * @param ctx - The request context (provides `tenantStub`).
- * @returns The OAuth metadata as JSON, with the caching headers the tenant
- * published alongside it.
  * @example
  * router.map(routes.oauthAuthorizationServer, oauthAuthorizationServer);
  */
 export default createAction(routes.oauthAuthorizationServer, async (ctx) => {
 	let metadata = await ctx.tenantStub.publishMetadata({ now: Date.now() });
-	let tag = await etag(metadata.version);
 
-	let headers: Record<string, string> = {
-		"Cache-Control": `public, max-age=${metadata.maxAge}`,
-	};
-	if (isSuccess(tag)) headers.ETag = tag.data;
-
-	return ok(metadata.oauthMetadata, { headers });
+	return respond(authorizationServerMetadata, authorizationServerMetadataFor(metadata), {
+		request: ctx.request,
+		cache: { visibility: "public", maxAge: metadata.maxAge * 1000 },
+	});
 });

@@ -3859,8 +3859,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Renders the OpenID configuration, the OAuth authorization server metadata, and the
-	 * JWKS document in one call.
+	 * Reads the facts the OpenID configuration, the OAuth authorization server metadata,
+	 * and the JWKS document are built from, in one call.
 	 *
 	 * @param input - The clock the key set's publish window is measured against.
 	 * @returns Both metadata documents, the published key set, a version a caller can

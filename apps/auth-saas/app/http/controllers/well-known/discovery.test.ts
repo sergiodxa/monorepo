@@ -71,6 +71,21 @@ describe("GET /.well-known/openid-configuration", () => {
 		expect(body.token_endpoint).toBe(`${ISSUER}/oauth/token`);
 		expect(body.userinfo_endpoint).toBe(`${ISSUER}/userinfo`);
 		expect(body.jwks_uri).toBe(`${ISSUER}/.well-known/jwks.json`);
+		expect(body.request_uri_parameter_supported).toBe(false);
+		expect(body).not.toHaveProperty("device_authorization_endpoint");
+	});
+
+	test("answers 304 to a client whose ETag still matches", async () => {
+		let router = buildRouter();
+		let first = await router.fetch(tenantRequest("/.well-known/openid-configuration"));
+		let tag = first.headers.get("ETag");
+		if (!tag) throw new Error("the first response carried no ETag");
+
+		let request = tenantRequest("/.well-known/openid-configuration");
+		request.headers.set("If-None-Match", tag);
+		let second = await router.fetch(request);
+
+		expect(second.status).toBe(304);
 	});
 });
 
