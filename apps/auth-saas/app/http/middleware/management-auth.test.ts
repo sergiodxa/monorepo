@@ -30,6 +30,8 @@ import { managementAuth } from "./management-auth";
 
 const ISSUER = "https://api.example.com";
 
+const METADATA_URL = "https://api.example.com/.well-known/oauth-protected-resource";
+
 let db: Database;
 let tenantId: string;
 let otherTenantId: string;
@@ -115,6 +117,9 @@ describe("bearer token", () => {
 		);
 
 		expect(response.status).toBe(403);
+		expect(response.headers.get("WWW-Authenticate")).toBe(
+			`Bearer error="insufficient_scope", resource_metadata="${METADATA_URL}"`,
+		);
 	});
 
 	test("refuses a token that does not verify", async () => {
@@ -127,6 +132,9 @@ describe("bearer token", () => {
 		);
 
 		expect(response.status).toBe(401);
+		expect(response.headers.get("WWW-Authenticate")).toBe(
+			`Bearer error="invalid_token", resource_metadata="${METADATA_URL}"`,
+		);
 	});
 });
 
@@ -162,5 +170,8 @@ describe("dashboard session", () => {
 		);
 
 		expect(response.status).toBe(401);
+		expect(response.headers.get("WWW-Authenticate")).toBe(
+			`Bearer resource_metadata="${METADATA_URL}"`,
+		);
 	});
 });

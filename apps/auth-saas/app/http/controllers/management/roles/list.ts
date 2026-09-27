@@ -41,7 +41,7 @@ export function createRolesListAction(options: ManagementControllerOptions) {
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let query = parseBody(RolesListQuerySchema, Object.fromEntries(ctx.url.searchParams));

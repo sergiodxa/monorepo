@@ -49,7 +49,7 @@ export function createSubjectGrantsListAction(options: ManagementControllerOptio
 	return createAction(routes.subjectGrantsList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:read");
+			let refused = requireScope(ctx, "subjects:read");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -105,7 +105,7 @@ export function createSubjectGrantsRevokeAction(options: ManagementControllerOpt
 	return createAction(routes.subjectGrantsRevoke, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

@@ -37,7 +37,7 @@ export function createClientsDeleteAction(options: ManagementControllerOptions) 
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "clients:write");
+			let refused = requireScope(ctx, "clients:write");
 			if (refused) return refused;
 
 			let clientId = clientIdParam(ctx);

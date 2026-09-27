@@ -101,7 +101,7 @@ export function createSubjectIdentifiersAddAction(options: ManagementControllerO
 	return createAction(routes.subjectIdentifiersAdd, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -148,7 +148,7 @@ export function createSubjectIdentifiersVerifyAction(options: ManagementControll
 	return createAction(routes.subjectIdentifiersVerify, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(
@@ -192,7 +192,7 @@ export function createSubjectIdentifiersSetPrimaryAction(options: ManagementCont
 	return createAction(routes.subjectIdentifiersSetPrimary, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -235,7 +235,7 @@ export function createSubjectIdentifiersRemoveAction(options: ManagementControll
 	return createAction(routes.subjectIdentifiersRemove, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

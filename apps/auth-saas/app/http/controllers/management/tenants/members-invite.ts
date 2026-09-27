@@ -63,7 +63,7 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 	return createAction(routes.tenantMembersInvite, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(InviteMemberBodySchema, await ctx.request.json().catch(() => null));

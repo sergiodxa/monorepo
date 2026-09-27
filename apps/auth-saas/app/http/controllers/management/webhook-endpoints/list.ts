@@ -40,7 +40,7 @@ export function createWebhookEndpointsListAction(options: ManagementControllerOp
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "webhooks:write");
+			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
 			let paging = managementPaging.parse(ctx.url.searchParams);

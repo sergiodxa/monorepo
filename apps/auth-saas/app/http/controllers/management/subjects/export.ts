@@ -52,7 +52,7 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			managementRateLimit(options.limiter, { bucket: "import_export" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "export:read");
+			let refused = requireScope(ctx, "export:read");
 			if (refused) return refused;
 
 			let raw = await ctx.request.json().catch(() => ({}));
@@ -62,7 +62,7 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			let includeCredentials = parsed.data.includeCredentials ?? false;
 
 			if (includeCredentials) {
-				let refusedCredentials = requireScope(ctx.managementCaller, "export:credentials");
+				let refusedCredentials = requireScope(ctx, "export:credentials");
 				if (refusedCredentials) return refusedCredentials;
 			}
 

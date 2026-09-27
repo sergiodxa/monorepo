@@ -53,7 +53,7 @@ export function createPasskeysListAction(options: ManagementControllerOptions) {
 	return createAction(routes.passkeysList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -80,7 +80,7 @@ export function createPasskeysRenameAction(options: ManagementControllerOptions)
 	return createAction(routes.passkeysRename, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -121,7 +121,7 @@ export function createPasskeysRevokeAction(options: ManagementControllerOptions)
 	return createAction(routes.passkeysRevoke, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

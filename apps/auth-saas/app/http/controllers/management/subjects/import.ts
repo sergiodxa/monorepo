@@ -118,7 +118,7 @@ export function createSubjectsImportBeginAction(options: ManagementControllerOpt
 			managementRateLimit(options.limiter, { bucket: "import_export" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let mode = ctx.url.searchParams.get("mode");

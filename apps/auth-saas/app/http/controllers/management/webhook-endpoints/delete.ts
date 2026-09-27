@@ -40,7 +40,7 @@ export function createWebhookEndpointsDeleteAction(options: ManagementController
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "webhooks:write");
+			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
 			let endpointId = endpointIdParam(ctx);

@@ -35,7 +35,7 @@ export function createTenantReadAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantRead, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let tenant = await Tenant.findById(ctx.db, ctx.managementCaller.tenantId);

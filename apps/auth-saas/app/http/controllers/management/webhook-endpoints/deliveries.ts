@@ -54,7 +54,7 @@ export function createWebhookDeliveriesListAction(options: ManagementControllerO
 	return createAction(routes.webhookDeliveriesList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "webhooks:write");
+			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
 			let endpointId = endpointIdParam(ctx);
@@ -103,7 +103,7 @@ export function createWebhookDeliveriesReplayAction(options: ManagementControlle
 	return createAction(routes.webhookDeliveriesReplay, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "webhooks:write");
+			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
 			let deliveryId = deliveryIdParam(ctx);

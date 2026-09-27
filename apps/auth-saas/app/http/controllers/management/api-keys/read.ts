@@ -37,7 +37,7 @@ export function createApiKeysReadAction(options: ManagementControllerOptions) {
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "keys:write");
+			let refused = requireScope(ctx, "keys:write");
 			if (refused) return refused;
 
 			let keyId = keyIdParam(ctx);

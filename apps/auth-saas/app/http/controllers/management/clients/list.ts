@@ -40,7 +40,7 @@ export function createClientsListAction(options: ManagementControllerOptions) {
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "clients:write");
+			let refused = requireScope(ctx, "clients:write");
 			if (refused) return refused;
 
 			let paging = managementPaging.parse(ctx.url.searchParams);

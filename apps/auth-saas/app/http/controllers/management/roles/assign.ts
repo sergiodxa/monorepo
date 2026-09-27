@@ -67,7 +67,7 @@ export function createSubjectRolesAssignAction(options: ManagementControllerOpti
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

@@ -72,7 +72,7 @@ export function createSubjectsUpdateAction(options: ManagementControllerOptions)
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

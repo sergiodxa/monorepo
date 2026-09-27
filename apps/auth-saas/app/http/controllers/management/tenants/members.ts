@@ -56,7 +56,7 @@ export function createTenantMembersListAction(options: ManagementControllerOptio
 	return createAction(routes.tenantMembersList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let memberships = await Membership.listByTenant(ctx.db, ctx.managementCaller.tenantId);
@@ -84,7 +84,7 @@ export function createTenantMembersCreateAction(options: ManagementControllerOpt
 	return createAction(routes.tenantMembersCreate, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(CreateMemberBodySchema, await ctx.request.json().catch(() => null));
@@ -116,7 +116,7 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
 	return createAction(routes.tenantMembersUpdateRole, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let membershipId = membershipIdParam(ctx);
@@ -150,7 +150,7 @@ export function createTenantMembersRemoveAction(options: ManagementControllerOpt
 	return createAction(routes.tenantMembersRemove, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let membershipId = membershipIdParam(ctx);

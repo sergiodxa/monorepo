@@ -62,7 +62,7 @@ export function createClientsRegisterAction(options: ManagementControllerOptions
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "clients:write");
+			let refused = requireScope(ctx, "clients:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(RegisterClientBodySchema, await ctx.request.json().catch(() => null));

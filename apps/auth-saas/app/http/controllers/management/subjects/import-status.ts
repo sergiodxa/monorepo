@@ -45,7 +45,7 @@ export function createSubjectsImportStatusAction(options: ManagementControllerOp
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:read");
+			let refused = requireScope(ctx, "subjects:read");
 			if (refused) return refused;
 
 			let runId = importRunIdParam(ctx);

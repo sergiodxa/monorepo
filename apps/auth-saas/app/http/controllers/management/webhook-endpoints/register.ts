@@ -58,7 +58,7 @@ export function createWebhookEndpointsRegisterAction(options: ManagementControll
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "webhooks:write");
+			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(

@@ -64,7 +64,7 @@ export function createTenantDomainsListAction(options: ManagementControllerOptio
 	return createAction(routes.tenantDomainsList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let domains = await Domain.listByTenant(ctx.db, ctx.managementCaller.tenantId);
@@ -92,7 +92,7 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 	return createAction(routes.tenantDomainsAttach, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(AttachDomainBodySchema, await ctx.request.json().catch(() => null));
@@ -129,7 +129,7 @@ export function createTenantDomainsVerificationAction(options: ManagementControl
 	return createAction(routes.tenantDomainsVerification, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let domainId = domainIdParam(ctx);
@@ -154,7 +154,7 @@ export function createTenantDomainsRemoveAction(options: ManagementControllerOpt
 	return createAction(routes.tenantDomainsRemove, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let domainId = domainIdParam(ctx);

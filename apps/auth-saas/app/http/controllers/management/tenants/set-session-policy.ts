@@ -123,7 +123,7 @@ export function createTenantSessionPolicySetAction(options: ManagementController
 			requireEntitlement("session_policy"),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(

@@ -54,7 +54,7 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "audit:read");
+			let refused = requireScope(ctx, "audit:read");
 			if (refused) return refused;
 
 			let query = parseBody(AuditEventsListQuerySchema, Object.fromEntries(ctx.url.searchParams));

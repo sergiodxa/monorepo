@@ -59,7 +59,7 @@ export function createSubjectsExportStatusAction(options: ManagementControllerOp
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "export:read");
+			let refused = requireScope(ctx, "export:read");
 			if (refused) return refused;
 
 			let runId = exportRunIdParam(ctx);
@@ -75,8 +75,7 @@ export function createSubjectsExportStatusAction(options: ManagementControllerOp
 			};
 
 			let canDownload =
-				!run.include_credentials ||
-				requireScope(ctx.managementCaller, "export:credentials") === null;
+				!run.include_credentials || requireScope(ctx, "export:credentials") === null;
 
 			if (run.status === "completed" && run.report_key !== null && canDownload) {
 				let ticket = await mintTransferDownloadTicket(ctx.db, {

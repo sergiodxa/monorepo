@@ -50,7 +50,7 @@ export function createPermissionsListAction(options: ManagementControllerOptions
 	return createAction(routes.permissionsList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let result = await ctx.tenantStub.listPermissions();
@@ -93,7 +93,7 @@ export function createPermissionsDefineAction(options: ManagementControllerOptio
 	return createAction(routes.permissionsDefine, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(
@@ -134,7 +134,7 @@ export function createPermissionsRemoveAction(options: ManagementControllerOptio
 	return createAction(routes.permissionsRemove, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "members:write");
+			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
 			let query = parseBody(RemovePermissionQuerySchema, Object.fromEntries(ctx.url.searchParams));

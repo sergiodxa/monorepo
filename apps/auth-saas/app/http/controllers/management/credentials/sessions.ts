@@ -54,7 +54,7 @@ export function createSessionsListAction(options: ManagementControllerOptions) {
 	return createAction(routes.sessionsList, {
 		middleware: mountedMiddleware(options, "read"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "sessions:write");
+			let refused = requireScope(ctx, "sessions:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -103,7 +103,7 @@ export function createSessionsRevokeAction(options: ManagementControllerOptions)
 	return createAction(routes.sessionsRevoke, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "sessions:write");
+			let refused = requireScope(ctx, "sessions:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -140,7 +140,7 @@ export function createSessionsRevokeAllAction(options: ManagementControllerOptio
 	return createAction(routes.sessionsRevokeAll, {
 		middleware: mountedMiddleware(options, "write"),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "sessions:write");
+			let refused = requireScope(ctx, "sessions:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

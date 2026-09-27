@@ -39,7 +39,7 @@ export function createSubjectsReadAction(options: ManagementControllerOptions) {
 			managementRateLimit(options.limiter, { bucket: "read" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:read");
+			let refused = requireScope(ctx, "subjects:read");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);

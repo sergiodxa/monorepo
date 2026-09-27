@@ -42,7 +42,7 @@ export function createTenantMfaPolicySetAction(options: ManagementControllerOpti
 			managementRateLimit(options.limiter, { bucket: "write" }),
 		],
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "tenant:write");
+			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
 			let parsed = parseBody(SetMfaPolicyBodySchema, await ctx.request.json().catch(() => null));

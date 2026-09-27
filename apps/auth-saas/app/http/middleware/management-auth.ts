@@ -8,12 +8,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { BearerChallenge } from "@sdxc/auth/bearer-challenge";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { JWK } from "@sdxc/jwt";
 import { createContextKey } from "remix/router";
 
+import type { ManagementResourceServer } from "~/app/lib/management-resource";
+
 import { managementProblem } from "~/app/http/lib/problem";
+import { managementResourceServer } from "~/app/lib/management-resource";
 import { ManagementAccessToken } from "~/app/lib/management-token";
 import Membership from "~/app/models/membership";
 import { publishPlatformKeySet } from "~/app/models/platform-signing-key";
@@ -31,25 +35,56 @@ export interface ManagementCaller {
 
 export const ManagementCallerContext = createContextKey<ManagementCaller>();
 
+export const ManagementApiContext = createContextKey<ManagementResourceServer>();
+
 declare module "remix/router" {
 	interface RequestContext {
 		/** The caller this request was resolved to, and the scopes it carries. */
 		managementCaller: ManagementCaller;
+		/** The management API as a protected resource, which every refusal's challenge comes from. */
+		managementApi: ManagementResourceServer;
 	}
 }
 
 const CALLER_PROPERTY = { property: "managementCaller" } as const;
 
-function unauthorized(detail: string): Response {
-	return managementProblem("unauthorized", {
-		detail,
-	});
+const API_PROPERTY = { property: "managementApi" } as const;
+
+/** Why a request was refused, in the RFC 6750 terms its `WWW-Authenticate` challenge carries. */
+type Refusal = Pick<Partial<BearerChallenge>, "error" | "scope">;
+
+/**
+ * A `401` whose challenge points at the resource metadata (RFC 9728 §5.1), so a client
+ * holding nothing but the API URL learns where to get a token. A request that presented
+ * no token gets a challenge with no `error`, per RFC 6750 §3.1.
+ */
+function unauthorized(api: ManagementResourceServer, detail: string, refusal?: Refusal): Response {
+	return managementProblem(
+		"unauthorized",
+		{ detail },
+		{ headers: { "WWW-Authenticate": api.challenge(refusal) } },
+	);
 }
 
-function forbidden(detail: string): Response {
-	return managementProblem("forbidden", {
-		detail,
-	});
+/**
+ * A `403` carrying `insufficient_scope`: the credential authenticated but reaches
+ * nothing at this tenant, and `scope` names what it would need when that is one scope.
+ *
+ * @param api - The resource server the challenge points at.
+ * @param detail - The problem's human-readable explanation.
+ * @param scope - The scopes the route requires, for a scope refusal.
+ * @returns The `problem+json` refusal.
+ */
+export function forbidden(
+	api: ManagementResourceServer,
+	detail: string,
+	scope: string[] = [],
+): Response {
+	return managementProblem(
+		"forbidden",
+		{ detail },
+		{ headers: { "WWW-Authenticate": api.challenge({ error: "insufficient_scope", scope }) } },
+	);
 }
 
 export interface ManagementAuthOptions {
@@ -68,6 +103,7 @@ export interface ManagementAuthOptions {
 /** Verifies a presented bearer token against the platform's own published keys and issuer. */
 async function resolveBearerCaller(
 	ctx: RequestContext,
+	api: ManagementResourceServer,
 	issuer: string,
 	token: string,
 ): Promise<ManagementCaller | { error: Response }> {
@@ -81,7 +117,9 @@ async function resolveBearerCaller(
 			algorithms: [JWK.Algorithm.ES256],
 		});
 	} catch {
-		return { error: unauthorized("The bearer token did not verify.") };
+		return {
+			error: unauthorized(api, "The bearer token did not verify.", { error: "invalid_token" }),
+		};
 	}
 
 	let scopes = verified.scope.split(" ").filter(Boolean);
@@ -93,7 +131,8 @@ async function resolveBearerCaller(
  * route's own params, so it is mounted on each tenant-scoped route itself —
  * the same per-route placement `scimGate` already uses — rather than the
  * router's global chain, where params from a route not yet matched are not
- * there to read.
+ * there to read. Publishes the management API's resource server as
+ * `ctx.managementApi`, so a route's own scope refusal carries the same challenge.
  *
  * @param options - The management API's own issuer, and how to resolve a dashboard
  * session's subject id.
@@ -105,19 +144,23 @@ async function resolveBearerCaller(
  * });
  */
 export function managementAuth(options: ManagementAuthOptions): Middleware {
+	let api = managementResourceServer(options.issuer);
+
 	return async (ctx, next) => {
+		ctx.set(ManagementApiContext, api, API_PROPERTY);
+
 		let pathTenantId = typeof ctx.params.tenantId === "string" ? ctx.params.tenantId : null;
 		let authorization = ctx.request.headers.get("Authorization");
 
 		if (authorization?.startsWith("Bearer ")) {
 			let token = authorization.slice("Bearer ".length).trim();
-			if (!token) return unauthorized("A bearer token is required.");
+			if (!token) return unauthorized(api, "A bearer token is required.");
 
-			let resolved = await resolveBearerCaller(ctx, options.issuer, token);
+			let resolved = await resolveBearerCaller(ctx, api, options.issuer, token);
 			if ("error" in resolved) return resolved.error;
 
 			if (pathTenantId !== null && pathTenantId !== resolved.tenantId) {
-				return forbidden("This credential is bound to a different tenant.");
+				return forbidden(api, "This credential is bound to a different tenant.");
 			}
 
 			ctx.set(ManagementCallerContext, resolved, CALLER_PROPERTY);
@@ -125,16 +168,16 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 		}
 
 		if (pathTenantId === null) {
-			return unauthorized("A bearer token or an authenticated dashboard session is required.");
+			return unauthorized(api, "A bearer token or an authenticated dashboard session is required.");
 		}
 
 		let subjectId = await options.resolveDashboardSubjectId(ctx);
 		if (!subjectId) {
-			return unauthorized("A bearer token or an authenticated dashboard session is required.");
+			return unauthorized(api, "A bearer token or an authenticated dashboard session is required.");
 		}
 
 		let membership = await Membership.findByTenantAndSubject(ctx.db, pathTenantId, subjectId);
-		if (!membership) return forbidden("This member does not belong to this tenant.");
+		if (!membership) return forbidden(api, "This member does not belong to this tenant.");
 
 		ctx.set(
 			ManagementCallerContext,

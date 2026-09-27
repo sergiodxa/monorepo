@@ -119,6 +119,7 @@ import notFound from "~/app/http/controllers/not-found";
 import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/management-mail";
+import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { createDatabase } from "~/app/lib/database";
 import { createHostnameClient } from "~/app/lib/hostnames";
@@ -145,6 +146,9 @@ async function resolveDashboardSubjectId(ctx: RequestContext): Promise<string | 
 	return resolved.status === "active" ? resolved.subjectId : null;
 }
 
+/** The management API's own origin: its issuer, and its RFC 9728 resource identifier. */
+let issuer = `https://api.${env.PLATFORM_DOMAIN}`;
+
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
 	trailingSlash,
@@ -152,6 +156,7 @@ let globalMiddleware: Middleware[] = [
 	asyncContext(),
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
+	managementWellKnown(issuer),
 	formData() as Middleware,
 	apiVersioning(),
 	mail(),
@@ -184,7 +189,7 @@ managementRouter.map(routes.invitationsAccept, invitationsAccept);
  * factory shares, assembled once here from the platform's own bindings.
  */
 let controllerOptions: ManagementControllerOptions = {
-	issuer: `https://api.${env.PLATFORM_DOMAIN}`,
+	issuer,
 	resolveDashboardSubjectId,
 	limiter: env.MANAGEMENT_RATE_LIMITER,
 	resolveStub: (tenantId) => env.TENANT.getByName(tenantId),

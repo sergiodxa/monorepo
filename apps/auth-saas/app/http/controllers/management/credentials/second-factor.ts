@@ -56,7 +56,7 @@ export function createSecondFactorResetAction(options: ManagementControllerOptio
 	return createAction(routes.secondFactorReset, {
 		middleware: mountedMiddleware(options),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
@@ -95,7 +95,7 @@ export function createSecondFactorTrustedDevicesRevokeAction(options: Management
 	return createAction(routes.secondFactorTrustedDevicesRevoke, {
 		middleware: mountedMiddleware(options),
 		handler: async (ctx) => {
-			let refused = requireScope(ctx.managementCaller, "subjects:write");
+			let refused = requireScope(ctx, "subjects:write");
 			if (refused) return refused;
 
 			let subjectId = subjectIdParam(ctx);
