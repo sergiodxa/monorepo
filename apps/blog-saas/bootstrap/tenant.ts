@@ -141,6 +141,11 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 				 */
 				bootstrapFirstAdmin: false,
 			},
+			/**
+			 * Hands the engine's post-response work (WebSub hub pings) to the runtime, which
+			 * keeps the object alive until each promise settles.
+			 */
+			waitUntil: (promise) => this.ctx.waitUntil(promise),
 		});
 		await this.#app.migrate();
 	}
