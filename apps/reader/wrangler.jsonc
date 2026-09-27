@@ -26,6 +26,18 @@
 	// production; `.env.example` carries the full list. Only bindings need an entry in
 	// this file.
 
+	// The key notification unsubscribe links are signed with, kept apart from the session
+	// secret so rotating one leaves the other standing. Create it once per account with
+	// `bunx wrangler secrets-store secret create <store_id> --name READER_UNSUBSCRIBE_SECRET
+	// --scopes workers --remote` before the deploy that reads it.
+	"secrets_store_secrets": [
+		{
+			"binding": "UNSUBSCRIBE_SECRET",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "READER_UNSUBSCRIBE_SECRET",
+		},
+	],
+
 	// The daily billing reconciliation, which re-reads what the payment platform says
 	// about every reader who has ever reached a checkout. It is what recovers a delivery
 	// nobody received, and it runs at a quiet hour because nothing waits on it.

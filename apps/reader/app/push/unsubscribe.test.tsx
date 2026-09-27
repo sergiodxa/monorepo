@@ -1,21 +1,35 @@
 /**
  * Checks the one-click way out of the email channel: a link signed for a reader names that
- * reader and nobody else, a link this app did not sign names nobody, and a notification email
+ * reader and nobody else, links mailed under the session secret keep working, a link neither
+ * key signed names nobody, and a notification email
  * carries the headers a mailbox provider draws its unsubscribe button from.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
-import { unwrap } from "@sdxc/result";
+import { signUnsubscribeToken, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
+import { UNSUBSCRIBE_SECRET, UNSUBSCRIBE_SECRET_VALUE } from "~/app/lib/test/unsubscribe-secret";
 import { NotificationEmail } from "~/app/push/copy";
 import { unsubscribeUrl, unsubscribingReader } from "~/app/push/unsubscribe";
+
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	return { ...original, env: withUnsubscribeSecret(original.env) };
+});
+
+afterEach(() => UNSUBSCRIBE_SECRET.reset());
+
+/** The purpose every link is signed under, with either key. */
+const PURPOSE = { purpose: "reader-notifications-unsubscribe:v1:" };
 
 /** One reader's OIDC subject, which is what a link is signed for. */
 const SUBJECT = "01J0READER0000000000000000";
@@ -43,6 +57,52 @@ describe("the unsubscribe link", () => {
 
 		expect(await unsubscribingReader(tampered)).toBeNull();
 		expect(await unsubscribingReader("not-a-token")).toBeNull();
+	});
+
+	test("is signed with the dedicated key rather than the session secret", async () => {
+		let token = tokenOf(unwrap(await unsubscribeUrl(SUBJECT, APP_URL)));
+
+		let dedicated = await verifyUnsubscribeToken(UNSUBSCRIBE_SECRET_VALUE, token, PURPOSE);
+		let session = await verifyUnsubscribeToken(env.COOKIE_SESSION_SECRET, token, PURPOSE);
+
+		expect(isSuccess(dedicated) && dedicated.data.subject).toBe(SUBJECT);
+		expect(isFailure(session)).toBe(true);
+	});
+
+	test("is not built while the dedicated key cannot be read", async () => {
+		UNSUBSCRIBE_SECRET.fail();
+
+		expect(isFailure(await unsubscribeUrl(SUBJECT, APP_URL))).toBe(true);
+	});
+
+	test("still names the reader of a link mailed under the session secret, and counts it", async () => {
+		let token = unwrap(
+			await signUnsubscribeToken(
+				env.COOKIE_SESSION_SECRET,
+				{ subject: SUBJECT, list: "notifications" },
+				PURPOSE,
+			),
+		);
+		let record: Record<string, unknown> = {};
+		let log = new Log({ kind: "request", sink: (emitted) => void (record = emitted) });
+
+		expect(await log.run(() => unsubscribingReader(token))).toBe(SUBJECT);
+		expect(JSON.stringify(record)).toContain("legacy_secret");
+
+		UNSUBSCRIBE_SECRET.fail();
+		expect(await unsubscribingReader(token)).toBe(SUBJECT);
+	});
+
+	test("names nobody for a token signed with neither key", async () => {
+		let token = unwrap(
+			await signUnsubscribeToken(
+				"some-other-key",
+				{ subject: SUBJECT, list: "notifications" },
+				PURPOSE,
+			),
+		);
+
+		expect(await unsubscribingReader(token)).toBeNull();
 	});
 
 	test("names nobody for a token the same key signed for another purpose or list", async () => {

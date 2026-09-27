@@ -418,14 +418,22 @@ with an id, a signed token needs no storage.
   on PASS, 1 on FAIL. This uses production as a visitor would, creating one lead that the
   email's own unsubscribe link removes; a local `vite dev` sends for real too, since the
   `send_email` binding is `remote: true`, but needs the same trial flow and gains nothing
-- Uptime: digest tokens stay signed with `COOKIE_SESSION_SECRET` under
-  `purpose: "digest-unsubscribe:v1:"` instead of a new `UNSUBSCRIBE_SECRET`, so every delivered
-  link keeps verifying and no secret has to be provisioned; the route stays
+- Uptime: digest tokens are signed with a dedicated key, the `UNSUBSCRIBE_SECRET` Secrets
+  Store binding (secret `UPTIME_UNSUBSCRIBE_SECRET`), under `purpose: "digest-unsubscribe:v1:"`;
+  an unreadable key skips that member's digest for the run. The route stays
   `/digests/unsubscribe/:token`. Lists carry ids only (`trial.`, `team-daily-digest.` and
-  `team-weekly-digest.` under the app's host); a translated `name` would need per-recipient copy
-- Reader adoption: tokens are signed with `COOKIE_SESSION_SECRET` under the purpose
+  `team-weekly-digest.` under the app's host); a translated `name` would need per-recipient copy.
+  Trial emails carry the lead's stored random token rather than a signed one, so no key is involved
+- Reader adoption: tokens are signed with a dedicated key, the `UNSUBSCRIBE_SECRET` Secrets
+  Store binding (secret `READER_UNSUBSCRIBE_SECRET`), under the purpose
   `reader-notifications-unsubscribe:v1:` and the list `notifications`, for the reader's OIDC
-  subject, as uptime does, so no secret has to be provisioned. A deployment with the key unset
-  sends the email without the headers and refuses every token. The endpoint is
+  subject. An unreadable key sends the email without the headers. The endpoint is
   `/notifications/unsubscribe/:token`; the `List-Id` is `notifications.<APP_URL host>`, named
   in the reader's locale
+- Both apps: links mailed before the dedicated key were signed with `COOKIE_SESSION_SECRET`
+  under the same purpose, and unsubscribe tokens carry no expiry, so verification tries the
+  dedicated key first and then `COOKIE_SESSION_SECRET`. Each fallback hit adds to the
+  `unsubscribe.legacy_secret` counter on the request's wide event. The fallback (and the test
+  cases for it) is removable once that counter has been zero in both apps for 90 consecutive
+  days of logs, and in any case once `COOKIE_SESSION_SECRET` is rotated, which retires those
+  links on its own

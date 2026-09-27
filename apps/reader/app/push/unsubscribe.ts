@@ -1,17 +1,19 @@
 /**
- * The one-click way out of the email channel: a link signed for one reader, which a mailbox
- * provider's button and a person's click both reach without a session, and the check that
- * turns such a link back into the reader it was signed for.
+ * The one-click way out of the email channel: a link signed for one reader under a key of its
+ * own from Secrets Store, which a mailbox provider's button and a person's click both reach
+ * without a session, and the check that turns such a link back into that reader.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import type { Result } from "@sdxc/result";
 
+import { currentLog } from "@sdxc/logger";
 import { MailError } from "@sdxc/mail";
 import { signUnsubscribeToken, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import routes from "~/routes/web";
@@ -20,22 +22,27 @@ import routes from "~/routes/web";
 const NOTIFICATIONS_LIST = "notifications";
 
 /**
- * The domain prefix every signature covers, which keeps these links apart from the session
- * cookies the same key signs: neither can ever be read as the other.
+ * The domain prefix every signature covers, under either key. It is the prefix every
+ * delivered link was signed with, which is what lets those links keep verifying.
  */
 const PURPOSE = "reader-notifications-unsubscribe:v1:";
 
 /**
- * The key every link is signed under, the session cookie's: a link then needs nothing new
- * provisioned, and rotating the key retires delivered links alongside every session.
+ * The dedicated unsubscribe key, or `null` when the Secrets Store binding cannot be read, so
+ * signing fails and verification falls through to the session secret.
  */
-function secret(): string {
-	return env.COOKIE_SESSION_SECRET;
+async function readUnsubscribeSecret(): Promise<string | null> {
+	try {
+		return (await env.UNSUBSCRIBE_SECRET.get()) || null;
+	} catch {
+		return null;
+	}
 }
 
 /**
  * The address a notification email's unsubscribe button and link point at, signed for one
- * reader. A deployment with no key set gets a failure, and sends its email without one.
+ * reader under the dedicated key. An unreadable key is a failure, and the email goes out
+ * without a link.
  *
  * @param subject - The reader's OIDC subject, which the token carries instead of an address.
  * @param appUrl - Where this app answers, which the link is absolute against.
@@ -44,10 +51,11 @@ export async function unsubscribeUrl(
 	subject: string,
 	appUrl: string,
 ): Promise<Result<string, MailError>> {
-	if (!secret()) return failure(new MailError("COOKIE_SESSION_SECRET is not set"));
+	let secret = await readUnsubscribeSecret();
+	if (!secret) return failure(new MailError("The UNSUBSCRIBE_SECRET binding could not be read."));
 
 	let token = await signUnsubscribeToken(
-		secret(),
+		secret,
 		{ subject, list: NOTIFICATIONS_LIST },
 		{ purpose: PURPOSE },
 	);
@@ -57,16 +65,28 @@ export async function unsubscribeUrl(
 }
 
 /**
- * The reader a link was signed for, or `null` for anything this app did not sign, including
- * every link while no key is set, so the endpoint fails closed.
+ * The reader a link was signed for, checked under the dedicated key and then under
+ * `COOKIE_SESSION_SECRET`, which signed every link mailed before it; each fallback hit counts
+ * as `unsubscribe.legacy_secret`, and the fallback goes once that stays zero for 90 days.
  *
  * @param token - The path segment the link arrived with.
+ * @returns The reader's subject, or `null` for anything neither key signed.
  */
 export async function unsubscribingReader(token: string): Promise<string | null> {
-	if (!secret()) return null;
+	let secret = await readUnsubscribeSecret();
+	if (secret) {
+		let claims = await verifyUnsubscribeToken(secret, token, { purpose: PURPOSE });
+		if (isSuccess(claims)) return readerOf(claims.data);
+	}
 
-	let claims = await verifyUnsubscribeToken(secret(), token, { purpose: PURPOSE });
-	if (isFailure(claims) || claims.data.list !== NOTIFICATIONS_LIST) return null;
+	if (!env.COOKIE_SESSION_SECRET) return null;
+	let legacy = await verifyUnsubscribeToken(env.COOKIE_SESSION_SECRET, token, { purpose: PURPOSE });
+	if (isFailure(legacy)) return null;
+	currentLog()?.inc("unsubscribe.legacy_secret");
+	return readerOf(legacy.data);
+}
 
-	return claims.data.subject;
+/** The subject of claims for the notifications list, or `null` for a token naming another list. */
+function readerOf(claims: UnsubscribeToken.Claims): string | null {
+	return claims.list === NOTIFICATIONS_LIST ? claims.subject : null;
 }

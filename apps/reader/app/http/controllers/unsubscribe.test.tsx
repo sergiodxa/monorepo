@@ -25,6 +25,12 @@ const SUBJECT = "01J0READER0000000000000000";
 let store: UserStoreDouble = createUserStoreDouble();
 let reached: string[] = [];
 
+vi.mock("cloudflare:workers", async (importOriginal) => {
+	let original = await importOriginal<typeof import("cloudflare:workers")>();
+	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	return { ...original, env: withUnsubscribeSecret(original.env) };
+});
+
 vi.doMock("~/database/user-do", () => ({
 	userStore: (subject: string) => {
 		reached.push(subject);
