@@ -34,7 +34,7 @@ describe("GET /.well-known/security.txt", () => {
 
 		let parsed = parse(await response.text());
 		if (isFailure(parsed)) throw parsed.error;
-		expect(parsed.data.contact.map(String)).toEqual(["mailto:security@sergiodxa.com"]);
+		expect(parsed.data.contact.map(String)).toEqual(["mailto:hello+security@sergiodxa.com"]);
 		expect(parsed.data.canonical.map(String)).toEqual([
 			"https://reader.sergiodxa.com/.well-known/security.txt",
 		]);

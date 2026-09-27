@@ -18,7 +18,7 @@ import { securityTxt } from "@sdxc/well-known/security-txt";
  * domain `wrangler.jsonc` routes, which is the one address the file is published at.
  */
 export const SECURITY_TXT: SecurityTxt = {
-	contact: [new URL("mailto:security@sergiodxa.com")],
+	contact: [new URL("mailto:hello+security@sergiodxa.com")],
 	expires: new Date("2027-09-26T00:00:00Z"),
 	encryption: [],
 	acknowledgments: [],

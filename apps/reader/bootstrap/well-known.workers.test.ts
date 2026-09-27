@@ -20,7 +20,7 @@ describe("GET /.well-known/security.txt", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await response.text()).toContain("Contact: mailto:security@sergiodxa.com");
+		expect(await response.text()).toContain("Contact: mailto:hello+security@sergiodxa.com");
 		expect(response.headers.get("x-content-type-options")).toBe("nosniff");
 	});
 });
