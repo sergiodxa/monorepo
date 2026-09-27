@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/security-headers",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware",
 	"license": "MIT",
 	"type": "module",

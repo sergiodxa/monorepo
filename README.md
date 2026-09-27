@@ -149,7 +149,7 @@ Run from the repository root:
 | [saml](packages/saml)                                           | SAML 2.0 service provider: verify a signed assertion and the metadata around it                                   | ✅  |
 | [sample](packages/sample)                                       | Seeded generation of believable people, places, prose, numbers and identifiers                                    | ✅  |
 | [scim](packages/scim)                                           | SCIM 2.0 resources, filters, PATCH operations and discovery documents                                             |     |
-| [security-headers](packages/security-headers)                   | Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware                  |     |
+| [security-headers](packages/security-headers)                   | Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware                  | ✅  |
 | [semver](packages/semver)                                       | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                                      | ✅  |
 | [seo](packages/seo)                                             | Canonical URLs, schema.org builders and head metadata                                                             | ✅  |
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                                           | ✅  |

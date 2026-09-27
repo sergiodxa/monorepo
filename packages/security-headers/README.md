@@ -2,7 +2,15 @@
 
 Typed Content-Security-Policy, Permissions-Policy and response security headers, with middleware.
 
-## Overview
+## Installation
+
+```bash
+npm add @sdxc/security-headers
+```
+
+The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router, and parsers
+return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values. Both install
+alongside this package.
 
 A browser enforces a set of response headers describing what a document may do: where its
 scripts, styles, images and frames come from (`Content-Security-Policy`), whether it is reached
@@ -15,8 +23,9 @@ a typed object an app writes once and reviews in one place.
 The CSP model writes keywords unquoted and quotes them on output, so a missing quote is
 impossible, and a `"nonce"` source is replaced by a per-response nonce the middleware generates
 on first read. The Permissions-Policy and `Reporting-Endpoints` go through the RFC 9651
-serializer in `@sdxc/structured-fields`. `X-Frame-Options` is derived from `frameAncestors`, so
-the two can never disagree.
+serializer in
+[`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields).
+`X-Frame-Options` is derived from `frameAncestors`, so the two can never disagree.
 
 Serialization fails toward the stricter policy: a CSP source that would break out of its
 directive is dropped, a source list left empty is written as `'none'`, a Permissions-Policy
@@ -24,6 +33,8 @@ origin RFC 9651 cannot carry denies its feature, and HSTS `preload` is written o
 preload lists would accept it.
 
 ## Usage
+
+### Install The Policy
 
 ```typescript
 import type { SecurityHeaders } from "@sdxc/security-headers";
@@ -47,7 +58,7 @@ const SECURITY_POLICY: SecurityHeaders.Policy = {
 };
 
 let router = createRouter({
-	middleware: [securityHeaders(SECURITY_POLICY), renderWith(render)],
+	middleware: [securityHeaders(SECURITY_POLICY)], // place it right before the renderer
 });
 ```
 
@@ -66,13 +77,34 @@ x-content-type-options: nosniff
 
 A response that never read the nonce is sent with `script-src 'self'`.
 
+### Write Headers Without The Middleware
+
+```typescript
+import { apply } from "@sdxc/security-headers";
+import { generateNonce } from "@sdxc/security-headers/csp";
+
+let headers = new Headers({ "content-type": "text/html" });
+apply(headers, SECURITY_POLICY, { url: new URL(request.url), nonce: generateNonce() });
+```
+
+### Read A Policy Back
+
+```typescript
+import { unwrap } from "@sdxc/result";
+import { parse } from "@sdxc/security-headers/csp";
+
+let [policy] = unwrap(parse("default-src 'self'; frame-src https://challenges.example.com"));
+policy?.directives.frameSrc; // ["https://challenges.example.com"]
+```
+
 ## API
 
 ### `@sdxc/security-headers`
 
 #### `entries(policy, options): Array<[name, value]>`
 
-Every header the policy produces, lowercase names in a stable order. `options.url` gates HSTS
+Every header the policy produces, lowercase names in a stable order. `options`
+(`SecurityHeaders.ApplyOptions`) takes the request `url`, which gates HSTS
 (written only for `https:`), and `options.nonce` is substituted for every `"nonce"` source in
 both CSP headers. `x-content-type-options: nosniff` is written unless `noSniff` is `false`.
 `X-Frame-Options` is `DENY` for `frameAncestors: ["none"]` (or `[]`), `SAMEORIGIN` for
@@ -110,7 +142,9 @@ when `maxAge` is at least a year and `includeSubDomains` is set.
 | `reportingEndpoints`                  | `Reporting-Endpoints`                      |
 
 `SecurityHeaders.Override` is the same shape with every field nullable and the CSP fields
-taking a `CSP.Override`.
+taking a `CSP.Override`. `SecurityHeaders.StrictTransportSecurity` is `{ maxAge,
+includeSubDomains?, preload? }` and `SecurityHeaders.ReferrerPolicy` the policy tokens. The
+`CSP` and `PermissionsPolicy` namespaces are re-exported here too.
 
 ### `@sdxc/security-headers/csp`
 
@@ -119,7 +153,7 @@ taking a `CSP.Override`.
 Writes one policy in the order the object lists its directives. Keywords (`self`, `none`,
 `unsafe-inline`, `strict-dynamic`, `wasm-unsafe-eval` …), `nonce-…` and `sha256-…` sources are
 quoted; schemes and hosts are written as-is. `"nonce"` becomes `'nonce-<options.nonce>'`, or is
-dropped without a nonce. An empty list is written as `'none'`.
+dropped without a nonce (`CSP.StringifyOptions`). An empty list is written as `'none'`.
 
 ```typescript
 stringify({ scriptSrc: ["self", "nonce"], objectSrc: [] }, { nonce: "cmFuZG9t" });
@@ -128,21 +162,21 @@ stringify({ scriptSrc: ["self", "nonce"], objectSrc: [] }, { nonce: "cmFuZG9t" }
 
 #### `parse(value): Result<CSP.Parsed[], CSPParseError>`
 
-Reads a header value into one entry per comma-joined policy. Names and keywords are lowercased
+Reads a header value into one `CSP.Parsed` (`{ directives, unknown }`) per comma-joined policy. Names and keywords are lowercased
 and unquoted; a repeated directive keeps its first value and the repeat lands in `unknown`, as
 does any directive the model does not carry, verbatim. A character outside printable ASCII or a
-directive name outside `[A-Za-z0-9-]` fails with the error's `position`.
+directive name outside `[A-Za-z0-9-]` fails with a `CSPParseError` whose `position` says where.
 
 ```typescript
-let result = parse(response.headers.get("content-security-policy") ?? "");
-if (isFailure(result)) throw result.error;
-expect(result.data[0]?.directives.scriptSrc).toContain("https://challenges.cloudflare.com");
+let result = parse("script-src 'self' https://cdn.example.com, img-src *");
+// success: [{ directives: { scriptSrc: ["self", "https://cdn.example.com"] }, unknown: {} },
+//           { directives: { imgSrc: ["*"] }, unknown: {} }]
 ```
 
 #### `merge(base, override): CSP.Directives`
 
-Replaces each directive the override names and removes those it sets to `null`, keeping the
-base's order.
+Replaces each directive the override (`CSP.Override`) names and removes those it sets to
+`null`, keeping the base's order.
 
 #### `generateNonce(): string`
 
@@ -155,13 +189,15 @@ base's order.
 `childSrc`, `workerSrc`, `manifestSrc`, `baseUri`, `formAction` and `frameAncestors` take source
 lists; `sandbox` takes `true` or tokens; `reportTo` an endpoint name; `reportUri` URLs;
 `upgradeInsecureRequests` `true`; `requireTrustedTypesFor` `["script"]`; `trustedTypes` policy
-names plus the `none` and `allow-duplicates` keywords.
+names plus the `none` and `allow-duplicates` keywords. `CSP.Keyword`, `CSP.Source`,
+`CSP.SourceList` and `CSP.SandboxToken` type the values.
 
 ### `@sdxc/security-headers/permissions-policy`
 
 #### `stringify(policy): Result<string, StructuredFieldStringifyError>`
 
-Writes `[]` as `()`, `"*"` as the bare token `*`, `self` and `src` as tokens and origins as
+Writes a `PermissionsPolicy.Policy`, a map from feature name to a `PermissionsPolicy.Allowlist`:
+`[]` as `()`, `"*"` as the bare token `*`, `self` and `src` as tokens and origins as
 strings. Feature names keep their wire spelling (`browsing-topics`), since they are an open
 registry.
 
@@ -184,6 +220,8 @@ types and malformed CSP reports skipped), `application/csp-report` legacy docume
 one labelled `application/json`. Each violation carries `documentURL`, `blockedURL`,
 `effectiveDirective`, `disposition`, `sample`, `sourceFile` and `lineNumber`; empty strings
 become `null`, and an older legacy report's `violated-directive` supplies the directive.
+`CSPReport.Violation` is the violation type. An unsupported media type or an unreadable body
+fails with a `CSPReportParseError`.
 
 ### `@sdxc/security-headers/middleware`
 
@@ -199,16 +237,15 @@ requests, and a `101 Switching Protocols` response passes through untouched.
 - `ctx.securityHeaders.policy` - the policy the response will be sent with.
 - `ctx.securityHeaders.override(patch)` - patches this response's policy.
 
-`SecurityHeadersKey` is the context key, for code that reads the state with `ctx.get`.
+`SecurityHeadersContext` types that state, and `SecurityHeadersKey` is the context key, for
+code that reads it with `ctx.get`.
 
 #### `securityHeadersOverride(patch): Middleware`
 
 Controller or action middleware applying `patch` for the routes it guards; a pass-through when
 `securityHeaders` is not installed.
 
-## Patterns
-
-### Pattern: An Inline Script With A Nonce
+## Pattern: An Inline Script With A Nonce
 
 ```tsx
 import { createAction } from "remix/router";
@@ -231,7 +268,7 @@ export default createAction(routes.formPost, {
 The policy lists `"nonce"` in `scriptSrc`; the response carries `'nonce-…'` because the
 handler read it.
 
-### Pattern: The Managed Import Map
+## Pattern: The Managed Import Map
 
 `remix/ui` keeps the attributes of `<ImportMap>` on the `<script type="importmap">` it writes,
 and its client runtime copies that script's nonce onto every import map it appends later. A
@@ -248,10 +285,11 @@ import { ImportMap } from "remix/ui/server";
 Without `<ImportMap>`, the client-entry import map is written with no attributes and a
 nonce-based `script-src` blocks it.
 
-### Pattern: A Route That Must Be Framed
+## Pattern: A Route That Must Be Framed
 
 ```typescript
 import { securityHeadersOverride } from "@sdxc/security-headers/middleware";
+import { createAction } from "remix/router";
 
 export default createAction(routes.embed, {
 	middleware: [securityHeadersOverride({ contentSecurityPolicy: { frameAncestors: ["*"] } })],
@@ -263,11 +301,13 @@ export default createAction(routes.embed, {
 
 The derived `X-Frame-Options` disappears with the `'none'` it came from.
 
-### Pattern: Report-Only Rollout And A Report Route
+## Pattern: Report-Only Rollout And A Report Route
 
 ```typescript
-import { parseReports } from "@sdxc/security-headers/reports";
+import type { SecurityHeaders } from "@sdxc/security-headers";
+
 import { isFailure } from "@sdxc/result";
+import { parseReports } from "@sdxc/security-headers/reports";
 
 const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicyReportOnly: {
@@ -281,28 +321,23 @@ const SECURITY_POLICY: SecurityHeaders.Policy = {
 router.post(routes.reports.csp, async (ctx) => {
 	let reports = await parseReports(ctx.request);
 	if (isFailure(reports)) return new Response(null, { status: 400 });
-	for (let violation of reports.data) ctx.log.warn("csp violation", violation);
+	for (let violation of reports.data) await recordViolation(violation);
 	return new Response(null, { status: 204 });
 });
 ```
 
-### Pattern: Asserting A Policy In A Test
+## Pattern: Asserting A Policy In A Test
 
 ```typescript
+import { unwrap } from "@sdxc/result";
 import { parse } from "@sdxc/security-headers/csp";
+import { expect } from "vitest";
 
 let [policy] = unwrap(parse(response.headers.get("content-security-policy") ?? ""));
-expect(policy?.directives.frameSrc).toEqual(["https://challenges.cloudflare.com"]);
+expect(policy?.directives.frameSrc).toEqual(["https://challenges.example.com"]);
 ```
 
-## Related Packages
-
-- [`@sdxc/structured-fields`](../structured-fields/README.md) - the RFC 9651 serializer behind
-  Permissions-Policy and Reporting-Endpoints
-- [`@sdxc/crypto`](../crypto/README.md) - the random bytes and base64 behind `generateNonce`
-- [`@sdxc/result`](../result/README.md) - the `Result` every parser returns
-
-## Tips
+## Pattern: Choosing Sources That Hold Up
 
 - Keep `styleSrc: ["self", "unsafe-inline"]` and never put `"nonce"` in `styleSrc`:
   `remix/ui` emits one `<style>` per `css()` mixin without a nonce, and a nonce in `style-src`
@@ -313,3 +348,33 @@ expect(policy?.directives.frameSrc).toEqual(["https://challenges.cloudflare.com"
   `contentSecurityPolicy` once the reports are quiet.
 - `'strict-dynamic'` makes browsers ignore `'self'` and host sources, so every `<script src>`
   would need the nonce too; adopt it deliberately.
+
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/security-headers": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
