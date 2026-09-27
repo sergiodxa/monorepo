@@ -38,6 +38,7 @@ import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
 import createNoWWWMiddleware from "~/app/http/middleware/no-www";
+import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
@@ -249,19 +250,31 @@ export default function createApplication(env: App.Env) {
 	);
 	router.map(
 		routes.cms.articles,
-		lazy(() => import("~/app/http/controllers/cms/articles"), CMS_WRITE_GUARDS),
+		lazy(
+			() => import("~/app/http/controllers/cms/articles"),
+			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.articles)],
+		),
 	);
 	router.map(
 		routes.cms.tutorials,
-		lazy(() => import("~/app/http/controllers/cms/tutorials"), CMS_WRITE_GUARDS),
+		lazy(
+			() => import("~/app/http/controllers/cms/tutorials"),
+			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.tutorials)],
+		),
 	);
 	router.map(
 		routes.cms.bookmarks,
-		lazy(() => import("~/app/http/controllers/cms/bookmarks"), CMS_WRITE_GUARDS),
+		lazy(
+			() => import("~/app/http/controllers/cms/bookmarks"),
+			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.bookmarks)],
+		),
 	);
 	router.map(
 		routes.cms.glossary,
-		lazy(() => import("~/app/http/controllers/cms/glossary"), CMS_WRITE_GUARDS),
+		lazy(
+			() => import("~/app/http/controllers/cms/glossary"),
+			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed)],
+		),
 	);
 	router.map(
 		routes.cms.redirects,

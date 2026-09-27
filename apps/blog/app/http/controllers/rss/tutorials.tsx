@@ -13,6 +13,7 @@ import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { advertiseHub } from "~/app/services/websub";
 import routes from "~/routes/web";
 
 /**
@@ -33,10 +34,13 @@ export default createAction(
 	async (ctx) => {
 		let tutorials = await TutorialPost.findAll(ctx.db, { includePreview: false });
 
+		let hub = advertiseHub(new URL(routes.rss.tutorials.href(), ctx.url).toString());
+
 		let rss = new RSS({
 			title: "Tutorials — Sergio Xalambrí",
 			description: "Tutorials by Sergio Xalambrí.",
 			link: new URL(routes.tutorials.href(), ctx.url).toString(),
+			atomLink: hub.atomLink,
 		});
 
 		for (let tutorial of tutorials) {
@@ -53,6 +57,6 @@ export default createAction(
 			});
 		}
 
-		return xml(rss.toString());
+		return xml(rss.toString(), { headers: hub.headers });
 	},
 );

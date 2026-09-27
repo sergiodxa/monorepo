@@ -13,6 +13,7 @@ import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
+import { advertiseHub } from "~/app/services/websub";
 import routes from "~/routes/web";
 
 /**
@@ -33,6 +34,8 @@ export default createAction(
 	async (ctx) => {
 		let articles = await ArticlePost.findAll(ctx.db, { includePreview: false });
 
+		let hub = advertiseHub(new URL(routes.rss.articles.href(), ctx.url).toString());
+
 		/**
 		 * Channel `link` targets the human-readable articles index page.
 		 */
@@ -40,6 +43,7 @@ export default createAction(
 			title: "Articles — Sergio Xalambrí",
 			description: "Articles by Sergio Xalambrí.",
 			link: new URL(routes.articles.href(), ctx.url).toString(),
+			atomLink: hub.atomLink,
 		});
 
 		/**
@@ -68,6 +72,6 @@ export default createAction(
 			});
 		}
 
-		return xml(rss.toString());
+		return xml(rss.toString(), { headers: hub.headers });
 	},
 );

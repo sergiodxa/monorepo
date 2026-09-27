@@ -13,6 +13,7 @@ import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
 import { LikePost } from "~/app/repositories/posts/like";
+import { advertiseHub } from "~/app/services/websub";
 import routes from "~/routes/web";
 
 /**
@@ -32,10 +33,13 @@ export default createAction(
 	async (ctx) => {
 		let likes = await LikePost.findAll(ctx.db);
 
+		let hub = advertiseHub(new URL(routes.rss.bookmarks.href(), ctx.url).toString());
+
 		let rss = new RSS({
 			title: "Bookmarks — Sergio Xalambrí",
 			description: "Bookmarks by Sergio Xalambrí.",
 			link: new URL(routes.bookmarks.href(), ctx.url).toString(),
+			atomLink: hub.atomLink,
 		});
 
 		for (let like of likes) {
@@ -48,6 +52,6 @@ export default createAction(
 			});
 		}
 
-		return xml(rss.toString());
+		return xml(rss.toString(), { headers: hub.headers });
 	},
 );

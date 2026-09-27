@@ -16,6 +16,7 @@ import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { advertiseHub } from "~/app/services/websub";
 import routes from "~/routes/web";
 
 /**
@@ -40,10 +41,13 @@ export default createAction(
 			GlossaryPost.findAll(ctx.db),
 		]);
 
+		let hub = advertiseHub(new URL(routes.rss.feed.href(), ctx.url).toString());
+
 		let rss = new RSS({
 			title: "Sergio Xalambrí",
 			description: "Articles, tutorials, bookmarks, and glossary terms by Sergio Xalambrí.",
 			link: ctx.url.origin,
+			atomLink: hub.atomLink,
 		});
 
 		let items: Array<RSS.Item> = [];
@@ -112,6 +116,6 @@ export default createAction(
 
 		for (let item of items) rss.addItem(item);
 
-		return xml(rss.toString());
+		return xml(rss.toString(), { headers: hub.headers });
 	},
 );

@@ -27,6 +27,10 @@
 		"directory": "./build/client",
 	},
 	"routes": [{ "pattern": "sergiodxa.com", "custom_domain": true }],
+	// The WebSub hub the feeds advertise and the CMS pings after a write. Google's public
+	// hub is free, needs no account, accepts the `hub.mode=publish` ping, and is the hub the
+	// large feed readers already subscribe through, so a push reaches them without polling.
+	"vars": { "WEBSUB_HUB": "https://pubsubhubbub.appspot.com/" },
 	"secrets_store_secrets": [
 		{
 			"binding": "CLIENT_ID",

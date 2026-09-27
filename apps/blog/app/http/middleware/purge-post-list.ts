@@ -16,21 +16,21 @@ import { TAGS } from "~/app/services/cache";
 const WRITE_METHODS: ReadonlySet<string> = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 /**
- * Purges the post-list tag once a CMS write succeeds. Success is the redirect
- * every mutating action answers with, which is what separates a stored change
- * from a rejected form re-rendered in place.
+ * Whether a CMS request stored a change. Success is the redirect every mutating action
+ * answers with, which is what separates a stored change from a rejected form re-rendered
+ * in place.
+ *
+ * @param method The request method.
+ * @param response What the action answered.
  */
+export function isStoredWrite(method: string, response: Response): boolean {
+	return WRITE_METHODS.has(method.toUpperCase()) && response.status >= 300 && response.status < 400;
+}
+
+/** Purges the post-list tag once a CMS write succeeds. */
 const purgePostList: Middleware = async (ctx, next) => {
 	let response = await next();
-
-	if (
-		WRITE_METHODS.has(ctx.method.toUpperCase()) &&
-		response.status >= 300 &&
-		response.status < 400
-	) {
-		ctx.cache.purgeLater(TAGS.postList());
-	}
-
+	if (isStoredWrite(ctx.method, response)) ctx.cache.purgeLater(TAGS.postList());
 	return response;
 };
 
