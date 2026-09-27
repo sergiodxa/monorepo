@@ -102,6 +102,7 @@ describe("GET /.well-known/oauth-authorization-server", () => {
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.issuer).toBe(ISSUER);
 		expect(body.token_endpoint).toBe(`${ISSUER}/oauth/token`);
+		expect(body.protected_resources).toEqual([`${ISSUER}/userinfo`]);
 	});
 });
 

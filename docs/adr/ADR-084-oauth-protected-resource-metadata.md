@@ -620,3 +620,7 @@ need a token per endpoint, and the metadata endpoint would answer for arbitrary 
         `Issuer.Metadata.authorization_endpoint` became optional for that RFC 8414 document.
         Business `403`s (`entitlementRequired`, `attributeNotWritable`) carry no challenge,
         since re-authorizing cannot change them
+  - [x] auth-saas `/userinfo`: the three challenge constants became `challenge(...)` calls on a
+        per-tenant `ResourceServer` whose resource is the tenant's userinfo URL; every tenant
+        host serves `/.well-known/oauth-protected-resource/userinfo`, and the RFC 8414 document
+        lists it under `protected_resources`

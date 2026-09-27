@@ -7,11 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
+import { wellKnown } from "@sdxc/well-known/middleware";
+import { parse as parseProtectedResource } from "@sdxc/well-known/oauth-protected-resource";
 import { Database } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -22,6 +25,7 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
+import { userinfoMetadataEntry } from "~/app/lib/userinfo-resource";
 import { authorizationCodes } from "~/database/authorization";
 import { openSession } from "~/database/sessions";
 import Tenant from "~/database/tenant-do";
@@ -43,10 +47,36 @@ beforeEach(async () => {
 	db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 });
 
-/** Builds a tenant router wired to the constructed Durable Object. */
+/** Where every challenge points, the tenant's userinfo metadata (RFC 9728 §3.1). */
+const METADATA_URL = new URL(`${ISSUER}/.well-known/oauth-protected-resource/userinfo`);
+
+/** The one `Bearer` challenge a refusal's `WWW-Authenticate` carries. */
+function challengeOf(response: Response) {
+	let parsed = parseChallenge(response.headers.get("WWW-Authenticate") ?? "");
+	if (isFailure(parsed)) throw parsed.error;
+	let [challenge] = parsed.data;
+	if (!challenge) throw new Error("the response carried no Bearer challenge");
+	return challenge;
+}
+
+/** A request already resolved to the fixture tenant. */
+function tenantRequest(path: string): Request {
+	return new Request(`https://${TENANT_ID}.example.com${path}`, {
+		headers: {
+			[TENANT_ID_HEADER]: TENANT_ID,
+			[TENANT_REGION_HEADER]: "wnam",
+			[TENANT_ISSUER_HEADER]: ISSUER,
+		},
+	});
+}
+
+/** Builds a tenant router wired to the constructed Durable Object, serving the userinfo metadata too. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>)],
+		middleware: [
+			wellKnown({ "oauth-protected-resource": userinfoMetadataEntry }),
+			tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
+		],
 	});
 	router.map(routes.userinfoGet, userinfoGet);
 	router.map(routes.userinfoPost, userinfoPost);
@@ -183,11 +213,27 @@ describe("GET /userinfo", () => {
 		expect(response.status).toBe(200);
 	});
 
-	test("a missing Authorization header is 401 with a bare Bearer challenge", async () => {
+	test("a missing Authorization header is 401 with a challenge naming no error", async () => {
 		let response = await buildRouter().fetch(userinfoRequest());
 
 		expect(response.status).toBe(401);
-		expect(response.headers.get("WWW-Authenticate")).toBe("Bearer");
+		expect(challengeOf(response)).toMatchObject({ error: null, resourceMetadata: METADATA_URL });
+	});
+
+	test("the challenge's resource_metadata leads to metadata naming /userinfo and the issuer", async () => {
+		let refused = await buildRouter().fetch(userinfoRequest());
+		let pointer = challengeOf(refused).resourceMetadata;
+		if (!pointer) throw new Error("the challenge carried no resource_metadata");
+
+		let response = await buildRouter().fetch(tenantRequest(pointer.pathname));
+		expect(response.status).toBe(200);
+
+		let metadata = parseProtectedResource(await response.text(), {
+			resource: `${ISSUER}/userinfo`,
+		});
+		if (isFailure(metadata)) throw metadata.error;
+		expect(metadata.data.resource.href).toBe(`${ISSUER}/userinfo`);
+		expect(metadata.data.authorizationServers.map((server) => server.origin)).toEqual([ISSUER]);
 	});
 
 	test("a malformed bearer token is 401 with an invalid_token challenge", async () => {
@@ -196,7 +242,10 @@ describe("GET /userinfo", () => {
 		);
 
 		expect(response.status).toBe(401);
-		expect(response.headers.get("WWW-Authenticate")).toBe('Bearer error="invalid_token"');
+		expect(challengeOf(response)).toMatchObject({
+			error: "invalid_token",
+			resourceMetadata: METADATA_URL,
+		});
 	});
 
 	test("a token whose grant does not cover openid is 403 with insufficient_scope", async () => {
@@ -207,7 +256,11 @@ describe("GET /userinfo", () => {
 		);
 
 		expect(response.status).toBe(403);
-		expect(response.headers.get("WWW-Authenticate")).toBe('Bearer error="insufficient_scope"');
+		expect(challengeOf(response)).toMatchObject({
+			error: "insufficient_scope",
+			scope: ["openid"],
+			resourceMetadata: METADATA_URL,
+		});
 		let body = (await response.json()) as Record<string, unknown>;
 		expect(body.error).toBe("insufficient_scope");
 	});
@@ -220,7 +273,7 @@ describe("GET /userinfo", () => {
 		);
 
 		expect(response.status).toBe(401);
-		expect(response.headers.get("WWW-Authenticate")).toBe('Bearer error="invalid_token"');
+		expect(challengeOf(response)).toMatchObject({ error: "invalid_token" });
 	});
 
 	test("Cache-Control states the access token's own remaining lifetime", async () => {

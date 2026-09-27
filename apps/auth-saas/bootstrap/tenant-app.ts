@@ -84,6 +84,7 @@ import {
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
 import { securityTxtEntry } from "~/app/lib/security-txt";
+import { userinfoMetadataEntry } from "~/app/lib/userinfo-resource";
 import { parseSenderAddress } from "~/app/mail/sender";
 import routes from "~/routes/tenant";
 
@@ -103,6 +104,7 @@ let globalMiddleware: Middleware[] = [
 	wellKnown({
 		"security.txt": securityTxtEntry,
 		"change-password": () => redirect(routes.hostedResetShow.href()),
+		"oauth-protected-resource": userinfoMetadataEntry,
 	}),
 	tenant((tenantId) => env.TENANT.getByName(tenantId)),
 	render as Middleware,

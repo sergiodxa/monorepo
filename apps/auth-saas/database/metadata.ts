@@ -153,7 +153,8 @@ export function openIdConfigurationFor(published: PublishMetadataResult): OpenId
 }
 
 /**
- * The tenant's RFC 8414 authorization server metadata.
+ * The tenant's RFC 8414 authorization server metadata, listing `/userinfo` under
+ * `protected_resources` so a client finds the resource this server issues tokens for.
  *
  * @param published - The facts {@link publishMetadata} read.
  * @returns The document `/.well-known/oauth-authorization-server` serves.
@@ -161,7 +162,10 @@ export function openIdConfigurationFor(published: PublishMetadataResult): OpenId
 export function authorizationServerMetadataFor(
 	published: PublishMetadataResult,
 ): AuthorizationServerMetadata {
-	return defineAuthorizationServerMetadata(sharedMembers(published));
+	return defineAuthorizationServerMetadata({
+		...sharedMembers(published),
+		protectedResources: [new URL("/userinfo", published.issuer)],
+	});
 }
 
 export interface ResolveUserInfoInput {

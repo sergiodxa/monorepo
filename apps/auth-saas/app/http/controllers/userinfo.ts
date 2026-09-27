@@ -13,13 +13,9 @@ import { createAction } from "remix/router";
 import type { ResolvedTenant } from "~/app/http/middleware/tenant";
 import type Tenant from "~/database/tenant-do";
 
+import { userinfoResourceServer } from "~/app/lib/userinfo-resource";
 import { AccessToken } from "~/database/tokens";
 import routes from "~/routes/tenant";
-
-/** How a missing or unverifiable bearer token challenges the client, per RFC 6750. */
-const MISSING_TOKEN_CHALLENGE = { "WWW-Authenticate": "Bearer" };
-const INVALID_TOKEN_CHALLENGE = { "WWW-Authenticate": 'Bearer error="invalid_token"' };
-const INSUFFICIENT_SCOPE_CHALLENGE = { "WWW-Authenticate": 'Bearer error="insufficient_scope"' };
 
 /**
  * Verifies the bearer access token and assembles the claims its granted scopes
@@ -33,6 +29,8 @@ const INSUFFICIENT_SCOPE_CHALLENGE = { "WWW-Authenticate": 'Bearer error="insuff
  *
  * `Cache-Control` states the access token's own remaining lifetime, so a relying
  * party caching this response never holds it past what the token itself is good for.
+ * Every refusal's challenge carries `resource_metadata` (RFC 9728), pointing the client
+ * at the tenant's userinfo metadata and, through it, at the issuer.
  *
  * @param request - The incoming request, read for its `Authorization` header.
  * @param tenant - The tenant this request was resolved to.
@@ -45,13 +43,15 @@ async function respondToUserinfo(
 	tenant: ResolvedTenant,
 	tenantStub: DurableObjectStub<Tenant>,
 ): Promise<Response> {
+	let api = userinfoResourceServer(tenant.issuer);
+	let missingToken = { "WWW-Authenticate": api.challenge() };
+	let invalidToken = { "WWW-Authenticate": api.challenge({ error: "invalid_token" }) };
+
 	let authorization = request.headers.get("Authorization");
-	if (!authorization?.startsWith("Bearer ")) {
-		return unauthorized({}, { headers: MISSING_TOKEN_CHALLENGE });
-	}
+	if (!authorization?.startsWith("Bearer ")) return unauthorized({}, { headers: missingToken });
 
 	let token = authorization.slice("Bearer ".length).trim();
-	if (!token) return unauthorized({}, { headers: MISSING_TOKEN_CHALLENGE });
+	if (!token) return unauthorized({}, { headers: missingToken });
 
 	let metadata = await tenantStub.publishMetadata({ now: Date.now() });
 	let keys = await JWK.importLocal(metadata.jwks);
@@ -73,11 +73,15 @@ async function respondToUserinfo(
 		clientId = verified.clientId;
 		remainingSeconds = Math.max(0, verified.expiresIn ?? 0);
 	} catch {
-		return unauthorized({}, { headers: INVALID_TOKEN_CHALLENGE });
+		return unauthorized({}, { headers: invalidToken });
 	}
 
 	if (!scopes.includes("openid")) {
-		return forbidden({ error: "insufficient_scope" }, { headers: INSUFFICIENT_SCOPE_CHALLENGE });
+		let challenge = api.challenge({ error: "insufficient_scope", scope: ["openid"] });
+		return forbidden(
+			{ error: "insufficient_scope" },
+			{ headers: { "WWW-Authenticate": challenge } },
+		);
 	}
 
 	let resolved = await tenantStub.resolveUserInfo({
@@ -87,7 +91,7 @@ async function respondToUserinfo(
 		sessionId,
 		clientId,
 	});
-	if (resolved.kind === "unknown") return unauthorized({}, { headers: INVALID_TOKEN_CHALLENGE });
+	if (resolved.kind === "unknown") return unauthorized({}, { headers: invalidToken });
 
 	return ok(resolved.claims, {
 		headers: { "Cache-Control": `private, max-age=${remainingSeconds}` },
