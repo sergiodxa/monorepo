@@ -19,6 +19,10 @@ describe("SECURITY_TXT", () => {
 		expect(SECURITY_TXT.expires.getTime() - Date.now()).toBeGreaterThan(RENEWAL_WINDOW_MS);
 	});
 
+	test("names the security inbox as the contact", () => {
+		expect(SECURITY_TXT.contact.map(String)).toEqual(["mailto:hello+security@sergiodxa.com"]);
+	});
+
 	test("names the apex domain's file as canonical", () => {
 		expect(SECURITY_TXT.canonical.map(String)).toEqual([
 			"https://sergiodxa.com/.well-known/security.txt",
