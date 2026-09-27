@@ -455,6 +455,7 @@ describe("PUT /api/v1/status-pages/:statusPageId/monitors", () => {
 describe("every item endpoint", () => {
 	test.each([
 		["GET", "show"],
+		["PATCH", "patch"],
 		["PUT", "update"],
 		["DELETE", "destroy"],
 		["PUT", "monitors"],
@@ -475,6 +476,7 @@ describe("every item endpoint", () => {
 
 	test.each([
 		["GET", "show", "status-pages:read"],
+		["PATCH", "patch", "status-pages:write"],
 		["PUT", "update", "status-pages:write"],
 		["DELETE", "destroy", "status-pages:write"],
 		["PUT", "monitors", "status-pages:write"],
@@ -494,5 +496,184 @@ describe("every item endpoint", () => {
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
 		expect(await db.findOne(statusPages, { where: { id: statusPage.id } })).not.toBeNull();
+	});
+});
+
+describe("PATCH /api/v1/status-pages/:statusPageId", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(
+		statusPageId: string,
+		body: unknown,
+		options: { key?: string; contentType?: string } = {},
+	) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		let path = routes.api.v1.statusPages.patch.href({ statusPageId: encodeId("sp", statusPageId) });
+		return new Request(`https://uptime.test${path}`, {
+			method: "PATCH",
+			headers,
+			body: typeof body === "string" ? body : JSON.stringify(body),
+		});
+	}
+
+	/** Runs `request` through the item controller behind the conformance check. */
+	async function send(db: Db, request: Request) {
+		let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+		router.map(statusPageRoutes, statusPageController);
+		return router.fetch(request);
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+		await db.update(statusPages, statusPage.id, { description: "About", is_public: false });
+
+		let response = await send(db, mergePatch(statusPage.id, { name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.description).toBe("About");
+		expect(updated?.is_public).toBe(false);
+	});
+
+	test("null clears a nullable member, resets a flag, and sets title back to name", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+		await db.update(statusPages, statusPage.id, {
+			title: "Custom Title",
+			logo_url: "https://example.com/logo.png",
+			is_public: false,
+		});
+
+		let response = await send(
+			db,
+			mergePatch(statusPage.id, { title: null, logoUrl: null, isPublic: null }, { key }),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(updated?.title).toBe("Public Status");
+		expect(updated?.logo_url).toBeNull();
+		expect(updated?.is_public).toBe(true);
+	});
+
+	test("null on a required member answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+
+		let response = await send(db, mergePatch(statusPage.id, { slug: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/slug"]);
+	});
+
+	test("re-sending the page's own slug skips the uniqueness check", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id, { slug: "mine" });
+
+		let response = await send(db, mergePatch(statusPage.id, { slug: "mine" }, { key }));
+
+		expect(response.status).toBe(200);
+	});
+
+	test("answers 409 conflict for a slug another page uses", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id, { slug: "mine" });
+		await createStatusPageRow(db, team.id, { slug: "taken" });
+
+		let response = await send(db, mergePatch(statusPage.id, { slug: "taken" }, { key }));
+
+		await expectProblem(response, "conflict");
+		let unchanged = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(unchanged?.slug).toBe("mine");
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+
+		let response = await send(
+			db,
+			mergePatch(
+				statusPage.id,
+				{ showOverallStatus: false },
+				{ key, contentType: "application/json" },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(updated?.show_overall_status).toBe(false);
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+
+		let response = await send(
+			db,
+			mergePatch(statusPage.id, { name: "x" }, { key, contentType: "text/plain" }),
+		);
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing null on title and the flags, and clearing description", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["status-pages:write"]);
+		let statusPage = await createStatusPageRow(db, team.id);
+		await db.update(statusPages, statusPage.id, { description: "About" });
+		let path = routes.api.v1.statusPages.update.href({
+			statusPageId: encodeId("sp", statusPage.id),
+		});
+
+		let refused = await Promise.all(
+			[{ title: null }, { isPublic: null }, { showOverallStatus: null }].map((body) =>
+				dispatch(db, { method: "PUT", path, key, body }),
+			),
+		);
+		let cleared = await dispatch(db, { method: "PUT", path, key, body: { description: null } });
+
+		expect(refused.map((response) => response.status)).toEqual([400, 400, 400]);
+		expect(cleared.status).toBe(200);
+		let updated = await db.findOne(statusPages, { where: { id: statusPage.id } });
+		expect(updated?.description).toBeNull();
+		expect(updated?.is_public).toBe(true);
+	});
+
+	test("404s for another team's page, 403 without status-pages:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let otherTeam = await createTeamRow(db);
+		let writer = await createApiKey(db, team.id, ["status-pages:write"]);
+		let reader = await createApiKey(db, team.id, ["status-pages:read"]);
+		let foreign = await createStatusPageRow(db, otherTeam.id);
+		let own = await createStatusPageRow(db, team.id);
+
+		let notFound = await send(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
+		let forbidden = await send(db, mergePatch(own.id, { name: "x" }, { key: reader }));
+
+		expect([notFound.status, forbidden.status]).toEqual([404, 403]);
 	});
 });

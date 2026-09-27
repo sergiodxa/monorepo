@@ -8,6 +8,7 @@
  */
 
 import type { Database } from "remix/data-table";
+import type { RequestContext } from "remix/router";
 
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
@@ -15,7 +16,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import type { InsertStatusPage } from "~/database/schema";
+import type { InsertStatusPage, SelectStatusPage } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import Monitor from "~/app/data/monitor";
@@ -27,9 +28,11 @@ import {
 	STATUS_PAGE_ID_PARAMS,
 	UPDATE_ATTACHMENTS_BODY,
 	UPDATE_STATUS_PAGE_BODY,
+	WRITABLE_STATUS_PAGE,
 } from "~/app/http/openapi/status-pages";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { encodeId } from "~/app/services/typed-id";
 import { statusPageRoutes } from "~/routes/api-groups";
 
@@ -43,6 +46,67 @@ async function loadWithAttachments(db: Database, teamId: string, statusPageId: s
 		monitors: attached.monitorIds.map((id) => encodeId("mon", id)),
 		cronJobs: attached.cronJobIds.map((id) => encodeId("cron", id)),
 	};
+}
+
+/**
+ * The page's writable members as the API reads them, the target a `PATCH` merge patch
+ * applies to.
+ */
+function writableStatusPage(page: SelectStatusPage) {
+	return {
+		name: page.name,
+		slug: page.slug,
+		title: page.title,
+		description: page.description,
+		logoUrl: page.logo_url,
+		customDomain: page.custom_domain,
+		isPublic: page.is_public,
+		showOverallStatus: page.show_overall_status,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to one status page, writing only the members it changed.
+ * A removed `title` falls back to `name`, as on create; the slug is checked for uniqueness
+ * only when the patch changes it.
+ *
+ * @param ctx - The request, after `requireApiKey("status-pages:write")`.
+ * @returns The updated page with its attachments; a 404 for a page outside the team, before
+ *   the body is read.
+ */
+async function patchStatusPage(ctx: RequestContext): Promise<Response> {
+	let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
+	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+	if (!existing)
+		return apiProblems.notFound({ detail: "Status page not found", instance: problemInstance() });
+
+	let update = await readApiUpdate(ctx.request, writableStatusPage(existing), WRITABLE_STATUS_PAGE);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	if (changed.has("slug") && (await StatusPage.isSlugTaken(ctx.db, value.slug, existing.id))) {
+		return apiProblems.conflict({ detail: "Slug is already in use", instance: problemInstance() });
+	}
+
+	let changes: Partial<InsertStatusPage> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("slug")) changes.slug = value.slug;
+	if (changed.has("title")) changes.title = value.title ?? value.name;
+	if (changed.has("description")) changes.description = value.description ?? null;
+	if (changed.has("logoUrl")) changes.logo_url = value.logoUrl ?? null;
+	if (changed.has("customDomain")) changes.custom_domain = value.customDomain ?? null;
+	if (changed.has("isPublic")) changes.is_public = value.isPublic;
+	if (changed.has("showOverallStatus")) changes.show_overall_status = value.showOverallStatus;
+
+	if (Object.keys(changes).length > 0) await StatusPage.updateById(ctx.db, statusPageId, changes);
+
+	let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
+	if (!statusPage)
+		return apiProblems.internalError({
+			detail: "Failed to load updated status page",
+			instance: problemInstance(),
+		});
+	return apiSuccess({ statusPage });
 }
 
 export default createController(statusPageRoutes, {
@@ -61,6 +125,12 @@ export default createController(statusPageRoutes, {
 					});
 				return apiSuccess({ statusPage });
 			},
+		},
+
+		/** PATCH /api/v1/status-pages/:statusPageId — merge-patches a status page's own fields. */
+		statusPagePatch: {
+			middleware: [requireApiKey("status-pages:write")],
+			handler: patchStatusPage,
 		},
 
 		/** PUT /api/v1/status-pages/:statusPageId — updates a status page's own fields. */

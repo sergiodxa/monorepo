@@ -192,11 +192,11 @@ curl https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
 }
 ```
 
-## PUT /api/v1/status-pages/:id
+## PATCH /api/v1/status-pages/:id
 
-Updates an existing status page.
+Updates an existing status page with a [JSON merge patch](/docs/api/overview#updating-resources).
 
-<!-- operation: statusPageUpdate -->
+<!-- operation: statusPagePatch -->
 
 ### Path Parameters
 
@@ -206,27 +206,27 @@ Updates an existing status page.
 
 ### Request Body
 
-All fields are optional. Only provided fields are updated; fields outside this table are ignored.
+All fields from [`POST /api/v1/status-pages`](#post-apiv1status-pages) are accepted, with the same limits. Include only the fields you want to change; fields outside this table are ignored. `null` clears `description`, `logoUrl` and `customDomain`, sets `title` back to `name`, and resets `isPublic` and `showOverallStatus` to `true`; `name` and `slug` cannot be removed.
 
 | Field               | Type    | Description                                                        |
 | ------------------- | ------- | ------------------------------------------------------------------ |
 | `name`              | string  | Internal name (1-255 characters)                                   |
 | `slug`              | string  | URL-friendly identifier (lowercase letters, numbers, hyphens only) |
-| `title`             | string  | Display title (1-255 characters)                                   |
+| `title`             | string  | Display title (1-255 characters); `null` sets it to `name`         |
 | `description`       | string  | Page description (max 500 characters); `null` clears it            |
 | `logoUrl`           | string  | URL to your logo image; `null` clears it                           |
 | `customDomain`      | string  | Custom domain for the status page; `null` clears it                |
-| `isPublic`          | boolean | Whether the page is publicly accessible                            |
-| `showOverallStatus` | boolean | Whether to display the overall status indicator                    |
+| `isPublic`          | boolean | Whether the page is publicly accessible; `null` resets to `true`   |
+| `showOverallStatus` | boolean | Whether to display the overall status indicator; `null` resets it  |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl -X PUT https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
+curl -X PATCH https://uptime.sergiodxa.com/api/v1/status-pages/sp_abc123 \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "title": "Updated Service Status",
     "description": "Current status of all our services",
@@ -263,6 +263,12 @@ The updated status page, with the ids of its attached HTTP monitors and cron job
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/status-pages/:id` takes the same fields, for integrations written before `PATCH` existed. A field you leave out keeps its value, and `null` clears `description`, `logoUrl` and `customDomain`; `null` on any other field is refused.
+
+<!-- operation: statusPageUpdate -->
 
 ## DELETE /api/v1/status-pages/:id
 

@@ -72,17 +72,28 @@ const STATUS_PAGE_DETAIL = s
 /** The path params naming one status page. */
 export const STATUS_PAGE_ID_PARAMS = s.object({ statusPageId: typedId("sp") });
 
-/** The body `POST /api/v1/status-pages` accepts; `title` defaults to `name`. */
-export const CREATE_STATUS_PAGE_BODY = s.object({
+/** The members a status page is created with; omitted ones take their defaults. */
+const STATUS_PAGE_MEMBERS = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	slug: slug().meta({ description: "Globally unique; lowercase letters, numbers and hyphens" }),
-	title: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	title: s.optional(
+		s
+			.string()
+			.pipe(checks.minLength(1), checks.maxLength(255))
+			.meta({ description: "Defaults to `name`" }),
+	),
 	description: s.optional(s.string().pipe(checks.maxLength(500))),
 	logoUrl: s.optional(s.string().pipe(checks.url())),
 	customDomain: s.optional(s.string().pipe(checks.minLength(1))),
 	isPublic: s.defaulted(s.boolean(), true),
 	showOverallStatus: s.defaulted(s.boolean(), true),
-});
+};
+
+/** The body `POST /api/v1/status-pages` accepts. */
+export const CREATE_STATUS_PAGE_BODY = s.object(STATUS_PAGE_MEMBERS);
+
+/** A status page's writable members, which a `PATCH` merge patch must leave valid. */
+export const WRITABLE_STATUS_PAGE = s.object(STATUS_PAGE_MEMBERS);
 
 /** The body a status-page update accepts; every field is optional and `null` clears one. */
 export const UPDATE_STATUS_PAGE_BODY = s.object({
@@ -94,6 +105,22 @@ export const UPDATE_STATUS_PAGE_BODY = s.object({
 	customDomain: s.optional(s.nullable(s.string().pipe(checks.minLength(1)))),
 	isPublic: s.optional(s.boolean()),
 	showOverallStatus: s.optional(s.boolean()),
+});
+
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` removing one, which
+ * clears `description`, `logoUrl` and `customDomain`, sets `title` back to `name` and gives
+ * a flag its default. The handler validates the patched page with {@link WRITABLE_STATUS_PAGE}.
+ */
+const STATUS_PAGE_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	slug: s.optional(slug()),
+	title: s.optional(s.nullable(s.string().pipe(checks.minLength(1), checks.maxLength(255)))),
+	description: s.optional(s.nullable(s.string().pipe(checks.maxLength(500)))),
+	logoUrl: s.optional(s.nullable(s.string().pipe(checks.url()))),
+	customDomain: s.optional(s.nullable(s.string().pipe(checks.minLength(1)))),
+	isPublic: s.optional(s.nullable(s.boolean())),
+	showOverallStatus: s.optional(s.nullable(s.boolean())),
 });
 
 /** The body that replaces a page's attachments; an omitted list detaches every item of it. */
@@ -138,8 +165,32 @@ const STATUS_PAGE_SHOW = defineOperation("statusPageShow", routes.api.v1.statusP
 	security: [{ apiKey: ["status-pages:read"] }],
 });
 
+const STATUS_PAGE_PATCH_OPERATION = defineOperation(
+	"statusPagePatch",
+	routes.api.v1.statusPages.patch,
+	{
+		summary: "Update a status page",
+		description:
+			"An RFC 7396 JSON merge patch: send the members to change; `null` clears or resets one.",
+		tags: TAGS,
+		params: STATUS_PAGE_ID_PARAMS,
+		body: {
+			"application/merge-patch+json": STATUS_PAGE_PATCH,
+			"application/json": STATUS_PAGE_PATCH,
+		},
+		responses: {
+			200: {
+				description: "The updated status page with its attachments",
+				body: envelope({ statusPage: STATUS_PAGE_DETAIL }),
+			},
+		},
+		problems: ["validationError", ...AUTH_PROBLEMS, "notFound", "conflict", "unsupportedMediaType"],
+		security: [{ apiKey: ["status-pages:write"] }],
+	},
+);
+
 const STATUS_PAGE_UPDATE = defineOperation("statusPageUpdate", routes.api.v1.statusPages.update, {
-	summary: "Update a status page",
+	summary: "Update a status page (PUT)",
 	tags: TAGS,
 	params: STATUS_PAGE_ID_PARAMS,
 	body: UPDATE_STATUS_PAGE_BODY,
@@ -195,6 +246,7 @@ export const OPERATIONS = [
 	STATUS_PAGES_INDEX,
 	STATUS_PAGES_CREATE,
 	STATUS_PAGE_SHOW,
+	STATUS_PAGE_PATCH_OPERATION,
 	STATUS_PAGE_UPDATE,
 	STATUS_PAGE_DESTROY,
 	STATUS_PAGE_MONITORS,
