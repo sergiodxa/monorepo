@@ -21,6 +21,7 @@ import { parseBody } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
@@ -64,6 +65,7 @@ export function createApiKeysCreateAction(options: ManagementControllerOptions) 
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			managementIdempotency,
 		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "keys:write");

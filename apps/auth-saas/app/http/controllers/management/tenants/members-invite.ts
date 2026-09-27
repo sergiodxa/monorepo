@@ -25,6 +25,8 @@ import { mountedMiddleware } from "~/app/http/controllers/management/tenants/sha
 import { parseBody } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
+import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
+import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { mailTranslator } from "~/app/mail/locale";
 import { TenantInvitationEmail } from "~/app/mail/tenant-invitation-email";
 import Tenant from "~/app/models/tenant";
@@ -61,7 +63,11 @@ function invalidEmail(): Response {
  */
 export function createTenantMembersInviteAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantMembersInvite, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			managementTenant(options.resolveStub),
+			managementIdempotency,
+		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;

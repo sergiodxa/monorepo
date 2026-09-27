@@ -12,10 +12,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type {
+	ClaimOutcome,
+	ClaimRequest,
+	IdempotencyStoreError,
+	StoredResponse,
+} from "@sdxc/idempotency";
+import type { Result } from "@sdxc/result";
 import type { AnyTable, TableRow } from "remix/data-table";
 
 import { importKey } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { DataTableStore, purgeExpired } from "@sdxc/idempotency/data-table";
 import { isFailure } from "@sdxc/result";
 import { DurableObject } from "cloudflare:workers";
 import { column as c, Database, isNull, table } from "remix/data-table";
@@ -1928,8 +1936,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 * refresh tokens whose family is past its ninety-day ceiling, deletes connection
 	 * sign-in transactions past their ten-minute window and handoff tickets past
 	 * their thirty seconds, deletes organization invitations a week past their expiry
-	 * that were never accepted or revoked, deletes API keys past their expiry, then
-	 * arms tomorrow's run.
+	 * that were never accepted or revoked, deletes API keys past their expiry, deletes
+	 * idempotency records past their replay window, then arms tomorrow's run.
 	 *
 	 * Never rejects, the way a Durable Object alarm should not: a rejected alarm is
 	 * retried by the platform, which would repeat a sweep that already ran.
@@ -2005,6 +2013,8 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 				let { more } = await ApiKeys.sweepExpiredApiKeys(this.#db);
 				if (!more) break;
 			}
+
+			await purgeExpired(this.#db);
 
 			for (let iteration = 0; iteration < 20; iteration++) {
 				let retentionDays = await this.#auditRetentionDays();
@@ -3079,6 +3089,53 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	): Promise<WithCost<SweepExpiredApiKeysResult>> {
 		await this.#migrated;
 		return this.#withCost(() => ApiKeys.sweepExpiredApiKeys(this.#db, input));
+	}
+
+	/**
+	 * Claims a management request's idempotency key in this tenant's own store, so a
+	 * retry is recognized next to the data it changes. Of concurrent claims on one id,
+	 * exactly one answers `claimed`.
+	 *
+	 * @param request - The record id, fingerprint, clock and windows the middleware computed.
+	 * @returns The claim's lease, the in-flight claim holding the id, or the stored outcome.
+	 */
+	async idempotencyClaim(
+		request: ClaimRequest,
+	): Promise<Result<ClaimOutcome, IdempotencyStoreError>> {
+		await this.#migrated;
+		return await new DataTableStore(this.#db).claim(request);
+	}
+
+	/**
+	 * Stores a claimed request's outcome for replay, while `lease` still owns the record.
+	 *
+	 * @param id - The claimed record's id.
+	 * @param lease - The token the claim answered with.
+	 * @param response - The outcome to replay to a retry.
+	 * @param expiresAt - When the record stops being replayed, in epoch milliseconds.
+	 */
+	async idempotencyComplete(
+		id: string,
+		lease: string,
+		response: StoredResponse,
+		expiresAt: number,
+	): Promise<Result<void, IdempotencyStoreError>> {
+		await this.#migrated;
+		return await new DataTableStore(this.#db).complete(id, lease, response, expiresAt);
+	}
+
+	/**
+	 * Frees a claimed key whose outcome is not stored, so a retry runs the request again.
+	 *
+	 * @param id - The claimed record's id.
+	 * @param lease - The token the claim answered with.
+	 */
+	async idempotencyRelease(
+		id: string,
+		lease: string,
+	): Promise<Result<void, IdempotencyStoreError>> {
+		await this.#migrated;
+		return await new DataTableStore(this.#db).release(id, lease);
 	}
 
 	/**

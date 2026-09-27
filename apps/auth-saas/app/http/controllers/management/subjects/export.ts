@@ -25,7 +25,9 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import { parseBody } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
+import { managementTenant } from "~/app/http/middleware/management-tenant";
 import TenantExportRun from "~/app/models/tenant-export-run";
 import routes from "~/routes/management";
 
@@ -50,6 +52,8 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 				resolveDashboardSubjectId: options.resolveDashboardSubjectId,
 			}),
 			managementRateLimit(options.limiter, { bucket: "import_export" }),
+			managementTenant(options.resolveStub),
+			managementIdempotency,
 		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "export:read");

@@ -18,6 +18,7 @@ import {
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
@@ -43,6 +44,7 @@ export function createWebhookEndpointsRotateSecretAction(options: ManagementCont
 			}),
 			managementTenant(options.resolveStub),
 			managementRateLimit(options.limiter, { bucket: "write" }),
+			managementIdempotency,
 		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "webhooks:write");

@@ -68,6 +68,7 @@ describe("provision", () => {
 				"0034-magic-link",
 				"0035-magic-link-attempt-uniformity",
 				"0036-client-id-token-alg",
+				"0037-idempotency-keys",
 			],
 			issuer: "https://tenant-1.example.com",
 			keys: {

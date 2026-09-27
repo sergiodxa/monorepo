@@ -19,6 +19,7 @@ import { managementPaging } from "~/app/http/lib/management-pagination";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
+import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import routes from "~/routes/management";
@@ -101,7 +102,7 @@ function deliveryIdParam(ctx: { params: Record<string, string | undefined> }): s
  */
 export function createWebhookDeliveriesReplayAction(options: ManagementControllerOptions) {
 	return createAction(routes.webhookDeliveriesReplay, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [...mountedMiddleware(options, "write"), managementIdempotency],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
