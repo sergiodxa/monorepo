@@ -547,11 +547,16 @@ that wants a narrower list still passes `algorithms`.
   alike. A delivery body stream that fails partway is refused with `reason: "mismatch"`.
 - Implementation: `Feed.selectSubscription` returns `topic: string | null`, `null` when neither
   the header nor the document declares `rel=self`; the caller decides the fallback.
+- Reader adoption: renewal is timed from the granted lease, so the feed object records it in
+  `hub_lease_seconds`, and the token and topic of the subscription last left in
+  `hub_leaving_token`/`hub_leaving_topic` so that unsubscription's verification is confirmed
+  (feed migration `0004-websub-lease-and-leaving`). A denial is answered `204`, since it
+  carries no challenge. A hub must now answer a subscription request `202`, as §5.1.2 says.
 
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package
 - [x] Phase 2: Pair hub and topic in `@sdxc/feed`
-- [ ] Phase 3: Migrate the reader
+- [x] Phase 3: Migrate the reader
 - [ ] Phase 4: Publish from the blog and blog-engine
 - [ ] Phase 5: Publish the package

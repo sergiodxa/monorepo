@@ -23,10 +23,7 @@ import { FEED_JOURNAL, FEED_MIGRATIONS } from "~/database/feed-migrations";
 import {
 	feed as feedTable,
 	HUB_COALESCE_MS,
-	HUB_LEASE_SECONDS,
-	HUB_RENEWAL_LEAD_MS,
 	hubCoalesced,
-	hubRenewalAt,
 	hubTopicFor,
 } from "~/database/feed-schema";
 import { runMigrations } from "~/database/migrations";
@@ -136,6 +133,25 @@ describe("what a poll learns about a hub", () => {
 		});
 	});
 
+	test("takes the topic from the header that advertised the hub, over the document's self", async () => {
+		origin({
+			self: "https://example.com/document-self.xml",
+			hub: HUB_URL,
+			header: `<https://header.example.com/>; rel="hub", <https://example.com/header-self.xml>; rel="self"`,
+		});
+
+		let outcome = await pollFeed(db, { now: NOW });
+
+		expect(outcome).toMatchObject({
+			status: "ok",
+			hub: {
+				url: "https://header.example.com/",
+				source: "header",
+				topic: "https://example.com/header-self.xml",
+			},
+		});
+	});
+
 	test("reports no hub, and clears the stored one, when the document drops it", async () => {
 		origin({ self: FEED_URL, hub: HUB_URL });
 		await pollFeed(db, { now: NOW });
@@ -190,7 +206,7 @@ describe("the topic a subscription is made with", () => {
 	});
 
 	test("is the canonical URL when nothing was declared", () => {
-		expect(hubTopicFor(FEED_URL, undefined)).toBe(FEED_URL);
+		expect(hubTopicFor(FEED_URL, null)).toBe(FEED_URL);
 	});
 
 	test.each(["https://elsewhere.example.net/feed.xml", "not a url"])(
@@ -201,14 +217,7 @@ describe("the topic a subscription is made with", () => {
 	);
 });
 
-describe("the lease and the coalescing window", () => {
-	test("renews with room for two more attempts before the lease lapses", () => {
-		let leaseUntil = NOW + HUB_LEASE_SECONDS * 1000;
-
-		expect(hubRenewalAt(leaseUntil)).toBeLessThan(leaseUntil - HUB_RENEWAL_LEAD_MS);
-		expect(hubRenewalAt(leaseUntil)).toBeGreaterThan(NOW);
-	});
-
+describe("the coalescing window", () => {
 	test("answers a notification from the stored copy inside the window, and fetches outside it", () => {
 		expect(hubCoalesced(NOW, NOW + HUB_COALESCE_MS - 1)).toBe(true);
 		expect(hubCoalesced(NOW, NOW + HUB_COALESCE_MS)).toBe(false);

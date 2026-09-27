@@ -167,15 +167,6 @@ export type HubState = (typeof HUB_STATES)[number];
 export const HUB_LEASE_SECONDS = 864_000;
 
 /**
- * The share of the lease that elapses before a renewal is sent, which leaves room for
- * two further attempts before the subscription lapses.
- */
-export const HUB_RENEWAL_SHARE = 0.8;
-
-/** The least notice a renewal is given, for a hub that grants a lease shorter than asked. */
-export const HUB_RENEWAL_LEAD_MS = 6 * HOUR_MS;
-
-/**
  * The shortest wait a feed with a working subscription serves.
  *
  * A hub's failure mode is silence, so the poll underneath it is the only thing that can
@@ -210,21 +201,6 @@ export const HUB_MISS_LIMIT = 3;
 export const HUB_COOLOFF_MS = 30 * DAY_MS;
 
 /**
- * When a subscription is renewed, from the lease the hub granted.
- *
- * The share is taken of the lease this app asks for rather than of the one it was given,
- * since the granted length is not stored: a hub that grants less than was asked renews
- * earlier than the share alone would, which is the safe direction to be wrong in.
- *
- * @param leaseUntil - Epoch milliseconds the lease the hub reported runs to.
- * @example if (hubRenewalAt(feed.hub_lease_until) <= now) await renew();
- */
-export function hubRenewalAt(leaseUntil: number): number {
-	let lead = Math.max(HUB_LEASE_SECONDS * 1000 * (1 - HUB_RENEWAL_SHARE), HUB_RENEWAL_LEAD_MS);
-	return leaseUntil - lead;
-}
-
-/**
  * Whether a notification is answered from the stored copy rather than by fetching.
  *
  * @param lastFetchedAt - Epoch milliseconds of the feed's last retrieval, if it has one.
@@ -237,17 +213,17 @@ export function hubCoalesced(lastFetchedAt: number | null, now: number): boolean
 /**
  * The topic a subscription is made with, or `null` where no subscription should be made.
  *
- * WebSub keys a subscription by the document's own `rel=self`, so that is what is sent —
+ * WebSub keys a subscription by the publisher's own `rel=self`, so that is what is sent —
  * but only when it names the origin the feed was fetched from. A document speaking for
  * another origin is either broken or is a publisher declaring a feed this app did not
  * retrieve from them, and the cost of declining is that the feed polls.
  *
  * @param feedUrl - The canonical URL this app fetches the feed from.
- * @param declaredSelf - The `rel=self` the document declared, if it declared one.
- * @example let topic = hubTopicFor(feed.feed_url, links.find((l) => l.rel === "self")?.href);
+ * @param declaredSelf - The `rel=self` declared beside the hub, or `null` where none was.
+ * @example let topic = hubTopicFor(feed.feed_url, subscription.topic);
  */
-export function hubTopicFor(feedUrl: string, declaredSelf: string | undefined): string | null {
-	if (declaredSelf === undefined) return feedUrl;
+export function hubTopicFor(feedUrl: string, declaredSelf: string | null): string | null {
+	if (declaredSelf === null) return feedUrl;
 
 	try {
 		if (new URL(declaredSelf).origin !== new URL(feedUrl).origin) return null;
@@ -321,6 +297,11 @@ export const feed = table({
 		 * instant a failed hub may be tried again.
 		 */
 		hub_lease_until: c.integer().nullable(),
+		/** The lease the hub granted, in seconds, which renewal is timed from. */
+		hub_lease_seconds: c.integer().nullable(),
+		/** The callback token of the subscription last left, whose unsubscription is confirmed. */
+		hub_leaving_token: c.text().nullable(),
+		hub_leaving_topic: c.text().nullable(),
 		hub_notified_at: c.integer().nullable(),
 		hub_notifications: c.integer().default(0),
 		hub_misses: c.integer().default(0),

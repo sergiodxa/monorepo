@@ -32,6 +32,17 @@ const HUB_URL = "https://hub.example.com/";
 /** Notifications one feed's callback answers in a minute, as the controller registers it. */
 const NOTIFICATIONS_PER_MINUTE = 60;
 
+/** The WebCrypto hash behind each algorithm a hub may sign a delivery with. */
+const WEBCRYPTO_HASH = {
+	sha1: "SHA-1",
+	sha256: "SHA-256",
+	sha384: "SHA-384",
+	sha512: "SHA-512",
+} as const;
+
+/** An algorithm name as `X-Hub-Signature` carries it. */
+type Algorithm = keyof typeof WEBCRYPTO_HASH;
+
 /** The origin the app is reached at in a test, which only the router's own URLs use. */
 const ORIGIN = "https://reader.test";
 
@@ -187,19 +198,23 @@ async function following(published?: Published): Promise<{ feedId: string; sourc
 	return { feedId, source };
 }
 
-/** The verification a hub makes, answered through the app's own router. */
+/**
+ * The verification a hub makes, answered through the app's own router. Only a subscribe
+ * verification carries a lease, as a hub sends them.
+ */
 function verify(
 	feedId: string,
 	token: string,
 	query: { mode?: string; topic: string; challenge?: string; leaseSeconds?: number },
 ): Promise<Response> {
 	let path = routes.websub.index.href({ feedId, token });
+	let mode = query.mode ?? "subscribe";
 	let search = new URLSearchParams({
-		"hub.mode": query.mode ?? "subscribe",
+		"hub.mode": mode,
 		"hub.topic": query.topic,
 		"hub.challenge": query.challenge ?? "a-challenge",
-		"hub.lease_seconds": String(query.leaseSeconds ?? 864_000),
 	});
+	if (mode === "subscribe") search.set("hub.lease_seconds", String(query.leaseSeconds ?? 864_000));
 
 	return router.fetch(new Request(new URL(`${path}?${search}`, ORIGIN)));
 }
@@ -208,15 +223,20 @@ function verify(
 async function notify(
 	feedId: string,
 	token: string,
-	options: { secret?: string; signature?: string; body?: string } = {},
+	options: { secret?: string; signature?: string; body?: string; algorithm?: Algorithm } = {},
 ): Promise<Response> {
 	let body = options.body ?? "<?xml version='1.0'?><rss/>";
 	let headers: Record<string, string> = { "content-type": "application/rss+xml" };
+	let algorithm = options.algorithm ?? "sha256";
 
 	if (options.signature !== undefined) headers["x-hub-signature"] = options.signature;
 	else if (options.secret !== undefined) {
-		let mac = unwrap(await hmac.sign(options.secret, new TextEncoder().encode(body)));
-		headers["x-hub-signature"] = `sha256=${Hex.encode(mac)}`;
+		let mac = unwrap(
+			await hmac.sign(options.secret, new TextEncoder().encode(body), {
+				hash: WEBCRYPTO_HASH[algorithm],
+			}),
+		);
+		headers["x-hub-signature"] = `${algorithm}=${Hex.encode(mac)}`;
 	}
 
 	return router.fetch(
@@ -339,6 +359,63 @@ describe("verification", () => {
 
 		expect((await verify(feedId, token, { topic })).status).toBe(404);
 	});
+
+	test("records the lease the hub granted and renews a short one inside itself", async () => {
+		let { feedId } = await following();
+		let row = await feedRow(feedId);
+
+		let response = await verify(feedId, String(row.hub_token), {
+			topic: String(row.hub_topic),
+			leaseSeconds: 3_600,
+		});
+		expect(response.status).toBe(200);
+
+		let verified = await feedRow(feedId);
+		expect(verified.hub_lease_seconds).toBe(3_600);
+
+		/** An hour's grant renews at its midpoint, not in a loop because six hours' lead exceeds it. */
+		let armed = Number(await armedAlarm(feedId)) - Date.now();
+		expect(armed).toBeGreaterThan(1_700_000);
+		expect(armed).toBeLessThanOrEqual(1_800_000);
+	});
+
+	test("clears a subscription the hub denies, so its token stops answering", async () => {
+		let { feedId } = await following();
+		let row = await feedRow(feedId);
+		let token = String(row.hub_token);
+
+		let response = await verify(feedId, token, {
+			mode: "denied",
+			topic: String(row.hub_topic),
+		});
+
+		expect(response.status).toBe(204);
+
+		let denied = await feedRow(feedId);
+		expect(denied.hub_state).toBe("none");
+		expect(denied.hub_token).toBeNull();
+		expect((await notify(feedId, token)).status).toBe(410);
+	});
+
+	test("ignores a denial carrying the wrong token", async () => {
+		let { feedId } = await following();
+		let row = await feedRow(feedId);
+
+		let response = await verify(feedId, "not-the-token", {
+			mode: "denied",
+			topic: String(row.hub_topic),
+		});
+
+		expect(response.status).toBe(404);
+		expect((await feedRow(feedId)).hub_state).toBe("pending");
+	});
+
+	test("refuses an unsubscription of the subscription still held", async () => {
+		let { feedId, token, topic } = await subscribed();
+
+		expect((await verify(feedId, token, { mode: "unsubscribe", topic })).status).toBe(404);
+		expect((await feedRow(feedId)).hub_state).toBe("active");
+	});
 });
 
 describe("notification", () => {
@@ -383,11 +460,34 @@ describe("notification", () => {
 		expect((await notify(feedId, token, { secret })).status).toBe(202);
 	});
 
-	test("answers a delivery carrying the wrong token with 404, without waking the object", async () => {
+	test("answers a delivery carrying a token it no longer holds with 410, so the hub stops", async () => {
 		let { feedId, source } = await subscribed();
 		let before = source.fetches();
 
-		expect((await notify(feedId, "not-the-token")).status).toBe(404);
+		expect((await notify(feedId, "not-the-token")).status).toBe(410);
+		expect(source.fetches()).toBe(before);
+	});
+
+	test.each(["sha1", "sha384", "sha512"] as const)(
+		"accepts a delivery the hub chose to sign with %s",
+		async (algorithm) => {
+			let { feedId, source, token, secret } = await subscribed();
+			let before = source.fetches();
+			await setFeedRow(feedId, { last_fetched_at: 0 });
+
+			expect((await notify(feedId, token, { secret, algorithm })).status).toBe(202);
+			expect(source.fetches()).toBe(before + 1);
+		},
+	);
+
+	test("refuses a correctly signed delivery past a mebibyte without fetching", async () => {
+		let { feedId, source, token, secret } = await subscribed();
+		let before = source.fetches();
+		await setFeedRow(feedId, { last_fetched_at: 0 });
+
+		let response = await notify(feedId, token, { secret, body: "x".repeat(1_048_577) });
+
+		expect(response.status).toBe(202);
 		expect(source.fetches()).toBe(before);
 	});
 
@@ -538,8 +638,38 @@ describe("leaving", () => {
 		expect(row.hub_state).toBe("none");
 		expect(Number(row.purge_at)).toBeGreaterThan(Date.now());
 
-		/** A hub that keeps notifying is answered without anything being woken. */
-		expect((await notify(feedId, token)).status).toBe(404);
+		/** A hub that keeps notifying is told the subscription is gone. */
+		expect((await notify(feedId, token)).status).toBe(410);
+	});
+
+	test("confirms the hub's verification of the unsubscription it sent, once", async () => {
+		let url = feedUrl();
+		origin(url);
+		let feedId = await registerFeed(url, "Example");
+		let mine = reader();
+
+		await env.FEED.getByName(feedId).subscribe(mine, url);
+		let row = await feedRow(feedId);
+		let token = String(row.hub_token);
+		let topic = String(row.hub_topic);
+
+		await env.FEED.getByName(feedId).unsubscribe(mine);
+
+		let foreign = await verify(feedId, token, {
+			mode: "unsubscribe",
+			topic: "https://attacker.example.net/feed.xml",
+		});
+		expect(foreign.status).toBe(404);
+
+		let confirmed = await verify(feedId, token, {
+			mode: "unsubscribe",
+			topic,
+			challenge: "leave-challenge",
+		});
+		expect(confirmed.status).toBe(200);
+		expect(await confirmed.text()).toBe("leave-challenge");
+
+		expect((await verify(feedId, token, { mode: "unsubscribe", topic })).status).toBe(404);
 	});
 
 	test("keeps the subscription while anybody still follows the feed", async () => {

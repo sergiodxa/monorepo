@@ -21,10 +21,13 @@
  */
 
 import type { Log } from "@sdxc/logger";
+import type { Subscriber } from "@sdxc/websub/subscriber";
 import type { DatabaseDriver } from "remix/data-table";
 
 import { randomToken, timingSafeEqual } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { isFailure } from "@sdxc/result";
+import { renewalAt, subscribe, unsubscribe } from "@sdxc/websub/subscriber";
 import { env } from "cloudflare:workers";
 import { DurableObject } from "cloudflare:workers";
 import { Database, gt } from "remix/data-table";
@@ -46,7 +49,6 @@ import {
 	HUB_NOTIFICATION_WINDOW_MS,
 	HUB_POLL_FLOOR_MS,
 	hubCoalesced,
-	hubRenewalAt,
 	items,
 	POLL_CEILING_MS,
 	POLL_FLOOR_MS,
@@ -87,12 +89,6 @@ const HUB_SECRET_BYTES = 32;
  * what stops anything that can reach a public endpoint from making this object fetch.
  */
 const HUB_TOKEN_BYTES = 32;
-
-/** How long a request to a hub may take, which bounds what one costs a firing alarm. */
-const HUB_TIMEOUT_MS = 10_000;
-
-/** What a subscription request is encoded as, which is the only form WebSub defines. */
-const HUB_CONTENT_TYPE = "application/x-www-form-urlencoded";
 
 export namespace FeedStore {
 	/**
@@ -169,16 +165,11 @@ export namespace FeedStore {
 	/** Why a poll was asked for, so one path serves the schedule, a reader and a ping. */
 	export type RefreshReason = "scheduled" | "manual" | "subscribe" | "websub";
 
-	/** The verification a hub sends before it starts delivering. */
-	export interface HubChallenge {
-		/** The unguessable half of the callback URL the hub was given. */
-		token: string;
-		mode: string;
-		topic: string;
-		/** Echoed back verbatim when all three of token, topic and mode agree. */
-		challenge: string;
-		leaseSeconds: number;
-	}
+	/**
+	 * What a hub's verification came to: a subscription or unsubscription this object asked
+	 * for and so confirms, a denial it recorded, or anything else, which is refused.
+	 */
+	export type HubVerdict = "confirmed" | "denied" | "refused";
 
 	/** What the callback needs to judge a delivery, for a caller holding the token. */
 	export interface HubCredentials {
@@ -338,7 +329,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * The grace period is about this app's storage — it exists so a re-follow does not
 		 * re-download a feed — and it is no reason to leave somebody else's hub delivering
 		 * for a feed nobody reads. The token goes with the subscription, so a hub that keeps
-		 * notifying is answered `404` without waking anything.
+		 * notifying is answered `410 Gone` without waking anything.
 		 */
 		if (feed !== null) {
 			await this.#leaveHub(feed, "unfollowed");
@@ -761,40 +752,71 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Answers a hub's verification, echoing the challenge only when the token, the topic
-	 * and a subscription this object is waiting on all agree.
+	 * Judges a hub's verification. A subscription is confirmed only when the token, the topic
+	 * and a subscription this object is waiting on all agree, which is the defence against
+	 * being enrolled in somebody else's topic; an unsubscription only for the one last left.
 	 *
-	 * That three-way agreement is the defence against being enrolled in somebody else's
-	 * topic: a hub asked to deliver a feed this app never subscribed to is told nothing it
-	 * can act on, whichever of the three it got wrong.
+	 * A denial for the subscription held clears it, so its token stops answering at once and
+	 * the next poll that still sees the hub asks again.
 	 *
-	 * @param input - What the hub's verification request carried.
-	 * @returns The challenge to echo, or `null` for a subscription this object never made.
+	 * @param token - The second segment of the callback URL the verification arrived on.
+	 * @param verification - What the hub's verification request carried.
+	 * @returns Whether to echo the challenge, record a denial, or refuse.
 	 */
-	async verifyHub(input: FeedStore.HubChallenge): Promise<string | null> {
+	async verifyHub(
+		token: string,
+		verification: Subscriber.Verification,
+	): Promise<FeedStore.HubVerdict> {
 		let feed = await this.#feedRow();
-		if (feed === null || feed.hub_token === null) return null;
-		if (!timingSafeEqual(feed.hub_token, input.token)) return null;
-		if (input.mode !== "subscribe") return null;
-		if (feed.hub_state !== "pending") return null;
-		if (feed.hub_topic === null || feed.hub_topic !== input.topic) return null;
+		if (feed === null) return "refused";
+
+		if (verification.mode === "unsubscribe") {
+			return this.#confirmLeaving(feed, token, verification.topic);
+		}
+
+		if (feed.hub_token === null || !timingSafeEqual(feed.hub_token, token)) return "refused";
+		if (feed.hub_topic === null || feed.hub_topic !== verification.topic) return "refused";
 
 		let now = Date.now();
-		let lease = input.leaseSeconds > 0 ? input.leaseSeconds : HUB_LEASE_SECONDS;
+
+		if (verification.mode === "denied") {
+			if (feed.hub_state !== "pending" && feed.hub_state !== "active") return "refused";
+
+			await this.#clearHub("none", feed.hub_url, now);
+			this.#record("job", {
+				event: "feed.hub.denied",
+				feedUrl: feed.feed_url,
+				hubUrl: feed.hub_url,
+				state: feed.hub_state,
+			});
+
+			return "denied";
+		}
+
+		if (feed.hub_state !== "pending") return "refused";
 
 		/**
 		 * The lease stored is the one the hub reported rather than the one this app asked
-		 * for, since the hub is what decides when it stops delivering.
+		 * for, since the hub is what decides when it stops delivering, and a lease of zero is
+		 * read as the one asked for.
 		 */
+		let lease = verification.leaseSeconds > 0 ? verification.leaseSeconds : HUB_LEASE_SECONDS;
+
 		await this.#db.update(
 			feedTable,
 			{ id: FEED_ROW_ID },
-			{ hub_state: "active", hub_lease_until: now + lease * 1000, hub_misses: 0, updated_at: now },
+			{
+				hub_state: "active",
+				hub_lease_until: now + lease * 1000,
+				hub_lease_seconds: lease,
+				hub_misses: 0,
+				updated_at: now,
+			},
 		);
 
 		await this.#armNext(await this.#untilNextPoll(await this.#feedRow(), now));
 
-		return input.challenge;
+		return "confirmed";
 	}
 
 	/**
@@ -942,15 +964,15 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			});
 		}
 
-		let sent = await this.#askHub(hub.url, {
-			"hub.mode": "subscribe",
-			"hub.topic": hub.topic,
-			"hub.callback": this.#callbackUrl(token),
-			"hub.secret": secret,
-			"hub.lease_seconds": String(HUB_LEASE_SECONDS),
+		let sent = await subscribe({
+			hub: hub.url,
+			topic: hub.topic,
+			callback: this.#callbackUrl(token),
+			secret,
+			leaseSeconds: HUB_LEASE_SECONDS,
 		});
 
-		if (!sent) {
+		if (isFailure(sent)) {
 			await this.#clearHub("none", hub.url, now);
 			return;
 		}
@@ -987,8 +1009,11 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 
 	/**
 	 * Tells a hub to stop delivering. It reports nothing back: the subscription is being
-	 * abandoned either way, and a hub that keeps notifying is answered by a callback whose
-	 * token has already gone.
+	 * abandoned either way, and a hub that keeps notifying is answered `410 Gone` by a
+	 * callback whose token has already gone.
+	 *
+	 * The token and topic being left are written first, because the hub may verify the
+	 * unsubscription before the request returns, and that verification is confirmed.
 	 *
 	 * @param feed - The feed's row as it stood while the subscription was held.
 	 * @param reason - What ended it, which is what the event is read by.
@@ -996,10 +1021,16 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	async #leaveHub(feed: SelectFeed, reason: string): Promise<void> {
 		if (feed.hub_url === null || feed.hub_topic === null || feed.hub_token === null) return;
 
-		await this.#askHub(feed.hub_url, {
-			"hub.mode": "unsubscribe",
-			"hub.topic": feed.hub_topic,
-			"hub.callback": this.#callbackUrl(feed.hub_token),
+		await this.#db.update(
+			feedTable,
+			{ id: FEED_ROW_ID },
+			{ hub_leaving_token: feed.hub_token, hub_leaving_topic: feed.hub_topic },
+		);
+
+		await unsubscribe({
+			hub: feed.hub_url,
+			topic: feed.hub_topic,
+			callback: this.#callbackUrl(feed.hub_token),
 		});
 
 		this.#record("job", {
@@ -1087,6 +1118,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 				hub_secret: null,
 				hub_token: null,
 				hub_lease_until: state === "failed" ? now + HUB_COOLOFF_MS : null,
+				hub_lease_seconds: null,
 				hub_misses: 0,
 				updated_at: now,
 			},
@@ -1094,24 +1126,28 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Sends one WebSub request and reports whether the hub accepted it.
+	 * Confirms the hub's verification of the unsubscription this object last sent, and only
+	 * that one, clearing it so a replayed verification is refused.
 	 *
-	 * @param hubUrl - The hub to ask.
-	 * @param body - The `hub.*` fields, which WebSub defines only as a form encoding.
+	 * @param feed - The feed's row, which carries the token and topic being left.
+	 * @param token - The second segment of the callback URL the verification arrived on.
+	 * @param topic - The topic the hub is unsubscribing.
 	 */
-	async #askHub(hubUrl: string, body: Record<string, string>): Promise<boolean> {
-		try {
-			let response = await fetch(hubUrl, {
-				method: "POST",
-				headers: { "content-type": HUB_CONTENT_TYPE },
-				body: new URLSearchParams(body).toString(),
-				signal: AbortSignal.timeout(HUB_TIMEOUT_MS),
-			});
+	async #confirmLeaving(
+		feed: SelectFeed,
+		token: string,
+		topic: string,
+	): Promise<FeedStore.HubVerdict> {
+		if (feed.hub_leaving_token === null || feed.hub_leaving_topic !== topic) return "refused";
+		if (!timingSafeEqual(feed.hub_leaving_token, token)) return "refused";
 
-			return response.ok;
-		} catch {
-			return false;
-		}
+		await this.#db.update(
+			feedTable,
+			{ id: FEED_ROW_ID },
+			{ hub_leaving_token: null, hub_leaving_topic: null, updated_at: Date.now() },
+		);
+
+		return "confirmed";
 	}
 
 	/** The address this feed's hub delivers to, which the token is the unguessable half of. */
@@ -1122,15 +1158,15 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 
 	/** Whether this feed's lease has reached the point a fresh subscription replaces it. */
 	#renewalDue(feed: SelectFeed | null, now: number): boolean {
-		if (feed === null || feed.hub_state !== "active" || feed.hub_lease_until === null) return false;
-		return hubRenewalAt(feed.hub_lease_until) <= now;
+		let due = feed === null ? null : renewalOf(feed);
+		return due !== null && due <= now;
 	}
 
 	/** How long until the lease is renewed, or `null` for a feed holding no subscription. */
 	async #renewalDelay(): Promise<number | null> {
 		let feed = await this.#feedRow();
-		if (feed === null || feed.hub_state !== "active" || feed.hub_lease_until === null) return null;
-		return Math.max(0, hubRenewalAt(feed.hub_lease_until) - Date.now());
+		let due = feed === null ? null : renewalOf(feed);
+		return due === null ? null : Math.max(0, due - Date.now());
 	}
 
 	/**
@@ -1220,6 +1256,20 @@ export function feedStore(feedId: string): DurableObjectStub<FeedDO> {
  */
 function held(reason: FeedStore.RefreshReason): boolean {
 	return reason === "scheduled" || reason === "websub";
+}
+
+/**
+ * When an active subscription is renewed, timed from the lease the hub granted, so a short
+ * grant renews inside itself. A row verified before the grant was recorded is timed as if
+ * the lease asked for had been granted.
+ *
+ * @returns Epoch milliseconds, or `null` for a feed holding no active lease.
+ */
+function renewalOf(feed: SelectFeed): number | null {
+	if (feed.hub_state !== "active" || feed.hub_lease_until === null) return null;
+
+	let leaseSeconds = feed.hub_lease_seconds ?? HUB_LEASE_SECONDS;
+	return renewalAt({ verifiedAt: feed.hub_lease_until - leaseSeconds * 1000, leaseSeconds });
 }
 
 /** The feed's description of itself, as it crosses the boundary. */

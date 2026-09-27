@@ -336,18 +336,22 @@ export async function measurePostsPerDay(db: Database, now: number): Promise<num
 
 /**
  * The hub this response advertises, looked for on every poll because a publisher adds one
- * and drops one and the answer held has to be the one their current document gives.
+ * and drops one and the answer held has to be the one their current document gives. The
+ * topic is the `rel=self` declared in the same place as the hub, so a header-advertised hub
+ * is subscribed under the header's topic.
  *
  * @param retrieved - The response and the document it carried.
  * @param feedUrl - The canonical URL this feed is fetched from.
  */
 function hubAdvertOf(retrieved: Feed.Fetched, feedUrl: string): HubAdvert | null {
-	let hub = Feed.selectHub(retrieved.links, retrieved.feed.links);
-	if (hub === undefined) return null;
+	let subscription = Feed.selectSubscription(retrieved.links, retrieved.feed.links);
+	if (subscription === undefined) return null;
 
-	let declared = retrieved.feed.links.find((link) => link.rel === "self")?.href;
-
-	return { url: hub.url, source: hub.source, topic: hubTopicFor(feedUrl, declared) };
+	return {
+		url: subscription.hub,
+		source: subscription.source,
+		topic: hubTopicFor(feedUrl, subscription.topic),
+	};
 }
 
 /** The feed's own description of itself, as the document last carried it. */
