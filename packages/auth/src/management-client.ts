@@ -17,8 +17,13 @@ import { parseLinkHeader } from "@sdxc/pagination";
 import { isProblem, ISSUES_SCHEMA } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
 
+import type { AuthError } from "./auth-error.js";
+import type { Issuer } from "./issuer.js";
+
 import { nonJsonMediaType } from "./content-type.js";
 import { managementProblems } from "./management-problems.js";
+import { ProtectedResource } from "./protected-resource.js";
+import { ServiceClient } from "./service-client.js";
 
 export { managementProblems } from "./management-problems.js";
 
@@ -468,6 +473,38 @@ export class ManagementClient {
 	 * `apiVersion` is free to be served the platform's own oldest supported one.
 	 */
 	apiVersionReceived: string | null = null;
+
+	/**
+	 * Builds a client from the management API's URL alone: its RFC 9728 metadata names
+	 * the authorization server, whose RFC 8414 metadata names the token endpoint the
+	 * service client is granted tokens at.
+	 *
+	 * @param api - The management API's resource identifier, such as `https://api.example.com`.
+	 * @param credentials - The management client's own id, secret and token options.
+	 * @param options - How a token is scoped and which version is named; the base URL is
+	 *   the discovered resource, plus the cache discovered documents are shared through.
+	 * @returns The client, or the `AuthError` discovery failed with.
+	 * @example
+	 * let client = unwrap(await ManagementClient.discover(API_URL, { clientId, clientSecret }));
+	 */
+	static async discover(
+		api: URL | string,
+		credentials: ServiceClient.Options,
+		options: Omit<ManagementClient.Options, "baseUrl"> & { cache?: Issuer.CacheSource } = {},
+	): Promise<Result<ManagementClient, AuthError>> {
+		let { cache, ...clientOptions } = options;
+
+		let resource = await ProtectedResource.discover(api, { cache });
+		if (isFailure(resource)) return resource;
+
+		let issuer = await resource.data.issuer(undefined, { cache });
+		if (isFailure(issuer)) return issuer;
+
+		let service = new ServiceClient(issuer.data, credentials);
+		return success(
+			new ManagementClient(service, { ...clientOptions, baseUrl: resource.data.metadata.resource }),
+		);
+	}
 
 	/**
 	 * Points a client at the records of the provider its service client speaks to.

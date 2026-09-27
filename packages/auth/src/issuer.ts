@@ -67,7 +67,7 @@ const VALUES_SCHEMA = s.optional(s.array(s.string()));
  */
 const METADATA_SCHEMA = s.object({
 	issuer: IDENTIFIER_SCHEMA,
-	authorization_endpoint: URL_SCHEMA,
+	authorization_endpoint: s.optional(URL_SCHEMA),
 	token_endpoint: URL_SCHEMA,
 	jwks_uri: URL_SCHEMA,
 	userinfo_endpoint: s.optional(URL_SCHEMA),
@@ -341,7 +341,11 @@ export class Issuer {
 		return verified.data;
 	}
 
-	/** Where a person is sent to authenticate and grant consent. */
+	/**
+	 * Where a person is sent to authenticate and grant consent.
+	 *
+	 * @throws `EndpointUnsupported` for a server that answers no grant needing one.
+	 */
 	authorizationEndpoint(): Promise<URL> {
 		return this.#endpoint("authorization_endpoint");
 	}
@@ -690,7 +694,11 @@ export namespace Issuer {
 	export interface Metadata {
 		/** The identifier the issuer's tokens carry as `iss`. */
 		issuer: string;
-		authorization_endpoint: string;
+		/**
+		 * Present on any server issuing codes; RFC 8414 §2 lets a server whose grants
+		 * never reach it, one answering only client credentials, leave it out.
+		 */
+		authorization_endpoint?: string;
 		token_endpoint: string;
 		jwks_uri: string;
 		userinfo_endpoint?: string;

@@ -983,3 +983,62 @@ describe("ManagementClient tenant-scoped surface", () => {
 		});
 	});
 });
+
+describe("ManagementClient.discover", () => {
+	const API = "https://api.discover.test";
+
+	test("finds the token endpoint from the API URL alone and calls the API with its token", async () => {
+		let granted: string | null = null;
+		let authorization: string | null = null;
+		server.use(
+			http.get(`${API}/.well-known/oauth-protected-resource`, () =>
+				HttpResponse.json({ resource: API, authorization_servers: [API] }),
+			),
+			http.get(`${API}/.well-known/oauth-authorization-server`, () =>
+				HttpResponse.json({
+					issuer: API,
+					token_endpoint: `${API}/oauth/token`,
+					jwks_uri: `${API}/.well-known/jwks.json`,
+					grant_types_supported: ["client_credentials"],
+				}),
+			),
+			http.post(`${API}/oauth/token`, async ({ request }) => {
+				granted = new URLSearchParams(await request.text()).get("grant_type");
+				return HttpResponse.json({
+					access_token: "mgmt-token",
+					token_type: "Bearer",
+					expires_in: 900,
+				});
+			}),
+			http.delete(`${API}/tenants/tnt_1/subjects/sub_1`, ({ request }) => {
+				authorization = request.headers.get("authorization");
+				return new HttpResponse(null, { status: 204 });
+			}),
+		);
+
+		let client = await ManagementClient.discover(API, {
+			clientId: "mgmt_client",
+			clientSecret: "secret",
+		});
+		if (isFailure(client)) throw client.error;
+
+		let result = await client.data.deleteTenantSubject("tnt_1", "sub_1");
+
+		expect(isSuccess(result)).toBe(true);
+		expect(granted).toBe("client_credentials");
+		expect(authorization).toBe("Bearer mgmt-token");
+	});
+
+	test("fails when the API publishes no resource metadata", async () => {
+		server.use(
+			http.get(
+				`${API}/.well-known/oauth-protected-resource`,
+				() => new HttpResponse(null, { status: 404 }),
+			),
+		);
+
+		let client = await ManagementClient.discover(API, { clientId: "c", clientSecret: "s" });
+
+		expect(isFailure(client)).toBe(true);
+	});
+});

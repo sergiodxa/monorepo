@@ -461,6 +461,14 @@ administered as `new ManagementClient(service, { baseUrl, resources: [baseUrl] }
 request under `{baseUrl}/tenants/{tenantId}/…`, so one client reaches every tenant a service
 client's credential is scoped to.
 
+`ManagementClient.discover(api, credentials, options?)` builds that client from the API's
+URL alone: it reads the API's RFC 9728 metadata, the RFC 8414 metadata of the authorization
+server it lists, and grants tokens at the token endpoint found there. `credentials` are
+`ServiceClient.Options`; `options` takes every `Options` member but `baseUrl`, which is the
+discovered resource, plus a `cache` for the fetched documents. It answers
+`Result<ManagementClient, AuthError>`. An RFC 8414 document may leave out
+`authorization_endpoint`, as a server answering only client credentials does.
+
 A failure this surface reports is `ManagementError` for a request that never completed, was
 unauthorized, or was rate-limited, or the richer `ManagementProblem` — an RFC 9457
 `application/problem+json` body — for everything the tenant-scoped API itself refuses:
