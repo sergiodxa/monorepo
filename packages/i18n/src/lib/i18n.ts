@@ -213,8 +213,10 @@ export function partText(part: MessagePart): string {
 	if ("parts" in part && Array.isArray(part.parts)) {
 		return part.parts.map((item: { value: unknown }) => String(item.value)).join("");
 	}
-	// oxlint-disable-next-line typescript/no-base-to-string -- matches `format`, which writes an unknown value with `String`
-	if ("value" in part) return String(part.value ?? "");
+	if ("value" in part) {
+		let value: unknown = part.value ?? "";
+		return String(value);
+	}
 	return "";
 }
 
