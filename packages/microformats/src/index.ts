@@ -1,5 +1,3 @@
-import type { DOMDocument } from "@sdxc/html/document";
-import type { Result } from "@sdxc/result";
 /**
  * Parses HTML into canonical microformats2 JSON and reads and writes that JSON, which is
  * the one shape Webmention reads a page through and Micropub sends and answers with.
@@ -8,6 +6,8 @@ import type { Result } from "@sdxc/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { DOMDocument } from "@sdxc/html/document";
+import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 import type { Schema } from "remix/data-schema";
 
