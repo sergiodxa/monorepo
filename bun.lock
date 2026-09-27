@@ -479,6 +479,10 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/cloudflare-pricing": {
+      "name": "@sdxc/cloudflare-pricing",
+      "version": "0.0.1",
+    },
     "packages/cron": {
       "name": "@sdxc/cron",
       "version": "0.0.1",
@@ -1825,6 +1829,8 @@
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
 
     "@sdxc/cloudflare-mocks": ["@sdxc/cloudflare-mocks@workspace:packages/cloudflare-mocks"],
+
+    "@sdxc/cloudflare-pricing": ["@sdxc/cloudflare-pricing@workspace:packages/cloudflare-pricing"],
 
     "@sdxc/cron": ["@sdxc/cron@workspace:packages/cron"],
 

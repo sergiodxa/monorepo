@@ -1,0 +1,23 @@
+{
+	"name": "@sdxc/cloudflare-pricing",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Cloudflare Developer Platform list prices, one module per service",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./analytics-engine": "./src/analytics-engine.ts",
+		"./d1": "./src/d1.ts",
+		"./durable-objects": "./src/durable-objects.ts",
+		"./email-service": "./src/email-service.ts",
+		"./kv": "./src/kv.ts",
+		"./queues": "./src/queues.ts",
+		"./r2": "./src/r2.ts",
+		"./workers": "./src/workers.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {}
+}
