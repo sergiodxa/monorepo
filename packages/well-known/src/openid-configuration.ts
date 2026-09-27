@@ -75,7 +75,8 @@ export function parse<Extensions extends object = Record<string, unknown>>(
 
 /**
  * Writes the document as its registered member names, leaving out `null` members,
- * empty lists and flags at their §3 default.
+ * optional empty lists and flags at their §3 default. The REQUIRED lists are written
+ * even when empty, so the output always passes {@link parse}.
  *
  * @param document - The metadata to publish.
  */

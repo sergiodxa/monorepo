@@ -155,6 +155,15 @@ describe(stringify, () => {
 		});
 	});
 
+	test("writes the required response_types_supported even when it lists nothing", () => {
+		let metadata = define({ issuer: "https://as.example", responseTypesSupported: [] });
+		expect(JSON.parse(stringify(metadata))).toEqual({
+			issuer: "https://as.example",
+			response_types_supported: [],
+		});
+		expect(unwrap(parse(stringify(metadata)))).toEqual(metadata);
+	});
+
 	test("round-trips through parse", () => {
 		let metadata = unwrap(parse(RFC_EXAMPLE));
 		expect(unwrap(parse(stringify(metadata)))).toEqual(metadata);

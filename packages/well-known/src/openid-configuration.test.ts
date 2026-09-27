@@ -80,6 +80,26 @@ describe(stringify, () => {
 		});
 	});
 
+	test("writes every required list even when it lists nothing", () => {
+		let metadata = define({
+			issuer: "https://op.example",
+			authorizationEndpoint: new URL("https://op.example/authorize"),
+			jwksUri: new URL("https://op.example/jwks.json"),
+			responseTypesSupported: [],
+			subjectTypesSupported: [],
+			idTokenSigningAlgValuesSupported: [],
+		});
+		expect(JSON.parse(stringify(metadata))).toEqual({
+			issuer: "https://op.example",
+			authorization_endpoint: "https://op.example/authorize",
+			jwks_uri: "https://op.example/jwks.json",
+			response_types_supported: [],
+			subject_types_supported: [],
+			id_token_signing_alg_values_supported: [],
+		});
+		expect(unwrap(parse(stringify(metadata)))).toEqual(metadata);
+	});
+
 	test("round-trips through parse", () => {
 		let metadata = unwrap(parse(PROVIDER));
 		expect(unwrap(parse(stringify(metadata)))).toEqual(metadata);

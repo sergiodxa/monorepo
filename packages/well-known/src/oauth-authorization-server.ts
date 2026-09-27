@@ -95,8 +95,8 @@ export function parse<Extensions extends object = Record<string, unknown>>(
 
 /**
  * Writes the document as its registered member names, leaving out `null` members,
- * empty lists and `false` flags, so a `define`d document serializes to what an app
- * would write by hand.
+ * optional empty lists and `false` flags. `response_types_supported` is REQUIRED, so
+ * it is written even when empty and the output always passes {@link parse}.
  *
  * @param document - The metadata to publish.
  */

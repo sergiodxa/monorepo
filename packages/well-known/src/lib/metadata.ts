@@ -259,10 +259,9 @@ export function readMetadata<Extensions extends object>(
 }
 
 /**
- * Writes a metadata document through its table: `null` members, empty lists and flags
- * at their default are left out, URLs become their `href`, and extensions come first
- * with any member name the table registers dropped, so an extension never replaces a
- * standard member.
+ * Writes a document through its table, omitting `null` members, optional empty lists and
+ * default flags; a required list is written even when empty so the output parses back.
+ * Extensions never replace a standard member: any member name the table registers is dropped.
  *
  * @param document - The typed document.
  * @param table - The document's mapping table.
@@ -282,7 +281,7 @@ export function writeMetadata(document: object, table: FieldTable): string {
 		let value = fields[name];
 		if (value === null || value === undefined) continue;
 		if (Array.isArray(value)) {
-			if (value.length === 0) continue;
+			if (value.length === 0 && !field.required) continue;
 			output[field.wire] = value.map((entry) => (entry instanceof URL ? entry.href : entry));
 			continue;
 		}
