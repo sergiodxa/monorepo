@@ -595,6 +595,22 @@ has to follow one.
   `DTSTART` is the first occurrence still running at `created_at`, and a monthly day outside
   1-31 is no pattern. The page lists in-progress and upcoming windows, the feed also keeps
   one-off windows for 30 days after they end.
+- Implementation: iTIP lives on its own subpath, `@sdxc/icalendar/itip`: `request`, `cancel`
+  and `reply` build the calendar for one event, `readReply` reads a `REPLY`'s answers (one per
+  `VEVENT`), `nextSequence` applies RFC 5546 §2.1.4 (bump on a change to `DTSTART`, `DTEND`,
+  `DURATION`, `RRULE`, `RDATE`, `EXDATE` or `STATUS`), and `calendarPart` returns the
+  `{ method, content, filename? }` shape `@sdxc/mail`'s `calendar` option takes, typed
+  structurally so neither package imports the other. A `REPLY` echoes the request's `SEQUENCE`,
+  and a `CANCEL` bumps it by one.
+- Implementation: RFC 5546 lets a `REPLY`, `CANCEL`, `REFRESH` or `DECLINECOUNTER` `VEVENT` omit
+  `DTSTART`, which `ICalendar.Event` requires; such an event stays in `components` as before, and
+  the reader no longer warns about it under those methods. `readReply` reads both forms.
+- Implementation: `@sdxc/mail` writes the calendar as the last `multipart/alternative` part and,
+  with `filename`, also as an `application/ics` attachment inside `multipart/mixed`. The
+  Workers `send_email` binding takes no alternative part, so its transport sends the calendar
+  as one attachment typed `text/calendar; method=…`.
+- Implementation: two RFC 5546 §4.2 examples carry printed typos (§4.2.1's seven-digit time,
+  §4.2.9's `;` before `mailto:`); the vendored fixtures correct them and note it.
 
 ## Current Progress
 
@@ -606,4 +622,8 @@ has to follow one.
   - [x] `./timezone` `vtimezone` and `TZID` resolution through parsed `VTIMEZONE`s
   - [x] Replace `isRecurringPatternActive` in uptime with `occurrences`
 - [ ] Phase 4: Invitations
+  - [x] `@sdxc/mail` accepts a `text/calendar; method=…` alternative part (`calendar` option)
+  - [x] `./itip` `request`, `cancel`, `reply`, `readReply`, `nextSequence`, `calendarPart`,
+        tested against RFC 5546 §4.2
+  - [ ] Maintenance emails in uptime that carry them
 - [ ] Phase 5: Publish

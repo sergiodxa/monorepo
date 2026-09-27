@@ -49,6 +49,17 @@ const EVENT_STATUSES = ["TENTATIVE", "CONFIRMED", "CANCELLED"] as const;
 /** Attendee roles the model types. */
 const ROLES = ["CHAIR", "REQ-PARTICIPANT", "OPT-PARTICIPANT", "NON-PARTICIPANT"] as const;
 
+/**
+ * iTIP methods whose `VEVENT` may omit `DTSTART` (RFC 5546 §3.2): a reply, a cancellation,
+ * a refresh or a declined counter identifies the event by `UID` alone.
+ */
+const START_OPTIONAL: ReadonlySet<string> = new Set([
+	"REPLY",
+	"CANCEL",
+	"REFRESH",
+	"DECLINECOUNTER",
+]);
+
 /** Participation statuses the model types. */
 const PARTICIPATION = ["NEEDS-ACTION", "ACCEPTED", "DECLINED", "TENTATIVE", "DELEGATED"] as const;
 
@@ -136,7 +147,7 @@ function readUtcDate(property: ICalendar.Property): Date | null {
  * @param typed - Parameter names the caller reads into typed fields
  * @returns The user
  */
-function readCalendarUser(
+export function readCalendarUser(
 	property: ICalendar.Property,
 	typed: string[] = [],
 ): ICalendar.CalendarUser {
@@ -157,7 +168,7 @@ function readCalendarUser(
  * @param property - The property
  * @returns The attendee
  */
-function readAttendee(property: ICalendar.Property): ICalendar.Attendee {
+export function readAttendee(property: ICalendar.Property): ICalendar.Attendee {
 	let role = property.parameters.ROLE?.[0]?.toUpperCase();
 	let participation = property.parameters.PARTSTAT?.[0]?.toUpperCase();
 	let rsvp = property.parameters.RSVP?.[0]?.toUpperCase();
@@ -226,14 +237,15 @@ function readAlarm(node: Node, warn: Warn): ICalendar.Alarm | null {
 
 /**
  * Reads a `VEVENT`. `DTSTART` is required to type it; without one the event stays an untyped
- * component. A missing `UID` or `DTSTAMP` is a warning, and a known property whose value
- * does not parse stays in `properties` with a warning.
+ * component, with a warning unless the method lets it go. A missing `UID` or `DTSTAMP` is a
+ * warning, and a known property whose value does not parse stays in `properties` with one.
  *
  * @param node - The event node
  * @param warn - Collects warnings
+ * @param startOptional - Whether the calendar's iTIP method lets a `VEVENT` omit `DTSTART`
  * @returns The event, or `null` when it has no readable `DTSTART`
  */
-function readEvent(node: Node, warn: Warn): ICalendar.Event | null {
+function readEvent(node: Node, warn: Warn, startOptional: boolean): ICalendar.Event | null {
 	let event: Partial<ICalendar.Event> & { properties: ICalendar.Property[] } = { properties: [] };
 	let keep = (entry: LineProperty, reason?: string) => {
 		if (reason) warn(entry.line, reason);
@@ -298,6 +310,7 @@ function readEvent(node: Node, warn: Warn): ICalendar.Event | null {
 		else keep(entry);
 	}
 	if (!event.start) {
+		if (startOptional) return null;
 		warn(node.line, "VEVENT without a readable DTSTART was kept as an untyped component");
 		return null;
 	}
@@ -439,7 +452,7 @@ export function readCalendar(node: Node): ICalendar.Parsed {
 	for (let child of node.children) {
 		let typed: ICalendar.Event | ICalendar.TimeZone | null = null;
 		if (child.name === "VEVENT") {
-			let event = readEvent(child, warn);
+			let event = readEvent(child, warn, START_OPTIONAL.has(calendar.method ?? ""));
 			if (event) calendar.events.push(event);
 			typed = event;
 		} else if (child.name === "VTIMEZONE") {

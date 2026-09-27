@@ -8,7 +8,8 @@
 	"exports": {
 		".": "./src/index.ts",
 		"./rrule": "./src/rrule.ts",
-		"./timezone": "./src/timezone.ts"
+		"./timezone": "./src/timezone.ts",
+		"./itip": "./src/itip.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
