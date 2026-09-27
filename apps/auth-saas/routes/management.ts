@@ -21,6 +21,8 @@ import { del, get, patch, post, put, route } from "remix/routes";
 export default route({
 	token: post("/oauth/token"),
 
+	openapi: get("/openapi.json"),
+
 	invitationsAccept: post("/invitations/accept"),
 
 	subjectsCreate: post("/tenants/:tenantId/subjects"),

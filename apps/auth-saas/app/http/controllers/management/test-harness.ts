@@ -17,8 +17,11 @@ import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { HostnameClient } from "@sdxc/hostname";
 import { JWK } from "@sdxc/jwt";
+import { createConformanceRecorder } from "@sdxc/openapi/testing";
 import { Database } from "remix/data-table";
+import { afterAll, expect } from "vitest";
 
+import { buildManagementDocument } from "~/app/http/openapi/document";
 import { ManagementAccessToken } from "~/app/lib/management-token";
 import Customer from "~/app/models/customer";
 import Membership from "~/app/models/membership";
@@ -31,6 +34,20 @@ import { createTestDatabase } from "~/app/test/db";
 import TenantObject from "~/database/tenant-do";
 
 export const ISSUER = "https://api.example.com";
+
+/** Records every exchange a harness router serves, against the published document. */
+const CONFORMANCE = createConformanceRecorder(buildManagementDocument(ISSUER));
+
+/**
+ * Checks every response a harness router answers against the OpenAPI document, so a
+ * route answering a status, problem type or body the document does not describe fails
+ * the test file that exercised it. Install it first on a harness router.
+ */
+export const conformance = CONFORMANCE.middleware;
+
+afterAll(() => {
+	expect(CONFORMANCE.violations()).toEqual([]);
+});
 
 /** A fake `RateLimiterBinding` answering the same decision on every call. */
 export function fakeLimiter(success = true): RateLimiterBinding {

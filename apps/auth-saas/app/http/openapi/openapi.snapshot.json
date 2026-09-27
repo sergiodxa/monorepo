@@ -1,0 +1,2171 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Management API",
+    "version": "2026-09-21"
+  },
+  "jsonSchemaDialect": "https://spec.openapis.org/oas/3.1/dialect/base",
+  "servers": [
+    {
+      "url": "https://api.example.com"
+    }
+  ],
+  "paths": {
+    "/tenants/{tenantId}/audit-events": {
+      "get": {
+        "operationId": "auditEventsList",
+        "summary": "List audit events",
+        "description": "A keyset page of the audit events recorded between from and to (epoch ms).",
+        "tags": [
+          "Audit events"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          },
+          {
+            "name": "action",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "actor_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "target_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "per_page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "number",
+                "string"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The page of events",
+            "headers": {
+              "Link": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "RFC 8288 links to the next and previous pages, when they exist"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AuditEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The paging parameters are not valid; The given cursor no longer matches this ordering; The request did not pass validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadCursorProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedProblem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "audit:read"
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Problem": {
+        "type": "object",
+        "description": "An RFC 9457 problem details document",
+        "properties": {
+          "type": {
+            "type": "string",
+            "format": "uri-reference"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "instance": {
+            "type": "string",
+            "format": "uri-reference"
+          }
+        }
+      },
+      "AttributeNotWritableProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/attribute-not-writable"
+              },
+              "title": {
+                "const": "This caller may not write one of the given attributes"
+              },
+              "status": {
+                "const": 403
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "BadCursorProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/bad-cursor"
+              },
+              "title": {
+                "const": "The given cursor no longer matches this ordering"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "DuplicatePermissionProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/duplicate-permission"
+              },
+              "title": {
+                "const": "This tenant already has a permission under this key"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "DuplicateRoleProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/duplicate-role"
+              },
+              "title": {
+                "const": "This scope already has a role under this key"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "DuplicateUsernameProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/duplicate-username"
+              },
+              "title": {
+                "const": "Only one username may be claimed at creation"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "EntitlementRequiredProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/entitlement-required"
+              },
+              "title": {
+                "const": "This tenant's plan does not include this feature"
+              },
+              "status": {
+                "const": 403
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ExpiredTicketProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/expired-ticket"
+              },
+              "title": {
+                "const": "This verification ticket has expired"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ExpiryTooFarProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/expiry-too-far"
+              },
+              "title": {
+                "const": "The requested expiry exceeds the longest a key may live"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ForbiddenProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/forbidden"
+              },
+              "title": {
+                "const": "This caller may not administer this tenant"
+              },
+              "status": {
+                "const": 403
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "HostnameRegistrationFailedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/hostname-registration-failed"
+              },
+              "title": {
+                "const": "Cloudflare refused to register this hostname"
+              },
+              "status": {
+                "const": 502
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "IdempotencyKeyInUseProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/idempotency-key-in-use"
+              },
+              "title": {
+                "const": "A request with this idempotency key is still being processed"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "IdempotencyKeyInvalidProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/idempotency-key-invalid"
+              },
+              "title": {
+                "const": "The Idempotency-Key header is not valid"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "IdempotencyKeyMissingProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/idempotency-key-missing"
+              },
+              "title": {
+                "const": "This request requires an Idempotency-Key header"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "IdempotencyKeyReusedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/idempotency-key-reused"
+              },
+              "title": {
+                "const": "This idempotency key was already used for a different request"
+              },
+              "status": {
+                "const": 422
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "IdentifierTakenProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/identifier-taken"
+              },
+              "title": {
+                "const": "An identifier is already claimed"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidAuthMethodProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-auth-method"
+              },
+              "title": {
+                "const": "This auth method does not match the client's kind"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidDomainKindProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-domain-kind"
+              },
+              "title": {
+                "const": "A platform domain may not be attached through this API"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidGrantTypeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-grant-type"
+              },
+              "title": {
+                "const": "One of the given grant types is not supported"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidIdentifierProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-identifier"
+              },
+              "title": {
+                "const": "An identifier is not valid"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidPostLogoutRedirectUriProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-post-logout-redirect-uri"
+              },
+              "title": {
+                "const": "One of the given post-logout redirect URIs is not valid"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidReassignmentProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-reassignment"
+              },
+              "title": {
+                "const": "The reassignment target does not exist at this role's own scope"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidRedirectUriProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-redirect-uri"
+              },
+              "title": {
+                "const": "One of the given redirect URIs is not valid"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidRequestProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-request"
+              },
+              "title": {
+                "const": "The paging parameters are not valid"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidResponseTypeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-response-type"
+              },
+              "title": {
+                "const": "One of the given response types is not supported"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidVerificationTicketProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-verification-ticket"
+              },
+              "title": {
+                "const": "This verification ticket does not match a pending identifier"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidTicketProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-ticket"
+              },
+              "title": {
+                "const": "This link no longer works"
+              },
+              "status": {
+                "const": 404
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "InvalidUrlProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/invalid-url"
+              },
+              "title": {
+                "const": "The given URL is not valid for a webhook endpoint"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "KindImmutableProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/kind-immutable"
+              },
+              "title": {
+                "const": "A client's kind may not change once registered"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "LastCredentialProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/last-credential"
+              },
+              "title": {
+                "const": "This subject's last remaining credential may not be removed"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "LastLiveSecretProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/last-live-secret"
+              },
+              "title": {
+                "const": "This client's last live secret may not be revoked"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "LastOwnerProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/last-owner"
+              },
+              "title": {
+                "const": "This scope's last owner may not be reassigned"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "LastVerifiedIdentifierProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/last-verified-identifier"
+              },
+              "title": {
+                "const": "This subject's last verified identifier may not be removed"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "NoPasswordProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/no-password"
+              },
+              "title": {
+                "const": "This subject holds no password to reset"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "NotConfidentialProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/not-confidential"
+              },
+              "title": {
+                "const": "Only a confidential client holds a secret to rotate"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "NotFoundProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/not-found"
+              },
+              "title": {
+                "const": "The resource does not exist"
+              },
+              "status": {
+                "const": 404
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "NotMemberProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/not-member"
+              },
+              "title": {
+                "const": "This subject does not belong to this organization"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "OverlapTooLongProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/overlap-too-long"
+              },
+              "title": {
+                "const": "The requested overlap window exceeds the longest one a rotation may open"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "PermissionSetTooLargeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/permission-set-too-large"
+              },
+              "title": {
+                "const": "This set of permission keys exceeds what a role may grant"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "PrefixNotSetProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/prefix-not-set"
+              },
+              "title": {
+                "const": "This tenant has not set its own API key prefix yet"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "RateLimitedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/rate-limited"
+              },
+              "title": {
+                "const": "Too many requests have been sent"
+              },
+              "status": {
+                "const": 429
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ReservedKeyProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/reserved-key"
+              },
+              "title": {
+                "const": "This key is reserved for the platform"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ScopeNotHeldProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/scope-not-held"
+              },
+              "title": {
+                "const": "The issuing subject does not hold one of the requested scopes"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "SystemRoleProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/system-role"
+              },
+              "title": {
+                "const": "A system role may not be changed"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "TooManyLiveSecretsProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/too-many-live-secrets"
+              },
+              "title": {
+                "const": "This client already holds the most secrets it may hold at once"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnauthorizedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unauthorized"
+              },
+              "title": {
+                "const": "This request could not be authenticated"
+              },
+              "status": {
+                "const": 401
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnknownAttributeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unknown-attribute"
+              },
+              "title": {
+                "const": "One of the given attributes has no declared definition"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnknownEventTypeProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unknown-event-type"
+              },
+              "title": {
+                "const": "One of the given event types is not recognized"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnknownPermissionProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unknown-permission"
+              },
+              "title": {
+                "const": "One of the given permission keys has no declared definition"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnsupportedApiVersionProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unsupported-api-version"
+              },
+              "title": {
+                "const": "This API version is not published"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UnverifiedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/unverified"
+              },
+              "title": {
+                "const": "An unverified identifier may not become primary"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "UsernameAlreadySetProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/username-already-set"
+              },
+              "title": {
+                "const": "This subject already holds a username"
+              },
+              "status": {
+                "const": 409
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          }
+        ]
+      },
+      "ValidationFailedProblem": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Problem"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "https://docs.example.com/errors/validation-failed"
+              },
+              "title": {
+                "const": "The request did not pass validation"
+              },
+              "status": {
+                "const": 400
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "status"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "pointer": {
+                      "type": "string",
+                      "description": "An RFC 6901 JSON Pointer into the request body"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "pointer",
+                    "code",
+                    "message"
+                  ]
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AuditEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "at": {
+            "type": "integer"
+          },
+          "action": {
+            "type": "string"
+          },
+          "actorType": {
+            "type": "string",
+            "enum": [
+              "subject",
+              "member",
+              "client",
+              "platform"
+            ]
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "targetType": {
+            "type": "string"
+          },
+          "targetId": {
+            "type": "string"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed",
+              "denied"
+            ]
+          },
+          "context": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "id",
+          "at",
+          "action",
+          "actorType",
+          "actorId",
+          "targetType",
+          "targetId",
+          "outcome",
+          "context",
+          "detail"
+        ]
+      }
+    },
+    "responses": {
+      "AttributeNotWritable": {
+        "description": "This caller may not write one of the given attributes",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/AttributeNotWritableProblem"
+            }
+          }
+        }
+      },
+      "BadCursor": {
+        "description": "The given cursor no longer matches this ordering",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/BadCursorProblem"
+            }
+          }
+        }
+      },
+      "DuplicatePermission": {
+        "description": "This tenant already has a permission under this key",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/DuplicatePermissionProblem"
+            }
+          }
+        }
+      },
+      "DuplicateRole": {
+        "description": "This scope already has a role under this key",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/DuplicateRoleProblem"
+            }
+          }
+        }
+      },
+      "DuplicateUsername": {
+        "description": "Only one username may be claimed at creation",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/DuplicateUsernameProblem"
+            }
+          }
+        }
+      },
+      "EntitlementRequired": {
+        "description": "This tenant's plan does not include this feature",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/EntitlementRequiredProblem"
+            }
+          }
+        }
+      },
+      "ExpiredTicket": {
+        "description": "This verification ticket has expired",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ExpiredTicketProblem"
+            }
+          }
+        }
+      },
+      "ExpiryTooFar": {
+        "description": "The requested expiry exceeds the longest a key may live",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ExpiryTooFarProblem"
+            }
+          }
+        }
+      },
+      "Forbidden": {
+        "description": "This caller may not administer this tenant",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ForbiddenProblem"
+            }
+          }
+        }
+      },
+      "HostnameRegistrationFailed": {
+        "description": "Cloudflare refused to register this hostname",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/HostnameRegistrationFailedProblem"
+            }
+          }
+        }
+      },
+      "IdempotencyKeyInUse": {
+        "description": "A request with this idempotency key is still being processed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/IdempotencyKeyInUseProblem"
+            }
+          }
+        }
+      },
+      "IdempotencyKeyInvalid": {
+        "description": "The Idempotency-Key header is not valid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/IdempotencyKeyInvalidProblem"
+            }
+          }
+        }
+      },
+      "IdempotencyKeyMissing": {
+        "description": "This request requires an Idempotency-Key header",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/IdempotencyKeyMissingProblem"
+            }
+          }
+        }
+      },
+      "IdempotencyKeyReused": {
+        "description": "This idempotency key was already used for a different request",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/IdempotencyKeyReusedProblem"
+            }
+          }
+        }
+      },
+      "IdentifierTaken": {
+        "description": "An identifier is already claimed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/IdentifierTakenProblem"
+            }
+          }
+        }
+      },
+      "InvalidAuthMethod": {
+        "description": "This auth method does not match the client's kind",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidAuthMethodProblem"
+            }
+          }
+        }
+      },
+      "InvalidDomainKind": {
+        "description": "A platform domain may not be attached through this API",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidDomainKindProblem"
+            }
+          }
+        }
+      },
+      "InvalidGrantType": {
+        "description": "One of the given grant types is not supported",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidGrantTypeProblem"
+            }
+          }
+        }
+      },
+      "InvalidIdentifier": {
+        "description": "An identifier is not valid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidIdentifierProblem"
+            }
+          }
+        }
+      },
+      "InvalidPostLogoutRedirectUri": {
+        "description": "One of the given post-logout redirect URIs is not valid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidPostLogoutRedirectUriProblem"
+            }
+          }
+        }
+      },
+      "InvalidReassignment": {
+        "description": "The reassignment target does not exist at this role's own scope",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidReassignmentProblem"
+            }
+          }
+        }
+      },
+      "InvalidRedirectUri": {
+        "description": "One of the given redirect URIs is not valid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidRedirectUriProblem"
+            }
+          }
+        }
+      },
+      "InvalidRequest": {
+        "description": "The paging parameters are not valid",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidRequestProblem"
+            }
+          }
+        }
+      },
+      "InvalidResponseType": {
+        "description": "One of the given response types is not supported",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidResponseTypeProblem"
+            }
+          }
+        }
+      },
+      "InvalidVerificationTicket": {
+        "description": "This verification ticket does not match a pending identifier",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidVerificationTicketProblem"
+            }
+          }
+        }
+      },
+      "InvalidTicket": {
+        "description": "This link no longer works",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidTicketProblem"
+            }
+          }
+        }
+      },
+      "InvalidUrl": {
+        "description": "The given URL is not valid for a webhook endpoint",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/InvalidUrlProblem"
+            }
+          }
+        }
+      },
+      "KindImmutable": {
+        "description": "A client's kind may not change once registered",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/KindImmutableProblem"
+            }
+          }
+        }
+      },
+      "LastCredential": {
+        "description": "This subject's last remaining credential may not be removed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/LastCredentialProblem"
+            }
+          }
+        }
+      },
+      "LastLiveSecret": {
+        "description": "This client's last live secret may not be revoked",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/LastLiveSecretProblem"
+            }
+          }
+        }
+      },
+      "LastOwner": {
+        "description": "This scope's last owner may not be reassigned",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/LastOwnerProblem"
+            }
+          }
+        }
+      },
+      "LastVerifiedIdentifier": {
+        "description": "This subject's last verified identifier may not be removed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/LastVerifiedIdentifierProblem"
+            }
+          }
+        }
+      },
+      "NoPassword": {
+        "description": "This subject holds no password to reset",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/NoPasswordProblem"
+            }
+          }
+        }
+      },
+      "NotConfidential": {
+        "description": "Only a confidential client holds a secret to rotate",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/NotConfidentialProblem"
+            }
+          }
+        }
+      },
+      "NotFound": {
+        "description": "The resource does not exist",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/NotFoundProblem"
+            }
+          }
+        }
+      },
+      "NotMember": {
+        "description": "This subject does not belong to this organization",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/NotMemberProblem"
+            }
+          }
+        }
+      },
+      "OverlapTooLong": {
+        "description": "The requested overlap window exceeds the longest one a rotation may open",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/OverlapTooLongProblem"
+            }
+          }
+        }
+      },
+      "PermissionSetTooLarge": {
+        "description": "This set of permission keys exceeds what a role may grant",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/PermissionSetTooLargeProblem"
+            }
+          }
+        }
+      },
+      "PrefixNotSet": {
+        "description": "This tenant has not set its own API key prefix yet",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/PrefixNotSetProblem"
+            }
+          }
+        }
+      },
+      "RateLimited": {
+        "description": "Too many requests have been sent",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/RateLimitedProblem"
+            }
+          }
+        }
+      },
+      "ReservedKey": {
+        "description": "This key is reserved for the platform",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ReservedKeyProblem"
+            }
+          }
+        }
+      },
+      "ScopeNotHeld": {
+        "description": "The issuing subject does not hold one of the requested scopes",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ScopeNotHeldProblem"
+            }
+          }
+        }
+      },
+      "SystemRole": {
+        "description": "A system role may not be changed",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/SystemRoleProblem"
+            }
+          }
+        }
+      },
+      "TooManyLiveSecrets": {
+        "description": "This client already holds the most secrets it may hold at once",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/TooManyLiveSecretsProblem"
+            }
+          }
+        }
+      },
+      "Unauthorized": {
+        "description": "This request could not be authenticated",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnauthorizedProblem"
+            }
+          }
+        }
+      },
+      "UnknownAttribute": {
+        "description": "One of the given attributes has no declared definition",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnknownAttributeProblem"
+            }
+          }
+        }
+      },
+      "UnknownEventType": {
+        "description": "One of the given event types is not recognized",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnknownEventTypeProblem"
+            }
+          }
+        }
+      },
+      "UnknownPermission": {
+        "description": "One of the given permission keys has no declared definition",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnknownPermissionProblem"
+            }
+          }
+        }
+      },
+      "UnsupportedApiVersion": {
+        "description": "This API version is not published",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnsupportedApiVersionProblem"
+            }
+          }
+        }
+      },
+      "Unverified": {
+        "description": "An unverified identifier may not become primary",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnverifiedProblem"
+            }
+          }
+        }
+      },
+      "UsernameAlreadySet": {
+        "description": "This subject already holds a username",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UsernameAlreadySetProblem"
+            }
+          }
+        }
+      },
+      "ValidationFailed": {
+        "description": "The request did not pass validation",
+        "content": {
+          "application/problem+json": {
+            "schema": {
+              "$ref": "#/components/schemas/ValidationFailedProblem"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "oauth2": {
+        "type": "oauth2",
+        "description": "A client-credentials token from https://api.example.com/oauth/token. Protected-resource metadata is at https://api.example.com/.well-known/oauth-protected-resource.",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "https://api.example.com/oauth/token",
+            "scopes": {
+              "subjects:read": "Read subjects, their identifiers, roles, grants and credentials",
+              "subjects:write": "Create, change, block and delete subjects, and import subjects",
+              "sessions:write": "Revoke a subject's sessions",
+              "clients:write": "Register, change and delete clients and their secrets",
+              "keys:write": "Create, rotate and revoke API keys",
+              "webhooks:write": "Register and change webhook endpoints, and replay deliveries",
+              "audit:read": "Read the tenant's audit events",
+              "export:read": "Export the tenant's subjects",
+              "tenant:write": "Change the tenant's domains and sign-in policies",
+              "members:write": "Add, invite, change and remove the tenant's members"
+            }
+          }
+        }
+      }
+    }
+  }
+}

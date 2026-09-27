@@ -22,6 +22,7 @@ import type TenantObject from "~/database/tenant-do";
 import { createAuditEventsListAction } from "~/app/http/controllers/management/audit/list";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantMembership,
@@ -50,7 +51,7 @@ export function buildAuditRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.auditEventsList, createAuditEventsListAction(controllerOptions));
 

@@ -9,8 +9,6 @@
 
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import * as s from "remix/data-schema";
-import * as coerce from "remix/data-schema/coerce";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -18,21 +16,14 @@ import type { ReadAuditPageResult } from "~/database/audit-events";
 import type { WithCost } from "~/database/tenant-do";
 
 import { managementPaging } from "~/app/http/lib/management-pagination";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { AUDIT_EVENTS_LIST } from "~/app/http/openapi/audit";
 import routes from "~/routes/management";
-
-let AuditEventsListQuerySchema = s.object({
-	from: coerce.number(),
-	to: coerce.number(),
-	action: s.optional(s.string()),
-	actor_id: s.optional(s.string()),
-	target_id: s.optional(s.string()),
-});
 
 /**
  * Builds the `auditEventsList` action.
@@ -57,8 +48,9 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 			let refused = requireScope(ctx, "audit:read");
 			if (refused) return refused;
 
-			let query = parseBody(AuditEventsListQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await AUDIT_EVENTS_LIST.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
+			let query = input.data.query;
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
 			if (isFailure(paging)) {
@@ -66,11 +58,11 @@ export function createAuditEventsListAction(options: ManagementControllerOptions
 			}
 
 			let read = await ctx.tenantStub.readAuditPage({
-				from: query.data.from,
-				to: query.data.to,
-				action: query.data.action,
-				actorId: query.data.actor_id,
-				targetId: query.data.target_id,
+				from: query.from,
+				to: query.to,
+				action: query.action,
+				actorId: query.actor_id,
+				targetId: query.target_id,
 				cursor: paging.data.cursor,
 				limit: paging.data.perPage,
 			});

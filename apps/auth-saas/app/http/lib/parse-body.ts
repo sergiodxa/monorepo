@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { OperationInputError } from "@sdxc/openapi";
 import type { Schema } from "remix/data-schema";
 
 import { issuesFrom } from "@sdxc/problem";
@@ -41,4 +42,21 @@ export function parseBody<Output>(
 			extensions: { errors: issuesFrom(parsed.issues) },
 		}),
 	};
+}
+
+/**
+ * The `400` validation failure for a request an operation's `parse` refused, pointing
+ * each issue into the part it came from (path params, query string or body).
+ *
+ * @param error - What `operation.parse` failed with.
+ * @returns The `problem+json` response to answer with.
+ * @example
+ * let input = await AUDIT_EVENTS_LIST.parse(ctx.request, ctx.params);
+ * if (isFailure(input)) return operationInputProblem(input.error);
+ */
+export function operationInputProblem(error: OperationInputError): Response {
+	return managementProblem("validationFailed", {
+		detail: `The request ${error.location === "body" ? "body" : error.location === "query" ? "query string" : "path"} did not pass validation.`,
+		extensions: { errors: issuesFrom(error) },
+	});
 }

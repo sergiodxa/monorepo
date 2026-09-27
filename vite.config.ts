@@ -365,9 +365,10 @@ export default defineConfig({
 		/**
 		 * Vendored third-party content. Oxfmt reformats fenced code inside markdown, which
 		 * would rewrite 600+ files nobody here authored and make the next vendor sync a
-		 * conflict; treat them as read-only.
+		 * conflict; treat them as read-only. An OpenAPI snapshot is compared byte for byte
+		 * with what `stringify` writes, so formatting it would fail the drift test.
 		 */
-		ignorePatterns: [".agents/**", "docs/vendor/**"],
+		ignorePatterns: [".agents/**", "docs/vendor/**", "**/openapi.snapshot.json"],
 		useTabs: true,
 		experimentalSortPackageJson: true,
 		experimentalSortImports: {

@@ -8,6 +8,7 @@
  */
 
 import type { JSONValue } from "@sdxc/merge-patch";
+import type { MergePatchRequestError } from "@sdxc/merge-patch/request";
 import type { Schema } from "remix/data-schema";
 
 import { applyValidated, diff } from "@sdxc/merge-patch";
@@ -20,6 +21,19 @@ import type { ParsedBody } from "~/app/http/lib/parse-body";
 import { parseBody } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 
+/**
+ * Answers a body that could not be read as a patch: a `415` naming the patch media type,
+ * or, for a body that is not JSON, the catalog's `validationFailed` every other
+ * malformed management body answers with.
+ */
+function patchRefusal(error: MergePatchRequestError): Response {
+	if (error.reason === "unsupported-media-type") return mergePatchProblem(error);
+	return managementProblem("validationFailed", {
+		detail: "The request body is not valid JSON.",
+		extensions: { errors: [] },
+	});
+}
+
 /** The patched resource and the smallest patch between it and the current one, or the refusal. */
 export type PatchedResource<Output> =
 	| { ok: true; next: Output; changes: JSONValue }
@@ -31,7 +45,8 @@ export type PatchedResource<Output> =
  * type was advertised, `application/json`; any other type is a `415` naming the patch type.
  *
  * @param request - The `PATCH` request, its body unread.
- * @param current - The resource's writable projection, holding no `null` members.
+ * @param current - The resource's writable projection, a JSON object holding no `null`
+ * members; an `undefined` member reads as absent.
  * @param schema - The schema the patched resource must satisfy.
  * @returns The validated result and `changes`, the merge patch from `current` to it (a
  * removed member is `null`), or the `problem+json` refusal.
@@ -41,13 +56,14 @@ export type PatchedResource<Output> =
  */
 export async function patchResource<Output>(
 	request: Request,
-	current: JSONValue,
+	current: object,
 	schema: Schema<unknown, Output>,
 ): Promise<PatchedResource<Output>> {
+	let target = JSON.parse(JSON.stringify(current)) as JSONValue;
 	let patch = await readMergePatch(request, { alsoAccept: ["application/json"] });
-	if (isFailure(patch)) return { ok: false, response: mergePatchProblem(patch.error) };
+	if (isFailure(patch)) return { ok: false, response: patchRefusal(patch.error) };
 
-	let next = applyValidated(current, patch.data, schema);
+	let next = applyValidated(target, patch.data, schema);
 	if (isFailure(next)) {
 		return {
 			ok: false,
@@ -58,7 +74,7 @@ export async function patchResource<Output>(
 		};
 	}
 
-	let changes = diff(current, next.data as JSONValue);
+	let changes = diff(target, JSON.parse(JSON.stringify(next.data)) as JSONValue);
 	if (isFailure(changes)) {
 		return {
 			ok: false,
@@ -93,6 +109,6 @@ export async function readPatchBody<Output>(
 	schema: Schema<unknown, Output>,
 ): Promise<ParsedBody<Output>> {
 	let patch = await readMergePatch(request, { alsoAccept: ["application/json"] });
-	if (isFailure(patch)) return { ok: false, response: mergePatchProblem(patch.error) };
+	if (isFailure(patch)) return { ok: false, response: patchRefusal(patch.error) };
 	return parseBody(schema, patch.data);
 }

@@ -16,6 +16,7 @@
 import type { Middleware, RequestContext } from "remix/router";
 
 import { log } from "@sdxc/logger/middleware";
+import { openapiHandler } from "@sdxc/openapi/router";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
@@ -123,6 +124,7 @@ import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/management-mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
 import trailingSlash from "~/app/http/middleware/trailing-slash";
+import { buildManagementDocument } from "~/app/http/openapi/document";
 import { MANAGEMENT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
 import { createHostnameClient } from "~/app/lib/hostnames";
@@ -181,6 +183,11 @@ export const managementRouter = createRouter({
 });
 
 managementRouter.map(routes.token, token);
+
+managementRouter.map(
+	routes.openapi,
+	openapiHandler(() => buildManagementDocument(issuer).build()),
+);
 
 /**
  * Mounted with no `managementAuth` middleware: an invitation's own emailed
