@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/password-policy",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse",
 	"license": "MIT",
 	"type": "module",
