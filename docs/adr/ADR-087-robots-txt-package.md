@@ -484,13 +484,17 @@ per-page directives and Content Signals would still need writing.
   removed without re-exports. `@sdxc/cache` reads a numeric `ttl` as seconds, so the reader
   writes `lifetimeMs / 1000`. The reader checks the origin with distill's `addressable`
   before `fetchRobots`, so a non-public origin is never asked for its file.
+- Implementation: `@sdxc/blog-engine` writes the rules as `Disallow: /cms$`, `/cms/` and
+  `/auth/` instead of the Usage section's `/cms` and `/auth`. A robots.txt pattern is a
+  prefix, and a post type's path only has to differ from the reserved segment, so `/auth`
+  would also close a type served at `/authors`.
 
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package
 - [x] Phase 2: Migrate `@sdxc/distill`
 - [x] Phase 3: Migrate the reader
-- [ ] Phase 4: Migrate the writers
-  - [ ] `@sdxc/blog-engine`'s `robots.txt` controller
+- [x] Phase 4: Migrate the writers
+  - [x] `@sdxc/blog-engine`'s `robots.txt` controller
   - [x] `@sdxc/seo`'s `robotsDirectives` delegates to `stringifyDirectives`
 - [ ] Phase 5: Publish
