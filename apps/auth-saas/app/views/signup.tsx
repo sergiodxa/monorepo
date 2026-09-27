@@ -310,7 +310,7 @@ export namespace SignUpCompletePage {
 	export interface Props {
 		/** The freshly-provisioned tenant's own hostname, e.g. `acme-4f9a.example.com`. */
 		tenantHostname: string;
-		/** Absolute URL of the new tenant's own hosted sign-in page. */
+		/** Absolute URL of the platform's own hosted sign-in page. */
 		signInUrl: string;
 	}
 }
@@ -334,12 +334,11 @@ export function SignUpCompletePage(handle: Handle<SignUpCompletePage.Props>) {
 						Your account and your organization <strong>{tenantHostname}</strong> are ready.
 					</p>
 					<p mix={[mutedText]}>
-						Sign back in any time at{" "}
 						<a mix={[link]} href={signInUrl}>
-							{tenantHostname}
-						</a>
-						. If you ever forget your password, a magic link always works — your email is already
-						verified.
+							Sign back in to your account
+						</a>{" "}
+						any time. If you ever forget your password, a magic link always works — your email is
+						already verified.
 					</p>
 				</div>
 			</div>

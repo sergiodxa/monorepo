@@ -97,12 +97,13 @@ export default createAction(webRoutes.signup.verify, async (ctx) => {
 		...requestOrigin(ctx.request),
 	});
 
-	let signInUrl = new URL(routes.hostedSignInShow.href(), tenant.issuer).toString();
+	let signInUrl = new URL(routes.hostedSignInShow.href(), `https://${env.PLATFORM_DOMAIN}`);
+	signInUrl.searchParams.set("return_to", "/");
 	let tenantHostname = new URL(tenant.issuer).hostname;
 
 	let response = await ctx.render(
 		<PublicDocument title="Auth SaaS - You're all set">
-			<SignUpCompletePage tenantHostname={tenantHostname} signInUrl={signInUrl} />
+			<SignUpCompletePage tenantHostname={tenantHostname} signInUrl={signInUrl.toString()} />
 		</PublicDocument>,
 	);
 	response.headers.append("Set-Cookie", await serializeSessionCookie(session, true));
