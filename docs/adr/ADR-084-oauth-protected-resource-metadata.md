@@ -612,3 +612,11 @@ need a token per endpoint, and the metadata endpoint would answer for arbitrary 
   - [x] uptime API: every `401` and `403` from `require-api-key.ts` carries a Bearer challenge
         pointing at `/.well-known/oauth-protected-resource/api/v1`, which the app serves with no
         `authorization_servers`
+  - [x] auth-saas management API: `managementAuth` publishes the `ResourceServer` as
+        `ctx.managementApi`, every `401`/`403` from authentication and `requireScope` carries
+        a Bearer challenge (`invalid_token`, or `insufficient_scope` with the missing scope),
+        and the API host serves protected-resource metadata, RFC 8414 metadata and the
+        platform JWKS; `ManagementClient.discover` finds the token endpoint from the API URL.
+        `Issuer.Metadata.authorization_endpoint` became optional for that RFC 8414 document.
+        Business `403`s (`entitlementRequired`, `attributeNotWritable`) carry no challenge,
+        since re-authorizing cannot change them
