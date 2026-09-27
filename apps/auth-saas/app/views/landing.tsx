@@ -11,6 +11,7 @@ import type { Handle, RemixNode } from "remix/ui";
 import { CheckIcon, GlobeIcon, LockIcon, ZapIcon } from "@sdxc/icons";
 import { css } from "remix/ui";
 
+import tenantRoutes from "~/routes/tenant";
 import routes from "~/routes/web";
 
 import { RESET_CSS } from "./styles";
@@ -36,6 +37,10 @@ let navRow = css({
 });
 
 let brand = css({ fontSize: "1.5rem", fontWeight: "700", color: "#111827", margin: "0" });
+
+let navActions = css({ display: "flex", alignItems: "center", gap: "1.5rem" });
+
+let navLink = css({ color: "#374151", textDecoration: "none", "&:hover": { color: "#111827" } });
 
 let mainContent = css({ maxWidth: "72rem", margin: "0 auto", padding: "4rem 1rem" });
 
@@ -211,9 +216,14 @@ export function LandingPage(): () => RemixNode {
 			<nav mix={[navBar]}>
 				<div mix={[navRow]}>
 					<h1 mix={[brand]}>Auth SaaS</h1>
-					<a mix={[primaryButton]} href={routes.signup.show.href()}>
-						Get Started
-					</a>
+					<div mix={[navActions]}>
+						<a mix={[navLink]} href={`${tenantRoutes.hostedSignInShow.href()}?return_to=%2F`}>
+							Sign in
+						</a>
+						<a mix={[primaryButton]} href={routes.signup.show.href()}>
+							Get Started
+						</a>
+					</div>
 				</div>
 			</nav>
 
