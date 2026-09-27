@@ -540,7 +540,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 				delay = await this.#untilNextPoll(previous, now);
 			}
 		} catch (error) {
-			console.error("feed poll alarm failed", error);
+			logger.open("alarm", { event: "feed.alarm.failed" }).fail(error).emit();
 		} finally {
 			if (!purged) await this.#armNext(delay).catch(() => undefined);
 		}

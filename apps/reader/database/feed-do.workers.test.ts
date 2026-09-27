@@ -15,7 +15,7 @@
 import { env, runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { FeedStore } from "~/database/feed-do";
 
@@ -415,6 +415,26 @@ describe("polling", () => {
 		let armed = await armedAlarm(feedId);
 		expect(armed).toBeGreaterThan(Date.now() + POLL_WARMUP_INTERVAL_MS - 10_000);
 		expect(armed).toBeLessThanOrEqual(Date.now() + POLL_WARMUP_INTERVAL_MS);
+	});
+
+	test("records a failed alarm as an error event and still arms the next poll", async () => {
+		let url = feedUrl();
+		origin(url, [{ guid: "g1" }]);
+		let feedId = await registerFeed(url, "Example");
+		await env.FEED.getByName(feedId).subscribe(reader(), url);
+		await runInDurableObject(env.FEED.getByName(feedId), (_instance, state) => {
+			state.storage.sql.exec("DROP TABLE feed");
+		});
+
+		let written = vi.spyOn(console, "error").mockImplementation(() => undefined);
+		await runDurableObjectAlarm(env.FEED.getByName(feedId));
+		let records = written.mock.calls.map(([record]) => record);
+		written.mockRestore();
+
+		expect(records).toContainEqual(
+			expect.objectContaining({ kind: "alarm", event: "feed.alarm.failed", outcome: "error" }),
+		);
+		expect(await armedAlarm(feedId)).not.toBeNull();
 	});
 
 	test("reports what the last poll recorded, with the head the hint approximates", async () => {
