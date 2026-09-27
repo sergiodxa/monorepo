@@ -506,7 +506,13 @@ Two commits, one per workspace.
         `apiKeysCreate` uses `shouldStore: () => false`, keeping the one-time secret out of D1
   - [x] API docs: `/docs/api/idempotency` and the four problem types
   - [ ] Build, migrate, deploy
-- [ ] Phase 3: Adopt in auth-saas and `@sdxc/auth`
+- [x] Phase 3: Adopt in auth-saas and `@sdxc/auth` (tenant migration `0037-idempotency-keys`,
+      `idempotencyClaim`/`idempotencyComplete`/`idempotencyRelease` on `Tenant`, purged by the
+      daily alarm; every route in the table but subject import, whose fingerprint would buffer
+      the upload. `@sdxc/auth` declares the four entries itself and formats the sf-string
+      itself, since a published package cannot depend on the private `@sdxc/idempotency`;
+      `idempotencyKey` is on `createTenantSubject`, `registerTenantClient`,
+      `rotateTenantClientSecret` and `inviteTenantMember`)
 - [ ] Phase 4: Publish
 
 ## Notes
