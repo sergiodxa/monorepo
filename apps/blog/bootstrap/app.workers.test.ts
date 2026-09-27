@@ -8,9 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure } from "@sdxc/result";
+import { parse } from "@sdxc/well-known/security-txt";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
+import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
 
 import createApplication from "./app";
@@ -80,5 +83,17 @@ describe("the blog router", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.auth.login.index.href());
+	});
+
+	test("serves security.txt with the site's contact", async () => {
+		let response = await fetchPath("/.well-known/security.txt");
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
+
+		let parsed = parse(await response.text());
+		if (isFailure(parsed)) throw parsed.error;
+		expect(parsed.data.contact.map(String)).toEqual(SECURITY_TXT.contact.map(String));
+		expect(parsed.data.expires).toEqual(SECURITY_TXT.expires);
 	});
 });

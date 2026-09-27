@@ -18,6 +18,8 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -42,6 +44,7 @@ import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import mcpRateLimit from "~/app/mcp/rate-limit";
 import { createDatabase } from "~/app/services/database";
+import { SECURITY_TXT } from "~/config/security-txt";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -99,6 +102,8 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
  * guards, and the HTML 404 fallback. `headRequests()` runs first so every later
  * middleware sees a plain `GET` and treats a `HEAD` probe as the page request;
  * `log(logger)` follows it and opens the request's wide event around everything else.
+ * `wellKnown()` answers the registered documents it lists before any session or cache
+ * work, since they are static and the same for every visitor.
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
  * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
@@ -113,6 +118,7 @@ export default function createApplication(env: App.Env) {
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		createNoTrailingSlashMiddleware(),
+		wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
 		asyncContext(),
 		database(createDatabase),
 		workersCache({ cache: () => platformCache }),
