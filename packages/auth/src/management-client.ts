@@ -13,6 +13,8 @@ import type { Result } from "@sdxc/result";
 
 import * as s from "@remix-run/data-schema";
 import { url } from "@remix-run/data-schema/checks";
+import { formatIdempotencyKey } from "@sdxc/idempotency";
+import { MEDIA_TYPE as MERGE_PATCH_MEDIA_TYPE } from "@sdxc/merge-patch";
 import { parseLinkHeader } from "@sdxc/pagination";
 import { isProblem, ISSUES_SCHEMA } from "@sdxc/problem";
 import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
@@ -26,26 +28,6 @@ import { ProtectedResource } from "./protected-resource.js";
 import { ServiceClient } from "./service-client.js";
 
 export { managementProblems } from "./management-problems.js";
-
-/** RFC 7396's media type, which every tenant-scoped `PATCH` body is sent as. */
-const MERGE_PATCH_MEDIA_TYPE = "application/merge-patch+json";
-
-/**
- * Writes a key as the `Idempotency-Key` header's RFC 9651 sf-string: quoted, with each
- * backslash and double quote escaped.
- *
- * @param key - The caller's key, minted once per logical operation.
- * @returns The header value, or `null` for a key an sf-string cannot carry (empty,
- *   non-ASCII, or holding a control character).
- */
-function formatIdempotencyKey(key: string): string | null {
-	if (key.length === 0) return null;
-	for (let index = 0; index < key.length; index++) {
-		let code = key.charCodeAt(index);
-		if (code < 0x20 || code > 0x7e) return null;
-	}
-	return `"${key.replaceAll("\\", "\\\\").replaceAll('"', '\\"')}"`;
-}
 
 /** Path the management API serves one subject at, with the id appended to it. */
 const SUBJECT_PATH = "/api/subjects";
@@ -661,15 +643,16 @@ export class ManagementClient {
 	): Promise<Result<{ endpoint: URL; response: Response }, ManagementError | ManagementProblem>> {
 		let idempotencyKey: string | null = null;
 		if (options.idempotencyKey !== undefined) {
-			idempotencyKey = formatIdempotencyKey(options.idempotencyKey);
-			if (idempotencyKey === null) {
+			let formatted = formatIdempotencyKey(options.idempotencyKey);
+			if (isFailure(formatted)) {
 				return failure(
 					new ManagementError(
 						"The idempotency key must be non-empty printable ASCII to travel as an Idempotency-Key header.",
-						{ code: ManagementErrorCode.RequestFailed },
+						{ code: ManagementErrorCode.RequestFailed, cause: formatted.error },
 					),
 				);
 			}
+			idempotencyKey = formatted.data;
 		}
 
 		let token = await this.#service.token({ resources: this.#resources });
@@ -1410,9 +1393,9 @@ export class ManagementClient {
 	}
 
 	/**
-	 * Grants a subject access to a tenant at a role — a direct grant rather than an
-	 * email invitation, since no separate invitation mechanism exists today. Requires
-	 * `members:write`.
+	 * Grants an existing subject access to a tenant at a role, effective at once; the
+	 * server emails invitations separately, at `POST /tenants/:tenantId/members/invite`.
+	 * Requires `members:write`.
 	 *
 	 * @param tenantId - The tenant to grant access to.
 	 * @param input - The subject and the role the membership grants.
