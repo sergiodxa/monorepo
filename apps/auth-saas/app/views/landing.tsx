@@ -11,6 +11,8 @@ import type { Handle, RemixNode } from "remix/ui";
 import { CheckIcon, GlobeIcon, LockIcon, ZapIcon } from "@sdxc/icons";
 import { css } from "remix/ui";
 
+import routes from "~/routes/web";
+
 import { RESET_CSS } from "./styles";
 
 let landingBody = css({
@@ -197,8 +199,7 @@ export function PublicDocument(handle: Handle<PublicDocumentProps>) {
 
 /**
  * Renders the marketing landing page content (hero, feature cards, OIDC capabilities,
- * footer). Preserves the original copy; the calls to action have no sign-up flow to
- * link to yet.
+ * footer). Preserves the original copy; both calls to action lead to `/signup`.
  *
  * @returns A render function producing the landing page markup.
  * @example
@@ -210,8 +211,7 @@ export function LandingPage(): () => RemixNode {
 			<nav mix={[navBar]}>
 				<div mix={[navRow]}>
 					<h1 mix={[brand]}>Auth SaaS</h1>
-					{/* oxlint-disable-next-line jsx-a11y/anchor-is-valid -- Placeholder target: the call to action keeps its place in the layout until there is a sign-up flow to send it to. */}
-					<a mix={[primaryButton]} href="#">
+					<a mix={[primaryButton]} href={routes.signup.show.href()}>
 						Get Started
 					</a>
 				</div>
@@ -225,8 +225,7 @@ export function LandingPage(): () => RemixNode {
 						custom domains, and instant deployment.
 					</p>
 					<div mix={[heroActions]}>
-						{/* oxlint-disable-next-line jsx-a11y/anchor-is-valid -- Placeholder target: the call to action keeps its place in the layout until there is a sign-up flow to send it to. */}
-						<a mix={[primaryButtonLg]} href="#">
+						<a mix={[primaryButtonLg]} href={routes.signup.show.href()}>
 							Start Free
 						</a>
 						<a mix={[secondaryButtonLg]} href="#features">
