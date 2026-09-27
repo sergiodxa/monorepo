@@ -7,7 +7,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -17,21 +17,15 @@ import {
 	apiKeyEntitlementRequired,
 	apiKeyPrefixNotSet,
 } from "~/app/http/controllers/management/api-keys/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { API_KEYS_CREATE } from "~/app/http/openapi/api-keys";
 import routes from "~/routes/management";
-
-let CreateApiKeyBodySchema = s.object({
-	subjectId: s.string(),
-	name: s.string(),
-	scopes: s.array(s.string()),
-	expiresAt: s.optional(s.number()),
-});
 
 /** Maps every `createApiKey` refusal onto its own `problem+json` response. */
 function createApiKeyFailure(result: Exclude<CreateApiKeyResult, { ok: true }>): Response {
@@ -71,11 +65,11 @@ export function createApiKeysCreateAction(options: ManagementControllerOptions) 
 			let refused = requireScope(ctx, "keys:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(CreateApiKeyBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await API_KEYS_CREATE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.createApiKey({
-				...parsed.data,
+				...input.data.body,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return createApiKeyFailure(result);

@@ -26,6 +26,7 @@ import { createApiKeysRevokeAction } from "~/app/http/controllers/management/api
 import { createApiKeysRotateAction } from "~/app/http/controllers/management/api-keys/rotate";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
@@ -55,7 +56,7 @@ export function buildApiKeysRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.apiKeysCreate, createApiKeysCreateAction(controllerOptions));
 	router.map(routes.apiKeysList, createApiKeysListAction(controllerOptions));

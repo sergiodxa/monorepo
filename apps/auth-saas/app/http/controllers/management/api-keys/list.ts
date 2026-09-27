@@ -8,21 +8,19 @@
 
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { managementPaging } from "~/app/http/lib/management-pagination";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { API_KEYS_LIST } from "~/app/http/openapi/api-keys";
 import routes from "~/routes/management";
-
-let ApiKeysListQuerySchema = s.object({ subjectId: s.string() });
 
 /**
  * Builds the `apiKeysList` action.
@@ -47,8 +45,8 @@ export function createApiKeysListAction(options: ManagementControllerOptions) {
 			let refused = requireScope(ctx, "keys:write");
 			if (refused) return refused;
 
-			let query = parseBody(ApiKeysListQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await API_KEYS_LIST.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let paging = managementPaging.parse(ctx.url.searchParams);
 			if (isFailure(paging)) {
@@ -56,7 +54,7 @@ export function createApiKeysListAction(options: ManagementControllerOptions) {
 			}
 
 			let result = await ctx.tenantStub.listApiKeys({
-				subjectId: query.data.subjectId,
+				subjectId: input.data.query.subjectId,
 				cursor: paging.data.cursor,
 				limit: paging.data.perPage,
 			});

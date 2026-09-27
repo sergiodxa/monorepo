@@ -72,6 +72,18 @@ describe("GET /tenants/:tenantId/api-keys", () => {
 		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
 	});
 
+	test("answers a problem+json validation failure for a per_page that is not a number", async () => {
+		let harness = await provisionedHarness();
+		let token = await harness.signToken();
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/api-keys?subjectId=sub_1&per_page=many`, token),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+	});
+
 	test("refuses a caller missing the keys:write scope", async () => {
 		let harness = await provisionedHarness();
 		let token = await harness.signToken({ scope: "subjects:read" });

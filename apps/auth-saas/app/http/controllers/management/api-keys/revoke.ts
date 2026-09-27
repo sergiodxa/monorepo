@@ -5,20 +5,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { apiKeyNotFound, keyIdParam } from "~/app/http/controllers/management/api-keys/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { API_KEYS_REVOKE } from "~/app/http/openapi/api-keys";
 import routes from "~/routes/management";
-
-let RevokeApiKeyBodySchema = s.object({ reason: s.string() });
 
 /**
  * Builds the `apiKeysRevoke` action.
@@ -45,12 +44,12 @@ export function createApiKeysRevokeAction(options: ManagementControllerOptions) 
 
 			let keyId = keyIdParam(ctx);
 
-			let parsed = parseBody(RevokeApiKeyBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await API_KEYS_REVOKE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.revokeApiKey({
 				keyId,
-				reason: parsed.data.reason,
+				reason: input.data.body.reason,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return apiKeyNotFound();

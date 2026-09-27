@@ -78,6 +78,22 @@ describe("POST /tenants/:tenantId/api-keys/:keyId/rotate", () => {
 		expect(body.type).toBe("https://docs.example.com/errors/overlap-too-long");
 	});
 
+	test("answers 400 validationFailed for a body that is not JSON", async () => {
+		let harness = await provisionedHarness();
+		let token = await harness.signToken();
+		let keyId = await mintKey(harness);
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/api-keys/${keyId}/rotate`, token, {
+				method: "POST",
+				body: "{not json",
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+	});
+
 	test("answers 404 for a key the tenant does not hold", async () => {
 		let harness = await provisionedHarness();
 		let token = await harness.signToken();
