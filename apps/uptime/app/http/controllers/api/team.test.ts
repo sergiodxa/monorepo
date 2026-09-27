@@ -17,6 +17,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
+import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { teamRoutes } from "~/routes/api-groups";
@@ -199,5 +200,143 @@ describe("PUT /api/v1/team", () => {
 			body: { name: "Renamed Team" },
 		});
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("PATCH /api/v1/team", () => {
+	/** A merge patch request, sent as `application/merge-patch+json` unless told otherwise. */
+	function mergePatch(body: unknown, options: { key?: string; contentType?: string } = {}) {
+		let headers: Record<string, string> = {
+			"content-type": options.contentType ?? "application/merge-patch+json",
+		};
+		if (options.key) headers.Authorization = `Bearer ${options.key}`;
+		return new Request(`https://uptime.test${routes.api.v1.teamPatch.href()}`, {
+			method: "PATCH",
+			headers,
+			body: JSON.stringify(body),
+		});
+	}
+
+	/** Sends `request` through the team controller, bypassing the JSON-body `dispatch`. */
+	async function send(db: Db, request: Request) {
+		let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+		router.map(teamRoutes, teamController);
+		return router.fetch(request);
+	}
+
+	/** A team whose stored logo is `logo`. */
+	async function createTeamWithLogo(db: Db, logo: string) {
+		let team = await createTeamRow(db);
+		await db.update(teams, team.id, { logo });
+		return team;
+	}
+
+	test("changes only the members the patch names", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamWithLogo(db, "https://example.com/logo.png");
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.logo).toBe("https://example.com/logo.png");
+	});
+
+	test("null on logoUrl clears the logo", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamWithLogo(db, "https://example.com/logo.png");
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ logoUrl: null }, { key }));
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { data: { team: { logo: string | null } } };
+		expect(body.data.team.logo).toBeNull();
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.logo).toBeNull();
+	});
+
+	test("a stored logo that is not a URL survives a patch that leaves logoUrl alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamWithLogo(db, "not a url");
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.logo).toBe("not a url");
+	});
+
+	test("null on name answers validation-error at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ name: null }, { key }));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/name"]);
+		let unchanged = await db.findOne(teams, { where: { id: team.id } });
+		expect(unchanged?.name).toBe("Acme");
+	});
+
+	test("accepts application/json as a merge patch", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(
+			db,
+			mergePatch(
+				{ logoUrl: "https://example.com/new.png" },
+				{ key, contentType: "application/json" },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.logo).toBe("https://example.com/new.png");
+	});
+
+	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ name: "x" }, { key, contentType: "text/plain" }));
+
+		expect(response.status).toBe(415);
+		expect(response.headers.get("Accept-Patch")).toBe("application/merge-patch+json");
+		await expectProblem(response, "unsupportedMediaType");
+	});
+
+	test("PUT keeps refusing a null logoUrl and an empty body", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamWithLogo(db, "https://example.com/logo.png");
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+		let path = routes.api.v1.teamUpdate.href();
+
+		let nullLogo = await dispatch(db, { method: "PUT", path, key, body: { logoUrl: null } });
+		let empty = await dispatch(db, { method: "PUT", path, key, body: {} });
+
+		expect([nullLogo.status, empty.status]).toEqual([400, 400]);
+		let unchanged = await db.findOne(teams, { where: { id: team.id } });
+		expect(unchanged?.logo).toBe("https://example.com/logo.png");
+	});
+
+	test("401 without a key, 403 without teams:write", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let reader = await createApiKey(db, team.id, ["teams:read"]);
+
+		let unauthorized = await send(db, mergePatch({ name: "x" }));
+		let forbidden = await send(db, mergePatch({ name: "x" }, { key: reader }));
+
+		expect([unauthorized.status, forbidden.status]).toEqual([401, 403]);
 	});
 });

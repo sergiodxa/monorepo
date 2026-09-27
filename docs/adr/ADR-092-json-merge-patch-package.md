@@ -392,7 +392,9 @@ cheapest.
       `@sdxc/auth` sends the media type and types the client update as `Partial` of the record,
       since `@sdxc/auth` is published and cannot depend on `@sdxc/merge-patch` without an
       install; `updateTenantClient` also moved from `PUT` to the `PATCH` the server answers)
-- [ ] Phase 3: Uptime
+- [x] Phase 3: Uptime (the eight partial resources and the team gain a `PATCH` read by
+      `readApiUpdate`; `PUT` keeps its own handler and body; the DNS record toggle keeps
+      `validate()`, which reads the merge patch media type beside its earlier content types)
 
 ## Notes
 
@@ -404,3 +406,12 @@ cheapest.
   applied to a non-object replaces it with `{}`; `{}` means "equal" only between objects
 - Implementation: `applyValidated` fails with a single issue when the schema validates
   asynchronously, since its `Result` is synchronous; `remix/data-schema` schemas are synchronous
+- Implementation: uptime's `PUT` endpoints keep their pre-merge-patch behavior (`null` refused
+  except where it already cleared, re-sent `enabled` resetting `enabledAt`/`next_due_at`, form
+  bodies read, alert channel settings ignored); merge patch semantics apply to `PATCH` only, so
+  existing integrations see no change until `PUT` is retired in a later API version
+- Implementation: uptime alert channel settings (`strategy`, `email`, `url`, `webhookUrl`, …) are
+  writable through `PATCH`, validated with the create body and rebuilt with `buildConfig`
+- Implementation: the uptime dashboard's team form stores any text as the logo while the API
+  requires a URL; `PATCH /api/v1/team` leaves a stored non-URL logo out of the patch target so a
+  patch that omits `logoUrl` still validates

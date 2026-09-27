@@ -1,10 +1,13 @@
 /**
  * API v1 endpoints for the authenticated team: `GET /api/v1/team` reads its profile
- * (`teams:read`) and `PUT /api/v1/team` updates its name and/or logo (`teams:write`).
+ * (`teams:read`); `PATCH /api/v1/team` merge-patches its name and/or logo and `PUT` updates
+ * them (`teams:write`).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+
+import type { RequestContext } from "remix/router";
 
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
@@ -15,9 +18,10 @@ import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { UPDATE_TEAM_BODY } from "~/app/http/openapi/team";
+import { UPDATE_TEAM_BODY, WRITABLE_TEAM } from "~/app/http/openapi/team";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { readApiUpdate } from "~/app/services/api-update";
 import { encodeId } from "~/app/services/typed-id";
 import { teamRoutes } from "~/routes/api-groups";
 
@@ -34,6 +38,38 @@ function serializeTeam(team: SelectTeam) {
 	};
 }
 
+/**
+ * The team's writable members as the API reads them, the target a `PATCH` merge patch
+ * applies to. A stored logo that is not a URL (the dashboard accepts any text) is left
+ * out, so a patch that leaves `logoUrl` alone still validates and keeps the stored logo.
+ */
+function writableTeam(team: SelectTeam) {
+	return {
+		name: team.name,
+		logoUrl: team.logo !== null && URL.canParse(team.logo) ? team.logo : null,
+	};
+}
+
+/**
+ * Applies a `PATCH` merge patch to the calling key's team, writing only the members the
+ * patch changed; a removed `logoUrl` clears the logo.
+ *
+ * @param ctx - The request, after `requireApiKey("teams:write")`.
+ * @returns The updated team, or the patch's `415`/`400` problem.
+ */
+async function patchTeam(ctx: RequestContext): Promise<Response> {
+	let update = await readApiUpdate(ctx.request, writableTeam(ctx.apiTeam), WRITABLE_TEAM);
+	if (update instanceof Response) return update;
+	let { value, changed } = update;
+
+	let changes: Partial<InsertTeam> = {};
+	if (changed.has("name")) changes.name = value.name;
+	if (changed.has("logoUrl")) changes.logo = value.logoUrl ?? null;
+
+	let team = await Team.updateById(ctx.db, ctx.apiTeam.id, changes);
+	return apiSuccess({ team: serializeTeam(team) });
+}
+
 export default createController(teamRoutes, {
 	actions: {
 		/** GET /api/v1/team — the authenticated team's profile. */
@@ -42,6 +78,12 @@ export default createController(teamRoutes, {
 			handler: async (ctx) => {
 				return apiSuccess({ team: serializeTeam(ctx.apiTeam) });
 			},
+		},
+
+		/** PATCH /api/v1/team — merge-patches the authenticated team. */
+		teamPatch: {
+			middleware: [requireApiKey("teams:write")],
+			handler: patchTeam,
 		},
 
 		/** PUT /api/v1/team — updates the authenticated team's name and/or logo. */

@@ -94,6 +94,26 @@ export const UPDATE_TEAM_BODY = s
 	)
 	.meta({ description: "At least one of `name` and `logoUrl` must be provided" });
 
+/**
+ * The team's writable members, which a `PATCH` merge patch must leave valid: `name` is
+ * required, and a removed `logoUrl` means the team has no logo.
+ */
+export const WRITABLE_TEAM = s.object({
+	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
+	logoUrl: s.optional(s.string().pipe(checks.url())),
+});
+
+/**
+ * The patch a `PATCH` documents: every member optional, and `null` on `logoUrl` clearing
+ * the logo. The handler validates the patched team with {@link WRITABLE_TEAM}.
+ */
+const TEAM_PATCH = s.object({
+	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
+	logoUrl: s.optional(
+		s.nullable(s.string().pipe(checks.url())).meta({ description: "`null` clears the logo" }),
+	),
+});
+
 /** The body `POST /api/v1/team-domains` accepts. */
 export const CREATE_TEAM_DOMAIN_BODY = s.object({
 	hostname: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
@@ -116,8 +136,19 @@ const TEAM_SHOW = defineOperation("teamShow", routes.api.v1.teamShow, {
 	security: [{ apiKey: ["teams:read"] }],
 });
 
-const TEAM_UPDATE = defineOperation("teamUpdate", routes.api.v1.teamUpdate, {
+const TEAM_PATCH_OPERATION = defineOperation("teamPatch", routes.api.v1.teamPatch, {
 	summary: "Update the team",
+	description:
+		"An RFC 7396 JSON merge patch: send the members to change; `null` on `logoUrl` clears it.",
+	tags: TEAM_TAGS,
+	body: { "application/merge-patch+json": TEAM_PATCH, "application/json": TEAM_PATCH },
+	responses: { 200: { description: "The updated team", body: envelope({ team: TEAM }) } },
+	problems: ["validationError", ...AUTH_PROBLEMS, "unsupportedMediaType"],
+	security: [{ apiKey: ["teams:write"] }],
+});
+
+const TEAM_UPDATE = defineOperation("teamUpdate", routes.api.v1.teamUpdate, {
+	summary: "Update the team (PUT)",
 	tags: TEAM_TAGS,
 	body: UPDATE_TEAM_BODY,
 	responses: { 200: { description: "The updated team", body: envelope({ team: TEAM }) } },
@@ -210,6 +241,7 @@ const INVITE_DESTROY = defineOperation("inviteDestroy", routes.api.v1.invites.de
 /** Every operation in this module, in the order the reference lists them. */
 export const OPERATIONS = [
 	TEAM_SHOW,
+	TEAM_PATCH_OPERATION,
 	TEAM_UPDATE,
 	MEMBERSHIPS_INDEX,
 	TEAM_DOMAINS_INDEX,

@@ -60,27 +60,29 @@ curl https://uptime.sergiodxa.com/api/v1/team \
 | `data.team.createdAt` | integer        | Unix timestamp in milliseconds of the creation    |
 | `data.team.updatedAt` | integer        | Unix timestamp in milliseconds of the last update |
 
-## PUT /api/v1/team
+## PATCH /api/v1/team
 
-Updates the current team's settings. At least one field must be provided.
+Updates the current team's settings with a [JSON merge patch](/docs/api/overview#updating-resources).
 
-<!-- operation: teamUpdate -->
+<!-- operation: teamPatch -->
 
 ### Request Body
 
-| Field     | Type   | Required | Description                                        |
-| --------- | ------ | -------- | -------------------------------------------------- |
-| `name`    | string | No       | Team display name (1-255 characters)               |
-| `logoUrl` | string | No       | URL to the team's logo image (must be a valid URL) |
+Include only the fields you want to change. `null` on `logoUrl` removes the logo; `name` cannot be removed.
+
+| Field     | Type           | Required | Description                                                          |
+| --------- | -------------- | -------- | -------------------------------------------------------------------- |
+| `name`    | string         | No       | Team display name (1-255 characters)                                 |
+| `logoUrl` | string \| null | No       | URL to the team's logo image (must be a valid URL); `null` clears it |
 
 ### Example Request
 
 #### cURL
 
 ```bash
-curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
+curl -X PATCH https://uptime.sergiodxa.com/api/v1/team \
   -H "Authorization: Bearer uptime_your_api_key" \
-  -H "Content-Type: application/json" \
+  -H "Content-Type: application/merge-patch+json" \
   -d '{
     "name": "Acme Corporation",
     "logoUrl": "https://cdn.example.com/logos/acme-new.png"
@@ -108,6 +110,12 @@ curl -X PUT https://uptime.sergiodxa.com/api/v1/team \
 	}
 }
 ```
+
+### Update With PUT
+
+`PUT /api/v1/team` takes the same fields, for integrations written before `PATCH` existed. At least one field must be provided, a field you leave out keeps its value, and `null` is refused, so `PUT` cannot remove the logo.
+
+<!-- operation: teamUpdate -->
 
 ## GET /api/v1/memberships
 
