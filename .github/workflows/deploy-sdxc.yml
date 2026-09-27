@@ -28,8 +28,37 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Secrets are unreadable in a job-level `if:`, so this job reads them into a step and
+  # reports whether the deploy can run. A fork or an unconfigured repository sees a skipped
+  # deploy and a notice naming what is missing, and the run stays green.
+  secrets:
+    name: Check secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      configured: ${{ steps.check.outputs.configured }}
+
+    steps:
+      - name: Check Cloudflare secrets
+        id: check
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=()
+          [ -n "$CLOUDFLARE_API_TOKEN" ] || missing+=(CLOUDFLARE_API_TOKEN)
+          [ -n "$CLOUDFLARE_ACCOUNT_ID" ] || missing+=(CLOUDFLARE_ACCOUNT_ID)
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Skipping the sdxc deploy: missing secret(s) ${missing[*]}"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
   deploy:
     name: Deploy
+    needs: secrets
+    if: needs.secrets.outputs.configured == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
