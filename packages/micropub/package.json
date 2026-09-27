@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/micropub",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read Micropub requests into typed operations and build the spec's responses",
 	"license": "MIT",
 	"type": "module",

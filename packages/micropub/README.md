@@ -2,40 +2,47 @@
 
 Read Micropub requests into typed operations and build the spec's responses.
 
-## Overview
+## Installation
 
-[Micropub](https://www.w3.org/TR/micropub/) is the W3C Recommendation for publishing to a
-site from a client the site's owner did not write. Clients POST creates, updates, deletes
-and undeletes, form-encoded, multipart (with files) or as JSON in the microformats2 shape,
-and GET queries (`q=config`, `q=source`, `q=syndicate-to`) to learn what the server supports
-and to read a post back for editing.
+```bash
+npm add @sdxc/micropub
+```
 
-The package is the protocol half of a Micropub endpoint:
+Parsers return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values; it installs
+alongside this package, as does [`@sdxc/microformats`](https://www.npmjs.com/package/@sdxc/microformats),
+whose `MF2` item shape every create and `q=source` answer takes.
 
-- **`@sdxc/micropub`** decodes a POST into one of four typed operations and a GET into a
-  typed query, returns the access token from whichever place it was sent, names the scopes
-  each operation needs, and builds every response the specification defines. Form bodies
-  are reshaped into the JSON shape first (`h` into `type`, `name[]` into arrays, `mp-*`
-  into commands), and property values are validated with `ITEM_SCHEMA` from
-  [`@sdxc/microformats`](../microformats/README.md), so both encodings yield the same
-  operation for the same post.
+[Micropub](https://www.w3.org/TR/micropub/) is the W3C Recommendation for publishing to a site
+from a client the site's owner did not write. Clients POST creates, updates, deletes and
+undeletes, form-encoded, multipart (with files) or as JSON in the microformats2 shape, and GET
+queries (`q=config`, `q=source`, `q=syndicate-to`) to learn what the server supports and to read
+a post back for editing.
+
+- **`@sdxc/micropub`** decodes a POST into one of four typed operations and a GET into a typed
+  query, returns the access token from whichever place it was sent, names the scopes each
+  operation needs, and builds every response the specification defines. Form bodies are
+  reshaped into the JSON shape first (`h` into `type`, `name[]` into arrays, `mp-*` into
+  commands), and property values are validated as microformats2, so both encodings yield the
+  same operation for the same post.
 - **`@sdxc/micropub/media`** reads the single `file` part a media endpoint upload carries,
   checked for size and media type, and answers it.
 
-Verifying the token, mapping operations onto posts and storing files belong to the app.
-Every example of the Recommendation and every server test of
-[micropub.rocks](https://micropub.rocks/) is replayed in the test suite
-(`src/rocks.test.ts` names each by its number).
+Verifying the token, mapping operations onto posts and storing files stay with you. Every
+example of the Recommendation and every server test of [micropub.rocks](https://micropub.rocks/)
+is replayed in the test suite.
 
 ## Usage
 
 ### Handle A Write
 
+Check the token before looking at the operation's contents, and answer `unauthorized` when
+`accessToken` is `null`; the parser leaves the decision of who may write to you.
+
 ```typescript
 import { created, deleted, error, parseOperation, requiredScopes, updated } from "@sdxc/micropub";
 import { isFailure } from "@sdxc/result";
 
-let parsed = await parseOperation(request, { formData: ctx.formData });
+let parsed = await parseOperation(request);
 if (isFailure(parsed)) return error("invalid_request", parsed.error.message);
 
 let { body: operation, accessToken } = parsed.data;
@@ -89,7 +96,7 @@ import { error } from "@sdxc/micropub";
 import { parseUpload, uploaded } from "@sdxc/micropub/media";
 import { isFailure } from "@sdxc/result";
 
-let upload = parseUpload(request, { formData: ctx.formData, accept: ["image/*"] });
+let upload = parseUpload(request, { formData: await request.formData(), accept: ["image/*"] });
 if (isFailure(upload)) return error("invalid_request", upload.error.message);
 
 let url = await storage.put(upload.data.body);
@@ -113,7 +120,7 @@ Decodes a POST by its `Content-Type`: `application/json` (or any `+json` type),
   `Undelete`, and a body without `action` a `Create` validated with `ITEM_SCHEMA`: `{ html }`
   content gains its text as `value`, and a nested item without `value` takes its first
   `name` or `url`. Numbers and booleans inside property arrays are read as their text,
-  since clients send coordinates as JSON numbers (micropub.rocks test 204).
+  since clients send coordinates as JSON numbers.
 - `mp-slug`, `mp-syndicate-to` and `post-status` become `commands.slug`,
   `commands.syndicateTo` and `commands.status`; every other `mp-*` name lands in
   `commands.other` with its values as sent. None of them stays in `properties`.
@@ -126,12 +133,12 @@ the data-schema `issues` behind it: an unsupported media type, text that is not 
 JSON body that is not an object or is over `maxJsonBytes`, an update over a form body, an
 update naming no change, an unknown `action`, a `url` that is not an absolute URL, a
 `post-status` other than `published` or `draft`, and a token sent both in the header and in
-the body (RFC 6750 forbids it; micropub.rocks test 805 checks it).
+the body (RFC 6750 forbids it).
 
 **Options:**
 
-- `formData`: the body a `formData()` middleware already consumed; without it the parser
-  reads form bodies itself
+- `formData`: the form body when your framework already read it (the request stream is
+  consumed by then); without it the parser reads form bodies itself
 - `maxJsonBytes`: the JSON body cap, enforced while streaming (default `1_048_576`)
 
 #### `parseQuery(request: Request): Result<Micropub.Parsed<Micropub.Query>, MicropubRequestError>`
@@ -186,7 +193,10 @@ data-schema issues, empty for failures outside the body's shape.
 
 `Operation` (`Create | Update | Delete | Undelete`), `Commands`, `Properties`, `Query` and
 its members, `Parsed<Body>`, `Scope`, `Config`, `SyndicationTarget`, `SyndicationDetail`,
-`PostType`, `ErrorCode`, `ErrorDetails` and `ParseOptions`.
+`PostType`, `ErrorCode`, `ErrorDetails` and `ParseOptions`. Every type is exported from the
+namespace, including each query member (`ConfigQuery`, `SyndicateToQuery`, `SourceQuery`,
+`CategoryQuery`, `ExtensionQuery`) and each operation (`Create`, `Update`, `Delete`,
+`Undelete`).
 
 ### `@sdxc/micropub/media`
 
@@ -202,43 +212,66 @@ file matches only `*/*`.
 
 `201 Created` with the file's URL in `Location`.
 
-## Patterns
+#### `Media`
 
-### Keep Files And URLs Together
+Types only: `Options` (`formData`, `maxBytes`, `accept`).
 
-A multipart create puts uploaded files in `files` and URLs in `properties`, so a photo
-sent either way reaches the post:
+## Pattern: Keep Files And URLs Together
+
+A multipart create puts uploaded files in `files` and URLs in `properties`, so a photo sent
+either way reaches the post. Ignore properties your content model does not know: the
+specification has servers create the post from the properties they recognize.
 
 ```typescript
-if (operation.action === "create") {
+import type { Micropub } from "@sdxc/micropub";
+
+async function photosOf(operation: Micropub.Create) {
 	let uploaded = await Promise.all((operation.files.photo ?? []).map((file) => storage.put(file)));
-	let photos = [...(operation.properties.photo ?? []), ...uploaded];
+	return [...(operation.properties.photo ?? []), ...uploaded];
 }
 ```
 
-### Read A Post Back In The Shape A Create Sends
+## Pattern: Read A Post Back In The Shape A Create Sends
 
-`source` writes an `MF2.Item`, the same shape `parseOperation` produces for a JSON create,
-so a round trip through a client's editor keeps HTML content as `{ html }` and alt text as
-`{ value, alt }`:
+`source` writes an `MF2.Item`, the same shape `parseOperation` produces for a JSON create, so a
+round trip through a client's editor keeps HTML content as `{ html }` and alt text as
+`{ value, alt }`. Advertise only the queries you answer in `config({ q })`; clients treat a
+missing query as unsupported.
 
 ```typescript
+import type { MF2 } from "@sdxc/microformats";
+import { source } from "@sdxc/micropub";
+
 let item: MF2.Item = { type: ["h-entry"], properties: { content: [{ html, value: text }] } };
 return source(item, query.properties);
 ```
 
-## Related Packages
+## Versioning
 
-- [`@sdxc/microformats`](../microformats/README.md) - the mf2 item shape, `ITEM_SCHEMA`, and
-  Post Type Discovery for mapping a create onto a content type
-- [`@sdxc/auth`](../auth/README.md) - `ResourceServer` verifies the access token
-- [`@sdxc/result`](../result/README.md) - the `Result` every parser returns
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
 
-## Tips
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
 
-- Check the token before looking at the operation's contents, and answer `unauthorized`
-  when `accessToken` is `null`; the parser never decides who may write.
-- Ignore properties your content model does not know rather than rejecting them; the
-  specification requires servers to create the post from the properties they recognize.
-- Advertise only the queries you answer in `config({ q })`; clients treat a missing query
-  as unsupported.
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/micropub": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

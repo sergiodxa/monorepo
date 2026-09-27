@@ -134,7 +134,7 @@ Run from the repository root:
 | [merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          |     |
 | [messageformat](packages/messageformat)                         | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                       | ✅  |
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
-| [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       |     |
+| [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
 | [oidc-provider](packages/oidc-provider)                         | OIDC/OAuth2 provider engine                                                                                       |     |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
