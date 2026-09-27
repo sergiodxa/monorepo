@@ -1061,6 +1061,13 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/trailing-slash-middleware": {
+      "name": "@sdxc/trailing-slash-middleware",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/typeid": {
       "name": "@sdxc/typeid",
       "version": "0.0.1",
@@ -1936,6 +1943,8 @@
     "@sdxc/structured-fields": ["@sdxc/structured-fields@workspace:packages/structured-fields"],
 
     "@sdxc/trace-context": ["@sdxc/trace-context@workspace:packages/trace-context"],
+
+    "@sdxc/trailing-slash-middleware": ["@sdxc/trailing-slash-middleware@workspace:packages/trailing-slash-middleware"],
 
     "@sdxc/typeid": ["@sdxc/typeid@workspace:packages/typeid"],
 
