@@ -9,7 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
+import type { DoH } from "@sdxc/doh";
+
+import { NameNotFoundError, resolve } from "@sdxc/doh";
+import { isFailure } from "@sdxc/result";
 
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
 
@@ -17,9 +20,8 @@ import {
 	DNS_RECORD_TYPES,
 	normalizeDnsName,
 	normalizeDnsRecordValue,
+	storedRecordValue,
 } from "~/app/lib/dns-record-value";
-
-const DOH_URL = new URL("https://cloudflare-dns.com/dns-query");
 
 export type DnsCheckStatus = "ok" | "changed" | "error";
 
@@ -29,30 +31,6 @@ export type DnsCheckStatus = "ok" | "changed" | "error";
  * count into a subrequest count against the platform's per-invocation ceiling.
  */
 export const QUERIES_PER_NAME = DNS_RECORD_TYPES.length;
-
-const RECORD_TYPE_CODES: Record<DnsRecordType, number> = {
-	A: 1,
-	AAAA: 28,
-	CNAME: 5,
-	MX: 15,
-	TXT: 16,
-	NS: 2,
-};
-
-/** `NXDOMAIN`: the name does not exist. Not a failure — see {@link queryDnsRecords}. */
-const NXDOMAIN = 3;
-
-const DnsAnswerSchema = s.object({
-	name: s.string(),
-	type: s.number(),
-	TTL: s.number(),
-	data: s.string(),
-});
-
-const DnsResponseSchema = s.object({
-	Status: s.number(),
-	Answer: s.optional(s.array(DnsAnswerSchema)),
-});
 
 export interface DnsCheckResult {
 	status: DnsCheckStatus;
@@ -99,37 +77,6 @@ export interface DnsNameSweep {
 }
 
 /**
- * Resolves `domain`'s `recordType` records via Cloudflare's DoH JSON API, throwing on any
- * answer that is not a clean `NOERROR`. Backs the SSRF and DNS-rebinding defence, where an
- * unresolved name and an unreachable resolver must both refuse the probe.
- */
-export async function resolveDns(
-	domain: string,
-	recordType: DnsRecordType,
-): Promise<{ values: string[]; responseTimeMs: number }> {
-	let { status, answers, responseTimeMs } = await queryDoh(domain, recordType);
-	if (status !== 0) throw new Error(`DNS query returned status code ${status}`);
-
-	let typeCode = RECORD_TYPE_CODES[recordType];
-	let values = answers
-		.filter((record) => record.type === typeCode)
-		.map((record) => {
-			let data = record.data;
-			/**
-			 * The outermost quote pair only. This function passes the resolver's own
-			 * bytes to the probe fence unnormalized, on purpose: the fence must
-			 * inspect addresses exactly as returned; normalization lives in `normalizeDnsRecordValue`.
-			 */
-			if (recordType === "TXT" && data.startsWith('"') && data.endsWith('"')) {
-				return data.slice(1, -1);
-			}
-			return data;
-		});
-
-	return { values, responseTimeMs };
-}
-
-/**
  * Resolves one `(name, type)` for the sweep, returning any failure as a value the caller
  * diffs around. `NXDOMAIN` and empty `NOERROR` both mean "no records of this type here" —
  * treating either as an error would park a retired or mail-less domain in `error` forever.
@@ -139,60 +86,32 @@ export async function queryDnsRecords(
 	recordType: DnsRecordType,
 ): Promise<DnsQueryOutcome> {
 	let owner = normalizeDnsName(name);
+	let startedAt = performance.now();
+	let answer = await resolve(owner, recordType);
+	let responseTimeMs = Math.round(performance.now() - startedAt);
 
-	try {
-		let { status, answers, responseTimeMs } = await queryDoh(owner, recordType);
-
-		if (status === NXDOMAIN) {
-			return {
-				name: owner,
-				recordType,
-				values: [],
-				responseTimeMs,
-				errorMessage: null,
-				suppressedByCname: false,
-			};
-		}
-		if (status !== 0) {
-			return {
-				name: owner,
-				recordType,
-				values: [],
-				responseTimeMs,
-				errorMessage: `DNS query returned status code ${status}`,
-				suppressedByCname: false,
-			};
-		}
-
-		let isAddressQuery = recordType === "A" || recordType === "AAAA";
-		let suppressedByCname =
-			isAddressQuery && answers.some((record) => record.type === RECORD_TYPE_CODES.CNAME);
-
-		let typeCode = RECORD_TYPE_CODES[recordType];
-		let values = suppressedByCname
-			? []
-			: answers
-					.filter((record) => record.type === typeCode)
-					.map((record) => normalizeDnsRecordValue(recordType, record.data));
-
-		return {
-			name: owner,
-			recordType,
-			values,
-			responseTimeMs,
-			errorMessage: null,
-			suppressedByCname,
-		};
-	} catch (error) {
+	if (isFailure(answer)) {
 		return {
 			name: owner,
 			recordType,
 			values: [],
-			responseTimeMs: 0,
-			errorMessage: error instanceof Error ? error.message : String(error),
+			responseTimeMs,
+			errorMessage: answer.error instanceof NameNotFoundError ? null : answer.error.message,
 			suppressedByCname: false,
 		};
 	}
+
+	let isAddressQuery = recordType === "A" || recordType === "AAAA";
+	let suppressedByCname = isAddressQuery && answer.data.chain.length > 0;
+
+	return {
+		name: owner,
+		recordType,
+		values: suppressedByCname ? [] : storedValues(recordType, answer.data),
+		responseTimeMs,
+		errorMessage: null,
+		suppressedByCname,
+	};
 }
 
 /**
@@ -217,27 +136,16 @@ export async function sweepDnsName(name: string): Promise<DnsNameSweep> {
 	};
 }
 
-/** Performs the DoH round trip and validates its envelope. Throws on a non-2xx response. */
-async function queryDoh(
-	name: string,
-	recordType: DnsRecordType,
-): Promise<{
-	status: number;
-	answers: s.InferOutput<typeof DnsAnswerSchema>[];
-	responseTimeMs: number;
-}> {
-	let url = new URL(DOH_URL);
-	url.searchParams.set("name", name);
-	url.searchParams.set("type", recordType);
-
-	let startedAt = performance.now();
-	let response = await fetch(url, { headers: { accept: "application/dns-json" } });
-	let responseTimeMs = Math.round(performance.now() - startedAt);
-
-	if (!response.ok) throw new Error(`DNS query failed with status ${response.status}`);
-
-	let body = s.parse(DnsResponseSchema, await response.json());
-	return { status: body.Status, answers: body.Answer ?? [], responseTimeMs };
+/**
+ * Every record an answer holds as the value stored for its identity. Records whose data the
+ * resolver answered in a shape that did not parse are folded as far as they go, so a record
+ * the customer still publishes is never reported `missing` over a formatting quirk.
+ */
+function storedValues(recordType: DnsRecordType, answer: DoH.Answer<DnsRecordType>): string[] {
+	return [
+		...answer.records.map(storedRecordValue),
+		...answer.unparsed.map((record) => normalizeDnsRecordValue(recordType, record.data)),
+	];
 }
 
 /** Renders a possibly multi-value answer as one stable string: sorted, comma-joined. */
@@ -289,37 +197,25 @@ export async function checkDns(
 	expectedValue: string | null,
 	previousValue: string | null,
 ): Promise<DnsCheckResult> {
-	try {
-		/**
-		 * Normalizes each answer directly through `normalizeDnsRecordValue`, matching what the
-		 * stored channel produces for a chunked TXT record — `resolveDns`'s quote strip runs
-		 * before normalization can see the value and would otherwise yield a different string.
-		 */
-		let answer = await queryDoh(domain, recordType);
-		if (answer.status !== 0) {
-			throw new Error(`DNS query returned status code ${answer.status}`);
-		}
-
-		let typeCode = RECORD_TYPE_CODES[recordType];
-		let normalized = answer.answers
-			.filter((record) => record.type === typeCode)
-			.map((record) => normalizeDnsRecordValue(recordType, record.data));
-		let resolvedValue = joinValues(normalized);
-		let status: DnsCheckStatus = "ok";
-
-		if (expectedValue !== null) {
-			if (!containsExpected(normalized, expectedValue, recordType)) status = "changed";
-		} else if (previousValue !== null && resolvedValue !== previousValue) {
-			status = "changed";
-		}
-
-		return { status, resolvedValue, responseTimeMs: answer.responseTimeMs };
-	} catch (error) {
+	let answer = await resolve(domain, recordType);
+	if (isFailure(answer)) {
 		return {
 			status: "error",
 			resolvedValue: null,
 			responseTimeMs: 0,
-			errorMessage: error instanceof Error ? error.message : String(error),
+			errorMessage: answer.error.message,
 		};
 	}
+
+	let normalized = storedValues(recordType, answer.data);
+	let resolvedValue = joinValues(normalized);
+	let status: DnsCheckStatus = "ok";
+
+	if (expectedValue !== null) {
+		if (!containsExpected(normalized, expectedValue, recordType)) status = "changed";
+	} else if (previousValue !== null && resolvedValue !== previousValue) {
+		status = "changed";
+	}
+
+	return { status, resolvedValue, responseTimeMs: answer.data.durationMs };
 }

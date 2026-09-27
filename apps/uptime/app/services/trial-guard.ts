@@ -14,6 +14,7 @@
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
+import { resolve } from "@sdxc/doh";
 import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { failure, isFailure, success } from "@sdxc/result";
@@ -21,7 +22,6 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
 import { recordCost } from "~/app/services/cost";
-import { resolveDns } from "~/app/services/dns-check";
 
 /** Cloudflare's server-side verification endpoint for a Turnstile token. */
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -581,19 +581,22 @@ export function checkTarget(target: string): Result<URL, TrialRefusal> {
  * @returns The resolved public addresses, or a refusal.
  */
 async function checkResolvedAddresses(hostname: string): Promise<Result<string[], TrialRefusal>> {
-	let [a, aaaa] = await Promise.allSettled([
-		resolveDns(hostname, "A"),
-		resolveDns(hostname, "AAAA"),
-	]);
+	let [a, aaaa] = await Promise.all([resolve(hostname, "A"), resolve(hostname, "AAAA")]);
 
-	if (a.status === "rejected" && aaaa.status === "rejected") {
+	if (isFailure(a) && isFailure(aaaa)) {
 		return failure(new TrialRefusal("blocked-target", "unresolvable"));
 	}
-	if (a.status === "rejected" || aaaa.status === "rejected") {
+	/** An address the reader could not parse is one the fence cannot judge, so it refuses too. */
+	if (
+		isFailure(a) ||
+		isFailure(aaaa) ||
+		a.data.unparsed.length > 0 ||
+		aaaa.data.unparsed.length > 0
+	) {
 		return failure(new TrialRefusal("blocked-target", "partial-resolution"));
 	}
 
-	let addresses = [...a.value.values, ...aaaa.value.values];
+	let addresses = [...a.data.records, ...aaaa.data.records].map((record) => record.address);
 	if (addresses.length === 0) {
 		return failure(new TrialRefusal("blocked-target", "no-address"));
 	}

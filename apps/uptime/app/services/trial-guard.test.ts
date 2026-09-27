@@ -12,6 +12,7 @@
 import type { RateLimitMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { CLOUDFLARE } from "@sdxc/doh";
 import { Log } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
@@ -70,7 +71,7 @@ let turnstileStatus = 200;
 let budgetKey = `trial:budget:${new Date().toISOString().slice(0, 10)}`;
 
 /** The DNS-over-HTTPS endpoint the resolver queries. */
-const DOH_URL = "https://cloudflare-dns.com/dns-query";
+const DOH_URL = CLOUDFLARE.url;
 
 /** Turnstile's verification endpoint. */
 const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -409,6 +410,17 @@ describe("guardTrialProbe", () => {
 
 	test("refuses rather than judging a name on half an answer", async () => {
 		dnsFailures.add("example.com:AAAA");
+
+		let result = await guardTrialProbe(submission("example.com"));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.detail).toBe("partial-resolution");
+	});
+
+	test("refuses a name whose address data it cannot read", async () => {
+		dnsRecords.set("example.com:A", ["not-an-address"]);
+		dnsRecords.set("example.com:AAAA", []);
 
 		let result = await guardTrialProbe(submission("example.com"));
 

@@ -5,14 +5,11 @@
  * chunks, and both input channels fold to one string — are all properties confirmed by
  * what Cloudflare actually returns.
  *
- * `resolveDns` is tested against the throw-on-anything-but-clean-NOERROR contract the
- * public probe's SSRF fence depends on, kept separate from the sweep's own
- * value-returning contract.
- *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { CLOUDFLARE } from "@sdxc/doh";
 import { HttpResponse, delay, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -21,11 +18,10 @@ import {
 	QUERIES_PER_NAME,
 	checkDns,
 	queryDnsRecords,
-	resolveDns,
 	sweepDnsName,
 } from "~/app/services/dns-check";
 
-const DOH_URL = "https://cloudflare-dns.com/dns-query";
+const DOH_URL = CLOUDFLARE.url;
 
 let server = setupServer();
 
@@ -40,8 +36,16 @@ afterAll(() => server.close());
 interface DohBody {
 	Status?: number;
 	Answer?: { name: string; type: number; TTL: number; data: string }[];
-	Authority?: { name: string; type: number }[];
+	Authority?: { name: string; type: number; TTL: number; data: string }[];
 }
+
+/** The zone's SOA, as Cloudflare puts it in `Authority` on NXDOMAIN and NODATA answers. */
+const SOA = {
+	name: "sergiodxa.com",
+	type: 6,
+	TTL: 1800,
+	data: "dora.ns.cloudflare.com. dns.cloudflare.com. 2384729384 10000 2400 604800 1800",
+};
 
 /** Answers every DoH query with one fixed body, whatever was asked for. */
 function respondWith(body: DohBody, init?: ResponseInit) {
@@ -58,77 +62,6 @@ function respondByType(bodies: Record<string, DohBody>, slowTypes: string[] = []
 		}),
 	);
 }
-
-describe("resolveDns", () => {
-	test("returns the resolved A record values and a response time", async () => {
-		respondWith({
-			Status: 0,
-			Answer: [{ name: "example.com", type: 1, TTL: 300, data: "1.2.3.4" }],
-		});
-
-		let result = await resolveDns("example.com", "A");
-
-		expect(result.values).toEqual(["1.2.3.4"]);
-		expect(typeof result.responseTimeMs).toBe("number");
-		expect(result.responseTimeMs).toBeGreaterThanOrEqual(0);
-	});
-
-	test("filters out answers that don't match the requested record type code", async () => {
-		respondWith({
-			Status: 0,
-			Answer: [
-				{ name: "example.com", type: 5, TTL: 300, data: "cname.example.com" },
-				{ name: "example.com", type: 1, TTL: 300, data: "5.6.7.8" },
-			],
-		});
-
-		let result = await resolveDns("example.com", "A");
-
-		expect(result.values).toEqual(["5.6.7.8"]);
-	});
-
-	test("returns an empty list when there is no Answer section", async () => {
-		respondWith({ Status: 0 });
-
-		expect((await resolveDns("example.com", "A")).values).toEqual([]);
-	});
-
-	test("throws when the HTTP response is not ok", async () => {
-		respondWith({}, { status: 500 });
-
-		await expect(resolveDns("example.com", "A")).rejects.toThrow(
-			"DNS query failed with status 500",
-		);
-	});
-
-	test("throws when the DNS query returns a non-zero Status", async () => {
-		respondWith({ Status: 2 });
-
-		await expect(resolveDns("example.com", "A")).rejects.toThrow(
-			"DNS query returned status code 2",
-		);
-	});
-
-	test("still throws on NXDOMAIN, which the probe fence reads as an unresolvable target", async () => {
-		respondWith({ Status: 3 });
-
-		await expect(resolveDns("zzz-nope.example.com", "A")).rejects.toThrow(
-			"DNS query returned status code 3",
-		);
-	});
-
-	test("keeps the address reached through a CNAME, which is the one the probe would connect to", async () => {
-		respondWith({
-			Status: 0,
-			Answer: [
-				{ name: "www.github.com", type: 5, TTL: 3557, data: "github.com." },
-				{ name: "github.com", type: 1, TTL: 17, data: "140.82.114.3" },
-			],
-		});
-
-		expect((await resolveDns("www.github.com", "A")).values).toEqual(["140.82.114.3"]);
-	});
-});
 
 describe("queryDnsRecords", () => {
 	test("returns the normalized RRset for a name that publishes one", async () => {
@@ -147,7 +80,7 @@ describe("queryDnsRecords", () => {
 	});
 
 	test("reads NXDOMAIN as no records here, not as a failed check", async () => {
-		respondWith({ Status: 3, Authority: [{ name: "sergiodxa.com", type: 6 }] });
+		respondWith({ Status: 3, Authority: [SOA] });
 
 		let outcome = await queryDnsRecords("zzz-nope.sergiodxa.com", "A");
 
@@ -156,7 +89,7 @@ describe("queryDnsRecords", () => {
 	});
 
 	test("reads NOERROR with no answers as no records here", async () => {
-		respondWith({ Status: 0, Authority: [{ name: "sergiodxa.com", type: 6 }] });
+		respondWith({ Status: 0, Authority: [SOA] });
 
 		let outcome = await queryDnsRecords("sergiodxa.com", "CNAME");
 
@@ -170,14 +103,16 @@ describe("queryDnsRecords", () => {
 		let outcome = await queryDnsRecords("dnssec-failed.org", "A");
 
 		expect(outcome.values).toEqual([]);
-		expect(outcome.errorMessage).toBe("DNS query returned status code 2");
+		expect(outcome.errorMessage).toBe(
+			"The resolver failed to answer for dnssec-failed.org (SERVFAIL)",
+		);
 	});
 
 	test("reads a non-2xx response as a failure", async () => {
 		respondWith({}, { status: 502 });
 
 		expect((await queryDnsRecords("example.com", "A")).errorMessage).toBe(
-			"DNS query failed with status 502",
+			"The resolver answered HTTP 502",
 		);
 	});
 
@@ -258,7 +193,7 @@ describe("queryDnsRecords", () => {
 	});
 
 	test("reports a proxied name's absent CNAME as none, not as an error", async () => {
-		respondWith({ Status: 0, Authority: [{ name: "sergiodxa.com", type: 6 }] });
+		respondWith({ Status: 0, Authority: [SOA] });
 
 		let outcome = await queryDnsRecords("gh.sergiodxa.com", "CNAME");
 
@@ -282,6 +217,15 @@ describe("queryDnsRecords", () => {
 		let outcome = await queryDnsRecords("google._domainkey.github.com", "TXT");
 
 		expect(outcome.values).toEqual(["v=DKIM1; k=rsa; p=MIIBIjANBgOPoA7dlR/A/pECIDAQAB"]);
+	});
+
+	test("carries a record whose data does not parse through as its folded text", async () => {
+		respondWith({
+			Status: 0,
+			Answer: [{ name: "example.com", type: 15, TTL: 300, data: "high MX.Example.com." }],
+		});
+
+		expect((await queryDnsRecords("example.com", "MX")).values).toEqual(["high mx.example.com"]);
 	});
 
 	test("lowercases the queried name so the outcome keys on one spelling", async () => {
@@ -532,7 +476,16 @@ describe("checkDns errors", () => {
 		expect(result.status).toBe("error");
 		expect(result.resolvedValue).toBeNull();
 		expect(result.responseTimeMs).toBe(0);
-		expect(result.errorMessage).toBe("DNS query returned status code 2");
+		expect(result.errorMessage).toBe("The resolver failed to answer for example.com (SERVFAIL)");
+	});
+
+	test("is error when the name does not exist, since the probe expects a record there", async () => {
+		respondWith({ Status: 3 });
+
+		let result = await checkDns("gone.example.com", "A", null, null);
+
+		expect(result.status).toBe("error");
+		expect(result.errorMessage).toBe("gone.example.com does not exist (NXDOMAIN)");
 	});
 
 	test("is error, not a throw, when the HTTP request fails", async () => {
@@ -541,6 +494,6 @@ describe("checkDns errors", () => {
 		let result = await checkDns("example.com", "A", null, null);
 
 		expect(result.status).toBe("error");
-		expect(result.errorMessage).toBe("DNS query failed with status 502");
+		expect(result.errorMessage).toBe("The resolver answered HTTP 502");
 	});
 });

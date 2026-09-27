@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { CLOUDFLARE } from "@sdxc/doh";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { http, HttpResponse } from "msw";
@@ -23,7 +24,7 @@ import verifyDomainOwnership from "~/app/jobs/verify-domain-ownership";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 /** The DNS-over-HTTPS resolver the job queries for the TXT record. */
-let DNS_URL = "https://cloudflare-dns.com/dns-query";
+let DNS_URL = CLOUDFLARE.url;
 
 /** MSW server standing in for the DNS-over-HTTPS resolver. */
 let server = setupServer();
@@ -163,7 +164,9 @@ describe("verifyDomainOwnership", () => {
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 
-		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("Failed to fetch");
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe(
+			"The DNS query failed: Failed to fetch",
+		);
 	});
 
 	test("marks the domain verified when the TXT record arrives as several character-strings", async () => {
@@ -197,7 +200,9 @@ describe("verifyDomainOwnership", () => {
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 		expect(record).not.toHaveProperty(["domain.verified"]);
-		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("DNS query returned status code 2");
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe(
+			"The resolver failed to answer for _ping-verification.example.com (SERVFAIL)",
+		);
 	});
 
 	test("reports an HTTP error from the resolver as a failed lookup, not as an unverified domain", async () => {
@@ -209,6 +214,6 @@ describe("verifyDomainOwnership", () => {
 		let updated = await TeamDomain.findById(db, domain.id);
 		expect(updated?.verified_at).toBeNull();
 		expect(record).not.toHaveProperty(["domain.verified"]);
-		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("DNS query failed with status 500");
+		expect(noteOf(record, "domains.lookup_failed")?.error).toBe("The resolver answered HTTP 500");
 	});
 });

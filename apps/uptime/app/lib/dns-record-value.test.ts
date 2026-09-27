@@ -11,7 +11,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DoH } from "@sdxc/doh";
+
 import { describe, expect, test } from "vitest";
+
+import type { DnsRecordType } from "~/app/lib/dns-record-value";
 
 import {
 	canonicalizeIpv6,
@@ -21,7 +25,7 @@ import {
 	normalizeDnsName,
 	normalizeDnsRecordValue,
 	parseDnsRecordValue,
-	readCharacterStrings,
+	storedRecordValue,
 } from "~/app/lib/dns-record-value";
 
 describe("DNS_RECORD_TYPES", () => {
@@ -110,30 +114,6 @@ describe("canonicalizeIpv6", () => {
 		["1:0:0:1:0:0:1:1", "1::1:0:0:1:1"],
 	])("elides the longest run of zero groups, leftmost on a tie: %j", (input, expected) => {
 		expect(canonicalizeIpv6(input)).toBe(expected);
-	});
-});
-
-describe("readCharacterStrings", () => {
-	test("joins several character-strings with nothing between them", () => {
-		expect(readCharacterStrings('"v=DKIM1; p=AAA" "BBB"')).toBe("v=DKIM1; p=AAABBB");
-	});
-
-	test("keeps whitespace and case inside a string", () => {
-		expect(readCharacterStrings('"v=DMARC1;  P=none;"')).toBe("v=DMARC1;  P=none;");
-	});
-
-	test("unescapes a quote and a backslash, and keeps every other escape", () => {
-		expect(readCharacterStrings('"say \\"hi\\""')).toBe('say "hi"');
-		expect(readCharacterStrings('"a\\\\b"')).toBe("a\\b");
-		expect(readCharacterStrings('"a\\;b"')).toBe("a\\;b");
-	});
-
-	test("reads a bare word as a character-string", () => {
-		expect(readCharacterStrings("bare")).toBe("bare");
-	});
-
-	test("refuses a string that is never closed", () => {
-		expect(readCharacterStrings('"open')).toBeNull();
 	});
 });
 
@@ -266,4 +246,48 @@ describe("the two input channels agree", () => {
 		expect(joined).toBe("…0H4cpYH9+3JJ78km4KXwaf9xUJCWF6nxeD");
 		expect(joined).not.toContain('" "');
 	});
+});
+
+describe("TXT escapes", () => {
+	test.each([
+		['"say \\"hi\\""', 'say "hi"'],
+		['"a\\\\b"', "a\\b"],
+		['"a\\;b"', "a;b"],
+		['"caf\\195\\169"', "caf\u00e9"],
+	])("decodes %j as %j", (data, expected) => {
+		expect(parseDnsRecordValue("TXT", data)).toBe(expected);
+	});
+});
+
+describe("storedRecordValue", () => {
+	let base = { name: "example.com", ttl: 300 };
+
+	/**
+	 * A resolver's answer reaches the sweep as typed records, a zone file as presentation text;
+	 * both must land on one stored value or every imported record diffs as changed.
+	 */
+	let cases: [record: DoH.RecordFor<DnsRecordType>, zoneFile: string][] = [
+		[{ ...base, type: "A", address: "104.21.58.249" }, "104.21.58.249"],
+		[
+			{ ...base, type: "AAAA", address: "2606:4700:3030::6815:3af9" },
+			"2606:4700:3030:0:0:0:6815:3AF9",
+		],
+		[{ ...base, type: "CNAME", target: "gh-ds9.pages.dev" }, "GH-ds9.Pages.dev."],
+		[{ ...base, type: "NS", host: "dora.ns.cloudflare.com" }, "dora.ns.cloudflare.com."],
+		[
+			{ ...base, type: "MX", preference: 5, exchange: "alt1.aspmx.l.google.com" },
+			"05 ALT1.aspmx.l.google.com.",
+		],
+		[{ ...base, type: "MX", preference: 0, exchange: "." }, "0 ."],
+		[
+			{ ...base, type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] },
+			'"v=DKIM1; p=AAA" "BBB"',
+		],
+	];
+
+	for (let [record, zoneFile] of cases) {
+		test(`${record.type} ${zoneFile}`, () => {
+			expect(storedRecordValue(record)).toBe(normalizeDnsRecordValue(record.type, zoneFile));
+		});
+	}
 });

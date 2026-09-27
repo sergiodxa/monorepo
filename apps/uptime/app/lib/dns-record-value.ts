@@ -13,6 +13,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DoH } from "@sdxc/doh";
+
+import { parseRecordData } from "@sdxc/doh";
+import { isSuccess } from "@sdxc/result";
+
 /** The record types tracked by a domain monitor, and the only ones normalized here. */
 export const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 
@@ -146,75 +151,34 @@ export function canonicalizeIpv6(value: string): string | null {
 }
 
 /**
- * Reads TXT presentation data into its character-strings, reporting whether every quoted
- * string was closed. The text is returned either way, so a total caller can still carry an
- * unterminated value through while a strict one refuses it.
+ * Reads TXT presentation data into its text: the character-strings concatenated with the
+ * quoting and escapes removed, since a TXT record over 255 bytes arrives as several quoted
+ * chunks that must be rejoined to recover it. `null` when the data is not valid TXT.
  */
-function readCharacterStringsPartial(data: string): { text: string; closed: boolean } {
-	let out = "";
-	let index = 0;
-	let closed = true;
-
-	while (index < data.length) {
-		let char = data[index] ?? "";
-
-		if (char === " " || char === "\t") {
-			index += 1;
-			continue;
-		}
-
-		if (char === '"') {
-			index += 1;
-			let terminated = false;
-
-			while (index < data.length) {
-				let inner = data[index] ?? "";
-
-				if (inner === "\\") {
-					let next = data[index + 1] ?? "";
-					out += next === '"' || next === "\\" ? next : `\\${next}`;
-					index += 2;
-					continue;
-				}
-
-				if (inner === '"') {
-					terminated = true;
-					index += 1;
-					break;
-				}
-
-				out += inner;
-				index += 1;
-			}
-
-			if (!terminated) closed = false;
-			continue;
-		}
-
-		/** A bare word is a legal character-string; it simply cannot contain whitespace. */
-		while (index < data.length) {
-			let inner = data[index] ?? "";
-			if (inner === " " || inner === "\t") break;
-			out += inner;
-			index += 1;
-		}
-	}
-
-	return { text: out, closed };
+function readTxtText(data: string): string | null {
+	let parsed = parseRecordData("TXT", data);
+	return isSuccess(parsed) ? parsed.data.text : null;
 }
 
 /**
- * Splits TXT presentation data into its character-strings and concatenates them, quotes
- * removed, since a TXT record over 255 bytes arrives as several quoted chunks that must be
- * rejoined to recover it.
- *
- * @param data - The RDATA of a TXT record, one or more quoted or bare character-strings.
- * @returns The record's text, or `null` when a quoted string is never closed.
- * @example readCharacterStrings('"v=DKIM1; p=AAA" "BBB"') // "v=DKIM1; p=AAABBB"
+ * The value stored for a record a resolver answered with, by the same identity rules
+ * {@link parseDnsRecordValue} applies to presentation data: MX as `preference host`, names
+ * folded, TXT joined. The resolver's reader has already canonicalized AAAA and the names.
  */
-export function readCharacterStrings(data: string): string | null {
-	let { text, closed } = readCharacterStringsPartial(data);
-	return closed ? text : null;
+export function storedRecordValue(record: DoH.RecordFor<DnsRecordType>): string {
+	switch (record.type) {
+		case "A":
+		case "AAAA":
+			return record.address;
+		case "CNAME":
+			return record.target;
+		case "NS":
+			return record.host;
+		case "MX":
+			return `${record.preference} ${record.exchange}`;
+		case "TXT":
+			return record.text;
+	}
 }
 
 /**
@@ -265,7 +229,7 @@ export function parseDnsRecordValue(type: DnsRecordType, data: string): string |
 		 * splitting it on whitespace would turn `v=spf1 -all` into `v=spf1-all`. Only quoting makes chunks.
 		 */
 		case "TXT":
-			return value.includes('"') ? readCharacterStrings(value) : value;
+			return value.includes('"') ? readTxtText(value) : value;
 	}
 }
 
@@ -316,8 +280,8 @@ export function normalizeDnsRecordValue(type: DnsRecordType, data: string): stri
 			return `${parsedPreference} ${host}`;
 		}
 
-		/** The only way TXT fails to parse is an unclosed quote; what was read is still the value. */
+		/** An unclosed final quote is the usual failure, so closing it recovers what was published. */
 		case "TXT":
-			return readCharacterStringsPartial(value).text;
+			return readTxtText(`${value}"`) ?? value;
 	}
 }

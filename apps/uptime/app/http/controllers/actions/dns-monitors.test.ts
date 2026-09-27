@@ -14,6 +14,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { CLOUDFLARE } from "@sdxc/doh";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { HttpResponse, http } from "msw";
@@ -72,7 +73,7 @@ let {
 } = await import("./dns-monitors");
 let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/data/dns-monitor");
 
-const DOH_URL = "https://cloudflare-dns.com/dns-query";
+const DOH_URL = CLOUDFLARE.url;
 
 let server = setupServer();
 

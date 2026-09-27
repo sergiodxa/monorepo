@@ -439,7 +439,7 @@ control; only a public resolver sees them.
 ## Current Progress
 
 - [x] Phase 1: Specify and build the package (`packages/doh`)
-- [ ] Phase 2: Migrate call sites (uptime, auth-saas)
+- [ ] Phase 2: Migrate call sites (uptime done; auth-saas pending)
 - [ ] Phase 3: Publish
 
 ## Notes

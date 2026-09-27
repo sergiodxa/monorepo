@@ -617,7 +617,7 @@ describe("POST /api/v1/ping dns", () => {
 		expect(response.status).toBe(200);
 		let { data } = await pingBody(response);
 		expect(data.ping.status).toBe("error");
-		expect(data.ping.errorMessage).toBe("Failed to fetch");
+		expect(data.ping.errorMessage).toBe("The DNS query failed: Failed to fetch");
 	});
 });
 
