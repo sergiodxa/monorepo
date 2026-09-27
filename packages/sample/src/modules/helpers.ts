@@ -244,8 +244,7 @@ export function createHelpersModule(random: Random, lookup: GeneratorLookup): He
 				.replace(/^-+|-+$/g, "");
 		},
 		replaceSymbols(pattern) {
-			// oxlint-disable-next-line typescript/no-misused-spread -- ASCII only
-			return [...pattern]
+			return Array.from(pattern)
 				.map((character) => {
 					if (character === SYMBOL_DIGIT) return String(random.int(0, 9));
 					if (character === SYMBOL_LETTER) return LETTERS.charAt(random.int(0, 25));

@@ -96,8 +96,7 @@ function run(random: Random, radix: number, length: number, name: string): strin
 function cased(random: Random, value: string, casing: AlphaOptions["casing"]): string {
 	if (casing === "upper") return value.toUpperCase();
 	if (casing === "mixed") {
-		// oxlint-disable-next-line typescript/no-misused-spread -- ASCII only
-		return [...value]
+		return Array.from(value)
 			.map((character) => (random.bool() ? character.toUpperCase() : character))
 			.join("");
 	}
