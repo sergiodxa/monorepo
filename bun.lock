@@ -562,6 +562,14 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/email-address": {
+      "name": "@sdxc/email-address",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/doh": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/feed": {
       "name": "@sdxc/feed",
       "version": "0.0.1",
@@ -1858,6 +1866,8 @@
     "@sdxc/doh": ["@sdxc/doh@workspace:packages/doh"],
 
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
+
+    "@sdxc/email-address": ["@sdxc/email-address@workspace:packages/email-address"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
 

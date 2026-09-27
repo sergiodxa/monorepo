@@ -1,0 +1,23 @@
+{
+	"name": "@sdxc/email-address",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Email address parsing and normalization, disposable-domain detection and mail-server checks",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./disposable": "./src/disposable.ts",
+		"./mail-server": "./src/mail-server.ts",
+		"./role-account": "./src/role-account.ts",
+		"./typo": "./src/typo.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"update-disposable-domains": "bun run scripts/update-disposable-domains.ts"
+	},
+	"dependencies": {
+		"@sdxc/doh": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}
