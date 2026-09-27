@@ -27,6 +27,7 @@ import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -126,6 +127,11 @@ export default function application(options: application.Options) {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		/**
+		 * Continues the caller's W3C trace or starts one, right after the log so its IDs land
+		 * on the request's record, and every job enqueued while serving carries it along.
+		 */
+		trace() as Middleware,
 		/**
 		 * Answers `/.well-known/security.txt` before anything that reads a session or the
 		 * database, since the file is static and a researcher's probe carries no cookie.

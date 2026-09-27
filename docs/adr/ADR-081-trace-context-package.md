@@ -504,6 +504,9 @@ most joins.
 - [ ] Phase 4: Adopt in the workers
   - [x] auth-saas: `trace()` after `log(logger)` on the platform, tenant and management routers
   - [x] reader: `trace()` after `log(logger)`
+  - [x] uptime: `trace()` after `log(logger)`; jobs enqueued through `app/lib/queue.ts` carry the
+        request's trace. `meta.requestId` in `app/services/api-response.ts` still mints a UUID,
+        since the API's published schema documents it as one
 - [ ] Phase 5: Publish
 
 ## Alternatives Considered
