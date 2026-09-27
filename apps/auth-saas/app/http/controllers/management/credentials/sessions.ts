@@ -11,7 +11,6 @@
 
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -22,12 +21,13 @@ import {
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam } from "~/app/http/controllers/management/subjects/shared";
 import { managementPaging } from "~/app/http/lib/management-pagination";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SESSIONS_REVOKE, SESSIONS_REVOKE_ALL } from "~/app/http/openapi/credentials";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -88,8 +88,6 @@ export function createSessionsListAction(options: ManagementControllerOptions) {
 	});
 }
 
-let RevokeSessionQuerySchema = s.object({ reason: s.string() });
-
 /**
  * Builds the `sessionsRevoke` action.
  *
@@ -109,13 +107,13 @@ export function createSessionsRevokeAction(options: ManagementControllerOptions)
 			let subjectId = subjectIdParam(ctx);
 			let sessionId = sessionIdParam(ctx);
 
-			let query = parseBody(RevokeSessionQuerySchema, Object.fromEntries(ctx.url.searchParams));
-			if (!query.ok) return query.response;
+			let input = await SESSIONS_REVOKE.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.revokeSession({
 				subjectId,
 				sessionId,
-				reason: query.data.reason,
+				reason: input.data.query.reason,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return sessionNotFound();
@@ -124,8 +122,6 @@ export function createSessionsRevokeAction(options: ManagementControllerOptions)
 		},
 	});
 }
-
-let RevokeAllSessionsBodySchema = s.object({ reason: s.string() });
 
 /**
  * Builds the `sessionsRevokeAll` action.
@@ -145,15 +141,12 @@ export function createSessionsRevokeAllAction(options: ManagementControllerOptio
 
 			let subjectId = subjectIdParam(ctx);
 
-			let parsed = parseBody(
-				RevokeAllSessionsBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await SESSIONS_REVOKE_ALL.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.revokeSubjectSessions({
 				subjectId,
-				reason: parsed.data.reason,
+				reason: input.data.body.reason,
 				actor: ctx.managementCaller.actor,
 			});
 

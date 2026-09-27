@@ -10,7 +10,6 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -27,6 +26,7 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { PASSKEY_PATCH } from "~/app/http/openapi/credentials";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions, bucket: "read" | "write") {
@@ -65,8 +65,6 @@ export function createPasskeysListAction(options: ManagementControllerOptions) {
 	});
 }
 
-let RenamePasskeyBodySchema = s.object({ label: s.string() });
-
 /**
  * Builds the `passkeysRename` action.
  *
@@ -86,7 +84,7 @@ export function createPasskeysRenameAction(options: ManagementControllerOptions)
 			let subjectId = subjectIdParam(ctx);
 			let credentialId = credentialIdParam(ctx);
 
-			let parsed = await readPatchBody(ctx.request, RenamePasskeyBodySchema);
+			let parsed = await readPatchBody(ctx.request, PASSKEY_PATCH);
 			if (!parsed.ok) return parsed.response;
 
 			let result = await ctx.tenantStub.renamePasskey({

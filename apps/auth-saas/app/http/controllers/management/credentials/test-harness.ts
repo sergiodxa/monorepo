@@ -37,6 +37,7 @@ import {
 } from "~/app/http/controllers/management/credentials/sessions";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantMembership,
@@ -65,7 +66,7 @@ export function buildCredentialsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.passkeysList, createPasskeysListAction(controllerOptions));
 	router.map(routes.passkeysRename, createPasskeysRenameAction(controllerOptions));

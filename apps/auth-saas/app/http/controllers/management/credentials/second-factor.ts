@@ -13,7 +13,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -23,11 +23,12 @@ import {
 	trustedDeviceNotFound,
 } from "~/app/http/controllers/management/credentials/shared";
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SECOND_FACTOR_RESET } from "~/app/http/openapi/credentials";
 import routes from "~/routes/management";
 
 function mountedMiddleware(options: ManagementControllerOptions) {
@@ -40,8 +41,6 @@ function mountedMiddleware(options: ManagementControllerOptions) {
 		managementRateLimit(options.limiter, { bucket: "write" }),
 	];
 }
-
-let ResetSecondFactorBodySchema = s.object({ reason: s.string() });
 
 /**
  * Builds the `secondFactorReset` action.
@@ -61,15 +60,12 @@ export function createSecondFactorResetAction(options: ManagementControllerOptio
 
 			let subjectId = subjectIdParam(ctx);
 
-			let parsed = parseBody(
-				ResetSecondFactorBodySchema,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await SECOND_FACTOR_RESET.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.resetSecondFactor({
 				subjectId,
-				reason: parsed.data.reason,
+				reason: input.data.body.reason,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return subjectNotFound();
