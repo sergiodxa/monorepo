@@ -40,6 +40,7 @@ import { createSubjectsUnblockAction } from "~/app/http/controllers/management/s
 import { createSubjectsUpdateAction } from "~/app/http/controllers/management/subjects/update";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantMembership,
@@ -69,7 +70,7 @@ export function buildSubjectsRouter(
 		r2: options.r2 ?? createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.subjectsCreate, createSubjectsCreateAction(controllerOptions));
 	router.map(routes.subjectsList, createSubjectsListAction(controllerOptions));

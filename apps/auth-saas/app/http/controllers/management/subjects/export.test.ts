@@ -130,6 +130,21 @@ describe("POST /tenants/:tenantId/subjects/export", () => {
 		expect(payload.status).toBe("queued");
 	});
 
+	test("answers 400 validationFailed for a body that is not JSON", async () => {
+		let harness = await buildSubjectsHarness({ r2: bucket });
+		let token = await harness.signToken({ scope: "export:read" });
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/subjects/export`, token, {
+				method: "POST",
+				body: "{not json",
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+	});
+
 	test("refuses a caller with only export:read asking for includeCredentials: true", async () => {
 		let harness = await buildSubjectsHarness({ r2: bucket });
 		let token = await harness.signToken({ scope: "export:read" });

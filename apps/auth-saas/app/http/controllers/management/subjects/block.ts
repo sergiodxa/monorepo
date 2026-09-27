@@ -6,20 +6,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { subjectIdParam, subjectNotFound } from "~/app/http/controllers/management/subjects/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SUBJECTS_BLOCK } from "~/app/http/openapi/subjects";
 import routes from "~/routes/management";
-
-let BlockSubjectBodySchema = s.object({ reason: s.string() });
 
 /**
  * Builds the `subjectsBlock` action.
@@ -46,10 +45,10 @@ export function createSubjectsBlockAction(options: ManagementControllerOptions) 
 
 			let subjectId = subjectIdParam(ctx);
 
-			let parsed = parseBody(BlockSubjectBodySchema, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await SUBJECTS_BLOCK.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
-			let result = await ctx.tenantStub.blockSubject({ subjectId, reason: parsed.data.reason });
+			let result = await ctx.tenantStub.blockSubject({ subjectId, reason: input.data.body.reason });
 			if (!result.ok) return subjectNotFound();
 
 			return new Response(null, { status: 204 });

@@ -17,23 +17,20 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { SUBJECTS_EXPORT_BEGIN } from "~/app/http/openapi/subjects";
 import TenantExportRun from "~/app/models/tenant-export-run";
 import routes from "~/routes/management";
-
-let SubjectsExportBeginBodySchema = s.object({
-	includeCredentials: s.optional(s.boolean()),
-});
 
 /**
  * Builds the `subjectsExportBegin` action.
@@ -59,11 +56,10 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			let refused = requireScope(ctx, "export:read");
 			if (refused) return refused;
 
-			let raw = await ctx.request.json().catch(() => ({}));
-			let parsed = parseBody(SubjectsExportBeginBodySchema, raw);
-			if (!parsed.ok) return parsed.response;
+			let input = await SUBJECTS_EXPORT_BEGIN.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
-			let includeCredentials = parsed.data.includeCredentials ?? false;
+			let includeCredentials = input.data.body?.includeCredentials ?? false;
 
 			if (includeCredentials) {
 				let refusedCredentials = requireScope(ctx, "export:credentials");

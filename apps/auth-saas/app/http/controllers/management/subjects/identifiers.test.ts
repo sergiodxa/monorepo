@@ -279,6 +279,29 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/identifiers?value=", () 
 		expect(response.status).toBe(404);
 	});
 
+	test("answers 400 validationFailed when the value query parameter is missing", async () => {
+		let harness = await buildSubjectsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.createSubject({
+			identifiers: [{ kind: "username", value: "jane" }],
+		});
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(
+				`/tenants/${harness.tenantId}/subjects/${created.subjectId}/identifiers`,
+				token,
+				{ method: "DELETE" },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({
+			errors: [expect.objectContaining({ pointer: "/value" })],
+		});
+	});
+
 	test("refuses a caller missing the subjects:write scope", async () => {
 		let harness = await buildSubjectsHarness();
 		let token = await harness.signToken({ scope: "subjects:read" });
