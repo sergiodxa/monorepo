@@ -1,0 +1,26 @@
+{
+	"name": "@sdxc/password-policy",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse",
+	"license": "MIT",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts",
+		"./breached": "./src/breached.ts",
+		"./common": "./src/common.ts",
+		"./context": "./src/context.ts",
+		"./error": "./src/password-policy-error.ts",
+		"./history": "./src/history.ts",
+		"./length": "./src/length.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit",
+		"update-common-passwords": "bun scripts/update-common-passwords.ts"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}

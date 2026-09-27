@@ -926,6 +926,14 @@
         "remix": "3.0.0-rc.2",
       },
     },
+    "packages/password-policy": {
+      "name": "@sdxc/password-policy",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/problem": {
       "name": "@sdxc/problem",
       "version": "0.0.1",
@@ -1932,6 +1940,8 @@
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 
     "@sdxc/passkey": ["@sdxc/passkey@workspace:packages/passkey"],
+
+    "@sdxc/password-policy": ["@sdxc/password-policy@workspace:packages/password-policy"],
 
     "@sdxc/problem": ["@sdxc/problem@workspace:packages/problem"],
 
