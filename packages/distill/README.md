@@ -34,6 +34,18 @@ if (isFailure(article)) return excerptAnd(post.url, article.error.outcome);
 render(article.data.html, article.data.title, article.data.byline);
 ```
 
+Honouring the origin's `robots.txt`, with the outcome retrieved (and cached for its
+`lifetimeMs`) through [`@sdxc/robots`](https://www.npmjs.com/package/@sdxc/robots):
+
+```typescript
+import { distill } from "@sdxc/distill";
+import { fetchRobots } from "@sdxc/robots/fetch";
+
+let userAgent = "MyApp/1.0 (+https://myapp.example/about)";
+let robots = await fetchRobots(post.url, { userAgent });
+let article = await distill(post.url, { userAgent, robots });
+```
+
 Already holding the markup — from a fixture, or from a response somebody else retrieved:
 
 ```typescript
@@ -50,9 +62,11 @@ Retrieves a page and reads the article out of it, answering
 `Result<Distill.Retrieved, DistillError>`.
 
 `options.userAgent` is required: a publisher who wants to refuse should be able to tell who
-is asking, and only the caller knows what to call itself. `options.robots` takes the origin's
-`robots.txt` as the caller already holds it, and a `Disallow` covering the path refuses before
-any request goes out; omitting it consults nothing. `maxBytes`, `maxRedirects`, `timeoutMs`
+is asking, and only the caller knows what to call itself. `options.robots` takes the
+`RobotsFetch.Outcome` that `@sdxc/robots/fetch`'s `fetchRobots` answered for the origin, and a
+path it disallows is refused before any request goes out: a parsed file is evaluated for the
+agent, an unavailable one (a 4xx) permits everything, and an unreachable one (a 5xx, a 429 or a
+network failure) refuses everything. Omitting it consults nothing. `maxBytes`, `maxRedirects`, `timeoutMs`
 and `signal` move the four bounds below.
 
 ### `distillFrom(source, url)`
@@ -60,27 +74,6 @@ and `signal` move the four bounds below.
 The same scoring, sanitization and metadata over markup in hand, answering
 `Result<Distill.Article, DistillEmptyError>`. `url` is what every relative URL in the
 markup resolves against, so it is the address the page was actually served from.
-
-### `fetchRobots(url, options)`
-
-Retrieves an origin's `robots.txt` for the caller to hold and cache, following up to five
-redirects, and answers `Distill.Robots`: a `status` and the `source` to pass as
-`options.robots`. The status is read the way RFC 9309 reads it:
-
-- `found`: a 2xx, and `source` is the document served.
-- `missing`: any 4xx, 404 included, and `source` is `null`, which permits everything.
-- `unreachable`: a 5xx, a network failure or a chain that could not be followed, and
-  `source` is a document disallowing everything.
-
-An unreachable origin is usually back within minutes, so cache that answer for a short
-while and a `found` or `missing` one for as long as you like; holding an unreachable
-answer for a day keeps the origin refused for that day.
-
-### `isAllowed(robots, path, userAgent)`, `robotsUrl(url)`, `productToken(userAgent)`
-
-The `robots.txt` rules on their own: the groups naming an agent replace the wildcard group,
-the longest matching pattern decides, `*` and `$` are honoured, and a missing document
-permits everything.
 
 ### `addressable(url)`
 
@@ -128,8 +121,9 @@ Three errors, each carrying an `outcome` a caller renders copy from.
 | `DistillLimitError`   | `timeout` | Time, bytes or hops ran out                                   |
 | `DistillEmptyError`   | `empty`   | The page arrived carrying no article                          |
 
-`Distill.Retrieved` adds `bytes`, and `mayCache` — `false` for a response carrying
-`X-Robots-Tag: noarchive`, which is the exact name for asking not to be kept.
+`Distill.Retrieved` adds `bytes`, and `mayCache` — `false` for a response whose
+`X-Robots-Tag` carries `noarchive` for every agent or for the one asking, which is the exact
+name for asking not to be kept.
 
 ## The four bounds
 

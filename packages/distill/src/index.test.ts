@@ -7,11 +7,12 @@
  */
 
 import { isFailure, isSuccess } from "@sdxc/result";
+import { fetchRobots } from "@sdxc/robots/fetch";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { distill, distillFrom, fetchRobots, isAllowed } from "./index.js";
+import { distill, distillFrom } from "./index.js";
 
 /** What every retrieval in this file asks under, since the caller always names one. */
 const AGENT = "ExampleReader/1.0 (+https://example.com/reader)";
@@ -228,95 +229,59 @@ describe("distill", () => {
 			}),
 		);
 
-		let article = await distill("https://example.com/private/post", {
-			userAgent: AGENT,
-			robots: "User-agent: *\nDisallow: /private/",
-		});
+		server.use(
+			http.get("https://example.com/robots.txt", () =>
+				HttpResponse.text("User-agent: *\nDisallow: /private/"),
+			),
+		);
+		let robots = await fetchRobots("https://example.com/private/post", { userAgent: AGENT });
+
+		let article = await distill("https://example.com/private/post", { userAgent: AGENT, robots });
 
 		expect(isFailure(article)).toBe(true);
 		if (!isFailure(article)) return;
 		expect(article.error.outcome).toBe("refused");
 	});
-});
 
-describe("fetchRobots", () => {
-	test("refuses everything when the origin answers robots.txt with a 5xx", async () => {
+	test("keeps an article whose noarchive names another crawler", async () => {
 		server.use(
-			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 503 })),
+			http.get("https://example.com/post", () =>
+				HttpResponse.html(page(ARTICLE), { headers: { "x-robots-tag": "otherbot: noarchive" } }),
+			),
 		);
 
-		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
+		let article = await distill("https://example.com/post", { userAgent: AGENT });
 
-		expect(robots.status).toBe("unreachable");
-		expect(isAllowed(robots.source, "/post", AGENT)).toBe(false);
+		expect(isSuccess(article)).toBe(true);
+		if (!isSuccess(article)) return;
+		expect(article.data.mayCache).toBe(true);
 	});
 
-	test("refuses everything when robots.txt fails at the network level", async () => {
-		server.use(http.get("https://example.com/robots.txt", () => HttpResponse.error()));
-
+	test("refuses every path of an origin answering robots.txt with 429", async () => {
+		server.use(
+			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 429 })),
+			http.get("https://example.com/post", () => {
+				throw new Error("nothing should reach the network");
+			}),
+		);
 		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
 
-		expect(robots.status).toBe("unreachable");
-		expect(isAllowed(robots.source, "/post", AGENT)).toBe(false);
+		let article = await distill("https://example.com/post", { userAgent: AGENT, robots });
+
+		expect(isFailure(article)).toBe(true);
+		if (!isFailure(article)) return;
+		expect(article.error.outcome).toBe("refused");
 	});
 
-	test("permits everything when robots.txt answers a 404", async () => {
+	test("reads an origin answering robots.txt with 404 as permitting everything", async () => {
 		server.use(
 			http.get("https://example.com/robots.txt", () => new HttpResponse(null, { status: 404 })),
+			http.get("https://example.com/post", () => HttpResponse.html(page(ARTICLE))),
 		);
-
 		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
 
-		expect(robots).toEqual({ status: "missing", source: null });
-		expect(isAllowed(robots.source, "/post", AGENT)).toBe(true);
-	});
+		let article = await distill("https://example.com/post", { userAgent: AGENT, robots });
 
-	test("applies the rules of a robots.txt reached through a redirect", async () => {
-		server.use(
-			http.get(
-				"https://example.com/robots.txt",
-				() =>
-					new HttpResponse(null, {
-						status: 301,
-						headers: { location: "https://www.example.com/robots.txt" },
-					}),
-			),
-			http.get("https://www.example.com/robots.txt", () =>
-				HttpResponse.text("User-agent: *\nDisallow: /private/"),
-			),
-		);
-
-		let robots = await fetchRobots("https://example.com/post", { userAgent: AGENT });
-
-		expect(robots.status).toBe("found");
-		expect(isAllowed(robots.source, "/post", AGENT)).toBe(true);
-		expect(isAllowed(robots.source, "/private/post", AGENT)).toBe(false);
-	});
-});
-
-describe("isAllowed", () => {
-	test("permits everything when an origin serves no document", () => {
-		expect(isAllowed(null, "/anything", AGENT)).toBe(true);
-	});
-
-	test("reads the group naming the agent in place of the wildcard group", () => {
-		let robots = "User-agent: *\nDisallow: /\n\nUser-agent: ExampleReader\nDisallow: /private/";
-
-		expect(isAllowed(robots, "/post", AGENT)).toBe(true);
-		expect(isAllowed(robots, "/private/post", AGENT)).toBe(false);
-	});
-
-	test("lets the longest matching rule decide", () => {
-		let robots = "User-agent: *\nDisallow: /posts/\nAllow: /posts/public/";
-
-		expect(isAllowed(robots, "/posts/secret", AGENT)).toBe(false);
-		expect(isAllowed(robots, "/posts/public/one", AGENT)).toBe(true);
-	});
-
-	test("honours the wildcard and the end-of-path anchor", () => {
-		let robots = "User-agent: *\nDisallow: /*.pdf$";
-
-		expect(isAllowed(robots, "/files/report.pdf", AGENT)).toBe(false);
-		expect(isAllowed(robots, "/files/report.pdf.html", AGENT)).toBe(true);
+		expect(isSuccess(article)).toBe(true);
 	});
 });

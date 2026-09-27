@@ -8,27 +8,20 @@
  */
 
 import type { Result } from "@sdxc/result";
+import type { RobotsFetch } from "@sdxc/robots/fetch";
 
 import { HTML } from "@sdxc/html";
 import { parseDocument } from "@sdxc/html/document";
 import { failure, isFailure, success } from "@sdxc/result";
+import { directivesFor } from "@sdxc/robots/directives";
+import { isAllowedBy } from "@sdxc/robots/fetch";
 
-import {
-	addressable,
-	follow,
-	MAX_BYTES,
-	mayArchive,
-	readWithin,
-	release,
-	retrieve,
-} from "./lib/limits.js";
+import { addressable, MAX_BYTES, readWithin, retrieve } from "./lib/limits.js";
 import { bylineOf, canonicalOf, titleOf } from "./lib/metadata.js";
-import { DISALLOW_ALL, isAllowed, robotsUrl } from "./lib/robots.js";
 import { articleOf } from "./lib/score.js";
 import { serialize } from "./lib/serialize.js";
 
 export { addressable, MAX_BYTES, MAX_REDIRECTS, TIMEOUT_MS } from "./lib/limits.js";
-export { isAllowed, productToken, robotsUrl } from "./lib/robots.js";
 
 /**
  * Signals that the site said no: a status refusing the request, a `robots.txt`
@@ -86,21 +79,10 @@ export namespace Distill {
 		bytes: number;
 		/**
 		 * Whether the response permits this article being held for anybody else. A
-		 * response carrying `X-Robots-Tag: noarchive` is read for whoever asked and
-		 * kept for nobody.
+		 * response whose `X-Robots-Tag` carries `noarchive` for every agent or for the one
+		 * asking is read for whoever asked and kept for nobody.
 		 */
 		mayCache: boolean;
-	}
-
-	/**
-	 * `missing` covers any 4xx and permits everything; `unreachable` covers a 5xx, a
-	 * network failure or an unfollowable chain and refuses everything, so a caller
-	 * holding it keeps it briefly rather than locking the origin out for a cache period.
-	 */
-	export interface Robots {
-		status: "found" | "missing" | "unreachable";
-		/** What to pass as `Options.robots`, whichever the status. */
-		source: string | null;
 	}
 
 	/** What a retrieval may spend, and the name it spends it under. */
@@ -112,11 +94,10 @@ export namespace Distill {
 		 */
 		userAgent: string;
 		/**
-		 * The origin's `robots.txt` as the caller already holds it — the `source` of
-		 * {@link fetchRobots} — or `null` for an origin serving none. Omitted, the
-		 * document is not consulted.
+		 * What `fetchRobots` from `@sdxc/robots/fetch` decided for the origin, fresh or from
+		 * the caller's cache. Omitted, the origin's rules are not consulted.
 		 */
-		robots?: string | null | undefined;
+		robots?: RobotsFetch.Outcome | undefined;
 		maxBytes?: number | undefined;
 		maxRedirects?: number | undefined;
 		timeoutMs?: number | undefined;
@@ -206,11 +187,11 @@ export async function distill(
 	let address = addressable(input);
 	if (isFailure(address)) return address;
 
-	if (options.robots !== undefined) {
-		let path = `${address.data.pathname}${address.data.search}`;
-		if (!isAllowed(options.robots, path, options.userAgent)) {
-			return failure(new DistillRefusedError(`Refused ${input}: robots.txt disallows it`));
-		}
+	if (
+		options.robots !== undefined &&
+		!isAllowedBy(options.robots, options.userAgent, address.data)
+	) {
+		return failure(new DistillRefusedError(`Refused ${input}: robots.txt disallows it`));
 	}
 
 	let retrieved = await retrieve(address.data, options);
@@ -230,46 +211,6 @@ export async function distill(
 	return success({
 		...article.data,
 		bytes: read.data.bytes,
-		mayCache: mayArchive(retrieved.data.response),
+		mayCache: !directivesFor(retrieved.data.response, options.userAgent).noarchive,
 	});
-}
-
-/**
- * Retrieves an origin's `robots.txt` for the caller to hold, following up to five
- * redirects and reading the final status the way RFC 9309 does: a 4xx permits
- * everything, and a server or network error refuses everything.
- *
- * @param input - Any URL on the origin.
- * @param options - The name to ask under, and what the retrieval may spend.
- * @returns The document to consult and which of the three answers produced it.
- * @example let robots = await fetchRobots(origin, { userAgent: agent });
- */
-export async function fetchRobots(
-	input: string,
-	options: Distill.Options,
-): Promise<Distill.Robots> {
-	let unreachable: Distill.Robots = { status: "unreachable", source: DISALLOW_ALL };
-
-	let address = addressable(input);
-	if (isFailure(address)) return unreachable;
-
-	let followed = await follow(new URL(robotsUrl(address.data)), options);
-	if (isFailure(followed)) return unreachable;
-
-	let { status, body } = followed.data.response;
-
-	if (status >= 400 && status < 500) {
-		release(body);
-		return { status: "missing", source: null };
-	}
-
-	if (status < 200 || status >= 300) {
-		release(body);
-		return unreachable;
-	}
-
-	let read = await readWithin(followed.data, options.maxBytes ?? MAX_BYTES);
-	if (isFailure(read)) return unreachable;
-
-	return { status: "found", source: read.data.text };
 }

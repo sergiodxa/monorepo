@@ -251,21 +251,6 @@ export async function readWithin(
 }
 
 /**
- * Whether a response asks not to be kept, which `X-Robots-Tag: noarchive` is the
- * exact name for. A page carrying it is read for whoever asked and held for nobody.
- *
- * @param response - The response the article was read out of.
- */
-export function mayArchive(response: Response): boolean {
-	let tag = response.headers.get("x-robots-tag");
-	if (!tag) return true;
-	return !tag
-		.toLowerCase()
-		.split(",")
-		.some((directive) => directive.trim().split(":").at(-1)?.trim() === "noarchive");
-}
-
-/**
  * Lets go of a body this retrieval leaves unread, telling the origin it may stop
  * sending. The cancellation runs on its own, so the outcome is reported as soon as
  * it is decided and a stream that stalls costs one refusal and nothing more.
