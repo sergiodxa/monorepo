@@ -2,7 +2,8 @@
 
 ## Status
 
-**Proposed** - 2026-09-26
+**Implemented** - 2026-09-26, with a follow-up: the confirmation screen's sign-in link and the
+platform tenant's own reachability are fixed by ADR-044.
 
 ## Background
 
