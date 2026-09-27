@@ -383,8 +383,10 @@
         "@sdxc/catch-response-middleware": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/duration": "workspace:*",
+        "@sdxc/idempotency": "workspace:*",
         "@sdxc/jwt": "workspace:*",
         "@sdxc/location": "workspace:*",
+        "@sdxc/merge-patch": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
@@ -939,9 +941,6 @@
     "packages/robots": {
       "name": "@sdxc/robots",
       "version": "0.0.1",
-      "dependencies": {
-        "@sdxc/result": "workspace:*",
-      },
     },
     "packages/rss": {
       "name": "@sdxc/rss",

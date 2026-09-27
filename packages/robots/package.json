@@ -11,8 +11,5 @@
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
-	},
-	"dependencies": {
-		"@sdxc/result": "workspace:*"
 	}
 }
