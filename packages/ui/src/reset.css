@@ -1,9 +1,10 @@
 /*
  * Base reset: border-box sizing, zeroed margins/padding,
- * borders reset to "0 solid" so bare border-widths work later, form controls
- * that inherit font/color/line-height, transparent button/input backgrounds
- * with a sensible cursor, block-level media, and the rest of the usual
- * list/table/[hidden] normalizations.
+ * borders reset to "0 solid" so bare border-widths work later, the theme's
+ * sans font stack applied once at the document root for every element to
+ * inherit, form controls that inherit font/color/line-height, transparent
+ * button/input backgrounds with a sensible cursor, block-level media, and the
+ * rest of the usual list/table/[hidden] normalizations.
  *
  * Every selector is wrapped in :where(...) so the whole file carries zero
  * specificity and can never beat a component's own css() rules.
@@ -33,6 +34,7 @@
 	}
 
 	:where(html, :host) {
+		font-family: var(--ui-font-sans);
 		line-height: 1.5;
 		-webkit-text-size-adjust: 100%;
 		tab-size: 4;
