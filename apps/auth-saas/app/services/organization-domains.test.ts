@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { CLOUDFLARE } from "@sdxc/doh";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
@@ -16,27 +17,39 @@ import type Tenant from "~/database/tenant-do";
 
 import { verifyOrganizationDomain } from "./organization-domains";
 
-let DNS_QUERY_URL = "https://cloudflare-dns.com/dns-query";
-
 let server = setupServer();
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** Answers a DNS-over-HTTPS TXT query with the given already-quoted values. */
-function respondWithTxt(values: string[]) {
+/** Answers a DNS-over-HTTPS TXT query with one record per given presentation-form `data`. */
+function respondWithTxtData(data: string[]) {
 	server.use(
-		http.get(DNS_QUERY_URL, () => {
+		http.get(CLOUDFLARE.url, ({ request }) => {
+			let name = new URL(request.url).searchParams.get("name") ?? "";
 			return HttpResponse.json({
-				Answer: values.map((value) => ({ type: 16, data: `"${value}"` })),
+				Status: 0,
+				TC: false,
+				AD: false,
+				Answer: data.map((value) => ({ name, type: 16, TTL: 300, data: value })),
 			});
 		}),
 	);
 }
 
+/** Answers a DNS-over-HTTPS TXT query with the given values, each one quoted character-string. */
+function respondWithTxt(values: string[]) {
+	respondWithTxtData(values.map((value) => `"${value}"`));
+}
+
 /** Answers a DNS-over-HTTPS query with no records at all — nothing published yet. */
 function respondWithNothing() {
-	server.use(http.get(DNS_QUERY_URL, () => HttpResponse.json({})));
+	server.use(http.get(CLOUDFLARE.url, () => HttpResponse.json({ Status: 0 })));
+}
+
+/** Answers a DNS-over-HTTPS query with NXDOMAIN, the name not existing at all. */
+function respondWithNxdomain() {
+	server.use(http.get(CLOUDFLARE.url, () => HttpResponse.json({ Status: 3 })));
 }
 
 /**
@@ -125,6 +138,44 @@ describe("verifyOrganizationDomain", () => {
 
 	test("does nothing when nothing is published yet", async () => {
 		respondWithNothing();
+		let { stub, confirmCalls } = stubTenant({
+			ok: true,
+			domain: "acme.com",
+			mode: "auto_join",
+			verification: { name: "_sdxc-domain-verify.acme.com", value: "the-expected-value" },
+			verifiedAt: null,
+		});
+
+		let result = await verifyOrganizationDomain(stub, {
+			organizationId: "org_1",
+			domain: "acme.com",
+		});
+
+		expect(result).toEqual({ outcome: "no-match" });
+		expect(confirmCalls).toEqual([]);
+	});
+
+	test("confirms a token the domain published split across two character-strings", async () => {
+		respondWithTxtData(['"the-expected" "-value"']);
+		let { stub, confirmCalls } = stubTenant({
+			ok: true,
+			domain: "acme.com",
+			mode: "auto_join",
+			verification: { name: "_sdxc-domain-verify.acme.com", value: "the-expected-value" },
+			verifiedAt: null,
+		});
+
+		let result = await verifyOrganizationDomain(stub, {
+			organizationId: "org_1",
+			domain: "acme.com",
+		});
+
+		expect(result).toEqual({ outcome: "verified" });
+		expect(confirmCalls).toHaveLength(1);
+	});
+
+	test("does nothing when the verification name does not exist yet", async () => {
+		respondWithNxdomain();
 		let { stub, confirmCalls } = stubTenant({
 			ok: true,
 			domain: "acme.com",
