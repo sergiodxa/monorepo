@@ -117,7 +117,7 @@ Run from the repository root:
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name                                | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           | ✅  |
 | [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/ui                                 | ✅  |
-| [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          |     |
+| [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                                         | ✅  |
 | [idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                     | ✅  |
 | [jobs](packages/jobs)                                           | Declared background jobs dispatched over a pluggable queue backend                                                | ✅  |
