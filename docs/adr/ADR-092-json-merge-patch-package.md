@@ -385,7 +385,13 @@ cheapest.
 
 - [x] Phase 1: Specify and build the package (`packages/merge-patch`; `@sdxc/validate` now reads
       any `+json` body)
-- [ ] Phase 2: Auth-saas subjects, clients, webhook endpoints
+- [x] Phase 2: Auth-saas subjects, clients, webhook endpoints (subjects project the described
+      subject onto a writable shape and send `diff` to `updateSubject`; clients and webhook
+      endpoints validate the patched record against the register schema and keep their
+      full-replacement store writes; roles and passkey rename read through the reader;
+      `@sdxc/auth` sends the media type and types the client update as `Partial` of the record,
+      since `@sdxc/auth` is published and cannot depend on `@sdxc/merge-patch` without an
+      install; `updateTenantClient` also moved from `PUT` to the `PATCH` the server answers)
 - [ ] Phase 3: Uptime
 
 ## Notes
