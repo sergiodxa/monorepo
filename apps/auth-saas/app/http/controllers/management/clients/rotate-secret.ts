@@ -8,23 +8,22 @@
  */
 
 import { json } from "@sdxc/http/response";
-import * as s from "remix/data-schema";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { RotateClientSecretResult } from "~/database/clients";
 
 import { clientIdParam, clientNotFound } from "~/app/http/controllers/management/clients/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { CLIENTS_ROTATE_SECRET } from "~/app/http/openapi/clients";
 import routes from "~/routes/management";
-
-let RotateClientSecretBodySchema = s.object({ windowDays: s.optional(s.number()) });
 
 /** Maps every `rotateClientSecret` refusal onto its own `problem+json` response. */
 function rotateClientSecretFailure(
@@ -65,15 +64,12 @@ export function createClientsRotateSecretAction(options: ManagementControllerOpt
 
 			let clientId = clientIdParam(ctx);
 
-			let parsed = parseBody(
-				RotateClientSecretBodySchema,
-				(await ctx.request.json().catch(() => null)) ?? {},
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await CLIENTS_ROTATE_SECRET.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.rotateClientSecret({
 				clientId,
-				windowDays: parsed.data.windowDays,
+				windowDays: input.data.body?.windowDays,
 			});
 			if (!result.ok) return rotateClientSecretFailure(result);
 

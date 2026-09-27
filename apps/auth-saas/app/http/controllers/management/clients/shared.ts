@@ -3,8 +3,8 @@
  * param, the `problem+json` response for a client the tenant does not hold,
  * the entitlement refusal a machine-access grant type is gated behind, and
  * mapping a redirect URI, grant type, response type or auth method refusal
- * onto its own response, and the schema a client's body is held to on register and
- * on update.
+ * onto its own response, and projecting a client onto the writable members a merge
+ * patch edits.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,24 +19,7 @@ import type {
 } from "~/database/clients";
 
 import { managementProblem } from "~/app/http/lib/problem";
-
-/**
- * A client's writable members: the body a registration sends whole, and the shape a
- * merge-patched client must still have, so both routes hold one set of rules.
- */
-export const CLIENT_BODY_SCHEMA = s.object({
-	name: s.string(),
-	kind: s.enum_(["confidential", "public"] as const),
-	redirectUris: s.array(s.string()),
-	postLogoutRedirectUris: s.array(s.string()),
-	grantTypes: s.array(s.string()),
-	responseTypes: s.array(s.string()),
-	scopes: s.array(s.string()),
-	tokenEndpointAuthMethod: s.enum_(["client_secret_basic", "client_secret_post", "none"] as const),
-	requireConsent: s.boolean(),
-	/** The ID token's signing algorithm; registration defaults it to ES256. */
-	idTokenSignedResponseAlg: s.optional(s.enum_(["ES256", "RS256"] as const)),
-});
+import { CLIENT_BODY_SCHEMA } from "~/app/http/openapi/clients";
 
 /** Projects a client's record onto {@link CLIENT_BODY_SCHEMA}, the resource a merge patch edits. */
 export function writableClient(client: ClientRecord): s.InferOutput<typeof CLIENT_BODY_SCHEMA> {

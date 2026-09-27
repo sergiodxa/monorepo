@@ -29,6 +29,7 @@ import { createClientsRotateSecretAction } from "~/app/http/controllers/manageme
 import { createClientsUpdateAction } from "~/app/http/controllers/management/clients/update";
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantMembership,
@@ -57,7 +58,7 @@ export function buildClientsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));
 	router.map(routes.clientsList, createClientsListAction(controllerOptions));

@@ -7,22 +7,23 @@
  */
 
 import { json } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 import type { RegisterClientResult } from "~/database/clients";
 
 import {
-	CLIENT_BODY_SCHEMA,
 	clientEntitlementRequired,
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { CLIENTS_REGISTER } from "~/app/http/openapi/clients";
 import routes from "~/routes/management";
 
 /** Maps every `registerClient` refusal onto its own `problem+json` response. */
@@ -55,10 +56,10 @@ export function createClientsRegisterAction(options: ManagementControllerOptions
 			let refused = requireScope(ctx, "clients:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(CLIENT_BODY_SCHEMA, await ctx.request.json().catch(() => null));
-			if (!parsed.ok) return parsed.response;
+			let input = await CLIENTS_REGISTER.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
-			let result = await ctx.tenantStub.registerClient(parsed.data);
+			let result = await ctx.tenantStub.registerClient(input.data.body);
 			if (!result.ok) return registerClientFailure(result);
 
 			return json({ client: result.client, secret: result.secret }, { status: 201 });

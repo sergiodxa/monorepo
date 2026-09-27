@@ -14,7 +14,6 @@ import type { ManagementControllerOptions } from "~/app/http/controllers/managem
 import type { UpdateClientResult } from "~/database/clients";
 
 import {
-	CLIENT_BODY_SCHEMA,
 	clientEntitlementRequired,
 	clientIdParam,
 	clientNotFound,
@@ -27,6 +26,7 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { CLIENT_BODY_SCHEMA } from "~/app/http/openapi/clients";
 import routes from "~/routes/management";
 
 /** Maps every `updateClient` refusal onto its own `problem+json` response. */

@@ -48,6 +48,25 @@ describe("POST /tenants/:tenantId/clients/:clientId/rotate-secret", () => {
 		expect(body.incumbentExpiresAt).toEqual(expect.any(Number));
 	});
 
+	test("answers 400 validationFailed for a body that is not JSON", async () => {
+		let harness = await buildClientsHarness();
+		let token = await harness.signToken();
+
+		let created = await harness.tenantDO.registerClient(baseInput());
+		if (!created.ok) throw new Error("unreachable");
+
+		let response = await harness.router.fetch(
+			harness.request(
+				`/tenants/${harness.tenantId}/clients/${created.client.id}/rotate-secret`,
+				token,
+				{ method: "POST", body: "{not json" },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+	});
+
 	test("caps a requested window", async () => {
 		let harness = await buildClientsHarness();
 		let token = await harness.signToken();
