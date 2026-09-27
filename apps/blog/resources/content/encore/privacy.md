@@ -61,7 +61,11 @@ The support website is hosted on Cloudflare, which also delivers support request
 
 To limit spam, the support form includes a hidden field that automated tools tend to fill in, and it limits how many requests one IP address can send per minute. Your IP address is used only to count those requests and is not included in the support request I receive.
 
-The website’s own request logs record the page requested and the outcome, not your IP address or the contents of your request. The website does not use analytics or advertising cookies. After you submit the form, it sets one cookie, `r3:session`, so the next page can confirm that your request was sent; that cookie expires after one year.
+The website’s own request logs record the page requested and the outcome, not your IP address or the contents of your request.
+
+The website uses [Cloudflare Web Analytics](https://www.cloudflare.com/web-analytics/) to measure visits, such as which pages are viewed and where visitors come from. Cloudflare Web Analytics does not use cookies or local storage and does not track you across websites. The website does not use advertising cookies.
+
+After you submit the form, the website sets one cookie, `r3:session`, so the next page can confirm that your request was sent; that cookie expires after one year.
 
 Support information is not sold or used for targeted advertising. Service providers may process it as necessary to provide hosting, email delivery, or security services.
 
