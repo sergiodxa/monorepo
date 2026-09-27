@@ -8,7 +8,7 @@
  */
 
 /** Newline-separated, lowercase, sorted; decoded into a set on first lookup. */
-export const DISPOSABLE_DOMAINS = `
+export const DISPOSABLE_DOMAINS: string = `
 0-mail.com
 0-mailer.dynv6.net
 000-webmail.myhome-server.de

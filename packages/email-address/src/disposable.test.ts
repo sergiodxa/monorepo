@@ -63,3 +63,14 @@ describe("checkDisposable", () => {
 		expect(result.error.domain).toBe("mailinator.com");
 	});
 });
+
+describe("the bundled list's declared type", () => {
+	/**
+	 * Typechecks only while the list is declared `string`: a literal type would reject any
+	 * other string here, and would copy the whole list into the published declaration file.
+	 */
+	test("is string, so the declaration file stays small", () => {
+		let other: typeof DISPOSABLE_DOMAINS = "any other string";
+		expect(other).toBe("any other string");
+	});
+});

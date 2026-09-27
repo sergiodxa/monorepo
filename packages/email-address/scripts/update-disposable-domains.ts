@@ -60,7 +60,7 @@ async function main() {
  */
 
 /** Newline-separated, lowercase, sorted; decoded into a set on first lookup. */
-export const DISPOSABLE_DOMAINS = \`
+export const DISPOSABLE_DOMAINS: string = \`
 ${domains.join("\n")}
 \`;
 `;
