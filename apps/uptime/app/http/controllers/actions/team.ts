@@ -18,6 +18,7 @@ import { Session } from "remix/session";
 import Customer from "~/app/data/customer";
 import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
+import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
 import {
 	ChangeRoleSchema,
 	DeleteTeamSchema,
@@ -26,12 +27,19 @@ import {
 } from "~/app/http/validators/team";
 import routes from "~/routes/web";
 
-/** POST /actions/:team/update-team */
+/**
+ * POST /actions/:team/update-team. A rejected logo flashes the submitted text under
+ * {@link TEAM_LOGO_ERROR}, so the settings page shows it back with the field's error.
+ */
 export const updateTeam = createAction(routes.teamAdminActions.team.update, async (ctx) => {
 	let result = await validate(ctx.formData, UpdateTeamSchema);
 	let session = ctx.get(Session);
 
 	if (isFailure(result)) {
+		if (result.error.issues.some((issue) => issue.path?.at(0) === "logo")) {
+			let logo = ctx.formData.get("logo");
+			session?.flash(TEAM_LOGO_ERROR, typeof logo === "string" ? logo : "");
+		}
 		session?.flash("toast", { intent: "error", message: "Please check the team details." });
 		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,

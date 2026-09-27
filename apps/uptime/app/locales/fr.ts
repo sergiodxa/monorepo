@@ -4594,6 +4594,8 @@ export default {
 						label: "URL du logo",
 						placeholder: "https://example.com/logo.png",
 						description: "Une URL vers l'image du logo de votre équipe.",
+						error:
+							"Saisissez une URL complète en http:// ou https://, ou laissez le champ vide pour retirer le logo.",
 					},
 					name: {
 						label: "Nom de l'équipe",

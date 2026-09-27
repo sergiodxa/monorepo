@@ -40,8 +40,8 @@ function serializeTeam(team: SelectTeam) {
 
 /**
  * The team's writable members as the API reads them, the target a `PATCH` merge patch
- * applies to. A stored logo that is not a URL (the dashboard accepts any text) is left
- * out, so a patch that leaves `logoUrl` alone still validates and keeps the stored logo.
+ * applies to. A stored logo that is not a URL (legacy rows saved before the dashboard
+ * required one) is left out, so a patch leaving `logoUrl` alone validates and keeps it.
  */
 function writableTeam(team: SelectTeam) {
 	return {

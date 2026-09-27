@@ -52,6 +52,31 @@ describe("UpdateTeamSchema", () => {
 		}
 	});
 
+	test("accepts an empty logo, which clears it", () => {
+		let formData = new FormData();
+		formData.set("name", "Acme Inc");
+		formData.set("logo", "");
+		let result = s.parseSafe(UpdateTeamSchema, formData);
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.value.logo).toBe("");
+		}
+	});
+
+	test.each(["acme-logo", "/logo.png", "ftp://example.com/logo.png", "javascript:alert(1)"])(
+		"rejects the non-http(s) logo %j with an issue on the logo field",
+		(logo) => {
+			let formData = new FormData();
+			formData.set("name", "Acme Inc");
+			formData.set("logo", logo);
+			let result = s.parseSafe(UpdateTeamSchema, formData);
+			expect(result.success).toBe(false);
+			if (!result.success) {
+				expect(result.issues.map((issue) => issue.path?.at(0))).toEqual(["logo"]);
+			}
+		},
+	);
+
 	test("rejects an empty name", () => {
 		let formData = new FormData();
 		formData.set("name", "");

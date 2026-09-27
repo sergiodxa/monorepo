@@ -4508,6 +4508,8 @@ export default {
 						label: "ロゴURL",
 						placeholder: "https://example.com/logo.png",
 						description: "チームのロゴ画像のURL。",
+						error:
+							"http:// または https:// で始まる完全なURLを入力するか、空欄にしてロゴを削除してください。",
 					},
 					name: {
 						label: "チーム名",

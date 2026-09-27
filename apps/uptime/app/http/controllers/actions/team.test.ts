@@ -20,13 +20,18 @@ import type { Route } from "remix/routes";
 import billing from "@sdxc/billing/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
+import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
+import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
+import { Session } from "remix/session";
+import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
 import { database } from "~/app/http/middleware/database";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
@@ -44,6 +49,25 @@ vi.spyOn(console, "info").mockImplementation(() => {});
  * flattened one — a known bug this mock works around so tests exercise real branching.
  */
 let { changeRole, deleteTeam, removeMember, updateTeam } = await import("./team");
+
+let sessionCookie = createCookie("uptime-test-session", { secrets: ["test-secret"] });
+let sessionStorage = createMemorySessionStorage();
+
+/** Reads what `response` flashed under `key`, the way the next page request would. */
+async function readFlash(response: Response, key: string): Promise<unknown> {
+	let router = createRouter({ middleware: [session(sessionCookie, sessionStorage)] });
+	let flashed: unknown;
+	router.get("/read", (ctx) => {
+		flashed = ctx.get(Session)?.get(key);
+		return new Response(null, { status: 204 });
+	});
+	let cookie = response.headers
+		.getSetCookie()
+		.map((value) => value.split(";")[0])
+		.join("; ");
+	await router.fetch(new Request("https://uptime.test/read", { headers: { Cookie: cookie } }));
+	return flashed;
+}
 
 /** Creates an in-memory database seeded with an owner and one additional member. */
 async function createFixture() {
@@ -114,6 +138,7 @@ async function send(
 			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
+			session(sessionCookie, sessionStorage),
 			formData() as Middleware,
 		],
 	});
@@ -176,6 +201,55 @@ describe("updateTeam", () => {
 
 		let unchanged = await db.findOne(teams, { where: { id: team.id } });
 		expect(unchanged?.name).toBe("Acme");
+	});
+
+	test("rejects a logo that is not a URL and flashes it back for the field's error", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+		let platform = createTestBilling();
+
+		let response = await send(
+			db,
+			team,
+			ownerMembership,
+			platform,
+			routes.teamAdminActions.team.update,
+			updateTeam as RequestHandler<any>,
+			"POST",
+			{ name: "Acme Renamed", logo: "acme-logo" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.settings.href({ team: team.slug }),
+		);
+		expect(await readFlash(response, TEAM_LOGO_ERROR)).toBe("acme-logo");
+
+		let unchanged = await db.findOne(teams, { where: { id: team.id } });
+		expect(unchanged?.name).toBe("Acme");
+		expect(unchanged?.logo).toBeNull();
+	});
+
+	test("clears the logo when the field is submitted empty", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+		await db.update(teams, team.id, { logo: "https://example.com/logo.png" });
+		let platform = createTestBilling();
+
+		let response = await send(
+			db,
+			team,
+			ownerMembership,
+			platform,
+			routes.teamAdminActions.team.update,
+			updateTeam as RequestHandler<any>,
+			"POST",
+			{ name: "Acme", logo: "" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(await readFlash(response, TEAM_LOGO_ERROR)).toBeUndefined();
+
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.logo).toBeNull();
 	});
 });
 

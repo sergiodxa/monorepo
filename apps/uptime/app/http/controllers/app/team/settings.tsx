@@ -49,6 +49,7 @@ import {
 } from "@sdxc/u/typography";
 import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
+import { Session } from "remix/session";
 
 import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
@@ -59,6 +60,7 @@ import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createManagementClient } from "~/app/lib/management-client";
+import { teamLogoUrl } from "~/app/lib/team-logo";
 import { resolveSubjects } from "~/app/services/subjects";
 import Avatar from "~/resources/components/avatar";
 import Field from "~/resources/components/field";
@@ -69,6 +71,15 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 const INVITE_EXPIRATION_DAYS = 7;
+
+/**
+ * Session flash key carrying the logo text the update-team action rejected, read once by
+ * this page to refill the field and show its error beside it.
+ */
+export const TEAM_LOGO_ERROR = "teamLogoError";
+
+/** DOM id of the logo field's error, referenced by the input's `aria-describedby`. */
+const LOGO_ERROR_ID = "team-logo-error";
 
 function getInviteExpirationDate(createdAt: number): Date {
 	let expiresAt = new Date(createdAt);
@@ -153,6 +164,8 @@ export default createAction(routes.app.team.settings, {
 		);
 
 		let team = ctx.team;
+		let rejectedLogo = ctx.get(Session)?.get(TEAM_LOGO_ERROR);
+		let logoError = typeof rejectedLogo === "string";
 		let viewerIsOwner = viewer.id === team.owner_id;
 		let hasPendingDomainVerification = domains.some((domain) => domain.verified_at === null);
 
@@ -199,14 +212,20 @@ export default createAction(routes.app.team.settings, {
 										<Field
 											label={ctx.intl.t("page.settings.form.fields.logo.label")}
 											description={ctx.intl.t("page.settings.form.fields.logo.description")}
+											error={
+												logoError ? ctx.intl.t("page.settings.form.fields.logo.error") : undefined
+											}
+											errorId={LOGO_ERROR_ID}
 										>
 											<div mix={[hstack({ gap: 4, align: "center" })]}>
-												<Avatar src={team.logo || null} name={team.name} size={48} />
+												<Avatar src={teamLogoUrl(team.logo)} name={team.name} size={48} />
 												<input
 													type="url"
 													name="logo"
-													defaultValue={team.logo ?? ""}
+													defaultValue={logoError ? rejectedLogo : (team.logo ?? "")}
 													placeholder={ctx.intl.t("page.settings.form.fields.logo.placeholder")}
+													aria-invalid={logoError ? "true" : undefined}
+													aria-describedby={logoError ? LOGO_ERROR_ID : undefined}
 													mix={[textInput(), grow(), shrink(1), basis("0%")]}
 												/>
 											</div>

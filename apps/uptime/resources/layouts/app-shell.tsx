@@ -60,6 +60,7 @@ import { Breadcrumbs, Menu, Sidebar } from "@sdxc/ui";
 import { menuKeys } from "@sdxc/ui/mixins";
 
 import { withPrefix } from "~/app/lib/prefixed-translate";
+import { teamLogoUrl } from "~/app/lib/team-logo";
 import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
 import FlashToast from "~/resources/components/flash-toast";
@@ -441,7 +442,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 					<div mix={[teamPickerCell]}>
 						{teams.length <= 1 ? (
 							<div mix={[teamPickerRow]}>
-								<Logo src={team.logo} name={team.name} />
+								<Logo src={teamLogoUrl(team.logo)} name={team.name} />
 								<span mix={[truncatedLabel]}>{team.name}</span>
 							</div>
 						) : (
@@ -453,7 +454,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 									aria-label={t("sidebar.teamPicker.label")}
 									mix={[menuTriggerButton]}
 								>
-									<Logo src={team.logo} name={team.name} />
+									<Logo src={teamLogoUrl(team.logo)} name={team.name} />
 									<span mix={[truncatedLabel]}>{team.name}</span>
 									<ChevronsUpDownIcon size={14} strokeWidth={1.5} mix={[menuChevronIcon]} />
 								</button>
@@ -467,7 +468,7 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 											key={t.id}
 											href={routes.app.team.dashboard.index.href({ team: t.slug })}
 										>
-											<Logo src={t.logo} name={t.name} />
+											<Logo src={teamLogoUrl(t.logo)} name={t.name} />
 											<span mix={[truncatedLabel]}>{t.name}</span>
 											{t.slug === team.slug && <CheckIcon size={14} strokeWidth={1.5} />}
 										</Menu.Item>

@@ -14,7 +14,7 @@
 
 import type { Handle, RemixNode } from "remix/ui";
 
-import { Description, Label } from "@sdxc/ui";
+import { Description, FieldError, Label } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
 
 namespace Field {
@@ -22,6 +22,10 @@ namespace Field {
 		label: string;
 		/** Muted helper text rendered below the control. */
 		description?: string;
+		/** Validation message rendered below the description, in the danger color. */
+		error?: string;
+		/** DOM id of the error, for the control's `aria-describedby`. */
+		errorId?: string;
 		children: RemixNode;
 	}
 }
@@ -35,6 +39,9 @@ export default function Field(handle: Handle<Field.Props>) {
 				{handle.props.children}
 			</Label>
 			{handle.props.description && <Description>{handle.props.description}</Description>}
+			{handle.props.error && (
+				<FieldError id={handle.props.errorId}>{handle.props.error}</FieldError>
+			)}
 		</div>
 	);
 }
