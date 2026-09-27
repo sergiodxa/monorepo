@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/trailing-slash-middleware",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Router middleware that redirects every path to one canonical trailing-slash form",
 	"license": "MIT",
 	"type": "module",
