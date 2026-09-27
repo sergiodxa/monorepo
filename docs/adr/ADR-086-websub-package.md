@@ -558,5 +558,5 @@ that wants a narrower list still passes `algorithms`.
 - [x] Phase 1: Specify and build the package
 - [x] Phase 2: Pair hub and topic in `@sdxc/feed`
 - [x] Phase 3: Migrate the reader
-- [ ] Phase 4: Publish from the blog and blog-engine
+- [x] Phase 4: Publish from the blog and blog-engine
 - [ ] Phase 5: Publish the package

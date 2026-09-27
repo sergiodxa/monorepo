@@ -1,7 +1,8 @@
 /**
  * The generic post CRUD controller at `/cms/types/:typeName/posts` — one controller
  * serving every post type by driving its form and validation from the type's field
- * definitions. Enforces the per-action posts.* permissions (create/edit/publish/delete).
+ * definitions. Enforces the per-action posts.* permissions (create/edit/publish/delete),
+ * and after each stored write pings the blog's WebSub hub with the feeds that changed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -28,6 +29,7 @@ import { CmsLayout } from "../../shared/components/cms-layout.js";
 import * as s from "../../shared/components/styles.js";
 import { type Permission } from "../../shared/permissions.js";
 import { entryText, fieldText } from "../../shared/text.js";
+import { pingHub } from "../../syndication/websub.js";
 import { createMetaCodec, type PostMetaValues } from "../models/meta-codec.js";
 import { Post } from "../models/post.js";
 
@@ -395,6 +397,7 @@ export default createController(routes.cms.posts, {
 				{ slug, author_id: user.id, published_at: publishedAt, meta },
 				createMetaCodec(type),
 			);
+			ctx.waitUntil(pingHub(ctx.db, ctx.url.origin, type));
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 		},
 
@@ -462,6 +465,7 @@ export default createController(routes.cms.posts, {
 				{ slug, published_at: publishedAt, meta },
 				codec,
 			);
+			ctx.waitUntil(pingHub(ctx.db, ctx.url.origin, type));
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 		},
 
@@ -481,6 +485,7 @@ export default createController(routes.cms.posts, {
 			if (!canDelete) return forbidden("Forbidden");
 
 			await Post.destroy(ctx.db, id);
+			ctx.waitUntil(pingHub(ctx.db, ctx.url.origin, type));
 			return redirect(`/cms/types/${type.name}/posts`, { status: redirect.Status.SeeOther });
 		},
 	},

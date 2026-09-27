@@ -1,7 +1,7 @@
 /**
  * RSS feed controllers: the global `/rss.xml` feed across all visible post types and
  * the per-type `/:typePath.rss` feed. Both emit only published posts, mapping each to
- * an RSS item built from the type's fields.
+ * an RSS item built from the type's fields, and advertise the blog's WebSub hub when set.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,6 +21,7 @@ import routes from "../../routes.js";
 import { Settings } from "../../settings/models/settings.js";
 import { excerptFor } from "../../shared/components/post-render.js";
 import { renderNotFound } from "../../shared/not-found.js";
+import { advertiseHub } from "../websub.js";
 
 /**
  * Builds RSS items for one post type's published posts, linking each to its
@@ -50,8 +51,16 @@ async function itemsForType(
 	return items;
 }
 
-function xmlResponse(body: string): Response {
-	return new Response(body, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });
+/**
+ * The feed as an RSS response, carrying the hub's `Link` header when the blog has a hub.
+ * @param body - The serialized feed.
+ * @param headers - Extra headers, the hub advertisement's.
+ * @returns The response.
+ */
+function xmlResponse(body: string, headers: HeadersInit): Response {
+	let response = new Headers(headers);
+	response.set("content-type", "application/rss+xml; charset=utf-8");
+	return new Response(body, { headers: response });
 }
 
 /**
@@ -60,18 +69,25 @@ function xmlResponse(body: string): Response {
  */
 export const feedRss: Action<typeof routes.rss> = createAction(routes.rss, async (ctx) => {
 	let origin = new URL(ctx.request.url).origin;
-	let [siteTitle, description, types] = await Promise.all([
+	let [siteTitle, description, types, hubUrl] = await Promise.all([
 		Settings.siteTitle(ctx.db),
 		Settings.siteDescription(ctx.db),
 		PostType.findVisible(ctx.db),
+		Settings.websubHub(ctx.db),
 	]);
+	let hub = advertiseHub(hubUrl, new URL(routes.rss.href(), origin).toString());
 
 	let items: RSS.Item[] = [];
 	for (let type of types) items.push(...(await itemsForType(ctx.db, origin, type)));
 
-	let rss = new RSS({ title: siteTitle, description: description || siteTitle, link: origin });
+	let rss = new RSS({
+		title: siteTitle,
+		description: description || siteTitle,
+		link: origin,
+		atomLink: hub.atomLink,
+	});
 	for (let item of items) rss.addItem(item);
-	return xmlResponse(rss.toString());
+	return xmlResponse(rss.toString(), hub.headers);
 });
 
 /** Per-type feed `/:typePath.rss`, described by the type's label when its description is blank. */
@@ -81,16 +97,19 @@ export const typeRss: Action<typeof routes.typeRss> = createAction(routes.typeRs
 	if (!type || !type.visible) return renderNotFound(ctx);
 
 	let origin = new URL(ctx.request.url).origin;
-	let [siteTitle, items] = await Promise.all([
+	let [siteTitle, items, hubUrl] = await Promise.all([
 		Settings.siteTitle(ctx.db),
 		itemsForType(ctx.db, origin, type),
+		Settings.websubHub(ctx.db),
 	]);
+	let hub = advertiseHub(hubUrl, new URL(routes.typeRss.href({ typePath }), origin).toString());
 
 	let rss = new RSS({
 		title: `${siteTitle} — ${type.label}`,
 		description: type.description || type.label,
 		link: `${origin}/${type.path}`,
+		atomLink: hub.atomLink,
 	});
 	for (let item of items) rss.addItem(item);
-	return xmlResponse(rss.toString());
+	return xmlResponse(rss.toString(), hub.headers);
 });

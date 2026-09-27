@@ -122,7 +122,7 @@ return logger.open("request").run(() => engine.fetch(request));
 | `session`     | `{ secret, storage?, cookieName? }`                                                     | Cookie signing secret + optional storage override.                                                                                                                     |
 | `migrations?` | `"auto" \| "manual"`                                                                    | `"auto"` (default) migrates lazily; `"manual"` for the DO host.                                                                                                        |
 | `isProd?`     | `boolean`                                                                               | Controls `Secure` cookies (default `false`).                                                                                                                           |
-| `waitUntil?`  | `(p: Promise<unknown>) => void`                                                         | Host hook for background work.                                                                                                                                         |
+| `waitUntil?`  | `(p: Promise<unknown>) => void`                                                         | Host hook for background work, such as the WebSub ping after a CMS write.                                                                                              |
 
 ### Subpath exports
 
@@ -146,6 +146,15 @@ The engine ships a fixed permission-key catalog and four built-in roles
 checks permissions, never role names, so owners compose custom roles from
 `/cms/roles`. Publishing is a permission (`posts.publish`) enforced server-side, and
 the last admin cannot be demoted or deleted.
+
+## Pattern: Push feeds through WebSub
+
+An owner who sets a hub under `/cms/settings` (for example
+`https://pubsubhubbub.appspot.com/`) gets feeds that advertise it, as a `rel="hub"`
+`atom:link` and a `Link` header, and a ping to it after every stored post write, naming
+`/rss.xml` and the type's own feed. Subscribed feed readers then receive a post as it is
+saved. The ping runs through the host's `waitUntil` after the response; a blog with no hub
+set advertises and pings nothing.
 
 ## Related Packages
 

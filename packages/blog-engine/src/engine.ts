@@ -18,6 +18,7 @@ import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
 import type { EngineAuthConfig } from "./auth/oidc.js";
+import type { WaitUntil } from "./shared/middleware/background.js";
 
 import appearance from "./appearance/controllers/cms.js";
 import assets from "./assets/controllers/assets.js";
@@ -32,6 +33,7 @@ import typeIndex from "./posts/controllers/type-index.js";
 import roles from "./roles/controllers/cms.js";
 import routes from "./routes.js";
 import settings from "./settings/controllers/cms.js";
+import { background } from "./shared/middleware/background.js";
 import { database } from "./shared/middleware/database.js";
 import oidcMiddleware from "./shared/middleware/oidc.js";
 import renderMiddleware from "./shared/middleware/render.js";
@@ -50,6 +52,8 @@ export interface EngineRouterDeps {
 	oidc: EngineAuthConfig;
 	/** Held by the engine instance, so a blog reads its provider's documents once. */
 	issuer: Issuer;
+	/** The host's background hook, published as `ctx.waitUntil` for work after the response. */
+	waitUntil?: WaitUntil;
 }
 
 /**
@@ -64,6 +68,7 @@ export interface EngineRouterDeps {
 export function createEngineRouter(deps: EngineRouterDeps) {
 	let globalMiddleware: Middleware[] = [
 		database(() => deps.db),
+		background(deps.waitUntil),
 		trailingSlash,
 		log() as Middleware,
 		oidcMiddleware(deps.oidc, deps.issuer),

@@ -1,7 +1,7 @@
 /**
  * Blog-owner settings store: the {@link Settings} class wrapping the `settings`
  * key/value table with JSON encoding, a generic get/set, and typed accessors for the
- * individual keys (title, description, language, theme, custom CSS).
+ * individual keys (title, description, language, theme, custom CSS, WebSub hub).
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -94,5 +94,15 @@ export class Settings {
 	 */
 	static customCss(db: Database): Promise<string> {
 		return this.get(db, "custom_css", "");
+	}
+
+	/**
+	 * Reads the WebSub hub the blog's feeds advertise and its CMS writes ping.
+	 * @param db - Database handle.
+	 * @returns The hub URL, or `null` when the owner chose none (the default).
+	 */
+	static async websubHub(db: Database): Promise<string | null> {
+		let hub = await this.get(db, "websub_hub", "");
+		return hub === "" ? null : hub;
 	}
 }

@@ -108,7 +108,13 @@ export function createBlogEngine(config: BlogEngineConfig): BlogEngine {
 		async fetch(request) {
 			if (config.migrations !== "manual") await (migrated ??= migrate());
 
-			let router = createEngineRouter({ db, sessionMiddleware, oidc, issuer });
+			let router = createEngineRouter({
+				db,
+				sessionMiddleware,
+				oidc,
+				issuer,
+				waitUntil: config.waitUntil,
+			});
 			return router.fetch(request);
 		},
 	};
