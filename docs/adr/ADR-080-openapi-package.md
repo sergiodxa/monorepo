@@ -908,6 +908,13 @@ the two would still drift, which is the state `2796c090` inherited.
   `uncovered()` to the file's own operations, since each API test file covers one
   controller. Branches only a programming error reaches (the `internal` problem after
   `Pagination.byKeyset`) are left undeclared.
+- Adoption (auth-saas): some handlers keep their own parsing with the operation's schemas
+  and the operation documents them only: merge-patch routes read through `readPatchBody`,
+  the subject list and keyset lists keep `managementPaging.parse` (a bad `per_page` answers
+  `invalidRequest`), and the import route streams its NDJSON body unread by `parse`.
+- Adoption (auth-saas): the shared harness's recorder asserts `violations()` only, not
+  `uncovered()`, since each area's test files share one document of 75 operations. The
+  `X-API-Version` echo is undocumented; `unsupportedApiVersion` is listed on every operation.
 
 ## Current Progress
 
@@ -916,4 +923,6 @@ the two would still drift, which is the state `2796c090` inherited.
 - [x] Phase 3: Adopt in uptime (`app/http/openapi/`: one module per resource, the document,
       `/api/v1/openapi.json`, the snapshot test, the conformance recorder in every API test file,
       and the reference's scope lines, error tables and schema blocks rendered from the document)
-- [ ] Phase 4: Adopt in auth-saas
+- [x] Phase 4: Adopt in auth-saas (`app/http/openapi/`: one module per area covering all 75
+      management operations, `/openapi.json`, the snapshot test, and the conformance recorder
+      in every management test harness)
