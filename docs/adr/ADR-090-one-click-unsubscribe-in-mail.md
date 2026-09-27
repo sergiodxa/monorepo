@@ -95,7 +95,9 @@ What stays out, and where it lives:
   lives in each app's controller
 - The confirmation page a person sees lives in each app, rendered with `remix/ui`
 - DKIM signing lives in the transport's platform (the `send_email` binding for Cloudflare)
-- `Feedback-ID` and other provider-specific headers stay in `Message.headers`
+- `Feedback-ID` lives in the transport's platform: Cloudflare Email Service writes its own, and
+  a `Message.headers` entry for it fails the send (see Notes). Other provider-specific `X-`
+  headers stay in `Message.headers`
 
 ### Exports
 
@@ -356,6 +358,7 @@ with an id, a signed token needs no storage.
 - [ADR-018: Mail Package with Pluggable Transports](./ADR-018-mail-package-with-pluggable-transports.md)
 - [ADR-030: Email Classes as the Authoring Contract](./ADR-030-email-classes-as-the-authoring-contract.md)
 - [ADR-023: Web Crypto Primitives Package](./ADR-023-web-crypto-primitives-package.md)
+
 ## Current Progress
 
 - [x] Phase 1: `unsubscribe` and `list` options, header generation and validation, and the
@@ -402,8 +405,8 @@ with an id, a signed token needs no storage.
   ([domain configuration](https://developers.cloudflare.com/email-service/configuration/domains/)).
   Confidence that both headers are signed: likely, not confirmed; a delivered message settles it
 - `Feedback-ID` is platform-controlled on Email Service: the platform writes its own, and a
-  `headers` entry for it fails the send with `E_HEADER_NOT_ALLOWED`, so it cannot stay in
-  `Message.headers` as Scope says. The same applies to any non-allowlisted header that does
+  `headers` entry for it fails the send with `E_HEADER_NOT_ALLOWED`, which is why Scope leaves
+  it to the platform. The same applies to any non-allowlisted header that does
   not start with `X-`, and at most 20 allowlisted non-`X-` headers go on one message
 - Phase 3 procedure: `apps/uptime` trial emails already carry both headers (hand-written until
   Phase 2 lands). Run a check at `https://uptime.sergiodxa.com/try`, submit a Gmail (and a
