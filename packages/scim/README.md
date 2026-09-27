@@ -2,34 +2,32 @@
 
 SCIM 2.0 resources, filters, PATCH operations and discovery documents.
 
-## Overview
+## Installation
+
+```bash
+npm add @sdxc/scim
+```
+
+Every fallible call returns an [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result)
+value, and `@sdxc/scim/data-table` translates filters into
+[`remix`](https://www.npmjs.com/package/remix)'s `remix/data-table` predicates. Both install
+alongside this package.
 
 SCIM 2.0 is how an enterprise directory (Okta, Microsoft Entra ID, Google Workspace) pushes
 people and groups into a service. [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643) defines
 the resources and [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644) the protocol. This package
 holds the standard's half of a SCIM endpoint: the User, Group and Enterprise User types, the
 complete filter grammar, PATCH, list queries and `ListResponse`, attribute projection, the SCIM
-error document and the discovery documents. Routing, authentication and storage stay in the app.
+error document and the discovery documents. Routing, authentication and storage stay yours.
 
-Everything is a plain function over plain data or a `Response`, and every fallible call returns
-an [`@sdxc/result`](/packages/result) `Result` whose failure is a `ScimError`, which
-`errorResponse` turns into the RFC 7644 §3.12 document. One `Discovery.Definitions` value
-describes the attributes an endpoint serves: `/Schemas` advertises it, and filters, PATCH and
-projection evaluate against it, so what a client is told and what the server does agree.
-
-Five entry points keep dependencies apart:
-
-| Import                  | Contents                                                             |
-| ----------------------- | -------------------------------------------------------------------- |
-| `@sdxc/scim`            | resource types and parsers, `meta`/versions, list queries, responses |
-| `@sdxc/scim/filter`     | `parseFilter`, `parsePath`, `stringifyFilter`, `compileFilter`       |
-| `@sdxc/scim/data-table` | `filterToWhere`, the only module importing `remix/data-table`        |
-| `@sdxc/scim/patch`      | `parsePatch`, `applyPatch`                                           |
-| `@sdxc/scim/discovery`  | RFC 7643 §8.7 definitions and the three discovery documents          |
+Every failure is a `ScimError`, which `errorResponse` turns into the RFC 7644 §3.12 document.
+One `Discovery.Definitions` value describes the attributes an endpoint serves: `/Schemas`
+advertises it, and filters, PATCH and projection evaluate against it, so what a client is told
+and what the server does agree.
 
 ## Usage
 
-### Create a user
+### Create A User
 
 ```typescript
 import { errorResponse, parseUser, readBody, scimResponse, userResource } from "@sdxc/scim";
@@ -48,7 +46,7 @@ let stored = await saveUser(user.data);
 return scimResponse(userResource(stored), { status: 201 });
 ```
 
-### List users with a filter
+### List Users With A Filter
 
 ```typescript
 import { errorResponse, listResponse, parseListQuery, project } from "@sdxc/scim";
@@ -83,9 +81,11 @@ return listResponse(
 `userName eq "BJensen@Example.com"` matches `bjensen@example.com`, because the definition says
 `userName` is `caseExact: false`.
 
-### Patch a user
+### Patch A User
 
 ```typescript
+import { isFailure } from "@sdxc/result";
+import { errorResponse, parseUser, userResource } from "@sdxc/scim";
 import { applyPatch, parsePatch } from "@sdxc/scim/patch";
 
 let operations = parsePatch(body.data);
@@ -97,7 +97,7 @@ if (isFailure(patched)) return errorResponse(patched.error); // noTarget, mutabi
 let next = parseUser(patched.data); // then store it the way a PUT would
 ```
 
-### Serve discovery
+### Serve Discovery
 
 ```typescript
 import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, scimResponse, USER_SCHEMA } from "@sdxc/scim";
@@ -155,14 +155,15 @@ scimResponse(schemas([...Object.values(DEFINITIONS), GROUP_DEFINITION]));
 `new ScimError(status, detail, { scimType? })`. `status` is the HTTP status, `scimType` one of
 RFC 7644 Table 9's codes (`invalidFilter`, `invalidPath`, `noTarget`, `mutability`,
 `uniqueness`, `invalidValue`, `invalidSyntax`, `tooMany`, `invalidVers`, `sensitive`) or `null`,
-and `message` the `detail`.
+and `message` the `detail`. `ScimErrorOptions` types the options.
 
 #### `parseUser(body, options?): Result<Scim.User, ScimError>`
 
 Reads a User. Attribute names match case-insensitively, `null` members count as unassigned, and
 each extension is read from its URN member and validated with its schema. Pass
 `options.extensions` as `{ key: { urn, schema } }` with any synchronous Standard Schema; the
-result's `extensions.key` is typed from the schema. The Enterprise User extension is read under
+result's `extensions.key` is typed from the schema (`ParseUserOptions`, `ExtensionSchemas`,
+`InferExtensions`). The Enterprise User extension is read under
 `enterprise` by default. A complete `meta` is read with `Date`s; an incomplete one is dropped.
 
 #### `parseGroup(body): Result<Scim.Group, ScimError>`
@@ -173,8 +174,8 @@ Reads a Group; member `$ref` becomes `ref`, and member `type` matches `User`/`Gr
 
 The wire objects: `schemas` filled from the extensions present, extensions under their URNs,
 `ref` written `$ref`, dates as RFC 3339, and unassigned members (empty arrays included)
-dropped. `password` is left out. Pass `options.extensions` to name the URN of each
-custom extension key.
+dropped. `password` is left out. Pass `options.extensions` (`ResourceOptions`) to name the
+URN of each custom extension key.
 
 #### `version(resource): Promise<string>`
 
@@ -197,7 +198,7 @@ Reads a JSON body sent as `application/scim+json`, `application/json` or with no
 Read a list request from the query string or a `POST /.search` body into a `Scim.ListQuery`.
 `startIndex` below 1 reads as 1, `count` below 0 as 0 and above `maxCount` as `maxCount`, and a
 missing `count` is `defaultCount` (100). With `options.attributes`, the filter and every path
-must resolve against those definitions.
+must resolve against those definitions. `ListQueryOptions` types the options.
 
 #### `scimResponse(body, init?)`, `errorResponse(error, init?)`, `listResponse(page, toResource, init?)`
 
@@ -209,6 +210,12 @@ page length.
 
 Applies `returned` (`always`, `never`, `default`, `request`) and the query's `attributes` or
 `excludedAttributes`, including sub-attributes (`name.givenName`) and whole extensions (the URN).
+
+#### `Scim` (types)
+
+The resource model: `Scim.User<Extensions>`, `Scim.Group`, `Scim.Member`, `Scim.Name`,
+`Scim.Address`, `Scim.EnterpriseUser`, `Scim.GroupMembership`, `Scim.MultiValued`, `Scim.Meta`,
+plus `Scim.ListQuery`, `Scim.Page` and `Scim.ErrorType`.
 
 ### `@sdxc/scim/filter`
 
@@ -229,7 +236,13 @@ the same tree.
 A predicate over wire resources. String comparisons fold case unless `caseExact`, date-times
 compare as instants, a multi-valued attribute matches when any value does, and `emails co "x"`
 reads `emails.value`. Ordering a boolean or binary, a type mismatch, an undefined path, or a
-path outside `allow` fails `invalidFilter` at compile time.
+path outside `allow` fails `invalidFilter` at compile time. `Filter.CompileOptions` types the
+options.
+
+#### `Filter` (types)
+
+The tree `parseFilter` returns: `Filter.Expression` is a `Compare`, `Present`, `Logical`, `Not`
+or `ValuePath`, over `Filter.AttributePath`, `Filter.Operator` and `Filter.Value`.
 
 ### `@sdxc/scim/data-table`
 
@@ -239,7 +252,10 @@ Translates a filter into a `remix/data-table` predicate selecting the same rows.
 maps paths to a column name (case-sensitive) or `{ column, caseExact: false }`, which folds
 case through `ilike`. `ne` also matches `NULL`, and `not` is pushed down to inverse operators.
 Value paths, unmapped paths, negated substring matches, case-folded ordering or `ne`, and
-values containing `%`, `_` or `\` fail with `UntranslatableFilterError`.
+values containing `%`, `_` or `\` fail with `UntranslatableFilterError`, the signal to evaluate
+that filter in memory with `compileFilter`. `ColumnMap` types `columns`. SQLite folds ASCII case
+in `like`, so a `co`/`sw`/`ew` on a `caseExact` column can return extra rows there; confirm with
+`compileFilter` when it matters.
 
 ### `@sdxc/scim/patch`
 
@@ -257,6 +273,8 @@ included), and a value filter matching nothing is `noTarget` for `remove`/`repla
 changes, and changes to an `immutable` attribute that has a value, are `mutability`. Where an
 attribute is boolean, `"True"`/`"False"` are read as booleans.
 
+`Patch.Operation`, `Patch.Path` and `Patch.ApplyOptions` type the operations and options.
+
 ### `@sdxc/scim/discovery`
 
 - `USER_DEFINITION`, `GROUP_DEFINITION`, `ENTERPRISE_USER_DEFINITION`: RFC 7643 §8.7 definitions
@@ -266,13 +284,20 @@ attribute is boolean, `"True"`/`"False"` are read as booleans.
   documents as plain objects, for `scimResponse`
 
 `id`, `externalId`, `schemas` and `meta` are resolved for every resource even though `/Schemas`
-omits them, as RFC 7643 §3 defines them in common.
+omits them, as RFC 7643 §3 defines them in common. Unqualified names resolve against the
+definitions in insertion order, after a resource's own `schemas`, so put the core schema first.
 
-## Pattern: Push a filter into SQL, fall back in memory
+`Discovery.Definitions`, `Discovery.SchemaDefinition`, `Discovery.Attribute`,
+`Discovery.ServiceProviderConfigOptions`, `Discovery.AuthenticationScheme` and
+`Discovery.ResourceType` type the definitions and documents.
+
+## Pattern: Push A Filter Into SQL, Fall Back In Memory
 
 ```typescript
-import { compileFilter } from "@sdxc/scim/filter";
+import { isFailure, isSuccess } from "@sdxc/result";
+import { errorResponse, groupResource } from "@sdxc/scim";
 import { filterToWhere } from "@sdxc/scim/data-table";
+import { compileFilter } from "@sdxc/scim/filter";
 import { and, eq } from "remix/data-table";
 
 let where = query.filter
@@ -297,7 +322,7 @@ if (query.filter && where && isFailure(where)) {
 }
 ```
 
-## Pattern: Conditional replace with versions
+## Pattern: Conditional Replace With Versions
 
 ```typescript
 import {
@@ -318,22 +343,39 @@ let tag = await version(next);
 return scimResponse({ ...next, meta: { ...next.meta, version: tag } }, { headers: { ETag: tag } });
 ```
 
-## Related Packages
+## Pattern: One Definition For Everything
 
-- [`@sdxc/result`](/packages/result) - The `Result` every parser returns
-- [`@sdxc/problem`](/packages/problem) - RFC 9457 problem details, for non-SCIM endpoints
+Build `/Schemas` from the same `Definitions` value that `compileFilter`, `applyPatch` and
+`project` receive, and restrict filters with `allow` to the attributes your store can filter by.
+PATCH as read, apply, replace: apply the operations to the current wire representation, then
+store the result through the same path a `PUT` takes.
 
-## Tips
+## Versioning
 
-1. **Put the core schema first in `Definitions`** - unqualified names resolve against the
-   definitions in insertion order, after a resource's own `schemas`.
-2. **Restrict filters with `allow`** - the grammar is complete, so refuse attributes the store
-   cannot filter by with an allow list rather than a narrower parser.
-3. **Always keep the in-memory fallback** - `filterToWhere` is partial by design; `compileFilter`
-   answers every valid filter.
-4. **PATCH as read, apply, replace** - apply operations to the current wire representation and
-   store the result through the same path a `PUT` takes.
-5. **Advertise what you evaluate** - build `/Schemas` from the same `Definitions` value that
-   `compileFilter`, `applyPatch` and `project` receive.
-6. **Mind SQLite's `LIKE`** - SQLite folds ASCII case in `like`, so a `co`/`sw`/`ew` on a
-   `caseExact` column can return extra rows there; confirm with `compileFilter` when it matters.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/scim": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

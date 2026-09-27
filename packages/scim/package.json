@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/scim",
 	"version": "0.0.1",
-	"private": true,
 	"description": "SCIM 2.0 resources, filters, PATCH operations and discovery documents",
 	"license": "MIT",
 	"type": "module",
