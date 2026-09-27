@@ -7,12 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/ui";
+
 import { toRemix } from "@sdxc/markdown/remix";
 import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { listStyle } from "@sdxc/u/general";
 import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
-import { bleed, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
+import { bleed, bs, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
 import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@sdxc/ui";
 import { Frame } from "remix/ui";
@@ -31,6 +34,92 @@ export namespace PostView {
 	 * Shape of the data required to render a post page.
 	 */
 	export interface Model extends PostViewModel.Page {}
+}
+
+/** What each kind of mention says its author did, completing "<author> …". */
+const MENTION_VERBS: Record<PostViewModel.Mention["kind"], string> = {
+	reply: "replied",
+	mention: "mentioned this",
+	like: "liked this",
+	repost: "reposted this",
+	bookmark: "bookmarked this",
+};
+
+/**
+ * The approved Webmentions under a post: reactions as a row of author avatars, and
+ * responses with their content, each an `h-cite` naming its author. Content was
+ * sanitized when the mention was verified; photos load without a referrer at a fixed size.
+ * Renders nothing for a post nobody has mentioned yet.
+ */
+function PostMentions(handle: Handle<{ mentions: PostViewModel.Page["mentions"] }>) {
+	return () => {
+		let { reactions, responses } = handle.props.mentions;
+		if (reactions.length === 0 && responses.length === 0) return null;
+
+		return (
+			<section aria-labelledby="webmentions" mix={[grid(), gap(3)]}>
+				<Heading level={2} id="webmentions" mix={[m(0), text("2xl")]}>
+					Webmentions
+				</Heading>
+
+				{reactions.length > 0 && (
+					<ul mix={[m(0), p(0), listStyle("none"), hstack({ gap: 2 }), flexWrap("wrap")]}>
+						{reactions.map((reaction) => (
+							<li key={reaction.url} mix={[mf("h-cite")]}>
+								<a
+									href={reaction.url}
+									title={`${reaction.authorName} ${MENTION_VERBS[reaction.kind]}`}
+									mix={[mf("u-url"), text("sm")]}
+								>
+									<span mix={[mf("p-author", "h-card")]}>
+										{reaction.authorPhoto ? (
+											<img
+												src={reaction.authorPhoto}
+												alt={reaction.authorName}
+												width={32}
+												height={32}
+												loading="lazy"
+												referrerpolicy="no-referrer"
+												mix={[mf("u-photo", "p-name"), is(8), bs(8), rounded("full")]}
+											/>
+										) : (
+											<span mix={[mf("p-name")]}>{reaction.authorName}</span>
+										)}
+									</span>
+								</a>
+							</li>
+						))}
+					</ul>
+				)}
+
+				{responses.length > 0 && (
+					<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3)]}>
+						{responses.map((response) => (
+							<li key={response.url} mix={[mf("h-cite")]}>
+								<Card mix={[p(4), grid(), gap(2), overflowWrap("break-word"), minIs(0)]}>
+									<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+										<a
+											href={response.authorUrl ?? response.url}
+											mix={[mf("p-author", "h-card"), fg("neutral.emphasis"), weight("bold")]}
+										>
+											{response.authorName}
+										</a>{" "}
+										<a href={response.url} mix={[mf("u-url"), fg("neutral.muted")]}>
+											{MENTION_VERBS[response.kind]}
+											{response.publishedLabel && ` on ${response.publishedLabel}`}
+										</a>
+									</p>
+									{response.contentHtml && (
+										<div mix={[mf("e-content"), text("base")]} innerHTML={response.contentHtml} />
+									)}
+								</Card>
+							</li>
+						))}
+					</ol>
+				)}
+			</section>
+		);
+	};
 }
 
 /**
@@ -141,6 +230,8 @@ export function PostView() {
 							)}
 						</div>
 					</article>
+
+					<PostMentions mentions={model.mentions} />
 
 					<Card
 						color="brand"

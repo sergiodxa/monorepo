@@ -11,7 +11,10 @@ import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { succeeded } from "@sdxc/result";
 
+import type { Webmention } from "~/app/repositories/webmention";
+
 import { Post } from "~/app/repositories/post";
+import { hostOf } from "~/app/repositories/webmention";
 
 /**
  * Type contracts used to build the post page view model.
@@ -59,6 +62,27 @@ export namespace PostViewModel {
 		};
 		/** Markdown string used by feed/alternate format responders. */
 		markdownBody: string;
+		/** Approved Webmentions, split into written responses and one-click reactions. */
+		mentions: {
+			/** Replies and plain mentions, oldest first, each rendered with its content. */
+			responses: Array<Mention>;
+			/** Likes, reposts and bookmarks, rendered as a row of authors. */
+			reactions: Array<Mention>;
+		};
+	}
+
+	/** One approved Webmention as the post page renders it. */
+	export interface Mention {
+		kind: "reply" | "like" | "repost" | "bookmark" | "mention";
+		/** The response's own permalink, where its author published it. */
+		url: string;
+		/** The author's name, else the source's host, so every mention names someone. */
+		authorName: string;
+		authorUrl: string | null;
+		authorPhoto: string | null;
+		/** Content already sanitized when the mention was verified; `null` for a bare link. */
+		contentHtml: string | null;
+		publishedLabel: string;
 	}
 
 	/**
@@ -118,6 +142,9 @@ export namespace PostViewModel {
 	export type LoadedPost = ArticlePost | TutorialPost;
 }
 
+/** The kinds a stored mention can carry; anything else reads as a plain mention. */
+const MENTION_KINDS = ["reply", "like", "repost", "bookmark", "mention"] as const;
+
 /**
  * Maps repository post payloads into the post page view contract.
  *
@@ -134,12 +161,14 @@ export class PostViewModel {
 	 * @param loadedPost Loaded post payload from the repository layer.
 	 * @param requestUrl Absolute request URL used to build canonical URLs.
 	 * @param format Optional content format requested for the response.
+	 * @param mentions The post's approved Webmentions.
 	 * @returns A page view model ready for rendering.
 	 */
 	static page(
 		loadedPost: PostViewModel.LoadedPost,
 		requestUrl: string,
 		format: "html" | "md" | undefined,
+		mentions: Array<Webmention.Row> = [],
 	): PostViewModel.Page {
 		if (loadedPost.postType === "articles") {
 			let post = loadedPost.post;
@@ -177,6 +206,7 @@ export class PostViewModel {
 					tags: [],
 				},
 				markdownBody: `# ${title}\n\n${post.meta.content}\n\n`,
+				mentions: this.mentions(mentions),
 			};
 		}
 
@@ -214,7 +244,40 @@ export class PostViewModel {
 				tags: loadedPost.tags,
 			},
 			markdownBody: `# ${title}\n\nUsed: ${loadedPost.tags.join(" - ")}\n\n${post.meta.content}\n\n`,
+			mentions: this.mentions(mentions),
 		};
+	}
+
+	/**
+	 * Splits stored mentions into responses and reactions and fills in what the page
+	 * shows for each, keeping the stored order.
+	 *
+	 * @param rows Approved mention rows.
+	 */
+	private static mentions(rows: Array<Webmention.Row>): PostViewModel.Page["mentions"] {
+		let responses: Array<PostViewModel.Mention> = [];
+		let reactions: Array<PostViewModel.Mention> = [];
+
+		for (let row of rows) {
+			let published = row.published_at ? new Date(row.published_at) : null;
+			let mention: PostViewModel.Mention = {
+				kind: MENTION_KINDS.find((kind) => kind === row.kind) ?? "mention",
+				url: row.url,
+				authorName: row.author_name || hostOf(row.source),
+				authorUrl: row.author_url,
+				authorPhoto: row.author_photo,
+				contentHtml: row.content_html,
+				publishedLabel:
+					published && !Number.isNaN(published.getTime())
+						? published.toLocaleDateString("en", { dateStyle: "medium", timeZone: "UTC" })
+						: "",
+			};
+
+			if (row.kind === "reply" || row.kind === "mention") responses.push(mention);
+			else reactions.push(mention);
+		}
+
+		return { responses, reactions };
 	}
 
 	/**

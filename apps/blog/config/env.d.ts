@@ -26,6 +26,8 @@ declare global {
 			CACHE: KVNamespace;
 			/** Present only once the deployment's bindings include a `ratelimits` entry. */
 			MCP_RATE_LIMITER: RateLimit | undefined;
+			/** The Webmention endpoint's budget; absent from a deployment predating the binding. */
+			WEBMENTION_RATE_LIMITER?: RateLimit;
 			/** Lets a deferred write finish after the response has been sent. */
 			waitUntil(promise: Promise<unknown>): void;
 		}

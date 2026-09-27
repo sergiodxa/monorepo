@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { and, eq, inList } from "remix/data-table";
+import { and, eq, inList, isNull } from "remix/data-table";
 
 import { Post } from "~/app/repositories/post";
 import { postMeta, posts } from "~/database/schema";
@@ -363,7 +363,7 @@ export class TutorialPost {
 		let rows = await db
 			.query(posts)
 			.join(postMeta, and(eq(postMeta.post_id, posts.id), inList(postMeta.key, ["title", "slug"])))
-			.where({ type: this.postType })
+			.where(and({ type: this.postType }, isNull(posts.deleted_at)))
 			.select({
 				id: posts.id,
 				created_at: posts.created_at,

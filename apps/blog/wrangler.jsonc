@@ -74,7 +74,21 @@
 	// reasoning for the numbers lives — the binding reports neither back.
 	"ratelimits": [
 		{ "name": "MCP_RATE_LIMITER", "namespace_id": "1001", "simple": { "limit": 60, "period": 60 } },
+		// The Webmention endpoint's budget, spent once per client address and once per source
+		// host (`app/http/middleware/webmention-rate-limit.ts`, which mirrors these numbers).
+		{
+			"name": "WEBMENTION_RATE_LIMITER",
+			"namespace_id": "1002",
+			"simple": { "limit": 30, "period": 60 },
+		},
 	],
+
+	// Background jobs (`app/jobs/dispatcher.ts`): Webmention verification and sending.
+	// One message per invocation keeps a slow source or endpoint from holding up others.
+	"queues": {
+		"consumers": [{ "queue": "blog-jobs", "max_batch_size": 1, "max_retries": 5 }],
+		"producers": [{ "binding": "QUEUE", "queue": "blog-jobs" }],
+	},
 
 	"d1_databases": [
 		{

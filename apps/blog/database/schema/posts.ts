@@ -33,12 +33,15 @@ export const posts = table({
 		author_id: c.text().references("users", "id", "fk_posts_author_id").onDelete("cascade"),
 		type: c.enum(["like", "tutorial", "article", "comment", "glossary"]),
 		published_at: c.text().nullable(),
+		/** Set when the post is deleted; its URL then answers 410 instead of 404. */
+		deleted_at: c.text().nullable(),
 	},
 	validate({ value }) {
 		return validateTimestamps(value, [
 			{ name: "created_at", nullable: false },
 			{ name: "updated_at", nullable: false },
 			{ name: "published_at", nullable: true },
+			{ name: "deleted_at", nullable: true },
 		]);
 	},
 });

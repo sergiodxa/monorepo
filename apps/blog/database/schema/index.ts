@@ -1,6 +1,6 @@
 /**
  * Barrel module for the blog database schema. Re-exports the posts, post_meta,
- * and users tables, their relation definitions, and the select/insert row types,
+ * users and Webmention tables, their relation definitions, and the select/insert row types,
  * giving repositories one import point for the whole schema surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -14,3 +14,5 @@ export { posts } from "./posts";
 export type { InsertPost, SelectPost } from "./posts";
 export { users } from "./users";
 export type { InsertUser, SelectUser } from "./users";
+export { webmentionDomains, webmentions } from "./webmentions";
+export type { SelectWebmention, SelectWebmentionDomain } from "./webmentions";

@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { eq } from "remix/data-table";
+import { and, eq, isNull, notNull } from "remix/data-table";
 
 import { PostMeta } from "~/app/repositories/post-meta";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -125,6 +125,7 @@ export namespace Post {
 		| {
 				postType: "articles";
 				post: {
+					id: string;
 					meta: {
 						title: string;
 						slug: string;
@@ -139,6 +140,7 @@ export namespace Post {
 		| {
 				postType: "tutorials";
 				post: {
+					id: string;
 					meta: {
 						title: string;
 						slug: string;
@@ -158,6 +160,12 @@ export namespace Post {
 		matchedTag: string;
 	}
 }
+
+/** The stored `posts.type` behind each public collection path. */
+const PUBLIC_TYPES = { articles: "article", tutorials: "tutorial" } as const;
+
+/** A post permalink: `/articles/:slug` or `/tutorials/:slug`, without an extension. */
+const MENTIONABLE_PATH = /^\/(articles|tutorials)\/([^/.]+)$/;
 
 /**
  * Data access and typed mapping helpers for posts and their metadata rows.
@@ -270,6 +278,7 @@ export class Post {
 			return {
 				postType: "articles",
 				post: {
+					id: post.id,
 					meta: {
 						title: post.meta.title,
 						slug: post.meta.slug,
@@ -289,6 +298,7 @@ export class Post {
 		return {
 			postType: "tutorials",
 			post: {
+				id: post.id,
 				meta: {
 					title: post.meta.title,
 					slug: post.meta.slug,
@@ -439,15 +449,73 @@ export class Post {
 	}
 
 	/**
-	 * Deletes a post by id.
+	 * Deletes a post by leaving a tombstone: the row and its metadata stay, every read
+	 * skips it, and its URL answers 410 Gone so Webmention receivers learn it was withdrawn.
 	 *
 	 * @param db Database handle used for writes.
 	 * @param id Post identifier.
-	 * @returns Always `true` when the delete command is issued.
+	 * @returns `true` when a live post was tombstoned, `false` when none matched.
 	 */
 	static async destroy(db: Database, id: string) {
-		await db.delete(this.table, id);
+		let existing = await db.findOne(this.table, { where: and({ id }, isNull("deleted_at")) });
+		if (!existing) return false;
+
+		let now = this.timestamp;
+		await db.update(this.table, id, { deleted_at: now, updated_at: now });
 		return true;
+	}
+
+	/**
+	 * Whether a public URL belonged to a post that was deleted, so the page answers
+	 * 410 Gone rather than 404; a live post reusing the slug takes precedence upstream.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param input Route-like lookup input.
+	 */
+	static async isTombstoned(
+		db: Database,
+		input: { postType: Post.PublicTypePath; postSlug: string },
+	): Promise<boolean> {
+		let type = PUBLIC_TYPES[input.postType];
+		let matches = await PostMeta.findByKeyValue(db, "slug", input.postSlug);
+		for (let match of matches) {
+			let post = await db.findOne(this.table, {
+				where: and({ id: match.post_id, type }, notNull("deleted_at")),
+			});
+			if (post) return true;
+		}
+		return false;
+	}
+
+	/**
+	 * Resolves a URL on this site to the published article or tutorial it names, which is
+	 * what the Webmention endpoint accepts mentions for. Another origin, another path, an
+	 * extension, a preview or a deleted post all resolve to `null`.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param target The URL a Webmention names as its target.
+	 * @param origin This site's origin, the only one whose posts are accepted.
+	 */
+	static async findMentionable(
+		db: Database,
+		target: URL,
+		origin: string,
+	): Promise<{ id: string; postType: Post.PublicTypePath; postSlug: string } | null> {
+		if (target.origin !== origin) return null;
+
+		let match = MENTIONABLE_PATH.exec(target.pathname);
+		let postType = match?.[1];
+		let postSlug = match?.[2];
+		if (postType !== "articles" && postType !== "tutorials") return null;
+		if (postSlug === undefined) return null;
+
+		let found = await this.findByTypeAndSlug(db, {
+			postType,
+			postSlug: decodeURIComponent(postSlug),
+		});
+		if (!found || !this.isPublishedAt(found.post.published_at)) return null;
+
+		return { id: found.post.id, postType, postSlug: found.post.meta.slug };
 	}
 
 	/**
@@ -477,7 +545,7 @@ export class Post {
 	 * @returns Number of posts for the requested type.
 	 */
 	static countForType<type extends Post.Type>(db: Database, postType: type) {
-		return db.count(this.table, { where: { type: postType } });
+		return db.count(this.table, { where: and({ type: postType }, isNull("deleted_at")) });
 	}
 
 	/**
@@ -571,6 +639,7 @@ export class Post {
 				author_id: this.table.author_id,
 				type: this.table.type,
 				published_at: this.table.published_at,
+				deleted_at: this.table.deleted_at,
 				meta_id: schema.postMeta.id,
 				meta_created_at: schema.postMeta.created_at,
 				meta_updated_at: schema.postMeta.updated_at,
@@ -580,9 +649,11 @@ export class Post {
 			})
 			.orderBy("posts.created_at", "desc");
 
-		if (where?.type) return query.where({ type: where.type }).all();
+		if (where?.type) {
+			return query.where(and({ type: where.type }, isNull(this.table.deleted_at))).all();
+		}
 
-		return query.all();
+		return query.where(isNull(this.table.deleted_at)).all();
 	}
 
 	/**
@@ -590,7 +661,7 @@ export class Post {
 	 * reliably.
 	 */
 	private static async findOneJoinedById(db: Database, id: string): Promise<Post.FoundPost | null> {
-		let post = await db.findOne(this.table, { where: { id } });
+		let post = await db.findOne(this.table, { where: and({ id }, isNull("deleted_at")) });
 		if (!post) return null;
 
 		let meta = await PostMeta.findByPostId(db, id);
@@ -608,6 +679,7 @@ export class Post {
 			author_id: string;
 			type: Post.Type;
 			published_at: string | null;
+			deleted_at: string | null;
 			meta_id: string;
 			meta_created_at: string;
 			meta_updated_at: string;
@@ -629,6 +701,7 @@ export class Post {
 					author_id: row.author_id,
 					type: row.type,
 					published_at: row.published_at,
+					deleted_at: row.deleted_at,
 					meta: [],
 				};
 				posts.set(row.id, post);

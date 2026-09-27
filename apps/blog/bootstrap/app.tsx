@@ -45,6 +45,7 @@ import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
 import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
+import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import mcpRateLimit from "~/app/mcp/rate-limit";
 import { createDatabase } from "~/app/services/database";
@@ -59,7 +60,7 @@ import { logger } from "./logger";
  * only `GET` here. Matched exactly against the route table, so a path *beneath* one of
  * these still falls through to the full chain and the normal 404 page.
  */
-const MACHINE_PATHS = new Set<string>([routes.mcp.index.href()]);
+const MACHINE_PATHS = new Set<string>([routes.mcp.index.href(), routes.webmention.href()]);
 
 /**
  * Whether a request is the machine half of a machine path. Method-aware because `/mcp`
@@ -174,6 +175,15 @@ export default function createApplication(env: App.Env) {
 		routes.healthcheck,
 		lazy(() => import("~/app/http/controllers/healthcheck")),
 	);
+
+	/**
+	 * Other sites notify the blog here. Anonymous by definition, so it answers behind
+	 * per-address and per-source-host budgets before the controller is loaded.
+	 */
+	router.map(
+		routes.webmention,
+		lazy(() => import("~/app/http/controllers/webmention"), webmentionRateLimit(env)),
+	);
 	router.map(
 		routes.articles,
 		lazy(() => import("~/app/http/controllers/articles")),
@@ -287,6 +297,10 @@ export default function createApplication(env: App.Env) {
 	router.map(
 		routes.cms.redirects,
 		lazy(() => import("~/app/http/controllers/cms/redirects"), CMS_GUARDS),
+	);
+	router.map(
+		routes.cms.webmentions,
+		lazy(() => import("~/app/http/controllers/cms/webmentions"), CMS_GUARDS),
 	);
 
 	return router;

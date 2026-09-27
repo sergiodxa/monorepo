@@ -18,6 +18,7 @@ import themeStyles from "@sdxc/ui/theme.css?url";
 import { PROFILE } from "~/config/profile";
 import colorStyles from "~/resources/css/colors.css?url";
 import codeStyles from "~/resources/css/highlight.css?url";
+import routes from "~/routes/web";
 
 /**
  * The profiles `rel="me"` claims as the site owner's, which is how an IndieWeb reader
@@ -109,6 +110,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<meta name="description" content={description} data-rmx-key="description" />
 					)}
 					{canonical && <link rel="canonical" href={canonical} data-rmx-key="canonical" />}
+					<link rel="webmention" href={routes.webmention.href()} data-rmx-key="webmention" />
 					{REL_ME.map((href) => (
 						<link key={href} rel="me" href={href} data-rmx-key={`me:${href}`} />
 					))}

@@ -49,6 +49,7 @@ let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.cms.bookmarks.index.href(), label: "Bookmarks" },
 	{ href: routes.cms.glossary.index.href(), label: "Glossary" },
 	{ href: routes.cms.redirects.index.href(), label: "Redirects" },
+	{ href: routes.cms.webmentions.index.href(), label: "Webmentions" },
 	{ href: routes.auth.logout.index.href(), label: "Logout" },
 ];
 

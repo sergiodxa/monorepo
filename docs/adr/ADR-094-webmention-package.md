@@ -515,7 +515,12 @@ own.
   - [x] Receiver: request validation, exact-link matching, `gone`/`unlinked`, JSON and text
         sources, redirect, size and time bounds through MSW
   - [x] `./discover`, `./receiver`, `./sender`, README
-- [ ] Phase 3: Receive in the blog
+- [x] Phase 3: Receive in the blog
+  - [x] `blog-jobs` queue, `app/jobs/dispatcher.ts`, and the worker's `queue`/`scheduled` exports
+  - [x] `0004_Webmentions.sql` (`webmentions`, `webmention_domains`, `posts.deleted_at`), the repository, the endpoint behind `WEBMENTION_RATE_LIMITER`, the verify job
+  - [x] `Link` header on post pages and `<link rel="webmention">` in `<head>`
+  - [x] `/cms/webmentions` moderation (approve, reject, trust or block a domain) and approved mentions under posts
+  - [ ] Create the queue, migrate, deploy, and send a test mention from webmention.rocks
 - [ ] Phase 4: Send from the blog
 - [ ] Phase 5: Publish
 
@@ -546,6 +551,17 @@ own.
   from the live pages (headers and markup) on 2026-09-24; the site's source is
   `aaronpk/webmention.rocks` at `7b97198`, Apache-2.0. Test #23's redirect tokens are
   per-visit, so the fixture keeps the pair observed that day.
+
+- Adoption: the `deleted_at` tombstone and the 410 moved from Phase 4 into Phase 3, since
+  the endpoint's `accepts` already has to refuse deleted posts. Every post read skips a
+  tombstoned row; the slug stays in `post_meta`, which is how its URL answers 410.
+- Adoption: both rate limits (client address and source host) run at the endpoint, through one
+  `WEBMENTION_RATE_LIMITER` binding under two key prefixes, so a flood is answered `429`
+  before anything is queued. A blocked source host is answered `202` and never queued, so it
+  learns nothing from the block; the verify job re-checks the policy before fetching.
+- Adoption: a mention stores the `post_id` its target resolved to, so it stays under its post
+  when the slug changes; the verify job re-resolves the target and acks when it no longer
+  names a published post.
 
 ## Alternatives Considered
 

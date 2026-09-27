@@ -17,7 +17,8 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { LikePost } from "~/app/repositories/posts/like";
-import { migratedDatabase, seedAuthor } from "~/app/test/d1";
+import { migratedDatabase } from "~/app/test/d1";
+import { seedAuthor } from "~/app/test/fixtures";
 import { PROFILE } from "~/config/profile";
 
 import createApplication from "../../../bootstrap/app";

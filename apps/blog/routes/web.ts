@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { form, get, route } from "remix/routes";
+import { form, get, post, route } from "remix/routes";
 
 import auth from "~/routes/auth";
 import cms from "~/routes/cms";
@@ -28,6 +28,12 @@ export default route({
 	sitemap: get("/sitemap.xml"),
 
 	healthcheck: get("/healthcheck"),
+
+	/**
+	 * The Webmention endpoint every page advertises, taking form-encoded `source` and
+	 * `target` from other sites that link to a post here.
+	 */
+	webmention: post("/webmention"),
 
 	/**
 	 * The Model Context Protocol endpoint, plus the page explaining it. `form()`

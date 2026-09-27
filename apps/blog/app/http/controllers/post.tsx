@@ -1,7 +1,8 @@
 /**
  * HTTP action for public article and tutorial post pages. Route params are validated
  * before any lookup, the response format is negotiated from the URL extension and the
- * `Accept` header, and unpublished posts stay admin-only behind a 403.
+ * `Accept` header, unpublished posts stay admin-only behind a 403, and deleted posts
+ * answer 410. HTML pages advertise the Webmention endpoint and list approved mentions.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +10,7 @@
 
 import * as ct from "@sdxc/http/content-type";
 import { accepts } from "@sdxc/http/negotiate";
+import { advertise } from "@sdxc/webmention/discover";
 import { enum_, optional, parse } from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -16,6 +18,7 @@ import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { Post } from "~/app/repositories/post";
+import { Webmention } from "~/app/repositories/webmention";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
@@ -90,6 +93,18 @@ export default createAction(
 			postSlug: validation.params.postSlug,
 		});
 
+		if (!post && (await Post.isTombstoned(ctx.db, validation.params))) {
+			if (prefersMarkdown) {
+				return markdown(410, "# Gone\n\nThis post was deleted.\n\n");
+			}
+
+			return renderGonePage(ctx.render, {
+				title: "Post Deleted",
+				description: "This post was deleted and is no longer available.",
+				emoji: "🪦",
+			});
+		}
+
 		if (!post) {
 			if (prefersMarkdown) {
 				if (validation.params.postType === "articles") {
@@ -146,7 +161,13 @@ export default createAction(
 			});
 		}
 
-		let viewModel = PostViewModel.page(post, ctx.request.url, validation.params.contentType);
+		let mentions = await Webmention.findApprovedForPost(ctx.db, post.post.id);
+		let viewModel = PostViewModel.page(
+			post,
+			ctx.request.url,
+			validation.params.contentType,
+			mentions,
+		);
 
 		// Only a published post is edge-cacheable. An admin previewing a draft reaches
 		// here too, and the middleware would refuse their session anyway, but the draft
@@ -159,7 +180,10 @@ export default createAction(
 			return markdown(200, viewModel.markdownBody);
 		}
 
-		return ctx.render(PostView, viewModel, { headers: { Vary: "Accept" } });
+		let endpoint = advertise(new URL(routeMap.webmention.href(), ctx.url));
+		return ctx.render(PostView, viewModel, {
+			headers: { Vary: "Accept", Link: endpoint.header },
+		});
 	},
 );
 
@@ -219,6 +243,19 @@ async function renderNotFoundPage(
 ): Promise<Response> {
 	let model = NotFoundViewModel.page(input);
 	return render(NotFoundView, model, { status: 404 });
+}
+
+/**
+ * Reports a deleted post as gone for good, which a Webmention receiver reads as the
+ * withdrawal of every mention the post sent.
+ * @returns HTML 410 response.
+ */
+async function renderGonePage(
+	render: import("~/app/http/context").BlogRenderer,
+	input: NotFoundViewModel.Input,
+): Promise<Response> {
+	let model = NotFoundViewModel.page(input);
+	return render(NotFoundView, model, { status: 410 });
 }
 
 /**
