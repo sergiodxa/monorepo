@@ -54,7 +54,10 @@ function xmlResponse(body: string): Response {
 	return new Response(body, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });
 }
 
-/** Global feed `/rss.xml`: published posts across all visible types. */
+/**
+ * Global feed `/rss.xml`: published posts across all visible types. RSS requires a channel
+ * description, so a blog whose owner left it blank describes its feed by its title.
+ */
 export const feedRss: Action<typeof routes.rss> = createAction(routes.rss, async (ctx) => {
 	let origin = new URL(ctx.request.url).origin;
 	let [siteTitle, description, types] = await Promise.all([
@@ -66,12 +69,12 @@ export const feedRss: Action<typeof routes.rss> = createAction(routes.rss, async
 	let items: RSS.Item[] = [];
 	for (let type of types) items.push(...(await itemsForType(ctx.db, origin, type)));
 
-	let rss = new RSS({ title: siteTitle, description, link: origin });
+	let rss = new RSS({ title: siteTitle, description: description || siteTitle, link: origin });
 	for (let item of items) rss.addItem(item);
 	return xmlResponse(rss.toString());
 });
 
-/** Per-type feed `/:typePath.rss`. */
+/** Per-type feed `/:typePath.rss`, described by the type's label when its description is blank. */
 export const typeRss: Action<typeof routes.typeRss> = createAction(routes.typeRss, async (ctx) => {
 	let { typePath } = s.parse(s.object({ typePath: s.string() }), ctx.params);
 	let type = await PostType.findByPath(ctx.db, typePath);
@@ -85,7 +88,7 @@ export const typeRss: Action<typeof routes.typeRss> = createAction(routes.typeRs
 
 	let rss = new RSS({
 		title: `${siteTitle} — ${type.label}`,
-		description: type.description,
+		description: type.description || type.label,
 		link: `${origin}/${type.path}`,
 	});
 	for (let item of items) rss.addItem(item);
