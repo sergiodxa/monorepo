@@ -17,7 +17,6 @@ import {
 	endpointNotFound,
 	webhookEndpointValidationFailure,
 	webhookEntitlementRequired,
-	WEBHOOK_ENDPOINT_BODY_SCHEMA,
 	writableWebhookEndpoint,
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
 import { patchResource } from "~/app/http/lib/merge-patch";
@@ -25,6 +24,7 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { WEBHOOK_ENDPOINT_BODY_SCHEMA } from "~/app/http/openapi/webhook-endpoints";
 import routes from "~/routes/management";
 
 /** Maps every `updateWebhookEndpoint` refusal onto its own `problem+json` response. */

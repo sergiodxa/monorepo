@@ -22,6 +22,7 @@ import type TenantObject from "~/database/tenant-do";
 
 import {
 	buildManagementTestCore,
+	conformance,
 	fakeHostnameClient,
 	fakeLimiter,
 	grantEntitlement,
@@ -61,7 +62,7 @@ export function buildWebhookEndpointsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db)] });
 
 	router.map(
 		routes.webhookEndpointsRegister,

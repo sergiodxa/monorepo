@@ -7,6 +7,7 @@
  */
 
 import { json } from "@sdxc/http/response";
+import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -15,14 +16,14 @@ import type { RegisterWebhookEndpointResult } from "~/database/webhook-endpoints
 import {
 	webhookEndpointValidationFailure,
 	webhookEntitlementRequired,
-	WEBHOOK_ENDPOINT_BODY_SCHEMA,
 } from "~/app/http/controllers/management/webhook-endpoints/shared";
-import { parseBody } from "~/app/http/lib/parse-body";
+import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
+import { WEBHOOK_ENDPOINTS_REGISTER } from "~/app/http/openapi/webhook-endpoints";
 import routes from "~/routes/management";
 
 /** Maps every `registerWebhookEndpoint` refusal onto its own `problem+json` response. */
@@ -57,14 +58,11 @@ export function createWebhookEndpointsRegisterAction(options: ManagementControll
 			let refused = requireScope(ctx, "webhooks:write");
 			if (refused) return refused;
 
-			let parsed = parseBody(
-				WEBHOOK_ENDPOINT_BODY_SCHEMA,
-				await ctx.request.json().catch(() => null),
-			);
-			if (!parsed.ok) return parsed.response;
+			let input = await WEBHOOK_ENDPOINTS_REGISTER.parse(ctx.request, ctx.params);
+			if (isFailure(input)) return operationInputProblem(input.error);
 
 			let result = await ctx.tenantStub.registerWebhookEndpoint({
-				...parsed.data,
+				...input.data.body,
 				actor: ctx.managementCaller.actor,
 			});
 			if (!result.ok) return registerWebhookEndpointFailure(result);
