@@ -10,6 +10,43 @@
 import * as s from "@remix-run/data-schema";
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 
+/** The validator behind {@link VALIDATION_FAILED_EXTENSIONS}. */
+const VALIDATION_FAILED_VALIDATOR = s.object({ errors: s.optional(ISSUES_SCHEMA) });
+
+/**
+ * `validationFailed`'s extension members. It implements Standard JSON Schema as well as
+ * validating, so a tool documenting the catalog, an OpenAPI document among them, can
+ * describe the `errors` member every validation failure carries.
+ */
+const VALIDATION_FAILED_EXTENSIONS: typeof VALIDATION_FAILED_VALIDATOR & {
+	"~standard": { jsonSchema: { input: JSONSchemaWriter; output: JSONSchemaWriter } };
+} = {
+	...VALIDATION_FAILED_VALIDATOR,
+	"~standard": {
+		...VALIDATION_FAILED_VALIDATOR["~standard"],
+		jsonSchema: {
+			input: (options) => validationFailedJSONSchema(options),
+			output: (options) => validationFailedJSONSchema(options),
+		},
+	},
+};
+
+/** Writes a schema's JSON Schema for the target a caller names, per Standard JSON Schema. */
+type JSONSchemaWriter = (options: { target: string }) => Record<string, unknown>;
+
+/**
+ * The JSON Schema of {@link VALIDATION_FAILED_EXTENSIONS}, with `errors` described by
+ * `ISSUES_SCHEMA`'s own JSON Schema for the same target.
+ *
+ * @param options - The JSON Schema target the caller asked for.
+ */
+function validationFailedJSONSchema(options: { target: string }): Record<string, unknown> {
+	return {
+		type: "object",
+		properties: { errors: ISSUES_SCHEMA["~standard"].jsonSchema.input(options) },
+	};
+}
+
 /**
  * Every problem type the management API answers with. The base URL and slugs are the
  * wire contract a caller branches on, so an entry's slug never changes once published.
@@ -279,6 +316,6 @@ export const managementProblems = defineProblems("https://docs.example.com/error
 		slug: "validation-failed",
 		status: 400,
 		title: "The request did not pass validation",
-		extensions: s.object({ errors: s.optional(ISSUES_SCHEMA) }),
+		extensions: VALIDATION_FAILED_EXTENSIONS,
 	},
 });
