@@ -19,6 +19,7 @@ import type { SelectTeamDomain } from "~/database/schema";
 
 import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -90,7 +91,7 @@ export default createController(teamDomainsRoutes, {
 		 * hostname the team already added, verified or not, answers 409 `conflict`.
 		 */
 		teamDomainsCreate: {
-			middleware: [requireApiKey("team-domains:write")],
+			middleware: [requireApiKey("team-domains:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateTeamDomainSchema);
 				if (isFailure(result)) {

@@ -282,6 +282,81 @@ describe("POST /api/v1/monitors", () => {
 	});
 });
 
+describe("POST /api/v1/monitors with an Idempotency-Key", () => {
+	/** A create carrying `idempotencyKey`, so a test can send the same one twice. */
+	function idempotentCreate(key: string, idempotencyKey: string, body: unknown) {
+		return new Request(`https://uptime.test${routes.api.v1.monitors.create.href()}`, {
+			method: "POST",
+			headers: {
+				Authorization: `Bearer ${key}`,
+				"content-type": "application/json",
+				"Idempotency-Key": idempotencyKey,
+			},
+			body: JSON.stringify(body),
+		});
+	}
+
+	test("a retry with the same key replays the first response and creates one monitor", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+		let body = { name: "Retried", url: "https://example.com/health" };
+
+		let first = await dispatch(db, idempotentCreate(key, '"retry-1"', body));
+		let second = await dispatch(db, idempotentCreate(key, '"retry-1"', body));
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+		expect(await second.json()).toEqual(await first.json());
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("reusing a key for a different body answers idempotency-key-reused", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+
+		await dispatch(db, idempotentCreate(key, '"reuse-1"', { name: "A", url: "https://a.test" }));
+		let response = await dispatch(
+			db,
+			idempotentCreate(key, '"reuse-1"', { name: "B", url: "https://b.test" }),
+		);
+
+		expect(response.status).toBe(422);
+		await expectProblem(response, "idempotencyKeyReused");
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(1);
+	});
+
+	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["monitors:write"]);
+
+		let response = await dispatch(
+			db,
+			idempotentCreate(key, "unquoted", { name: "A", url: "https://a.test" }),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "idempotencyKeyInvalid");
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	test("the same key from another API key runs the create again", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let firstKey = await createApiKey(db, team.id, ["monitors:write"]);
+		let secondKey = await createApiKey(db, team.id, ["monitors:write"]);
+		let body = { name: "Scoped", url: "https://example.com" };
+
+		await dispatch(db, idempotentCreate(firstKey, '"shared"', body));
+		let response = await dispatch(db, idempotentCreate(secondKey, '"shared"', body));
+
+		expect(response.status).toBe(201);
+		expect(await db.count(monitors, { where: { team_id: team.id } })).toBe(2);
+	});
+});
+
 describe("GET /api/v1/monitors/stats", () => {
 	test("returns aggregate stats for the team", async () => {
 		let { db } = createTestDatabase();

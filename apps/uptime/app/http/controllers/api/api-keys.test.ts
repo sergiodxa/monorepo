@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { TypeID } from "@sdxc/typeid";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -306,5 +307,28 @@ describe("POST /api/v1/api-keys", () => {
 
 		let response = await dispatch(db, post(key, { name: "X", scopes: ["monitors:read"] }));
 		expect(response.status).toBe(403);
+	});
+});
+
+describe("POST /api/v1/api-keys with an Idempotency-Key", () => {
+	test("never stores the minted secret, so a retry after completion mints another key", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["api-keys:write", "monitors:read"]);
+		let create = () => {
+			let request = post(key, { name: "CI", scopes: ["monitors:read"] });
+			request.headers.set("Idempotency-Key", '"mint-1"');
+			return request;
+		};
+
+		let first = await dispatch(db, create());
+		let second = await dispatch(db, create());
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+		let firstBody = (await first.json()) as { data: { key: string } };
+		let secondBody = (await second.json()) as { data: { key: string } };
+		expect(secondBody.data.key).not.toBe(firstBody.data.key);
+		expect(await db.count(idempotencyKeys)).toBe(0);
 	});
 });

@@ -21,6 +21,7 @@ import type { SelectInvite } from "~/database/schema";
 
 import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -89,7 +90,7 @@ export default createController(invitesRoutes, {
 		 * already invited, pending or accepted, answers 409 `conflict` and sends nothing.
 		 */
 		invitesCreate: {
-			middleware: [requireApiKey("invites:write")],
+			middleware: [requireApiKey("invites:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateInviteSchema);
 				if (isFailure(result)) {

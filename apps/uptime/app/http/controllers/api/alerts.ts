@@ -24,6 +24,7 @@ import type { AlertConfig, SelectAlert } from "~/database/schema";
 import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
 import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
@@ -229,7 +230,7 @@ export default createController(alertsRoutes, {
 
 		/** POST /api/v1/alerts — creates an alert for the team, up to {@link MAX_ALERTS_PER_TEAM}. */
 		alertsCreate: {
-			middleware: [requireApiKey("alerts:write")],
+			middleware: [requireApiKey("alerts:write"), idempotent],
 			handler: async (ctx) => {
 				let existingCount = await Alert.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_ALERTS_PER_TEAM) {

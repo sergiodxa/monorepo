@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test } from "vitest";
@@ -158,6 +159,29 @@ describe("clean", () => {
 		expect(remaining.map((row) => row.id)).toEqual(["event-inside-window"]);
 	});
 
+	test("deletes idempotency records past their expiry and keeps live ones", async () => {
+		let now = Date.now();
+		for (let [id, expiresAt] of [
+			["key-expired", now - 1000],
+			["key-live", now + MS_PER_DAY],
+		] as const) {
+			await db.create(idempotencyKeys, {
+				id,
+				fingerprint: null,
+				lease: "lease",
+				state: "completed",
+				response: null,
+				lease_expires_at: now,
+				expires_at: expiresAt,
+			});
+		}
+
+		await run();
+
+		let remaining = await db.findMany(idempotencyKeys, {});
+		expect(remaining.map((row) => row.id)).toEqual(["key-live"]);
+	});
+
 	test("keeps DNS and TCP history that the 7-day HTTP window would have deleted", async () => {
 		let now = Date.now();
 		await seedDnsResult("dns-month-old", now - 30 * MS_PER_DAY);
@@ -196,6 +220,7 @@ describe("clean", () => {
 			{ table: "tcp_monitor_results", rows_deleted: 1, batches: 1, reached_ceiling: false },
 			{ table: "flow_monitor_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "alert_events", rows_deleted: 1, batches: 1, reached_ceiling: false },
+			{ table: "idempotency_keys", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "trial_watch_results", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "trial_watches", rows_deleted: 0, batches: 1, reached_ceiling: false },
 			{ table: "leads", rows_deleted: 0, batches: 1, reached_ceiling: false },
@@ -206,7 +231,7 @@ describe("clean", () => {
 		let record = await run();
 
 		expect(record).toMatchObject({ "rows.deleted": 0 });
-		expect(sweptTables(record)).toHaveLength(8);
+		expect(sweptTables(record)).toHaveLength(9);
 	});
 });
 

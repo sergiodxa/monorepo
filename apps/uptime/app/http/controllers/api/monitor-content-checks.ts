@@ -21,6 +21,7 @@ import type { SelectMonitorContentCheck } from "~/database/schema";
 import ContentCheck from "~/app/data/content-check";
 import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -115,7 +116,7 @@ export default createController(monitorContentChecksRoutes, {
 
 		/** POST /api/v1/monitors/:monitorId/content-checks — creates a content check. */
 		monitorContentChecksCreate: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey("monitors:write"), idempotent],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MonitorIdParams, ctx.params);
 				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);

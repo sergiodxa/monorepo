@@ -499,6 +499,13 @@ Two commits, one per workspace.
         Durable Object driver over a `SqlStorage` mock, and a real D1 binding in workerd
   - [x] README
 - [ ] Phase 2: Adopt in uptime
+  - [x] Migration `20260926100000_idempotency_keys.sql`, `app/http/middleware/idempotency.ts`,
+        the four catalog entries, and the `clean` job sweeping expired records
+  - [x] Middleware on the twelve `*Create` actions. No create answers `internalError`; each
+        answers a `5xx` only when its write fails, so the default `shouldStore` holds.
+        `apiKeysCreate` uses `shouldStore: () => false`, keeping the one-time secret out of D1
+  - [x] API docs: `/docs/api/idempotency` and the four problem types
+  - [ ] Build, migrate, deploy
 - [ ] Phase 3: Adopt in auth-saas and `@sdxc/auth`
 - [ ] Phase 4: Publish
 

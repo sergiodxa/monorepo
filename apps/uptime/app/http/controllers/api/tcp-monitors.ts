@@ -20,6 +20,7 @@ import type { SelectTcpMonitor } from "~/database/schema";
 
 import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -99,7 +100,7 @@ export default createController(tcpMonitorsRoutes, {
 
 		/** POST /api/v1/tcp-monitors — creates a TCP monitor for the team. */
 		tcpMonitorsCreate: {
-			middleware: [requireApiKey("tcp-monitors:write")],
+			middleware: [requireApiKey("tcp-monitors:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateTcpMonitorSchema);
 				if (isFailure(result)) {

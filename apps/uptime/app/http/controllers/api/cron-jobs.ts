@@ -23,6 +23,7 @@ import type { SelectCronJobMonitor } from "~/database/schema";
 
 import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
 	DEFAULT_TIMEZONE,
@@ -119,7 +120,7 @@ export default createController(cronJobsRoutes, {
 		 * database.
 		 */
 		cronJobsCreate: {
-			middleware: [requireApiKey("cron-jobs:write")],
+			middleware: [requireApiKey("cron-jobs:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateCronJobSchema);
 				if (isFailure(result)) {

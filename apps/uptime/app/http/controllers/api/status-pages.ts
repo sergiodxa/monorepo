@@ -21,6 +21,7 @@ import type { SelectStatusPage } from "~/database/schema";
 
 import StatusPage from "~/app/data/status-page";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -107,7 +108,7 @@ export default createController(statusPagesRoutes, {
 
 		/** POST /api/v1/status-pages — creates a status page for the team. */
 		statusPagesCreate: {
-			middleware: [requireApiKey("status-pages:write")],
+			middleware: [requireApiKey("status-pages:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateStatusPageSchema);
 				if (isFailure(result)) {

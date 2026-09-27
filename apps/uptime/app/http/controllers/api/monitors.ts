@@ -20,6 +20,7 @@ import { createController } from "remix/router";
 import type { SelectMonitor } from "~/database/schema";
 
 import Monitor from "~/app/data/monitor";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -109,7 +110,7 @@ export default createController(monitorsRoutes, {
 
 		/** POST /api/v1/monitors — creates an HTTP monitor for the team. */
 		monitorsCreate: {
-			middleware: [requireApiKey("monitors:write")],
+			middleware: [requireApiKey("monitors:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateMonitorSchema);
 				if (isFailure(result)) {

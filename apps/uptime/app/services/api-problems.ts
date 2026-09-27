@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { IDEMPOTENCY_PROBLEM_ENTRIES } from "@sdxc/idempotency";
 import { defineProblems, ISSUES_SCHEMA } from "@sdxc/problem";
 import { generateUUID } from "@sdxc/uuid";
 import * as s from "remix/data-schema";
@@ -50,6 +51,7 @@ export const apiProblems = defineProblems("https://uptime.sergiodxa.com/docs/api
 		status: 503,
 		title: "The endpoint is unavailable to this team",
 	},
+	...IDEMPOTENCY_PROBLEM_ENTRIES,
 });
 
 /**

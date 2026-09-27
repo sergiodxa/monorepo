@@ -22,6 +22,7 @@ import type { SelectMaintenanceWindow } from "~/database/schema";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MONITOR_SCOPE_TYPES, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
@@ -145,7 +146,7 @@ export default createController(maintenanceRoutes, {
 
 		/** POST /api/v1/maintenance — creates a maintenance window for the team. */
 		maintenanceCreate: {
-			middleware: [requireApiKey("maintenance:write")],
+			middleware: [requireApiKey("maintenance:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateMaintenanceSchema);
 				if (isFailure(result)) {

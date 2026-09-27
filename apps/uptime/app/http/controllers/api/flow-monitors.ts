@@ -30,6 +30,7 @@ import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
 import FlowMonitor from "~/app/data/flow-monitor";
 import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { MAX_SOURCE_LENGTH } from "~/app/http/validators/flow-monitor";
 import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
@@ -127,7 +128,7 @@ export default createController(flowMonitorsRoutes, {
 
 		/** POST /api/v1/flow-monitors — creates a flow monitor for the team. */
 		flowMonitorsCreate: {
-			middleware: [requireApiKey("flow-monitors:write")],
+			middleware: [requireApiKey("flow-monitors:write"), idempotent],
 			handler: async (ctx) => {
 				let result = await validate(ctx.request, CreateFlowMonitorSchema);
 				if (isFailure(result)) {

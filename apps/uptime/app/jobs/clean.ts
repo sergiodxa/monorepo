@@ -73,6 +73,11 @@ const RETAINED_TABLES: readonly RetainedTable[] = [
 		retentionDays: FLOW_RESULT_RETENTION_DAYS,
 	},
 	{ table: "alert_events", dateColumn: "sent_at", retentionDays: ALERT_EVENT_RETENTION_DAYS },
+	/**
+	 * `expires_at` is already the instant the API stops replaying the record, so the window
+	 * is zero: a row past it only costs storage.
+	 */
+	{ table: "idempotency_keys", dateColumn: "expires_at", retentionDays: 0 },
 ];
 
 /** One table's swept counts, as the run's record notes them. */

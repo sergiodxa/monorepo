@@ -24,6 +24,7 @@ import type { SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
 	DEFAULT_DNS_INTERVAL_SECONDS,
@@ -140,7 +141,7 @@ export default createController(dnsMonitorsRoutes, {
 
 		/** POST /api/v1/dns-monitors — creates a DNS monitor for the team, up to {@link MAX_DNS_MONITORS_PER_TEAM}. */
 		dnsMonitorsCreate: {
-			middleware: [requireApiKey("dns-monitors:write")],
+			middleware: [requireApiKey("dns-monitors:write"), idempotent],
 			handler: async (ctx) => {
 				/**
 				 * Checked before anything is parsed: one check sweeps every tracked name of every monitor

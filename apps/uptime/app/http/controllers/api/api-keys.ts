@@ -24,6 +24,7 @@ import type { SelectApiKey } from "~/database/schema";
 
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
+import { idempotentUnstored } from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
@@ -101,7 +102,7 @@ export default createController(apiKeysRoutes, {
 
 		/** POST /api/v1/api-keys — creates a new API key for the team, returning the plaintext key once. */
 		apiKeysCreate: {
-			middleware: [requireApiKey("api-keys:write")],
+			middleware: [requireApiKey("api-keys:write"), idempotentUnstored],
 			handler: async (ctx) => {
 				let existingCount = await ApiKey.countByTeam(ctx.db, ctx.apiTeam.id);
 				if (existingCount >= MAX_API_KEYS_PER_TEAM) {
