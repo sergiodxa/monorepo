@@ -11,19 +11,19 @@ import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 
-import { isHttpUrl } from "~/app/lib/team-logo";
+import { isHttpsUrl } from "~/app/lib/team-logo";
 
 const TEAM_ROLES = ["member", "admin"] as const;
 
 /**
- * Validates the `update-team` action form body. `logo` is an http(s) URL, or empty to
+ * Validates the `update-team` action form body. `logo` is an https URL, or empty to
  * clear it, matching the URL the team API requires.
  */
 export const UpdateTeamSchema = f.object({
 	name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	logo: f.field(
 		s.optional(
-			s.string().refine((value) => value === "" || isHttpUrl(value), "Expected an http(s) URL"),
+			s.string().refine((value) => value === "" || isHttpsUrl(value), "Expected an https URL"),
 		),
 	),
 });

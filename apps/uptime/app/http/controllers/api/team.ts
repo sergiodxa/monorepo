@@ -19,6 +19,7 @@ import type { InsertTeam, SelectTeam } from "~/database/schema";
 import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { UPDATE_TEAM_BODY, WRITABLE_TEAM } from "~/app/http/openapi/team";
+import { teamLogoUrl } from "~/app/lib/team-logo";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
@@ -40,13 +41,13 @@ function serializeTeam(team: SelectTeam) {
 
 /**
  * The team's writable members as the API reads them, the target a `PATCH` merge patch
- * applies to. A stored logo that is not a URL (legacy rows saved before the dashboard
- * required one) is left out, so a patch leaving `logoUrl` alone validates and keeps it.
+ * applies to. A stored logo that is not an https URL (legacy rows saved before the rule) is
+ * left out, so a patch leaving `logoUrl` alone validates and keeps it.
  */
 function writableTeam(team: SelectTeam) {
 	return {
 		name: team.name,
-		logoUrl: team.logo !== null && URL.canParse(team.logo) ? team.logo : null,
+		logoUrl: teamLogoUrl(team.logo),
 	};
 }
 

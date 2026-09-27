@@ -201,6 +201,19 @@ describe("settings page", () => {
 		expect(body.match(/<input[^>]*name="logo"[^>]*>/)?.[0]).toContain(`value="acme-logo"`);
 	});
 
+	test("draws no image for a legacy http logo, keeping it in the field", async () => {
+		let { db, team, ownerMembership } = await createFixture();
+		let legacy = { ...team, logo: "http://example.com/logo.png" };
+
+		let response = await renderSettings(db, legacy, ownerMembership);
+		let body = await response.text();
+
+		expect(body).not.toMatch(/<img[^>]*src="http:\/\/example\.com\/logo\.png"/);
+		expect(body.match(/<input[^>]*name="logo"[^>]*>/)?.[0]).toContain(
+			`value="http://example.com/logo.png"`,
+		);
+	});
+
 	test("marks the owner's billing link as a document navigation", async () => {
 		let { db, team, ownerMembership } = await createFixture();
 

@@ -68,12 +68,12 @@ Updates the current team's settings with a [JSON merge patch](/docs/api/overview
 
 ### Request Body
 
-Include only the fields you want to change. `null` on `logoUrl` removes the logo; `name` cannot be removed.
+Include only the fields you want to change. `null` on `logoUrl` removes the logo; `name` cannot be removed. A `logoUrl` that is not an `https://` URL answers `400` with a `validation-error` at `/logoUrl`.
 
-| Field     | Type           | Required | Description                                                          |
-| --------- | -------------- | -------- | -------------------------------------------------------------------- |
-| `name`    | string         | No       | Team display name (1-255 characters)                                 |
-| `logoUrl` | string \| null | No       | URL to the team's logo image (must be a valid URL); `null` clears it |
+| Field     | Type           | Required | Description                                                                 |
+| --------- | -------------- | -------- | --------------------------------------------------------------------------- |
+| `name`    | string         | No       | Team display name (1-255 characters)                                        |
+| `logoUrl` | string \| null | No       | URL to the team's logo image (must start with `https://`); `null` clears it |
 
 ### Example Request
 

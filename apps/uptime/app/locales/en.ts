@@ -4586,7 +4586,7 @@ export default {
 						label: "Logo URL",
 						placeholder: "https://example.com/logo.png",
 						description: "A URL to your team's logo image.",
-						error: "Enter a full http:// or https:// URL, or leave it empty to remove the logo.",
+						error: "Enter a full https:// URL, or leave it empty to remove the logo.",
 					},
 					name: {
 						label: "Team Name",

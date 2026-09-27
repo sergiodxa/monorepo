@@ -82,11 +82,19 @@ const INVITE = s
 	})
 	.meta({ id: "Invite" });
 
+/**
+ * A team logo: an absolute `https://` URL, so every stored logo is one a page can load
+ * without mixed content, documented as `format: uri` plus `pattern: ^https://`.
+ */
+function httpsLogoUrl() {
+	return s.string().pipe(checks.url(), checks.pattern(/^https:\/\//));
+}
+
 /** The body `PUT /api/v1/team` accepts; at least one field must be present. */
 export const UPDATE_TEAM_BODY = s
 	.object({
 		name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-		logoUrl: s.optional(s.string().pipe(checks.url())),
+		logoUrl: s.optional(httpsLogoUrl()),
 	})
 	.refine(
 		(value) => value.name !== undefined || value.logoUrl !== undefined,
@@ -100,7 +108,7 @@ export const UPDATE_TEAM_BODY = s
  */
 export const WRITABLE_TEAM = s.object({
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
-	logoUrl: s.optional(s.string().pipe(checks.url())),
+	logoUrl: s.optional(httpsLogoUrl()),
 });
 
 /**
@@ -109,9 +117,7 @@ export const WRITABLE_TEAM = s.object({
  */
 const TEAM_PATCH = s.object({
 	name: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
-	logoUrl: s.optional(
-		s.nullable(s.string().pipe(checks.url())).meta({ description: "`null` clears the logo" }),
-	),
+	logoUrl: s.optional(s.nullable(httpsLogoUrl()).meta({ description: "`null` clears the logo" })),
 });
 
 /** The body `POST /api/v1/team-domains` accepts. */

@@ -8458,6 +8458,7 @@
                       "null"
                     ],
                     "format": "uri",
+                    "pattern": "^https:\\/\\/",
                     "description": "`null` clears the logo"
                   }
                 }
@@ -8478,6 +8479,7 @@
                       "null"
                     ],
                     "format": "uri",
+                    "pattern": "^https:\\/\\/",
                     "description": "`null` clears the logo"
                   }
                 }
@@ -8571,7 +8573,8 @@
                   },
                   "logoUrl": {
                     "type": "string",
-                    "format": "uri"
+                    "format": "uri",
+                    "pattern": "^https:\\/\\/"
                   }
                 },
                 "description": "At least one of `name` and `logoUrl` must be provided"

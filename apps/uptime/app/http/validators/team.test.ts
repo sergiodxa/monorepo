@@ -63,19 +63,22 @@ describe("UpdateTeamSchema", () => {
 		}
 	});
 
-	test.each(["acme-logo", "/logo.png", "ftp://example.com/logo.png", "javascript:alert(1)"])(
-		"rejects the non-http(s) logo %j with an issue on the logo field",
-		(logo) => {
-			let formData = new FormData();
-			formData.set("name", "Acme Inc");
-			formData.set("logo", logo);
-			let result = s.parseSafe(UpdateTeamSchema, formData);
-			expect(result.success).toBe(false);
-			if (!result.success) {
-				expect(result.issues.map((issue) => issue.path?.at(0))).toEqual(["logo"]);
-			}
-		},
-	);
+	test.each([
+		"acme-logo",
+		"/logo.png",
+		"http://example.com/logo.png",
+		"ftp://example.com/logo.png",
+		"javascript:alert(1)",
+	])("rejects the non-https logo %j with an issue on the logo field", (logo) => {
+		let formData = new FormData();
+		formData.set("name", "Acme Inc");
+		formData.set("logo", logo);
+		let result = s.parseSafe(UpdateTeamSchema, formData);
+		expect(result.success).toBe(false);
+		if (!result.success) {
+			expect(result.issues.map((issue) => issue.path?.at(0))).toEqual(["logo"]);
+		}
+	});
 
 	test("rejects an empty name", () => {
 		let formData = new FormData();

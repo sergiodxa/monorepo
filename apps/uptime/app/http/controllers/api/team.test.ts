@@ -178,6 +178,27 @@ describe("PUT /api/v1/team", () => {
 		expect(response.status).toBe(400);
 	});
 
+	test.each(["http://example.com/logo.png", "ftp://example.com/logo.png", "javascript:alert(1)"])(
+		"answers validation-error at /logoUrl for the non-https logo %j",
+		async (logoUrl) => {
+			let { db } = createTestDatabase();
+			let team = await createTeamRow(db);
+			let key = await createApiKey(db, team.id, ["teams:write"]);
+
+			let response = await dispatch(db, {
+				method: "PUT",
+				path: routes.api.v1.teamUpdate.href(),
+				key,
+				body: { logoUrl },
+			});
+
+			let problem = await expectProblem(response, "validationError");
+			expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/logoUrl"]);
+			let unchanged = await db.findOne(teams, { where: { id: team.id } });
+			expect(unchanged?.logo).toBeNull();
+		},
+	);
+
 	test("returns 401 for a missing Authorization header", async () => {
 		let { db } = createTestDatabase();
 		let response = await dispatch(db, {
@@ -269,6 +290,35 @@ describe("PATCH /api/v1/team", () => {
 		let updated = await db.findOne(teams, { where: { id: team.id } });
 		expect(updated?.name).toBe("Patched");
 		expect(updated?.logo).toBe("not a url");
+	});
+
+	test.each(["http://example.com/logo.png", "ftp://example.com/logo.png", "javascript:alert(1)"])(
+		"answers validation-error at /logoUrl for the non-https logo %j",
+		async (logoUrl) => {
+			let { db } = createTestDatabase();
+			let team = await createTeamWithLogo(db, "https://example.com/logo.png");
+			let key = await createApiKey(db, team.id, ["teams:write"]);
+
+			let response = await send(db, mergePatch({ logoUrl }, { key }));
+
+			let problem = await expectProblem(response, "validationError");
+			expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/logoUrl"]);
+			let unchanged = await db.findOne(teams, { where: { id: team.id } });
+			expect(unchanged?.logo).toBe("https://example.com/logo.png");
+		},
+	);
+
+	test("a stored legacy http logo survives a patch that leaves logoUrl alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamWithLogo(db, "http://example.com/logo.png");
+		let key = await createApiKey(db, team.id, ["teams:write"]);
+
+		let response = await send(db, mergePatch({ name: "Patched" }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(teams, { where: { id: team.id } });
+		expect(updated?.name).toBe("Patched");
+		expect(updated?.logo).toBe("http://example.com/logo.png");
 	});
 
 	test("null on name answers validation-error at its pointer", async () => {
