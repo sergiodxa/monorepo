@@ -1098,6 +1098,16 @@
         "@sdxc/xml": "workspace:*",
       },
     },
+    "packages/spam": {
+      "name": "@sdxc/spam",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/doh": "workspace:*",
+        "@sdxc/email-address": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/spec": {
       "name": "@sdxc/spec",
       "version": "0.0.1",
@@ -2018,6 +2028,8 @@
     "@sdxc/session-storage-kv": ["@sdxc/session-storage-kv@workspace:packages/session-storage-kv"],
 
     "@sdxc/sitemap": ["@sdxc/sitemap@workspace:packages/sitemap"],
+
+    "@sdxc/spam": ["@sdxc/spam@workspace:packages/spam"],
 
     "@sdxc/spec": ["@sdxc/spec@workspace:packages/spec"],
 

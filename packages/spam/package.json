@@ -1,0 +1,26 @@
+{
+	"name": "@sdxc/spam",
+	"version": "0.0.1",
+	"description": "Spam scoring for user-generated content, with local rules, reputation checks and a trainable classifier",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./memory": "./src/memory.ts",
+		"./author-email": "./src/author-email.ts",
+		"./stop-forum-spam": "./src/stop-forum-spam.ts",
+		"./link-blocklist": "./src/link-blocklist.ts",
+		"./akismet": "./src/akismet.ts",
+		"./bayes": "./src/bayes.ts",
+		"./workers-ai": "./src/workers-ai.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/doh": "workspace:*",
+		"@sdxc/email-address": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	}
+}

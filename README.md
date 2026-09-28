@@ -160,6 +160,7 @@ Run from the repository root:
 | [server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                                           | ✅  |
 | [session-storage-kv](packages/session-storage-kv)               | Session storage adapter for Cloudflare KV                                                                         | ✅  |
 | [sitemap](packages/sitemap)                                     | Sitemap generation and parsing                                                                                    | ✅  |
+| [spam](packages/spam)                                           | Spam scoring for user-generated content, with local rules, reputation checks and a trainable classifier           | ✅  |
 | [spec](packages/spec)                                           | Executable specification runner for `.spec` files                                                                 | ✅  |
 | [strings](packages/strings)                                     | Inflection, Chicago title case, slugs and grapheme-safe text                                                      | ✅  |
 | [structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                         | ✅  |

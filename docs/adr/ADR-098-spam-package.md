@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-28
+**Accepted** - 2026-09-28
 
 ## Background
 
@@ -35,7 +35,6 @@ part, designed so the network-backed and learning layers plug into the same cont
 
 | Signal                                                            | Source                                       | Cost                     |
 | ----------------------------------------------------------------- | -------------------------------------------- | ------------------------ |
-| Honeypot filled                                                   | The form                                     | Free, synchronous        |
 | Submitted faster than a human can                                 | A trusted render timestamp                   | Free, synchronous        |
 | Link count and density                                            | The content                                  | Free, synchronous        |
 | Shorteners, raw-IP URLs, BBCode                                   | The content                                  | Free, synchronous        |
@@ -83,9 +82,7 @@ export interface Submission {
 		ip?: string;
 		userAgent?: string;
 	};
-	/** The value of the form's honeypot field, when the form has one. */
-	honeypot?: string;
-	/** When the form was rendered, from a source the visitor cannot forge. */
+	/** When the form was rendered, verified by the honeypot token (ADR-099). */
 	renderedAt?: Date;
 	submittedAt?: Date;
 	/** The site's expected languages, as BCP 47 tags, for the language-mismatch rule. */
@@ -128,8 +125,8 @@ let filter = createSpamFilter({
 	timeout: 1500,
 });
 
-let result = await filter.check(submission);
-// Result<{ verdict: "ham" | "unsure" | "spam"; score: number; signals: Signal[]; skipped: Skipped[] }>
+let assessment = await filter.check(submission);
+// { verdict: "ham" | "unsure" | "spam"; score: number; signals: Signal[]; failures: Failure[] }
 ```
 
 1. **Local** checks run first. If their total already reaches the `spam` threshold, the filter
@@ -138,9 +135,9 @@ let result = await filter.check(submission);
 3. **Escalation** checks (the LLM) run only when the total so far is in the `unsure` band, so the
    model is called for the few cases where the rules can't decide.
 
-A remote or escalation check that fails or times out adds no score. It appears in `skipped` with
-its error code, so the app can log it and decide whether an incomplete check should go to moderation.
-The filter itself fails only for invalid configuration.
+A check that fails, throws or times out adds no score. It appears in `failures` with its error
+code, so the app can log it and decide whether an incomplete check should go to moderation. The
+filter itself always resolves an assessment, so `check` returns one directly rather than a `Result`.
 
 ### Verdicts belong to the app
 
@@ -170,37 +167,37 @@ reports of each class, it contributes nothing, so a fresh install relies on the 
 
 ### Export paths
 
-| Path                          | Contents                                                                               |
-| ----------------------------- | -------------------------------------------------------------------------------------- |
-| `@sdxc/spam`                  | `createSpamFilter`, the contract types, `DEFAULT_RULES`, each rule by name             |
-| `@sdxc/spam/stop-forum-spam`  | StopForumSpam lookup of IP, email and username                                         |
-| `@sdxc/spam/link-blocklist`   | Linked-domain lookups against DNS blocklists through `@sdxc/doh`                       |
-| `@sdxc/spam/akismet`          | Akismet `comment-check`, `submit-spam`, `submit-ham`                                   |
-| `@sdxc/spam/bayes`            | The classifier and the `TokenStore` interface with its implementations                 |
-| `@sdxc/spam/workers-ai`       | Escalation through a Workers AI binding passed in by the app                           |
-| `@sdxc/spam/memory`           | A check that returns scripted signals, for testing apps                                |
-| `@sdxc/spam/render-timestamp` | Signs and verifies the form's render time as a hidden field, via `@sdxc/crypto` `hmac` |
+| Path                         | Contents                                                                      |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `@sdxc/spam`                 | `createSpamFilter`, the contract types, `DEFAULT_RULES`, each rule by name    |
+| `@sdxc/spam/stop-forum-spam` | StopForumSpam lookup of IP, email and username                                |
+| `@sdxc/spam/link-blocklist`  | Linked-domain lookups against DNS blocklists through `@sdxc/doh`              |
+| `@sdxc/spam/akismet`         | Akismet `comment-check`, `submit-spam`, `submit-ham`                          |
+| `@sdxc/spam/bayes`           | The classifier and the `TokenStore` interface with its implementations        |
+| `@sdxc/spam/workers-ai`      | Escalation through a Workers AI binding passed in by the app                  |
+| `@sdxc/spam/memory`          | A check that returns scripted signals, for testing apps                       |
+| `@sdxc/spam/author-email`    | The disposable-domain rule, which bundles `@sdxc/email-address`'s domain list |
 
-Separate paths keep the core free of network code and of data tables such as the Unicode
-confusables list, and make each third party an import the app writes on purpose.
+Separate paths keep the core free of network code and of large data tables, such as the
+disposable-domain list, and make each third party an import the app writes on purpose.
 
 ### Default rules
 
-| Rule           | Scores                                                                                             |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| `honeypot`     | A non-empty honeypot; enough on its own to reach `spam`                                            |
-| `timing`       | Submission within a few seconds of render, or a render time far in the past                        |
-| `links`        | Link count and links per word; more weight in short content                                        |
-| `link-syntax`  | `[url=…]` BBCode, or Markdown or HTML links in a `text` field                                      |
-| `link-targets` | URL shorteners, raw-IP hosts, punycode hosts mimicking a known brand                               |
-| `unicode`      | Mixed scripts within a word, confusables, zero-width characters, mathematical alphanumeric letters |
-| `contact-bait` | Messaging-app handles, phone numbers, cryptocurrency wallet addresses                              |
-| `shouting`     | Mostly uppercase, repeated characters, repeated phrases, emoji floods                              |
-| `language`     | Content in a script none of the site's `languages` use                                             |
-| `author-email` | Disposable domain                                                                                  |
-| `author-name`  | A name that contains a URL, or reads as a keyword list                                             |
+| Rule           | Scores                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------- |
+| `timing`       | Submission within a few seconds of render, or a render time far in the past                    |
+| `links`        | Link count and links per word; more weight in short content                                    |
+| `link-syntax`  | `[url=…]` BBCode, or Markdown or HTML links in a `text` field                                  |
+| `link-targets` | URL shorteners, raw-IP hosts, punycode hosts mimicking a known brand                           |
+| `unicode`      | Mixed scripts within a word (homoglyphs), zero-width characters, styled letters, stacked marks |
+| `contact-bait` | Messaging-app handles, phone numbers, cryptocurrency wallet addresses                          |
+| `shouting`     | Mostly uppercase, repeated characters, repeated phrases, emoji floods                          |
+| `language`     | Content in a script none of the site's `languages` use                                         |
+| `author-name`  | A name that contains a URL, or reads as a keyword list                                         |
 
-Each rule's weights are exported, so an app can reweight or drop a rule without reimplementing it.
+Every rule takes its weights and limits as options with documented defaults, so an app reweights
+or drops a rule by building its own list instead of reimplementing one. `author-email` is not in
+`DEFAULT_RULES`, because of the list it bundles; an app adds it from its own path.
 
 ## Consequences
 
@@ -232,8 +229,9 @@ Each rule's weights are exported, so an app can reweight or drop a rule without 
 
 - **No middleware** - forms differ in which fields they post and what a verdict does, so apps call
   the filter from their action. A middleware can follow once two apps share a shape.
-- **Complements, not replaces** - honeypots, CAPTCHA and rate limiting still run before the filter;
-  the filter's honeypot and timing rules only let one call record those signals alongside the rest.
+- **Complements, not replaces** - the honeypot (ADR-099), CAPTCHA and rate limiting run before the
+  filter and refuse the certain cases; the `timing` rule scores the render time the honeypot token
+  verified.
 
 ## Implementation Plan
 
@@ -245,14 +243,14 @@ Each rule's weights are exported, so an app can reweight or drop a rule without 
    submissions, no personal data), with expected verdicts and expected signals
 2. Implement `Submission`, `Signal`, `SpamCheck`, `createSpamFilter` and the local stage
 3. Implement the default rules, with precision and recall against the corpus asserted in tests
-4. Implement the scripted `memory` check and `render-timestamp`
+4. Implement the scripted `memory` check
 
 ### Phase 2: Remote checks
 
 **Priority:** Medium
 
 1. `stop-forum-spam` and `link-blocklist`, tested with MSW
-2. Parallel execution with the timeout and the `skipped` report
+2. Parallel execution with the timeout and the `failures` report
 3. `akismet`, including `report`
 
 ### Phase 3: Learning and escalation
@@ -267,14 +265,14 @@ Each rule's weights are exported, so an app can reweight or drop a rule without 
 
 **Priority:** Low
 
-1. `apps/blog` encore-support replaces its inline honeypot check with the filter
+1. `apps/blog` encore-support runs the filter behind the honeypot middleware
 2. Webmention and any future comment feature use the filter from the start
 
 ## Alternatives Considered
 
 ### 1. A string-only `isSpam(content)` function
 
-The simplest API. **Rejected because**: the strongest signals (honeypot, timing, author reputation,
+The simplest API. **Rejected because**: the strongest signals (timing, author reputation,
 disposable email) are about the submission, not the text. A string-only API leaves them out and
 returns a boolean where moderation needs a reason.
 
@@ -302,21 +300,22 @@ exactly the traffic this package targets.
 - [StopForumSpam API](https://www.stopforumspam.com/usage)
 - [Spamhaus Data Query Service](https://www.spamhaus.com/product/data-query-service/)
 - [SpamAssassin rule scoring](https://spamassassin.apache.org/)
-- [Unicode Technical Standard #39: Security Mechanisms (confusables)](https://www.unicode.org/reports/tr39/)
+- [Unicode Technical Standard #39: Security Mechanisms](https://www.unicode.org/reports/tr39/)
+- [ADR-099: Honeypot Package](./ADR-099-honeypot-package.md)
 - [A Plan for Spam, Paul Graham](https://paulgraham.com/spam.html)
 - [ADR-096: Adopt the shared captcha, email, password, pricing and trailing-slash packages](./ADR-096-adopt-shared-security-and-cost-packages.md)
 
 ## Current Progress
 
-- [ ] Phase 1: Contract, local rules and corpus
-- [ ] Phase 2: Remote checks
-- [ ] Phase 3: Learning and escalation
+- [x] Phase 1: Contract, local rules and corpus
+- [x] Phase 2: Remote checks
+- [x] Phase 3: Learning and escalation
 - [ ] Phase 4: Adoption
 
 ## Notes
 
-- The package stays `private: true` until the contract has settled through at least one app.
-- The Unicode confusables table is generated from UTS #39 data into a committed module, the same way
-  `@sdxc/email-address` ships its disposable-domain list.
-- A render timestamp in a plain hidden field is forgeable; `render-timestamp` signs it, or the app
-  stores it in the session.
+- The package is public from its first release.
+- Homoglyphs are caught by mixed scripts within one word rather than a UTS #39 confusables table:
+  it needs no generated data and catches the substitutions spam actually uses.
+- The honeypot rule and the signed render timestamp moved to `@sdxc/honeypot` (ADR-099): a filled
+  trap is a fact about the request that justifies refusing it before the filter runs.
