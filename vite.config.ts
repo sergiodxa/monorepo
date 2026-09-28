@@ -128,6 +128,31 @@ const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	},
 };
 
+/**
+ * Takes its bindings from `apps/auth-saas`'s own wrangler config. Tests over the tenant
+ * object's database need `node:sqlite`, absent from workerd, so they stay on the threads
+ * pool. Declared apart from `projects` for the same reason as {@link BLOG_WORKERS_PROJECT}.
+ */
+const AUTH_SAAS_WORKERS_PROJECT: TestProjectInlineConfiguration = {
+	root: "apps/auth-saas",
+	plugins: [
+		cloudflareTest({
+			wrangler: { configPath: "./wrangler.jsonc" },
+			/**
+			 * Every binding stays local, so a `remote: true` binding never opens a proxy session
+			 * to the real account, which needs credentials CI does not have.
+			 */
+			remoteBindings: false,
+		}),
+	],
+	resolve: { tsconfigPaths: true },
+	test: {
+		name: "auth-saas-workers",
+		include: ["**/*.workers.test.ts?(x)"],
+		testTimeout: 20_000,
+	},
+};
+
 export default defineConfig({
 	run: {
 		tasks: {
@@ -307,6 +332,11 @@ export default defineConfig({
 				test: {
 					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],
+					/**
+					 * `*.workers.test.ts` belongs to `auth-saas-workers`. Vitest's defaults are
+					 * spread back in because naming `exclude` replaces them.
+					 */
+					exclude: [...defaultExclude, "**/*.workers.test.ts?(x)"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
@@ -316,6 +346,7 @@ export default defineConfig({
 					testTimeout: 20_000,
 				},
 			},
+			AUTH_SAAS_WORKERS_PROJECT,
 			{
 				root: "apps/blog-saas",
 				plugins: [cloudflareWorkersStub()],

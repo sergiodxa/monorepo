@@ -1,18 +1,14 @@
 /**
- * Drives `/u/sign-in` and `/u/reset` through a real router mounting the
- * Turnstile challenge trigger the way `tenant-app.ts` wires it: the widget
- * stays off an ordinary page load, appears once the connecting address has
- * crossed half its shared budget, and a submission made while challenged is
- * refused without a token or a token Turnstile rejects, but proceeds when the
- * token checks out or when the verification call itself cannot complete — the
- * open policy sign-in and reset share. `MemoryCaptcha` answers each verification,
- * and the widget's loader carries the response's CSP nonce.
+ * Drives `/u/sign-in` and `/u/reset` through a real router mounted the way `tenant-app.ts`
+ * wires them: the widget stays off an unchallenged page and appears on a challenged one, and a
+ * submission made while challenged is refused without a token or with one Turnstile rejects, but
+ * proceeds when the token checks out or the verification call cannot complete. The challenge
+ * decision is fixed per test; the KV counter behind it has its own Workers-pool test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RateLimitKVNamespace } from "@sdxc/rate-limit";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { MemoryCaptcha } from "@sdxc/captcha/memory";
@@ -26,7 +22,7 @@ import type Tenant from "~/database/tenant-do";
 import i18n from "~/app/http/middleware/i18n";
 import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
-import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
+import { TurnstileChallengeContext } from "~/app/http/middleware/turnstile-challenge";
 import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import routes from "~/routes/tenant";
@@ -38,26 +34,24 @@ import { buildHarness, createTestSubjectWithPassword } from "./test-harness";
 let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
 beforeEach(() => turnstile.reset());
 
-/** A KV namespace double backed by a Map, for a fresh challenge counter per test. */
-function memoryKv(): RateLimitKVNamespace {
-	let entries = new Map<string, string>();
-	return {
-		async get(key) {
-			return entries.get(key) ?? null;
-		},
-		async put(key, value) {
-			entries.set(key, value);
-		},
-		async delete(key) {
-			entries.delete(key);
-		},
+/**
+ * Publishes a fixed challenge decision the way `turnstileChallenge` publishes the one its counter
+ * reaches, so a test chooses whether the address it drives is challenged.
+ *
+ * @param challenged - Whether the connecting address has crossed half its shared budget.
+ * @returns The middleware setting `turnstileChallenge` on the context.
+ */
+function fixedChallenge(challenged: boolean): Middleware {
+	return (context, next) => {
+		context.set(TurnstileChallengeContext, challenged, { property: "turnstileChallenge" });
+		return next();
 	};
 }
 
-/** Builds a router mounting `turnstileChallenge` on sign-in and reset, the way `tenant-app.ts` shares one instance across both. */
-async function buildChallengeRouter(kv: RateLimitKVNamespace) {
+/** Builds a router mounting the challenge decision on sign-in and reset, the way `tenant-app.ts` shares one across both. */
+async function buildChallengeRouter(challenged: boolean) {
 	let harness = await buildHarness();
-	let challenge = turnstileChallenge(kv);
+	let challenge = fixedChallenge(challenged);
 	let verification = turnstileVerification(turnstile);
 
 	let middleware: Middleware[] = [
@@ -100,19 +94,9 @@ function requestTo(
 	return harness.request(path, { ...init, headers });
 }
 
-/** Spends the shared challenge counter past its halfway mark with plain page loads. */
-async function crossChallengeThreshold(
-	router: Awaited<ReturnType<typeof buildChallengeRouter>>["router"],
-	harness: Awaited<ReturnType<typeof buildHarness>>,
-) {
-	for (let i = 0; i < 5; i += 1) {
-		await router.fetch(requestTo(harness, "/u/sign-in?interaction=int_1"));
-	}
-}
-
 describe("sign-in", () => {
-	test("shows no Turnstile widget before the address crosses the halfway mark", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
+	test("shows no Turnstile widget while the address is not challenged", async () => {
+		let { harness, router } = await buildChallengeRouter(false);
 
 		let response = await router.fetch(requestTo(harness, "/u/sign-in?interaction=int_1"));
 
@@ -120,9 +104,8 @@ describe("sign-in", () => {
 		expect(body).not.toContain("challenges.cloudflare.com/turnstile/v0/api.js");
 	});
 
-	test("shows the Turnstile widget once the address crosses the halfway mark", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+	test("shows the Turnstile widget once the address is challenged", async () => {
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(requestTo(harness, "/u/sign-in?interaction=int_1"));
 
@@ -131,8 +114,7 @@ describe("sign-in", () => {
 	});
 
 	test("loads the widget's script under the nonce the response's CSP allows", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(requestTo(harness, "/u/sign-in?interaction=int_1"));
 
@@ -143,7 +125,7 @@ describe("sign-in", () => {
 	});
 
 	test("proceeds without a token while the address is not challenged", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
+		let { harness, router } = await buildChallengeRouter(false);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -160,8 +142,7 @@ describe("sign-in", () => {
 	});
 
 	test("refuses a challenged submission with no Turnstile token", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -177,8 +158,7 @@ describe("sign-in", () => {
 
 	test("refuses a challenged submission whose Turnstile token is rejected", async () => {
 		turnstile.failNext("rejected");
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -197,8 +177,7 @@ describe("sign-in", () => {
 	});
 
 	test("proceeds to the ordinary credential check once Turnstile confirms the token", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -220,8 +199,7 @@ describe("sign-in", () => {
 
 	test("proceeds to the ordinary credential check when the Turnstile call cannot complete", async () => {
 		turnstile.failNext("unavailable");
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		await crossChallengeThreshold(router, harness);
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -242,12 +220,11 @@ describe("sign-in", () => {
 	});
 
 	test("a genuinely correct sign-in still succeeds once Turnstile confirms the token", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
+		let { harness, router } = await buildChallengeRouter(true);
 		await createTestSubjectWithPassword(harness.tenantDO, {
 			email: "jane@example.com",
 			password: "correct horse battery staple",
 		});
-		await crossChallengeThreshold(router, harness);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/sign-in?interaction=int_1", {
@@ -266,21 +243,15 @@ describe("sign-in", () => {
 });
 
 describe("reset", () => {
-	test("shows the Turnstile widget on both legs once the address crosses the halfway mark", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		for (let i = 0; i < 5; i += 1) {
-			await router.fetch(requestTo(harness, "/u/reset"));
-		}
+	test("shows the Turnstile widget on the request leg once the address is challenged", async () => {
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let requestLeg = await router.fetch(requestTo(harness, "/u/reset"));
 		expect(await requestLeg.text()).toContain("challenges.cloudflare.com/turnstile/v0/api.js");
 	});
 
 	test("refuses a challenged request submission with no Turnstile token", async () => {
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		for (let i = 0; i < 5; i += 1) {
-			await router.fetch(requestTo(harness, "/u/reset"));
-		}
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/reset", {
@@ -295,10 +266,7 @@ describe("reset", () => {
 
 	test("proceeds when the Turnstile verification call cannot complete", async () => {
 		turnstile.failNext("unavailable");
-		let { harness, router } = await buildChallengeRouter(memoryKv());
-		for (let i = 0; i < 5; i += 1) {
-			await router.fetch(requestTo(harness, "/u/reset"));
-		}
+		let { harness, router } = await buildChallengeRouter(true);
 
 		let response = await router.fetch(
 			requestTo(harness, "/u/reset", {
