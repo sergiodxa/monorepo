@@ -57,15 +57,19 @@ export const TENANT_SECURITY_POLICY: SecurityHeaders.Policy = {
 	permissionsPolicy: PERMISSIONS_POLICY,
 };
 
-/** The platform's own pages: the landing page and the billing redirects. */
+/**
+ * The platform's own pages: the landing page, the billing redirects, and `/signup`, whose
+ * form embeds the Turnstile widget.
+ */
 export const PLATFORM_SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicyReportOnly: {
 		defaultSrc: ["self"],
-		scriptSrc: ["self", "nonce"],
+		scriptSrc: ["self", "nonce", TURNSTILE_ORIGIN],
 		styleSrc: ["self", "unsafe-inline"],
 		imgSrc: ["self", "data:"],
 		fontSrc: ["self"],
 		connectSrc: ["self"],
+		frameSrc: [TURNSTILE_ORIGIN],
 		frameAncestors: ["none"],
 		objectSrc: ["none"],
 		baseUri: ["none"],

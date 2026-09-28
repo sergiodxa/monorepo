@@ -12,11 +12,10 @@
 import type { Form } from "@sdxc/ui";
 import type { Handle } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { css } from "remix/ui";
 
 import type { PasswordPolicy } from "~/database/passwords";
-
-import { TurnstileWidget } from "./hosted/turnstile-widget";
 
 let pageWrap = css({
 	minHeight: "100vh",
@@ -153,6 +152,8 @@ export namespace SignUpForm {
 		policy: PasswordPolicy;
 		/** The platform's Turnstile site key, rendered unconditionally — signup always challenges. */
 		turnstileSiteKey: string;
+		/** The response's CSP nonce, for the widget's loader script. */
+		turnstileNonce?: string;
 		issues?: ReadonlyArray<Form.Issue>;
 	}
 }
@@ -166,7 +167,7 @@ export namespace SignUpForm {
  */
 export function SignUpForm(handle: Handle<SignUpForm.Props>) {
 	return () => {
-		let { action, policy, turnstileSiteKey, issues } = handle.props;
+		let { action, policy, turnstileSiteKey, turnstileNonce, issues } = handle.props;
 		let topIssue = formIssue(issues);
 
 		return (
@@ -232,7 +233,7 @@ export function SignUpForm(handle: Handle<SignUpForm.Props>) {
 							)}
 						</div>
 
-						<TurnstileWidget siteKey={turnstileSiteKey} />
+						<TurnstileWidget siteKey={turnstileSiteKey} nonce={turnstileNonce} />
 
 						<button mix={[submitButton]} type="submit">
 							Create organization

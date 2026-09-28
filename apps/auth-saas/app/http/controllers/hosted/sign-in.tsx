@@ -16,7 +16,6 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -26,7 +25,10 @@ import {
 	respondToAuthorizationOutcome,
 	safeReturnTo,
 } from "~/app/http/controllers/hosted/outcome";
-import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import {
+	passesConditionalTurnstileChallenge,
+	turnstileNonce,
+} from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { CREDENTIAL_FAILURE_SPEND } from "~/app/http/middleware/tenant-rate-limit";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
@@ -67,6 +69,7 @@ async function renderSignInPage(
 				error={input.error}
 				challenge={input.challenge}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
+				turnstileNonce={turnstileNonce(ctx)}
 			/>
 		</HostedDocument>,
 		input.error ? { status: 400 } : undefined,
@@ -123,12 +126,11 @@ export const signInSubmit = createAction(routes.hostedSignInSubmit, async (ctx) 
 	let origin = requestOrigin(ctx.request);
 
 	if (challenge) {
-		let turnstilePassed = await passesConditionalTurnstileChallenge(
-			env.TURNSTILE_SECRET_KEY,
-			ctx.formData,
-			getClientIP(ctx.request) ?? undefined,
-			{ env, tenantId: ctx.tenant.id, country: origin.country ?? undefined },
-		);
+		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+			env,
+			tenantId: ctx.tenant.id,
+			country: origin.country ?? undefined,
+		});
 		if (!turnstilePassed) {
 			return renderSignInPage(ctx, {
 				loginHint,

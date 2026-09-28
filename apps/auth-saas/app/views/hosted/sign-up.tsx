@@ -11,12 +11,11 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { is, maxIs } from "@sdxc/u/size";
 import { Button, Card, Form, TextField } from "@sdxc/ui";
 
 import type { PasswordPolicy } from "~/database/passwords";
-
-import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace SignUpPage {
 	export interface Props {
@@ -26,6 +25,8 @@ export namespace SignUpPage {
 		policy: PasswordPolicy;
 		/** The platform's Turnstile site key, rendered unconditionally — sign-up always challenges. */
 		turnstileSiteKey: string;
+		/** The response's CSP nonce, for the widget's loader script. */
+		turnstileNonce?: string;
 		issues?: ReadonlyArray<Form.Issue>;
 	}
 }
@@ -38,7 +39,7 @@ export namespace SignUpPage {
  */
 export function SignUpPage(handle: Handle<SignUpPage.Props>) {
 	return () => {
-		let { t, action, policy, turnstileSiteKey, issues } = handle.props;
+		let { t, action, policy, turnstileSiteKey, turnstileNonce, issues } = handle.props;
 
 		return (
 			<Card mix={[is("100%"), maxIs("24rem")]}>
@@ -74,7 +75,7 @@ export function SignUpPage(handle: Handle<SignUpPage.Props>) {
 							autoComplete="name"
 						/>
 
-						<TurnstileWidget siteKey={turnstileSiteKey} />
+						<TurnstileWidget siteKey={turnstileSiteKey} nonce={turnstileNonce} />
 
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedSignUp.submit")}

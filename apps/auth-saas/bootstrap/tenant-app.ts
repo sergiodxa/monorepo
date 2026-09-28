@@ -12,6 +12,7 @@
 
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { Turnstile } from "@sdxc/captcha/turnstile";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
@@ -87,6 +88,7 @@ import {
 	tokenRateLimit,
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { securityTxtEntry } from "~/app/lib/security-txt";
 import { userinfoMetadataEntry } from "~/app/lib/userinfo-resource";
@@ -159,6 +161,11 @@ let protocolLimit = protocolRateLimit(env.PROTOCOL_RATE_LIMITER, env);
  */
 let credentialTurnstileChallenge = turnstileChallenge(env.TURNSTILE_CHALLENGE_KV);
 
+/** Verifies the token every hosted form that can challenge submits, after its rate limits. */
+let submittedTurnstile = turnstileVerification(
+	new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY }),
+);
+
 tenantRouter.map(routes.openidConfiguration, {
 	middleware: [protocolLimit],
 	handler: openidConfiguration as RequestHandler,
@@ -198,7 +205,7 @@ tenantRouter.map(routes.hostedSignInShow, {
 	handler: signInShow as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInSubmit, {
-	middleware: [credentialTurnstileChallenge, credentialRateLimit],
+	middleware: [credentialTurnstileChallenge, credentialRateLimit, submittedTurnstile],
 	handler: signInSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
@@ -232,7 +239,7 @@ tenantRouter.map(routes.hostedDeviceShow, {
 tenantRouter.map(routes.hostedDeviceSubmit, hostedDeviceSubmit);
 tenantRouter.map(routes.hostedSignUpShow, signUpShow);
 tenantRouter.map(routes.hostedSignUpSubmit, {
-	middleware: [credentialRateLimit, mailRateLimit],
+	middleware: [credentialRateLimit, mailRateLimit, submittedTurnstile],
 	handler: signUpSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedVerifyShow, verifyShow);
@@ -245,7 +252,12 @@ tenantRouter.map(routes.hostedResetShow, {
 	handler: resetShow as RequestHandler,
 });
 tenantRouter.map(routes.hostedResetSubmit, {
-	middleware: [credentialTurnstileChallenge, credentialRateLimit, resetMailRateLimit],
+	middleware: [
+		credentialTurnstileChallenge,
+		credentialRateLimit,
+		resetMailRateLimit,
+		submittedTurnstile,
+	],
 	handler: resetSubmit as RequestHandler,
 });
 tenantRouter.map(routes.hostedMagicLinkShow, {
@@ -257,6 +269,7 @@ tenantRouter.map(routes.hostedMagicLinkSubmit, {
 		credentialTurnstileChallenge,
 		credentialRateLimit,
 		magicLinkRateLimit(env.MAGIC_LINK_RATE_LIMIT_KV, env),
+		submittedTurnstile,
 	],
 	handler: magicLinkSubmit as RequestHandler,
 });

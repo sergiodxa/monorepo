@@ -73,6 +73,14 @@ describe("PLATFORM_SECURITY_POLICY", () => {
 		expect(directivesOf(headers.get("Content-Security-Policy-Report-Only")).reportTo).toBe("csp");
 		expect(headers.get("Cross-Origin-Opener-Policy")).toBe("same-origin");
 	});
+
+	test("lets the sign-up form's Turnstile widget load its script and challenge frame", async () => {
+		let headers = await headersFor(PLATFORM_SECURITY_POLICY);
+
+		let directives = directivesOf(headers.get("Content-Security-Policy-Report-Only"));
+		expect(directives.scriptSrc).toContain("https://challenges.cloudflare.com");
+		expect(directives.frameSrc).toEqual(["https://challenges.cloudflare.com"]);
+	});
 });
 
 describe("MANAGEMENT_SECURITY_POLICY", () => {

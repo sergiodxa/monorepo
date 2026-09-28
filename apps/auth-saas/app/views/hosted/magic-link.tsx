@@ -14,11 +14,10 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Alert, Button, Card, Form, Link, Text, TextField } from "@sdxc/ui";
-
-import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace MagicLinkPage {
 	export type Props =
@@ -30,6 +29,8 @@ export namespace MagicLinkPage {
 				challenge: boolean;
 				/** The platform's Turnstile site key, rendered only when `challenge` is set. */
 				turnstileSiteKey: string;
+				/** The response's CSP nonce, for the widget's loader script. */
+				turnstileNonce?: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| {
@@ -168,7 +169,9 @@ export function MagicLinkPage(handle: Handle<MagicLinkPage.Props>) {
 							required
 							autoComplete="username"
 						/>
-						{props.challenge && <TurnstileWidget siteKey={props.turnstileSiteKey} />}
+						{props.challenge && (
+							<TurnstileWidget siteKey={props.turnstileSiteKey} nonce={props.turnstileNonce} />
+						)}
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedMagicLink.requestSubmit")}
 						</Button>

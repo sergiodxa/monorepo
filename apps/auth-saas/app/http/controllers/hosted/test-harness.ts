@@ -9,8 +9,9 @@
  */
 
 import type { Transport } from "@sdxc/mail";
-import type { Middleware } from "remix/router";
+import type { Middleware, RequestHandler } from "remix/router";
 
+import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
@@ -62,6 +63,7 @@ import {
 	TENANT_REGION_HEADER,
 	tenant,
 } from "~/app/http/middleware/tenant";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import Tenant from "~/database/tenant-do";
 import routes from "~/routes/tenant";
@@ -73,8 +75,12 @@ export const REDIRECT_URI = "https://example.com/callback";
 /** The sender identity every test message carries, standing in for the real `EMAIL_FROM`. */
 export const TEST_MAIL_FROM = { email: "no-reply@example.com", name: "Test Sender" };
 
-/** Builds the tenant router wired to a constructed Durable Object, mapping every hosted route. */
-function buildRouter(tenantDO: Tenant, transport: Transport) {
+/**
+ * Builds the tenant router wired to a constructed Durable Object, mapping every hosted route,
+ * with `turnstile` verifying each form that can challenge.
+ */
+function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCaptcha) {
+	let verification = turnstileVerification(turnstile);
 	let middleware: Middleware[] = [
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
@@ -90,7 +96,10 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	router.map(routes.token, token);
 	router.map(routes.register, register);
 	router.map(routes.hostedSignInShow, signInShow);
-	router.map(routes.hostedSignInSubmit, signInSubmit);
+	router.map(routes.hostedSignInSubmit, {
+		middleware: [verification],
+		handler: signInSubmit as RequestHandler,
+	});
 	router.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);
 	router.map(routes.hostedSignInPasskeyVerify, signInPasskeyVerify);
 	router.map(routes.hostedSecondFactorShow, secondFactorShow);
@@ -106,13 +115,22 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	router.map(routes.hostedDeviceShow, hostedDeviceShow);
 	router.map(routes.hostedDeviceSubmit, hostedDeviceSubmit);
 	router.map(routes.hostedSignUpShow, signUpShow);
-	router.map(routes.hostedSignUpSubmit, signUpSubmit);
+	router.map(routes.hostedSignUpSubmit, {
+		middleware: [verification],
+		handler: signUpSubmit as RequestHandler,
+	});
 	router.map(routes.hostedVerifyShow, verifyShow);
 	router.map(routes.hostedVerifyResend, verifyResend);
 	router.map(routes.hostedResetShow, resetShow);
-	router.map(routes.hostedResetSubmit, resetSubmit);
+	router.map(routes.hostedResetSubmit, {
+		middleware: [verification],
+		handler: resetSubmit as RequestHandler,
+	});
 	router.map(routes.hostedMagicLinkShow, magicLinkShow);
-	router.map(routes.hostedMagicLinkSubmit, magicLinkSubmit);
+	router.map(routes.hostedMagicLinkSubmit, {
+		middleware: [verification],
+		handler: magicLinkSubmit as RequestHandler,
+	});
 	router.map(routes.hostedMagicLinkCompleteShow, magicLinkCompleteShow);
 	router.map(routes.hostedMagicLinkCompleteSubmit, magicLinkCompleteSubmit);
 	router.map(routes.hostedError, errorShow);
@@ -126,6 +144,8 @@ export interface Harness {
 	router: ReturnType<typeof buildRouter>;
 	/** Records every message the hosted flow sent, unless a test supplied its own transport. */
 	mailTransport: Transport;
+	/** Answers every Turnstile verification; any non-empty token passes unless a test queues otherwise. */
+	turnstile: MemoryCaptcha;
 	/** A request already resolved to the fixture tenant, with a `Cookie` header when given one. */
 	request(path: string, init?: RequestInit & { cookie?: string }): Request;
 }
@@ -144,12 +164,14 @@ export async function buildHarness(options: BuildHarnessOptions = {}): Promise<H
 	await tenantDO.provision({ tenantId: TENANT_ID, issuer: ISSUER });
 	let db = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 	let transport = options.transport ?? new MemoryTransport();
+	let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
 
 	return {
 		tenantDO,
 		db,
-		router: buildRouter(tenantDO, transport),
+		router: buildRouter(tenantDO, transport, turnstile),
 		mailTransport: transport,
+		turnstile,
 		request(path, init = {}) {
 			let { cookie, headers: initHeaders, ...rest } = init;
 			let headers = new Headers(initHeaders);

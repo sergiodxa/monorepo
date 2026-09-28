@@ -11,12 +11,11 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { is, maxIs } from "@sdxc/u/size";
 import { Button, Card, Form, Link, Text, TextField } from "@sdxc/ui";
 
 import type { PasswordPolicy } from "~/database/passwords";
-
-import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace ResetPage {
 	export type Props =
@@ -28,6 +27,8 @@ export namespace ResetPage {
 				challenge: boolean;
 				/** The platform's Turnstile site key, rendered only when `challenge` is set. */
 				turnstileSiteKey: string;
+				/** The response's CSP nonce, for the widget's loader script. */
+				turnstileNonce?: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| { t: Translate; state: "requested" }
@@ -38,6 +39,8 @@ export namespace ResetPage {
 				policy: PasswordPolicy;
 				challenge: boolean;
 				turnstileSiteKey: string;
+				/** The response's CSP nonce, for the widget's loader script. */
+				turnstileNonce?: string;
 				issues?: ReadonlyArray<Form.Issue>;
 		  }
 		| { t: Translate; state: "completed"; signInHref: string }
@@ -119,7 +122,9 @@ export function ResetPage(handle: Handle<ResetPage.Props>) {
 								required
 								autoComplete="new-password"
 							/>
-							{props.challenge && <TurnstileWidget siteKey={props.turnstileSiteKey} />}
+							{props.challenge && (
+								<TurnstileWidget siteKey={props.turnstileSiteKey} nonce={props.turnstileNonce} />
+							)}
 							<Button type="submit" color="brand" mix={[is("100%")]}>
 								{t("hostedReset.completeSubmit")}
 							</Button>
@@ -143,7 +148,9 @@ export function ResetPage(handle: Handle<ResetPage.Props>) {
 							required
 							autoComplete="username"
 						/>
-						{props.challenge && <TurnstileWidget siteKey={props.turnstileSiteKey} />}
+						{props.challenge && (
+							<TurnstileWidget siteKey={props.turnstileSiteKey} nonce={props.turnstileNonce} />
+						)}
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedReset.requestSubmit")}
 						</Button>

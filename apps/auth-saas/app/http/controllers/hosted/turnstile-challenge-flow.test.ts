@@ -5,8 +5,8 @@
  * crossed half its shared budget, and a submission made while challenged is
  * refused without a token or a token Turnstile rejects, but proceeds when the
  * token checks out or when the verification call itself cannot complete — the
- * open policy sign-in and reset share. The `siteverify` call is stubbed with
- * MSW.
+ * open policy sign-in and reset share. `MemoryCaptcha` answers each verification,
+ * and the widget's loader carries the response's CSP nonce.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,11 +15,11 @@
 import type { RateLimitKVNamespace } from "@sdxc/rate-limit";
 import type { Middleware, RequestHandler } from "remix/router";
 
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
+import { MemoryCaptcha } from "@sdxc/captcha/memory";
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type Tenant from "~/database/tenant-do";
 
@@ -27,18 +27,16 @@ import i18n from "~/app/http/middleware/i18n";
 import render from "~/app/http/middleware/render";
 import { tenant } from "~/app/http/middleware/tenant";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
+import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import routes from "~/routes/tenant";
 
 import { resetShow, resetSubmit } from "./reset";
 import { signInShow, signInSubmit } from "./sign-in";
 import { buildHarness, createTestSubjectWithPassword } from "./test-harness";
 
-const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
-
-let server = setupServer();
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
+beforeEach(() => turnstile.reset());
 
 /** A KV namespace double backed by a Map, for a fresh challenge counter per test. */
 function memoryKv(): RateLimitKVNamespace {
@@ -60,8 +58,10 @@ function memoryKv(): RateLimitKVNamespace {
 async function buildChallengeRouter(kv: RateLimitKVNamespace) {
 	let harness = await buildHarness();
 	let challenge = turnstileChallenge(kv);
+	let verification = turnstileVerification(turnstile);
 
 	let middleware: Middleware[] = [
+		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
 		render as Middleware,
 		formData() as Middleware,
@@ -74,7 +74,7 @@ async function buildChallengeRouter(kv: RateLimitKVNamespace) {
 		handler: signInShow as RequestHandler,
 	});
 	router.map(routes.hostedSignInSubmit, {
-		middleware: [challenge],
+		middleware: [challenge, verification],
 		handler: signInSubmit as RequestHandler,
 	});
 	router.map(routes.hostedResetShow, {
@@ -82,7 +82,7 @@ async function buildChallengeRouter(kv: RateLimitKVNamespace) {
 		handler: resetShow as RequestHandler,
 	});
 	router.map(routes.hostedResetSubmit, {
-		middleware: [challenge],
+		middleware: [challenge, verification],
 		handler: resetSubmit as RequestHandler,
 	});
 
@@ -130,6 +130,35 @@ describe("sign-in", () => {
 		expect(body).toContain("challenges.cloudflare.com/turnstile/v0/api.js");
 	});
 
+	test("loads the widget's script under the nonce the response's CSP allows", async () => {
+		let { harness, router } = await buildChallengeRouter(memoryKv());
+		await crossChallengeThreshold(router, harness);
+
+		let response = await router.fetch(requestTo(harness, "/u/sign-in?interaction=int_1"));
+
+		let policy = response.headers.get("Content-Security-Policy-Report-Only") ?? "";
+		let nonce = /'nonce-([^']+)'/.exec(policy)?.[1];
+		expect(nonce).toBeDefined();
+		expect(await response.text()).toContain(`nonce="${nonce}"`);
+	});
+
+	test("proceeds without a token while the address is not challenged", async () => {
+		let { harness, router } = await buildChallengeRouter(memoryKv());
+
+		let response = await router.fetch(
+			requestTo(harness, "/u/sign-in?interaction=int_1", {
+				method: "POST",
+				body: new URLSearchParams({ identifier: "jane@example.com", password: "wrong-password" }),
+				headers: { "Content-Type": "application/x-www-form-urlencoded" },
+			}),
+		);
+
+		let body = await response.text();
+		expect(body).not.toContain("verify you're not a robot");
+		expect(body).toContain("incorrect");
+		expect(turnstile.calls).toHaveLength(0);
+	});
+
 	test("refuses a challenged submission with no Turnstile token", async () => {
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		await crossChallengeThreshold(router, harness);
@@ -147,7 +176,7 @@ describe("sign-in", () => {
 	});
 
 	test("refuses a challenged submission whose Turnstile token is rejected", async () => {
-		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.json({ success: false })));
+		turnstile.failNext("rejected");
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		await crossChallengeThreshold(router, harness);
 
@@ -168,7 +197,6 @@ describe("sign-in", () => {
 	});
 
 	test("proceeds to the ordinary credential check once Turnstile confirms the token", async () => {
-		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.json({ success: true })));
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		await crossChallengeThreshold(router, harness);
 
@@ -191,7 +219,7 @@ describe("sign-in", () => {
 	});
 
 	test("proceeds to the ordinary credential check when the Turnstile call cannot complete", async () => {
-		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.error()));
+		turnstile.failNext("unavailable");
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		await crossChallengeThreshold(router, harness);
 
@@ -214,7 +242,6 @@ describe("sign-in", () => {
 	});
 
 	test("a genuinely correct sign-in still succeeds once Turnstile confirms the token", async () => {
-		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.json({ success: true })));
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		await createTestSubjectWithPassword(harness.tenantDO, {
 			email: "jane@example.com",
@@ -234,9 +261,6 @@ describe("sign-in", () => {
 			}),
 		);
 
-		// The credential check itself proceeded and set a session cookie — the
-		// interaction id names no real row, so `resumeAuthorization` is left to
-		// answer whatever it answers past that point.
 		expect(response.headers.get("Set-Cookie")).toMatch(/^__Host-session=/);
 	});
 });
@@ -270,7 +294,7 @@ describe("reset", () => {
 	});
 
 	test("proceeds when the Turnstile verification call cannot complete", async () => {
-		server.use(http.post(SITEVERIFY_URL, () => HttpResponse.error()));
+		turnstile.failNext("unavailable");
 		let { harness, router } = await buildChallengeRouter(memoryKv());
 		for (let i = 0; i < 5; i += 1) {
 			await router.fetch(requestTo(harness, "/u/reset"));

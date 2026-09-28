@@ -10,13 +10,13 @@
 import type { Translate } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { gap, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
 import { Alert, Button, Card, Checkbox, Separator, Text, TextField } from "@sdxc/ui";
 
 import { PasskeySignInButton } from "./passkey-button";
-import { TurnstileWidget } from "./turnstile-widget";
 
 export namespace SignInPage {
 	export interface Props {
@@ -33,6 +33,8 @@ export namespace SignInPage {
 		challenge: boolean;
 		/** The platform's Turnstile site key, rendered only when `challenge` is set. */
 		turnstileSiteKey: string;
+		/** The response's CSP nonce, for the widget's loader script. */
+		turnstileNonce?: string;
 	}
 }
 
@@ -54,6 +56,7 @@ export function SignInPage(handle: Handle<SignInPage.Props>) {
 			error,
 			challenge,
 			turnstileSiteKey,
+			turnstileNonce,
 		} = handle.props;
 
 		return (
@@ -92,7 +95,7 @@ export function SignInPage(handle: Handle<SignInPage.Props>) {
 							{t("hostedSignIn.remember")}
 						</Checkbox>
 
-						{challenge && <TurnstileWidget siteKey={turnstileSiteKey} />}
+						{challenge && <TurnstileWidget siteKey={turnstileSiteKey} nonce={turnstileNonce} />}
 
 						<Button type="submit" color="brand" mix={[is("100%")]}>
 							{t("hostedSignIn.submit")}

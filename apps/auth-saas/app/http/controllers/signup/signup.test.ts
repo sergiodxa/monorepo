@@ -17,6 +17,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Middleware, RequestHandler } from "remix/router";
+
+import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import {
 	createDurableObjectNamespace,
 	createDurableObjectState,
@@ -25,11 +28,9 @@ import {
 import { randomToken } from "@sdxc/crypto";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type Tenant from "~/database/tenant-do";
 
@@ -98,6 +99,7 @@ let { database } = await import("~/app/http/middleware/database");
 let { Mail } = await import("~/app/http/middleware/mail");
 let render = (await import("~/app/http/middleware/render")).default;
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
+let { turnstileVerification } = await import("~/app/http/middleware/turnstile-verification");
 let signupPending = (await import("~/app/http/controllers/signup/pending")).default;
 let signupVerify = (await import("~/app/http/controllers/signup/verify")).default;
 let signupResend = (await import("~/app/http/controllers/signup/resend")).default;
@@ -116,17 +118,11 @@ buildTenant = (state) =>
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let mailTransport: MemoryTransport;
 
-/** Sign-up always challenges, so every submission here carries a token Turnstile confirms. */
-let server = setupServer(
-	http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
-		HttpResponse.json({ success: true }),
-	),
-);
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
+/** Sign-up always challenges; every non-empty token passes unless a test queues otherwise. */
+let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
 
 beforeEach(async () => {
+	turnstile.reset();
 	db = await createTestDatabase();
 
 	let state = createDurableObjectState();
@@ -145,20 +141,22 @@ function buildRouter() {
 		from: { email: "noreply@auth.example.com" },
 	});
 
-	let router = createRouter({
-		middleware: [
-			database(() => db),
-			(ctx, next) => {
-				ctx.set(Mail, mailer, { property: "mail" });
-				return next();
-			},
-			render,
-			formData(),
-		],
-	});
+	let middleware: Middleware[] = [
+		database(() => db) as Middleware,
+		(ctx, next) => {
+			ctx.set(Mail, mailer, { property: "mail" });
+			return next();
+		},
+		render as Middleware,
+		formData() as Middleware,
+	];
+	let router = createRouter({ middleware });
 
 	router.map(routes.signup.show, signupShow);
-	router.map(routes.signup.submit, signupSubmit);
+	router.map(routes.signup.submit, {
+		middleware: [turnstileVerification(turnstile)],
+		handler: signupSubmit as RequestHandler,
+	});
 	router.map(routes.signup.pending, signupPending);
 	router.map(routes.signup.verify, signupVerify);
 	router.map(routes.signup.resend, signupResend);
@@ -338,11 +336,7 @@ describe("signup", () => {
 	});
 
 	test("refuses a submission whose Turnstile token is rejected", async () => {
-		server.use(
-			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
-				HttpResponse.json({ success: false }),
-			),
-		);
+		turnstile.failNext("rejected");
 
 		let router = buildRouter();
 		let response = await postForm(router, "/signup", {

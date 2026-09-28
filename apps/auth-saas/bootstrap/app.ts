@@ -9,6 +9,7 @@
 
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { Turnstile } from "@sdxc/captcha/turnstile";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -41,6 +42,7 @@ import {
 	TENANT_ISSUER_HEADER,
 	TENANT_REGION_HEADER,
 } from "~/app/http/middleware/tenant";
+import { turnstileVerification } from "~/app/http/middleware/turnstile-verification";
 import { PLATFORM_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
 import { securityTxtEntry } from "~/app/lib/security-txt";
@@ -163,7 +165,10 @@ router.map(routes.billing.portal, billingPortal);
 router.map(routes.billing.webhook, billingWebhook);
 
 router.map(routes.signup.show, signupShow);
-router.map(routes.signup.submit, signupSubmit);
+router.map(routes.signup.submit, {
+	middleware: [turnstileVerification(new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY }))],
+	handler: signupSubmit as RequestHandler,
+});
 router.map(routes.signup.pending, signupPending);
 router.map(routes.signup.verify, signupVerify);
 router.map(routes.signup.resend, signupResend);

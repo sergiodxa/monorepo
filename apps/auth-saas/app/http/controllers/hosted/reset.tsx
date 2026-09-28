@@ -16,7 +16,6 @@
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
@@ -26,7 +25,10 @@ import { createAction } from "remix/router";
 import type { PasswordPolicy } from "~/database/passwords";
 
 import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
-import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import {
+	passesConditionalTurnstileChallenge,
+	turnstileNonce,
+} from "~/app/http/controllers/hosted/turnstile-guard";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { resetPasswordLink } from "~/app/mail/links";
 import { ResetPasswordEmail } from "~/app/mail/reset-password-email";
@@ -85,6 +87,7 @@ function renderRequestForm(
 				action={actionUrl(ctx, routes.hostedResetSubmit.href())}
 				challenge={challenge}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
+				turnstileNonce={turnstileNonce(ctx)}
 				issues={issues}
 			/>
 		</HostedDocument>,
@@ -110,6 +113,7 @@ function renderCompleteForm(
 				policy={policy}
 				challenge={challenge}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
+				turnstileNonce={turnstileNonce(ctx)}
 				issues={issues}
 			/>
 		</HostedDocument>,
@@ -154,16 +158,11 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, async (ctx) =>
 	let challenge = ctx.turnstileChallenge === true;
 
 	if (challenge) {
-		let turnstilePassed = await passesConditionalTurnstileChallenge(
-			env.TURNSTILE_SECRET_KEY,
-			ctx.formData,
-			getClientIP(ctx.request) ?? undefined,
-			{
-				env,
-				tenantId: ctx.tenant.id,
-				country: requestOrigin(ctx.request).country ?? undefined,
-			},
-		);
+		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+			env,
+			tenantId: ctx.tenant.id,
+			country: requestOrigin(ctx.request).country ?? undefined,
+		});
 
 		if (!turnstilePassed) {
 			let turnstileIssue = [{ message: t("hostedReset.errors.turnstileFailed") }];

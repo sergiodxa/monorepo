@@ -1,29 +1,21 @@
 /**
- * Turns a submitted Turnstile token into a pass/refuse decision for one
- * hosted screen's own failure policy: sign-up refuses on any refusal, so a
- * vendor outage costs one visitor one retry rather than admitting an
- * unchallenged sign-up, while sign-in and reset let a verification call that
- * could not complete through instead, so that outage never stops every
- * tenant's users from signing in or resetting a password at once. A token
- * Turnstile itself rejects, or none presented at all, still refuses either way.
+ * Turns the Turnstile outcome `turnstileVerification` published into a pass/refuse decision
+ * for one screen's failure policy: sign-up refuses any failure, while sign-in, reset and magic
+ * link let an unreachable Turnstile through, so a vendor outage never stops sign-in everywhere.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CaptchaOutcome } from "@sdxc/captcha/middleware";
+import type { RequestContext } from "remix/router";
+
+import { isFailure } from "@sdxc/result";
+import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
+
 import type { AttackSignalEnv } from "~/app/lib/attack-signals";
 
 import { recordAttackSignal } from "~/app/lib/attack-signals";
-import { verifyTurnstileToken } from "~/app/services/turnstile";
-
-/** The form field Turnstile's own widget submits its response token under. */
-const TURNSTILE_RESPONSE_FIELD = "cf-turnstile-response";
-
-/** Reads the token a form submitted, or `null` when the widget never ran. */
-function readTurnstileToken(formData: FormData): string | null {
-	let token = formData.get(TURNSTILE_RESPONSE_FIELD);
-	return typeof token === "string" && token.length > 0 ? token : null;
-}
 
 /** Where a refused challenge records the tenant's own attack signal, and who it belongs to. */
 export interface TurnstileAttackSignal {
@@ -33,92 +25,69 @@ export interface TurnstileAttackSignal {
 }
 
 /**
- * Verifies a sign-up submission's token under sign-up's unconditional,
- * closed policy: a missing token, a refused one, and an unreachable
- * verification call all refuse the submission alike.
- *
- * @param secretKey - The platform's Turnstile secret key.
- * @param formData - The submitted form, read for its Turnstile token.
- * @param remoteIp - The connecting address, when known.
- * @param attackSignal - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded.
- * @returns Whether the submission may proceed.
- * @example
- * let passed = await passesUnconditionalTurnstileChallenge(env.TURNSTILE_SECRET_KEY, ctx.formData);
+ * Records a refused challenge as the tenant's attack signal, its reason the failure's
+ * provider-neutral code (`missing-token`, `rejected`, `expired`, …).
  */
-export async function passesUnconditionalTurnstileChallenge(
-	secretKey: string,
-	formData: FormData,
-	remoteIp?: string,
-	attackSignal?: TurnstileAttackSignal,
-): Promise<boolean> {
-	let token = readTurnstileToken(formData);
-	let verified = token === null ? null : await verifyTurnstileToken(secretKey, token, remoteIp);
-	let passed = verified !== null && verified.ok;
+function recordRefusal(attackSignal: TurnstileAttackSignal | undefined, reason: string): void {
+	if (!attackSignal) return;
 
-	if (!passed && attackSignal) {
-		recordAttackSignal(attackSignal.env, {
-			tenantId: attackSignal.tenantId,
-			surface: "credential",
-			outcome: "refused-turnstile",
-			reason: verified === null ? "no-token" : verified.ok ? undefined : verified.reason,
-			country: attackSignal.country,
-		});
-	}
-
-	return passed;
+	recordAttackSignal(attackSignal.env, {
+		tenantId: attackSignal.tenantId,
+		surface: "credential",
+		outcome: "refused-turnstile",
+		reason,
+		country: attackSignal.country,
+	});
 }
 
 /**
- * Verifies a sign-in or reset submission's token, already known to have been
- * challenged: a missing token or one Turnstile refuses still stops the
- * submission, while a verification call that could not complete lets it
- * through, since that surface's policy is open to a vendor outage rather
- * than to skipping verification altogether.
+ * Applies sign-up's unconditional, closed policy: a missing token, a refused one, and an
+ * unreachable Turnstile all refuse the submission alike.
  *
- * @param secretKey - The platform's Turnstile secret key.
- * @param formData - The submitted form, read for its Turnstile token.
- * @param remoteIp - The connecting address, when known.
- * @param attackSignal - Where to record a refusal as the tenant's own attack
- * signal; omitted, nothing is recorded. Never recorded for a verification
- * call that could not complete, since that path is not itself a refusal.
+ * @param outcome - The request's `ctx.captcha`.
+ * @param attackSignal - Where to record a refusal; omitted, nothing is recorded.
  * @returns Whether the submission may proceed.
  * @example
- * let passed = await passesConditionalTurnstileChallenge(env.TURNSTILE_SECRET_KEY, ctx.formData);
+ * let passed = passesUnconditionalTurnstileChallenge(ctx.captcha, { env, tenantId });
  */
-export async function passesConditionalTurnstileChallenge(
-	secretKey: string,
-	formData: FormData,
-	remoteIp?: string,
+export function passesUnconditionalTurnstileChallenge(
+	outcome: CaptchaOutcome,
 	attackSignal?: TurnstileAttackSignal,
-): Promise<boolean> {
-	let token = readTurnstileToken(formData);
+): boolean {
+	if (!isFailure(outcome)) return true;
 
-	if (!token) {
-		if (attackSignal) {
-			recordAttackSignal(attackSignal.env, {
-				tenantId: attackSignal.tenantId,
-				surface: "credential",
-				outcome: "refused-turnstile",
-				reason: "no-token",
-				country: attackSignal.country,
-			});
-		}
-		return false;
-	}
+	recordRefusal(attackSignal, outcome.error.code);
+	return false;
+}
 
-	let verified = await verifyTurnstileToken(secretKey, token, remoteIp);
-	let passed = verified.ok || verified.reason === "verification-unavailable";
+/**
+ * Applies the open policy of a screen that already decided to challenge: a missing token or
+ * one Turnstile refuses stops the submission, while an unreachable Turnstile lets it through
+ * unrecorded, since that path is not itself a refusal.
+ *
+ * @param outcome - The request's `ctx.captcha`.
+ * @param attackSignal - Where to record a refusal; omitted, nothing is recorded.
+ * @returns Whether the submission may proceed.
+ * @example
+ * let passed = passesConditionalTurnstileChallenge(ctx.captcha, { env, tenantId });
+ */
+export function passesConditionalTurnstileChallenge(
+	outcome: CaptchaOutcome,
+	attackSignal?: TurnstileAttackSignal,
+): boolean {
+	if (!isFailure(outcome) || outcome.error.code === "unavailable") return true;
 
-	if (!passed && attackSignal) {
-		recordAttackSignal(attackSignal.env, {
-			tenantId: attackSignal.tenantId,
-			surface: "credential",
-			outcome: "refused-turnstile",
-			reason: verified.ok ? undefined : verified.reason,
-			country: attackSignal.country,
-		});
-	}
+	recordRefusal(attackSignal, outcome.error.code);
+	return false;
+}
 
-	return passed;
+/**
+ * The response's CSP nonce for the widget's loader script, which the policy allows by nonce;
+ * absent on a router without `securityHeaders()`, where no policy restricts scripts.
+ *
+ * @param ctx - The request context.
+ * @returns The nonce, or `undefined` when no security headers are installed.
+ */
+export function turnstileNonce(ctx: RequestContext): string | undefined {
+	return ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined;
 }

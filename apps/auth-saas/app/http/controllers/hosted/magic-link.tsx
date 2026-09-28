@@ -24,7 +24,6 @@ import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
 import { Hex, sha256 } from "@sdxc/crypto";
-import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
@@ -38,7 +37,10 @@ import {
 	respondToAuthorizationOutcome,
 	safeReturnTo,
 } from "~/app/http/controllers/hosted/outcome";
-import { passesConditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import {
+	passesConditionalTurnstileChallenge,
+	turnstileNonce,
+} from "~/app/http/controllers/hosted/turnstile-guard";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
 import {
@@ -105,6 +107,7 @@ function renderRequestForm(
 				action={actionUrl(ctx, routes.hostedMagicLinkSubmit.href())}
 				challenge={challenge}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
+				turnstileNonce={turnstileNonce(ctx)}
 				issues={issues}
 			/>
 		</HostedDocument>,
@@ -192,12 +195,11 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
 	let origin = requestOrigin(ctx.request);
 
 	if (challenge) {
-		let turnstilePassed = await passesConditionalTurnstileChallenge(
-			env.TURNSTILE_SECRET_KEY,
-			ctx.formData,
-			getClientIP(ctx.request) ?? undefined,
-			{ env, tenantId: ctx.tenant.id, country: origin.country ?? undefined },
-		);
+		let turnstilePassed = passesConditionalTurnstileChallenge(ctx.captcha, {
+			env,
+			tenantId: ctx.tenant.id,
+			country: origin.country ?? undefined,
+		});
 
 		if (!turnstilePassed) {
 			let turnstileIssue = [{ message: t("hostedMagicLink.errors.turnstileFailed") }];

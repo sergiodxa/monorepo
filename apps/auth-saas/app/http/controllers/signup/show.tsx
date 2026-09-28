@@ -14,7 +14,6 @@
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
@@ -24,7 +23,10 @@ import { createAction } from "remix/router";
 
 import type { PasswordPolicy, PasswordPolicyFailure } from "~/database/passwords";
 
-import { passesUnconditionalTurnstileChallenge } from "~/app/http/controllers/hosted/turnstile-guard";
+import {
+	passesUnconditionalTurnstileChallenge,
+	turnstileNonce,
+} from "~/app/http/controllers/hosted/turnstile-guard";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { mailTranslator } from "~/app/mail/locale";
 import { PlatformSignupVerifyEmail } from "~/app/mail/platform-signup-verify-email";
@@ -70,6 +72,7 @@ function renderSignUpPage(
 				action={routes.signup.submit.href()}
 				policy={input.policy}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
+				turnstileNonce={turnstileNonce(ctx)}
 				issues={input.issues}
 			/>
 		</PublicDocument>,
@@ -109,16 +112,11 @@ export const signupSubmit = createAction(routes.signup.submit, async (ctx) => {
 	let platform = env.TENANT.getByName(env.PLATFORM_DOMAIN);
 	let policy = await platform.describePasswordPolicy();
 
-	let turnstilePassed = await passesUnconditionalTurnstileChallenge(
-		env.TURNSTILE_SECRET_KEY,
-		ctx.formData,
-		getClientIP(ctx.request) ?? undefined,
-		{
-			env,
-			tenantId: env.PLATFORM_DOMAIN,
-			country: requestOrigin(ctx.request).country ?? undefined,
-		},
-	);
+	let turnstilePassed = passesUnconditionalTurnstileChallenge(ctx.captcha, {
+		env,
+		tenantId: env.PLATFORM_DOMAIN,
+		country: requestOrigin(ctx.request).country ?? undefined,
+	});
 	if (!turnstilePassed) {
 		return renderSignUpPage(ctx, {
 			policy,

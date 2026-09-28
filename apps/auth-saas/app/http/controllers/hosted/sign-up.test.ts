@@ -15,9 +15,7 @@ import type { Result } from "@sdxc/result";
 
 import { MailError } from "@sdxc/mail";
 import { failure } from "@sdxc/result";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
 import type { Harness } from "~/app/http/controllers/hosted/test-harness";
 
@@ -36,16 +34,6 @@ class FailingTransport {
 		return failure(new MailError("the test transport always refuses"));
 	}
 }
-
-/** Sign-up always challenges, so every submission here carries a token Turnstile confirms. */
-let server = setupServer(
-	http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
-		HttpResponse.json({ success: true }),
-	),
-);
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
 
 let harness: Harness;
 
@@ -77,12 +65,8 @@ async function beginAndReachSignIn(harnessValue: Harness, clientId: string) {
 }
 
 /**
- * Posts a URL-encoded form through the router, with an explicit content-type
- * so MSW's raw-header patch — which otherwise breaks on the content-type
- * undici derives for a body-object POST once MSW is listening — never sees
- * one to rewrite. Every submission also carries a Turnstile token by
- * default, since sign-up always challenges (unused, and harmless, on the one
- * sign-in submission this file also drives).
+ * Posts a URL-encoded form through the router, carrying a Turnstile token by default, since
+ * sign-up always challenges (unused, and harmless, on the one sign-in submission this file drives).
  */
 function postForm(
 	harnessValue: Harness,
@@ -247,11 +231,7 @@ describe("sign-up", () => {
 	});
 
 	test("refuses a submission whose Turnstile token is rejected, with the failure visible on the re-rendered page", async () => {
-		server.use(
-			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
-				HttpResponse.json({ success: false }),
-			),
-		);
+		harness.turnstile.failNext("rejected");
 
 		let response = await postForm(harness, "/u/sign-up", {
 			email: "jane@example.com",
@@ -265,11 +245,7 @@ describe("sign-up", () => {
 	});
 
 	test("refuses a submission when the Turnstile verification call cannot complete", async () => {
-		server.use(
-			http.post("https://challenges.cloudflare.com/turnstile/v0/siteverify", () =>
-				HttpResponse.error(),
-			),
-		);
+		harness.turnstile.failNext("unavailable");
 
 		let response = await postForm(harness, "/u/sign-up", {
 			email: "jane@example.com",
