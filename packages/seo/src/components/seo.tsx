@@ -11,6 +11,8 @@
 
 import type { Handle } from "remix/ui";
 
+import { unsafeHTML } from "remix/ui";
+
 import type { SeoSite } from "../create-seo.js";
 import type { SchemaOrg } from "../lib/schema.js";
 
@@ -114,7 +116,10 @@ function SeoMeta(handle: Handle<Seo.MetaProps>) {
  */
 function SeoJsonLd(handle: Handle<Seo.JsonLdProps>) {
 	return () => (
-		<script type="application/ld+json" innerHTML={serializeJsonLd(handle.props.schema)} />
+		<script
+			type="application/ld+json"
+			innerHTML={unsafeHTML(serializeJsonLd(handle.props.schema))}
+		/>
 	);
 }
 
