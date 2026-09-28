@@ -55,6 +55,9 @@ queue live in the worker, and the captcha is a word the form prints.
 bun run db:local:migrate    # apply migrations to the local D1 copy
 ```
 
+The local copy lives in `.cloudflare/state`, the same directory `bun run dev` reads, so a
+fresh checkout needs the migration once before the board has a table.
+
 ## Scripts
 
 | Script                     | Purpose                                    |
