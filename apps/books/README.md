@@ -60,19 +60,20 @@ state the app has lives in Buttondown and Polar.
 
 ## Scripts
 
-| Script              | Purpose                                |
-| ------------------- | -------------------------------------- |
-| `bun run dev`       | Start the dev server on port 3003      |
-| `bun run build`     | Build the worker and client assets     |
-| `bun run start`     | Preview the production build           |
-| `bun run typecheck` | Type-check the app                     |
-| `bun cf:typegen`    | Regenerate `worker-configuration.d.ts` |
-| `bun cf:deploy`     | Deploy the worker                      |
+| Script              | Purpose                                   |
+| ------------------- | ----------------------------------------- |
+| `bun run dev`       | Start the dev server on port 3003         |
+| `bun run build`     | Build the worker and client assets        |
+| `bun run start`     | Preview the production build              |
+| `bun run typecheck` | Type-check the app                        |
+| `bun cf:typegen`    | Regenerate `.cloudflare/types/index.d.ts` |
+| `bun cf:deploy`     | Deploy the worker                         |
 
 ## Deployment
 
-Run `bun run build` first — `wrangler deploy` does not build the Vite app — then
-`bun cf:deploy`. Secrets are set with `bunx wrangler secret put <NAME>`.
+The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
+Run `bun run build`, then `bun cf:deploy`, which uploads that build output as-is.
+Secrets are set with `cf workers secrets update`.
 
 ## Environment Variables
 

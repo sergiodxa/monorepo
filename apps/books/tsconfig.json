@@ -6,7 +6,8 @@
 		"bootstrap/**/*",
 		"routes/**/*",
 		"resources/**/*",
-		"worker-configuration.d.ts",
+		".cloudflare/types/index.d.ts",
+		"cloudflare.config.ts",
 		"vite.config.ts"
 	],
 	"compilerOptions": {
