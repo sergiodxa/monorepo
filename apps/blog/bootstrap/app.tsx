@@ -21,6 +21,7 @@ import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
@@ -40,7 +41,6 @@ import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
-import createNoTrailingSlashMiddleware from "~/app/http/middleware/no-trailing-slash";
 import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
@@ -136,7 +136,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		trace(),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
-		createNoTrailingSlashMiddleware(),
+		trailingSlash(),
 		wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
 		asyncContext(),
 		database(createDatabase),

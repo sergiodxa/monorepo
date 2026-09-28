@@ -85,6 +85,20 @@ describe("the blog router", () => {
 		expect(response.headers.get("location")).toBe(routes.auth.login.index.href());
 	});
 
+	test("redirects a slashed path to its slash-free form, keeping the query", async () => {
+		let response = await fetchPath("/articles/?page=2");
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe("https://blog.test/articles?page=2");
+	});
+
+	test("redirects a slashed POST with a 308, so the client repeats it with its body", async () => {
+		let response = await fetchPath("/webmention/", { method: "POST" });
+
+		expect(response.status).toBe(308);
+		expect(response.headers.get("location")).toBe("https://blog.test/webmention");
+	});
+
 	test("serves security.txt with the site's contact", async () => {
 		let response = await fetchPath("/.well-known/security.txt");
 
