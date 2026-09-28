@@ -8,11 +8,12 @@
  */
 
 import type { Transport } from "@sdxc/mail";
+import type { SpamFilter } from "@sdxc/spam";
 import type { Middleware } from "remix/router";
 
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 
-import { SupportDesk } from "~/app/services/support-desk";
+import { createSupportSpamFilter, SupportDesk } from "~/app/services/support-desk";
 
 /**
  * Declared in this imported module, so the property exists wherever the middleware does.
@@ -25,14 +26,19 @@ declare module "remix/router" {
 }
 
 /**
- * Creates the middleware publishing `ctx.supportDesk`. The transport is opened once per
- * isolate, since the binding it wraps is the same for every request.
+ * Creates the middleware publishing `ctx.supportDesk`. The transport and spam filter are built
+ * once per isolate, since what they wrap is the same for every request.
  *
  * @param env Environment bindings, read for the email binding, inbox and rate limiter.
  * @param transport Delivery to use in place of the email binding, as a test supplies.
+ * @param spamFilter Scoring to use in place of the free default checks, as a test supplies.
  * @returns Middleware that sets `ctx.supportDesk` before the handler runs.
  */
-export default function supportDesk(env: App.Env, transport?: Transport): Middleware {
+export default function supportDesk(
+	env: App.Env,
+	transport?: Transport,
+	spamFilter: SpamFilter = createSupportSpamFilter(),
+): Middleware {
 	let resolved = transport ?? (env.EMAIL ? new CloudflareTransport(env.EMAIL) : undefined);
 
 	return (ctx, next) => {
@@ -40,6 +46,7 @@ export default function supportDesk(env: App.Env, transport?: Transport): Middle
 			transport: resolved,
 			inbox: env.SUPPORT_INBOX,
 			limiter: env.SUPPORT_RATE_LIMITER,
+			spamFilter,
 		});
 		return next();
 	};

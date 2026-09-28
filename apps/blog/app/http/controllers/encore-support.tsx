@@ -84,7 +84,8 @@ export default createController(routes.encoreSupport, {
 		 * learns nothing; a missing or unverifiable token re-renders the form to send again, since
 		 * a person with a page opened before a secret rotation holds one. A denied budget, a
 		 * validation issue, or a failed delivery re-renders the form with the visitor's values.
-		 * Nothing the visitor wrote is logged.
+		 * A valid request the spam filter scores as spam answers like a success without sending;
+		 * one it is unsure about is delivered flagged. Nothing the visitor wrote is logged.
 		 *
 		 * @returns A See Other redirect to the confirmation, or the form with a 4xx/5xx status.
 		 */
@@ -125,7 +126,28 @@ export default createController(routes.encoreSupport, {
 				);
 			}
 
-			let delivered = await ctx.supportDesk.deliver(parsed.data);
+			let assessment = await ctx.supportDesk.assess(parsed.data, {
+				ip: getClientIP(ctx.request) ?? undefined,
+				userAgent: ctx.request.headers.get("user-agent") ?? undefined,
+				renderedAt: trap.data.renderedAt,
+			});
+			ctx.log.set({
+				spam: {
+					verdict: assessment.verdict,
+					score: assessment.score,
+					signals: assessment.signals.map((signal) => signal.check).join(","),
+					failures: assessment.failures
+						.map((entry) => `${entry.check}:${entry.error.code}`)
+						.join(","),
+				},
+			});
+			if (assessment.verdict === "spam") {
+				ctx.log.set({ support: { outcome: "spam" } });
+				session.flash(SENT_FLASH, true);
+				return redirect(routes.encoreSupport.index.href(), { status: redirect.Status.SeeOther });
+			}
+
+			let delivered = await ctx.supportDesk.deliver(parsed.data, assessment);
 			if (isFailure(delivered)) {
 				ctx.log.warn("support.delivery_failed", { reason: delivered.error.reason });
 				return renderForm(ctx, { state: "failed", values, issues: [] }, { status: 503 });

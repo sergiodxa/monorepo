@@ -54,7 +54,7 @@ describe("GET /apps/encore/privacy.md", () => {
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get("content-type")).toContain("text/markdown");
-		expect(body).toContain("Last updated: September 26, 2026");
+		expect(body).toContain("Last updated: September 28, 2026");
 		expect(body).not.toContain("title: Encore Privacy Policy");
 	});
 });

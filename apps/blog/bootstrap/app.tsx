@@ -12,6 +12,7 @@
  */
 
 import type { Transport } from "@sdxc/mail";
+import type { SpamFilter } from "@sdxc/spam";
 import type { Middleware, RequestContext } from "remix/router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
@@ -111,6 +112,8 @@ const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
 export interface ApplicationOptions {
 	/** Delivers Encore support requests in place of the `EMAIL` binding. */
 	mailTransport?: Transport;
+	/** Scores Encore support requests in place of the free default checks. */
+	spamFilter?: SpamFilter;
 }
 
 /**
@@ -212,7 +215,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 				honeypot(new Honeypot({ secret: `honeypot:${env.COOKIE_SESSION_SECRET}` }), {
 					onFailure: () => null,
 				}),
-				supportDesk(env, options.mailTransport),
+				supportDesk(env, options.mailTransport, options.spamFilter),
 			],
 		),
 	);

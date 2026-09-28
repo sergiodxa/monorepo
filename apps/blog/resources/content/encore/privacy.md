@@ -3,7 +3,7 @@ title: Encore Privacy Policy
 description: "How Encore: Music Party Game handles information on iPhone, iPad, Apple Watch, and Mac, and when you contact Encore support."
 ---
 
-Last updated: September 26, 2026
+Last updated: September 28, 2026
 
 Encore: Music Party Game is developed by Sergio Daniel Xalambri (“I,” “me,” or “my”). This policy explains how information is handled when you use Encore on iPhone, iPad, Apple Watch, and Mac, or contact Encore support.
 
@@ -59,7 +59,9 @@ The support website and email services may process information needed to deliver
 
 The support website is hosted on Cloudflare, which also delivers support requests to me by email. Cloudflare processes the technical information needed to serve and protect the website, such as your IP address and browser details, under [Cloudflare’s privacy policy](https://www.cloudflare.com/privacypolicy/).
 
-To limit spam, the support form includes a hidden field that automated tools tend to fill in, and it limits how many requests one IP address can send per minute. Your IP address is used only to count those requests and is not included in the support request I receive.
+To limit spam, the support form includes hidden fields that automated tools tend to fill in, and it limits how many requests one IP address can send per minute. Each request is also checked automatically for signs of spam, such as many links or a disposable email address; a request that looks like spam may be discarded or marked for review. Your IP address is not included in the support request I receive.
+
+As part of that check, your IP address, email address, and name, if provided, are looked up in [StopForumSpam](https://www.stopforumspam.com/), a public database of addresses reported for sending spam. StopForumSpam receives only those details, not your message, and handles them under [its privacy policy](https://www.stopforumspam.com/privacy).
 
 The website keeps request logs through Cloudflare to diagnose problems. They record details of each request, such as the page requested and the outcome, and do not include the contents of your support request.
 

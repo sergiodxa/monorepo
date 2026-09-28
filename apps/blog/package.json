@@ -37,6 +37,7 @@
 		"@sdxc/rss": "workspace:*",
 		"@sdxc/security-headers": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
+		"@sdxc/spam": "workspace:*",
 		"@sdxc/strings": "workspace:*",
 		"@sdxc/trace-context": "workspace:*",
 		"@sdxc/trailing-slash-middleware": "workspace:*",

@@ -2,7 +2,8 @@
  * Drives the Encore support page through the real router inside workerd, against the local
  * session KV and rate-limit binding, with mail captured by a memory transport: the page, a
  * delivered request and its confirmation, validation, delivery failure, the honeypot fields
- * the page renders, and the abuse guards.
+ * the page renders, the spam verdicts, and the abuse guards. Each request's spam filter is the
+ * test's own, so no reputation service is ever called.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,10 +11,13 @@
 
 import type { NormalizedMessage, SentMessage, Transport } from "@sdxc/mail";
 import type { Result } from "@sdxc/result";
+import type { SpamFilter } from "@sdxc/spam";
 
 import { MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
+import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
+import { MemoryCheck } from "@sdxc/spam/memory";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
@@ -93,6 +97,8 @@ async function submission(fields: Record<string, string> = {}, trap = "") {
 
 interface SubmitOptions {
 	transport?: Transport;
+	/** @default a filter with no checks, so every valid request is ham */
+	spamFilter?: SpamFilter;
 	env?: Partial<App.Env>;
 	address?: string;
 	headers?: Record<string, string>;
@@ -100,7 +106,10 @@ interface SubmitOptions {
 
 /** Posts the form the way a same-origin browser does. */
 function submit(body: URLSearchParams, options: SubmitOptions = {}) {
-	let app = createApplication(environment(options.env), { mailTransport: options.transport });
+	let app = createApplication(environment(options.env), {
+		mailTransport: options.transport,
+		spamFilter: options.spamFilter ?? createSpamFilter({ checks: [] }),
+	});
 	return app.fetch(
 		new Request(new URL(PATH, ORIGIN), {
 			method: "POST",
@@ -296,6 +305,67 @@ describe("POST /apps/encore/support", () => {
 
 		expect(response.status).toBe(303);
 		expect(transport.messages).toHaveLength(1);
+	});
+
+	test("answers a request scored as spam like a success without sending", async () => {
+		let transport = new MemoryTransport();
+		let check = new MemoryCheck({ signals: [{ check: "test.spam", score: 10 }] });
+		let response = await submit(await submission(), {
+			transport,
+			spamFilter: createSpamFilter({ checks: [check] }),
+		});
+
+		expect(response.status).toBe(303);
+		expect(transport.messages).toHaveLength(0);
+		expect(check.last).toMatchObject({
+			content: expect.stringContaining("The timer stops"),
+			format: "text",
+			author: { name: "Ada Lovelace", email: "ada@example.com" },
+			renderedAt: expect.any(Date),
+		});
+		expect(check.last?.author?.ip).toMatch(/^10\./);
+	});
+
+	test("delivers a request the filter is unsure about, flagged with its signals", async () => {
+		let transport = new MemoryTransport();
+		let check = new MemoryCheck({
+			signals: [{ check: "links.count", score: 6, detail: "4 links" }],
+		});
+		let response = await submit(await submission(), {
+			transport,
+			spamFilter: createSpamFilter({ checks: [check] }),
+		});
+
+		expect(response.status).toBe(303);
+		expect(transport.last?.subject).toBe("[Possible spam] [Encore] Bug report on iPhone");
+		expect(transport.last?.text).toContain("This request may be spam (score 6)");
+		expect(transport.last?.text).toContain("links.count");
+		expect(transport.last?.text).toContain("The timer stops when I reveal the second card.");
+	});
+
+	test("delivers normally when a reputation check is down", async () => {
+		let transport = new MemoryTransport();
+		let check = new MemoryCheck().failNext("unavailable");
+		let response = await submit(await submission(), {
+			transport,
+			spamFilter: createSpamFilter({ checks: [check] }),
+		});
+
+		expect(response.status).toBe(303);
+		expect(transport.last?.subject).toBe("[Encore] Bug report on iPhone");
+	});
+
+	test("discards a BBCode link dump under the default rules", async () => {
+		let transport = new MemoryTransport();
+		let message =
+			"Great app! [url=https://pills.example]cheap pills online[/url] [url=https://pills.example/2]big discount[/url]";
+		let response = await submit(await submission({ message }), {
+			transport,
+			spamFilter: createSpamFilter({ checks: DEFAULT_RULES }),
+		});
+
+		expect(response.status).toBe(303);
+		expect(transport.messages).toHaveLength(0);
 	});
 
 	test("limits how often one address may submit, keeping the values", async () => {
