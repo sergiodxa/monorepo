@@ -11,7 +11,8 @@
 
 import { Base64Url, password, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
-import { beforeEach, describe, expect, test } from "vitest";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -21,6 +22,7 @@ import Credential from "~/app/data/credential";
 import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { notesOf, withLog } from "~/app/lib/test/logs";
+import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
 import {
 	authorizeUrl,
 	exchangeCode,
@@ -84,6 +86,15 @@ async function codeFrom(extra: Record<string, string> = {}): Promise<string> {
 
 	return code;
 }
+
+/** A password that passes every local rule and that the stand-in breach API reports. */
+const BREACHED_PASSWORD = "breached-but-long";
+
+let server = setupServer(pwnedPasswords([BREACHED_PASSWORD]));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 beforeEach(async () => {
 	app = await createTestApp();
@@ -439,6 +450,46 @@ describe("POST /authorize", () => {
 
 		expect(response.status).toBe(400);
 		expect(await Subject.findByEmail(app.db, `${NEW_EMAIL}.`)).toBeNull();
+	});
+
+	test("refuses to register a password shorter than eight characters, saying so", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register({ password: "short" });
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("Use at least 8 characters.");
+		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+	});
+
+	test("refuses to register a breached password, saying why", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register({ password: BREACHED_PASSWORD });
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain(en.password.policy.breached);
+		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+	});
+
+	test("refuses to register a password containing the username", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register({ password: "newcomer-forever" });
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("contain your email address or username");
+		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+	});
+
+	test("registers when the breach lookup is down, since every local rule passed", async () => {
+		server.use(pwnedPasswordsUnavailable());
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register();
+
+		expect(response.status).toBe(303);
+		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).not.toBeNull();
 	});
 
 	test("refuses a registered subject whose credential was never verified", async () => {

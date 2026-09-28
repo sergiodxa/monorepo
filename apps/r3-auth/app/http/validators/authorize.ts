@@ -30,9 +30,6 @@ const PROMPT_VALUES: readonly PromptValue[] = [
 /** Shape of the ids this server issues, so a malformed `client_id` never reaches a query. */
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Minimum password length accepted at registration and sign-in. */
-const MINIMUM_PASSWORD_LENGTH = 8;
-
 /**
  * An authorization request as it arrives on the query string. `scope` keeps what it
  * dropped beside what it granted, so a narrowed request is reportable (RFC 6749 §3.3)
@@ -77,14 +74,15 @@ export type AuthorizeQuery = s.InferOutput<typeof AuthorizeQuerySchema>;
  *
  * The address must parse as an email address, and passes on trimmed but otherwise as
  * typed: subjects are matched on `email_address` exactly, so every stored address keeps
- * matching the same keystrokes it matched before.
+ * matching the same keystrokes it matched before. The password is only required here:
+ * the engine runs the password policy on a password it is about to store.
  */
 export const AuthorizeFormSchema = s.object({
 	email: s
 		.string()
 		.refine((value) => isSuccess(parseEmailAddress(value)), "Invalid email")
 		.transform((value) => value.trim()),
-	password: s.string().pipe(checks.minLength(MINIMUM_PASSWORD_LENGTH)),
+	password: s.string().pipe(checks.minLength(1)),
 	name: s.string().pipe(checks.minLength(1)),
 	username: s.string().pipe(checks.minLength(1)),
 });

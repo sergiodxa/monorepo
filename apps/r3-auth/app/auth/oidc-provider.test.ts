@@ -21,6 +21,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite
 import { OIDC } from "~/app/auth/oidc-provider";
 import LogoutToken from "~/app/auth/values/logout-token";
 import { ISSUER } from "~/app/config";
+import { pwnedPasswords } from "~/app/lib/test/pwned-passwords";
 
 let AccessToken = OIDC.AccessToken;
 let IdToken = OIDC.IdToken;
@@ -111,7 +112,10 @@ const REFUSING_BACKCHANNEL = "https://refusing.example.com/backchannel-logout";
 /** A relying party whose back-channel endpoint the request never reaches. */
 const UNREACHABLE_BACKCHANNEL = "https://unreachable.example.com/backchannel-logout";
 
-let server = setupServer();
+/** A password that passes every local rule and that the stand-in breach API reports. */
+const BREACHED_PASSWORD = "breached-but-long";
+
+let server = setupServer(pwnedPasswords([BREACHED_PASSWORD]));
 
 /**
  * A session ready for the logout fan-out, with session-specific logout on so the token
@@ -1567,6 +1571,59 @@ describe("loginWithCredential()", () => {
 		let signIn = await provider.loginWithCredential(loginInput());
 
 		expect(signIn.status).toBe("success");
+	});
+});
+
+describe("loginWithCredential() password policy", () => {
+	test("refuses to register a breached password and creates nothing", async () => {
+		let state = loginState({ subjectMissing: true });
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLog());
+
+		let result = await provider.loginWithCredential(loginInput({ password: BREACHED_PASSWORD }));
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure") {
+			expect(result.error).toBeInstanceOf(OIDC.PasswordRefusedError);
+			if (result.error instanceof OIDC.PasswordRefusedError) {
+				expect(result.error.issue.reason).toBe("breached");
+			}
+		}
+		expect(state.avatars).toHaveLength(0);
+		expect(state.created).toHaveLength(0);
+	});
+
+	test("refuses to register a password containing the username", async () => {
+		let state = loginState({ subjectMissing: true });
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLog());
+
+		let result = await provider.loginWithCredential(
+			loginInput({ password: `${testSubject.username}-forever` }),
+		);
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure") expect(result.error).toBeInstanceOf(OIDC.PasswordRefusedError);
+		expect(state.created).toHaveLength(0);
+	});
+
+	test("refuses to store a weak password for a subject that has no credential yet", async () => {
+		let state = loginState();
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLog());
+
+		let result = await provider.loginWithCredential(loginInput({ password: "password123" }));
+
+		expect(result.status).toBe("failure");
+		if (result.status === "failure") expect(result.error).toBeInstanceOf(OIDC.PasswordRefusedError);
+		expect(state.created).toHaveLength(0);
+	});
+
+	/** Existing passwords were set under older rules, and signing in keeps accepting them. */
+	test("signs in with a stored password the policy would refuse today", async () => {
+		let state = loginState({ storedHash: unwrap(await password.hash("password123")) });
+		let provider = new OIDC(ISSUER, createLoginRepository(state), createMockLog());
+
+		let result = await provider.loginWithCredential(loginInput({ password: "password123" }));
+
+		expect(result.status).toBe("success");
 	});
 });
 

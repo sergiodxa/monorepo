@@ -128,7 +128,7 @@ export default {
 			confirmation: { label: "Repeat new password", placeholder: "Repeat new password" },
 			submit: "Change password",
 			errors: {
-				invalid: "Use at least 8 characters.",
+				invalid: "Enter a new password and repeat it.",
 				mismatch: "The two passwords do not match.",
 				failedTitle: "Something went wrong",
 				failed: "Your password was not changed. Ask for a new link and try again.",
@@ -141,6 +141,20 @@ export default {
 			description:
 				"Reset links expire and can only be used once. Ask for a new one to choose a password.",
 			action: "Ask for a new link",
+		},
+
+		/**
+		 * One sentence per rule a new password can break, shown above the registration
+		 * and new-password forms alike, each naming what to change.
+		 */
+		policy: {
+			tooShort: "Use at least {$minLength} characters.",
+			tooLong: "Use at most {$maxLength} characters.",
+			common: "That password is too common. Choose one that is harder to guess.",
+			breached:
+				"That password has appeared in a data breach, so attackers try it first. Choose a different one.",
+			similarToIdentifier: "Your password can't contain your email address or username.",
+			other: "Choose a different password.",
 		},
 
 		done: {

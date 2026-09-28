@@ -16,19 +16,6 @@ import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 
 /**
- * Minimum password length, the same floor the sign-in and registration form applies.
- * A reset that accepted a weaker password than registration does would be the easiest
- * way to end up with an account weaker than the rules it was created under.
- */
-const MINIMUM_PASSWORD_LENGTH = 8;
-
-/**
- * Longest password accepted, so a submission cannot turn one scrypt derivation into an
- * arbitrarily long one. The bound is far above any real passphrase.
- */
-const MAXIMUM_PASSWORD_LENGTH = 256;
-
-/**
  * Longest token accepted before anything hashes it. The tokens this server issues are a
  * fixed length; the bound exists so the validator rejects a megabyte of query string
  * before it reaches the hash step.
@@ -76,13 +63,11 @@ export type ResetTokenQuery = s.InferOutput<typeof ResetTokenQuerySchema>;
  * The new-password form.
  *
  * The token stays out of the `POST` URL's `Referer` trail as a hidden field;
- * the controller matches the two password fields against each other.
+ * the controller matches the two password fields and runs the password policy.
  */
 export const ResetPasswordSchema = s.object({
 	token: s.string().pipe(checks.minLength(1), checks.maxLength(MAXIMUM_TOKEN_LENGTH)),
-	password: s
-		.string()
-		.pipe(checks.minLength(MINIMUM_PASSWORD_LENGTH), checks.maxLength(MAXIMUM_PASSWORD_LENGTH)),
+	password: s.string().pipe(checks.minLength(1)),
 	passwordConfirmation: s.string().pipe(checks.minLength(1)),
 });
 

@@ -10,7 +10,8 @@
  */
 
 import { password } from "@sdxc/crypto";
-import { beforeEach, describe, expect, test } from "vitest";
+import { setupServer } from "msw/node";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
@@ -20,6 +21,7 @@ import Subject from "~/app/data/subject";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
 import { createTestApp } from "~/app/lib/test/http";
+import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
 import { authorizeUrl, EMAIL, ORIGIN, PASSWORD, seed } from "~/app/lib/test/seed";
 import { sessions } from "~/database/schema";
 import routes from "~/routes/web";
@@ -41,6 +43,15 @@ const EXPECTED_TOKEN_TTL_SECONDS = 30 * 60;
 
 /** Seconds one address is expected to be inside its cooldown for. */
 const EXPECTED_COOLDOWN_SECONDS = 5 * 60;
+
+/** A password that passes every local rule and that the stand-in breach API reports. */
+const BREACHED_PASSWORD = "breached-but-long";
+
+let server = setupServer(pwnedPasswords([BREACHED_PASSWORD]));
+
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
 
 let app: TestApp;
 let fixtures: Fixtures;
@@ -529,6 +540,50 @@ describe("completing a reset", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Use at least 8 characters.");
+	});
+
+	test("refuses a breached password, saying why", async () => {
+		await requestReset(EMAIL);
+		let token = tokenFromMail();
+
+		let response = await submitReset(token, BREACHED_PASSWORD);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("appeared in a data breach");
+		expect(await signInWith(EMAIL, PASSWORD)).toHaveProperty("status", 303);
+	});
+
+	test("refuses a password containing the account's username", async () => {
+		await requestReset(EMAIL);
+
+		let response = await submitReset(tokenFromMail(), "jane-forever-and-ever");
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("contain your email address or username");
+	});
+
+	/**
+	 * The policy runs before the token is spent, so a person told to pick another password
+	 * can do so from the same link instead of asking for a new one.
+	 */
+	test("keeps the link usable after a refused password", async () => {
+		await requestReset(EMAIL);
+		let token = tokenFromMail();
+
+		await submitReset(token, BREACHED_PASSWORD);
+		let retry = await submitReset(token, NEW_PASSWORD);
+
+		expect(retry.status).toBe(200);
+		expect(await signInWith(EMAIL, NEW_PASSWORD)).toHaveProperty("status", 303);
+	});
+
+	test("completes the reset when the breach lookup is down", async () => {
+		server.use(pwnedPasswordsUnavailable());
+
+		let response = await completeReset();
+
+		expect(response.status).toBe(200);
+		expect(await signInWith(EMAIL, NEW_PASSWORD)).toHaveProperty("status", 303);
 	});
 
 	test("answers a submission carrying no token with the unusable-link page", async () => {

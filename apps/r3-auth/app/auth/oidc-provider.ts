@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Result } from "@sdxc/result";
 
 import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@sdxc/crypto";
@@ -15,6 +16,7 @@ import { elapsed } from "@sdxc/dates";
 import { JWK, JWT } from "@sdxc/jwt";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
+import { checkNewPassword } from "~/app/auth/password-policy";
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";
 import LogoutToken from "~/app/auth/values/logout-token";
@@ -146,6 +148,20 @@ class MissingValidationError extends OAuth2Error {
 
 	constructor(override readonly description: string = "Verification required") {
 		super("missing_validation", description);
+	}
+}
+
+/**
+ * A password someone tried to set broke one of the rules new passwords must pass. `issue`
+ * names the rule and carries what a message about it needs, so the form can say what to
+ * change; the description stays a fixed sentence for logs.
+ */
+class PasswordRefusedError extends OAuth2Error {
+	override readonly name = "PasswordRefusedError";
+
+	/** @param issue - The rule the password broke, as the policy reported it. */
+	constructor(readonly issue: PasswordPolicyError.Issue) {
+		super("invalid_request", "Password refused by policy");
 	}
 }
 
@@ -463,6 +479,8 @@ export class OIDC {
 	static MissingValidationError = MissingValidationError;
 	/** A bearer token that is unusable at a protected endpoint, e.g. missing a required scope. */
 	static InvalidTokenError = InvalidTokenError;
+	/** A password refused by the rules new passwords must pass, carrying which rule it broke. */
+	static PasswordRefusedError = PasswordRefusedError;
 
 	/** The access-token value object, exposed so callers verify tokens with the same class the engine mints. */
 	static AccessToken = AccessToken;
@@ -866,6 +884,7 @@ export class OIDC {
 	 * Signs a subject in with an email and password, issuing an authorization code. An
 	 * unknown address registers with a verified credential, so signing up ends signed in;
 	 * a known address without one stores an unverified hash, so a stranger cannot claim it.
+	 * Either new password must first pass the password policy.
 	 *
 	 * @param input - Credentials plus the authorization request to resume.
 	 * @returns The authorization code result, or why the sign-in was refused.
@@ -877,6 +896,12 @@ export class OIDC {
 			let credential = await this.repository.findCredential(subject.id);
 
 			if (!credential) {
+				let accepted = await checkNewPassword(input.password, [
+					subject.emailAddress,
+					subject.username,
+				]);
+				if (isFailure(accepted)) return failure(new PasswordRefusedError(accepted.error.issue));
+
 				let passwordHash = await password.hash(input.password);
 				if (isFailure(passwordHash)) return failure(new InternalServerError());
 
@@ -895,6 +920,9 @@ export class OIDC {
 
 			await this.upgradePasswordHash(subject.id, credential.passwordHash, input.password);
 		} else {
+			let accepted = await checkNewPassword(input.password, [input.email, input.username]);
+			if (isFailure(accepted)) return failure(new PasswordRefusedError(accepted.error.issue));
+
 			let emailHash = await sha256Hex(input.email);
 
 			subject = await this.repository.createSubject({

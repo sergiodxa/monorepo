@@ -20,11 +20,12 @@ import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import type { OIDC } from "~/app/auth/oidc-provider";
 import type { AuthzState, ResponseMode } from "~/app/http/middleware/session";
 import type { AuthorizeQuery } from "~/app/http/validators/authorize";
 import type { SelectClient } from "~/database/schema";
 
+import { OIDC } from "~/app/auth/oidc-provider";
+import { passwordRefusalMessage } from "~/app/auth/password-policy";
 import { createOidcProvider } from "~/app/auth/repository";
 import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
 import Client from "~/app/data/client";
@@ -367,7 +368,13 @@ export default createController(routes.authorize, {
 				let client = await Client.findById(ctx.db, authz.clientId);
 				if (!client) return badRequest({ message: "Invalid request" });
 
-				return signInPage(ctx, client, authz, signInErrorMessage(ctx, login.error.code));
+				let message = signInErrorMessage(ctx, login.error.code);
+				if (login.error instanceof OIDC.PasswordRefusedError) {
+					ctx.log.set({ password: { refused: login.error.issue.reason } });
+					message = passwordRefusalMessage(ctx, login.error.issue);
+				}
+
+				return signInPage(ctx, client, authz, message);
 			}
 
 			ctx.log.set({ subject: { id: login.data.subjectId } });

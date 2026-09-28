@@ -5,7 +5,8 @@
  *
  * Ending the sessions is the security point: a session row's id *is* the refresh token, so one
  * left behind after a reset stays a live credential in whoever's hands prompted the reset. The
- * new hash comes from the same scrypt policy registration uses.
+ * new password passes the same password policy, and its hash the same scrypt cost, as at
+ * registration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +20,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import { checkNewPassword, passwordRefusalMessage } from "~/app/auth/password-policy";
 import { createOidcProvider } from "~/app/auth/repository";
 import Credential from "~/app/data/credential";
 import Session from "~/app/data/session";
@@ -170,8 +172,8 @@ export default createController(routes.password.reset, {
 
 		/**
 		 * POST /password/reset — spends the link, writes the new hash, revokes every session, and
-		 * notifies the subject. Consuming the token before deriving the hash keeps that cost for
-		 * callers who held a live link; a confirmation mismatch gets its own message.
+		 * notifies the subject. The password policy runs against a live link before spending it,
+		 * so a refused password leaves the link usable for the next attempt.
 		 */
 		action: async (ctx) => {
 			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
@@ -194,17 +196,33 @@ export default createController(routes.password.reset, {
 				return resetPage(ctx, result.data.token, ctx.intl.t("password.reset.errors.mismatch"));
 			}
 
-			let subjectId = await consumePasswordResetToken(result.data.token);
-			if (!subjectId) {
+			let pendingSubjectId = await peekPasswordResetToken(result.data.token);
+			if (!pendingSubjectId) {
 				ctx.log.note("password_reset.token_unusable");
 				return invalidPage(ctx);
 			}
 
-			ctx.log.set({ subject: { id: subjectId } });
+			ctx.log.set({ subject: { id: pendingSubjectId } });
 
-			let subject = await Subject.findById(ctx.db, subjectId);
+			let subject = await Subject.findById(ctx.db, pendingSubjectId);
 			if (!subject) {
 				ctx.log.note("password_reset.subject_missing");
+				return invalidPage(ctx);
+			}
+
+			let accepted = await checkNewPassword(result.data.password, [
+				subject.email_address,
+				subject.username,
+			]);
+			if (isFailure(accepted)) {
+				ctx.log.set({ password: { refused: accepted.error.issue.reason } });
+				ctx.log.note("password_reset.password_refused");
+				return resetPage(ctx, result.data.token, passwordRefusalMessage(ctx, accepted.error.issue));
+			}
+
+			let subjectId = await consumePasswordResetToken(result.data.token);
+			if (subjectId !== subject.id) {
+				ctx.log.note("password_reset.token_unusable");
 				return invalidPage(ctx);
 			}
 
