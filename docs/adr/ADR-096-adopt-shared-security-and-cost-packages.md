@@ -257,9 +257,6 @@ touch a workspace. One commit per app keeps each app's notes describing what cha
 - auth-saas's hosted sign-up and magic link parse addresses only. A per-tenant setting for the
   disposable and mail-server checks needs a tenant migration, an object method and a management API
   field, so it waits for its own change.
-- auth-saas hashes the NFKC form of a password when it is set, but sign-in and password change
-  verify the password as typed, so a password whose NFKC form differs from what was typed cannot sign
-  in. That predates this ADR and is tracked separately.
 - The package defaults are not the apps' current values: `minLength` is 15 where both apps use 8. Each
   app passes its value explicitly until the product decision is made.
 - `@sdxc/password-policy`'s root import does not include the history check, whose scrypt verification

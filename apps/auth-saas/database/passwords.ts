@@ -178,6 +178,18 @@ export interface PasswordWriteOptions {
 /** Identifies this platform to the Pwned Passwords API, which asks every client to name itself. */
 const BREACH_CHECK_USER_AGENT = "auth-saas";
 
+/**
+ * The one form of a password that is ever hashed or verified: its NFKC normalization, which is
+ * also what every policy rule compares, so a password typed with full-width letters or a ligature
+ * signs in exactly as it was set. Every stored hash is of this form.
+ *
+ * @param typed - The password as the person typed it.
+ * @returns The string handed to `password.hash` and `password.verify`.
+ */
+function hashedForm(typed: string): string {
+	return typed.normalize("NFKC");
+}
+
 /** What writing a new password hands back once policy and reuse both clear. */
 interface WrittenPassword {
 	ok: true;
@@ -187,7 +199,7 @@ interface WrittenPassword {
 
 /**
  * Enforces policy, refuses a reuse, and writes a subject's new password in one operation.
- * Every rule and the reuse check run on the NFKC form, the form that is hashed. A stored hash
+ * Every rule and the reuse check run on {@link hashedForm}, the form that is hashed. A stored hash
  * that cannot be verified lets the write through, logged, so a damaged row never locks a
  * subject out of reset; a match against any other row still refuses.
  *
@@ -202,7 +214,7 @@ async function writeNewPassword(
 	options: PasswordWriteOptions,
 ): Promise<WrittenPassword | PasswordPolicyFailure> {
 	let policy = await getPolicy(db);
-	let candidate = input.password.normalize("NFKC");
+	let candidate = hashedForm(input.password);
 
 	let identifierRows = await db.findMany(subjectIdentifiers, {
 		where: { subject_id: input.subjectId },
@@ -417,7 +429,7 @@ export async function changePassword(
 	});
 	if (!newest) return { ok: false, reason: "no-password" };
 
-	let verified = await password.verify(newest.hash, input.currentPassword);
+	let verified = await password.verify(newest.hash, hashedForm(input.currentPassword));
 	if (isFailure(verified) || !verified.data) return { ok: false, reason: "wrong-password" };
 
 	let written = await writeNewPassword(
@@ -500,7 +512,7 @@ async function dummyHash(): Promise<string> {
 
 /** Derives a candidate against the fixed dummy hash, spending the CPU a real verify would. */
 async function verifyAgainstDummy(candidate: string): Promise<void> {
-	await password.verify(await dummyHash(), candidate);
+	await password.verify(await dummyHash(), hashedForm(candidate));
 }
 
 /** An identifier with an `@` is checked as an email; anything else, as a username. */
@@ -620,7 +632,7 @@ export async function signInWithPassword(
 		return { ok: false, reason: "invalid-credentials", retryAfter: newest.retry_after };
 	}
 
-	let verified = await password.verify(newest.hash, input.password);
+	let verified = await password.verify(newest.hash, hashedForm(input.password));
 	if (isFailure(verified) || !verified.data) {
 		let failure = nextFailureState(newest, failureThreshold, now);
 		await db.update(passwords, { id: newest.id }, failure);
@@ -635,7 +647,7 @@ export async function signInWithPassword(
 	let clearedState: Partial<PasswordRow> = clearedBackoff();
 
 	if (password.needsRehash(newest.hash)) {
-		let rehashed = await password.hash(input.password);
+		let rehashed = await password.hash(hashedForm(input.password));
 		if (isSuccess(rehashed)) clearedState.hash = rehashed.data;
 	}
 

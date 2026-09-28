@@ -1713,3 +1713,57 @@ describe("audit", () => {
 		expect(rows).toMatchObject([{ actorId: subjectId, outcome: "denied" }]);
 	});
 });
+
+describe("password normalization: one form hashed and verified", () => {
+	/** Typed with full-width letters and the `ﬁ` ligature, so its NFKC form differs from it. */
+	let typed = "ｆｕｌｌ-ｗｉｄｔｈ-ﬁne-horse-1";
+
+	test("signs in with a password whose NFKC form differs from what was typed", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let result = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: typed,
+			remembered: false,
+		});
+
+		expect(result).toMatchObject({ ok: true, subjectId });
+	});
+
+	test("changes a password whose NFKC form differs from what was typed", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let result = await Passwords.changePassword(db, {
+			subjectId,
+			currentPassword: typed,
+			newPassword: "a-new-password-1",
+			keepSessionId: "sess_test",
+		});
+
+		expect(result).toMatchObject({ ok: true });
+	});
+
+	test("rehashes the NFKC form on sign-in, so the next sign-in still verifies", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: typed, actor: subjectActor });
+
+		let needsRehash = vi.spyOn(password, "needsRehash").mockReturnValue(true);
+		let first = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: typed,
+			remembered: false,
+		});
+		needsRehash.mockRestore();
+
+		let second = await Passwords.signInWithPassword(db, {
+			identifier: "jane@example.com",
+			password: "full-width-fine-horse-1",
+			remembered: false,
+		});
+
+		expect(first).toMatchObject({ ok: true, subjectId });
+		expect(second).toMatchObject({ ok: true, subjectId });
+	});
+});
