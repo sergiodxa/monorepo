@@ -12,7 +12,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { JWK } from "@sdxc/jwt";
 import * as s from "remix/data-schema";
-import { and, column as c, eq, gt, isNull, lte, notNull, or, table } from "remix/data-table";
+import { and, column as c, eq, gt, gte, isNull, lte, notNull, or, table } from "remix/data-table";
 
 import { writeAuditEvent } from "./audit-events";
 
@@ -298,7 +298,7 @@ export async function setCustomClaims(
 
 	let now = Date.now();
 
-	await db.deleteMany(customClaims, { where: {} });
+	await db.deleteMany(customClaims, { where: gte("name", "") });
 
 	for (let claim of parsed.claims) {
 		await db.create(customClaims, {

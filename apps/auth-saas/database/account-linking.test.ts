@@ -22,7 +22,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { importKey, randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
-import { Database } from "remix/data-table";
+import { Database, gte } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { MatchedSubjectForLinking } from "./account-linking";
@@ -244,7 +244,11 @@ describe("mintLinkTicket / spendLinkTicket", () => {
 
 		// Every row this table can hold expires on the same schedule, so backdating
 		// the one row a fresh mint just wrote is the whole setup an expiry test needs.
-		await db.updateMany(pendingLinkTickets, { expires_at: Date.now() - 1 }, { where: {} });
+		await db.updateMany(
+			pendingLinkTickets,
+			{ expires_at: Date.now() - 1 },
+			{ where: gte("id", "") },
+		);
 
 		let spent = await spendLinkTicket(db, sealKey, { ticket });
 

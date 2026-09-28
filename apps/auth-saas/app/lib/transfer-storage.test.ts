@@ -17,6 +17,7 @@
 import type { Database } from "remix/data-table";
 
 import { createAnalyticsEngine, createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { gte } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { flush, runWithLedger } from "~/app/lib/cost-ledger";
@@ -168,7 +169,11 @@ describe("mintTransferDownloadTicket / spendTransferDownloadTicket", () => {
 
 		// Every row this table can hold expires on the same schedule, so backdating
 		// the one row a fresh mint just wrote is the whole setup an expiry test needs.
-		await db.updateMany(transferDownloadTickets, { expires_at: Date.now() - 1 }, { where: {} });
+		await db.updateMany(
+			transferDownloadTickets,
+			{ expires_at: Date.now() - 1 },
+			{ where: gte("id", "") },
+		);
 
 		let spent = await spendTransferDownloadTicket(db, { ticket });
 
