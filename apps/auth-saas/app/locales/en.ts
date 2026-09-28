@@ -229,10 +229,13 @@ export default {
 	hostedPassword: {
 		errors: {
 			tooShort: "Password must be at least {$minLength} characters.",
+			tooLong: "Password must be at most {$maxLength} characters.",
 			common: "Choose a password that isn't easy to guess.",
+			breached: "This password has appeared in a data breach. Choose a different one.",
 			similarToIdentifier: "Your password can't be similar to your email.",
 			deniedTerm: 'Your password can\'t contain "{$term}".',
 			reused: "Choose a password you haven't used before.",
+			checkUnavailable: "We couldn't check that password right now. Try again.",
 		},
 	},
 

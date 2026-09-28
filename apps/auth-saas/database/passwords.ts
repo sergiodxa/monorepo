@@ -8,9 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, password, sha256 } from "@sdxc/crypto";
+import { currentLog } from "@sdxc/logger";
+import { checkPassword } from "@sdxc/password-policy";
+import { checkPasswordHistory } from "@sdxc/password-policy/history";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -20,7 +24,7 @@ import type { AuditAction, AuditActor } from "./audit-events";
 import type { AppliedDomainMembership, SuggestedOrganization } from "./organizations";
 import type { EffectiveSessionPolicy, SessionsAfterCredentialChange } from "./session-policy";
 import type { OpenSessionMetering, OpenSessionSuccess } from "./sessions";
-import type { Actor, IdentifierKind, SubjectIdentifierRow } from "./subjects";
+import type { Actor, IdentifierKind } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
 import {
@@ -62,69 +66,6 @@ const DEFAULT_HISTORY_DEPTH = 1;
 
 /** How long a password reset ticket signs for an address before it expires. */
 const RESET_TICKET_TTL_MS = 30 * 60 * 1000;
-
-/**
- * The top 100,000 breached and common passwords, shipped as truncated SHA-256
- * prefixes in a sorted binary asset, is real data this checkout has no way to
- * acquire or fetch. This is a placeholder: a few dozen of the most obviously common
- * passwords, in plain text, standing in for that corpus until it exists. Replace the
- * list (and, ideally, the lookup with the ADR's sorted-prefix structure) rather than
- * treating this as the real deny-list.
- */
-const PLACEHOLDER_COMMON_PASSWORDS = [
-	"password",
-	"123456",
-	"12345678",
-	"123456789",
-	"1234567890",
-	"qwerty",
-	"qwertyuiop",
-	"letmein",
-	"iloveyou",
-	"admin",
-	"welcome",
-	"monkey",
-	"dragon",
-	"football",
-	"baseball",
-	"abc123",
-	"111111",
-	"123123",
-	"password1",
-	"1234567",
-	"sunshine",
-	"master",
-	"shadow",
-	"superman",
-	"trustno1",
-	"hello",
-	"666666",
-	"123321",
-	"mustang",
-	"batman",
-	"starwars",
-	"1q2w3e4r",
-	"whatever",
-	"princess",
-	"login",
-	"passw0rd",
-	"admin123",
-	"charlie",
-	"freedom",
-	"jordan23",
-];
-
-/** Decoded lazily on first use, so a tenant that never sets a password pays nothing. */
-let commonPasswordSet: Set<string> | null = null;
-
-/** Whether a candidate password is one of the placeholder list's well-known values. */
-function isPlaceholderCommonPassword(candidate: string): boolean {
-	if (commonPasswordSet === null) {
-		commonPasswordSet = new Set(PLACEHOLDER_COMMON_PASSWORDS);
-	}
-
-	return commonPasswordSet.has(candidate.normalize("NFKC").toLowerCase());
-}
 
 /** A subject's password credential: only the newest row authenticates. */
 export const passwords = table({
@@ -216,49 +157,26 @@ export async function describePasswordPolicy(db: Database): Promise<PasswordPoli
 	};
 }
 
-/** The email local part, domain label and folded username a candidate is checked against. */
-function identifierFragments(rows: SubjectIdentifierRow[]): string[] {
-	let fragments: string[] = [];
+/**
+ * The policy rejections {@link setPassword}, {@link changePassword} and reset completion
+ * share: the refusal's `reason` and the values its message needs, as a plain object that
+ * crosses the Durable Object boundary.
+ */
+export type PasswordPolicyFailure = { ok: false } & PasswordPolicyError.Issue;
 
-	for (let row of rows) {
-		if (row.kind === "email") {
-			let at = row.folded.indexOf("@");
-			if (at <= 0) continue;
-
-			fragments.push(row.folded.slice(0, at));
-
-			let domain = row.folded.slice(at + 1);
-			let label = domain.split(".")[0];
-			if (label) fragments.push(label);
-		} else {
-			fragments.push(row.folded);
-		}
-	}
-
-	// A fragment shorter than this matches almost anything, so it would refuse
-	// passwords for a reason the person typing one could not connect to their address.
-	return fragments.filter((fragment) => fragment.length >= 3);
+/** The remote checks a password write runs besides the local rules. */
+export interface PasswordWriteOptions {
+	/**
+	 * Whether to ask Have I Been Pwned about the candidate once every local rule passed; an
+	 * unreachable API lets the password through.
+	 *
+	 * @default false
+	 */
+	breachCheck?: boolean;
 }
 
-/** Whether a candidate password contains, or is contained by, one of a subject's own identifiers. */
-function isSimilarToIdentifier(candidate: string, fragments: string[]): boolean {
-	let normalized = candidate.normalize("NFKC").toLowerCase();
-
-	for (let fragment of fragments) {
-		if (normalized.includes(fragment)) return true;
-		if (fragment.includes(normalized) && normalized.length >= 3) return true;
-	}
-
-	return false;
-}
-
-/** The policy rejections {@link setPassword}, {@link changePassword} and reset completion share. */
-export type PasswordPolicyFailure =
-	| { ok: false; reason: "too-short"; minLength: number }
-	| { ok: false; reason: "breached-or-common" }
-	| { ok: false; reason: "similar-to-identifier" }
-	| { ok: false; reason: "denied-term"; term: string }
-	| { ok: false; reason: "reused" };
+/** Identifies this platform to the Pwned Passwords API, which asks every client to name itself. */
+const BREACH_CHECK_USER_AGENT = "auth-saas";
 
 /** What writing a new password hands back once policy and reuse both clear. */
 interface WrittenPassword {
@@ -268,45 +186,36 @@ interface WrittenPassword {
 }
 
 /**
- * Enforces policy, refuses a reuse, and writes a subject's new password in one
- * operation: the derivations, the insert and the history trim never interleave with
- * another write to the same rows.
+ * Enforces policy, refuses a reuse, and writes a subject's new password in one operation.
+ * Every rule and the reuse check run on the NFKC form, the form that is hashed. A stored hash
+ * that cannot be verified lets the write through, logged, so a damaged row never locks a
+ * subject out of reset; a match against any other row still refuses.
  *
  * @param db - The tenant's database.
  * @param input - The subject the password belongs to and the candidate itself.
+ * @param options - Whether the breached-password lookup runs.
  * @returns The new row's id and expiry, or which policy rule refused the candidate.
  */
 async function writeNewPassword(
 	db: Database,
 	input: { subjectId: string; password: string },
+	options: PasswordWriteOptions,
 ): Promise<WrittenPassword | PasswordPolicyFailure> {
 	let policy = await getPolicy(db);
 	let candidate = input.password.normalize("NFKC");
-
-	if (candidate.length < policy.min_length) {
-		return { ok: false, reason: "too-short", minLength: policy.min_length };
-	}
-
-	if (isPlaceholderCommonPassword(candidate)) {
-		return { ok: false, reason: "breached-or-common" };
-	}
 
 	let identifierRows = await db.findMany(subjectIdentifiers, {
 		where: { subject_id: input.subjectId },
 	});
 
-	if (isSimilarToIdentifier(candidate, identifierFragments(identifierRows))) {
-		return { ok: false, reason: "similar-to-identifier" };
-	}
-
-	let deniedTerms = (policy.denied_terms as string[]) ?? [];
-	let normalizedCandidate = candidate.toLowerCase();
-
-	for (let term of deniedTerms) {
-		let normalizedTerm = term.normalize("NFKC").toLowerCase();
-		if (normalizedTerm.length > 0 && normalizedCandidate.includes(normalizedTerm)) {
-			return { ok: false, reason: "denied-term", term };
-		}
+	let accepted = await checkPassword(candidate, {
+		minLength: policy.min_length,
+		deniedTerms: (policy.denied_terms as string[]) ?? [],
+		identifiers: identifierRows.map((row) => row.folded),
+		breached: options.breachCheck ? { userAgent: BREACH_CHECK_USER_AGENT } : false,
+	});
+	if (isFailure(accepted) && accepted.error.issue.reason !== "breach-check-unavailable") {
+		return { ok: false, ...accepted.error.issue };
 	}
 
 	let retained = await db.findMany(passwords, {
@@ -314,9 +223,19 @@ async function writeNewPassword(
 		orderBy: ["created_at", "desc"],
 	});
 
-	for (let row of retained) {
-		let matched = await password.verify(row.hash, candidate);
-		if (isSuccess(matched) && matched.data) return { ok: false, reason: "reused" };
+	let history = await checkPasswordHistory(
+		candidate,
+		retained.map((row) => row.hash),
+		{ maxHistory: retained.length },
+	);
+	if (isFailure(history)) {
+		let { issue } = history.error;
+		if (issue.reason !== "history-check-unavailable") return { ok: false, ...issue };
+
+		currentLog()?.warn("password.history_check_unavailable", {
+			subjectId: input.subjectId,
+			passwordId: retained[issue.index]?.id,
+		});
 	}
 
 	let hashed = await password.hash(candidate);
@@ -422,19 +341,22 @@ export type SetPasswordResult =
  *
  * @param db - The tenant's database.
  * @param input - The subject, the candidate password, and who is asking.
+ * @param options - Whether the breached-password lookup runs.
  * @returns The new row's id and expiry, or which policy rule refused the candidate.
  */
 export async function setPassword(
 	db: Database,
 	input: SetPasswordInput,
+	options: PasswordWriteOptions = {},
 ): Promise<SetPasswordResult> {
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
 
-	let written = await writeNewPassword(db, {
-		subjectId: input.subjectId,
-		password: input.password,
-	});
+	let written = await writeNewPassword(
+		db,
+		{ subjectId: input.subjectId, password: input.password },
+		options,
+	);
 	if (!written.ok) return written;
 
 	await writeAuditEvent(db, {
@@ -477,12 +399,14 @@ export type ChangePasswordResult =
  * @param sessionsAfterCredentialChange - The tenant's own effective policy for what a
  * credential change does to a subject's other sessions; omitted, `revoke-others`, the
  * behavior this function has always had.
+ * @param options - Whether the breached-password lookup runs.
  * @returns The new row's id and expiry, or why the change was refused.
  */
 export async function changePassword(
 	db: Database,
 	input: ChangePasswordInput,
 	sessionsAfterCredentialChange: SessionsAfterCredentialChange = SESSIONS_AFTER_CREDENTIAL_CHANGE_DEFAULT,
+	options: PasswordWriteOptions = {},
 ): Promise<ChangePasswordResult> {
 	let subject = await db.find(subjects, { id: input.subjectId });
 	if (!subject) return { ok: false, reason: "not-found" };
@@ -496,10 +420,11 @@ export async function changePassword(
 	let verified = await password.verify(newest.hash, input.currentPassword);
 	if (isFailure(verified) || !verified.data) return { ok: false, reason: "wrong-password" };
 
-	let written = await writeNewPassword(db, {
-		subjectId: input.subjectId,
-		password: input.newPassword,
-	});
+	let written = await writeNewPassword(
+		db,
+		{ subjectId: input.subjectId, password: input.newPassword },
+		options,
+	);
 	if (!written.ok) return written;
 
 	await revokeSubjectSessions(db, {
@@ -943,11 +868,13 @@ export type CompletePasswordResetResult =
  *
  * @param db - The tenant's database.
  * @param input - The ticket as delivered, and the new password it authorizes.
+ * @param options - Whether the breached-password lookup runs.
  * @returns The subject and the new row's id, or why the reset was refused.
  */
 export async function completePasswordReset(
 	db: Database,
 	input: CompletePasswordResetInput,
+	options: PasswordWriteOptions = {},
 ): Promise<CompletePasswordResetResult> {
 	let hashed = await sha256(input.ticket);
 	if (isFailure(hashed)) return { ok: false, reason: "invalid-ticket" };
@@ -961,10 +888,11 @@ export async function completePasswordReset(
 
 	if (row.expires_at <= Date.now()) return { ok: false, reason: "invalid-ticket" };
 
-	let written = await writeNewPassword(db, {
-		subjectId: row.subject_id,
-		password: input.newPassword,
-	});
+	let written = await writeNewPassword(
+		db,
+		{ subjectId: row.subject_id, password: input.newPassword },
+		options,
+	);
 	if (!written.ok) return written;
 
 	await revokeSubjectSessions(db, { subjectId: row.subject_id, reason: "password_reset" });

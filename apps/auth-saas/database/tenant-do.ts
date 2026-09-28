@@ -660,6 +660,15 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	#sealKeyPromise: Promise<CryptoKey> | null = null;
 
 	/**
+	 * The remote checks every password write runs. The deployed Worker sets
+	 * `PASSWORD_BREACH_CHECK` to `enabled`, so each new password is looked up in Have I Been
+	 * Pwned; an object built with no such variable, as a test builds one, stays offline.
+	 */
+	get #passwordWrites(): Passwords.PasswordWriteOptions {
+		return { breachCheck: this.env.PASSWORD_BREACH_CHECK === "enabled" };
+	}
+
+	/**
 	 * Opens this tenant's database and applies whatever schema has not run yet, queuing
 	 * every method behind it so none observes a half-applied schema.
 	 *
@@ -1617,7 +1626,7 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	 */
 	async setPassword(input: SetPasswordInput): Promise<WithCost<SetPasswordResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Passwords.setPassword(this.#db, input));
+		return this.#withCost(() => Passwords.setPassword(this.#db, input, this.#passwordWrites));
 	}
 
 	/**
@@ -1631,7 +1640,12 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 
 		return this.#withCost(async () => {
 			let { sessionsAfterCredentialChange } = await this.#effectiveSessionPolicy();
-			return Passwords.changePassword(this.#db, input, sessionsAfterCredentialChange);
+			return Passwords.changePassword(
+				this.#db,
+				input,
+				sessionsAfterCredentialChange,
+				this.#passwordWrites,
+			);
 		});
 	}
 
@@ -1703,7 +1717,9 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 		input: CompletePasswordResetInput,
 	): Promise<WithCost<CompletePasswordResetResult>> {
 		await this.#migrated;
-		return this.#withCost(() => Passwords.completePasswordReset(this.#db, input));
+		return this.#withCost(() =>
+			Passwords.completePasswordReset(this.#db, input, this.#passwordWrites),
+		);
 	}
 
 	/**

@@ -173,5 +173,7 @@
 	"vars": {
 		"PLATFORM_DOMAIN": "auth.sergiodxa.com",
 		"EMAIL_FROM": "Auth SaaS <noreply@auth.sergiodxa.com>",
+		// Looks every new password up in Have I Been Pwned; an unreachable API lets it through.
+		"PASSWORD_BREACH_CHECK": "enabled",
 	},
 }

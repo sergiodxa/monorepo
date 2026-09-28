@@ -13,9 +13,13 @@ import type { DurableObjectStateMock } from "@sdxc/cloudflare-mocks";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { password } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { Log } from "@sdxc/logger";
+import { PWNED_PASSWORDS_RANGE_URL } from "@sdxc/password-policy/breached";
 import { unwrap } from "@sdxc/result";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { readAuditPage } from "./audit-events";
 import { createDauCache } from "./metering";
@@ -45,6 +49,34 @@ import m0030 from "./tenant-migrations/0030-totp-backoff.sql?raw";
 import { totpFactors } from "./totp";
 
 let db: Database;
+
+let server = setupServer();
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
+/** The uppercase SHA-1 hex of a password, the form the Pwned Passwords range API indexes. */
+async function sha1Hex(value: string): Promise<string> {
+	let digest = await crypto.subtle.digest(
+		"SHA-1",
+		new TextEncoder().encode(value.normalize("NFC")),
+	);
+	return [...new Uint8Array(digest)]
+		.map((byte) => byte.toString(16).padStart(2, "0"))
+		.join("")
+		.toUpperCase();
+}
+
+/** Answers every range lookup as though `breached` appeared in `occurrences` breaches. */
+async function answerPwnedRange(breached: string, occurrences: number): Promise<void> {
+	let hash = await sha1Hex(breached);
+	server.use(
+		http.get(`${PWNED_PASSWORDS_RANGE_URL}:prefix`, ({ params }) => {
+			let body = params.prefix === hash.slice(0, 5) ? `${hash.slice(5)}:${occurrences}\r\n` : "";
+			return new HttpResponse(`${body}0000000000000000000000000000000000A:0`);
+		}),
+	);
+}
 
 let subjectActor = { kind: "subject" } as const;
 
@@ -137,7 +169,7 @@ describe("setPassword: policy rejections", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "too-short", minLength: 8 });
+		expect(result).toEqual({ ok: false, reason: "too-short", minLength: 8, length: 6 });
 	});
 
 	test("refuses a well-known common password", async () => {
@@ -149,7 +181,7 @@ describe("setPassword: policy rejections", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "breached-or-common" });
+		expect(result).toEqual({ ok: false, reason: "common" });
 	});
 
 	test("refuses a password containing the subject's own email local part", async () => {
@@ -161,7 +193,45 @@ describe("setPassword: policy rejections", () => {
 			actor: subjectActor,
 		});
 
-		expect(result).toEqual({ ok: false, reason: "similar-to-identifier" });
+		expect(result).toEqual({ ok: false, reason: "similar-to-identifier", fragment: "janedoe" });
+	});
+
+	test("refuses a common password the former 40-entry list never held", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "michelle",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "common" });
+	});
+
+	test("refuses a password Have I Been Pwned reports breached, once enabled", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await answerPwnedRange("a-perfectly-fine-password-1", 42);
+
+		let result = await Passwords.setPassword(
+			db,
+			{ subjectId, password: "a-perfectly-fine-password-1", actor: subjectActor },
+			{ breachCheck: true },
+		);
+
+		expect(result).toEqual({ ok: false, reason: "breached", occurrences: 42 });
+	});
+
+	test("accepts a password the local rules pass when Have I Been Pwned is unreachable", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		server.use(http.get(`${PWNED_PASSWORDS_RANGE_URL}:prefix`, () => HttpResponse.error()));
+
+		let result = await Passwords.setPassword(
+			db,
+			{ subjectId, password: "a-perfectly-fine-password-1", actor: subjectActor },
+			{ breachCheck: true },
+		);
+
+		expect(result.ok).toBe(true);
 	});
 
 	test("refuses a password containing a tenant-denied term", async () => {
@@ -226,7 +296,61 @@ describe("setPassword: reuse and history", () => {
 			password: "a-perfectly-fine-password-1",
 			actor: subjectActor,
 		});
-		expect(second).toEqual({ ok: false, reason: "reused" });
+		expect(second).toEqual({ ok: false, reason: "reused", index: 0 });
+	});
+
+	test("compares a reuse on the NFKC form it hashes, so a full-width spelling matches", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+
+		await Passwords.setPassword(db, {
+			subjectId,
+			password: "ｆｕｌｌ-ｗｉｄｔｈ-horse-1",
+			actor: subjectActor,
+		});
+		let reused = await Passwords.setPassword(db, {
+			subjectId,
+			password: "full-width-horse-1",
+			actor: subjectActor,
+		});
+
+		expect(reused).toEqual({ ok: false, reason: "reused", index: 0 });
+	});
+
+	test("lets a write through, logged, when a stored hash cannot be verified", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await Passwords.setPassword(db, { subjectId, password: "password-a-1", actor: subjectActor });
+		await db.updateMany(
+			Passwords.passwords,
+			{ hash: "$scrypt$damaged" },
+			{ where: { subject_id: subjectId } },
+		);
+
+		let records: Record<string, unknown>[] = [];
+		let log = new Log({ kind: "request", sink: (record) => records.push(record) });
+		let result = await log.run(() =>
+			Passwords.setPassword(db, { subjectId, password: "password-b-1", actor: subjectActor }),
+		);
+
+		expect(result.ok).toBe(true);
+		expect(log.outcome).toBe("degraded");
+		expect(JSON.stringify(records)).toContain("password.history_check_unavailable");
+	});
+
+	test("still refuses a reuse when an older stored hash cannot be verified", async () => {
+		let subjectId = await createVerifiedSubject("jane@example.com");
+		await db.update(Passwords.passwordPolicy, { id: "default" }, { history_depth: 3 });
+		await Passwords.setPassword(db, { subjectId, password: "password-a-1", actor: subjectActor });
+		let oldest = await db.findOne(Passwords.passwords, { where: { subject_id: subjectId } });
+		await Passwords.setPassword(db, { subjectId, password: "password-b-1", actor: subjectActor });
+		await db.update(Passwords.passwords, { id: oldest?.id ?? "" }, { hash: "$scrypt$damaged" });
+
+		let result = await Passwords.setPassword(db, {
+			subjectId,
+			password: "password-b-1",
+			actor: subjectActor,
+		});
+
+		expect(result).toEqual({ ok: false, reason: "reused", index: 0 });
 	});
 
 	test("trims history to the tenant's depth, keeping only the newest N rows", async () => {
@@ -260,7 +384,7 @@ describe("setPassword: reuse and history", () => {
 			password: "password-a-1",
 			actor: subjectActor,
 		});
-		expect(reuseWithinWindow).toEqual({ ok: false, reason: "reused" });
+		expect(reuseWithinWindow).toEqual({ ok: false, reason: "reused", index: 2 });
 
 		// A fourth distinct password trims "password-a-1" out of the retained rows.
 		await Passwords.setPassword(db, { subjectId, password: "password-d-1", actor: subjectActor });
@@ -1392,7 +1516,7 @@ describe("beginPasswordReset / completePasswordReset", () => {
 			ticket: begun.ticket,
 			newPassword: "short",
 		});
-		expect(tooShort).toEqual({ ok: false, reason: "too-short", minLength: 8 });
+		expect(tooShort).toEqual({ ok: false, reason: "too-short", minLength: 8, length: 5 });
 
 		let secondAttempt = await Passwords.completePasswordReset(db, {
 			ticket: begun.ticket,

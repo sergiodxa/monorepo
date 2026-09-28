@@ -1,8 +1,8 @@
 /**
  * Maps a `PasswordPolicyFailure` — the refusal shape `setPassword` and
  * `completePasswordReset` both answer with — to the `Form.Issue` its field
- * renders, so `/u/sign-up` and `/u/reset` share one translation of the same
- * five policy rules rather than each composing its own copy.
+ * renders, so hosted sign-up and reset and platform sign-up share one
+ * translation of every password policy refusal.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -32,8 +32,14 @@ export function passwordPolicyIssue(
 		case "too-short":
 			message = t("hostedPassword.errors.tooShort", { minLength: failure.minLength });
 			break;
-		case "breached-or-common":
+		case "too-long":
+			message = t("hostedPassword.errors.tooLong", { maxLength: failure.maxLength });
+			break;
+		case "common":
 			message = t("hostedPassword.errors.common");
+			break;
+		case "breached":
+			message = t("hostedPassword.errors.breached");
 			break;
 		case "similar-to-identifier":
 			message = t("hostedPassword.errors.similarToIdentifier");
@@ -43,6 +49,10 @@ export function passwordPolicyIssue(
 			break;
 		case "reused":
 			message = t("hostedPassword.errors.reused");
+			break;
+		case "breach-check-unavailable":
+		case "history-check-unavailable":
+			message = t("hostedPassword.errors.checkUnavailable");
 			break;
 	}
 

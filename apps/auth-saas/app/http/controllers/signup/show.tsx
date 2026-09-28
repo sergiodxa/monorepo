@@ -26,8 +26,9 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import type { PasswordPolicy, PasswordPolicyFailure } from "~/database/passwords";
+import type { PasswordPolicy } from "~/database/passwords";
 
+import { passwordPolicyIssue } from "~/app/http/controllers/hosted/password-policy-issue";
 import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
@@ -52,22 +53,6 @@ function signUpSchema(policy: PasswordPolicy, t: Translate) {
 		email: f.field(emailAddress(t("platformSignUp.errors.emailInvalid"))),
 		password: f.field(s.string().pipe(checks.minLength(policy.minLength))),
 	});
-}
-
-/** Renders a password policy refusal as plain English, with no translation layer behind this router. */
-function passwordPolicyMessage(failure: PasswordPolicyFailure): string {
-	switch (failure.reason) {
-		case "too-short":
-			return `Use at least ${failure.minLength} characters.`;
-		case "breached-or-common":
-			return "Choose a password that isn't easy to guess.";
-		case "similar-to-identifier":
-			return "Your password can't be similar to your email.";
-		case "denied-term":
-			return `Your password can't contain "${failure.term}".`;
-		case "reused":
-			return "Choose a password you haven't used before.";
-	}
 }
 
 /** Why a parsed address was held back, and what the re-rendered form offers instead. */
@@ -266,7 +251,7 @@ export const signupSubmit = createAction(routes.signup.submit, async (ctx) => {
 
 		return renderSignUpPage(ctx, {
 			policy,
-			issues: [{ message: passwordPolicyMessage(written), path: ["password"] }],
+			issues: [passwordPolicyIssue(ctx.intl.t, written, "password")],
 		});
 	}
 

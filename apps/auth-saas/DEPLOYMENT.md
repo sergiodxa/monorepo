@@ -64,6 +64,8 @@ done
 (`openssl rand -hex 32`). `INTERNAL_SECRET` must match what the control plane uses to
 mint Management API tokens for tenant DOs. `PLATFORM_DOMAIN` and `EMAIL_FROM` are
 plain vars in `wrangler.jsonc` — change them there if your domain differs.
+`PASSWORD_BREACH_CHECK` is `enabled` there too, so every new password is looked up in Have I
+Been Pwned; an unreachable API lets the password through.
 
 ## 5. Deploy
 
