@@ -59,6 +59,7 @@ function platformStub(tenantDO: InstanceType<typeof Tenant>) {
 		createSubject: tenantDO.createSubject.bind(tenantDO),
 		openSessionForSubject: tenantDO.openSessionForSubject.bind(tenantDO),
 		resolveSession: tenantDO.resolveSession.bind(tenantDO),
+		revokeSession: tenantDO.revokeSession.bind(tenantDO),
 		registerClient: tenantDO.registerClient.bind(tenantDO),
 		defineScopes: tenantDO.defineScopes.bind(tenantDO),
 	};
@@ -94,6 +95,7 @@ let { dashboardShow, dashboardCreateTenant } =
 	await import("~/app/http/controllers/dashboard/show");
 let { dashboardAgentClientsShow, dashboardAgentClientsRegister } =
 	await import("~/app/http/controllers/dashboard/agent-clients");
+let { dashboardSignOut } = await import("~/app/http/controllers/dashboard/sign-out");
 let { createAgentClientsRegisterAction } =
 	await import("~/app/http/controllers/management/agent-clients/register");
 let { resolveDashboardSession, dashboardSignInUrl } =
@@ -125,6 +127,7 @@ function buildDashboardRouter() {
 	router.map(webRoutes.dashboard.createTenant, dashboardCreateTenant);
 	router.map(webRoutes.dashboard.agentClients, dashboardAgentClientsShow);
 	router.map(webRoutes.dashboard.registerAgentClient, dashboardAgentClientsRegister);
+	router.map(webRoutes.dashboard.signOut, dashboardSignOut);
 
 	return router;
 }
@@ -316,5 +319,35 @@ describe("GET/POST /dashboard/tenants/:tenantId/agent-clients", () => {
 
 		expect(response.status).toBe(302);
 		expect(response.headers.get("Location")).toBe(webRoutes.dashboard.show.href());
+	});
+});
+
+describe("POST /dashboard/sign-out", () => {
+	test("revokes the session at the platform tenant, not just the cookie", async () => {
+		let router = buildDashboardRouter();
+		let { cookie } = await signIn();
+
+		let signOutResponse = await router.fetch(
+			dashboardPost(webRoutes.dashboard.signOut.href(), [], cookie),
+		);
+		expect(signOutResponse.status).toBe(302);
+		expect(signOutResponse.headers.get("Location")).toBe(webRoutes.index.href());
+
+		let token = await sessionCookie.parse(cookie);
+		let resolved = await platformTenantDO.resolveSession({
+			token: token as string,
+			ip: null,
+			userAgent: null,
+			country: null,
+			region: null,
+			city: null,
+		});
+		expect(resolved.status).not.toBe("active");
+
+		let afterSignOut = await router.fetch(dashboardGet(webRoutes.dashboard.show.href(), cookie));
+		expect(afterSignOut.status).toBe(302);
+		expect(afterSignOut.headers.get("Location")).toBe(
+			dashboardSignInUrl(webRoutes.dashboard.show.href()),
+		);
 	});
 });

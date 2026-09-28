@@ -17,9 +17,10 @@ import { requestOrigin } from "~/app/lib/request-origin";
 import { sessionCookie } from "~/app/lib/session-cookie";
 import tenantRoutes from "~/routes/tenant";
 
-/** A live platform dashboard session's subject id. */
+/** A live platform dashboard session's subject and session id. */
 export interface DashboardSession {
 	subjectId: string;
+	sessionId: string;
 }
 
 /**
@@ -39,7 +40,9 @@ export async function resolveDashboardSession(
 	let platform = env.TENANT.getByName(env.PLATFORM_DOMAIN);
 	let resolved = await platform.resolveSession({ token, ...requestOrigin(ctx.request) });
 
-	return resolved.status === "active" ? { subjectId: resolved.subjectId } : null;
+	return resolved.status === "active"
+		? { subjectId: resolved.subjectId, sessionId: resolved.sessionId }
+		: null;
 }
 
 /**
