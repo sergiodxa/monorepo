@@ -51,7 +51,7 @@ function createMailer(): MailClient {
  *
  * @returns The middleware installing it as `ctx.mail`.
  * @example
- * let globalMiddleware: Middleware[] = [trailingSlash, log(logger), asyncContext(), database(createDatabase), formData(), apiVersioning(), mail()];
+ * let globalMiddleware: Middleware[] = [trailingSlash(), log(logger), asyncContext(), database(createDatabase), formData(), apiVersioning(), mail()];
  */
 export function mail(): Middleware {
 	return (ctx, next) => {

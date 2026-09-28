@@ -13,6 +13,7 @@ import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -40,7 +41,6 @@ import {
 	TENANT_ISSUER_HEADER,
 	TENANT_REGION_HEADER,
 } from "~/app/http/middleware/tenant";
-import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { PLATFORM_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
 import { securityTxtEntry } from "~/app/lib/security-txt";
@@ -127,7 +127,7 @@ let globalMiddleware: Middleware[] = [
 	 * request behind it.
 	 */
 	headRequests(),
-	trailingSlash,
+	trailingSlash(),
 	log(logger) as Middleware,
 	trace() as Middleware,
 	asyncContext(),

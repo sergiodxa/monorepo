@@ -19,6 +19,7 @@ import { log } from "@sdxc/logger/middleware";
 import { openapiHandler } from "@sdxc/openapi/router";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
@@ -124,7 +125,6 @@ import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
-import trailingSlash from "~/app/http/middleware/trailing-slash";
 import { buildManagementDocument } from "~/app/http/openapi/document";
 import { MANAGEMENT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
@@ -157,7 +157,7 @@ let issuer = `https://api.${env.PLATFORM_DOMAIN}`;
 
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
-	trailingSlash,
+	trailingSlash(),
 	log(logger) as Middleware,
 	trace() as Middleware,
 	asyncContext(),
