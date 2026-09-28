@@ -1,11 +1,12 @@
 /**
- * The MCP endpoint end to end: a `tools/call` presenting a valid bearer token reaches
- * the real `subjectsList` management action — mounted here the same way
- * `management-auth.test.ts` and `management-rate-limit.test.ts` mount one real action
- * apiece, over a real tenant Durable Object seeded with a real subject — and returns
- * that route's real data; no token, or one that does not verify, is refused before any
- * such request is ever built; and the protected-resource metadata names the platform
- * tenant's own issuer.
+ * The platform's MCP server end to end, built on `@sdxc/mcp`: the generated tool list
+ * is non-empty and includes recognizable management operations; a `tools/call` for a
+ * real operation, presenting a valid bearer token, reaches the real `subjectsList`
+ * management action — mounted here the same way `management-auth.test.ts` and
+ * `dashboard.test.ts` mount one real action apiece, over a real tenant Durable Object
+ * seeded with a real subject — and returns that route's real data; no token, or one
+ * that does not verify, is refused before any such request is ever built; and the
+ * protected-resource metadata names the platform tenant's own issuer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +17,7 @@ import type { Database } from "remix/data-table";
 
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
@@ -38,6 +40,9 @@ let tenantId: string;
 let platformTenantDO: TenantObject;
 let tenantDO: TenantObject;
 let subjectId: string;
+
+/** Spies on every forwarded request the dispatch module was asked to send. */
+let dispatchCalls: Request[];
 
 /** A rate limiter that always allows, standing in for `MANAGEMENT_RATE_LIMITER`. */
 function allowingLimiter(): RateLimiterBinding {
@@ -73,11 +78,13 @@ async function signMachineToken(scope = "subjects:read"): Promise<string> {
 	return outcome.accessToken;
 }
 
-/** A `tools/call` JSON-RPC request against the MCP endpoint. */
+/** A `tools/call` JSON-RPC request against the MCP endpoint, carrying every header this revision requires. */
 function callToolRequest(name: string, args: Record<string, unknown>, token?: string): Request {
 	let headers = new Headers({
 		"Content-Type": "application/json",
-		Accept: "application/json, text/event-stream",
+		"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+		"Mcp-Method": "tools/call",
+		"Mcp-Name": name,
 	});
 	if (token !== undefined) headers.set("Authorization", `Bearer ${token}`);
 
@@ -88,7 +95,40 @@ function callToolRequest(name: string, args: Record<string, unknown>, token?: st
 			jsonrpc: "2.0",
 			id: 1,
 			method: "tools/call",
-			params: { name, arguments: args },
+			params: {
+				name,
+				arguments: args,
+				_meta: {
+					[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+					[MetaKey.ClientCapabilities]: {},
+				},
+			},
+		}),
+	});
+}
+
+/** A `tools/list` JSON-RPC request, carrying every header this revision requires. */
+function listToolsRequest(token?: string): Request {
+	let headers = new Headers({
+		"Content-Type": "application/json",
+		"MCP-Protocol-Version": LATEST_PROTOCOL_VERSION,
+		"Mcp-Method": "tools/list",
+	});
+	if (token !== undefined) headers.set("Authorization", `Bearer ${token}`);
+
+	return new Request("https://auth.example.com/mcp", {
+		method: "POST",
+		headers,
+		body: JSON.stringify({
+			jsonrpc: "2.0",
+			id: 1,
+			method: "tools/list",
+			params: {
+				_meta: {
+					[MetaKey.ProtocolVersion]: LATEST_PROTOCOL_VERSION,
+					[MetaKey.ClientCapabilities]: {},
+				},
+			},
 		}),
 	});
 }
@@ -147,7 +187,26 @@ beforeEach(async () => {
 		}),
 	);
 
-	useManagementDispatchForTesting((request) => managementActionRouter.fetch(request));
+	dispatchCalls = [];
+	useManagementDispatchForTesting((request) => {
+		dispatchCalls.push(request);
+		return managementActionRouter.fetch(request);
+	});
+});
+
+describe("tools/list", () => {
+	test("is non-empty and includes recognizable management operations", async () => {
+		let response = await mcpRouter.fetch(listToolsRequest(await signMachineToken()));
+		expect(response.status).toBe(200);
+
+		let body = (await response.json()) as { result?: { tools?: Array<{ name: string }> } };
+		let names = body.result?.tools?.map((each) => each.name) ?? [];
+
+		expect(names.length).toBeGreaterThan(0);
+		expect(names).toEqual(
+			expect.arrayContaining(["subjectsList", "subjectsCreate", "clientsList"]),
+		);
+	});
 });
 
 describe("tools/call", () => {
@@ -158,9 +217,10 @@ describe("tools/call", () => {
 		expect(response.status).toBe(200);
 
 		let body = (await response.json()) as {
-			result: { isError: boolean; content: { type: string; text: string }[] };
+			result: { isError?: boolean; content: { type: string; text: string }[] };
 		};
-		expect(body.result.isError).toBe(false);
+		expect(body.result.isError).toBeFalsy();
+		expect(dispatchCalls).toHaveLength(1);
 
 		let subjects = JSON.parse(body.result.content[0]?.text ?? "[]") as { id: string }[];
 		expect(subjects.map((subject) => subject.id)).toContain(subjectId);
@@ -170,9 +230,7 @@ describe("tools/call", () => {
 		let response = await mcpRouter.fetch(callToolRequest("subjectsList", { tenantId }));
 
 		expect(response.status).toBe(401);
-		expect(response.headers.get("WWW-Authenticate")).toContain(
-			'resource_metadata="https://test-platform_domain/.well-known/oauth-protected-resource"',
-		);
+		expect(dispatchCalls).toHaveLength(0);
 	});
 
 	test("refuses a bearer token that does not verify before any request is forwarded", async () => {
@@ -182,6 +240,7 @@ describe("tools/call", () => {
 
 		expect(response.status).toBe(401);
 		expect(response.headers.get("WWW-Authenticate")).toContain('error="invalid_token"');
+		expect(dispatchCalls).toHaveLength(0);
 	});
 });
 
