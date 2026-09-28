@@ -16,6 +16,6 @@
 		"@sdxc/html": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0",
-		"remix": "3.0.0-rc.2"
+		"remix": "3.0.0-rc.4"
 	}
 }

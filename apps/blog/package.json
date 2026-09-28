@@ -49,7 +49,7 @@
 		"@sdxc/websub": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
 		"@sdxc/workers-cache": "workspace:*",
-		"remix": "3.0.0-rc.2"
+		"remix": "3.0.0-rc.4"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.54.2",

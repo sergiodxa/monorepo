@@ -146,6 +146,20 @@ Use this for custom elements, third-party widgets, and imperative integrations t
 
 Avoid wrapping Remix-owned UI that should continue receiving server-driven frame updates. A client entry inside `data-rmx-preserve-dom` can hydrate from the initial HTML, but later frame reloads will not patch new server-rendered children or props through the preserved host. Put the client entry outside the preserved boundary when it needs future frame data, or put `data-rmx-preserve-dom` inside the client entry around only the imperative DOM island.
 
+## Preserving client-owned attributes
+
+Use `data-rmx-preserve-attrs` with space-separated DOM attribute names to keep client-owned state on any matched element:
+
+```html
+<html lang="en" data-rmx-preserve-attrs="class data-theme"></html>
+```
+
+On frame reloads, listed attributes keep their live values or absence. Other attributes and children reconcile normally. Each attribute is preserved as a whole, so listing `class` preserves all its tokens without merging server classes.
+
+Each reload uses the list from the incoming HTML for that same reconciliation. Removing a name immediately returns that attribute to normal reconciliation; an empty or omitted list adds no preservation.
+
+This applies only to the matched element's attributes. It does not preserve descendants or prevent removal or replacement of the element. Initial rendering and hydration are unchanged.
+
 ## Nested frames
 
 Frames can nest. Each frame owns its own region of the DOM and hydrates its client entries independently:
@@ -172,18 +186,34 @@ function OuterFrame() {
 
 Nested frames stream independently. The outer frame can resolve and render while the inner frame is still loading.
 
-During SSR, `handle.frame.src` should point at the frame currently being rendered, while `handle.frames.top.src` should stay fixed at the outer document URL. Use `renderToStream({ frameSrc, topFrameSrc })` inside nested `resolveFrame()` handlers to preserve that distinction.
+During server-side frame composition, `handle.frame.src` identifies the frame currently being rendered, while `handle.frames.top.src` identifies the URL of the root render. Use `renderToStream({ frameSrc, topFrameSrc })` inside nested server `resolveFrame()` handlers to preserve that distinction.
 
 ## Client-resolved frames
 
-On the client, `run` fetches frame sources by default. The built-in resolver is equivalent to:
+On the client, `run` fetches frame sources by default. The default resolver sends `X-Remix-Frame: true` for every request, including top-frame navigation and reloads. Named frames also send `X-Remix-Target`, matching server-side `render()` middleware.
+
+| Request                        | `X-Remix-Frame` | `X-Remix-Target` |
+| ------------------------------ | --------------- | ---------------- |
+| Top-frame navigation or reload | `true`          | Omitted          |
+| Named `<Frame>`                | `true`          | Frame name       |
+| Unnamed `<Frame>`              | `true`          | Omitted          |
+
+A normal browser document load does not use the resolver and does not send these headers. Top-frame and unnamed frame requests have the same headers; give a frame a name when the handler needs to distinguish it. The handler decides whether to return a full document or a fragment.
+
+The default browser resolver omits `X-Remix-Top-Frame-Src`. When `render()` middleware handles these requests, the server-rendered `handle.frames.top.src` defaults to the requested frame's URL. Same-origin subrequests created by that render carry its top-frame source to nested renders. If frame content depends on the containing page, include the relevant context explicitly in the frame's `src`.
+
+The built-in resolver is equivalent to:
 
 ```js
 async function resolveFrame(src, options) {
+  let headers = new Headers({ Accept: 'text/html', 'X-Remix-Frame': 'true' })
+  if (options?.target != null) headers.set('X-Remix-Target', options.target)
+
   let response = await fetch(src, {
     body: getRequestBody(options),
-    headers: { Accept: 'text/html' },
+    headers,
     method: options?.method,
+    mode: 'same-origin',
     signal: options?.signal,
   })
 
@@ -197,7 +227,8 @@ async function resolveFrame(src, options) {
 
 function getRequestBody(options) {
   let formData = options?.formData
-  if (!formData || options?.method?.toLowerCase() === 'get') return
+  let method = options?.method
+  if (!formData || !method || ['get', 'head'].includes(method.toLowerCase())) return
 
   if (options?.encType === 'text/plain') {
     let body = ''
@@ -228,7 +259,7 @@ calls, link navigations, and form navigations. GET form values are already encod
 submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-delimited text for
 `text/plain`, and `FormData` for `multipart/form-data`. Provide `resolveFrame` when an app needs
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
-`signal` and `target`; non-GET form submissions also provide `formData`, `method`, and `encType`.
+`signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
 The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants Remix UI to render the response body.
 
@@ -237,7 +268,9 @@ response lets Remix stream its body. When `fetch()` followed a redirect during a
 the final response URL replaces the browser navigation URL and becomes the top frame's canonical `src`;
 other frames render the response without changing either URL.
 
-Because this function defines the trust boundary for frame HTML, only return content from sources you trust.
+The default resolver uses Fetch's `same-origin` mode. Cross-origin sources and redirects fail, even if the destination allows CORS. This restricts where the default resolver can fetch content; it does not sanitize the response or make user-generated HTML safe because it came from the same origin.
+
+Remix parses and reconciles frame HTML into the current document without sanitizing it. Only return content from sources the application trusts to run code in the current page, and sanitize untrusted content before returning it. To load trusted cross-origin frame content, provide a custom `resolveFrame` to `run()`. Custom resolvers control their own request, redirect, and content trust policies.
 
 ## Link navigation
 
@@ -247,10 +280,14 @@ and reconcile it into the existing document instead of performing a full documen
 soft-navigation behavior applies even when the page does not render an explicit `<Frame>`.
 
 - `data-rmx-target="name"` reloads a named frame.
-- `data-rmx-src="/frame"` overrides the URL resolved into that frame while `href` remains the navigation destination.
+- `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while `href` remains the navigation destination.
 - `data-rmx-history="push|replace"` controls how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the link as a normal document navigation.
+
+During navigation, the top frame's source stays in sync with the browser URL. `data-rmx-src` only changes the requested URL when `data-rmx-target` resolves to a mounted named frame. If the target is omitted, an intercepted navigation reloads the top frame from `href`. If a specified target does not match a mounted frame, Remix leaves fresh link, form, and `navigate()` navigations to the browser. Back and forward traversal reloads the destination document instead of reconciling stale frame content. Native form navigation preserves the selected method, body, files, and submitter overrides.
+
+Every source override must resolve to the document origin, using `document.baseURI` for relative URLs. Invalid or cross-origin overrides disable interception regardless of the target, leaving the browser to navigate to the link's `href` or the form's destination.
 
 To keep links/forms as a document navigations while still hydrating client entries and using explicit
 frames, you can cancel the built-in `navigate` event behavior with your own listener before calling
@@ -269,7 +306,7 @@ Eligible same-origin form submissions use the same frame navigation path as link
 
 - Submissions reload `handle.frames.top` by default.
 - `data-rmx-target="name"` reloads a named frame.
-- `data-rmx-src="/frame"` overrides the URL resolved into that frame while the form action remains the navigation destination.
+- `data-rmx-src="/frame"` overrides the source of the mounted frame selected by `data-rmx-target`, while the form action remains the navigation destination.
 - `data-rmx-history="push|replace"` overrides how the navigation updates history.
 - `data-rmx-reset-scroll="false"` preserves the current scroll position.
 - `data-rmx-document` leaves the submission as a normal document navigation.

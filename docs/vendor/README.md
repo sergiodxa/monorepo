@@ -46,7 +46,7 @@ extension describes, so nothing raw ever becomes markup for it to filter.
 
 ## `@remix-run/*` and `remix/`
 
-The `README.md` of each Remix v3 package, at the `3.0.0-rc.2` release the
+The `README.md` of each Remix v3 package, at the `3.0.0-rc.4` release the
 workspaces pin, so a reader finds the API a package actually ships without
 reaching into `node_modules`. Refresh them whenever the pin moves.
 

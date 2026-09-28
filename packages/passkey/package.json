@@ -15,6 +15,6 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
-		"remix": "3.0.0-rc.2"
+		"remix": "3.0.0-rc.4"
 	}
 }
