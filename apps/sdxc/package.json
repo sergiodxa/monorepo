@@ -7,7 +7,7 @@
 		"catalogue": "bun scripts/extract-catalogue.ts",
 		"cf:deploy": "bunx wrangler deploy",
 		"cf:typegen": "bunx wrangler types",
-		"dev": "vite dev",
+		"dev": "bun scripts/extract-catalogue.ts && vite dev",
 		"start": "vite preview",
 		"typecheck": "tsc --noEmit"
 	},

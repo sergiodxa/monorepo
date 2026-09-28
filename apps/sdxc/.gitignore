@@ -2,6 +2,7 @@
 
 # Folders
 /.wrangler
+/app/generated
 
 # Files
 .dev.vars

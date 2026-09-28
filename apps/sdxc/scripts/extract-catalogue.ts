@@ -1,9 +1,8 @@
 /**
  * Writes the catalogue documents the site reads. It walks the two catalogue packages
  * on disk, extracts every utility and component, and emits one JSON file per
- * catalogue under `app/generated`. Run it before a build, or on its own after
- * changing either package; the output is committed, so a fresh checkout serves the
- * catalogues without running anything first.
+ * catalogue under `app/generated`. `dev`, `build` and the test run each start by
+ * running it, so the site and its tests always read the packages as they are now.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

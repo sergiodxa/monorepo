@@ -317,6 +317,7 @@ export default defineConfig({
 				test: {
 					name: "sdxc",
 					include: ["**/*.test.ts?(x)"],
+					globalSetup: ["scripts/catalogue.setup.ts"],
 					pool: "threads",
 					/**
 					 * Not inherited from the top-level `test` block: a project ignores it, so the
