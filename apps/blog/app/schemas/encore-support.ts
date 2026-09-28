@@ -9,6 +9,8 @@
 
 import type { InferOutput } from "remix/data-schema";
 
+import { parseEmailAddress } from "@sdxc/email-address";
+import { isSuccess } from "@sdxc/result";
 import { defaulted, string } from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 
@@ -33,10 +35,15 @@ export const SUPPORT_LIMITS = {
 export const SUPPORT_MESSAGE_MIN = 10;
 
 /**
- * Loose on purpose: one `@`, a dotted domain, no whitespace. Deliverability is proven by the
- * reply, and a stricter pattern only rejects real addresses.
+ * The address the reply goes to, in the form mail headers carry: NFKC-normalized with an ASCII
+ * domain. Only its syntax is checked, since the reply itself proves the mailbox receives mail.
+ *
+ * @returns The parsed address, or `null` when it is no mailbox address at all.
  */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+function replyAddress(value: string): string | null {
+	let parsed = parseEmailAddress(value);
+	return isSuccess(parsed) ? parsed.data.address : null;
+}
 
 /** Whether `value` holds a line break or another control character, out of place in a one-line field. */
 function hasControlCharacter(value: string): boolean {
@@ -94,9 +101,10 @@ export const SupportRequestSchema = f.object({
 				`Email must be ${SUPPORT_LIMITS.email} characters or fewer.`,
 			)
 			.refine(
-				(value) => value.length === 0 || EMAIL_PATTERN.test(value),
+				(value) => value.length === 0 || replyAddress(value) !== null,
 				"Enter a valid email address, like name@example.com.",
-			),
+			)
+			.transform((value) => replyAddress(value) ?? value),
 	),
 	topic: choice(SUPPORT_TOPICS, "Choose a topic."),
 	platform: choice(SUPPORT_PLATFORMS, "Choose the device you're using."),
