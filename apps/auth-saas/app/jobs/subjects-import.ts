@@ -23,6 +23,7 @@ import {
 	MAX_BATCHES_PER_RUN_PER_TICK,
 	TICK_TIME_BUDGET_MS,
 } from "~/app/jobs/lib/subjects-import-pacing";
+import { recordCost } from "~/app/lib/cost-ledger";
 import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-storage";
 import TenantImportRun from "~/app/models/tenant-import-run";
 
@@ -58,6 +59,7 @@ async function appendFailureReportLines(
 	newLines: string[],
 ): Promise<void> {
 	let existing = await bucket.head(key);
+	recordCost({ r2ClassBOperations: 1 });
 
 	/**
 	 * Streams the object's existing lines ahead of `newLines`, so the rewrite keeps

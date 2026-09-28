@@ -4,7 +4,8 @@
  *
  * `writeTransferFile`/`readTransferFileLines` are proven against an in-memory
  * R2 bucket: several NDJSON lines written come back in order, and a
- * `startLine` skips the rows a previous tick already consumed.
+ * `startLine` skips the rows a previous tick already consumed, and each put
+ * and get is metered as an R2 operation on the open cost ledger.
  * `mintTransferDownloadTicket`/`spendTransferDownloadTicket` are proven round
  * trip: a mint then a spend succeeds once, a second spend of the same ticket
  * fails, and an expired ticket fails.
@@ -15,9 +16,11 @@
 
 import type { Database } from "remix/data-table";
 
-import { createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { createAnalyticsEngine, createR2Bucket } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { flush, runWithLedger } from "~/app/lib/cost-ledger";
+import { COST_RESOURCES } from "~/app/lib/cost-rates";
 import Customer from "~/app/models/customer";
 import Tenant from "~/app/models/tenant";
 import { createTestDatabase } from "~/app/test/db";
@@ -56,6 +59,23 @@ describe("writeTransferFile / readTransferFileLines", () => {
 		let read = await collect(readTransferFileLines(bucket, "exports/acme/subjects.ndjson"));
 
 		expect(read).toEqual(rows);
+	});
+
+	test("meters a write as an R2 Class A operation and a read as a Class B one", async () => {
+		let bucket = createR2Bucket();
+		let analytics = createAnalyticsEngine();
+
+		await runWithLedger("tenant_1", "queue", async () => {
+			await writeTransferFile(bucket, "exports/acme/subjects.ndjson", asyncLines(['{"id":1}']));
+			await collect(readTransferFileLines(bucket, "exports/acme/subjects.ndjson"));
+			flush({ ANALYTICS: analytics });
+		});
+
+		let encoded = analytics.dataPoints[0]?.blobs?.[3];
+		if (typeof encoded !== "string") throw new Error("the ledger wrote no quantities");
+		let quantities = encoded.split(",").map(Number);
+		expect(quantities[COST_RESOURCES.indexOf("r2ClassAOperations")]).toBe(1);
+		expect(quantities[COST_RESOURCES.indexOf("r2ClassBOperations")]).toBe(1);
 	});
 
 	test("skips the rows named by startLine", async () => {

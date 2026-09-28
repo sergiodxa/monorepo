@@ -110,6 +110,25 @@ describe("reportDailyUsage", () => {
 		});
 	});
 
+	test("sums the ledger's cents column over cost points only, leaving attack signals out", async () => {
+		let { tenant } = await makeTenant({ hasProviderCustomer: true });
+		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 1, sessions: 0, tokens: 0 });
+
+		let queries: string[] = [];
+		server.use(
+			http.post(ANALYTICS_SQL_URL, async ({ request }) => {
+				queries.push(await request.text());
+				return HttpResponse.json({ data: [] });
+			}),
+		);
+
+		await reportDailyUsage(db, new MemoryBilling(), { day });
+
+		expect(queries).toHaveLength(1);
+		expect(queries[0]).toContain("SUM(double1)");
+		expect(queries[0]).toContain("blob1 IN ('fetch', 'queue', 'scheduled')");
+	});
+
 	test("skips a tenant whose customer has no provider_customer_id, reporting it as skipped rather than sent", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: false });
 		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 7, sessions: 1, tokens: 1 });

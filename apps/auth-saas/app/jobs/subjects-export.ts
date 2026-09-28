@@ -23,6 +23,7 @@ import {
 	PAGE_SIZE,
 	TICK_TIME_BUDGET_MS,
 } from "~/app/jobs/lib/subjects-export-pacing";
+import { recordCost } from "~/app/lib/cost-ledger";
 import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-storage";
 import { CredentialsExportStartedEmail } from "~/app/mail/credentials-export-started-email";
 import { mailTranslator } from "~/app/mail/locale";
@@ -61,6 +62,7 @@ async function appendExportOutputLines(
 	newLines: string[],
 ): Promise<void> {
 	let existing = await bucket.head(key);
+	recordCost({ r2ClassBOperations: 1 });
 
 	/**
 	 * Streams the object's existing lines ahead of `newLines`, so the rewrite keeps

@@ -20,6 +20,7 @@ import { createAction } from "remix/router";
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
 import { managementProblem } from "~/app/http/lib/problem";
+import { recordCost } from "~/app/lib/cost-ledger";
 import { spendTransferDownloadTicket } from "~/app/lib/transfer-storage";
 import routes from "~/routes/management";
 
@@ -60,6 +61,7 @@ export function createSubjectsImportDownloadAction(options: ManagementController
 		if (spent.tenantId !== tenantId) return invalidTicket();
 
 		let object = await options.r2.get(spent.r2Key);
+		recordCost({ r2ClassBOperations: 1 });
 		if (!object) return reportNotFound();
 
 		return new Response(object.body, {

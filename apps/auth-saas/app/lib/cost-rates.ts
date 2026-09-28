@@ -15,17 +15,31 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Meter } from "@sdxc/cloudflare-pricing";
+
+import { centsPerGbDay, centsPerUnit } from "@sdxc/cloudflare-pricing";
+import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
+import * as D1 from "@sdxc/cloudflare-pricing/d1";
+import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
+import * as EmailService from "@sdxc/cloudflare-pricing/email-service";
+import * as KV from "@sdxc/cloudflare-pricing/kv";
+import * as Queues from "@sdxc/cloudflare-pricing/queues";
+import * as R2 from "@sdxc/cloudflare-pricing/r2";
+import * as Workers from "@sdxc/cloudflare-pricing/workers";
+
 /**
  * The dated rate-card version every measurement is stamped with. A price correction adds
  * a new version rather than rewriting one already recorded, so a period spanning both
  * versions prices each group of measurements under the card that applied to it.
  */
-export const RATE_CARD_VERSION = "2026-09-20";
+export const RATE_CARD_VERSION = "2026-09-28";
 
 /**
- * The resource order every recorded measurement positions its fields by. Appended to as a
- * new resource is metered, never reordered or pruned — reordering would orphan every point
- * already stored under the position a resource used to hold.
+ * The resource order every recorded measurement positions its quantities by. Appended to
+ * as a new resource is metered, never reordered or pruned — reordering would orphan every
+ * point already stored under the position a resource used to hold. `d1Rows` is retired:
+ * reads and writes bill 1,000 times apart, so they are metered as `d1RowsRead` and
+ * `d1RowsWritten`, and `d1Rows` keeps its position at zero.
  */
 export const COST_RESOURCES = [
 	"workerRequests",
@@ -44,6 +58,11 @@ export const COST_RESOURCES = [
 	"analyticsQueries",
 	"queueOperations",
 	"emailSent",
+	"d1RowsRead",
+	"d1RowsWritten",
+	"r2ClassAOperations",
+	"r2ClassBOperations",
+	"workerLogEvents",
 ] as const;
 
 /** One resource this rate card prices. */
@@ -53,28 +72,44 @@ export type CostResource = (typeof COST_RESOURCES)[number];
 export type CostQuantities = Record<CostResource, number>;
 
 /**
- * Cents per unit for every resource the platform meters: Worker requests and CPU
- * milliseconds; Durable Object requests, duration and SQLite rows read, written and
- * stored (as GB-days held); D1 rows and storage; KV reads, mutations and storage;
- * analytics points and queries; queue operations; and email sent.
+ * Analytics Engine prices at zero until Cloudflare invoices it, so the points and queries
+ * stay metered and start costing the day the pricing package reports billing as active.
+ *
+ * @param meter - An Analytics Engine meter.
+ * @returns Cents per unit of `meter`, or zero while Analytics Engine is unbilled.
+ */
+function analyticsEngineCents(meter: Meter): number {
+	return AnalyticsEngine.BILLING_ACTIVE ? centsPerUnit(meter) : 0;
+}
+
+/**
+ * Cents per unit for every resource the platform meters, at Cloudflare's published
+ * Workers Paid overage prices. Durable Object duration is per active millisecond of one
+ * object, KV mutations are key writes, R2 operations are Standard storage's, and the
+ * retired `d1Rows` prices at zero because nothing records it.
  */
 export const RATES: CostQuantities = {
-	workerRequests: 3.0e-5,
-	workerCpuMs: 2.0e-6,
-	doRequests: 1.5e-5,
-	doDurationMs: 1.5625e-7,
-	doRowsRead: 1.0e-7,
-	doRowsWritten: 1.0e-4,
-	doStorageGbDays: 0.667,
-	d1Rows: 1.0e-4,
-	d1StorageGbDays: 2.5e-2,
-	kvReads: 5.0e-5,
-	kvMutations: 5.0e-4,
-	kvStorageGbDays: 1.667e-2,
-	analyticsPoints: 2.5e-5,
-	analyticsQueries: 1.0e-4,
-	queueOperations: 4.0e-5,
-	emailSent: 3.5e-2,
+	workerRequests: centsPerUnit(Workers.REQUESTS),
+	workerCpuMs: centsPerUnit(Workers.CPU_MS),
+	doRequests: centsPerUnit(DurableObjects.REQUESTS),
+	doDurationMs: DurableObjects.centsPerActiveMs(),
+	doRowsRead: centsPerUnit(DurableObjects.SQLITE_ROWS_READ),
+	doRowsWritten: centsPerUnit(DurableObjects.SQLITE_ROWS_WRITTEN),
+	doStorageGbDays: centsPerGbDay(DurableObjects.SQLITE_STORAGE),
+	d1Rows: 0,
+	d1StorageGbDays: centsPerGbDay(D1.STORAGE),
+	kvReads: centsPerUnit(KV.READS),
+	kvMutations: centsPerUnit(KV.WRITES),
+	kvStorageGbDays: centsPerGbDay(KV.STORAGE),
+	analyticsPoints: analyticsEngineCents(AnalyticsEngine.DATA_POINTS_WRITTEN),
+	analyticsQueries: analyticsEngineCents(AnalyticsEngine.READ_QUERIES),
+	queueOperations: centsPerUnit(Queues.OPERATIONS),
+	emailSent: centsPerUnit(EmailService.EMAILS_SENT),
+	d1RowsRead: centsPerUnit(D1.ROWS_READ),
+	d1RowsWritten: centsPerUnit(D1.ROWS_WRITTEN),
+	r2ClassAOperations: centsPerUnit(R2.CLASS_A_OPERATIONS),
+	r2ClassBOperations: centsPerUnit(R2.CLASS_B_OPERATIONS),
+	workerLogEvents: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
 };
 
 /**
@@ -121,6 +156,18 @@ export const MODELLED_CPU_MS_PER_HANDLER: Record<"fetch" | "queue" | "scheduled"
 	fetch: 8,
 	queue: 8,
 	scheduled: 8,
+};
+
+/**
+ * Modelled Workers Logs events per invocation, by handler class: the invocation log
+ * Cloudflare writes for every invocation once `observability` is enabled, plus the one
+ * wide event the invocation's own logger emits. Calibrated against the log-event count
+ * the infrastructure bill reports, the same way the modelled CPU is.
+ */
+export const MODELLED_LOG_EVENTS_PER_HANDLER: Record<"fetch" | "queue" | "scheduled", number> = {
+	fetch: 2,
+	queue: 2,
+	scheduled: 2,
 };
 
 /**

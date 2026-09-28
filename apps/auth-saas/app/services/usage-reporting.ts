@@ -28,7 +28,8 @@ import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { COST_RESOURCES } from "~/app/lib/cost-rates";
+import type { LedgerSource } from "~/app/lib/cost-ledger";
+
 import Customer from "~/app/models/customer";
 import Tenant from "~/app/models/tenant";
 import TenantUsageDay from "~/app/models/tenant-usage-day";
@@ -41,12 +42,10 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const ANALYTICS_ENGINE_DATASET = "auth-saas-analytics";
 
 /**
- * The `doubleN` column `flush`'s own blob/double layout prices a point's cost
- * under. `flush` writes `[...COST_RESOURCES.map(...), cents]`, so the priced
- * total always sits one past the last resource, and stays there as a new
- * resource is appended to `COST_RESOURCES` rather than inserted.
+ * The ledger's sources, the `blob1` values that tell a cost point apart from the attack
+ * signals sharing its dataset, whose own `double1` is a count rather than cents.
  */
-const CENTS_DOUBLE_COLUMN = `double${COST_RESOURCES.length + 1}`;
+const LEDGER_SOURCES = ["fetch", "queue", "scheduled"] satisfies LedgerSource[];
 
 /** Why a tenant's day was left out of the ingest call. */
 export type UsageReportingSkipReason = "tenant_not_found" | "no_provider_customer";
@@ -116,9 +115,10 @@ async function queryDailyCostByTenant(day: number): Promise<Map<string, number>>
 	let dayEnd = formatUtcDateTime((day + 1) * DAY_MS);
 
 	let query = `
-		SELECT blob2 AS tenant_id, SUM(${CENTS_DOUBLE_COLUMN}) AS cents
+		SELECT blob2 AS tenant_id, SUM(double1) AS cents
 		FROM ${ANALYTICS_ENGINE_DATASET}
-		WHERE timestamp >= toDateTime('${dayStart}') AND timestamp < toDateTime('${dayEnd}')
+		WHERE blob1 IN (${LEDGER_SOURCES.map((source) => `'${source}'`).join(", ")})
+		AND timestamp >= toDateTime('${dayStart}') AND timestamp < toDateTime('${dayEnd}')
 		GROUP BY blob2
 	`;
 

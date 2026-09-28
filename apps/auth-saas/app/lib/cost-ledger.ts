@@ -21,6 +21,7 @@ import {
 	COST_RESOURCES,
 	createCostQuantities,
 	MODELLED_CPU_MS_PER_HANDLER,
+	MODELLED_LOG_EVENTS_PER_HANDLER,
 	priceCostQuantities,
 	RATE_CARD_VERSION,
 } from "./cost-rates";
@@ -84,12 +85,9 @@ export interface FlushEnv {
 }
 
 /**
- * Folds the request's own share and the handler class's modelled CPU into whatever
- * {@link recordCost} accumulated, prices the total, writes it as one analytics data
- * point indexed by tenant id, and logs the same totals on the invocation's own log. Does
- * nothing outside a ledger, the same as {@link recordCost}, and must run from inside the
- * {@link runWithLedger} call it reads its quantities from — once that call returns, there
- * is nothing left to fold.
+ * Prices what accumulated plus the invocation's request, modelled CPU and log events into one
+ * data point: cents in `double1`, quantities in `blob4` in {@link COST_RESOURCES} order, so the
+ * list outgrows Analytics Engine's 20 doubles a point without moving the cents column.
  *
  * Catches and logs its own failure rather than rethrowing: instrumentation failing the
  * request it measures would be worse than no instrumentation.
@@ -104,13 +102,19 @@ export function flush(env: FlushEnv): void {
 		let quantities = { ...state.quantities };
 		quantities.workerRequests += 1;
 		quantities.workerCpuMs += MODELLED_CPU_MS_PER_HANDLER[state.source];
+		quantities.workerLogEvents += MODELLED_LOG_EVENTS_PER_HANDLER[state.source];
 
 		let cents = priceCostQuantities(quantities);
 
 		env.ANALYTICS.writeDataPoint({
 			indexes: [state.tenantId],
-			blobs: [state.source, state.tenantId, RATE_CARD_VERSION],
-			doubles: [...COST_RESOURCES.map((resource) => quantities[resource]), cents],
+			blobs: [
+				state.source,
+				state.tenantId,
+				RATE_CARD_VERSION,
+				COST_RESOURCES.map((resource) => quantities[resource]).join(","),
+			],
+			doubles: [cents],
 		});
 
 		currentLog()?.set({

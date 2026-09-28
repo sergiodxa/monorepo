@@ -25,6 +25,8 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID, generateUUIDv7 } from "@sdxc/uuid";
 import { column as c, table } from "remix/data-table";
 
+import { recordCost } from "./cost-ledger";
+
 /**
  * How long a download ticket names its object before it expires — the 24
  * hours a run's own signed download link is documented to stay valid for.
@@ -100,6 +102,7 @@ export async function writeTransferFile(
 ): Promise<void> {
 	let stream = lines instanceof ReadableStream ? lines : toLineStream(lines);
 	await bucket.put(key, stream);
+	recordCost({ r2ClassAOperations: 1 });
 }
 
 /** Options narrowing where {@link readTransferFileLines} starts yielding. */
@@ -139,6 +142,7 @@ export async function* readTransferFileLines(
 	options?: ReadTransferFileLinesOptions,
 ): AsyncGenerator<string> {
 	let object = await bucket.get(key);
+	recordCost({ r2ClassBOperations: 1 });
 	if (!object) throw new Error(`transfer file not found: ${key}`);
 
 	let toSkip = options?.startLine ?? 0;
