@@ -88,8 +88,9 @@ an async-local store, so concurrent jobs in one invocation each get their own wi
 Call sites record through a free function that is a no-op outside a ledger, so an uninstrumented
 path costs nothing. One `flush()` at the end folds in the request share, the modelled CPU for the
 handler class and the accumulated row counts, prices them, and writes one analytics data point
-indexed by tenant id carrying the source, the attribution and the rate-card version as blobs and
-the quantities plus priced cents as numbers. The same totals go onto the invocation's structured
+indexed by tenant id carrying the source, the attribution and the rate-card version as blobs, the
+priced cents as its first number, and the quantities as one comma-separated blob in resource order,
+since a data point holds at most 20 numbers and the resources outnumber that. The same totals go onto the invocation's structured
 log through `@sdxc/logger`, so what one request cost is a log query. `flush()` catches its own
 errors: instrumentation failing the work it measures would be worse than no instrumentation.
 
