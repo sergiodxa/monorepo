@@ -32,8 +32,16 @@ work it cannot do. The pieces around the config each have their own constraint:
 - **miniflare.** `cf` and the 2.0 plugin both require `miniflare@5.20260926.0-alpha`; the root
   `overrides` entry pins miniflare repo-wide, so it moves to that version for every workspace.
 - **D1.** `cf d1 migrations apply` records migrations in the same table shape Wrangler does, so
-  an already-migrated database carries over. It identifies the database by ID, and its local
-  state lives under `~/.config/cloudflare/state`, so local databases start empty after the move.
+  an already-migrated database carries over (r3-auth's production database lists no pending
+  migrations after the move). It takes the database ID, accepts only UUID-shaped IDs, reads
+  the migrations from `--dir`, and targets the remote database unless `--local` is passed.
+- **Local state.** The Vite plugin keeps local state in `<app>/.cloudflare/state`, and `cf`
+  defaults to `~/.config/cloudflare/state`, so `db:local:migrate` passes
+  `--persist-to .cloudflare/state` to write where `vite dev` reads. Local databases start
+  empty after the move.
+- **Secrets.** `cf deploy` uploads each `bindings.secret()` as an inherited binding and fails
+  when the deployed Worker has no secret of that name. An optional secret is typed on
+  `Cloudflare.Env` in the app's `config/env.d.ts` instead.
 - **`cf dev`** delegates to `npx vite`; the `dev` and `build` scripts call `vite` directly so
   every step stays inside Bun.
 
@@ -74,8 +82,8 @@ than declaring their bindings twice.
 
 ## Current Progress
 
-- [x] `apps/books`
-- [ ] `apps/demo`, `apps/r3-auth`, `apps/r3-gallery`, `apps/sdxc`, `apps/blog-saas`
+- [x] `apps/books` (deployed)
+- [x] `apps/demo`, `apps/r3-auth`, `apps/r3-gallery`, `apps/sdxc`, `apps/blog-saas`
 - [ ] `apps/blog`, `apps/uptime`, `apps/reader`, `apps/auth-saas` (blocked on the Workers pool)
 
 ## References

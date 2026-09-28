@@ -80,7 +80,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST write tests with Vitest, never Jest, Mocha, or Node's built-in `assert` module
 - MUST run tests from the root of the repository, never from individual package directories — `vp test run <path>` scopes a run without changing directory
 - MUST use Vite+ (`vp check`) for formatting, linting and type checking, never other tools like Prettier, ESLint or a direct `tsc` run in CI
-- MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `wrangler d1 migrations` directly
+- MUST apply migrations using `bun run db:local:migrate` or `bun run db:remote:migrate`, never invoking `cf d1 migrations` or `wrangler d1 migrations` directly
 - MUST write documentation for each shared package, following [](./docs/guides/package-documentation.md) as guidelines
 - MUST write documentation for each application, following [](./docs/guides/app-documentation.md) as guidelines
 - MUST write an ADR for any significant architectural decisions, following [](./docs/guides/adr-writing.md) as guidelines
@@ -89,7 +89,8 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST build before migrate, so deploy can be done in a single step after migration, without extra waiting time for build
 - MUST deploy after migration, to ensure the latest code is running with the new database schema
 - MUST NOT deploy before migration, to avoid running old code with an incompatible database schema
-- MUST use `bunx wrangler` when running commands, never use `wrangler` directly
+- MUST configure a Worker in `cloudflare.config.ts` and run it through the app's `cf` scripts; the apps with a `*.workers.test.ts` project stay on `wrangler.jsonc` and `bunx wrangler` until the Workers test pool reads `cloudflare.config.ts` (ADR-100)
+- MUST declare with `bindings.secret()` only the secrets every deployed Worker has: `cf deploy` fails when a declared secret is missing remotely, so an optional secret is typed on `Cloudflare.Env` in the app's `config/env.d.ts`
 - MUST use `@sdxc/logger`, never `console.log`
 - MUST log through the invocation's log — `ctx.log` in route handlers and job handlers, `currentLog()` anywhere else — and never construct a logger per request; the worker configures one `createLogger()` and attaches it with `log(logger)` at the top of the router's middleware chain and as the job dispatcher's `logger` option (ADR-033)
 - MUST use `@sdxc/jobs` for background jobs
