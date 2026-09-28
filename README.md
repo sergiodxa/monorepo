@@ -117,6 +117,7 @@ Run from the repository root:
 | [flags-engine](packages/flags-engine)                           | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                             | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                                              | ✅  |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a markdown visitor that paints code blocks                                    | ✅  |
+| [honeypot](packages/honeypot)                                   | Honeypot form fields with a signed render timestamp, router middleware and a `remix/ui` component                 | ✅  |
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains                            | ✅  |
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name                                | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           | ✅  |

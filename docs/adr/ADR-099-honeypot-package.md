@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-09-28
+**Accepted** - 2026-09-28
 
 ## Background
 
@@ -99,6 +99,7 @@ open in a browser valid.
 | `trap-filled`   | The trap field is present and non-empty                             |
 | `too-fast`      | Issued less than `minSeconds` ago, or in the future beyond the skew |
 | `expired`       | Issued more than `maxAge` ago, only when `maxAge` is set            |
+| `misconfigured` | No secret to sign or verify with                                    |
 
 `minSeconds` defaults to `0` and `maxAge` to unset. A fast human and a form left open for a day are
 both real people, so the defaults refuse only what no person produces: a filled trap and a missing
@@ -251,8 +252,8 @@ trap.
 
 ## Current Progress
 
-- [ ] Phase 1: Package
-- [ ] Phase 2: Spam filter alignment
+- [x] Phase 1: Package
+- [x] Phase 2: Spam filter alignment
 - [ ] Phase 3: Adoption
 
 ## Notes

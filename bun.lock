@@ -678,6 +678,15 @@
         "@sdxc/markdown": "workspace:*",
       },
     },
+    "packages/honeypot": {
+      "name": "@sdxc/honeypot",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0-rc.2",
+      },
+    },
     "packages/hostname": {
       "name": "@sdxc/hostname",
       "version": "0.0.1",
@@ -1942,6 +1951,8 @@
     "@sdxc/get-client-ip": ["@sdxc/get-client-ip@workspace:packages/get-client-ip"],
 
     "@sdxc/highlight": ["@sdxc/highlight@workspace:packages/highlight"],
+
+    "@sdxc/honeypot": ["@sdxc/honeypot@workspace:packages/honeypot"],
 
     "@sdxc/hostname": ["@sdxc/hostname@workspace:packages/hostname"],
 
