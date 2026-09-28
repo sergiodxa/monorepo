@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-
 import type { AnyJobDefinition } from "@sdxc/jobs";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { describe, expect, test, vi } from "vitest";
+
+import config from "../../cloudflare.config";
 
 /**
  * Installed above the dynamic imports below, since the dispatcher's middleware read
@@ -47,21 +46,15 @@ function declaredJobs(node: object): AnyJobDefinition[] {
 }
 
 /**
- * The schedules the deployed worker is actually triggered on, read out of the JSONC
- * config: the `crons` array is sliced out of the text and its comments dropped, so the
- * assertion reads the same file the deploy does.
+ * The schedules the deployed worker is actually triggered on, taken from the scheduled
+ * triggers of `cloudflare.config.ts`, so the assertion reads the same config the deploy does.
  *
  * @returns The configured cron expressions.
  */
 function configuredCrons(): string[] {
-	let path = fileURLToPath(new URL("../../wrangler.jsonc", import.meta.url));
-	let match = /"crons"\s*:\s*\[([^\]]*)\]/.exec(readFileSync(path, "utf8"));
-
-	if (match?.[1] === undefined) throw new Error("wrangler.jsonc declares no `crons` array");
-
-	let entries = match[1].replaceAll(/\/\/[^\n]*/g, "").replace(/,\s*$/, "");
-
-	return JSON.parse(`[${entries}]`) as string[];
+	return config.worker.triggers.flatMap((trigger) =>
+		trigger.type === "scheduled" ? [trigger.schedule] : [],
+	);
 }
 
 describe("the job dispatcher", () => {

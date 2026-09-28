@@ -1,8 +1,8 @@
 # Blog SaaS — First Deployment
 
-Everything required to deploy `apps/blog-saas` from scratch. Run all commands from
-the repo root with `bunx wrangler` (never a global `wrangler`). Replace the
-placeholder ids in `wrangler.jsonc` as you create each resource.
+Everything required to deploy `apps/blog-saas` from scratch. Run the `cf` commands
+from `apps/blog-saas` with its pinned CLI (`bunx cf`). Replace the placeholder ids in
+`cloudflare.config.ts` as you create each resource.
 
 ## 0. Prerequisites
 
@@ -23,13 +23,14 @@ placeholder ids in `wrangler.jsonc` as you create each resource.
 ## 1. Create the control-plane resources
 
 ```bash
-bunx wrangler d1 create blog-saas-platform
-bunx wrangler kv namespace create SLUG_CACHE
-bunx wrangler queues create blog-saas-jobs
+bunx cf d1 create --name blog-saas-platform
+bunx cf kv namespaces create --title SLUG_CACHE
+bunx cf queues create --queue-name blog-saas-jobs
 ```
 
-Copy the returned `database_id` and KV `id` into `wrangler.jsonc`
-(`d1_databases[0].database_id`, `kv_namespaces[0].id`). The queue carries the
+Copy the returned D1 ID and KV `id` into `cloudflare.config.ts` (`PLATFORM_DB.id`,
+`SLUG_CACHE.id`), and the D1 ID into the `db:local:migrate` / `db:remote:migrate`
+scripts in `package.json`, since `cf d1 migrations apply` takes the ID. The queue carries the
 background jobs the cron triggers enqueue, and a deploy referencing a queue that
 does not exist fails, so create it before step 5. The Analytics Engine dataset
 (`blog-saas-analytics`) and the `BLOG` Durable Object are created on first deploy —
@@ -41,7 +42,7 @@ no manual step.
 bun run --cwd apps/blog-saas db:remote:migrate
 ```
 
-## 3. Zone / DNS setup (not automatable via wrangler)
+## 3. Zone / DNS setup (manual, in the dashboard)
 
 On the `sergiodxa.com` zone:
 
@@ -53,8 +54,8 @@ On the `sergiodxa.com` zone:
 3. An explicit route `sso.blog.sergiodxa.com/*` pointing at the **auth-saas**
    worker (more-specific pattern wins over the wildcard).
 
-The routes in `wrangler.jsonc` (`blog.sergiodxa.com` custom domain, the wildcard,
-and the fallback) bind the worker; the DNS records above must exist for them to
+The `domains` and fetch `triggers` in `cloudflare.config.ts` (`blog.sergiodxa.com`
+custom domain, the wildcard, and the fallback) bind the worker; the DNS records above must exist for them to
 resolve.
 
 ## 4. Set secrets
@@ -65,18 +66,19 @@ for name in COOKIE_SESSION_SECRET OIDC_CLIENT_ID OIDC_CLIENT_SECRET \
   SSO_MANAGEMENT_CLIENT_ID SSO_MANAGEMENT_CLIENT_SECRET \
   CF_API_TOKEN CF_ZONE_ID CF_ACCOUNT_ID \
   POLAR_ACCESS_TOKEN POLAR_WEBHOOK_SECRET POLAR_PRODUCT_ID; do
-  bunx wrangler secret put "$name"
+  bunx cf workers secrets update "$name" --worker blog-saas
 done
 ```
 
 `COOKIE_SESSION_SECRET` is any long random string (e.g. `openssl rand -hex 32`).
 The `OIDC_*` / `SSO_MANAGEMENT_*` values come from the auth-saas sso tenant
 (step 0). `PLATFORM_DOMAIN` and `OIDC_ISSUER` are plain vars already in
-`wrangler.jsonc` — change them there if your domain differs.
+`cloudflare.config.ts` — change them there if your domain differs.
 
 ## 5. Deploy
 
 ```bash
+bun run --cwd apps/blog-saas build
 bun run --cwd apps/blog-saas cf:deploy
 ```
 

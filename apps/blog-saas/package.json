@@ -6,10 +6,10 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"cf:deploy": "bunx wrangler deploy",
-		"cf:typegen": "bunx wrangler types",
-		"db:local:migrate": "bunx wrangler d1 migrations apply blog-saas-platform --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply blog-saas-platform --remote",
+		"cf:deploy": "cf deploy --prebuilt",
+		"cf:typegen": "cf workers types",
+		"db:local:migrate": "cf d1 migrations apply 00000000-0000-4000-8000-000000000000 --dir ./database/migrations --local --persist-to ./.cloudflare/state",
+		"db:remote:migrate": "cf d1 migrations apply 00000000-0000-4000-8000-000000000000 --dir ./database/migrations",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -29,9 +29,9 @@
 		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.54.2",
+		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
 		"@sdxc/cloudflare-mocks": "workspace:*",
-		"vite": "^8.2.2",
-		"wrangler": "^4.127.1"
+		"cf": "1.0.0-beta.5",
+		"vite": "^8.2.2"
 	}
 }

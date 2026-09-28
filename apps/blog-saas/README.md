@@ -67,7 +67,9 @@ worker entry to the blog's Durable Object, which serves the engine.
 
 ## Database
 
-Control-plane migrations live in `database/migrations/`.
+Control-plane migrations live in `database/migrations/`. `cf` addresses the database by
+its ID, which the scripts repeat from `cloudflare.config.ts`; local runs share
+`.cloudflare/state` with `bun run dev`, so a local migration is visible to the dev server.
 
 ```bash
 bun run db:local:migrate  # Apply migrations locally
@@ -83,18 +85,20 @@ Each blog's own content schema is owned and migrated by `@sdxc/blog-engine` insi
 | `dev`               | Start the development server            |
 | `build`             | Build for production                    |
 | `start`             | Preview the production build            |
-| `cf:deploy`         | Deploy to Cloudflare Workers            |
-| `cf:typegen`        | Generate Cloudflare binding types       |
+| `cf:deploy`         | Deploy the last build to Workers        |
+| `cf:typegen`        | Generate `.cloudflare/types/index.d.ts` |
 | `db:local:migrate`  | Apply control-plane migrations locally  |
 | `db:remote:migrate` | Apply control-plane migrations remotely |
 | `typecheck`         | Type-check                              |
 
 ## Deployment
 
+The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
 First-time setup (D1/KV/Analytics, DNS, secrets, Polar) is documented in
-[DEPLOYMENT.md](./DEPLOYMENT.md). Once configured:
+[DEPLOYMENT.md](./DEPLOYMENT.md). Once configured, build and upload that build as-is:
 
 ```bash
+bun run build
 bun run cf:deploy
 ```
 

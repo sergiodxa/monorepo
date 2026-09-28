@@ -10,8 +10,8 @@ provisioning, custom domains, and billing. See
 ```bash
 bun run dev               # Run development server (port 3005)
 bun run build             # Build for production
-bun run cf:deploy         # Deploy to Cloudflare Workers
-bun run cf:typegen        # Generate Cloudflare bindings types
+bun run cf:deploy         # Deploy the last build (cf deploy --prebuilt)
+bun run cf:typegen        # Generate .cloudflare/types/index.d.ts
 bun run db:local:migrate  # Apply control-plane D1 migrations (local)
 bun run db:remote:migrate # Apply control-plane D1 migrations (remote)
 bun run typecheck         # Type-check
@@ -20,7 +20,9 @@ bun run typecheck         # Type-check
 ## Rules
 
 - MUST use Bun for installs, scripts, and tests; run linters/formatters/typecheck from the repo root.
-- MUST use `bunx wrangler` for Cloudflare commands, never `wrangler` directly.
+- MUST configure bindings and secrets in `cloudflare.config.ts` and run Cloudflare commands through
+  the app's `cf` CLI; `bun run build` precedes `bun run cf:deploy`, which uploads `.cloudflare/output`
+  as-is.
 - MUST use `remix/*` packages, not React or React Router.
 - MUST keep the blog application logic in `@sdxc/blog-engine`; this app is a thin host.
 

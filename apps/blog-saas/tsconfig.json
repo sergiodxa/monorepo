@@ -6,8 +6,9 @@
 		"config/**/*.d.ts",
 		"database/**/*",
 		"routes/**/*",
-		"vite.config.ts",
-		"worker-configuration.d.ts"
+		".cloudflare/types/index.d.ts",
+		"cloudflare.config.ts",
+		"vite.config.ts"
 	],
 	"compilerOptions": {
 		"jsx": "react-jsx",
