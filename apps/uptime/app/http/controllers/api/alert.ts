@@ -36,6 +36,7 @@ import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
+import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertRoutes } from "~/routes/api-groups";
@@ -117,6 +118,12 @@ async function patchAlert(ctx: RequestContext): Promise<Response> {
 	if (changed.has("name")) changes.name = value.name;
 	if (changed.has("notifyOnRecovery")) changes.notify_on_recovery = value.notifyOnRecovery;
 	if (changed.has("cooldownMinutes")) changes.cooldown_minutes = value.cooldownMinutes;
+
+	/** Checked only when the patch sets the recipient, so an unrelated edit costs no lookup. */
+	if (value.strategy === "email" && changed.has("email")) {
+		let undeliverable = await refuseUndeliverableRecipient(value.email, "/email");
+		if (undeliverable) return undeliverable;
+	}
 
 	/**
 	 * `CREATE_ALERT_BODY`'s inferred output loses its per-branch literal discriminant (see

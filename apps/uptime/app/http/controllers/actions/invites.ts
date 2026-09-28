@@ -21,6 +21,7 @@ import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
 import { recordCost } from "~/app/services/cost";
+import { checkEmailAddress } from "~/app/services/email-address";
 import routes from "~/routes/web";
 
 /**
@@ -40,6 +41,20 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 	}
 
 	let { email } = result.data;
+
+	/** The invite is only as good as the email carrying it, so a domain with no mail host is refused. */
+	let deliverable = await checkEmailAddress(email);
+	if (isFailure(deliverable)) {
+		session?.flash("toast", {
+			intent: "error",
+			message: ctx.intl.t("actions.emailAddress.noMailServer", {
+				domain: deliverable.error.domain,
+			}),
+		});
+		return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
+			status: redirect.Status.SeeOther,
+		});
+	}
 
 	let existing = await Invite.findByEmailForTeam(ctx.db, ctx.team.id, email);
 	if (existing && existing.accepted_at !== null) {

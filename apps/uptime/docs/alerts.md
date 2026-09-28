@@ -22,7 +22,7 @@ Alerts notify users when monitors detect problems and, when enabled, when the mo
 
 Channel-specific settings:
 
-- Email: recipient address and optional subject prefix
+- Email: recipient address, on a domain that receives email, and optional subject prefix
 - Webhook: destination URL and optional secret
 - Slack: webhook URL and optional channel override
 - Discord: webhook URL

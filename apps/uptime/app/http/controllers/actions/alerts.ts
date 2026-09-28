@@ -28,6 +28,7 @@ import {
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
 import { parseMonitorScope } from "~/app/lib/monitor-scope";
+import { checkEmailAddress } from "~/app/services/email-address";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
@@ -72,6 +73,16 @@ async function resolveSubmittedScope(
 	return (await isResolvableScope(db, teamId, scope)) ? scope : null;
 }
 
+/**
+ * The domain an email alert's recipient cannot receive mail at, or `null` when the alert
+ * sends somewhere else or its recipient's domain receives mail.
+ */
+async function undeliverableDomain(values: CreateAlertValues): Promise<string | null> {
+	if (values.strategy !== "email" || !values.email_to) return null;
+	let checked = await checkEmailAddress(values.email_to);
+	return isFailure(checked) ? checked.error.domain : null;
+}
+
 /** POST /actions/:team/create-alert */
 export const createAlert = createAction(routes.actions.alert.create, async (ctx) => {
 	let result = await validate(ctx.formData, CreateAlertSchema);
@@ -92,6 +103,17 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 		session?.flash("toast", {
 			intent: "error",
 			message: "Please check the alert details and try again.",
+		});
+		return redirect(routes.app.team.alerts.new.href({ team: ctx.team.slug }), {
+			status: redirect.Status.SeeOther,
+		});
+	}
+
+	let undeliverable = await undeliverableDomain(result.data);
+	if (undeliverable !== null) {
+		session?.flash("toast", {
+			intent: "error",
+			message: ctx.intl.t("actions.emailAddress.noMailServer", { domain: undeliverable }),
 		});
 		return redirect(routes.app.team.alerts.new.href({ team: ctx.team.slug }), {
 			status: redirect.Status.SeeOther,
@@ -156,6 +178,19 @@ export const updateAlert = createAction(routes.actions.alert.update, async (ctx)
 		session?.flash("toast", {
 			intent: "error",
 			message: "Please check the alert details and try again.",
+		});
+		return redirect(
+			ctx.request.headers.get("Referer") ??
+				routes.app.team.alerts.index.href({ team: ctx.team.slug }),
+			{ status: redirect.Status.SeeOther },
+		);
+	}
+
+	let undeliverable = await undeliverableDomain(result.data);
+	if (undeliverable !== null) {
+		session?.flash("toast", {
+			intent: "error",
+			message: ctx.intl.t("actions.emailAddress.noMailServer", { domain: undeliverable }),
 		});
 		return redirect(
 			ctx.request.headers.get("Referer") ??

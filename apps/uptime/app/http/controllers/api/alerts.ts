@@ -28,6 +28,7 @@ import { CREATE_ALERT_BODY } from "~/app/http/openapi/alerts";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertsRoutes } from "~/routes/api-groups";
@@ -194,6 +195,11 @@ export default createController(alertsRoutes, {
 				let scope = apiScopeFrom(result.data);
 				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
+				}
+
+				if (result.data.strategy === "email") {
+					let undeliverable = await refuseUndeliverableRecipient(result.data.email, "/email");
+					if (undeliverable) return undeliverable;
 				}
 
 				/**

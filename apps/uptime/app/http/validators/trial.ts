@@ -18,6 +18,8 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
+import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
+
 /** Longest address accepted, matching the practical limit on an email address. */
 const MAX_EMAIL_LENGTH = 320;
 
@@ -27,12 +29,22 @@ export const TRIAL_URL_FIELD = "url";
 /** Field name Cloudflare's Turnstile widget writes its token into, per its fixed contract. */
 export const TURNSTILE_FIELD = "cf-turnstile-response";
 
-/** Validates the `POST /try/lead` form body. */
+/**
+ * Form field carrying the address a visitor was offered a correction for. Submitting that
+ * same address again keeps it as typed, so a correction is offered once per address.
+ */
+export const TRIAL_EMAIL_CONFIRMED_FIELD = "email_confirmed";
+
+/** Validates the `POST /try/lead` form body; `email` comes out in its deliverable form. */
 export const TrialLeadSchema = f.object({
 	email: f.field(
-		s.string().pipe(checks.minLength(1), checks.maxLength(MAX_EMAIL_LENGTH), checks.email()),
+		s
+			.string()
+			.pipe(checks.minLength(1), checks.maxLength(MAX_EMAIL_LENGTH), emailAddress())
+			.transform(deliverableAddress),
 	),
 	consent: f.field(s.defaulted(coerce.boolean(), false)),
+	[TRIAL_EMAIL_CONFIRMED_FIELD]: f.field(s.defaulted(s.string(), "")),
 });
 
 export type TrialLeadValues = s.InferOutput<typeof TrialLeadSchema>;

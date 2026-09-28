@@ -73,6 +73,7 @@ import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
+import type { EmailAddressRefusalReason } from "~/app/services/email-address";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
 import type { TrialRefusalReason } from "~/app/services/trial-guard";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
@@ -88,7 +89,11 @@ import {
 } from "~/app/http/controllers/trial/session";
 import { getViewer } from "~/app/http/middleware/auth";
 import { MONITOR_URL_PREFILL } from "~/app/http/validators/monitor";
-import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
+import {
+	TRIAL_EMAIL_CONFIRMED_FIELD,
+	TRIAL_URL_FIELD,
+	TURNSTILE_FIELD,
+} from "~/app/http/validators/trial";
 import { BASE_PRICE_USD, FREE_TRIAL_DAYS } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
@@ -178,6 +183,17 @@ export interface TrialMonitorOffer {
 	subscribeHref: string | null;
 }
 
+/** A refused lead address, with what the form needs to explain it and to be resubmitted. */
+export interface TrialLeadError {
+	reason: EmailAddressRefusalReason;
+	/** The address as submitted, put back in the field so the visitor edits instead of retyping. */
+	email: string;
+	/** The domain the refusal is about; empty for an address that did not parse. */
+	domain: string;
+	/** The address the visitor most likely meant, for `typo`. */
+	suggestion: string | null;
+}
+
 /** Everything that varies between the ways this page can be reached. */
 export interface TrialPageView {
 	/** The check that ran, when one did. */
@@ -192,8 +208,8 @@ export interface TrialPageView {
 	 * inside the last thirty days, so nothing was started and the report went out instead.
 	 */
 	repeated?: string;
-	/** Whether the address just submitted to the email form failed validation. */
-	leadError?: boolean;
+	/** Why the address just submitted to the email form was refused, when it was. */
+	leadError?: TrialLeadError;
 	/** Starting value for the URL box, when no probe supplies one. */
 	prefill?: string;
 	/** The signed-in viewer's offer, which replaces the email capture when present. */
@@ -353,6 +369,25 @@ function refusalMessage(refusal: TrialRefusalState, t: Translate): string {
 	if (refusal.code === "failed-challenge") return t("page.trial.refusal.failedChallenge");
 	if (refusal.code === "budget-exhausted") return t("page.trial.refusal.budgetExhausted");
 	return t("page.trial.refusal.unavailable");
+}
+
+/**
+ * The field error for a refused lead address. A `typo` names the likely fix and says how to
+ * keep the address as typed, since resubmitting it unchanged is what confirms it.
+ *
+ * @param error - Why the address was refused.
+ * @param t - The request's translator.
+ * @returns The sentence to show under the field.
+ */
+function leadErrorMessage(error: TrialLeadError, t: Translate): string {
+	if (error.reason === "disposable") return t("page.trial.lead.email.disposable");
+	if (error.reason === "no-mail-server") {
+		return t("page.trial.lead.email.noMailServer", { domain: error.domain });
+	}
+	if (error.reason === "typo" && error.suggestion !== null) {
+		return t("page.trial.lead.email.typo", { suggestion: error.suggestion, email: error.email });
+	}
+	return t("page.trial.lead.email.error");
 }
 
 /**
@@ -743,10 +778,18 @@ export function renderTrialPage(view: TrialPageView = {}) {
 														type="email"
 														label={t("page.trial.lead.email.label")}
 														placeholder={t("page.trial.lead.email.placeholder")}
-														errorMessage={leadError ? t("page.trial.lead.email.error") : undefined}
+														errorMessage={leadError ? leadErrorMessage(leadError, t) : undefined}
+														defaultValue={leadError?.email}
 														autoComplete="email"
 														required
 													/>
+													{leadError?.reason === "typo" ? (
+														<input
+															type="hidden"
+															name={TRIAL_EMAIL_CONFIRMED_FIELD}
+															value={leadError.email}
+														/>
+													) : null}
 
 													<div mix={[vstack({ gap: 1 })]}>
 														<Checkbox

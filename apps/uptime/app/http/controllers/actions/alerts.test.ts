@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
@@ -18,17 +19,33 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
+import en from "~/app/locales/en";
 import { alerts, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { createAlert, updateAlert, deleteAlert } = await import("./alerts");
 let { MAX_ALERTS_PER_TEAM } = await import("~/app/data/alert");
 
-/** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
+
+/** The translator the app's language middleware would provide, for the actions' toasts. */
+let { intl } = createTranslator({
+	resources: { en },
+	supportedLanguages: ["en"],
+	fallbackLanguage: "en",
+})();
+
+/**
+ * Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`,
+ * plus the translator in place of the language middleware.
+ */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
 	return (ctx, next) => {
 		(ctx as unknown as { team: SelectTeam }).team = team;
 		(ctx as unknown as { membership: SelectMembership }).membership = membership;
+		ctx.intl = intl;
 		return next();
 	};
 }
@@ -134,6 +151,46 @@ describe("POST /actions/:team/create-alert", () => {
 			strategy: "email",
 			config: { to: "ops@example.com", subjectPrefix: "" },
 		});
+	});
+
+	test("refuses a recipient whose domain receives no mail, creating no row", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ email_to: "ops@nomail.example" }),
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.new.href({ team: team.slug }),
+		);
+		expect(await db.findOne(alerts, { where: { team_id: team.id } })).toBeNull();
+	});
+
+	test("rejects a recipient the address parser refuses, such as an IP-literal domain", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			emailAlertBody({ email_to: "ops@127.0.0.1" }),
+		);
+
+		expect(await db.findOne(alerts, { where: { team_id: team.id } })).toBeNull();
+		expect(dns.asked).toEqual([]);
 	});
 
 	test("rejects a blank name and redirects to the new-alert form without creating a row", async () => {
@@ -336,6 +393,41 @@ describe("POST /actions/:team/update-alert", () => {
 
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.name).toBe("New name");
+	});
+
+	test("keeps the alert unchanged when the new recipient's domain receives no mail", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let alert = await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "Old name",
+				notify_on_recovery: false,
+				cooldown_minutes: 0,
+				config: { strategy: "email", config: { to: "old@example.com", subjectPrefix: "" } },
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		await postAlertAction(
+			updateAlert,
+			routes.actions.alert.update,
+			team,
+			membership,
+			db,
+			emailAlertBody({ alert_id: alert.id, email_to: "ops@nomail.example" }),
+		);
+
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "email",
+			config: { to: "old@example.com", subjectPrefix: "" },
+		});
 	});
 
 	test("404s when the alert doesn't belong to the team", async () => {

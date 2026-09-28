@@ -19,6 +19,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -37,6 +38,9 @@ const CONFORMANCE = checkConformance(alertRoutes);
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: alertController } = await import("./alert");
+
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -631,6 +635,43 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 			strategy: "email",
 			config: { to: "oncall@example.com", subjectPrefix: "[prod]" },
 		});
+	});
+
+	test("refuses a patched recipient whose domain receives no mail, keeping the alert", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "" } },
+		});
+
+		let response = await dispatch(
+			db,
+			mergePatch(alert.id, { email: "oncall@nomail.example" }, { key }),
+		);
+
+		expect(response.status).toBe(400);
+		await expectProblem(response, "validationError");
+		let unchanged = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(unchanged?.config).toEqual({
+			strategy: "email",
+			config: { to: "ops@example.com", subjectPrefix: "" },
+		});
+	});
+
+	test("looks up no mail server for a patch that leaves the recipient alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id, {
+			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "" } },
+		});
+
+		let response = await dispatch(db, mergePatch(alert.id, { name: "Renamed" }, { key }));
+
+		expect(response.status).toBe(200);
+		expect(dns.asked).toEqual([]);
 	});
 
 	test("null clears an optional channel setting", async () => {

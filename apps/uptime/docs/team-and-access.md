@@ -53,7 +53,7 @@ Invites let admins and owners add people by email.
 
 ### How It Works
 
-1. An admin or owner sends an email invite.
+1. An admin or owner sends an email invite. The address's domain must receive email.
 2. The invited person opens the invite link.
 3. The invited person must sign in with the same email address.
 4. Accepting the invite adds that user to the team as a member.

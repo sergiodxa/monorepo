@@ -1676,6 +1676,11 @@ export default {
 			subscriptionRequired: "An active subscription is required to run a check.",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} does not accept email. Check the address and try again.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Oops! Something went wrong.",
@@ -4209,6 +4214,9 @@ export default {
 					label: "Email",
 					placeholder: "you@example.com",
 					error: "That does not look like an email address.",
+					disposable: "Use an address you keep: this one is from a disposable email service.",
+					noMailServer: "{$domain} does not accept email. Check the address.",
+					typo: "Did you mean {$suggestion}? Send {$email} again to keep it.",
 				},
 			},
 

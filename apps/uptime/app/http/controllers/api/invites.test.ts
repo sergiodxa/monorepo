@@ -20,6 +20,7 @@ import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -32,6 +33,9 @@ import routes from "~/routes/web";
 const CONFORMANCE = checkConformance(invitesRoutes);
 
 let { default: invitesController } = await import("./invites");
+
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -230,6 +234,39 @@ describe("POST /api/v1/invites", () => {
 
 		let created = await Invite.findByEmailForTeam(db, team.id, "new@example.com");
 		expect(created).not.toBeNull();
+	});
+
+	test("answers 400 validation-error naming the field when the domain receives no mail", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest({ email: "new@nomail.example" }, { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors).toEqual([
+			{ pointer: "/email", code: "invalid", message: "nomail.example does not accept email" },
+		]);
+		expect(await Invite.listByTeam(db, team.id)).toHaveLength(0);
+	});
+
+	test("refuses an address whose domain is an IP literal", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["invites:write"]);
+
+		let response = await dispatch(
+			db,
+			createRequest({ email: "new@[127.0.0.1]" }, { Authorization: `Bearer ${key}` }),
+		);
+
+		await expectProblem(response, "validationError");
+		expect(dns.asked).toEqual([]);
 	});
 
 	test("answers 409 conflict for an email the team already invited, pending or accepted", async () => {

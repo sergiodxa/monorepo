@@ -13,6 +13,7 @@ import { defineOperation } from "@sdxc/openapi";
 
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
+import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
@@ -129,7 +130,9 @@ export const CREATE_TEAM_DOMAIN_BODY = s.object({
 export const DELETE_TEAM_DOMAIN_BODY = s.object({ id: typedId("dom") });
 
 /** The body `POST /api/v1/invites` accepts. */
-export const CREATE_INVITE_BODY = s.object({ email: s.string().pipe(checks.email()) });
+export const CREATE_INVITE_BODY = s.object({
+	email: s.string().pipe(emailAddress()).transform(deliverableAddress),
+});
 
 /** The path params naming one invite. */
 export const INVITE_ID_PARAMS = s.object({ inviteId: typedId("inv") });

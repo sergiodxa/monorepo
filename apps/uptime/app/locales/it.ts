@@ -1646,6 +1646,11 @@ export default {
 			subscriptionRequired: "È richiesto un abbonamento attivo per eseguire un controllo.",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} non riceve email. Controlla l'indirizzo e riprova.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Ops! Qualcosa è andato storto.",
@@ -4194,6 +4199,10 @@ export default {
 					label: "Email",
 					placeholder: "lei@esempio.com",
 					error: "Non sembra un indirizzo email.",
+					disposable:
+						"Usi un indirizzo che conserva: questo proviene da un servizio di email usa e getta.",
+					noMailServer: "{$domain} non riceve email. Controlli l'indirizzo.",
+					typo: "Intendeva {$suggestion}? Invii di nuovo {$email} per mantenerlo.",
 				},
 			},
 

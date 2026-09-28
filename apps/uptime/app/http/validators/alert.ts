@@ -13,11 +13,11 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
+import { deliverableAddress, isEmailAddress } from "~/app/http/validators/email-address";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 
 const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord"] as const;
 
-const isEmail = checks.email().check;
 const isUrl = checks.url().check;
 
 /** Field shape shared by the create and update alert forms. */
@@ -39,7 +39,8 @@ const alertFields = {
 	cooldown_minutes: f.field(
 		s.defaulted(coerce.number().pipe(checks.min(0), checks.max(1440)), DEFAULT_COOLDOWN_MINUTES),
 	),
-	email_to: f.field(s.optional(s.string())),
+	/** Stored in its deliverable form; the `strategy` rule below decides whether it is required. */
+	email_to: f.field(s.optional(s.string().transform(deliverableAddress))),
 	email_subject_prefix: f.field(s.optional(s.string())),
 	webhook_url: f.field(s.optional(s.string())),
 	webhook_secret: f.field(s.optional(s.string())),
@@ -61,7 +62,7 @@ export const CreateAlertSchema = f
 	.object(alertFields)
 	.refine(
 		(value: AlertFieldValues) =>
-			value.strategy !== "email" || (!!value.email_to && isEmail(value.email_to)),
+			value.strategy !== "email" || (!!value.email_to && isEmailAddress(value.email_to)),
 		"A valid recipient email is required for the email channel.",
 	)
 	.refine(
@@ -88,7 +89,7 @@ export const UpdateAlertSchema = f
 	.object({ alert_id: f.field(s.string()), ...alertFields })
 	.refine(
 		(value: AlertFieldValues) =>
-			value.strategy !== "email" || (!!value.email_to && isEmail(value.email_to)),
+			value.strategy !== "email" || (!!value.email_to && isEmailAddress(value.email_to)),
 		"A valid recipient email is required for the email channel.",
 	)
 	.refine(

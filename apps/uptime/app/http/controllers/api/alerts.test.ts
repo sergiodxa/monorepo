@@ -21,6 +21,7 @@ import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -39,6 +40,9 @@ const CONFORMANCE = checkConformance(alertsRoutes);
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: alertsController } = await import("./alerts");
+
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -234,6 +238,36 @@ describe("POST /api/v1/alerts", () => {
 			strategy: "email",
 			config: { to: "ops@example.com", subjectPrefix: "" },
 		});
+	});
+
+	test("returns 400 naming the recipient when its domain receives no mail", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(db, post(key, emailAlertBody({ email: "ops@nomail.example" })));
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors).toEqual([
+			{ pointer: "/email", code: "invalid", message: "nomail.example does not accept email" },
+		]);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	test("looks up no mail server for an alert that sends to a webhook", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, { name: "Hook", strategy: "webhook", url: "https://hooks.example/uptime" }),
+		);
+
+		expect(response.status).toBe(201);
+		expect(dns.asked).toEqual([]);
 	});
 
 	test("returns 400 when the payload fails validation", async () => {

@@ -1653,6 +1653,11 @@ export default {
 			subscriptionRequired: "Un abonnement actif est nécessaire pour lancer une vérification.",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} ne reçoit pas d'e-mails. Vérifiez l'adresse et réessayez.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Oups ! Une erreur s'est produite.",
@@ -4215,6 +4220,10 @@ export default {
 					label: "Email",
 					placeholder: "vous@exemple.com",
 					error: "Cela ne ressemble pas à une adresse email.",
+					disposable:
+						"Utilisez une adresse que vous conservez : celle-ci provient d'un service d'e-mail jetable.",
+					noMailServer: "{$domain} ne reçoit pas d'e-mails. Vérifiez l'adresse.",
+					typo: "Vouliez-vous dire {$suggestion} ? Renvoyez {$email} pour la conserver.",
 				},
 			},
 

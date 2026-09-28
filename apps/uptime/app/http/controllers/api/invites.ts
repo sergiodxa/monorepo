@@ -24,6 +24,7 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_INVITE_BODY } from "~/app/http/openapi/team";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
+import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { invitesRoutes } from "~/routes/api-groups";
@@ -96,6 +97,9 @@ export default createController(invitesRoutes, {
 						extensions: { errors: issuesFrom(result.error) },
 					});
 				}
+
+				let undeliverable = await refuseUndeliverableRecipient(result.data.email, "/email");
+				if (undeliverable) return undeliverable;
 
 				if (await Invite.findByEmailForTeam(ctx.db, ctx.apiTeam.id, result.data.email)) {
 					return apiProblems.conflict({

@@ -41,6 +41,7 @@ import {
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import routes from "~/routes/web";
 
 /**
@@ -62,6 +63,9 @@ vi.doMock("~/app/services/trial-guard", () => ({
 }));
 
 let { default: trialLead } = await import("./lead");
+
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
 
 /** Renders through `renderToString` — this page renders no `<Frame>`. */
 function createTestRenderer(): Renderer<RemixNode> {
@@ -433,6 +437,75 @@ describe("POST /try/lead validation", () => {
 		expect(response.headers.get("location")).toBeNull();
 		expect(body).toContain("That does not look like an email address.");
 		expect(await TrialWatch.claimDue(db, Date.now() + 86_400_000)).toHaveLength(0);
+	});
+
+	test("refuses a disposable inbox, keeping the address in the field", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { db, response } = await submit({ email: "reader@mailinator.com" }, session);
+		let body = await response.text();
+
+		expect(body).toContain("this one is from a disposable email service");
+		expect(body).toContain('value="reader@mailinator.com"');
+		expect(await Lead.findByEmail(db, "reader@mailinator.com")).toBeNull();
+		expect(session.get(TRIAL_PROBE)).toBeDefined();
+	});
+
+	test("refuses an address whose domain receives no mail", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { db, response } = await submit({ email: "reader@nomail.example" }, session);
+
+		expect(await response.text()).toContain("nomail.example does not accept email.");
+		expect(await Lead.findByEmail(db, "reader@nomail.example")).toBeNull();
+	});
+
+	test("accepts an address whose mail-server lookup failed, since the answer is unknown", async () => {
+		dns.answer("flaky.example", "lookup-failed");
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { db } = await submit({ email: "reader@flaky.example" }, session);
+
+		expect(await Lead.findByEmail(db, "reader@flaky.example")).not.toBeNull();
+	});
+
+	test("offers the likely provider for a mistyped domain before starting anything", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { db, response } = await submit({ email: "reader@gmal.com" }, session);
+		let body = await response.text();
+
+		expect(body).toContain("Did you mean reader@gmail.com? Send reader@gmal.com again to keep it.");
+		expect(body).toContain('name="email_confirmed"');
+		expect(await Lead.findByEmail(db, "reader@gmal.com")).toBeNull();
+	});
+
+	test("keeps a mistyped-looking address once the visitor sends it again", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { db } = await submit(
+			{ email: "reader@gmal.com", email_confirmed: "reader@gmal.com" },
+			session,
+		);
+
+		expect(await Lead.findByEmail(db, "reader@gmal.com")).not.toBeNull();
+		expect(transport.last?.to).toEqual([{ email: "reader@gmal.com" }]);
+	});
+
+	test("refuses an IP-literal domain the old format check let through", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response } = await submit({ email: "reader@0x7f.1" }, session);
+
+		expect(await response.text()).toContain("That does not look like an email address.");
+		expect(dns.asked).toEqual([]);
 	});
 
 	test("keeps the result on the page, so a typo does not cost the check", async () => {

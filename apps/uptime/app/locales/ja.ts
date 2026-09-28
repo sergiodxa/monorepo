@@ -1607,6 +1607,12 @@ export default {
 			subscriptionRequired: "チェックを実行するには有効なサブスクリプションが必要です。",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer:
+				"{$domain} はメールを受信できません。アドレスを確認して、もう一度お試しください。",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "エラーが発生しました。",
@@ -4134,6 +4140,10 @@ export default {
 					label: "メールアドレス",
 					placeholder: "you@example.com",
 					error: "メールアドレスの形式ではないようです。",
+					disposable:
+						"使い捨てメールサービスのアドレスは使用できません。普段お使いのアドレスを入力してください。",
+					noMailServer: "{$domain} はメールを受信できません。アドレスをご確認ください。",
+					typo: "{$suggestion} のことですか？ {$email} のままにする場合は、もう一度送信してください。",
 				},
 			},
 

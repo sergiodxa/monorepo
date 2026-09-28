@@ -14,6 +14,7 @@ import { defineOperation } from "@sdxc/openapi";
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
 import { ALERT_EVENT } from "~/app/http/openapi/monitors";
+import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { typedId } from "~/app/services/typed-id";
@@ -114,7 +115,7 @@ export const ALERT_ID_PARAMS = s.object({ alertId: typedId("alt") });
 export const CREATE_ALERT_BODY = s.variant("strategy", {
 	email: s.object({
 		strategy: s.literal("email"),
-		email: s.string().pipe(checks.email()),
+		email: s.string().pipe(emailAddress()).transform(deliverableAddress),
 		subjectPrefix: s.optional(s.string().pipe(checks.maxLength(100))),
 		...COMMON_ALERT_FIELDS,
 	}),
@@ -171,7 +172,7 @@ const ALERT_PATCH = s.object({
 			description: "Switching strategy requires the new strategy's settings",
 		}),
 	),
-	email: s.optional(s.string().pipe(checks.email()).meta({ description: "`email` strategy" })),
+	email: s.optional(s.string().pipe(emailAddress()).meta({ description: "`email` strategy" })),
 	subjectPrefix: s.optional(s.nullable(s.string().pipe(checks.maxLength(100)))),
 	url: s.optional(s.string().pipe(checks.url()).meta({ description: "`webhook` strategy" })),
 	secret: s.optional(s.nullable(s.string().pipe(checks.maxLength(255)))),

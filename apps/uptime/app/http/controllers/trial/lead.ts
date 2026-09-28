@@ -30,9 +30,10 @@ import {
 	TRIAL_WATCH_STARTED,
 	takeTrialState,
 } from "~/app/http/controllers/trial/session";
-import { TrialLeadSchema } from "~/app/http/validators/trial";
+import { TRIAL_EMAIL_CONFIRMED_FIELD, TrialLeadSchema } from "~/app/http/validators/trial";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { recordCost } from "~/app/services/cost";
+import { checkEmailAddress } from "~/app/services/email-address";
 import { hostnameOf, trackTrialMonitorStarted } from "~/app/services/funnel-events";
 import { supportedLanguages } from "~/database/schema";
 import routes from "~/routes/web";
@@ -63,7 +64,39 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		 * the re-rendered page needs something to put the error next to.
 		 */
 		session?.set(TRIAL_PROBE, probe);
-		return renderTrialPage({ probe, leadError: true });
+		let submitted = ctx.formData.get("email");
+		return renderTrialPage({
+			probe,
+			leadError: {
+				reason: "invalid",
+				email: typeof submitted === "string" ? submitted : "",
+				domain: "",
+				suggestion: null,
+			},
+		});
+	}
+
+	/**
+	 * Every email the watch sends goes to this address, so it must reach a person: a
+	 * disposable inbox is refused, and a likely typo is offered once, then kept when the
+	 * visitor sends the same address again.
+	 */
+	let checked = await checkEmailAddress(result.data.email, {
+		disposable: true,
+		typo: result.data[TRIAL_EMAIL_CONFIRMED_FIELD] !== result.data.email,
+	});
+	if (isFailure(checked)) {
+		session?.set(TRIAL_PROBE, probe);
+		ctx.log.set({ trial: { lead_refused: checked.error.reason } });
+		return renderTrialPage({
+			probe,
+			leadError: {
+				reason: checked.error.reason,
+				email: result.data.email,
+				domain: checked.error.domain,
+				suggestion: checked.error.suggestion,
+			},
+		});
 	}
 
 	let locale = toSupportedLanguage(ctx.locale);

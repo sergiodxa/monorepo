@@ -25,6 +25,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import en from "~/app/locales/en";
 import { invites, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -35,6 +36,9 @@ import routes from "~/routes/web";
  * below runs after the mock patches it, so tests exercise the actions' real branching.
  */
 let { createInvite, revokeInvite } = await import("./invites");
+
+/** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
+let dns = useMailServerDns();
 
 /** Creates an in-memory database seeded with one team and its owning admin membership. */
 async function createFixture() {
@@ -239,6 +243,66 @@ describe("createInvite", () => {
 		let matching = await db.findMany(invites, { where: { team_id: team.id } });
 		expect(matching).toHaveLength(0);
 		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("refuses an address whose domain receives no mail, sending nothing", async () => {
+		dns.answer("nomail.example", "no-mail-server");
+		let { db, team, membership } = await createFixture();
+		let transport = new MemoryTransport();
+
+		let response = await send(
+			db,
+			team,
+			membership,
+			transport,
+			routes.teamAdminActions.invite.create,
+			createInvite as RequestHandler<any>,
+			"POST",
+			{ email: "friend@nomail.example" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(dns.asked).toContain("nomail.example");
+		expect(await db.findMany(invites, { where: { team_id: team.id } })).toHaveLength(0);
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("invites an address whose mail-server lookup failed, since the answer is unknown", async () => {
+		dns.answer("flaky.example", "lookup-failed");
+		let { db, team, membership } = await createFixture();
+		let transport = new MemoryTransport();
+
+		await send(
+			db,
+			team,
+			membership,
+			transport,
+			routes.teamAdminActions.invite.create,
+			createInvite as RequestHandler<any>,
+			"POST",
+			{ email: "friend@flaky.example" },
+		);
+
+		expect(await db.findMany(invites, { where: { team_id: team.id } })).toHaveLength(1);
+	});
+
+	test("stores the address with its domain lowercased, as it is delivered to", async () => {
+		let { db, team, membership } = await createFixture();
+		let transport = new MemoryTransport();
+
+		await send(
+			db,
+			team,
+			membership,
+			transport,
+			routes.teamAdminActions.invite.create,
+			createInvite as RequestHandler<any>,
+			"POST",
+			{ email: "  Friend@Example.COM " },
+		);
+
+		let [invite] = await db.findMany(invites, { where: { team_id: team.id } });
+		expect(invite?.email).toBe("Friend@example.com");
 	});
 });
 

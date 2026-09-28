@@ -1640,6 +1640,11 @@ export default {
 			subscriptionRequired: "Se requiere una suscripción activa para ejecutar una comprobación.",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} no recibe correo. Revisa la dirección e inténtalo de nuevo.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "¡Ups! Algo salió mal.",
@@ -4194,6 +4199,10 @@ export default {
 					label: "Email",
 					placeholder: "tu@ejemplo.com",
 					error: "Eso no parece una dirección de email.",
+					disposable:
+						"Usa una dirección que conserves: esta es de un servicio de correo desechable.",
+					noMailServer: "{$domain} no recibe correo. Revisa la dirección.",
+					typo: "¿Quisiste decir {$suggestion}? Envía {$email} de nuevo para conservarla.",
 				},
 			},
 

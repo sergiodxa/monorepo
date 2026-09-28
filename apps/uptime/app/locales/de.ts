@@ -1645,6 +1645,11 @@ export default {
 			subscriptionRequired: "Für eine Prüfung ist ein aktives Abonnement erforderlich.",
 		},
 
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} empfängt keine E-Mails. Prüfe die Adresse und versuche es erneut.",
+		},
+
 		addDomain: {
 			errors: {
 				generic: "Hoppla! Etwas ist schiefgelaufen.",
@@ -4217,6 +4222,10 @@ export default {
 					label: "E-Mail",
 					placeholder: "du@beispiel.de",
 					error: "Das sieht nicht nach einer E-Mail-Adresse aus.",
+					disposable:
+						"Bitte nutze eine Adresse, die du behältst: Diese stammt von einem Wegwerf-E-Mail-Dienst.",
+					noMailServer: "{$domain} empfängt keine E-Mails. Bitte prüfe die Adresse.",
+					typo: "Meintest du {$suggestion}? Sende {$email} erneut, um sie zu behalten.",
 				},
 			},
 
