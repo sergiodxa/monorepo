@@ -1,6 +1,6 @@
 /**
  * Application bootstrap that assembles the board's fetch-router. It registers the global
- * middleware stack, maps the three routes onto their controllers, and wires the
+ * middleware stack, maps the routes onto their controllers, and wires the
  * request-scoped renderer. It is the composition root the worker and the tests share.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -26,12 +26,14 @@ import { renderToStream } from "remix/ui/server";
 import * as board from "~/app/http/controllers/board";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import outbox from "~/app/http/controllers/outbox";
+import position from "~/app/http/controllers/position";
 import database from "~/app/http/middleware/database";
 import jobs from "~/app/http/middleware/jobs";
 import callerBudget from "~/app/http/middleware/rate-limit";
 import { captchaProvider } from "~/app/lib/captcha";
 import { openDatabase } from "~/app/lib/database";
 import { FALLBACK_LANGUAGE, resources, SUPPORTED_LANGUAGES } from "~/app/lib/i18n";
+import { isFrameRequest } from "~/routes/frames";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -81,6 +83,8 @@ export default function application(
 		},
 	});
 
+	router.map(routes.position, position);
+
 	router.map(routes.outbox, outbox);
 
 	router.map(routes.mcp, {
@@ -95,11 +99,19 @@ export default function application(
  * Creates the request-scoped renderer reached through `ctx.render`. `createHtmlResponse`
  * prepends `<!DOCTYPE html>` to the stream's first chunk, the only point JSX rendering
  * leaves to add it, without which every page parses in quirks mode.
+ *
+ * A frame's answer is written into a document that already declared one, so it is sent as
+ * the markup it is and the doctype belongs to whichever response opened the document.
  */
-function createHtmlRenderer(_ctx: RequestContext) {
+function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		return createHtmlResponse(renderToStream(node), { ...init, headers });
+
+		let stream = renderToStream(node);
+
+		if (isFrameRequest(ctx.request)) return new Response(stream, { ...init, headers });
+
+		return createHtmlResponse(stream, { ...init, headers });
 	};
 }

@@ -12,7 +12,11 @@ shortest correct version of a thing wins over the clever one.
 - MUST reach for an in-memory adapter wherever a contract has one — mail, cache, and the
   job queue — because the app runs from a laptop with no network behind it
 - MUST keep every interaction on HTML the browser already implements: `<dialog>` with
-  `commandfor` and `command`, plain forms, and no client script
+  `commandfor` and `command`, plain forms, and links that go somewhere on their own
+- MUST keep the client bundle to the one island that defers a position's detail. An island
+  imports `remix/ui` and its own types and nothing else, since whatever it imports ships;
+  `@sdxc/ui`, `@sdxc/markdown` and `@sdxc/i18n` stay on the server, and a page carrying no
+  island links no script
 - MUST build every view out of `@sdxc/ui` components, styling through their own
   `variant`/`color`/`size` props and reaching for `@sdxc/u` mixins only for layout no
   component owns

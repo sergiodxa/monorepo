@@ -13,7 +13,10 @@
 		"location": "Ubicación",
 		"salary": "Salario",
 		"contact": "Postular por correo",
-		"published": "Publicada el {$date}"
+		"published": "Publicada el {$date}",
+		"back": "Volver a la bolsa",
+		"loading": "Cargando la vacante…",
+		"read": "Leer la vacante completa"
 	},
 	"form": {
 		"title": "Publicar una vacante",

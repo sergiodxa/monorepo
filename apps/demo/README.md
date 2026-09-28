@@ -26,9 +26,12 @@ queue live in the worker, and the captcha is a word the form prints.
 - **Listing** — open positions, newest first, served from an in-memory cache
 - **Component library** — every view is composed from `@sdxc/ui`, over the palette in
   `resources/css/colors.css` that the theme derives its semantic tokens from
-- **Native dialogs** — a position and the submit form open as `<dialog>` elements driven by
-  `commandfor` and `command`, so the page ships no script
-- **Markdown descriptions** — parsed and rendered as UI nodes
+- **Native dialogs** — the submit form opens as a `<dialog>` driven by `commandfor` and
+  `command`, so reopening it after a refused submission takes no script
+- **Deferred detail** — the listing carries summaries; a position's body is fetched from
+  `/positions/:id` when its dialog opens, by one island the board links and nothing else
+- **Markdown descriptions** — parsed in the position's own controller and rendered as UI
+  nodes, so the board parses nothing per posting
 - **Captcha** — Turnstile when a secret is configured, a printed word otherwise
 - **Rate limit** — a per-address budget on the submit form and on the MCP endpoint
 - **Background jobs** — a confirmation email per submission, and a nightly expiry sweep
@@ -38,12 +41,13 @@ queue live in the worker, and the captcha is a word the form prints.
 
 ## Routes
 
-| Route     | Method | Purpose                             |
-| --------- | ------ | ----------------------------------- |
-| `/`       | GET    | The open positions                  |
-| `/`       | POST   | Publishes a position                |
-| `/outbox` | GET    | Every message the board sent        |
-| `/mcp`    | POST   | The Model Context Protocol endpoint |
+| Route            | Method | Purpose                             |
+| ---------------- | ------ | ----------------------------------- |
+| `/`              | GET    | The open positions                  |
+| `/`              | POST   | Publishes a position                |
+| `/positions/:id` | GET    | One position, complete              |
+| `/outbox`        | GET    | Every message the board sent        |
+| `/mcp`           | POST   | The Model Context Protocol endpoint |
 
 ## Database
 

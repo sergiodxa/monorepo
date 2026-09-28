@@ -13,7 +13,10 @@
 		"location": "Location",
 		"salary": "Salary",
 		"contact": "Apply by email",
-		"published": "Published {$date}"
+		"published": "Published {$date}",
+		"back": "Back to the board",
+		"loading": "Loading the position…",
+		"read": "Read the full position"
 	},
 	"form": {
 		"title": "Post a position",

@@ -2,7 +2,10 @@
  * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
  * page title, and the three stylesheets the board ships — the reset, the palette the
  * semantic tokens derive from, and the theme that derives them. Every page composes into
- * it, so a page decides only its own content, and no script is linked at all.
+ * it, so a page decides only its own content.
+ *
+ * The client entry is linked by the pages that carry an island and by no others, so a page
+ * the browser drives on its own downloads nothing to be told so.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,6 +28,12 @@ import colorStyles from "~/resources/css/colors.css?url";
  */
 const THEME_CLASS = "system";
 
+/**
+ * The dev server serves the entry from source while the build emits it under a pinned name,
+ * so the tag resolves without reading a manifest at render time.
+ */
+const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+
 namespace DocumentLayout {
 	export interface Props {
 		/** The page's content, rendered inside `<body>`. */
@@ -33,13 +42,18 @@ namespace DocumentLayout {
 		title: string;
 		/** The language the page is written in, as detected for this request. */
 		locale: string;
+		/**
+		 * Whether this page carries an island, which is the only reason to link the client
+		 * runtime. A page that carries none is complete as it stands and links no script.
+		 */
+		hydrates?: boolean;
 	}
 }
 
 /** Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { children, locale, title } = handle.props;
+		let { children, hydrates = false, locale, title } = handle.props;
 
 		return (
 			<html lang={locale} class={THEME_CLASS} mix={[colorScheme("light dark")]}>
@@ -65,6 +79,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					]}
 				>
 					<main mix={[vstack({ gap: 8 }), is("100%"), maxIs("48rem"), p(6)]}>{children}</main>
+					{hydrates ? <script type="module" async src={CLIENT_ENTRY_SRC}></script> : null}
 				</body>
 			</html>
 		);
