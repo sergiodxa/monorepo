@@ -1,19 +1,35 @@
 /**
- * The rate card: unit prices the cost ledger meters against, plus the handful of
- * quantities the platform exposes no way to measure and this app models instead
- * (ADR-007 §2). Prices are in **cents** — Polar's Cost Insights takes cents, and
- * converting dollars at the reporting boundary invites a 100× error easy to miss.
- * {@link RATE_CARD_VERSION} tags every recorded point and event, so a price change
- * adds a new version instead of rewriting history. Every rate prices usage as if
- * the customer had no free tier, which stays true as the platform grows and keeps
- * `invoice_line = max(0, units − included) × rate` computable.
+ * The rate card: cents per unit of every resource the cost ledger meters, derived from
+ * Cloudflare's list prices in `@sdxc/cloudflare-pricing`, plus the quantities this app
+ * models because nothing measures them. Rates price usage as if no free tier applied, and
+ * {@link RATE_CARD_VERSION} tags every point, so a price change adds a version.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Meter } from "@sdxc/cloudflare-pricing";
+
+import { centsPerGbDay, centsPerUnit } from "@sdxc/cloudflare-pricing";
+import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
+import * as D1 from "@sdxc/cloudflare-pricing/d1";
+import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
+import * as EmailService from "@sdxc/cloudflare-pricing/email-service";
+import * as KV from "@sdxc/cloudflare-pricing/kv";
+import * as Queues from "@sdxc/cloudflare-pricing/queues";
+import * as Workers from "@sdxc/cloudflare-pricing/workers";
+
 /** The rate card this module currently states. Carried on every measurement it prices. */
-export const RATE_CARD_VERSION = "2026-08-02";
+export const RATE_CARD_VERSION = "2026-09-28";
+
+/**
+ * Cents per unit of an Analytics Engine meter: its list price once Cloudflare invoices the
+ * service, zero until then, so the ledger keeps counting points and queries while their cost
+ * matches the bill.
+ */
+function analyticsEngineCents(meter: Meter): number {
+	return AnalyticsEngine.BILLING_ACTIVE ? centsPerUnit(meter) : 0;
+}
 
 /**
  * Cents per unit, at Workers Paid overage rates. **Key order is the Analytics Engine
@@ -21,32 +37,28 @@ export const RATE_CARD_VERSION = "2026-08-02";
  * reordered or removed without orphaning every point already written.
  */
 export const RATES = {
-	workerRequest: 3.0e-5,
-	workerCpuMs: 2.0e-6,
-	queueOperation: 4.0e-5,
-	d1RowRead: 1.0e-7,
-	d1RowWritten: 1.0e-4,
-	/** $0.75 per GB-month, amortized to a day. */
-	d1StorageGbDay: 2.5,
-	kvRead: 5.0e-5,
-	/** $5.00 per million; write, delete, and list price the same. */
-	kvMutation: 5.0e-4,
-	/** $0.50 per GB-month, amortized to a day. */
-	kvStorageGbDay: 1.667,
-	doRequest: 1.5e-5,
-	/** $12.50 per million GB-seconds, at the fixed 128 MB allocation. */
-	doDurationMs: 1.5625e-7,
-	aeDataPoint: 2.5e-5,
-	aeQuery: 1.0e-4,
-	/** $0.35 per 1,000, beyond the 3,000 messages Workers Paid includes monthly. */
-	emailSent: 3.5e-2,
-	/** $0.20 per GB-month of Durable Object SQLite, amortized to a day. */
-	doSqliteStorageGbDay: 0.667,
-	/** Durable Object SQLite reads price as D1's do. */
-	doRowRead: 1.0e-7,
-	/** Durable Object SQLite writes price as D1's do. */
-	doRowWritten: 1.0e-4,
-} as const;
+	workerRequest: centsPerUnit(Workers.REQUESTS),
+	workerCpuMs: centsPerUnit(Workers.CPU_MS),
+	queueOperation: centsPerUnit(Queues.OPERATIONS),
+	d1RowRead: centsPerUnit(D1.ROWS_READ),
+	d1RowWritten: centsPerUnit(D1.ROWS_WRITTEN),
+	d1StorageGbDay: centsPerGbDay(D1.STORAGE),
+	kvRead: centsPerUnit(KV.READS),
+	/** Write, delete, and list price the same. */
+	kvMutation: centsPerUnit(KV.WRITES),
+	kvStorageGbDay: centsPerGbDay(KV.STORAGE),
+	doRequest: centsPerUnit(DurableObjects.REQUESTS),
+	/** One millisecond of one active object, at the 128 MB Cloudflare bills every object for. */
+	doDurationMs: DurableObjects.centsPerActiveMs(),
+	aeDataPoint: analyticsEngineCents(AnalyticsEngine.DATA_POINTS_WRITTEN),
+	aeQuery: analyticsEngineCents(AnalyticsEngine.READ_QUERIES),
+	emailSent: centsPerUnit(EmailService.EMAILS_SENT),
+	doSqliteStorageGbDay: centsPerGbDay(DurableObjects.SQLITE_STORAGE),
+	doRowRead: centsPerUnit(DurableObjects.SQLITE_ROWS_READ),
+	doRowWritten: centsPerUnit(DurableObjects.SQLITE_ROWS_WRITTEN),
+	/** Workers Logs events: the worker enables `observability`, and every invocation writes one. */
+	workerLogEvent: centsPerUnit(Workers.LOG_EVENTS_WRITTEN),
+};
 
 /** A resource the ledger can be asked to count. */
 export type CostResource = keyof typeof RATES;

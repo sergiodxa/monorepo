@@ -276,6 +276,15 @@ describe("CostLedger self-accounting", () => {
 		expect(quantity(point!, "workerCpuMs")).toBe(MODELLED_CPU_MS.queue);
 	});
 
+	test("charges the invocation's log event in the same share as its request", async () => {
+		let [point] = await flushing(async () => apportionCostByTeam(["team-1"]), {
+			handler: "queue",
+			workerRequests: 0.2,
+		});
+
+		expect(quantity(point!, "workerLogEvent")).toBeCloseTo(0.2, 9);
+	});
+
 	test("owns a whole request when nothing said otherwise", async () => {
 		let [point] = await flushing(async () => apportionCostByTeam(["team-1"]), {
 			handler: "fetch",

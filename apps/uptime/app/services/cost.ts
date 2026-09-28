@@ -61,6 +61,7 @@ const COST_FIELDS: Record<CostResource, string> = {
 	doSqliteStorageGbDay: "do_sqlite_storage_gb_day",
 	doRowRead: "do_rows_read",
 	doRowWritten: "do_rows_written",
+	workerLogEvent: "log_events",
 };
 
 /**
@@ -182,12 +183,13 @@ export class CostLedger {
 	}
 
 	/**
-	 * {@link flush} without the guard. CPU, request-share, and D1 quantities
-	 * fold in here because only here is the whole unit of work finally over;
-	 * each team's write counts itself as work that team caused.
+	 * {@link flush} without the guard. CPU, request-share, and D1 quantities fold in here
+	 * because only here is the unit of work over; the invocation's one log event splits
+	 * like its request, and each team's write counts itself as work that team caused.
 	 */
 	#write(): void {
 		this.record("workerRequest", this.#workerRequests);
+		this.record("workerLogEvent", this.#workerRequests);
 		this.record("workerCpuMs", MODELLED_CPU_MS[this.#handler]);
 		this.record("d1RowRead", this.usage.rowsRead);
 		this.record("d1RowWritten", this.usage.rowsWritten);

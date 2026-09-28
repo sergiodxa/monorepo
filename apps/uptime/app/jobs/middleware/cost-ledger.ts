@@ -34,6 +34,8 @@ export function costLedger(): JobMiddleware {
 
 		/** A delivered message costs one queue read and delete; each redelivery counts its own two. */
 		ledger.record("queueOperation", 2);
+		/** The dispatcher writes each job its own log event, beside its share of the batch's. */
+		ledger.record("workerLogEvent", 1);
 
 		await trackCost(ledger, next);
 	};
