@@ -2,8 +2,8 @@
  * Tests the fence in front of the public trial probe: the blocklist (exercised range by
  * range, including the address spellings that exist only to evade a check like this), a
  * challenge that fails closed even with no secret configured, and refusal reasons kept
- * distinguishable so a test can tell a budget refusal from a missing checkbox. Both outbound
- * calls are intercepted with MSW so a probe's skipped calls are as visible as the ones it made.
+ * distinguishable so a test can tell a budget refusal from a missing checkbox. DNS goes
+ * through MSW; challenges go through `MemoryCaptcha`, and through MSW only for Turnstile's wire exchange.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,7 @@
 
 import type { RateLimitMock } from "@sdxc/cloudflare-mocks";
 
+import { MemoryCaptcha } from "@sdxc/captcha/memory";
 import { createEnv, createKVNamespace, createRateLimit } from "@sdxc/cloudflare-mocks";
 import { CLOUDFLARE } from "@sdxc/doh";
 import { Log } from "@sdxc/logger";
@@ -62,6 +63,9 @@ let dnsRecords = new Map<string, string[]>();
 
 /** Queries that should fail outright, keyed `name:type`, for the unresolvable cases. */
 let dnsFailures = new Set<string>();
+
+/** The challenge provider every free submission verifies with, unless it uses Turnstile's own. */
+let captcha = new MemoryCaptcha();
 
 /** Whether siteverify reports the token as valid, and the status it answers with. */
 let turnstileSuccess = true;
@@ -121,10 +125,11 @@ afterAll(() => server.close());
 /**
  * A submission from a visitor, with the address the platform reported for them. Free
  * unless a test says otherwise, since that is the path every control here exists for.
+ * `turnstile` leaves the provider unset, so the deployment's own Turnstile verifies it.
  */
 function submission(
 	target: string,
-	options: { token?: string | null; address?: string; billed?: boolean } = {},
+	options: { token?: string | null; address?: string; billed?: boolean; turnstile?: boolean } = {},
 ): TrialProbeRequest {
 	let headers = new Headers();
 	headers.set("CF-Connecting-IP", options.address ?? "203.0.113.9");
@@ -133,6 +138,7 @@ function submission(
 		token: options.token === undefined ? "token-1" : options.token,
 		request: new Request("https://uptime.test/try", { method: "POST", headers }),
 		billed: options.billed ?? false,
+		captcha: options.turnstile ? undefined : captcha,
 	};
 }
 
@@ -147,6 +153,7 @@ beforeEach(async () => {
 	kvPut.mockClear();
 	limiter.reset();
 
+	captcha.reset();
 	turnstileSuccess = true;
 	turnstileStatus = 200;
 	turnstileSecretKey = "turnstile-secret";
@@ -451,7 +458,9 @@ describe("guardTrialProbe", () => {
 	});
 
 	test("verifies the token against siteverify with the secret and the calling address", async () => {
-		await guardTrialProbe(submission("example.com", { token: "token-9", address: "198.51.100.7" }));
+		await guardTrialProbe(
+			submission("example.com", { token: "token-9", address: "198.51.100.7", turnstile: true }),
+		);
 
 		expect(verifications).toHaveLength(1);
 		let [verification] = verifications;
@@ -464,11 +473,39 @@ describe("guardTrialProbe", () => {
 	test("refuses when siteverify rejects the token", async () => {
 		turnstileSuccess = false;
 
+		let result = await guardTrialProbe(submission("example.com", { turnstile: true }));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("failed-challenge");
+	});
+
+	test("refuses a token the provider rejected, naming why for the logs", async () => {
+		captcha.failNext("expired");
+
 		let result = await guardTrialProbe(submission("example.com"));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("failed-challenge");
+		expect(result.error.detail).toBe("token-expired");
+	});
+
+	test("hands the provider the token and the calling address", async () => {
+		await guardTrialProbe(submission("example.com", { token: "token-9", address: "198.51.100.7" }));
+
+		expect(captcha.calls).toEqual([{ token: "token-9", remoteIp: "198.51.100.7" }]);
+	});
+
+	test("fails closed when the provider is unavailable", async () => {
+		captcha.failNext("unavailable", ["internal-error"]);
+
+		let result = await guardTrialProbe(submission("example.com"));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.reason).toBe("failed-challenge");
+		expect(result.error.detail).toBe("siteverify-unavailable");
 	});
 
 	/** The token is never sent for verification, so nothing is spent asking. */
@@ -478,7 +515,7 @@ describe("guardTrialProbe", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("challenge-incomplete");
-		expect(verifications).toEqual([]);
+		expect(captcha.calls).toEqual([]);
 	});
 
 	test("treats an empty token the same as no token at all", async () => {
@@ -492,7 +529,7 @@ describe("guardTrialProbe", () => {
 	test("fails closed when siteverify cannot be reached", async () => {
 		turnstileStatus = 500;
 
-		let result = await guardTrialProbe(submission("example.com"));
+		let result = await guardTrialProbe(submission("example.com", { turnstile: true }));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
@@ -504,7 +541,9 @@ describe("guardTrialProbe", () => {
 		let records: Record<string, unknown>[] = [];
 		let log = new Log({ kind: "request", sink: (record) => void records.push(record) });
 
-		let result = await log.run(() => guardTrialProbe(submission("example.com")));
+		let result = await log.run(() =>
+			guardTrialProbe(submission("example.com", { turnstile: true })),
+		);
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
@@ -526,7 +565,7 @@ describe("guardTrialProbe", () => {
 	test("refuses when the secret is present but empty", async () => {
 		turnstileSecretKey = "";
 
-		let result = await guardTrialProbe(submission("example.com"));
+		let result = await guardTrialProbe(submission("example.com", { turnstile: true }));
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
@@ -577,7 +616,7 @@ describe("guardTrialProbe", () => {
 		expect(result.error.retryAfterSeconds).toBeGreaterThan(0);
 		expect(kvGet).not.toHaveBeenCalled();
 		expect(dnsQueries).toEqual([]);
-		expect(verifications).toEqual([]);
+		expect(captcha.calls).toEqual([]);
 	});
 
 	test("counts a granted probe against today's global budget", async () => {
@@ -643,7 +682,7 @@ describe("guardTrialProbe", () => {
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
 		expect(dnsQueries).toEqual([]);
-		expect(verifications).toEqual([]);
+		expect(captcha.calls).toEqual([]);
 		expect(kvPut).not.toHaveBeenCalled();
 	});
 
@@ -657,7 +696,7 @@ describe("guardTrialProbe", () => {
 		expect(limiter.count("trial-probe:203.0.113.9")).toBe(0);
 		expect(kvGet).not.toHaveBeenCalled();
 		expect(kvPut).not.toHaveBeenCalled();
-		expect(verifications).toEqual([]);
+		expect(captcha.calls).toEqual([]);
 	});
 
 	test("holds a billed probe to the same target rules as a free one", async () => {

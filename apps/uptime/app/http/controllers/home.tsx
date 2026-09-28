@@ -12,6 +12,7 @@
 
 import type { RemixNode } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { IntlProvider, Trans } from "@sdxc/i18n/ui";
 import {
 	ActivityIcon,
@@ -74,7 +75,7 @@ import { Button, Heading, LinkButton, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { TRIAL_URL_FIELD } from "~/app/http/validators/trial";
+import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import {
 	BASE_PRICE_USD,
 	INCLUDED_PINGS,
@@ -90,7 +91,6 @@ import MarketingFeatureRow from "~/resources/components/marketing/feature-row";
 import SectionHeader from "~/resources/components/marketing/section-header";
 import MarketingTrustIndicators from "~/resources/components/marketing/trust-indicators";
 import PricingCalculator from "~/resources/components/pricing-calculator";
-import Turnstile from "~/resources/components/turnstile";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -362,6 +362,9 @@ export default createAction(routes.home, async (ctx) => {
 	let firstFaqColumn = FAQS.slice(0, faqSplitIndex);
 	let secondFaqColumn = FAQS.slice(faqSplitIndex);
 
+	/** A deployment with no site key renders no widget, so its form sends no token. */
+	let turnstileSiteKey = trialTurnstileSiteKey();
+
 	return ctx.render(
 		<DocumentLayout
 			title={t("landing.meta.title")}
@@ -580,7 +583,9 @@ export default createAction(routes.home, async (ctx) => {
 								required
 								mix={[grow(1), is("full"), textAlign("start")]}
 							/>
-							<Turnstile siteKey={trialTurnstileSiteKey()} />
+							{turnstileSiteKey === null ? null : (
+								<TurnstileWidget siteKey={turnstileSiteKey} field={TURNSTILE_FIELD} theme="auto" />
+							)}
 							<Button type="submit" mix={[shrink(0), nowrap(), bs(10)]}>
 								{t("landing.try.submit")}
 							</Button>

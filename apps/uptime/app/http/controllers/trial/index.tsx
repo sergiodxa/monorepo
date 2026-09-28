@@ -12,6 +12,7 @@ import type { Translate } from "@sdxc/i18n";
 import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
+import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import {
 	ActivityIcon,
 	ArrowRightIcon,
@@ -101,7 +102,6 @@ import {
 import { HttpCheck } from "~/app/services/http-check";
 import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import { guardTrialProbe } from "~/app/services/trial-guard";
-import Turnstile from "~/resources/components/turnstile";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -383,6 +383,9 @@ export function renderTrialPage(view: TrialPageView = {}) {
 
 	let chrome = buildMarketingChrome(t);
 
+	/** A deployment with no site key renders no widget, so its form sends no token. */
+	let turnstileSiteKey = trialTurnstileSiteKey();
+
 	/**
 	 * How long the free report runs for. Interpolated into every line that quotes it, so the
 	 * page, the emails and the scheduling that actually stops the watch all read the term from
@@ -545,7 +548,13 @@ export function renderTrialPage(view: TrialPageView = {}) {
 										/>
 
 										<div mix={[vstack({ gap: 2 })]}>
-											<Turnstile siteKey={trialTurnstileSiteKey()} />
+											{turnstileSiteKey === null ? null : (
+												<TurnstileWidget
+													siteKey={turnstileSiteKey}
+													field={TURNSTILE_FIELD}
+													theme="auto"
+												/>
+											)}
 											{refusal !== undefined && incomplete ? (
 												<FieldError>{refusalMessage(refusal, t)}</FieldError>
 											) : null}

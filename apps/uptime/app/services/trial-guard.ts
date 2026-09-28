@@ -11,20 +11,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Captcha } from "@sdxc/captcha";
 import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
+import { Turnstile } from "@sdxc/captcha/turnstile";
 import { resolve } from "@sdxc/doh";
 import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { failure, isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
-import * as s from "remix/data-schema";
 
 import { recordCost } from "~/app/services/cost";
-
-/** Cloudflare's server-side verification endpoint for a Turnstile token. */
-const SITEVERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 /**
  * Free probes the whole site performs in one UTC day, across every visitor.
@@ -195,6 +193,11 @@ export interface TrialProbeRequest {
 	 * Required, so every call site commits to an answer about who is paying.
 	 */
 	billed: boolean;
+	/**
+	 * The provider that verifies {@link TrialProbeRequest.token}. Defaults to Turnstile with
+	 * this deployment's secret, which refuses every free probe when no secret is configured.
+	 */
+	captcha?: Captcha;
 }
 
 /** Permission to perform one free probe, and what was learned getting there. */
@@ -611,52 +614,49 @@ async function checkResolvedAddresses(hostname: string): Promise<Result<string[]
 }
 
 /**
- * Verifies a Turnstile token server-side. Fails **closed** in every direction, including
- * an unconfigured deployment, since an open prober is worse than a degraded page. A
- * missing token is kept distinct from a rejected one, since only it is a form to finish.
+ * The provider that verifies this deployment's Turnstile tokens, or `null` when no secret
+ * is configured, logged so an unconfigured deployment shows up in the logs.
+ *
+ * @returns A verifier holding the secret, or `null` without one.
+ */
+function deploymentCaptcha(): Captcha | null {
+	let secret = turnstileSecret();
+	if (secret !== undefined) return new Turnstile({ secretKey: secret });
+	currentLog()?.warn("trial.turnstile_unconfigured");
+	return null;
+}
+
+/**
+ * Verifies a challenge token server-side. Fails **closed** in every direction, including
+ * an unconfigured deployment and an unreachable provider, since an open prober is worse
+ * than a degraded page. A missing token stays apart from a rejected one: only it is a form to finish.
  *
  * @param token - The token the widget produced.
- * @param address - The calling address, which Turnstile cross-checks against the token.
+ * @param address - The calling address, which the provider cross-checks against the token.
+ * @param captcha - The provider to verify with, or `undefined` for this deployment's Turnstile.
  * @returns The refusal to answer with, or `null` when the caller may proceed.
  */
 async function verifyChallenge(
 	token: string | null,
 	address: string | null,
+	captcha: Captcha | undefined,
 ): Promise<TrialRefusal | null> {
-	let secret = turnstileSecret();
-	if (secret === undefined) {
-		currentLog()?.warn("trial.turnstile_unconfigured");
-		return new TrialRefusal("unavailable", "turnstile-unconfigured");
-	}
+	let provider = captcha ?? deploymentCaptcha();
+	if (provider === null) return new TrialRefusal("unavailable", "turnstile-unconfigured");
 
 	if (token === null || token === "") {
 		return new TrialRefusal("challenge-incomplete", "no-token");
 	}
 
-	let body = new URLSearchParams({ secret, response: token });
-	if (address !== null) body.set("remoteip", address);
+	let verified = await provider.verify(token, address === null ? {} : { remoteIp: address });
+	if (!isFailure(verified)) return null;
 
-	try {
-		let response = await fetch(SITEVERIFY_URL, { method: "POST", body });
-		if (!response.ok) {
-			currentLog()?.warn("trial.turnstile_unavailable", { status: response.status });
-			return new TrialRefusal("failed-challenge", "siteverify-unavailable");
-		}
-
-		let parsed = s.parseSafe(s.object({ success: s.boolean() }), await response.json());
-		if (!parsed.success) {
-			currentLog()?.warn("trial.turnstile_unreadable");
-			return new TrialRefusal("failed-challenge", "siteverify-unreadable");
-		}
-
-		if (parsed.value.success) return null;
-		return new TrialRefusal("failed-challenge", "token-rejected");
-	} catch (error) {
-		currentLog()?.warn("trial.turnstile_unavailable", {
-			error: error instanceof Error ? error.message : String(error),
-		});
-		return new TrialRefusal("failed-challenge", "siteverify-unreachable");
+	let { code, providerCodes } = verified.error;
+	if (code === "unavailable") {
+		currentLog()?.warn("trial.turnstile_unavailable", { codes: providerCodes.join(",") });
+		return new TrialRefusal("failed-challenge", "siteverify-unavailable");
 	}
+	return new TrialRefusal("failed-challenge", `token-${code}`);
 }
 
 /**
@@ -720,7 +720,7 @@ export async function guardTrialProbe(
 
 	if (!probe.billed) {
 		let address = probe.request.headers.get("CF-Connecting-IP");
-		let challenge = await verifyChallenge(probe.token, address);
+		let challenge = await verifyChallenge(probe.token, address, probe.captcha);
 		if (challenge !== null) return failure(challenge);
 	}
 
