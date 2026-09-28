@@ -21,6 +21,8 @@ import type { Middleware } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -212,9 +214,19 @@ export default function application(options: application.Options) {
 		},
 	});
 
+	/**
+	 * The public try-it form's honeypot, on every route that renders the form or accepts it: the
+	 * landing page, `/try` and `/try/lead`. Its key derives from the session secret under a
+	 * `honeypot:` label, so no second secret is provisioned. A refused submission reaches the
+	 * controller, which answers a filled trap like a success and asks a person to send again.
+	 */
+	let trialHoneypot = honeypot(new Honeypot({ secret: `honeypot:${options.cookieSecret}` }), {
+		onFailure: () => null,
+	});
+
 	router.map(
 		routes.home,
-		lazy(() => import("~/app/http/controllers/home")),
+		lazy(() => import("~/app/http/controllers/home"), [trialHoneypot]),
 	);
 	router.map(
 		routes.healthcheck,
@@ -255,16 +267,17 @@ export default function application(options: application.Options) {
 
 	/**
 	 * Public try-it surface: outside every auth guard since using it needs no
-	 * account. Each leaf guards itself instead — `trial-guard.ts` for
-	 * `trial.check`'s POST, an unguessable URL token for `trial.unsubscribe`.
+	 * account. Each leaf guards itself instead — the honeypot ahead of `trial-guard.ts`
+	 * for `trial.check`'s POST, so a filled trap never costs a challenge verification or a
+	 * probe, the honeypot for `trial.lead`, an unguessable URL token for `trial.unsubscribe`.
 	 */
 	router.map(
 		routes.trial.check,
-		lazy(() => import("~/app/http/controllers/trial/index")),
+		lazy(() => import("~/app/http/controllers/trial/index"), [trialHoneypot]),
 	);
 	router.map(
 		routes.trial.lead,
-		lazy(() => import("~/app/http/controllers/trial/lead")),
+		lazy(() => import("~/app/http/controllers/trial/lead"), [trialHoneypot]),
 	);
 	router.map(
 		routes.trial.unsubscribe,

@@ -364,6 +364,7 @@
         "@sdxc/flags": "workspace:*",
         "@sdxc/flags-engine": "workspace:*",
         "@sdxc/highlight": "workspace:*",
+        "@sdxc/honeypot": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icalendar": "workspace:*",

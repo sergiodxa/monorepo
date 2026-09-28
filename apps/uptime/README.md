@@ -18,6 +18,16 @@ cron forwards to the billing platform. Neither dataset needs provisioning — th
 it. Re-run verification before each deploy; the historical phase notes live in the ADR
 linked above.
 
+## Public try-it form
+
+The landing page and `/try` let an anonymous visitor check one URL, and `/try/lead` turns that
+check into a free week of hourly checks. Both forms carry signed honeypot fields, verified before
+anything else runs: a filled trap gets an ordinary `200` page from `/try` and the started-watch
+receipt from `/try/lead`, while nothing is checked, recorded or sent, and a missing or forged token renders the form again with what was typed, asking to send
+it again. The honeypot's key derives from `COOKIE_SESSION_SECRET`, so it needs no secret of its
+own. Past the honeypot, `POST /try` runs `app/services/trial-guard.ts`: a per-address rate limit, a
+public-target check, the Turnstile challenge and a daily budget of free probes.
+
 ## Development
 
 ```sh

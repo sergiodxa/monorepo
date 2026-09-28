@@ -148,7 +148,7 @@ dead weight in any placement discussion.
 ### 2.2a The sixth checked entity: the public trial
 
 `POST /try` takes a URL and an email address from an anonymous visitor, probes the URL once
-behind Turnstile and an SPF-style egress guard, and then re-probes it **hourly for seven
+behind signed honeypot fields, Turnstile and an SPF-style egress guard, and then re-probes it **hourly for seven
 days**. Three tables and three lifetimes:
 
 | Table                 | Grain              | Lifetime                                          |

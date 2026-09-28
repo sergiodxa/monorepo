@@ -3,7 +3,8 @@
  *
  * `GET` only ever renders the empty form; probing the URL and billing the
  * check are `POST`'s job alone, asserted on its response, the only evidence
- * a single request leaves behind. A signed-in viewer gets its own block below.
+ * a single request leaves behind. Every submission carries the honeypot fields a
+ * rendered page issued. A signed-in viewer gets its own block below.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -52,6 +53,7 @@ import {
 	createTestBilling,
 } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { honeypotFields, testHoneypot } from "~/app/lib/test/honeypot";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -220,6 +222,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 			}) as Middleware,
 			i18n as Middleware,
 			formData() as Middleware,
+			testHoneypot(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});
@@ -248,17 +251,35 @@ async function getTry(session = new Session(), search = "") {
 	return dispatch(new Request(url), session);
 }
 
-/** Submits the form and reads back both the rendered page and the session it touched. */
-async function runTry(body: Record<string, string>, session = new Session(), actor?: Actor) {
+/**
+ * `body` with the honeypot fields of a freshly loaded `/try` and the trap set to `trap`, as a
+ * browser posts the form.
+ */
+async function withHoneypot(body: Record<string, string>, trap = "") {
+	let fields = honeypotFields((await getTry()).body);
+	return new URLSearchParams({
+		[fields.tokenField]: fields.token,
+		[fields.trapField]: trap,
+		...body,
+	});
+}
+
+/** Posts `body` exactly as given and reads back both the rendered page and the session it touched. */
+async function postTry(body: URLSearchParams, session = new Session(), actor?: Actor) {
 	let request = new Request(`https://uptime.test${routes.trial.check.action.href()}`, {
 		method: "POST",
 		headers: { "content-type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams(body),
+		body,
 	});
 
 	let result = await dispatch(request, session, actor);
 
 	return { ...result, probe: session.get(TRIAL_PROBE) as TrialProbeState | undefined };
+}
+
+/** Submits the form with the fields a rendered page issued, as a person would. */
+async function runTry(body: Record<string, string>, session = new Session(), actor?: Actor) {
+	return postTry(await withHoneypot(body), session, actor);
 }
 
 beforeEach(() => {
@@ -741,6 +762,118 @@ describe("POST /try refusals", () => {
 		let { body } = await runTry({ url: "example.com" });
 
 		expect(body).not.toContain("could not confirm the request came from a browser");
+	});
+});
+
+describe("POST /try honeypot", () => {
+	test("renders the trap out of reach of people and autofill", async () => {
+		let { body } = await getTry();
+
+		expect(body).toMatch(/<div aria-hidden="true" inert class="[^"]+"><label for="hp_[a-z]+">/);
+		expect(body).toMatch(
+			/<input type="text" id="hp_[a-z]+" name="hp_[a-z]+" value="" tabindex="-1" autocomplete="off"/,
+		);
+		expect(body).toMatch(/<input type="hidden" name="hp-token" value="[^"]+"/);
+	});
+
+	test("answers a filled trap with the page's own 200, spending no challenge or probe", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response, body, probe } = await postTry(
+			await withHoneypot({ url: "example.com" }, "https://spam.example"),
+			session,
+		);
+
+		expect(response.status).toBe(200);
+		expect(body).toContain('value="example.com"');
+		expect(body).not.toContain("The check did not run");
+		expect(body).not.toContain("This form expired");
+		expect(guardTrialProbe).not.toHaveBeenCalled();
+		expect(probes).toHaveLength(0);
+		expect(probe).toBeUndefined();
+		expect(pingResults.dataPoints).toHaveLength(0);
+	});
+
+	test("records a refused honeypot on the invocation's log, code and all", async () => {
+		let records: Record<string, unknown>[] = [];
+		let requestLog = new Log({ kind: "request", sink: (record) => void records.push(record) });
+		let body = await withHoneypot({ url: "example.com" }, "spam");
+
+		await requestLog.run(() => postTry(body));
+
+		expect(records[0]).toMatchObject({
+			"trial.probe_refused": true,
+			"trial.refusal_reason": "honeypot",
+		});
+		expect(records[0]?.notes).toContainEqual(
+			expect.objectContaining({ name: "trial.honeypot_refused", detail: "trap-filled" }),
+		);
+	});
+
+	test("asks to send again when the token is missing, keeping the URL", async () => {
+		let body = await withHoneypot({ url: "example.com" });
+		body.delete("hp-token");
+
+		let { response, body: html } = await postTry(body);
+
+		expect(response.status).toBe(400);
+		expect(html).toContain("This form expired before it was sent");
+		expect(html).toContain('value="example.com"');
+		expect(honeypotFields(html).token).toBeTruthy();
+		expect(guardTrialProbe).not.toHaveBeenCalled();
+		expect(probes).toHaveLength(0);
+	});
+
+	test("refuses a forged token without running the check", async () => {
+		let { response, body } = await postTry(
+			await withHoneypot({ url: "example.com", "hp-token": "forged.token" }),
+		);
+
+		expect(response.status).toBe(400);
+		expect(body).toContain("This form expired before it was sent");
+		expect(guardTrialProbe).not.toHaveBeenCalled();
+		expect(probes).toHaveLength(0);
+	});
+
+	test("re-renders a refused form with fields that verify on the next send", async () => {
+		guardResult = failure(new TestRefusal("blocked-target"));
+		let refused = await runTry({ url: "127.0.0.1" });
+		let fields = honeypotFields(refused.body);
+
+		guardResult = success({
+			url: new URL("https://example.com/"),
+			addresses: ["93.184.216.34"],
+			budgetRemaining: 499,
+		});
+		let { response, body } = await postTry(
+			new URLSearchParams({ [fields.tokenField]: fields.token, url: "example.com" }),
+		);
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Check another URL");
+		expect(probes).toHaveLength(1);
+	});
+
+	test("gives the redirect's follow-up form its own fields", async () => {
+		doFetch.mockImplementation(async (url: string, init?: RequestInit) => {
+			probes.push({ url, headers: new Headers(init?.headers) });
+			return new Response(null, {
+				status: 301,
+				headers: { location: "https://www.example.com/", "X-Response-Time": "4" },
+			});
+		});
+
+		let { body } = await runTry({ url: "example.com" });
+		let fields = honeypotFields(body);
+		let followed = await postTry(
+			new URLSearchParams({ [fields.tokenField]: fields.token, url: "https://www.example.com/" }),
+		);
+
+		expect(followed.response.status).toBe(200);
+		expect(guardTrialProbe).toHaveBeenLastCalledWith(
+			expect.objectContaining({ target: "https://www.example.com/" }),
+		);
 	});
 });
 

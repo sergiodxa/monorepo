@@ -4132,6 +4132,12 @@ export default {
 				submit: "Ejecutar la primera comprobación",
 			},
 
+			expired: {
+				title: "Este formulario caducó antes de enviarse",
+				description:
+					"Se abrió antes de nuestra última actualización, así que no pudimos aceptarlo. Lo que escribió sigue aquí: envíelo de nuevo.",
+			},
+
 			refusal: {
 				title: "La comprobación no se ejecutó",
 				blockedTarget:

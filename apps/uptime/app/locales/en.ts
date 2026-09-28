@@ -4148,6 +4148,12 @@ export default {
 				submit: "Run the first check",
 			},
 
+			expired: {
+				title: "This form expired before it was sent",
+				description:
+					"It was opened before our last update, so we could not accept it. What you entered is still here: send it again.",
+			},
+
 			refusal: {
 				title: "The check did not run",
 				blockedTarget:

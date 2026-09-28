@@ -3,8 +3,8 @@
  * rows, feature and use-case grids, a pricing calculator, and an FAQ, inside
  * `MarketingLayout`. Serves as the top-of-funnel entry point and the redirect target
  * for unauthenticated `requireUser` guards. The pricing calculator is the page's one
- * `clientEntry` island; the hero's try-it form `POST`s straight to `/try` so the
- * check runs on the first click.
+ * `clientEntry` island; the hero's try-it form `POST`s straight to `/try`, carrying the
+ * honeypot fields that route verifies, so the check runs on the first click.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@
 import type { RemixNode } from "remix/ui";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { IntlProvider, Trans } from "@sdxc/i18n/ui";
 import {
 	ActivityIcon,
@@ -36,6 +37,7 @@ import {
 	UsersIcon,
 	WorkflowIcon,
 } from "@sdxc/icons";
+import { unwrap } from "@sdxc/result";
 import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";
 import { rounded, shadow } from "@sdxc/u/effects";
 import {
@@ -365,6 +367,13 @@ export default createAction(routes.home, async (ctx) => {
 	/** A deployment with no site key renders no widget, so its form sends no token. */
 	let turnstileSiteKey = trialTurnstileSiteKey();
 
+	/**
+	 * The try-it form's honeypot fields, which `/try` verifies before it spends a challenge
+	 * verification or a probe. Issuing fails only without a signing secret, which the route's
+	 * honeypot middleware always configures.
+	 */
+	let honeypot = unwrap(await ctx.honeypot.issue());
+
 	return ctx.render(
 		<DocumentLayout
 			title={t("landing.meta.title")}
@@ -574,6 +583,7 @@ export default createAction(routes.home, async (ctx) => {
 								media("(min-width: 640px)", [flexRow(), items("end"), gap(3)]),
 							]}
 						>
+							<HoneypotFields {...honeypot} />
 							<TextField
 								name={TRIAL_URL_FIELD}
 								type="url"

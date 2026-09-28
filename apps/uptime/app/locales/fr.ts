@@ -4152,6 +4152,12 @@ export default {
 				submit: "Lancer le premier test",
 			},
 
+			expired: {
+				title: "Ce formulaire a expiré avant d'être envoyé",
+				description:
+					"Il a été ouvert avant notre dernière mise à jour, nous n'avons donc pas pu l'accepter. Ce que vous avez saisi est toujours là : envoyez-le à nouveau.",
+			},
+
 			refusal: {
 				title: "Le test n'a pas été lancé",
 				blockedTarget:

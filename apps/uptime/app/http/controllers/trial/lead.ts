@@ -1,6 +1,7 @@
 /**
  * `POST /try/lead` turns a submitted probe into a week of hourly checks for the
- * email a visitor hands over: a lead row, a watch row, and a confirmation send.
+ * email a visitor hands over: a lead row, a watch row, and a confirmation send, once the
+ * form's honeypot fields verify.
  *
  * A free watch is capped to one per normalized URL every thirty days: the watch
  * row itself deletes after that window, so finding one live is the whole check.
@@ -43,7 +44,11 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 /** Origin the report's call to action points at; the host this app is served from. */
 const APP_ORIGIN = "https://uptime.sergiodxa.com";
 
-/** POST /try/lead — records the lead, opens the watch, sends the receipt. */
+/**
+ * POST /try/lead — records the lead, opens the watch, sends the receipt. A filled honeypot trap
+ * answers with the started-watch receipt while recording, opening and sending nothing, so a bot
+ * learns nothing; a missing or unverifiable token renders the form again to resend, as a `400`.
+ */
 export default createAction(routes.trial.lead, async (ctx) => {
 	let session = ctx.get(Session);
 	let back = redirect(routes.trial.check.index.href(), { status: redirect.Status.SeeOther });
@@ -55,6 +60,25 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	 */
 	let probe = takeTrialState<TrialProbeState>(session, TRIAL_PROBE);
 	if (!probe) return back;
+
+	let trap = ctx.honeypotOutcome;
+	if (isFailure(trap)) {
+		ctx.log.set({ trial: { lead_refused: "honeypot", honeypot_reason: trap.error.code } });
+		if (trap.error.code === "trap-filled") {
+			session?.set(TRIAL_WATCH_STARTED, probe.url);
+			return back;
+		}
+		/**
+		 * A person whose page was open before the signing secret changed holds a token that no
+		 * longer verifies, so the probe goes back and the form asks them to send it again.
+		 */
+		session?.set(TRIAL_PROBE, probe);
+		let submitted = ctx.formData.get("email");
+		return renderTrialPage(
+			{ probe, expired: true, leadEmail: typeof submitted === "string" ? submitted : "" },
+			{ status: 400 },
+		);
+	}
 
 	let result = await validate(ctx.formData, TrialLeadSchema);
 	if (isFailure(result)) {

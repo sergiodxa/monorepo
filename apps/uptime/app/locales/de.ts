@@ -4153,6 +4153,12 @@ export default {
 				submit: "Erste Prüfung ausführen",
 			},
 
+			expired: {
+				title: "Dieses Formular ist abgelaufen, bevor es gesendet wurde",
+				description:
+					"Es wurde vor unserem letzten Update geöffnet, deshalb konnten wir es nicht annehmen. Deine Eingaben sind noch da: Sende es einfach erneut.",
+			},
+
 			refusal: {
 				title: "Die Prüfung wurde nicht ausgeführt",
 				blockedTarget:

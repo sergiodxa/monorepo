@@ -4131,6 +4131,12 @@ export default {
 				submit: "Esegui il primo controllo",
 			},
 
+			expired: {
+				title: "Questo modulo è scaduto prima dell'invio",
+				description:
+					"È stato aperto prima del nostro ultimo aggiornamento, quindi non abbiamo potuto accettarlo. Quello che ha inserito è ancora qui: lo invii di nuovo.",
+			},
+
 			refusal: {
 				title: "Il controllo non è stato eseguito",
 				blockedTarget:

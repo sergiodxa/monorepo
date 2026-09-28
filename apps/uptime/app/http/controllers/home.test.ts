@@ -2,8 +2,8 @@
  * Tests the `/` controller: it renders the public marketing homepage inside the
  * shared document/marketing chrome for anonymous and signed-in viewers, with the
  * hero CTA switching between a sign-in form and a dashboard link, full head
- * metadata and `WebSite` structured data, and every marketing section from the
- * hero screenshot through the FAQ.
+ * metadata and `WebSite` structured data, every marketing section from the
+ * hero screenshot through the FAQ, and the try-it box's honeypot fields.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,6 +30,7 @@ import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/app/li
 import { findClaimViolations } from "~/app/lib/public-claims";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/lib/test/honeypot";
 import routes from "~/routes/web";
 
 /**
@@ -76,6 +77,7 @@ async function getHome(viewer: Viewer | null) {
 			database(() => db),
 			seedAuth(viewer),
 			i18n as Middleware,
+			testHoneypot(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});
@@ -300,6 +302,26 @@ describe("GET /", () => {
 		expect(body).toContain(`<form method="post" action="${routes.trial.check.action.href()}"`);
 		expect(body).toContain('name="url"');
 		expect(body).toContain("Run a check");
+	});
+
+	test("renders the try-it box's honeypot trap out of reach of people and autofill", async () => {
+		let body = await (await getHome(null)).text();
+
+		expect(body).toMatch(/<div aria-hidden="true" inert class="[^"]+"><label for="hp_[a-z]+">/);
+		expect(body).toMatch(
+			/<input type="text" id="hp_[a-z]+" name="hp_[a-z]+" value="" tabindex="-1" autocomplete="off"/,
+		);
+	});
+
+	test("issues try-it fields that the check's honeypot verifies", async () => {
+		let fields = honeypotFields(await (await getHome(null)).text());
+		let form = new URLSearchParams({
+			[fields.tokenField]: fields.token,
+			[fields.trapField]: "",
+			url: "example.com",
+		});
+
+		expect((await TEST_HONEYPOT.verify(form)).status).toBe("success");
 	});
 
 	test("renders no Turnstile widget when the deployment has no site key", async () => {

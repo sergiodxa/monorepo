@@ -2,7 +2,7 @@
  * Tests `POST /try/lead`: the URL and status come from the session's probe rather than the
  * posted form, consent is tracked apart from the address so an unticked box reads as no
  * consent, and the free-watch cap holds across URL and address spellings that vary only in
- * formatting.
+ * formatting. Every submission carries honeypot fields, and a refused set starts nothing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +17,7 @@ import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -41,6 +42,7 @@ import {
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/lib/test/honeypot";
 import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import routes from "~/routes/web";
 
@@ -96,13 +98,23 @@ let transport = new MemoryTransport();
  * Submits the capture form and returns everything it touched. `existing` reuses a
  * database from an earlier submission, the only way to reach the cap: it needs a watch
  * this address already opened by a real submission, not one seeded past the code under test.
+ * The body carries freshly issued honeypot fields with the trap set to `trap`; a field in
+ * `body` replaces them.
  */
 async function submit(
 	body: Record<string, string>,
 	session: Session,
 	existing?: ReturnType<typeof createTestDatabase>["db"],
 	records: Record<string, unknown>[] = [],
+	trap = "",
 ) {
+	let fields = unwrap(await TEST_HONEYPOT.issue());
+	let form = new URLSearchParams({
+		[fields.tokenField]: fields.token,
+		[fields.trapField]: trap,
+		...body,
+	});
+
 	let db = existing ?? createTestDatabase().db;
 
 	let router = createRouter({
@@ -121,6 +133,7 @@ async function submit(
 			mail({ transport, from: MAIL_FROM }),
 			i18n as Middleware,
 			formData() as Middleware,
+			testHoneypot(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});
@@ -129,7 +142,7 @@ async function submit(
 	let request = new Request(`https://uptime.test${routes.trial.lead.href()}`, {
 		method: "POST",
 		headers: { "content-type": "application/x-www-form-urlencoded" },
-		body: new URLSearchParams(body),
+		body: form,
 	});
 
 	/**
@@ -518,6 +531,76 @@ describe("POST /try/lead validation", () => {
 		expect(body).toContain("Check another URL");
 		expect(body).toContain("https://probed.example/");
 		expect(session.get(TRIAL_PROBE)).toBeDefined();
+	});
+});
+
+describe("POST /try/lead honeypot", () => {
+	test("answers a filled trap with the started-watch receipt, recording and sending nothing", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response, db } = await submit(
+			{ email: "reader@example.com" },
+			session,
+			undefined,
+			[],
+			"https://spam.example",
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.trial.check.index.href());
+		expect(session.get(TRIAL_WATCH_STARTED)).toBe("https://probed.example/");
+		expect(session.get(TRIAL_PROBE)).toBeUndefined();
+		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(await TrialWatch.claimDue(db, Date.now() + 86_400_000)).toHaveLength(0);
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("asks to send again when the token is missing, keeping the address and the probe", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response, db } = await submit({ email: "reader@example.com", "hp-token": "" }, session);
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain("This form expired before it was sent");
+		expect(body).toContain('value="reader@example.com"');
+		expect(body).toContain("https://probed.example/");
+		expect(honeypotFields(body).token).toBeTruthy();
+		expect(session.get(TRIAL_PROBE)).toBeDefined();
+		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("refuses a forged token, opening and sending nothing", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let { response, db } = await submit(
+			{ email: "reader@example.com", "hp-token": "forged.token" },
+			session,
+		);
+
+		expect(response.status).toBe(400);
+		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("re-renders a refused address with fields that verify on the next send", async () => {
+		let session = new Session();
+		session.set(TRIAL_PROBE, probeState());
+
+		let rejected = await submit({ email: "not-an-address" }, session);
+		let fields = honeypotFields(await rejected.response.text());
+		let { response, db } = await submit(
+			{ email: "reader@example.com", [fields.tokenField]: fields.token },
+			session,
+		);
+
+		expect(response.status).toBe(303);
+		expect(await Lead.findByEmail(db, "reader@example.com")).not.toBeNull();
+		expect(transport.messages).toHaveLength(1);
 	});
 });
 

@@ -1,8 +1,8 @@
 /**
  * `/try` — the public offer of a free multi-day health report on one site, and the
- * only page in this feature that sells. `GET` renders the empty URL box; `POST` runs
- * the check and re-renders the same page with the result, so no state has to survive
- * between requests and a reload never shows a stale answer.
+ * only page in this feature that sells. `GET` renders the empty URL box with honeypot
+ * fields; `POST` reads their check, runs the check and re-renders the same page with the
+ * result, so no state has to survive between requests and a reload never shows a stale answer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { HoneypotFields } from "@sdxc/honeypot/ui";
 import {
 	ActivityIcon,
 	ArrowRightIcon,
@@ -25,7 +26,7 @@ import {
 	NetworkIcon,
 } from "@sdxc/icons";
 import { currentLog } from "@sdxc/logger";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { bg, fg, linearGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
@@ -214,6 +215,13 @@ export interface TrialPageView {
 	prefill?: string;
 	/** The signed-in viewer's offer, which replaces the email capture when present. */
 	monitorOffer?: TrialMonitorOffer;
+	/**
+	 * Set when the submission's honeypot token was missing or failed to verify, as it does for a
+	 * page opened before the signing secret changed: the form renders again asking to resend it.
+	 */
+	expired?: boolean;
+	/** The address to put back in the email field when it is resent, keeping what was typed. */
+	leadEmail?: string;
 }
 
 /**
@@ -406,15 +414,33 @@ function isIncompleteForm(refusal: TrialRefusalState | undefined): boolean {
  * Renders `/try`, in whichever of its states the caller reached. The single code
  * path both methods answer through: the `GET` passes no result, the `POST` passes
  * what it got, and `POST /try/lead` passes the probe back with its form's error.
+ * Every render issues fresh honeypot fields, so a re-rendered form verifies on its next send.
  *
  * @param view - What this particular request has to show.
+ * @param init - The response's status and headers.
  * @returns The rendered document.
  */
-export function renderTrialPage(view: TrialPageView = {}) {
+export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseInit) {
 	let ctx = getContext();
 	let t = ctx.intl.t;
-	let { probe, refusal, watching, repeated, leadError, monitorOffer } = view;
+	let { probe, refusal, watching, repeated, leadError, monitorOffer, expired } = view;
 	let incomplete = isIncompleteForm(refusal);
+
+	/**
+	 * One set per render, since a page shows at most one form. Issuing fails only without a
+	 * signing secret, which the route's honeypot middleware always configures.
+	 */
+	let honeypot = unwrap(await ctx.honeypot.issue());
+
+	/** The request to send the form again, placed inside whichever form is on the page. */
+	let expiredAlert = expired ? (
+		<Alert color="warning" live="polite">
+			<Alert.Content>
+				<Alert.Title>{t("page.trial.expired.title")}</Alert.Title>
+				<Alert.Description>{t("page.trial.expired.description")}</Alert.Description>
+			</Alert.Content>
+		</Alert>
+	) : null;
 
 	let chrome = buildMarketingChrome(t);
 
@@ -571,6 +597,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 										action={routes.trial.check.action.href()}
 										mix={[vstack({ gap: 4 })]}
 									>
+										<HoneypotFields {...honeypot} />
 										<TextField
 											name={TRIAL_URL_FIELD}
 											type="url"
@@ -594,6 +621,8 @@ export function renderTrialPage(view: TrialPageView = {}) {
 												<FieldError>{refusalMessage(refusal, t)}</FieldError>
 											) : null}
 										</div>
+
+										{expiredAlert}
 
 										{refusal === undefined || incomplete ? null : (
 											<Alert color="warning" live="polite">
@@ -694,6 +723,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 																url: probe.location,
 															})}
 														</Text>
+														<HoneypotFields {...honeypot} />
 														<input type="hidden" name={TRIAL_URL_FIELD} value={probe.location} />
 														<Button type="submit" variant="outline">
 															{t("page.trial.result.redirect.action")}
@@ -773,13 +803,14 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													action={routes.trial.lead.href()}
 													mix={[vstack({ gap: 4 })]}
 												>
+													<HoneypotFields {...honeypot} />
 													<TextField
 														name="email"
 														type="email"
 														label={t("page.trial.lead.email.label")}
 														placeholder={t("page.trial.lead.email.placeholder")}
 														errorMessage={leadError ? leadErrorMessage(leadError, t) : undefined}
-														defaultValue={leadError?.email}
+														defaultValue={leadError?.email ?? view.leadEmail}
 														autoComplete="email"
 														required
 													/>
@@ -805,6 +836,8 @@ export function renderTrialPage(view: TrialPageView = {}) {
 													</div>
 
 													<Description>{t("page.trial.lead.promise")}</Description>
+
+													{expiredAlert}
 
 													<Button type="submit">{t("page.trial.lead.submit", { days })}</Button>
 												</form>
@@ -928,6 +961,7 @@ export function renderTrialPage(view: TrialPageView = {}) {
 				)}
 			</MarketingLayout>
 		</DocumentLayout>,
+		init,
 	);
 }
 
@@ -1021,9 +1055,12 @@ export default createController(routes.trial.check, {
 		},
 
 		/**
-		 * POST /try — runs `guardTrialProbe` before any outbound fetch, then `HttpCheck` in
-		 * `followRedirects: false` mode, since a redirect can only be safely evaluated by
-		 * the caller that requested it and never automatically followed past the guard.
+		 * POST /try — reads the honeypot's check first, then runs `guardTrialProbe` before any
+		 * outbound fetch, then `HttpCheck` in `followRedirects: false` mode, since a redirect can
+		 * only be safely evaluated by the caller that requested it and never automatically
+		 * followed past the guard. A filled trap answers with the page's own `200` and the URL
+		 * kept, spending no challenge verification, budget or probe; a missing or unverifiable
+		 * token renders the form again with the URL and a request to resend it, as a `400`.
 		 */
 		async action(ctx) {
 			let session = ctx.get(Session);
@@ -1038,6 +1075,15 @@ export default createController(routes.trial.check, {
 			 * a probe nobody can see is one nobody should be able to post a watch for.
 			 */
 			session?.unset(TRIAL_PROBE);
+
+			let trap = ctx.honeypotOutcome;
+			if (isFailure(trap)) {
+				currentLog()
+					?.set({ trial: { probe_refused: true, refusal_reason: "honeypot" } })
+					.note("trial.honeypot_refused", { detail: trap.error.code });
+				if (trap.error.code === "trap-filled") return renderTrialPage({ prefill: submitted });
+				return renderTrialPage({ prefill: submitted, expired: true }, { status: 400 });
+			}
 
 			let account = await resolveTrialAccount(ctx.db);
 			let billedTeam = account?.billedTeam ?? null;
