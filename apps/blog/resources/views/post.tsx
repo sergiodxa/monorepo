@@ -18,7 +18,7 @@ import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdx
 import { bleed, bs, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
 import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@sdxc/ui";
-import { Frame } from "remix/ui";
+import { Frame, unsafeHTML } from "remix/ui";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
 
@@ -110,7 +110,10 @@ function PostMentions(handle: Handle<{ mentions: PostViewModel.Page["mentions"] 
 										</a>
 									</p>
 									{response.contentHtml && (
-										<div mix={[mf("e-content"), text("base")]} innerHTML={response.contentHtml} />
+										<div
+											mix={[mf("e-content"), text("base")]}
+											innerHTML={unsafeHTML(response.contentHtml)}
+										/>
 									)}
 								</Card>
 							</li>
