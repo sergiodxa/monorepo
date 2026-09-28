@@ -44,7 +44,7 @@ let assessment = await filter.check({
 		email: form.get("email"),
 		ip: request.headers.get("CF-Connecting-IP"),
 	},
-	renderedAt: verifiedRenderTime, // from a signed form field, never from a plain hidden input
+	renderedAt: verifiedRenderTime, // signed at render, as @sdxc/honeypot does; never a plain hidden input
 	languages: ["en", "es"],
 });
 ```
@@ -242,6 +242,34 @@ next queued outcome, else `signals`.
 - `reset()` forgets calls, reports and queued outcomes.
 
 `name` defaults to `"memory"` and `stage` to `"remote"`.
+
+## Pattern: Refuse bots before scoring
+
+A honeypot refuses what no person produces, before the body is read into a submission, so no
+rule, lookup or model call runs for it. [`@sdxc/honeypot`](https://www.npmjs.com/package/@sdxc/honeypot)
+does that, and what it lets through carries a signed render time for the `timing` rule.
+
+```ts
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
+import { unwrap } from "@sdxc/result";
+import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
+
+let trap = new Honeypot({ secret: HONEYPOT_SECRET });
+let filter = createSpamFilter({ checks: DEFAULT_RULES });
+
+router.post("/comments", {
+	middleware: [honeypot(trap)],
+	async handler(ctx) {
+		let form = await ctx.request.formData();
+		let assessment = await filter.check({
+			content: String(form.get("content") ?? ""),
+			renderedAt: unwrap(ctx.honeypot).renderedAt,
+		});
+		return saveComment(form, assessment);
+	},
+});
+```
 
 ## Pattern: Hold, discard or publish
 
