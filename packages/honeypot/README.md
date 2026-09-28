@@ -139,10 +139,10 @@ import { honeypot as honeypotMiddleware } from "@sdxc/honeypot/middleware";
 router.post("/contact", {
 	middleware: [
 		honeypotMiddleware(honeypot, {
-			onFailure: (error) =>
-				error.code === "misconfigured"
-					? new Response(null, { status: 500 })
-					: Response.redirect(new URL("/contact/sent", "https://example.com"), 303),
+			onFailure(error) {
+				if (error.code === "misconfigured") return new Response(null, { status: 500 });
+				return Response.redirect(new URL("/contact/sent", "https://example.com"), 303);
+			},
 		}),
 	],
 	handler: sendMessage,
