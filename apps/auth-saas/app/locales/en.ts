@@ -130,6 +130,17 @@ export default {
 		},
 	},
 
+	platformSignUp: {
+		errors: {
+			emailInvalid: "Enter a valid email address.",
+			emailDisposable:
+				"Use an email address you'll keep. Disposable addresses can't own an organization.",
+			emailNoMailServer: "{$domain} can't receive email. Check the address and try again.",
+			emailSuggestion:
+				"Did you mean {$suggestion}? We filled it in. Submit again, or change it back to keep {$address}.",
+		},
+	},
+
 	hostedVerify: {
 		title: "Verify your email",
 		pending: {
@@ -208,6 +219,7 @@ export default {
 		},
 		errors: {
 			badCode: "That code isn't right. {$attemptsLeft} attempts left.",
+			emailInvalid: "Enter a valid email address.",
 			dauCapReached:
 				"This account has reached its daily limit of active users. Try again tomorrow.",
 			turnstileFailed: "We couldn't verify you're not a robot. Try again.",

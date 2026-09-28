@@ -29,13 +29,13 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, open, seal, sha256 } from "@sdxc/crypto";
+import { normalizeDomain } from "@sdxc/email-address";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { column as c, table } from "remix/data-table";
 
 import { organizationDomains } from "./organizations";
-import { encodeDomain } from "./subject-identifiers";
 
 /**
  * How long a confirmed-path ticket names its subject and provider identity before
@@ -102,7 +102,8 @@ export function boundClaimsJson(claims: Record<string, unknown> | null): string 
 function domainOf(email: string): string | null {
 	let at = email.indexOf("@");
 	if (at <= 0 || at === email.length - 1) return null;
-	return encodeDomain(email.slice(at + 1));
+	let domain = normalizeDomain(email.slice(at + 1));
+	return isFailure(domain) ? null : domain.data;
 }
 
 /**

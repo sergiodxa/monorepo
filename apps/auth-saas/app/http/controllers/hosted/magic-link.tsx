@@ -20,6 +20,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
@@ -27,7 +28,6 @@ import { Hex, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
-import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
@@ -41,6 +41,7 @@ import {
 	passesConditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import { emailAddress } from "~/app/http/lib/email-address";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
 import {
@@ -80,9 +81,10 @@ function freshRequestHref(ctx: RequestContext): string {
 	return url.toString();
 }
 
-let RequestSchema = f.object({
-	email: f.field(s.string().pipe(checks.minLength(1), checks.email())),
-});
+/** The request form's schema, refusing an address its identifier could never fold. */
+function requestSchema(t: Translate) {
+	return f.object({ email: f.field(emailAddress(t("hostedMagicLink.errors.emailInvalid"))) });
+}
 
 /** SHA-256 of the raw nonce `mintMagicLinkNonce` minted, hex-encoded — the only form the tenant object ever sees. */
 async function hashMagicLinkNonce(nonce: string): Promise<string> {
@@ -207,14 +209,15 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
 		}
 	}
 
-	let parsed = s.parseSafe(RequestSchema, ctx.formData);
+	let parsed = s.parseSafe(requestSchema(t), ctx.formData);
 	if (!parsed.success) return renderRequestForm(ctx, challenge, parsed.issues);
+	let email = parsed.value.email.address;
 
 	let nonce = mintMagicLinkNonce();
 	let nonceHash = await hashMagicLinkNonce(nonce);
 
 	let begun = await ctx.tenantStub.beginMagicLinkSignIn({
-		address: parsed.value.email,
+		address: email,
 		locale: ctx.locale,
 		browserNonceHash: nonceHash,
 		interactionId,
@@ -226,7 +229,7 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
 	if (begun.message === "sign_in") {
 		await ctx.email.send(
 			new MagicLinkSignInEmail({
-				email: parsed.value.email,
+				email,
 				url: magicLinkSignInLink(ctx, begun.token),
 				code: begun.code,
 				tenantName,
@@ -235,10 +238,9 @@ export const magicLinkSubmit = createAction(routes.hostedMagicLinkSubmit, async 
 			{ from: senderAddressFor(ctx) },
 		);
 	} else if (begun.message === "no_account") {
-		await ctx.email.send(
-			new MagicLinkNoAccountEmail({ email: parsed.value.email, tenantName, t }),
-			{ from: senderAddressFor(ctx) },
-		);
+		await ctx.email.send(new MagicLinkNoAccountEmail({ email, tenantName, t }), {
+			from: senderAddressFor(ctx),
+		});
 	}
 
 	let response = await renderConfirmation(ctx);

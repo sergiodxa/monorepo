@@ -152,6 +152,34 @@ describe("sign-up", () => {
 		expect(body).toContain("valid email");
 	});
 
+	test.each([
+		["an IP-literal domain", "jane@127.0.0.1"],
+		["a single-label domain", "jane@localhost"],
+		["a percent-encoded domain", "jane@ex%61mple.com"],
+	])("refuses an address with %s before any identifier is written", async (_name, email) => {
+		let response = await postForm(harness, "/u/sign-up", {
+			email,
+			password: "correct horse battery staple",
+			name: "",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Enter a valid email address.");
+		expect(await harness.db.findMany(subjectIdentifiers, {})).toHaveLength(0);
+	});
+
+	test("stores the parsed address, trimmed and with its domain lowercased", async () => {
+		let response = await postForm(harness, "/u/sign-up", {
+			email: "  Jane@Example.COM ",
+			password: "correct horse battery staple",
+			name: "",
+		});
+
+		expect(response.status).toBe(302);
+		let row = await harness.db.findOne(subjectIdentifiers, { where: { kind: "email" } });
+		expect(row).toMatchObject({ value: "Jane@example.com", folded: "jane@example.com" });
+	});
+
 	test("sends a verification email carrying the minted ticket's link", async () => {
 		let signUpResponse = await postForm(harness, "/u/sign-up", {
 			email: "jane@example.com",

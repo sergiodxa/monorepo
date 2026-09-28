@@ -16,6 +16,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Translate } from "@sdxc/i18n";
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
@@ -33,6 +34,7 @@ import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import { emailAddress } from "~/app/http/lib/email-address";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { verifyAddressLink } from "~/app/mail/links";
 import { senderAddressFor, senderNameFromIssuer } from "~/app/mail/sender";
@@ -48,10 +50,13 @@ function actionUrl(ctx: RequestContext, path: string): string {
 	return url.toString();
 }
 
-/** The sign-up form's schema, its password's minimum length drawn from the tenant's own policy. */
-function signUpSchema(policy: PasswordPolicy) {
+/**
+ * The sign-up form's schema: the address parsed the way its identifier folds, and the
+ * password's minimum length drawn from the tenant's own policy.
+ */
+function signUpSchema(policy: PasswordPolicy, t: Translate) {
 	return f.object({
-		email: f.field(s.string().pipe(checks.minLength(1), checks.email())),
+		email: f.field(emailAddress(t("hostedSignUp.errors.identifierInvalid"))),
 		password: f.field(s.string().pipe(checks.minLength(policy.minLength))),
 		name: f.field(s.string()),
 	});
@@ -126,12 +131,13 @@ export const signUpSubmit = createAction(routes.hostedSignUpSubmit, async (ctx) 
 		});
 	}
 
-	let parsed = s.parseSafe(signUpSchema(policy), ctx.formData);
+	let parsed = s.parseSafe(signUpSchema(policy, t), ctx.formData);
 	if (!parsed.success) {
 		return renderSignUpPage(ctx, { policy, turnstileSiteKey, issues: parsed.issues });
 	}
 
-	let { email, password, name } = parsed.value;
+	let { password, name } = parsed.value;
+	let email = parsed.value.email.address;
 	let displayName = name.trim().length > 0 ? name.trim() : undefined;
 
 	let created = await ctx.tenantStub.createSubject({

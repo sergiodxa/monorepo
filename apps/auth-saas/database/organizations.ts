@@ -19,6 +19,7 @@ import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { normalizeDomain } from "@sdxc/email-address";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
@@ -31,7 +32,7 @@ import type { AuditActor } from "./audit-events";
 import { writeAuditEvent } from "./audit-events";
 import { checkAndSpendMailEnvelope } from "./mail-rate-limit";
 import { clearActiveOrganization, sessions } from "./sessions";
-import { encodeDomain, foldIdentifier } from "./subject-identifiers";
+import { foldIdentifier } from "./subject-identifiers";
 import { subjectIdentifiers } from "./subjects";
 
 /** How long an invitation stands before it expires, when a caller does not choose. */
@@ -897,8 +898,9 @@ export async function addOrganizationDomain(
 	let organization = await db.find(organizations, { id: input.organizationId });
 	if (!organization) return { ok: false, reason: "not-found" };
 
-	let encoded = encodeDomain(input.domain);
-	if (!encoded) return { ok: false, reason: "invalid-domain" };
+	let normalized = normalizeDomain(input.domain);
+	if (isFailure(normalized)) return { ok: false, reason: "invalid-domain" };
+	let encoded = normalized.data;
 
 	let existing = await db.find(organizationDomains, { domain: encoded });
 	if (existing) return { ok: false, reason: "domain-taken" };
@@ -959,7 +961,8 @@ export async function confirmOrganizationDomain(
 	db: Database,
 	input: ConfirmOrganizationDomainInput,
 ): Promise<ConfirmOrganizationDomainResult> {
-	let encoded = encodeDomain(input.domain);
+	let normalized = normalizeDomain(input.domain);
+	let encoded = isFailure(normalized) ? null : normalized.data;
 	let existing = encoded
 		? await db.findOne(organizationDomains, {
 				where: { domain: encoded, organization_id: input.organizationId },
@@ -1012,7 +1015,8 @@ export async function describeOrganizationDomain(
 	db: Database,
 	input: DescribeOrganizationDomainInput,
 ): Promise<DescribeOrganizationDomainResult> {
-	let encoded = encodeDomain(input.domain);
+	let normalized = normalizeDomain(input.domain);
+	let encoded = isFailure(normalized) ? null : normalized.data;
 	let existing = encoded
 		? await db.findOne(organizationDomains, {
 				where: { domain: encoded, organization_id: input.organizationId },

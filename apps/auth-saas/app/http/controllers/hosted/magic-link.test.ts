@@ -211,6 +211,19 @@ describe("magic-link", () => {
 		expect(transport.messages[1]?.email).toBeInstanceOf(MagicLinkNoAccountEmail);
 	});
 
+	test("refuses an address the identifier rules could never fold, sending nothing", async () => {
+		let client = await createTestClient(harness.tenantDO, ["openid"]);
+		let { magicLinkPath } = await reachMagicLinkRequest(harness, client.id);
+
+		let response = await harness.router.fetch(
+			harness.request(magicLinkPath, { method: "POST", body: form({ email: "jane@localhost" }) }),
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Enter a valid email address.");
+		expect((harness.mailTransport as MemoryTransport).messages).toHaveLength(0);
+	});
+
 	test("a wrong-browser link landing renders the distinct guidance rather than a plain invalid screen", async () => {
 		let client = await createTestClient(harness.tenantDO, ["openid"]);
 		await createTestSubjectWithPassword(harness.tenantDO, {

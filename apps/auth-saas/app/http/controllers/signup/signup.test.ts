@@ -4,8 +4,9 @@
  * owned by a real membership, and signs its new owner into the platform dashboard; a
  * taken email refuses without writing a pending signup or a tenant; an unknown or
  * expired ticket, and a ticket verified twice, both render the same invalid state
- * without provisioning anything the second time; and a submission with no Turnstile
- * token is refused before anything is written.
+ * without provisioning anything the second time; a submission with no Turnstile
+ * token is refused before anything is written; and the owner's address is screened
+ * for disposable domains, likely typos and a mail server, with DoH answered by MSW.
  *
  * `cloudflare:workers` is mocked with a real, freshly-constructed platform tenant
  * object routed through `TENANT.getByName`, standing in for a Durable Object reached
@@ -28,9 +29,11 @@ import {
 import { randomToken } from "@sdxc/crypto";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { http, HttpResponse } from "msw";
+import { setupServer } from "msw/node";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type Tenant from "~/database/tenant-do";
 
@@ -100,6 +103,7 @@ let { Mail } = await import("~/app/http/middleware/mail");
 let render = (await import("~/app/http/middleware/render")).default;
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
 let { turnstileVerification } = await import("~/app/http/middleware/turnstile-verification");
+let i18n = (await import("~/app/http/middleware/i18n")).default;
 let signupPending = (await import("~/app/http/controllers/signup/pending")).default;
 let signupVerify = (await import("~/app/http/controllers/signup/verify")).default;
 let signupResend = (await import("~/app/http/controllers/signup/resend")).default;
@@ -118,11 +122,37 @@ buildTenant = (state) =>
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 let mailTransport: MemoryTransport;
 
+/** Cloudflare's DoH endpoint, which the owner-address mail-server check asks. */
+let DOH_URL = "https://cloudflare-dns.com/dns-query";
+
+/** DNS answers by domain: MX records, or a DNS status such as NXDOMAIN (3). */
+let dnsAnswers = new Map<string, string[] | { Status: number }>();
+
+/** Answers every MX query from `dnsAnswers`, and any other type with no records. */
+let server = setupServer(
+	http.get(DOH_URL, ({ request }) => {
+		let url = new URL(request.url);
+		let name = url.searchParams.get("name") ?? "";
+		let type = url.searchParams.get("type");
+		let reply = dnsAnswers.get(name) ?? [];
+		if (!Array.isArray(reply)) return HttpResponse.json({ Status: reply.Status });
+		let records = type === "MX" ? reply : [];
+		return HttpResponse.json({
+			Status: 0,
+			Answer: records.map((data) => ({ name: `${name}.`, type: 15, TTL: 300, data })),
+		});
+	}),
+);
+beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+
 /** Sign-up always challenges; every non-empty token passes unless a test queues otherwise. */
 let turnstile = new MemoryCaptcha({ field: "cf-turnstile-response" });
 
 beforeEach(async () => {
 	turnstile.reset();
+	dnsAnswers = new Map([["example.com", ["10 mx.example.com."]]]);
 	db = await createTestDatabase();
 
 	let state = createDurableObjectState();
@@ -154,7 +184,7 @@ function buildRouter() {
 
 	router.map(routes.signup.show, signupShow);
 	router.map(routes.signup.submit, {
-		middleware: [turnstileVerification(turnstile)],
+		middleware: [i18n as Middleware, turnstileVerification(turnstile)],
 		handler: signupSubmit as RequestHandler,
 	});
 	router.map(routes.signup.pending, signupPending);
@@ -348,5 +378,91 @@ describe("signup", () => {
 		expect(response.status).toBe(400);
 		let body = await response.text();
 		expect(body).toContain("robot");
+	});
+	test.each([
+		["an IP-literal domain", "jane@127.0.0.1"],
+		["a single-label domain", "jane@localhost"],
+		["a zero-width character", "ja\u200bne@example.com"],
+	])("refuses an owner address with %s before anything is written", async (_name, email) => {
+		let response = await postForm(buildRouter(), "/signup", {
+			organizationName: "Acme, Inc.",
+			email,
+			password: "correct horse battery staple",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Enter a valid email address.");
+		expect(await db.findMany(Customer.table, {})).toHaveLength(0);
+	});
+
+	test("refuses a disposable owner address", async () => {
+		let response = await postForm(buildRouter(), "/signup", {
+			organizationName: "Acme, Inc.",
+			email: "jane@mailinator.com",
+			password: "correct horse battery staple",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Disposable addresses");
+		expect(mailTransport.last).toBeUndefined();
+	});
+
+	test("offers the likely spelling of a mistyped provider, and keeps the address once confirmed", async () => {
+		dnsAnswers.set("gmaill.com", ["10 mx.gmaill.com."]);
+		let router = buildRouter();
+		let fields = {
+			organizationName: "Acme, Inc.",
+			email: "jane@gmaill.com",
+			password: "correct horse battery staple",
+		};
+
+		let offered = await postForm(router, "/signup", fields);
+
+		expect(offered.status).toBe(400);
+		let html = await offered.text();
+		expect(html).toContain("Did you mean jane@gmail.com?");
+		expect(html).toContain('value="jane@gmail.com"');
+		expect(html).toContain('name="confirmedEmail" value="jane@gmaill.com"');
+
+		let kept = await postForm(router, "/signup", { ...fields, confirmedEmail: "jane@gmaill.com" });
+
+		expect(kept.status).toBe(302);
+	});
+
+	test("offers the likely spelling before refusing a typo domain the disposable list holds", async () => {
+		let response = await postForm(buildRouter(), "/signup", {
+			organizationName: "Acme, Inc.",
+			email: "jane@gmial.com",
+			password: "correct horse battery staple",
+		});
+
+		let html = await response.text();
+		expect(html).toContain("Did you mean jane@gmail.com?");
+		expect(html).not.toContain("Disposable addresses");
+	});
+
+	test("refuses an owner address whose domain does not exist", async () => {
+		dnsAnswers.set("no-such-domain.example", { Status: 3 });
+
+		let response = await postForm(buildRouter(), "/signup", {
+			organizationName: "Acme, Inc.",
+			email: "jane@no-such-domain.example",
+			password: "correct horse battery staple",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("can't receive email");
+	});
+
+	test("lets the address through when the mail-server lookup itself fails", async () => {
+		server.use(http.get(DOH_URL, () => HttpResponse.error()));
+
+		let response = await postForm(buildRouter(), "/signup", {
+			organizationName: "Acme, Inc.",
+			email: "jane@example.com",
+			password: "correct horse battery staple",
+		});
+
+		expect(response.status).toBe(302);
 	});
 });

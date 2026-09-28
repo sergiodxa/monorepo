@@ -13,6 +13,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { Base64 } from "@sdxc/crypto";
 import { open, seal } from "@sdxc/crypto";
+import { normalizeDomain } from "@sdxc/email-address";
 import { isFailure } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
 import { typeid } from "@sdxc/typeid";
@@ -30,7 +31,6 @@ import {
 	toConnectionRecord,
 } from "./connections";
 import { organizationDomains, organizations } from "./organizations";
-import { encodeDomain } from "./subject-identifiers";
 
 /** The audit actor for a call with no operator identity threaded through today. */
 const PLATFORM_ACTOR = { type: "platform", id: "system" } as const;
@@ -781,10 +781,10 @@ export async function resolveOrganizationConnection(
 	db: Database,
 	input: { domain: string },
 ): Promise<ResolveOrganizationConnectionResult> {
-	let encoded = encodeDomain(input.domain);
-	if (!encoded) return { ok: false, reason: "not-found" };
+	let encoded = normalizeDomain(input.domain);
+	if (isFailure(encoded)) return { ok: false, reason: "not-found" };
 
-	let domainRow = await db.find(organizationDomains, { domain: encoded });
+	let domainRow = await db.find(organizationDomains, { domain: encoded.data });
 	if (!domainRow || domainRow.verified_at === null) return { ok: false, reason: "not-found" };
 
 	let connection = await db.findOne(connections, {

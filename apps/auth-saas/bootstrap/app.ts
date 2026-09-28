@@ -35,6 +35,7 @@ import signupResend from "~/app/http/controllers/signup/resend";
 import { signupShow, signupSubmit } from "~/app/http/controllers/signup/show";
 import signupVerify from "~/app/http/controllers/signup/verify";
 import { database } from "~/app/http/middleware/database";
+import i18n from "~/app/http/middleware/i18n";
 import { mail } from "~/app/http/middleware/mail";
 import render from "~/app/http/middleware/render";
 import {
@@ -166,7 +167,10 @@ router.map(routes.billing.webhook, billingWebhook);
 
 router.map(routes.signup.show, signupShow);
 router.map(routes.signup.submit, {
-	middleware: [turnstileVerification(new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY }))],
+	middleware: [
+		i18n as Middleware,
+		turnstileVerification(new Turnstile({ secretKey: env.TURNSTILE_SECRET_KEY })),
+	],
 	handler: signupSubmit as RequestHandler,
 });
 router.map(routes.signup.pending, signupPending);

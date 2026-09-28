@@ -53,6 +53,30 @@ describe("foldIdentifier: email", () => {
 	});
 });
 
+describe("foldIdentifier: email addresses the URL parser used to fold into another identity", () => {
+	test.each([
+		["a percent-encoded domain", "a@ex%61mple.com"],
+		["a domain with a trailing fragment", "a@example.com#"],
+		["a hex-and-dotted IPv4 domain", "a@0x7f.1"],
+		["a dotted IPv4 literal", "a@127.0.0.1"],
+		["a bracketed IPv6 literal", "a@[::1]"],
+		["a single-label domain", "a@localhost"],
+		["a domain with a trailing root dot", "a@example.com."],
+		["a control character in the local part", "a\u0007b@example.com"],
+		["a zero-width space in the local part", "a\u200bb@example.com"],
+		["a zero-width joiner in the local part", "a\u200db@example.com"],
+	])("refuses %s", (_name, value) => {
+		expect(foldIdentifier("email", value)).toEqual({ ok: false, reason: "invalid-email" });
+	});
+
+	test("keeps every address both rules accept at the value the old folding stored", () => {
+		expect(foldIdentifier("email", "Jane.Doe+News@Sub.Example.CO.UK")).toEqual({
+			ok: true,
+			folded: "jane.doe+news@sub.example.co.uk",
+		});
+	});
+});
+
 describe("foldIdentifier: username", () => {
 	test("case-folds letters", () => {
 		expect(foldIdentifier("username", "JaneDoe")).toEqual({ ok: true, folded: "janedoe" });

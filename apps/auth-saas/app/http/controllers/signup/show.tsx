@@ -11,9 +11,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { EmailAddress } from "@sdxc/email-address";
+import type { Translate } from "@sdxc/i18n";
 import type { Form } from "@sdxc/ui";
 import type { RequestContext } from "remix/router";
 
+import { checkDisposable } from "@sdxc/email-address/disposable";
+import { checkMailServer } from "@sdxc/email-address/mail-server";
+import { suggestDomain } from "@sdxc/email-address/typo";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
@@ -27,6 +32,7 @@ import {
 	passesUnconditionalTurnstileChallenge,
 	turnstileNonce,
 } from "~/app/http/controllers/hosted/turnstile-guard";
+import { emailAddress } from "~/app/http/lib/email-address";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { mailTranslator } from "~/app/mail/locale";
 import { PlatformSignupVerifyEmail } from "~/app/mail/platform-signup-verify-email";
@@ -36,11 +42,14 @@ import { PublicDocument } from "~/app/views/landing";
 import { SignUpForm } from "~/app/views/signup";
 import routes from "~/routes/web";
 
-/** The sign-up form's schema, its password's minimum length drawn from the platform's own policy. */
-function signUpSchema(policy: PasswordPolicy) {
+/**
+ * The sign-up form's schema: the address parsed the way its identifier folds, and the
+ * password's minimum length drawn from the platform's own policy.
+ */
+function signUpSchema(policy: PasswordPolicy, t: Translate) {
 	return f.object({
 		organizationName: f.field(s.string().pipe(checks.minLength(1))),
-		email: f.field(s.string().pipe(checks.minLength(1), checks.email())),
+		email: f.field(emailAddress(t("platformSignUp.errors.emailInvalid"))),
 		password: f.field(s.string().pipe(checks.minLength(policy.minLength))),
 	});
 }
@@ -61,10 +70,62 @@ function passwordPolicyMessage(failure: PasswordPolicyFailure): string {
 	}
 }
 
+/** Why a parsed address was held back, and what the re-rendered form offers instead. */
+interface AddressRefusal {
+	message: string;
+	/** The provider's spelling the form fills in, when the domain looks mistyped. */
+	suggestion?: string;
+}
+
+/**
+ * Screens an organization owner's address before anything is claimed. A likely typo of a
+ * common provider is offered first, since the disposable list holds many typo domains, and
+ * `confirmedEmail` naming the address keeps it; a disposable domain or one that cannot receive
+ * mail then refuses, while a failed lookup passes, so a resolver outage never blocks a sign-up.
+ *
+ * @param t - The request's translator.
+ * @param address - The parsed address.
+ * @param confirmedEmail - The address the person already kept over a suggestion, if any.
+ * @returns Why the address was held back, or `null` when it may sign up.
+ */
+async function screenOwnerAddress(
+	t: Translate,
+	address: EmailAddress,
+	confirmedEmail: FormDataEntryValue | null,
+): Promise<AddressRefusal | null> {
+	let suggestion = suggestDomain(address);
+	if (suggestion && confirmedEmail !== address.address) {
+		return {
+			message: t("platformSignUp.errors.emailSuggestion", {
+				suggestion: suggestion.address,
+				address: address.address,
+			}),
+			suggestion: suggestion.address,
+		};
+	}
+
+	if (isFailure(checkDisposable(address))) {
+		return { message: t("platformSignUp.errors.emailDisposable") };
+	}
+
+	let servers = await checkMailServer(address.domain);
+	if (isFailure(servers) && servers.error.reason !== "lookup-failed") {
+		return { message: t("platformSignUp.errors.emailNoMailServer", { domain: address.domain }) };
+	}
+
+	return null;
+}
+
 /** Renders the sign-up form, stating the platform's real password policy rather than a guessed one. */
 function renderSignUpPage(
 	ctx: RequestContext,
-	input: { policy: PasswordPolicy; issues?: ReadonlyArray<Form.Issue> },
+	input: {
+		policy: PasswordPolicy;
+		issues?: ReadonlyArray<Form.Issue>;
+		organizationName?: string;
+		email?: string;
+		confirmedEmail?: string;
+	},
 ): Promise<Response> {
 	return ctx.render(
 		<PublicDocument title="Auth SaaS - Create your organization">
@@ -73,6 +134,9 @@ function renderSignUpPage(
 				policy={input.policy}
 				turnstileSiteKey={env.TURNSTILE_SITE_KEY}
 				turnstileNonce={turnstileNonce(ctx)}
+				organizationName={input.organizationName}
+				email={input.email}
+				confirmedEmail={input.confirmedEmail}
 				issues={input.issues}
 			/>
 		</PublicDocument>,
@@ -124,10 +188,26 @@ export const signupSubmit = createAction(routes.signup.submit, async (ctx) => {
 		});
 	}
 
-	let parsed = s.parseSafe(signUpSchema(policy), ctx.formData);
+	let parsed = s.parseSafe(signUpSchema(policy, ctx.intl.t), ctx.formData);
 	if (!parsed.success) return renderSignUpPage(ctx, { policy, issues: parsed.issues });
 
-	let { organizationName, email, password } = parsed.value;
+	let { organizationName, password } = parsed.value;
+	let email = parsed.value.email.address;
+
+	let refusal = await screenOwnerAddress(
+		ctx.intl.t,
+		parsed.value.email,
+		ctx.formData.get("confirmedEmail"),
+	);
+	if (refusal) {
+		return renderSignUpPage(ctx, {
+			policy,
+			issues: [{ message: refusal.message, path: ["email"] }],
+			organizationName,
+			email: refusal.suggestion ?? email,
+			confirmedEmail: refusal.suggestion ? email : undefined,
+		});
+	}
 
 	let created = await platform.createSubject({ identifiers: [{ kind: "email", value: email }] });
 

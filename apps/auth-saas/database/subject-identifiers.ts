@@ -8,6 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseEmailAddress } from "@sdxc/email-address";
+import { isFailure } from "@sdxc/result";
+
 /** The two identifier kinds a subject may hold. */
 export type IdentifierKind = "email" | "username";
 
@@ -51,57 +54,13 @@ function foldUsername(value: string): FoldResult {
 }
 
 /**
- * Folds an email address: NFKC-normalized, the local part case-folded, and the domain
- * lowercased and IDNA-encoded. Stops at that general rule — a dotted Gmail local part or
- * a plus-addressed one folds to itself, because the platform does not know which mail
- * host applies which rule and a wrong guess would merge two real mailboxes into one
- * account.
+ * Folds an email address to its canonical form: NFKC-normalized, the local part case-folded,
+ * and the domain lowercased and IDNA-encoded. Dotted and plus-addressed local parts fold to
+ * themselves, since only the mail host knows which spellings share a mailbox.
  */
 function foldEmail(value: string): FoldResult {
-	let normalized = value.normalize("NFKC");
-	let at = normalized.indexOf("@");
+	let parsed = parseEmailAddress(value);
+	if (isFailure(parsed)) return { ok: false, reason: "invalid-email" };
 
-	if (at <= 0 || at !== normalized.lastIndexOf("@") || at === normalized.length - 1) {
-		return { ok: false, reason: "invalid-email" };
-	}
-
-	let local = normalized.slice(0, at);
-	let domain = normalized.slice(at + 1);
-
-	if (/[\s/\\]/.test(local) || /[\s/\\@]/.test(domain)) {
-		return { ok: false, reason: "invalid-email" };
-	}
-
-	let encodedDomain = encodeDomain(domain);
-	if (encodedDomain === null) return { ok: false, reason: "invalid-email" };
-
-	return { ok: true, folded: `${local.toLowerCase()}@${encodedDomain}` };
-}
-
-/**
- * Lowercases and IDNA-encodes a domain the way it will be looked up and delivered to.
- *
- * `mailto:` carries no host of its own to parse — it is not one of the schemes the URL
- * standard treats specially — so a domain is IDNA-encoded by routing it through a
- * scheme that does, discarding everything the parser adds beyond the host it resolved.
- * Exported for callers folding a bare domain rather than a whole address — an
- * organization claiming one for automatic membership needs the identical folding rule
- * an email's own domain half already gets here, not a second copy of it.
- *
- * @param domain - The domain as it appeared after the `@`.
- * @returns The lowercased, IDNA-encoded domain, or `null` when it does not parse as one.
- */
-export function encodeDomain(domain: string): string | null {
-	let url: URL;
-
-	try {
-		url = new URL(`http://${domain}`);
-	} catch {
-		return null;
-	}
-
-	if (url.port !== "" || url.username !== "" || url.password !== "") return null;
-	if (url.pathname !== "/" || url.search !== "" || url.hash !== "") return null;
-
-	return url.hostname;
+	return { ok: true, folded: parsed.data.canonical };
 }

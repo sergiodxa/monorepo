@@ -154,6 +154,12 @@ export namespace SignUpForm {
 		turnstileSiteKey: string;
 		/** The response's CSP nonce, for the widget's loader script. */
 		turnstileNonce?: string;
+		/** The organization name a re-rendered form keeps. */
+		organizationName?: string;
+		/** The address a re-rendered form fills in: the submitted one, or the suggested spelling. */
+		email?: string;
+		/** The submitted address a typo suggestion replaced, which resubmitting keeps as entered. */
+		confirmedEmail?: string;
 		issues?: ReadonlyArray<Form.Issue>;
 	}
 }
@@ -167,7 +173,16 @@ export namespace SignUpForm {
  */
 export function SignUpForm(handle: Handle<SignUpForm.Props>) {
 	return () => {
-		let { action, policy, turnstileSiteKey, turnstileNonce, issues } = handle.props;
+		let {
+			action,
+			policy,
+			turnstileSiteKey,
+			turnstileNonce,
+			organizationName,
+			email,
+			confirmedEmail,
+			issues,
+		} = handle.props;
 		let topIssue = formIssue(issues);
 
 		return (
@@ -192,6 +207,7 @@ export function SignUpForm(handle: Handle<SignUpForm.Props>) {
 								type="text"
 								required
 								autoComplete="organization"
+								value={organizationName}
 							/>
 							{fieldIssue(issues, "organizationName") && (
 								<p mix={[fieldError]}>{fieldIssue(issues, "organizationName")}</p>
@@ -209,7 +225,11 @@ export function SignUpForm(handle: Handle<SignUpForm.Props>) {
 								type="email"
 								required
 								autoComplete="email"
+								value={email}
 							/>
+							{confirmedEmail && (
+								<input type="hidden" name="confirmedEmail" value={confirmedEmail} />
+							)}
 							{fieldIssue(issues, "email") && (
 								<p mix={[fieldError]}>{fieldIssue(issues, "email")}</p>
 							)}
