@@ -25,6 +25,7 @@ import {
 	authorizeUrl,
 	exchangeCode,
 	ORIGIN,
+	PASSWORD,
 	REDIRECT_URI,
 	seed,
 	signIn,
@@ -53,7 +54,7 @@ const NEW_EMAIL = "newcomer@example.com";
 const NEW_PASSWORD = "a-brand-new-password";
 
 /** Posts the registration form for whichever authorization request is parked. */
-async function register(): Promise<Response> {
+async function register(fields: Record<string, string> = {}): Promise<Response> {
 	return await app.fetch(
 		new Request(`${ORIGIN}${routes.authorize.action.href()}`, {
 			method: "POST",
@@ -64,6 +65,7 @@ async function register(): Promise<Response> {
 				password: NEW_PASSWORD,
 				name: "New Comer",
 				username: "newcomer",
+				...fields,
 			}),
 		}),
 	);
@@ -396,6 +398,49 @@ describe("POST /authorize", () => {
 	 * The page shows the locale copy, while the engine's own `missing_validation`
 	 * description stays an internal diagnostic.
 	 */
+	test("signs a registered subject in from an address padded with spaces", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures)));
+
+		let response = await app.fetch(
+			new Request(`${ORIGIN}${routes.authorize.action.href()}`, {
+				method: "POST",
+				headers: { "content-type": "application/x-www-form-urlencoded" },
+				redirect: "manual",
+				body: new URLSearchParams({
+					email: "  jane@example.com ",
+					password: PASSWORD,
+					name: "Jane Doe",
+					username: "jane",
+				}),
+			}),
+		);
+
+		expect(response.status).toBe(303);
+		expect(new URL(response.headers.get("location")!).searchParams.get("code")).toBeTruthy();
+	});
+
+	/**
+	 * Subjects are matched on the stored address exactly, so a registration keeps the
+	 * address as typed: an account registered as `Jane.Doe@…` is still found by it.
+	 */
+	test("registers the address as typed, so the same keystrokes find it again", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register({ email: " Newcomer@Example.com " });
+
+		expect(response.status).toBe(303);
+		expect(await Subject.findByEmail(app.db, "Newcomer@Example.com")).not.toBeNull();
+	});
+
+	test("refuses to register an address with a trailing-dot domain", async () => {
+		await app.fetch(new Request(authorizeUrl(fixtures, { prompt: "create" })));
+
+		let response = await register({ email: `${NEW_EMAIL}.` });
+
+		expect(response.status).toBe(400);
+		expect(await Subject.findByEmail(app.db, `${NEW_EMAIL}.`)).toBeNull();
+	});
+
 	test("refuses a registered subject whose credential was never verified", async () => {
 		let subject = await Subject.create(app.db, {
 			email_address: "github@example.com",

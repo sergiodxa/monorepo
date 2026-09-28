@@ -60,11 +60,6 @@ const LATEST_KEY_PREFIX = "password-reset-latest:";
 /** Per-address cooldown marker, keyed by the address's digest so no mailbox is stored here. */
 const COOLDOWN_KEY_PREFIX = "password-reset-cooldown:";
 
-/** The address as it is compared and hashed: case-folded and trimmed. */
-function normalizeAddress(email: string): string {
-	return email.trim().toLowerCase();
-}
-
 /**
  * Hex SHA-256 of a value, or `null` when the runtime refused the digest.
  *
@@ -91,7 +86,8 @@ function resetUrl(token: string): string {
  *
  * @param ctx - The request the form was posted on; its mailer and log are read from it.
  * @param db - Database the address is resolved against.
- * @param email - The address as submitted; normalized here.
+ * @param email - The address in its canonical form, as `ForgotPasswordSchema` answers it,
+ *   which is what the cooldown is keyed on and the subject is looked up by.
  */
 export async function requestPasswordReset(
 	ctx: RequestContext,
@@ -99,9 +95,7 @@ export async function requestPasswordReset(
 	email: string,
 ): Promise<void> {
 	try {
-		let address = normalizeAddress(email);
-
-		let cooldownDigest = await digest(address);
+		let cooldownDigest = await digest(email);
 		if (!cooldownDigest) {
 			ctx.log.warn("password_reset.digest_failed");
 			return;
@@ -117,7 +111,7 @@ export async function requestPasswordReset(
 			expirationTtl: toSeconds(PASSWORD_RESET_COOLDOWN),
 		});
 
-		let subject = await Subject.findByEmail(db, address);
+		let subject = await Subject.findByEmail(db, email);
 		if (!subject) {
 			ctx.log.note("password_reset.address_unknown");
 			return;

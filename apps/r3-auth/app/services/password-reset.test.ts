@@ -249,6 +249,38 @@ describe("requesting a password reset", () => {
 		expect(app.mail.messages).toHaveLength(0);
 	});
 
+	test("reaches the account from a re-cased, padded address", async () => {
+		await requestReset(`  ${EMAIL.toUpperCase()} `);
+
+		expect(app.mail.messages).toHaveLength(1);
+		expect(app.mail.last?.to).toEqual([{ email: EMAIL }]);
+	});
+
+	test("shares one cooldown between spellings that differ only in case", async () => {
+		await requestReset(EMAIL);
+		await requestReset(EMAIL.toUpperCase());
+
+		expect(app.mail.messages).toHaveLength(1);
+		expect(await keysUnder("password-reset-cooldown:")).toHaveLength(1);
+	});
+
+	/**
+	 * `jane@example.com.` passes a loose `x@y.z` pattern but names no mailbox this server
+	 * would send to; it is refused on shape, identically for a registered address and not.
+	 */
+	test("refuses a trailing-dot domain the same way whether or not it is registered", async () => {
+		for (let address of [`${EMAIL}.`, `${UNKNOWN_EMAIL}.`]) {
+			app.resetCookies();
+			let response = await requestReset(address);
+
+			expect(response.status).toBe(400);
+			expect(await response.text()).toContain("Enter a valid email address.");
+		}
+
+		expect(app.mail.messages).toHaveLength(0);
+		expect(await keysUnder("password-reset-cooldown:")).toHaveLength(0);
+	});
+
 	test("retires the previous token when a new one is issued", async () => {
 		await requestReset(EMAIL);
 		let first = tokenFromMail();

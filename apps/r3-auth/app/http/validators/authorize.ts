@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseEmailAddress } from "@sdxc/email-address";
+import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 
@@ -72,9 +74,16 @@ export type AuthorizeQuery = s.InferOutput<typeof AuthorizeQuerySchema>;
 /**
  * The credential sign-in form. Registration and sign-in post the same fields: the
  * engine decides which one is happening from whether the address is already known.
+ *
+ * The address must parse as an email address, and passes on trimmed but otherwise as
+ * typed: subjects are matched on `email_address` exactly, so every stored address keeps
+ * matching the same keystrokes it matched before.
  */
 export const AuthorizeFormSchema = s.object({
-	email: s.string().pipe(checks.email()),
+	email: s
+		.string()
+		.refine((value) => isSuccess(parseEmailAddress(value)), "Invalid email")
+		.transform((value) => value.trim()),
 	password: s.string().pipe(checks.minLength(MINIMUM_PASSWORD_LENGTH)),
 	name: s.string().pipe(checks.minLength(1)),
 	username: s.string().pipe(checks.minLength(1)),

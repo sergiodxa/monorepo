@@ -8,6 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Schema } from "remix/data-schema";
+
+import { parseEmailAddress } from "@sdxc/email-address";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 
@@ -32,13 +36,29 @@ const MAXIMUM_PASSWORD_LENGTH = 256;
 const MAXIMUM_TOKEN_LENGTH = 128;
 
 /**
+ * An email address, answered in its canonical form: the local part lowercased and the
+ * domain ASCII-encoded, the form a recovery request is looked up and rate-limited by, so
+ * re-casing an address neither misses its account nor buys another mail.
+ */
+function canonicalEmailAddress(): Schema<unknown, string> {
+	return s.createSchema(function validate(value, context) {
+		if (typeof value !== "string") return s.fail("Expected string", context.path);
+
+		let parsed = parseEmailAddress(value);
+		if (isFailure(parsed)) return s.fail("Invalid email", context.path);
+
+		return { value: parsed.data.canonical };
+	});
+}
+
+/**
  * The "forgot my password" form.
  *
  * Only the address is asked for and validated here for shape; whether it belongs to a
  * subject is checked afterward, so the endpoint's answer stays the same either way.
  */
 export const ForgotPasswordSchema = s.object({
-	email: s.string().pipe(checks.email()),
+	email: canonicalEmailAddress(),
 });
 
 /** A validated reset request. */
