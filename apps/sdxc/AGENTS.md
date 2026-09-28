@@ -11,7 +11,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 
 ## Things that cannot change
 
-- **`sdxc.sergiodxa.com`** is a custom domain declared in `wrangler.jsonc`. A deploy that
+- **`sdxc.sergiodxa.com`** is a custom domain declared in `cloudflare.config.ts`. A deploy that
   drops it takes the site offline; rollback is redeploying the previous version.
 - **The tag names in `app/services/content.ts`** are the vocabulary every content file is
   written in. Renaming one silently turns every use of it into raw HTML text, because an

@@ -84,17 +84,18 @@ jobs:
         run: sfw bun install --frozen-lockfile
 
       # The generated `Cloudflare.Env` is read by the worker's own source, so it is written
-      # before the build rather than taken from the repository.
+      # before the build rather than taken from the repository. Its bindings and secrets come
+      # from `cloudflare.config.ts` alone, so the step needs no `.dev.vars` or credentials.
       - name: Generate framework types
-        run: |
-          cp apps/sdxc/.env.example apps/sdxc/.dev.vars
-          bun run --cwd apps/sdxc cf:typegen
+        run: bun run --cwd apps/sdxc cf:typegen
 
       # Extracts the catalogue from the packages and bundles the worker, in that order —
       # which is what makes the deployed reference match the source this run checked out.
       - name: Build
         run: bun run --cwd apps/sdxc build
 
+      # `cf` authenticates from `CLOUDFLARE_API_TOKEN` and picks the account from
+      # `CLOUDFLARE_ACCOUNT_ID`, then uploads the Build Output the step above wrote.
       - name: Deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

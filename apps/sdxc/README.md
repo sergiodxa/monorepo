@@ -12,8 +12,13 @@ Production URL: https://sdxc.sergiodxa.com
 
 ## Cloudflare Services
 
-None. The worker has no D1, KV, R2, queue, cron, or Durable Object binding — every page
-is rendered from files in the deployed bundle.
+Configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
+
+- **KV** (`CACHE`) holds what the site reads back from GitHub: the changelog and the
+  sponsor list. Every other page renders from files in the deployed bundle.
+- **Cron** (`0 */6 * * *`) refreshes the sponsor list into KV, so a page never waits on
+  GitHub.
+- **Custom domain** `sdxc.sergiodxa.com`.
 
 Observability is enabled, with traces head-sampled at 10%.
 
@@ -68,14 +73,14 @@ Observability is enabled, with traces head-sampled at 10%.
 
 ## Scripts
 
-| Script       | Description                            |
-| ------------ | -------------------------------------- |
-| `dev`        | Start development server               |
-| `build`      | Build for production                   |
-| `start`      | Preview the production build           |
-| `cf:deploy`  | Deploy to Cloudflare                   |
-| `cf:typegen` | Regenerate `worker-configuration.d.ts` |
-| `typecheck`  | Type check the app with `tsc`          |
+| Script       | Description                               |
+| ------------ | ----------------------------------------- |
+| `dev`        | Start development server                  |
+| `build`      | Build for production                      |
+| `start`      | Preview the production build              |
+| `cf:deploy`  | Deploy to Cloudflare                      |
+| `cf:typegen` | Regenerate `.cloudflare/types/index.d.ts` |
+| `typecheck`  | Type check the app with `tsc`             |
 
 ## Deployment
 

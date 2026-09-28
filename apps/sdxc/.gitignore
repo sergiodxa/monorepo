@@ -1,9 +1,8 @@
 # Artifacts the root .gitignore does not already cover.
 
 # Folders
-/.wrangler
+/.cloudflare
 /app/generated
 
 # Files
 .dev.vars
-worker-configuration.d.ts
