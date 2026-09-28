@@ -1,6 +1,12 @@
 {
 	"extends": "../../tsconfig.json",
-	"include": ["index.html", "src/**/*", "vite.config.ts"],
+	"include": [
+		"index.html",
+		"src/**/*",
+		".cloudflare/types/index.d.ts",
+		"cloudflare.config.ts",
+		"vite.config.ts"
+	],
 	"compilerOptions": {
 		"noEmit": true,
 		"allowImportingTsExtensions": true,

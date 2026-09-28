@@ -45,15 +45,17 @@ Production URL: https://r3-gallery.sergiodxa-cloudflare.workers.dev/
 | `dev`        | Start the Vite development server.    |
 | `build`      | Build the static SPA for production.  |
 | `start`      | Preview the production build locally. |
-| `cf:deploy`  | Build and deploy to Cloudflare.       |
+| `cf:deploy`  | Deploy the last build to Cloudflare.  |
 | `cf:typegen` | Generate Cloudflare binding types.    |
 | `typecheck`  | Type-check the app.                   |
 
 ## Deployment
 
-This app builds to static assets and can be deployed with Cloudflare Workers static assets.
+This app builds to static assets and deploys as the assets-only `r3-gallery` Worker, whose
+configuration lives in `cloudflare.config.ts`.
 
 ```bash
+bun run build
 bun run cf:deploy
 ```
 

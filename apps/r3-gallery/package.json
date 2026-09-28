@@ -6,9 +6,8 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"start": "vite preview",
-		"precf:deploy": "bun run build",
-		"cf:deploy": "bunx wrangler deploy",
-		"cf:typegen": "bunx wrangler types",
+		"cf:deploy": "cf deploy --prebuilt",
+		"cf:typegen": "cf workers types",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
@@ -19,7 +18,8 @@
 		"remix": "3.0.0-rc.2"
 	},
 	"devDependencies": {
-		"vite": "^8.2.2",
-		"wrangler": "^4.127.1"
+		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+		"cf": "1.0.0-beta.5",
+		"vite": "^8.2.2"
 	}
 }
