@@ -42,7 +42,7 @@
 		"vitest": "4.1.10"
 	},
 	"overrides": {
-		"miniflare": "5.20260831.0-alpha"
+		"miniflare": "5.20260926.0-alpha"
 	},
 	"devEngines": {
 		"packageManager": [
