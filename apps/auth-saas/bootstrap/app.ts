@@ -27,6 +27,12 @@ import billingCheckoutReturn from "~/app/http/controllers/billing/checkout-retur
 import billingPortal from "~/app/http/controllers/billing/portal";
 import billingWebhook from "~/app/http/controllers/billing/webhook";
 import { cspReports } from "~/app/http/controllers/csp-reports";
+import {
+	dashboardAgentClientsRegister,
+	dashboardAgentClientsShow,
+} from "~/app/http/controllers/dashboard/agent-clients";
+import { dashboardCreateTenant, dashboardShow } from "~/app/http/controllers/dashboard/show";
+import { dashboardSignOut } from "~/app/http/controllers/dashboard/sign-out";
 import health from "~/app/http/controllers/health";
 import index from "~/app/http/controllers/index";
 import notFound from "~/app/http/controllers/not-found";
@@ -176,3 +182,9 @@ router.map(routes.signup.submit, {
 router.map(routes.signup.pending, signupPending);
 router.map(routes.signup.verify, signupVerify);
 router.map(routes.signup.resend, signupResend);
+
+router.map(routes.dashboard.show, dashboardShow);
+router.map(routes.dashboard.createTenant, dashboardCreateTenant);
+router.map(routes.dashboard.agentClients, dashboardAgentClientsShow);
+router.map(routes.dashboard.registerAgentClient, dashboardAgentClientsRegister);
+router.map(routes.dashboard.signOut, dashboardSignOut);

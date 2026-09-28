@@ -45,4 +45,16 @@ export default route({
 		verify: get("/signup/verify"),
 		resend: post("/signup/resend"),
 	},
+
+	/**
+	 * The platform's own administrative dashboard: the first UI consumer of the
+	 * Management API. Every page requires a valid platform session.
+	 */
+	dashboard: {
+		show: get("/dashboard"),
+		createTenant: post("/dashboard/tenants"),
+		agentClients: get("/dashboard/tenants/:tenantId/agent-clients"),
+		registerAgentClient: post("/dashboard/tenants/:tenantId/agent-clients"),
+		signOut: post("/dashboard/sign-out"),
+	},
 });

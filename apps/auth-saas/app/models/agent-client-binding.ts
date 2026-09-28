@@ -68,6 +68,17 @@ export default class AgentClientBinding {
 	}
 
 	/**
+	 * Lists every machine credential registered against a tenant, oldest first.
+	 *
+	 * @param db - Database connection.
+	 * @param tenantId - The tenant id.
+	 * @returns A promise resolving to the tenant's agent client binding rows.
+	 */
+	static listByTenantId(db: Database, tenantId: string): Promise<AgentClientBindingRow[]> {
+		return db.findMany(AgentClientBinding.table, { where: { tenant_id: tenantId } });
+	}
+
+	/**
 	 * Deletes a client's binding, for a client disabled or deleted at its own tenant.
 	 *
 	 * @param db - Database connection.

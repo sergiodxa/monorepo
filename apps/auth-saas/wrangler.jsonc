@@ -158,6 +158,11 @@
 		"bindings": [{ "name": "TENANT", "class_name": "Tenant" }],
 	},
 
+	// A self-referencing service binding: the dashboard calls the real, public
+	// Management API routes in-process, at zero network cost, rather than
+	// reaching into control-plane models directly.
+	"services": [{ "binding": "SELF", "service": "auth-saas" }],
+
 	"migrations": [{ "tag": "add-tenant-do", "new_sqlite_classes": ["Tenant"] }],
 
 	// Walks the pending-domains index daily, promoting or failing verification attempts.
