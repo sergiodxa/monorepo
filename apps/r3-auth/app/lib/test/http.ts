@@ -249,7 +249,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 			let serialized = await createCookie(SESSION_COOKIE_NAME, {
 				secrets: [COOKIE_SECRET],
-			}).serialize(id);
+			}).serialize(JSON.stringify({ value: id, expires: Date.now() + SESSION_TTL_SECONDS * 1000 }));
 
 			let pair = serialized.split(";")[0]!;
 			let separator = pair.indexOf("=");
