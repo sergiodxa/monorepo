@@ -1,0 +1,47 @@
+{
+	"board": {
+		"title": "Remix Job Board",
+		"tagline": "Open positions, newest first.",
+		"empty": "No open positions yet. Be the first to post one.",
+		"post": "Post a job",
+		"outbox": "Outbox"
+	},
+	"posting": {
+		"open": "View position",
+		"close": "Close",
+		"location": "Location",
+		"salary": "Salary",
+		"contact": "Apply by email",
+		"published": "Published {$date}"
+	},
+	"form": {
+		"title": "Post a position",
+		"titleField": "Job title",
+		"company": "Company",
+		"location": "Location",
+		"salary": "Salary range",
+		"description": "Description (Markdown)",
+		"email": "Contact email",
+		"captcha": "Type {$answer} to prove you are human",
+		"submit": "Publish",
+		"invalid": "Every field is required, and the contact must be an email address."
+	},
+	"outbox": {
+		"title": "Outbox",
+		"tagline": "Every message the board sent, newest first.",
+		"empty": "Nothing sent yet. Publish a position and the confirmation lands here.",
+		"to": "To",
+		"subject": "Subject",
+		"back": "Back to the board"
+	},
+	"email": {
+		"subject": "{$title} is live on the Remix Job Board",
+		"heading": "Your position is live",
+		"body": "{$title} at {$company} is now on the board. It stays open for thirty days.",
+		"footer": "You received this because this address was listed as the contact for a posting."
+	},
+	"notFound": {
+		"title": "Not found",
+		"description": "There is nothing at this address."
+	}
+}

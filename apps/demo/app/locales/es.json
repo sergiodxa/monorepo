@@ -1,0 +1,47 @@
+{
+	"board": {
+		"title": "Bolsa de trabajo Remix",
+		"tagline": "Vacantes abiertas, de la más reciente a la más antigua.",
+		"empty": "Todavía no hay vacantes. Publica la primera.",
+		"post": "Publicar vacante",
+		"outbox": "Bandeja de salida"
+	},
+	"posting": {
+		"open": "Ver vacante",
+		"close": "Cerrar",
+		"location": "Ubicación",
+		"salary": "Salario",
+		"contact": "Postular por correo",
+		"published": "Publicada el {$date}"
+	},
+	"form": {
+		"title": "Publicar una vacante",
+		"titleField": "Puesto",
+		"company": "Empresa",
+		"location": "Ubicación",
+		"salary": "Rango salarial",
+		"description": "Descripción (Markdown)",
+		"email": "Correo de contacto",
+		"captcha": "Escribe {$answer} para comprobar que eres una persona",
+		"submit": "Publicar",
+		"invalid": "Todos los campos son obligatorios y el contacto debe ser un correo válido."
+	},
+	"outbox": {
+		"title": "Bandeja de salida",
+		"tagline": "Todos los mensajes que envió la bolsa, del más reciente al más antiguo.",
+		"empty": "Aún no se envía nada. Publica una vacante y la confirmación aparece aquí.",
+		"to": "Para",
+		"subject": "Asunto",
+		"back": "Volver a la bolsa"
+	},
+	"email": {
+		"subject": "{$title} ya está publicada en la bolsa de trabajo Remix",
+		"heading": "Tu vacante está publicada",
+		"body": "{$title} en {$company} ya aparece en la bolsa. Permanece abierta treinta días.",
+		"footer": "Recibes este mensaje porque esta dirección figura como contacto de una vacante."
+	},
+	"notFound": {
+		"title": "No encontrado",
+		"description": "No hay nada en esta dirección."
+	}
+}

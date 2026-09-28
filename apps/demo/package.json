@@ -1,0 +1,43 @@
+{
+	"name": "@apps/demo",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"start": "vite preview",
+		"cf:deploy": "bunx wrangler deploy",
+		"cf:typegen": "bunx wrangler types",
+		"typecheck": "tsc --noEmit",
+		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote"
+	},
+	"dependencies": {
+		"@sdxc/cache": "workspace:*",
+		"@sdxc/captcha": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/get-client-ip": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/i18n": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/mail": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
+		"@sdxc/rate-limit": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/typeid": "workspace:*",
+		"@sdxc/u": "workspace:*",
+		"@sdxc/ui": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"remix": "3.0.0-rc.2"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "^1.54.2",
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/messageformat": "workspace:*",
+		"vite": "^8.2.2",
+		"wrangler": "^4.127.1"
+	}
+}

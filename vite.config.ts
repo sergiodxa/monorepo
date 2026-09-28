@@ -249,6 +249,27 @@ export default defineConfig({
 				},
 			},
 			{
+				/**
+				 * The talk's demo board. Rooted at the app for its `~/*` aliases, and given the
+				 * Cloudflare stub because `cloudflare:workers` supplies the `DB` binding and the
+				 * Turnstile keys the captcha provider chooses by.
+				 */
+				root: "apps/demo",
+				plugins: [cloudflareWorkersStub()],
+				resolve: { tsconfigPaths: true },
+				test: {
+					name: "demo",
+					include: ["**/*.test.ts?(x)"],
+					pool: "threads",
+					/**
+					 * Not inherited from the top-level `test` block: a project ignores it, so the
+					 * 5s default applies unless set here. The router tests apply the migration to a
+					 * fresh database before their first assertion runs.
+					 */
+					testTimeout: 20_000,
+				},
+			},
+			{
 				root: "apps/books",
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },
