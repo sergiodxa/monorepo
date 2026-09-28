@@ -58,6 +58,7 @@ import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
 import notFound from "~/app/http/controllers/not-found";
 import deviceAuthorization from "~/app/http/controllers/oauth/device-authorization";
 import introspect from "~/app/http/controllers/oauth/introspect";
+import register from "~/app/http/controllers/oauth/register";
 import token from "~/app/http/controllers/oauth/token";
 import {
 	scimResourceTypes,
@@ -178,6 +179,10 @@ tenantRouter.map(routes.userinfoPost, {
 tenantRouter.map(routes.token, {
 	middleware: [tokenRateLimit(env.TOKEN_RATE_LIMITER, env)],
 	handler: token as RequestHandler,
+});
+tenantRouter.map(routes.register, {
+	middleware: [protocolLimit],
+	handler: register as RequestHandler,
 });
 tenantRouter.map(routes.deviceAuthorization, {
 	middleware: [deviceAuthorizationRateLimit(env.DEVICE_AUTHORIZATION_RATE_LIMITER, env)],

@@ -1,8 +1,8 @@
 /**
  * A fully-provisioned tenant, a registered client, and a real tenant router
- * mapping every hosted-screen and `/authorize` route, for driving the hosted
- * sign-in, sign-up, verify, reset, magic-link, consent and error flow through
- * real HTTP requests the way `oauth/token.test.ts` drives the token endpoint.
+ * mapping every hosted-screen, `/authorize`, `/oauth/token` and `/oauth/register`
+ * route, for driving the hosted sign-in, sign-up, verify, reset, magic-link,
+ * consent, error and token-exchange flow through real HTTP requests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -51,6 +51,8 @@ import {
 	stepUpSubmit,
 } from "~/app/http/controllers/hosted/step-up";
 import { verifyResend, verifyShow } from "~/app/http/controllers/hosted/verify";
+import register from "~/app/http/controllers/oauth/register";
+import token from "~/app/http/controllers/oauth/token";
 import i18n from "~/app/http/middleware/i18n";
 import { platformSender } from "~/app/http/middleware/mail-sender";
 import render from "~/app/http/middleware/render";
@@ -85,6 +87,8 @@ function buildRouter(tenantDO: Tenant, transport: Transport) {
 	let router = createRouter({ middleware });
 
 	router.map(routes.authorize, authorize);
+	router.map(routes.token, token);
+	router.map(routes.register, register);
 	router.map(routes.hostedSignInShow, signInShow);
 	router.map(routes.hostedSignInSubmit, signInSubmit);
 	router.map(routes.hostedSignInPasskeyOptions, signInPasskeyOptions);

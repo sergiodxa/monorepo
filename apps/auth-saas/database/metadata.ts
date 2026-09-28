@@ -119,6 +119,7 @@ function sharedMembers(published: PublishMetadataResult) {
 		issuer: published.issuer,
 		authorizationEndpoint: endpoint("/authorize"),
 		tokenEndpoint: endpoint("/oauth/token"),
+		registrationEndpoint: endpoint("/oauth/register"),
 		jwksUri: endpoint("/.well-known/jwks.json"),
 		deviceAuthorizationEndpoint: published.hasDeviceGrant
 			? endpoint("/oauth/device_authorization")

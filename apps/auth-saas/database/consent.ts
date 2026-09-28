@@ -24,6 +24,7 @@ import { and, column as c, eq, inList, table } from "remix/data-table";
 import type { SubjectRow } from "./subjects";
 
 import { writeAuditEvent } from "./audit-events";
+import { isClientIdUrl, resolveCimdClient } from "./client-id-metadata";
 import { clients } from "./clients";
 import { subjectIdentifiers, subjects } from "./subjects";
 
@@ -59,6 +60,58 @@ export const grants = table({
 
 export type ScopeRow = TableRow<typeof scopes>;
 export type GrantRow = TableRow<typeof grants>;
+
+/** One scope a caller asks {@link defineScopes} to add to this tenant's own catalog. */
+export interface DefineScopeInput {
+	name: string;
+	title: string;
+	description: string;
+	claims?: string[];
+}
+
+export interface DefineScopesInput {
+	scopes: DefineScopeInput[];
+}
+
+let DefineScopesSchema = s.object({
+	scopes: s.array(
+		s.object({
+			name: s.string(),
+			title: s.string(),
+			description: s.string(),
+			claims: s.optional(s.array(s.string())),
+		}),
+	),
+});
+
+/**
+ * Adds scopes to this tenant's own catalog, one row per name, leaving a name
+ * already present untouched — the same guard the standard OIDC scopes'
+ * seeding migration applies, so a caller may run this on every boot without
+ * overwriting a tenant's own edits to a row it already wrote.
+ *
+ * @param db - The tenant's database.
+ * @param input - The scopes to add, each named, titled and described the way
+ * a consent screen renders it.
+ */
+export async function defineScopes(db: Database, input: DefineScopesInput): Promise<void> {
+	let parsed = s.parse(DefineScopesSchema, input);
+	let now = Date.now();
+
+	for (let scope of parsed.scopes) {
+		let existing = await db.find(scopes, { name: scope.name });
+		if (existing) continue;
+
+		await db.create(scopes, {
+			name: scope.name,
+			title: scope.title,
+			description: scope.description,
+			claims: scope.claims ?? [],
+			is_standard: false,
+			created_at: now,
+		});
+	}
+}
 
 /**
  * What a consent screen renders. The client section carries only what a client's record
@@ -150,13 +203,45 @@ export async function evaluateConsent(
 	return { decision: "show", screen };
 }
 
+/**
+ * The client facts a consent screen names, read from the tenant's own client table for
+ * an opaque id, or from a fetched Client ID Metadata Document for a `client_id` shaped
+ * as an `https://` URL.
+ */
+async function resolveConsentClient(
+	db: Database,
+	clientId: string,
+): Promise<{
+	name: string;
+	logoUri: string | null;
+	policyUri: string | null;
+	tosUri: string | null;
+} | null> {
+	if (isClientIdUrl(clientId)) {
+		let resolved = await resolveCimdClient(clientId, Date.now());
+		if (!resolved.ok) return null;
+
+		return {
+			name: resolved.client.name,
+			logoUri: resolved.client.logoUri,
+			policyUri: resolved.client.policyUri,
+			tosUri: resolved.client.tosUri,
+		};
+	}
+
+	let row = await db.find(clients, { id: clientId });
+	if (!row) return null;
+
+	return { name: row.name, logoUri: null, policyUri: null, tosUri: null };
+}
+
 /** Assembles the screen `evaluateConsent` shows, or `null` for a client or subject that does not resolve. */
 async function buildConsentScreen(
 	db: Database,
 	input: { subjectId: string; clientId: string; requestedScopes: string[] },
 	existingScopes: string[],
 ): Promise<ConsentScreen | null> {
-	let client = await db.find(clients, { id: input.clientId });
+	let client = await resolveConsentClient(db, input.clientId);
 	if (!client) return null;
 
 	let subject = await db.find(subjects, { id: input.subjectId });
@@ -173,7 +258,13 @@ async function buildConsentScreen(
 	let scopeByName = new Map(scopeRows.map((row) => [row.name, row]));
 
 	return {
-		client: { id: client.id, name: client.name, logoUri: null, policyUri: null, tosUri: null },
+		client: {
+			id: input.clientId,
+			name: client.name,
+			logoUri: client.logoUri,
+			policyUri: client.policyUri,
+			tosUri: client.tosUri,
+		},
 		subject: {
 			id: subject.id,
 			displayName: displayNameOf(subject),

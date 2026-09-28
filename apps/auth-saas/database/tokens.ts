@@ -30,6 +30,7 @@ import type { ClientRow } from "./clients";
 import type { SubjectRow } from "./subjects";
 
 import { authorizationCodes } from "./authorization";
+import { isClientIdUrl } from "./client-id-metadata";
 import { clients, verifyClientSecret } from "./clients";
 import { scopes } from "./consent";
 import { resolveRoleAndPermissionClaims } from "./roles";
@@ -175,6 +176,36 @@ export type AuthenticateClientResult =
 	| { ok: false; status: 400 | 401; description: string };
 
 /**
+ * The row a client identified by a Client ID Metadata Document authenticates as: a
+ * public client with no secret, minting under the algorithm every client defaults to.
+ * Nothing here is read from storage, since the URL naming this client is never written
+ * to the tenant's own client table; the authorization code this client redeems already
+ * bound its granted scopes and redirect target at the authorize step, so this row only
+ * has to carry what minting a token still reads off it.
+ */
+function cimdClientRow(clientId: string): ClientRow {
+	let now = Date.now();
+
+	return {
+		id: clientId,
+		name: clientId,
+		kind: "public",
+		redirect_uris: [],
+		post_logout_redirect_uris: [],
+		grant_types: ["authorization_code", "refresh_token"],
+		response_types: ["code"],
+		scopes: [],
+		token_endpoint_auth_method: "none",
+		require_consent: true,
+		created_at: now,
+		updated_at: now,
+		disabled_at: null,
+		include_permissions: false,
+		id_token_signed_response_alg: "ES256",
+	} as ClientRow;
+}
+
+/**
  * Resolves and authenticates the client presenting one credential shape: `none`
  * is valid only for a public client, whose proof is PKCE rather than a secret;
  * `basic`/`post` is valid only for a confidential client whose own registered
@@ -183,6 +214,10 @@ export type AuthenticateClientResult =
  * OAuth 2.1 asks for a `WWW-Authenticate` challenge rather than a plain 400 — the
  * caller already holds the `basic` scheme it used to reach here, so no header
  * value needs to cross back for it to build one.
+ *
+ * A `client_id` shaped as an `https://` URL identifies a Client ID Metadata Document
+ * rather than a row in this tenant's own client table; such a client is always public,
+ * so it authenticates only with `none`, exactly as a public row would.
  *
  * Exported so a caller that only needs to know whether a client is who it
  * claims — minting nothing — reaches the same check `exchangeCode` and
@@ -193,6 +228,19 @@ export async function authenticateClient(
 	input: AuthenticateClientInput,
 ): Promise<AuthenticateClientResult> {
 	let failureStatus: 400 | 401 = input.authScheme === "basic" ? 401 : 400;
+
+	if (isClientIdUrl(input.clientId)) {
+		if (input.authScheme !== "none") {
+			return {
+				ok: false,
+				status: failureStatus,
+				description:
+					"This application is identified by a URL and holds no secret to authenticate with.",
+			};
+		}
+
+		return { ok: true, client: cimdClientRow(input.clientId) };
+	}
 
 	let client = await db.find(clients, { id: input.clientId });
 	if (!client) {

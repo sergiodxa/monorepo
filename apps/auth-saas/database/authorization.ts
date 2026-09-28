@@ -24,10 +24,58 @@ import type { ConsentScreen } from "./consent";
 import type { SessionRow } from "./sessions";
 import type { StepUpScreen } from "./totp";
 
+import { isClientIdUrl, resolveCimdClient } from "./client-id-metadata";
 import { clients, redirectUriMatches } from "./clients";
 import { evaluateConsent } from "./consent";
 import { sessions } from "./sessions";
 import { describeStepUpScreen } from "./totp";
+
+/**
+ * The facts about a client this endpoint reads before parking or minting a code,
+ * whether the client is a row in the tenant's own table or a document fetched from
+ * the URL that names it.
+ */
+interface AuthorizingClient {
+	disabledAt: number | null;
+	redirectUris: string[];
+	responseTypes: string[];
+	scopes: string[];
+}
+
+/**
+ * Resolves the client an `/authorize` request names: a Client ID Metadata Document,
+ * fetched fresh (or from this instance's short-lived cache) for a `client_id` shaped
+ * as an `https://` URL, or a row from the tenant's own client table for an opaque id
+ * this tenant issued itself. A CIMD client is never disabled — that column exists only
+ * on a stored row — and carries whichever scopes its own document declared.
+ */
+async function resolveAuthorizingClient(
+	db: Database,
+	clientId: string,
+	now: number,
+): Promise<AuthorizingClient | null> {
+	if (isClientIdUrl(clientId)) {
+		let resolved = await resolveCimdClient(clientId, now);
+		if (!resolved.ok) return null;
+
+		return {
+			disabledAt: null,
+			redirectUris: resolved.client.redirectUris,
+			responseTypes: resolved.client.responseTypes,
+			scopes: resolved.client.scopes,
+		};
+	}
+
+	let row = await db.find(clients, { id: clientId });
+	if (!row) return null;
+
+	return {
+		disabledAt: row.disabled_at,
+		redirectUris: row.redirect_uris as string[],
+		responseTypes: row.response_types as string[],
+		scopes: row.scopes as string[],
+	};
+}
 
 /** How long a person has to complete sign-in and consent before a parked request lapses. */
 const AUTHORIZATION_REQUEST_TTL_MS = 10 * 60 * 1000;
@@ -479,16 +527,16 @@ export async function beginAuthorization(
 	let clientId = query.client_id;
 	if (!clientId) return render("invalid_request", "client_id is required.");
 
-	let client = await db.find(clients, { id: clientId });
+	let client = await resolveAuthorizingClient(db, clientId, parsed.now);
 	if (!client) return render("invalid_client", "This application is not registered.");
-	if (client.disabled_at !== null) {
+	if (client.disabledAt !== null) {
 		return render("invalid_client", "This application has been disabled.");
 	}
 
 	let requestedRedirectUri = query.redirect_uri;
 	if (!requestedRedirectUri) return render("invalid_request", "redirect_uri is required.");
 
-	let registeredUris = client.redirect_uris as string[];
+	let registeredUris = client.redirectUris;
 	let redirectVerified = registeredUris.some((registered) =>
 		redirectUriMatches(registered, requestedRedirectUri),
 	);
@@ -511,7 +559,7 @@ export async function beginAuthorization(
 			"Only the authorization code flow is supported.",
 		);
 	}
-	if (!(client.response_types as string[]).includes("code")) {
+	if (!client.responseTypes.includes("code")) {
 		return redirectError(
 			target,
 			parsed.issuer,
@@ -521,7 +569,7 @@ export async function beginAuthorization(
 	}
 
 	let requestedScopes = (query.scope ?? "").split(/\s+/).filter(Boolean);
-	let ceiling = client.scopes as string[];
+	let ceiling = client.scopes;
 	if (requestedScopes.some((scope) => !ceiling.includes(scope))) {
 		return redirectError(
 			target,
