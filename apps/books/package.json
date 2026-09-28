@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/billing": "workspace:*",
+		"@sdxc/email-address": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/http": "workspace:*",
