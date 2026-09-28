@@ -22,8 +22,8 @@ theirs, and lands owning a freshly provisioned tenant with a working credential.
 ### A signup is two accounts at once
 
 Signing up creates a subject who can administer the platform's dashboard-facing surface — a
-*subject inside the platform tenant's own object*, the same store `ADR-034`'s member invitations
-already write into — and, as a side effect of that subject existing, a brand-new *tenant*, an
+_subject inside the platform tenant's own object_, the same store `ADR-034`'s member invitations
+already write into — and, as a side effect of that subject existing, a brand-new _tenant_, an
 entirely separate OIDC/OAuth2 provider the subject now owns a membership on. These are different
 things at different layers: one is a row in a Durable Object's SQLite, the other is a row (plus a
 domain, plus a provisioned Durable Object) in the D1 control plane. Getting the two wired

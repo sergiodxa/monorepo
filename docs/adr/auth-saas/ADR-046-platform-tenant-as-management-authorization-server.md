@@ -12,7 +12,7 @@ MCP server, or a CLI could hold on a person's behalf, alongside the existing mac
 own client table, its own authorization codes, its own refresh tokens, living beside the tenant
 OIDC engine rather than reusing it.
 
-That premise was wrong. The platform tenant is not a stand-in for an authorization server — it *is*
+That premise was wrong. The platform tenant is not a stand-in for an authorization server — it _is_
 one, the exact same kind every customer's own tenant is, already carrying a complete OAuth 2.0 /
 OpenID Connect implementation: client registration, authorize, consent, token, and refresh
 rotation, all already built and already tested. Building a second one beside it to solve "how does
@@ -42,8 +42,8 @@ scopes added to it, since nothing has ever asked it to issue a token for them.
 
 ### The insight that shrinks this: enforcement never belongs in the token
 
-The session path's real trick is that a token (or cookie) only ever has to prove *who* is asking.
-*What tenant, at what role* is resolved fresh against the control plane's own membership records,
+The session path's real trick is that a token (or cookie) only ever has to prove _who_ is asking.
+_What tenant, at what role_ is resolved fresh against the control plane's own membership records,
 on every single request. Nothing about that requires the credential to name a tenant at all. Once
 that's the model, a subject holding several memberships — across tenants owned by different
 customers — costs nothing extra: the same lookup that already runs today just returns a different

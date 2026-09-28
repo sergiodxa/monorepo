@@ -32,7 +32,7 @@ The instinct to reach for is: sign in normally, then hand that proof to some sec
 converts it into a management token. That framing is wrong. The management API is its own
 resource with its own authorization server, the same way any OAuth-protected resource has one; a
 dashboard is simply its first client, not a special path in front of it. What is reused from the
-platform tenant's own sign-in is only the *identity substrate* — the session that already proves
+platform tenant's own sign-in is only the _identity substrate_ — the session that already proves
 who a person is — not a token this flow then exchanges. The authorize step itself, and the
 consent it renders, are net new: pick which organization, review which scopes, and the token
 endpoint mints a `ManagementAccessToken` directly, in the one grant that flow ends in.
@@ -42,8 +42,8 @@ endpoint mints a `ManagementAccessToken` directly, in the one grant that flow en
 The management API's own issuer is already `https://api.{PLATFORM_DOMAIN}` — every
 `ManagementAccessToken` `client_credentials` already mints carries it as `iss`
 (`app/services/management-token-grant.ts`). This flow's token endpoint stays there, a second grant
-type beside the one `app/http/controllers/management/token.ts` already serves. Its *authorize* and
-*consent* pages, though, need the platform tenant's own session cookie in the same request — a
+type beside the one `app/http/controllers/management/token.ts` already serves. Its _authorize_ and
+_consent_ pages, though, need the platform tenant's own session cookie in the same request — a
 `__Host-` cookie is bound to one exact host and cannot cross to `api.{PLATFORM_DOMAIN}`'s own
 origin — so they render on the platform's own bare domain instead, alongside `/signup` and the
 `/u/*` pages ADR-044 already forwards there. An unauthenticated visit to `/oauth/authorize`
@@ -98,7 +98,7 @@ tenant admin registering it by hand first. Two paths register one:
 
 Both resolve to the same shape by the time authorize runs: a redirect URI to validate against, a
 display name for the consent screen, and whether the client is confidential or public. Neither
-carries a scopes *ceiling* the way an admin-registered `management_clients` row does — for this
+carries a scopes _ceiling_ the way an admin-registered `management_clients` row does — for this
 grant, the person's own membership role is the ceiling, not a value someone configured for the
 client ahead of time.
 
@@ -113,7 +113,7 @@ possible.
 
 ## Decision
 
-1. `management_oauth_clients` — a new control-plane table for a client used *interactively*: id,
+1. `management_oauth_clients` — a new control-plane table for a client used _interactively_: id,
    name, redirect URIs, `kind` (`confidential`/`public`), secret hash (nullable, for `confidential`
    only), and how it was registered (`admin`, `dynamic`, or `cimd`) — kept apart from
    `management_clients`, whose whole point is a tenant admin's own, ahead-of-time-vetted credential.
