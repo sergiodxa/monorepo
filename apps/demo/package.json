@@ -10,7 +10,8 @@
 		"cf:typegen": "bunx wrangler types",
 		"typecheck": "tsc --noEmit",
 		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote"
+		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote",
+		"mcp:inspect": "bunx @mcpjam/inspector@latest"
 	},
 	"dependencies": {
 		"@sdxc/cache": "workspace:*",
