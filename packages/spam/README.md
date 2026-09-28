@@ -264,7 +264,7 @@ router.post("/comments", {
 		let form = await ctx.request.formData();
 		let assessment = await filter.check({
 			content: String(form.get("content") ?? ""),
-			renderedAt: unwrap(ctx.honeypot).renderedAt,
+			renderedAt: unwrap(ctx.honeypotOutcome).renderedAt,
 		});
 		return saveComment(form, assessment);
 	},
