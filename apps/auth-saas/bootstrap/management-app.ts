@@ -27,6 +27,7 @@ import { createRouter } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
 
+import { createAgentClientsRegisterAction } from "~/app/http/controllers/management/agent-clients/register";
 import { createApiKeysCreateAction } from "~/app/http/controllers/management/api-keys/create";
 import { createApiKeysListAction } from "~/app/http/controllers/management/api-keys/list";
 import { createApiKeysReadAction } from "~/app/http/controllers/management/api-keys/read";
@@ -260,6 +261,10 @@ managementRouter.map(
 	createSubjectsExportDownloadAction(controllerOptions),
 );
 
+managementRouter.map(
+	routes.agentClientsRegister,
+	createAgentClientsRegisterAction(controllerOptions),
+);
 managementRouter.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));
 managementRouter.map(routes.clientsList, createClientsListAction(controllerOptions));
 managementRouter.map(routes.clientsRead, createClientsReadAction(controllerOptions));

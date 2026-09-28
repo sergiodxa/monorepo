@@ -15,7 +15,7 @@ import { authorizationServerMetadata, define } from "@sdxc/well-known/oauth-auth
 import { protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-resource";
 
 import { managementResourceServer } from "~/app/lib/management-resource";
-import { publishPlatformKeySet } from "~/app/models/platform-signing-key";
+import { platformTenantStub } from "~/app/lib/platform-tenant";
 
 /**
  * Builds the middleware answering the three documents on the management host. The
@@ -44,6 +44,6 @@ export function managementWellKnown(issuer: string): Middleware {
 				protectedResources: [api.resource],
 			}),
 		),
-		"jwks.json": serve(jwks, async (ctx) => await publishPlatformKeySet(ctx.db)),
+		"jwks.json": serve(jwks, async () => platformTenantStub().publishKeySet()),
 	});
 }

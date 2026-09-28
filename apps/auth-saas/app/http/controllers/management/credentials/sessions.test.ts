@@ -167,7 +167,7 @@ describe("DELETE /tenants/:tenantId/subjects/:subjectId/sessions/:sessionId", ()
 			action: "session.revoked",
 		});
 		if (!page.ok) throw new Error("unreachable");
-		expect(page.events).toMatchObject([{ actorType: "client", actorId: "mgmt_client_1" }]);
+		expect(page.events).toMatchObject([{ actorType: "client", actorId: expect.any(String) }]);
 	});
 
 	test("answers a problem+json not-found for a session this subject does not hold", async () => {

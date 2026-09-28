@@ -10,6 +10,8 @@
 import type { Database } from "remix/data-table";
 
 import { parse as parseChallenges } from "@sdxc/auth/bearer-challenge";
+import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { randomToken } from "@sdxc/crypto";
 import { JWK } from "@sdxc/jwt";
 import { unwrap } from "@sdxc/result";
 import { parse as parseJwks } from "@sdxc/well-known/jwks";
@@ -21,20 +23,39 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { database } from "~/app/http/middleware/database";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
-import { ManagementAccessToken } from "~/app/lib/management-token";
-import {
-	advancePlatformSigningKeys,
-	currentPlatformSigningKeyPair,
-} from "~/app/models/platform-signing-key";
+import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import AgentClientBinding from "~/app/models/agent-client-binding";
 import { createTestDatabase } from "~/app/test/db";
+import TenantObject from "~/database/tenant-do";
+import { AccessToken } from "~/database/tokens";
 
 const ISSUER = "https://api.example.com";
 
+const PLATFORM_ISSUER = "https://platform.example.com";
+
 let db: Database;
+let platformTenantDO: TenantObject;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
-	await advancePlatformSigningKeys(db, { now: Date.now() });
+
+	let state = createDurableObjectState();
+	platformTenantDO = new TenantObject(state, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
+	await platformTenantDO.provision({ tenantId: "platform", issuer: PLATFORM_ISSUER });
+	await platformTenantDO.applyEntitlements({
+		plan: "pro",
+		features: { machine_access: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+
+	usePlatformTenantForTesting(
+		() => platformTenantDO as unknown as DurableObjectStub<TenantObject>,
+		PLATFORM_ISSUER,
+	);
 });
 
 /** A management router carrying the discovery documents and one scope-guarded route. */
@@ -45,6 +66,35 @@ function buildRouter() {
 		handler: (ctx) => requireScope(ctx, "audit:read") ?? new Response(null, { status: 204 }),
 	});
 	return router;
+}
+
+/** Registers an agent client on the platform tenant, bound to `tnt_1`, and mints its token. */
+async function signAgentToken(scope = "subjects:read"): Promise<string> {
+	let registered = await platformTenantDO.registerClient({
+		name: "agent client",
+		kind: "confidential",
+		redirectUris: [],
+		postLogoutRedirectUris: [],
+		grantTypes: ["client_credentials"],
+		responseTypes: [],
+		scopes: ["subjects:read"],
+		tokenEndpointAuthMethod: "client_secret_basic",
+		requireConsent: false,
+	});
+	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
+
+	await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId: "tnt_1" });
+
+	let outcome = await platformTenantDO.issueClientCredentialsToken({
+		clientId: registered.client.id,
+		clientSecret: registered.secret,
+		scope,
+		resource: null,
+		authScheme: "basic",
+		now: Date.now(),
+	});
+	if (outcome.kind !== "tokens") throw new Error("unreachable");
+	return outcome.accessToken;
 }
 
 describe("the management API's discovery documents", () => {
@@ -83,48 +133,24 @@ describe("the management API's discovery documents", () => {
 		expect(server.grant_types_supported).toEqual(["client_credentials"]);
 	});
 
-	test("the published key set verifies a management token", async () => {
+	test("the published key set verifies a token minted by the platform tenant", async () => {
 		let router = buildRouter();
-		let pair = await currentPlatformSigningKeyPair(db);
-		if (!pair) throw new Error("unreachable");
-		let now = Math.floor(Date.now() / 1000);
-		let token = await new ManagementAccessToken({
-			iss: ISSUER,
-			sub: "mgmt_client_1",
-			client_id: "mgmt_client_1",
-			aud: `${ISSUER}/tenants/tnt_1`,
-			tenant_id: "tnt_1",
-			scope: "subjects:read",
-			iat: now,
-			exp: now + 900,
-		}).sign(JWK.Algorithm.ES256, [pair]);
+		let token = await signAgentToken();
 
 		let response = await router.fetch(new Request(`${ISSUER}/.well-known/jwks.json`));
 		let set = unwrap(parseJwks(await response.text()));
 		let keys = await JWK.importLocal({ keys: set.keys } as Parameters<typeof JWK.importLocal>[0]);
-		let verified = await ManagementAccessToken.verify(token, keys, {
-			issuer: ISSUER,
+		let verified = await AccessToken.verify(token, keys, {
+			issuer: PLATFORM_ISSUER,
 			algorithms: [JWK.Algorithm.ES256],
 		});
 
-		expect(verified.tenantId).toBe("tnt_1");
+		expect(verified.clientId).not.toBe("");
 	});
 
 	test("a 403 for a missing scope names that scope in its challenge", async () => {
 		let router = buildRouter();
-		let pair = await currentPlatformSigningKeyPair(db);
-		if (!pair) throw new Error("unreachable");
-		let now = Math.floor(Date.now() / 1000);
-		let token = await new ManagementAccessToken({
-			iss: ISSUER,
-			sub: "mgmt_client_1",
-			client_id: "mgmt_client_1",
-			aud: `${ISSUER}/tenants/tnt_1`,
-			tenant_id: "tnt_1",
-			scope: "subjects:read",
-			iat: now,
-			exp: now + 900,
-		}).sign(JWK.Algorithm.ES256, [pair]);
+		let token = await signAgentToken("subjects:read");
 
 		let response = await router.fetch(
 			new Request(`${ISSUER}/tenants/tnt_1/probe`, {

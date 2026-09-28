@@ -1968,6 +1968,143 @@
         "security": []
       }
     },
+    "/tenants/{tenantId}/agent-clients": {
+      "post": {
+        "operationId": "agentClientsRegister",
+        "summary": "Register an agent client",
+        "description": "A machine credential's secret is in the response and never readable again. Send an Idempotency-Key header (a quoted string) to have a retry answered with the first attempt's response for 24 hours.",
+        "tags": [
+          "Agent clients"
+        ],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "scopes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "subjects:read",
+                        "subjects:write",
+                        "sessions:write",
+                        "clients:write",
+                        "keys:write",
+                        "webhooks:write",
+                        "audit:read",
+                        "export:read",
+                        "tenant:write",
+                        "members:write"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "scopes"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The registered client id and its one-time secret",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "clientId": {
+                      "type": "string"
+                    },
+                    "secret": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "clientId",
+                    "secret"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "This API version is not published; The Idempotency-Key header is not valid; The request did not pass validation",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/UnsupportedApiVersionProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/IdempotencyKeyInvalidProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ValidationFailedProblem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "description": "This caller may not administer this tenant; This tenant's plan does not include this feature",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ForbiddenProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/EntitlementRequiredProblem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "$ref": "#/components/responses/IdempotencyKeyInUse"
+          },
+          "422": {
+            "$ref": "#/components/responses/IdempotencyKeyReused"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          }
+        },
+        "security": [
+          {
+            "oauth2": [
+              "clients:write"
+            ]
+          }
+        ]
+      }
+    },
     "/tenants/{tenantId}/clients": {
       "post": {
         "operationId": "clientsRegister",

@@ -1,8 +1,9 @@
 /**
  * Drives `POST /oauth/token` through the management router: the HTTP-layer form
  * parsing and client-authentication detection `app/http/controllers/oauth/token.ts`
- * already established, now over `management_clients` and answering with a token
- * bound to the client's own tenant.
+ * already established, now against the platform tenant's own ordinary
+ * client-credentials grant, answering with a token that tenant signs under its
+ * own key.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,49 +12,46 @@
 import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
-import { Base64 } from "@sdxc/crypto";
-import { env } from "cloudflare:workers";
+import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { Base64, randomToken } from "@sdxc/crypto";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { conformance } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
-import Customer from "~/app/models/customer";
-import { registerManagementClient } from "~/app/models/management-client";
-import { advancePlatformSigningKeys } from "~/app/models/platform-signing-key";
-import Tenant from "~/app/models/tenant";
+import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
 import { createTestDatabase } from "~/app/test/db";
+import TenantObject from "~/database/tenant-do";
 import routes from "~/routes/management";
 
 import token from "./token";
 
+const PLATFORM_ISSUER = "https://platform.example.com";
+
 let db: Database;
-let tenantId: string;
-let otherTenantId: string;
-let ISSUER: string;
+let platformTenantDO: TenantObject;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
-	await advancePlatformSigningKeys(db, { now: Date.now() });
-	ISSUER = `https://api.${env.PLATFORM_DOMAIN}`;
 
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
+	let state = createDurableObjectState();
+	platformTenantDO = new TenantObject(state, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
+	await platformTenantDO.provision({ tenantId: "platform", issuer: PLATFORM_ISSUER });
+	await platformTenantDO.applyEntitlements({
+		plan: "pro",
+		features: { machine_access: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
 	});
-	tenantId = tenant.id;
 
-	let other = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Other, Inc.",
-		slug: "other",
-		issuer: "https://other.auth.example.com",
-	});
-	otherTenantId = other.id;
+	usePlatformTenantForTesting(
+		() => platformTenantDO as unknown as DurableObjectStub<TenantObject>,
+		PLATFORM_ISSUER,
+	);
 });
 
 /** Builds a management router wired to the constructed database, with the same
@@ -80,17 +78,30 @@ function tokenRequest(
 	let requestHeaders = new Headers(headers);
 	requestHeaders.set("Content-Type", "application/x-www-form-urlencoded");
 
-	return new Request(`https://api.${env.PLATFORM_DOMAIN}/oauth/token`, {
+	return new Request("https://api.example.com/oauth/token", {
 		method: "POST",
 		headers: requestHeaders,
 		body: body.toString(),
 	});
 }
 
-async function registerTestClient(scopes: string[] = ["subjects:read", "subjects:write"]) {
-	let result = await registerManagementClient(db, { tenantId, name: "CI pipeline", scopes });
-	if (!result.ok) throw new Error("unreachable");
-	return result;
+async function registerTestClient(
+	scopes: string[] = ["subjects:read", "subjects:write"],
+	tokenEndpointAuthMethod: "client_secret_basic" | "client_secret_post" = "client_secret_basic",
+) {
+	let result = await platformTenantDO.registerClient({
+		name: "CI pipeline",
+		kind: "confidential",
+		redirectUris: [],
+		postLogoutRedirectUris: [],
+		grantTypes: ["client_credentials"],
+		responseTypes: [],
+		scopes,
+		tokenEndpointAuthMethod,
+		requireConsent: false,
+	});
+	if (!result.ok || result.secret === null) throw new Error("unreachable");
+	return { client: result.client, secret: result.secret };
 }
 
 describe("POST /oauth/token", () => {
@@ -116,7 +127,10 @@ describe("POST /oauth/token", () => {
 	});
 
 	test("mints an access token authenticated with client_secret_post", async () => {
-		let { client, secret } = await registerTestClient();
+		let { client, secret } = await registerTestClient(
+			["subjects:read", "subjects:write"],
+			"client_secret_post",
+		);
 		let router = buildRouter();
 
 		let response = await router.fetch(
@@ -139,7 +153,7 @@ describe("POST /oauth/token", () => {
 				code: "whatever",
 				code_verifier: "whatever",
 				redirect_uri: "https://example.com",
-				client_id: "mgmt_whatever",
+				client_id: "client_whatever",
 			}),
 		);
 
@@ -152,7 +166,7 @@ describe("POST /oauth/token", () => {
 		let router = buildRouter();
 
 		let response = await router.fetch(
-			tokenRequest({ grant_type: "client_credentials", client_id: "mgmt_whatever" }),
+			tokenRequest({ grant_type: "client_credentials", client_id: "client_whatever" }),
 		);
 
 		expect(response.status).toBe(401);
@@ -160,26 +174,8 @@ describe("POST /oauth/token", () => {
 		expect(body.error).toBe("invalid_client");
 	});
 
-	test("refuses a token naming a different tenant's resource", async () => {
-		let { client, secret } = await registerTestClient();
-		let router = buildRouter();
-
-		let response = await router.fetch(
-			tokenRequest({
-				grant_type: "client_credentials",
-				client_id: client.id,
-				client_secret: secret,
-				resource: `${ISSUER}/tenants/${otherTenantId}`,
-			}),
-		);
-
-		expect(response.status).toBe(400);
-		let body = (await response.json()) as Record<string, unknown>;
-		expect(body.error).toBe("invalid_target");
-	});
-
 	test("refuses a scope outside the client's own ceiling", async () => {
-		let { client, secret } = await registerTestClient(["subjects:read"]);
+		let { client, secret } = await registerTestClient(["subjects:read"], "client_secret_post");
 		let router = buildRouter();
 
 		let response = await router.fetch(
@@ -202,7 +198,7 @@ describe("POST /oauth/token", () => {
 		let response = await router.fetch(
 			tokenRequest(
 				{ grant_type: "client_credentials" },
-				{ Authorization: `Basic ${Base64.encode("mgmt_missing:whatever")}` },
+				{ Authorization: `Basic ${Base64.encode("client_missing:whatever")}` },
 			),
 		);
 

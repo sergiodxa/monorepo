@@ -98,6 +98,7 @@ import type {
 	SetConnectionEnabledResult,
 } from "./connections";
 import type {
+	DefineScopesInput,
 	EvaluateConsentInput,
 	EvaluateConsentResult,
 	ListGrantsInput,
@@ -3686,6 +3687,21 @@ export default class Tenant extends DurableObject<Cloudflare.Env> {
 	async listGrants(input: ListGrantsInput): Promise<WithCost<ListGrantsResult>> {
 		await this.#migrated;
 		return this.#withCost(() => Consent.listGrants(this.#db, input));
+	}
+
+	/**
+	 * Adds scopes to this tenant's own catalog, leaving a name already present
+	 * untouched. Safe to call on every registration a caller performs against a
+	 * scope vocabulary it owns, since a name already written is never overwritten.
+	 *
+	 * @param input - The scopes to add, each named, titled and described.
+	 */
+	async defineScopes(input: DefineScopesInput): Promise<WithCost<{ ok: true }>> {
+		await this.#migrated;
+		return this.#withCost(async () => {
+			await Consent.defineScopes(this.#db, input);
+			return { ok: true } as const;
+		});
 	}
 
 	/**

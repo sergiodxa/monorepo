@@ -1,8 +1,9 @@
 /**
  * Resolves a management API request's caller into a tenant id and a scope set,
- * from either a management-client bearer token or a dashboard session naming a
- * member of the tenant the URL's `:tenantId` segment addresses. Answers only who
- * is calling and with what scopes; a route checks its own required scope itself.
+ * from either a bearer token issued by the platform tenant's own token endpoint
+ * or a dashboard session naming a member of the tenant the URL's `:tenantId`
+ * segment addresses. Answers only who is calling and with what scopes; a route
+ * checks its own required scope itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,10 +19,11 @@ import type { ManagementResourceServer } from "~/app/lib/management-resource";
 
 import { managementProblem } from "~/app/http/lib/problem";
 import { managementResourceServer } from "~/app/lib/management-resource";
-import { ManagementAccessToken } from "~/app/lib/management-token";
+import { platformTenantIssuer, platformTenantStub } from "~/app/lib/platform-tenant";
+import AgentClientBinding from "~/app/models/agent-client-binding";
 import Membership from "~/app/models/membership";
-import { publishPlatformKeySet } from "~/app/models/platform-signing-key";
 import { scopesForRole } from "~/app/services/management-scopes";
+import { AccessToken } from "~/database/tokens";
 
 /** Who is calling, and the scopes that credential resolved to. */
 export interface ManagementCaller {
@@ -100,20 +102,33 @@ export interface ManagementAuthOptions {
 	resolveDashboardSubjectId: (ctx: RequestContext) => Promise<string | null>;
 }
 
-/** Verifies a presented bearer token against the platform's own published keys and issuer. */
+/**
+ * Verifies a presented bearer token against the platform tenant's own published
+ * keys and issuer, then resolves who it speaks for. A machine credential names
+ * its one reachable tenant at registration, in {@link AgentClientBinding} —
+ * checked here the same way a membership is checked, since neither a machine
+ * credential nor a person's own token ever needs to carry a tenant claim itself.
+ * A token with no binding is a person's own, obtained through an ordinary
+ * authorization-code-with-PKCE consent: which tenant it reaches, and at what
+ * scopes, is resolved fresh against the URL's own `:tenantId` and that
+ * subject's membership there — the intersection of the role's own scope
+ * ceiling and whatever the token's own consent actually granted, since a
+ * consent may have granted fewer scopes than the role would otherwise allow.
+ */
 async function resolveBearerCaller(
 	ctx: RequestContext,
 	api: ManagementResourceServer,
-	issuer: string,
+	pathTenantId: string | null,
 	token: string,
 ): Promise<ManagementCaller | { error: Response }> {
-	let published = await publishPlatformKeySet(ctx.db);
+	let platform = platformTenantStub();
+	let published = await platform.publishKeySet();
 	let keys = await JWK.importLocal(published);
 
-	let verified: ManagementAccessToken;
+	let verified: AccessToken;
 	try {
-		verified = await ManagementAccessToken.verify(token, keys, {
-			issuer,
+		verified = await AccessToken.verify(token, keys, {
+			issuer: platformTenantIssuer(),
 			algorithms: [JWK.Algorithm.ES256],
 		});
 	} catch {
@@ -123,7 +138,35 @@ async function resolveBearerCaller(
 	}
 
 	let scopes = verified.scope.split(" ").filter(Boolean);
-	return { tenantId: verified.tenantId, scopes, actor: { type: "client", id: verified.clientId } };
+
+	let binding = await AgentClientBinding.findByClientId(ctx.db, verified.clientId);
+	if (binding) {
+		return {
+			tenantId: binding.tenant_id,
+			scopes,
+			actor: { type: "client", id: verified.clientId },
+		};
+	}
+
+	if (pathTenantId === null) {
+		return {
+			error: unauthorized(api, "A bearer token or an authenticated dashboard session is required."),
+		};
+	}
+
+	let membership = await Membership.findByTenantAndSubject(ctx.db, pathTenantId, verified.subject);
+	if (!membership) {
+		return { error: forbidden(api, "This member does not belong to this tenant.") };
+	}
+
+	let roleScopes: string[] = scopesForRole(membership.role);
+	let grantedScopes = scopes.filter((scope) => roleScopes.includes(scope));
+
+	return {
+		tenantId: pathTenantId,
+		scopes: grantedScopes,
+		actor: { type: "member", id: verified.subject },
+	};
 }
 
 /**
@@ -156,7 +199,7 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 			let token = authorization.slice("Bearer ".length).trim();
 			if (!token) return unauthorized(api, "A bearer token is required.");
 
-			let resolved = await resolveBearerCaller(ctx, api, options.issuer, token);
+			let resolved = await resolveBearerCaller(ctx, api, pathTenantId, token);
 			if ("error" in resolved) return resolved.error;
 
 			if (pathTenantId !== null && pathTenantId !== resolved.tenantId) {

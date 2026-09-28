@@ -1,19 +1,20 @@
 /**
  * `POST /oauth/token` — the management API's own token endpoint: exchanges a
- * management client's id and secret for a short-lived access token about that
- * client, scoped to the tenant it was registered under. `client_credentials` is
- * the only grant this endpoint answers; it never issues a code or a refresh token.
+ * machine client's id and secret for a short-lived access token about that
+ * client, through the platform tenant's own, ordinary client-credentials
+ * grant. `client_credentials` is the only grant this endpoint answers; it
+ * never issues a code or a refresh token — a person's own token comes from
+ * the platform tenant's own authorization-code flow instead, not from here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { json } from "@sdxc/http/response";
-import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import { resolveClientAuth, tokenError } from "~/app/http/controllers/oauth/token";
-import { issueManagementClientCredentialsToken } from "~/app/services/management-token-grant";
+import { platformTenantStub } from "~/app/lib/platform-tenant";
 import routes from "~/routes/management";
 
 /**
@@ -27,10 +28,10 @@ function resources(form: FormData): string[] {
 }
 
 /**
- * Exchanges a management client's credentials for an access token bound to its
- * own tenant.
+ * Exchanges a machine client's credentials for an access token, minted by the
+ * platform tenant's own token endpoint under its own signing key.
  *
- * @param ctx - The request context (provides `db`).
+ * @param ctx - The request context.
  * @returns The minted access token as OAuth-shaped JSON with `Cache-Control:
  * no-store`, or the error the grant was refused for.
  * @example
@@ -65,14 +66,17 @@ export default createAction(routes.token, async (ctx) => {
 	}
 
 	let scope = form.get("scope");
+	let requestedResources = resources(form);
 
-	let outcome = await issueManagementClientCredentialsToken(ctx.db, {
+	let platform = platformTenantStub();
+
+	let outcome = await platform.issueClientCredentialsToken({
+		scope: typeof scope === "string" ? scope : null,
+		resource: requestedResources[0] ?? null,
 		clientId: clientAuth.auth.clientId,
 		clientSecret: clientAuth.auth.clientSecret,
-		scope: typeof scope === "string" ? scope : null,
-		resources: resources(form),
+		authScheme: clientAuth.auth.authScheme === "basic" ? "basic" : "post",
 		now: Date.now(),
-		issuer: `https://api.${env.PLATFORM_DOMAIN}`,
 	});
 
 	if (outcome.kind === "error")

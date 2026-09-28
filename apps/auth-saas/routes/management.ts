@@ -46,6 +46,8 @@ export default route({
 	subjectsExportStatus: get("/tenants/:tenantId/subjects/export/:runId"),
 	subjectsExportDownload: get("/tenants/:tenantId/subjects/export/:runId/download"),
 
+	agentClientsRegister: post("/tenants/:tenantId/agent-clients"),
+
 	clientsRegister: post("/tenants/:tenantId/clients"),
 	clientsList: get("/tenants/:tenantId/clients"),
 	clientsRead: get("/tenants/:tenantId/clients/:clientId"),

@@ -6,6 +6,13 @@
  * `buildXHarness` that calls {@link buildManagementTestCore}, the way
  * `subjects/test-harness.ts` and `clients/test-harness.ts` each do.
  *
+ * Every signed token is a real, machine-credential access token minted by a
+ * freshly-constructed platform tenant object, through the same
+ * client-credentials grant any tenant's own clients use — {@link
+ * usePlatformTenantForTesting} points the management API's own bearer
+ * verification at this same object, so a test never has to reach the real
+ * `TENANT` binding.
+ *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -16,24 +23,24 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { HostnameClient } from "@sdxc/hostname";
-import { JWK } from "@sdxc/jwt";
 import { createConformanceRecorder } from "@sdxc/openapi/testing";
 import { Database } from "remix/data-table";
 import { afterAll, expect } from "vitest";
 
 import { buildManagementDocument } from "~/app/http/openapi/document";
-import { ManagementAccessToken } from "~/app/lib/management-token";
+import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import AgentClientBinding from "~/app/models/agent-client-binding";
 import Customer from "~/app/models/customer";
 import Membership from "~/app/models/membership";
-import {
-	advancePlatformSigningKeys,
-	currentPlatformSigningKeyPair,
-} from "~/app/models/platform-signing-key";
 import Tenant from "~/app/models/tenant";
+import { MANAGEMENT_SCOPES } from "~/app/services/management-scopes";
 import { createTestDatabase } from "~/app/test/db";
 import TenantObject from "~/database/tenant-do";
 
 export const ISSUER = "https://api.example.com";
+
+/** The platform tenant's own OIDC issuer, distinct from `ISSUER`, the management API's own resource identifier. */
+const PLATFORM_ISSUER = "https://platform.example.com";
 
 /** Records every exchange a harness router serves, against the published document. */
 const CONFORMANCE = createConformanceRecorder(buildManagementDocument(ISSUER));
@@ -110,7 +117,6 @@ export async function buildManagementTestCore(
 	options: BuildManagementTestCoreOptions,
 ): Promise<ManagementTestCore> {
 	let db = await createTestDatabase();
-	await advancePlatformSigningKeys(db, { now: Date.now() });
 
 	let customer = await Customer.create(db, { name: "Acme, Inc." });
 	let tenant = await Tenant.create(db, {
@@ -135,6 +141,84 @@ export async function buildManagementTestCore(
 
 	let tenantDb = new Database(createSQLStorageDatabaseAdapter(state.storage.sql));
 
+	let platformState = createDurableObjectState();
+	let platformTenantDO = new TenantObject(platformState, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
+	await platformTenantDO.provision({ tenantId: "platform", issuer: PLATFORM_ISSUER });
+	await platformTenantDO.applyEntitlements({
+		plan: "pro",
+		features: { machine_access: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+
+	usePlatformTenantForTesting(
+		() => platformTenantDO as unknown as DurableObjectStub<TenantObject>,
+		PLATFORM_ISSUER,
+	);
+
+	/** One agent client registered per tenant id a test asks a token for, reused across repeated `signToken` calls. */
+	let agentClients = new Map<string, { clientId: string; secret: string; scopes: Set<string> }>();
+
+	/**
+	 * Registers, and binds to `tenantId`, the one agent client every token
+	 * minted for it reuses — widening its own registered ceiling whenever a
+	 * later call asks for a scope narrower tests never named up front, so a
+	 * resource area's own finer-grained scope (`export:credentials` alongside
+	 * `export:read`, say) is never refused for a reason no test itself states.
+	 */
+	async function agentClientFor(
+		tenantId: string,
+		requestedScopes: string[],
+	): Promise<{ clientId: string; secret: string }> {
+		let existing = agentClients.get(tenantId);
+
+		if (existing) {
+			let missing = requestedScopes.filter((scope) => !existing.scopes.has(scope));
+			if (missing.length > 0) {
+				for (let scope of missing) existing.scopes.add(scope);
+				await platformTenantDO.updateClient({
+					clientId: existing.clientId,
+					name: "test agent client",
+					kind: "confidential",
+					redirectUris: [],
+					postLogoutRedirectUris: [],
+					grantTypes: ["client_credentials"],
+					responseTypes: [],
+					scopes: [...existing.scopes],
+					tokenEndpointAuthMethod: "client_secret_basic",
+					requireConsent: false,
+				});
+			}
+			return existing;
+		}
+
+		let scopes = new Set([...MANAGEMENT_SCOPES, ...requestedScopes]);
+
+		let registered = await platformTenantDO.registerClient({
+			name: "test agent client",
+			kind: "confidential",
+			redirectUris: [],
+			postLogoutRedirectUris: [],
+			grantTypes: ["client_credentials"],
+			responseTypes: [],
+			scopes: [...scopes],
+			tokenEndpointAuthMethod: "client_secret_basic",
+			requireConsent: false,
+		});
+		if (!registered.ok || registered.secret === null) {
+			throw new Error("unreachable: test agent client registration failed");
+		}
+
+		await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId });
+
+		let created = { clientId: registered.client.id, secret: registered.secret, scopes };
+		agentClients.set(tenantId, created);
+		return created;
+	}
+
 	return {
 		db,
 		tenantId: tenant.id,
@@ -142,22 +226,23 @@ export async function buildManagementTestCore(
 		tenantDO,
 		tenantDb,
 		async signToken(overrides = {}) {
-			let pair = await currentPlatformSigningKeyPair(db);
-			if (!pair) throw new Error("unreachable");
-
-			let now = Math.floor(Date.now() / 1000);
 			let tenantId = overrides.tenantId ?? tenant.id;
+			let scope = overrides.scope ?? options.defaultScope;
+			let { clientId, secret } = await agentClientFor(tenantId, scope.split(" ").filter(Boolean));
 
-			return new ManagementAccessToken({
-				iss: ISSUER,
-				sub: "mgmt_client_1",
-				client_id: "mgmt_client_1",
-				aud: `${ISSUER}/tenants/${tenantId}`,
-				tenant_id: tenantId,
-				scope: overrides.scope ?? options.defaultScope,
-				iat: now,
-				exp: now + 900,
-			}).sign(JWK.Algorithm.ES256, [pair]);
+			let outcome = await platformTenantDO.issueClientCredentialsToken({
+				clientId,
+				clientSecret: secret,
+				scope,
+				resource: null,
+				authScheme: "basic",
+				now: Date.now(),
+			});
+			if (outcome.kind !== "tokens") {
+				throw new Error("unreachable: test agent client token issuance failed");
+			}
+
+			return outcome.accessToken;
 		},
 		request(path, token, init = {}) {
 			let { headers: initHeaders, ...rest } = init;

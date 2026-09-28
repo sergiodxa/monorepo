@@ -12,6 +12,7 @@ import { createDocument } from "@sdxc/openapi";
 import { oauth2 } from "@sdxc/openapi/security";
 
 import { PUBLISHED_API_VERSIONS } from "~/app/http/lib/api-version";
+import { AGENT_CLIENTS_OPERATIONS } from "~/app/http/openapi/agent-clients";
 import { API_KEYS_OPERATIONS } from "~/app/http/openapi/api-keys";
 import { AUDIT_OPERATIONS } from "~/app/http/openapi/audit";
 import { CLIENTS_OPERATIONS } from "~/app/http/openapi/clients";
@@ -22,21 +23,7 @@ import { SECURITY_SCHEME } from "~/app/http/openapi/shared";
 import { SUBJECTS_OPERATIONS } from "~/app/http/openapi/subjects";
 import { TENANTS_OPERATIONS } from "~/app/http/openapi/tenants";
 import { WEBHOOK_ENDPOINTS_OPERATIONS } from "~/app/http/openapi/webhook-endpoints";
-import { MANAGEMENT_SCOPES } from "~/app/services/management-scopes";
-
-/** What each scope lets a token do, for the OAuth flow the document advertises. */
-const SCOPE_DESCRIPTIONS: Record<(typeof MANAGEMENT_SCOPES)[number], string> = {
-	"subjects:read": "Read subjects, their identifiers, roles, grants and credentials",
-	"subjects:write": "Create, change, block and delete subjects, and import subjects",
-	"sessions:write": "Revoke a subject's sessions",
-	"clients:write": "Register, change and delete clients and their secrets",
-	"keys:write": "Create, rotate and revoke API keys",
-	"webhooks:write": "Register and change webhook endpoints, and replay deliveries",
-	"audit:read": "Read the tenant's audit events",
-	"export:read": "Export the tenant's subjects",
-	"tenant:write": "Change the tenant's domains and sign-in policies",
-	"members:write": "Add, invite, change and remove the tenant's members",
-};
+import { MANAGEMENT_SCOPE_DESCRIPTIONS as SCOPE_DESCRIPTIONS } from "~/app/services/management-scopes";
 
 /**
  * Builds the document for the API served at `issuer`. `info.version` is the
@@ -67,6 +54,7 @@ export function buildManagementDocument(issuer: string) {
 	}).add(
 		...PUBLIC_OPERATIONS,
 		...SUBJECTS_OPERATIONS,
+		...AGENT_CLIENTS_OPERATIONS,
 		...CLIENTS_OPERATIONS,
 		...API_KEYS_OPERATIONS,
 		...WEBHOOK_ENDPOINTS_OPERATIONS,

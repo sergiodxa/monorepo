@@ -1,8 +1,10 @@
 /**
- * Drives `managementAuth` through a small test router: resolving a bearer token
- * signed by the platform's own key, resolving a dashboard session's membership
- * role into scopes, and refusing every way a caller fails to authenticate or
- * reach a tenant it does not belong to.
+ * Drives `managementAuth` through a small test router: resolving a bearer
+ * token minted by the platform tenant's own token endpoint — a machine
+ * credential's client-credentials token, and a person's own
+ * authorization-code token — and a dashboard session's membership role into
+ * scopes, and refusing every way a caller fails to authenticate or reach a
+ * tenant it does not belong to.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,30 +13,39 @@
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { JWK } from "@sdxc/jwt";
+import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
+import { Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
+import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid";
+import { Database as DataTableDatabase } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
-import { ManagementAccessToken } from "~/app/lib/management-token";
+import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
+import AgentClientBinding from "~/app/models/agent-client-binding";
 import Customer from "~/app/models/customer";
 import Membership from "~/app/models/membership";
-import {
-	advancePlatformSigningKeys,
-	currentPlatformSigningKeyPair,
-} from "~/app/models/platform-signing-key";
 import Tenant from "~/app/models/tenant";
 import { createTestDatabase } from "~/app/test/db";
+import { authorizationCodes } from "~/database/authorization";
+import { openSession } from "~/database/sessions";
+import TenantObject from "~/database/tenant-do";
 
 import { managementAuth } from "./management-auth";
 
 const ISSUER = "https://api.example.com";
+
+const PLATFORM_ISSUER = "https://platform.example.com";
 
 const METADATA_URL = "https://api.example.com/.well-known/oauth-protected-resource";
 
 let db: Database;
 let tenantId: string;
 let otherTenantId: string;
+let platformTenantDO: TenantObject;
+let platformDb: Database;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
@@ -54,27 +65,135 @@ beforeEach(async () => {
 		issuer: "https://other.auth.example.com",
 	});
 	otherTenantId = other.id;
+
+	let platformState = createDurableObjectState();
+	platformTenantDO = new TenantObject(platformState, {
+		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
+	} as Cloudflare.Env);
+	await platformTenantDO.provision({ tenantId: "platform", issuer: PLATFORM_ISSUER });
+	await platformTenantDO.applyEntitlements({
+		plan: "pro",
+		features: { machine_access: true },
+		dauCap: null,
+		auditRetentionDays: null,
+		effectiveAt: Date.now(),
+	});
+	platformDb = new DataTableDatabase(createSQLStorageDatabaseAdapter(platformState.storage.sql));
+
+	usePlatformTenantForTesting(
+		() => platformTenantDO as unknown as DurableObjectStub<TenantObject>,
+		PLATFORM_ISSUER,
+	);
 });
 
-/** Signs a management access token the way the token endpoint mints one. */
-async function signToken(
-	overrides: Partial<{ tenantId: string; scope: string }> = {},
+/** Registers an agent client on the platform tenant, bound to `boundTenantId`, and mints its token. */
+async function signMachineToken(
+	boundTenantId: string,
+	scope = "subjects:read subjects:write",
 ): Promise<string> {
-	await advancePlatformSigningKeys(db, { now: Date.now() });
-	let pair = await currentPlatformSigningKeyPair(db);
-	if (!pair) throw new Error("unreachable");
+	let registered = await platformTenantDO.registerClient({
+		name: "agent client",
+		kind: "confidential",
+		redirectUris: [],
+		postLogoutRedirectUris: [],
+		grantTypes: ["client_credentials"],
+		responseTypes: [],
+		scopes: ["subjects:read", "subjects:write"],
+		tokenEndpointAuthMethod: "client_secret_basic",
+		requireConsent: false,
+	});
+	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
 
-	let now = Math.floor(Date.now() / 1000);
-	return new ManagementAccessToken({
-		iss: ISSUER,
-		sub: "mgmt_client_1",
-		client_id: "mgmt_client_1",
-		aud: `${ISSUER}/tenants/${overrides.tenantId ?? tenantId}`,
-		tenant_id: overrides.tenantId ?? tenantId,
-		scope: overrides.scope ?? "subjects:read subjects:write",
-		iat: now,
-		exp: now + 900,
-	}).sign(JWK.Algorithm.ES256, [pair]);
+	await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId: boundTenantId });
+
+	let outcome = await platformTenantDO.issueClientCredentialsToken({
+		clientId: registered.client.id,
+		clientSecret: registered.secret,
+		scope,
+		resource: null,
+		authScheme: "basic",
+		now: Date.now(),
+	});
+	if (outcome.kind !== "tokens") throw new Error("unreachable");
+	return outcome.accessToken;
+}
+
+/** A subject and its open session on the platform tenant, ready to bind an authorization code to. */
+async function createPlatformSubjectAndSession(): Promise<{
+	subjectId: string;
+	sessionId: string;
+}> {
+	let created = await platformTenantDO.createSubject({
+		identifiers: [{ kind: "username", value: `jane-${generateUUID()}` }],
+	});
+	if (!created.ok) throw new Error("unreachable");
+
+	let session = await openSession(platformDb, {
+		subjectId: created.subjectId,
+		amr: ["pwd"],
+		remembered: true,
+	});
+	return { subjectId: created.subjectId, sessionId: session.sessionId };
+}
+
+/** Mints an interactive, person-obtained token: a client of the platform tenant, an
+ * authorization code written directly (the way `oauth/token.test.ts` builds one),
+ * exchanged for a real token carrying exactly the scopes the code names. */
+async function signHumanToken(input: {
+	subjectId: string;
+	sessionId: string;
+	scopes: string[];
+}): Promise<string> {
+	let redirectUri = "https://example.com/callback";
+
+	let registered = await platformTenantDO.registerClient({
+		name: "interactive client",
+		kind: "confidential",
+		redirectUris: [redirectUri],
+		postLogoutRedirectUris: [],
+		grantTypes: ["authorization_code"],
+		responseTypes: ["code"],
+		scopes: input.scopes,
+		tokenEndpointAuthMethod: "client_secret_basic",
+		requireConsent: false,
+	});
+	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
+
+	let code = `code-${generateUUID()}`;
+	let codeVerifier = `verifier-${generateUUID()}`;
+	let codeHashed = await sha256(code);
+	let verifierHashed = await sha256(codeVerifier);
+	if (isFailure(codeHashed) || isFailure(verifierHashed)) throw new Error("unreachable");
+	let now = Date.now();
+
+	await platformDb.create(authorizationCodes, {
+		id: generateUUID(),
+		code_hash: Hex.encode(codeHashed.data),
+		client_id: registered.client.id,
+		redirect_uri: redirectUri,
+		code_challenge: Base64Url.encode(verifierHashed.data),
+		scopes: input.scopes,
+		subject_id: input.subjectId,
+		session_id: input.sessionId,
+		nonce: null,
+		auth_time: now,
+		created_at: now,
+		expires_at: now + 60_000,
+		redeemed_at: null,
+		token_family_id: null,
+	});
+
+	let outcome = await platformTenantDO.exchangeCode({
+		code,
+		codeVerifier,
+		redirectUri,
+		clientId: registered.client.id,
+		clientSecret: registered.secret,
+		authScheme: "basic",
+		now,
+	});
+	if (outcome.kind !== "tokens") throw new Error("unreachable");
+	return outcome.accessToken;
 }
 
 function buildRouter(resolveDashboardSubjectId: (ctx: RequestContext) => Promise<string | null>) {
@@ -86,9 +205,9 @@ function buildRouter(resolveDashboardSubjectId: (ctx: RequestContext) => Promise
 	return router;
 }
 
-describe("bearer token", () => {
-	test("resolves the caller from a token the platform itself signed", async () => {
-		let token = await signToken();
+describe("machine bearer token", () => {
+	test("resolves the caller from its own registration-time tenant binding", async () => {
+		let token = await signMachineToken(tenantId);
 		let router = buildRouter(async () => null);
 
 		let response = await router.fetch(
@@ -99,15 +218,15 @@ describe("bearer token", () => {
 
 		expect(response.status).toBe(200);
 		let body = (await response.json()) as unknown;
-		expect(body).toEqual({
+		expect(body).toMatchObject({
 			tenantId,
 			scopes: ["subjects:read", "subjects:write"],
-			actor: { type: "client", id: "mgmt_client_1" },
+			actor: { type: "client" },
 		});
 	});
 
-	test("refuses a token naming a different tenant than the URL's own", async () => {
-		let token = await signToken({ tenantId: otherTenantId });
+	test("refuses a credential bound to a different tenant than the URL's own", async () => {
+		let token = await signMachineToken(otherTenantId);
 		let router = buildRouter(async () => null);
 
 		let response = await router.fetch(
@@ -135,6 +254,78 @@ describe("bearer token", () => {
 		expect(response.headers.get("WWW-Authenticate")).toBe(
 			`Bearer error="invalid_token", resource_metadata="${METADATA_URL}"`,
 		);
+	});
+});
+
+describe("human bearer token", () => {
+	test("one subject holding memberships on two differently-owned tenants reaches both with the same token", async () => {
+		let { subjectId, sessionId } = await createPlatformSubjectAndSession();
+		let token = await signHumanToken({
+			subjectId,
+			sessionId,
+			scopes: ["subjects:read", "subjects:write"],
+		});
+
+		await Membership.create(db, { tenantId, subjectId, role: "owner" });
+		await Membership.create(db, { tenantId: otherTenantId, subjectId, role: "owner" });
+
+		let router = buildRouter(async () => null);
+
+		let first = await router.fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+		expect(first.status).toBe(200);
+		expect(await first.json()).toMatchObject({
+			tenantId,
+			actor: { type: "member", id: subjectId },
+		});
+
+		let second = await router.fetch(
+			new Request(`https://api.example.com/tenants/${otherTenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+		expect(second.status).toBe(200);
+		expect(await second.json()).toMatchObject({
+			tenantId: otherTenantId,
+			actor: { type: "member", id: subjectId },
+		});
+	});
+
+	test("carries only the intersection of the role's own scopes and what the token itself was granted", async () => {
+		let { subjectId, sessionId } = await createPlatformSubjectAndSession();
+		let token = await signHumanToken({ subjectId, sessionId, scopes: ["subjects:read"] });
+
+		await Membership.create(db, { tenantId, subjectId, role: "owner" });
+
+		let router = buildRouter(async () => null);
+
+		let response = await router.fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		let body = (await response.json()) as { scopes: string[] };
+		expect(body.scopes).toEqual(["subjects:read"]);
+	});
+
+	test("refuses a subject with no membership at the URL's tenant", async () => {
+		let { subjectId, sessionId } = await createPlatformSubjectAndSession();
+		let token = await signHumanToken({ subjectId, sessionId, scopes: ["subjects:read"] });
+
+		let router = buildRouter(async () => null);
+
+		let response = await router.fetch(
+			new Request(`https://api.example.com/tenants/${tenantId}/probe`, {
+				headers: { Authorization: `Bearer ${token}` },
+			}),
+		);
+
+		expect(response.status).toBe(403);
 	});
 });
 

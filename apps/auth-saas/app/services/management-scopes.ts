@@ -9,6 +9,7 @@
  */
 
 import type { MembershipRole } from "~/app/models/membership";
+import type Tenant from "~/database/tenant-do";
 
 /** Every scope the management API ever checks, spelled `<resource>:<read|write>`. */
 export const MANAGEMENT_SCOPES = [
@@ -29,6 +30,58 @@ export type ManagementScope = (typeof MANAGEMENT_SCOPES)[number];
 /** Whether `value` names one of the scopes the management API recognizes. */
 export function isManagementScope(value: string): value is ManagementScope {
 	return (MANAGEMENT_SCOPES as readonly string[]).includes(value);
+}
+
+/**
+ * What each scope lets a token do — the one place this text is written, read
+ * both by the OpenAPI document's OAuth flow description and by the seeding
+ * step that adds these scopes to the platform tenant's own catalog.
+ */
+export const MANAGEMENT_SCOPE_DESCRIPTIONS: Record<ManagementScope, string> = {
+	"subjects:read": "Read subjects, their identifiers, roles, grants and credentials",
+	"subjects:write": "Create, change, block and delete subjects, and import subjects",
+	"sessions:write": "Revoke a subject's sessions",
+	"clients:write": "Register, change and delete clients and their secrets",
+	"keys:write": "Create, rotate and revoke API keys",
+	"webhooks:write": "Register and change webhook endpoints, and replay deliveries",
+	"audit:read": "Read the tenant's audit events",
+	"export:read": "Export the tenant's subjects",
+	"tenant:write": "Change the tenant's domains and sign-in policies",
+	"members:write": "Add, invite, change and remove the tenant's members",
+};
+
+/** A short label for each scope, for the consent screen a person granting one of these ever sees. */
+export const MANAGEMENT_SCOPE_TITLES: Record<ManagementScope, string> = {
+	"subjects:read": "Read subjects",
+	"subjects:write": "Manage subjects",
+	"sessions:write": "Revoke sessions",
+	"clients:write": "Manage clients",
+	"keys:write": "Manage API keys",
+	"webhooks:write": "Manage webhook endpoints",
+	"audit:read": "Read audit events",
+	"export:read": "Export subjects",
+	"tenant:write": "Manage tenant settings",
+	"members:write": "Manage tenant members",
+};
+
+/**
+ * Adds the management API's own scope vocabulary to the platform tenant's scope
+ * catalog, leaving a name already present untouched. The platform tenant is the
+ * only tenant this vocabulary is ever asked to grant access to, so nothing calls
+ * this against any other tenant's own catalog.
+ *
+ * @param platform - A stub for the platform tenant's own Durable Object.
+ * @example
+ * await seedManagementScopes(env.TENANT.getByName(env.PLATFORM_DOMAIN));
+ */
+export async function seedManagementScopes(platform: DurableObjectStub<Tenant>): Promise<void> {
+	await platform.defineScopes({
+		scopes: MANAGEMENT_SCOPES.map((name) => ({
+			name,
+			title: MANAGEMENT_SCOPE_TITLES[name],
+			description: MANAGEMENT_SCOPE_DESCRIPTIONS[name],
+		})),
+	});
 }
 
 /** The two scopes a tenant's own `admin` membership never carries. */
