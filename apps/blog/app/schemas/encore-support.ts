@@ -87,8 +87,8 @@ function choice<const Option extends string>(options: ReadonlyArray<Option>, mes
 }
 
 /**
- * The support request as the form posts it. `website` is the honeypot: a field hidden from
- * people that a form-filling bot completes, which the controller checks before anything else.
+ * The support request as the form posts it. The honeypot fields post alongside it and are
+ * verified before this schema runs, so they never reach a validated request.
  */
 export const SupportRequestSchema = f.object({
 	name: optionalLine("Name", SUPPORT_LIMITS.name),

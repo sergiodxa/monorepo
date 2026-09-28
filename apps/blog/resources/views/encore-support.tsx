@@ -1,15 +1,16 @@
 /**
  * View for the Encore support page: what the app is, how to describe a problem, and the
  * support form. Each state the controller reaches — idle, sent, invalid, rate-limited,
- * failed — renders here, and every state but `sent` keeps the visitor's values in the form.
+ * failed, resubmit — renders here, and every state but `sent` keeps the visitor's values.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Honeypot } from "@sdxc/honeypot";
 import type { Handle } from "remix/ui";
 
-import { visuallyHidden } from "@sdxc/u/a11y";
+import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { container, flexWrap, gap, grid, gridTemplate, hstack, repeat } from "@sdxc/u/layout";
@@ -48,9 +49,9 @@ const ENHANCEMENT_SRC = "/js/encore-support.js";
 export namespace EncoreSupportView {
 	/**
 	 * `sent` replaces the form with the confirmation; the others render the form, with the
-	 * matching alert above it for `rate-limited` and `failed`.
+	 * matching alert above it for `rate-limited`, `failed`, `invalid` and `resubmit`.
 	 */
-	export type State = "idle" | "sent" | "invalid" | "rate-limited" | "failed";
+	export type State = "idle" | "sent" | "invalid" | "rate-limited" | "failed" | "resubmit";
 
 	/** The form's values as the visitor typed them, keyed by field name. */
 	export type Values = Partial<
@@ -63,6 +64,8 @@ export namespace EncoreSupportView {
 		values: Values;
 		/** Validation issues by field path, which the form hands each field by name. */
 		issues: ReadonlyArray<Form.Issue>;
+		/** Freshly issued trap fields; `sent` renders no form and needs none. */
+		honeypot?: Honeypot.Fields;
 	}
 
 	/** Props of a labeled native select, which reads its own error from `issues`. */
@@ -176,7 +179,7 @@ function MessageField(handle: Handle<EncoreSupportView.MessageProps>) {
  */
 export function EncoreSupportView() {
 	return ({ model }: { model: EncoreSupportView.Model }) => {
-		let { state, values, issues } = model;
+		let { state, values, issues, honeypot } = model;
 		let action = routes.encoreSupport.action.href();
 
 		return (
@@ -269,6 +272,16 @@ export function EncoreSupportView() {
 										</Alert.Content>
 									</Alert>
 								) : null}
+								{state === "resubmit" ? (
+									<Alert color="warning" live="assertive">
+										<Alert.Content>
+											<Alert.Description>
+												This form expired before it was sent. Your message has been preserved—please
+												send it again.
+											</Alert.Description>
+										</Alert.Content>
+									</Alert>
+								) : null}
 								{state === "invalid" ? (
 									<Alert color="danger" live="assertive">
 										<Alert.Content>
@@ -338,16 +351,7 @@ export function EncoreSupportView() {
 
 								<MessageField value={values.message} issues={issues} />
 
-								<div aria-hidden="true" mix={[visuallyHidden()]}>
-									<label htmlFor="support-website">Leave this field empty</label>
-									<input
-										id="support-website"
-										type="text"
-										name="website"
-										tabIndex={-1}
-										autoComplete="off"
-									/>
-								</div>
+								{honeypot ? <HoneypotFields {...honeypot} /> : null}
 
 								<p mix={[m(0), text("sm")]}>
 									We’ll use the information you submit to respond to your request and investigate

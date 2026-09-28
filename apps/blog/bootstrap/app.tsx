@@ -15,6 +15,8 @@ import type { Transport } from "@sdxc/mail";
 import type { Middleware, RequestContext } from "remix/router";
 import type { ResolveFrameContext } from "remix/ui/server";
 
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
 import { lazy } from "@sdxc/lazy-route";
@@ -196,13 +198,22 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 	);
 	/**
 	 * The Encore support form takes anonymous submissions, so it answers only same-origin
-	 * browser posts and reaches the support desk the controller rate-limits and mails through.
+	 * browser posts, carries honeypot fields, and reaches the support desk the controller
+	 * rate-limits and mails through. The honeypot's key derives from the session secret under a
+	 * `honeypot:` label, so no second secret is provisioned; a refused submission reaches the
+	 * controller, which answers a filled trap like a success and asks a person to send again.
 	 */
 	router.map(
 		routes.encoreSupport,
 		lazy(
 			() => import("~/app/http/controllers/encore-support"),
-			[cop(), supportDesk(env, options.mailTransport)],
+			[
+				cop(),
+				honeypot(new Honeypot({ secret: `honeypot:${env.COOKIE_SESSION_SECRET}` }), {
+					onFailure: () => null,
+				}),
+				supportDesk(env, options.mailTransport),
+			],
 		),
 	);
 	router.map(

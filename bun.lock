@@ -92,6 +92,7 @@
         "@sdxc/email-address": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/highlight": "workspace:*",
+        "@sdxc/honeypot": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/jwt": "workspace:*",

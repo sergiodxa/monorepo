@@ -1,7 +1,8 @@
 /**
  * Drives the Encore support page through the real router inside workerd, against the local
  * session KV and rate-limit binding, with mail captured by a memory transport: the page, a
- * delivered request and its confirmation, validation, delivery failure, spam and abuse guards.
+ * delivered request and its confirmation, validation, delivery failure, the honeypot fields
+ * the page renders, and the abuse guards.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -55,8 +56,26 @@ function uniqueAddress() {
 	return `10.${bytes[0]}.${bytes[1]}.${Math.floor(Math.random() * 250) + 1}`;
 }
 
-/** A valid submission, with any field replaced. */
-function submission(fields: Record<string, string> = {}) {
+/** The honeypot fields a rendered form carries, read from its HTML as a browser would post them. */
+function honeypotFields(html: string) {
+	let token = html.match(/<input type="hidden" name="(hp-token)" value="([^"]+)"/);
+	let trap = html.match(/<input type="text" id="(hp_[a-z]+)"/);
+	if (!token?.[1] || !token[2] || !trap?.[1])
+		throw new Error("the page rendered no honeypot fields");
+	return { tokenField: token[1], token: token[2], trapField: trap[1] };
+}
+
+/** The honeypot fields of a freshly loaded support page. */
+async function issuedFields() {
+	return honeypotFields(await (await load()).text());
+}
+
+/**
+ * A valid submission carrying the honeypot fields of a freshly loaded page, with any field
+ * replaced and the trap set to `trap`.
+ */
+async function submission(fields: Record<string, string> = {}, trap = "") {
+	let honeypot = await issuedFields();
 	return new URLSearchParams({
 		name: "Ada Lovelace",
 		email: "ada@example.com",
@@ -66,7 +85,8 @@ function submission(fields: Record<string, string> = {}) {
 		appVersion: "1.2",
 		message:
 			"The timer stops when I reveal the second card.\n\nSteps: open a game, reveal two cards.",
-		website: "",
+		[honeypot.tokenField]: honeypot.token,
+		[honeypot.trapField]: trap,
 		...fields,
 	});
 }
@@ -122,6 +142,16 @@ describe("GET /apps/encore/support", () => {
 		expect(html).toContain('href="/apps/encore/privacy"');
 	});
 
+	test("renders the honeypot trap out of reach of people and autofill", async () => {
+		let html = await (await load()).text();
+
+		expect(html).toMatch(/<div aria-hidden="true" inert class="[^"]+"><label for="hp_[a-z]+">/);
+		expect(html).toMatch(
+			/<input type="text" id="hp_[a-z]+" name="hp_[a-z]+" value="" tabindex="-1" autocomplete="off"/,
+		);
+		expect(html).not.toContain('name="website"');
+	});
+
 	test("labels every visible control", async () => {
 		let html = await (await load()).text();
 
@@ -135,7 +165,7 @@ describe("GET /apps/encore/support", () => {
 describe("POST /apps/encore/support", () => {
 	test("mails the request to the inbox, replying to the visitor, then confirms once", async () => {
 		let transport = new MemoryTransport();
-		let response = await submit(submission(), { transport });
+		let response = await submit(await submission(), { transport });
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(PATH);
@@ -166,7 +196,7 @@ describe("POST /apps/encore/support", () => {
 
 	test("escapes what the visitor wrote in the email", async () => {
 		let transport = new MemoryTransport();
-		await submit(submission({ message: "<script>alert(1)</script> breaks the lobby" }), {
+		await submit(await submission({ message: "<script>alert(1)</script> breaks the lobby" }), {
 			transport,
 		});
 
@@ -177,7 +207,7 @@ describe("POST /apps/encore/support", () => {
 	test("rejects invalid fields with field-level errors, keeping the values, sending nothing", async () => {
 		let transport = new MemoryTransport();
 		let response = await submit(
-			submission({ email: "not-an-email", topic: "Refund", message: "Help me please now" }),
+			await submission({ email: "not-an-email", topic: "Refund", message: "Help me please now" }),
 			{ transport },
 		);
 		let html = await response.text();
@@ -192,7 +222,7 @@ describe("POST /apps/encore/support", () => {
 	});
 
 	test("requires an email and a message", async () => {
-		let response = await submit(submission({ email: "", message: "" }), {
+		let response = await submit(await submission({ email: "", message: "" }), {
 			transport: new MemoryTransport(),
 		});
 		let html = await response.text();
@@ -203,7 +233,7 @@ describe("POST /apps/encore/support", () => {
 	});
 
 	test("reports a rejected delivery as an error and preserves the message", async () => {
-		let response = await submit(submission(), { transport: new RejectingTransport() });
+		let response = await submit(await submission(), { transport: new RejectingTransport() });
 		let html = await response.text();
 
 		expect(response.status).toBe(503);
@@ -216,7 +246,10 @@ describe("POST /apps/encore/support", () => {
 
 	test("fails closed when no support inbox is configured", async () => {
 		let transport = new MemoryTransport();
-		let response = await submit(submission(), { transport, env: { SUPPORT_INBOX: undefined } });
+		let response = await submit(await submission(), {
+			transport,
+			env: { SUPPORT_INBOX: undefined },
+		});
 
 		expect(response.status).toBe(503);
 		expect(transport.messages).toHaveLength(0);
@@ -224,20 +257,55 @@ describe("POST /apps/encore/support", () => {
 
 	test("answers a filled honeypot like a success without sending", async () => {
 		let transport = new MemoryTransport();
-		let response = await submit(submission({ website: "https://spam.example" }), { transport });
+		let response = await submit(await submission({}, "https://spam.example"), { transport });
 
 		expect(response.status).toBe(303);
 		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("asks to send again when the honeypot token is missing, keeping the values", async () => {
+		let transport = new MemoryTransport();
+		let body = await submission();
+		body.delete("hp-token");
+		let response = await submit(body, { transport });
+		let html = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(transport.messages).toHaveLength(0);
+		expect(html).toContain("This form expired before it was sent.");
+		expect(html).toContain("The timer stops when I reveal the second card.");
+		expect(honeypotFields(html).token).toBeTruthy();
+	});
+
+	test("refuses a forged honeypot token without sending", async () => {
+		let transport = new MemoryTransport();
+		let response = await submit(await submission({ "hp-token": "forged.token" }), { transport });
+
+		expect(response.status).toBe(400);
+		expect(transport.messages).toHaveLength(0);
+	});
+
+	test("re-renders a rejected form with fields that verify on the next send", async () => {
+		let transport = new MemoryTransport();
+		let rejected = await submit(await submission({ email: "not-an-email" }), { transport });
+		let honeypot = honeypotFields(await rejected.text());
+
+		let retry = await submission();
+		retry.set(honeypot.tokenField, honeypot.token);
+		let response = await submit(retry, { transport });
+
+		expect(response.status).toBe(303);
+		expect(transport.messages).toHaveLength(1);
 	});
 
 	test("limits how often one address may submit, keeping the values", async () => {
 		let transport = new MemoryTransport();
 		let address = uniqueAddress();
 		for (let attempt = 0; attempt < SUPPORT_RATE_LIMIT; attempt++) {
-			await submit(submission(), { transport, address });
+			await submit(await submission(), { transport, address });
 		}
 
-		let response = await submit(submission(), { transport, address });
+		let response = await submit(await submission(), { transport, address });
 		let html = await response.text();
 
 		expect(response.status).toBe(429);
@@ -248,7 +316,7 @@ describe("POST /apps/encore/support", () => {
 
 	test("refuses a cross-site post", async () => {
 		let transport = new MemoryTransport();
-		let response = await submit(submission(), {
+		let response = await submit(await submission(), {
 			transport,
 			headers: { "sec-fetch-site": "cross-site" },
 		});
