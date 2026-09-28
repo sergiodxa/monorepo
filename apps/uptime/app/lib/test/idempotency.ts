@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
+import { gte } from "remix/data-table";
 
 /**
  * Marks every idempotency record as claimed by a request that is still running, so the
@@ -22,6 +23,6 @@ export async function markInFlight(db: Database): Promise<void> {
 	await db.updateMany(
 		idempotencyKeys,
 		{ state: "in-flight", response: null, lease_expires_at: Date.now() + 60_000 },
-		{ where: {} },
+		{ where: gte("id", "") },
 	);
 }
