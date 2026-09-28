@@ -25,6 +25,7 @@ import { raw } from "@sdxc/u/general";
 import {
 	absolute,
 	container,
+	fixed,
 	flex,
 	flexCol,
 	flexColReverse,
@@ -163,7 +164,18 @@ export function Dialog(handle: Handle<Dialog.Props>) {
 				id={id}
 				data-slot="dialog"
 				mix={[
+					/**
+					 * Establishes the containing block {@link Dialog.Close} pins itself to while
+					 * the panel sits in the page's flow, which a dialog opened through its `open`
+					 * attribute alone does.
+					 */
 					relative(),
+					/**
+					 * Measures a modal panel against the viewport, so it stays centered on screen
+					 * however far the page behind it is scrolled: the top layer resolves any other
+					 * positioning scheme against the document's own coordinates.
+					 */
+					when("&:modal", fixed()),
 					bg("neutral.tint"),
 					fg("neutral.emphasis"),
 					rounded("lg"),
