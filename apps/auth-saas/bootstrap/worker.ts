@@ -32,6 +32,7 @@ import Tenant from "~/database/tenant-do";
 
 import { router } from "./app";
 import { managementRouter } from "./management-app";
+import { mcpRouter } from "./mcp-app";
 import { tenantRouter } from "./tenant-app";
 
 export { Tenant };
@@ -135,6 +136,9 @@ export default {
 
 		if (isPlatformHost(hostname)) {
 			if (hostname === managementHostname()) return await managementRouter.fetch(request);
+			if (url.pathname === "/mcp" || url.pathname === "/.well-known/oauth-protected-resource") {
+				return await mcpRouter.fetch(request);
+			}
 			return await router.fetch(request);
 		}
 

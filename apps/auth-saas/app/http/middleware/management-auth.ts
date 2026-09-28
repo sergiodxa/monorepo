@@ -104,16 +104,41 @@ export interface ManagementAuthOptions {
 
 /**
  * Verifies a presented bearer token against the platform tenant's own published
- * keys and issuer, then resolves who it speaks for. A machine credential names
- * its one reachable tenant at registration, in {@link AgentClientBinding} —
- * checked here the same way a membership is checked, since neither a machine
- * credential nor a person's own token ever needs to carry a tenant claim itself.
- * A token with no binding is a person's own, obtained through an ordinary
- * authorization-code-with-PKCE consent: which tenant it reaches, and at what
- * scopes, is resolved fresh against the URL's own `:tenantId` and that
- * subject's membership there — the intersection of the role's own scope
- * ceiling and whatever the token's own consent actually granted, since a
- * consent may have granted fewer scopes than the role would otherwise allow.
+ * keys and issuer, the one check any caller of the platform tenant's token
+ * endpoint must pass regardless of which resource server it then reaches —
+ * the management API through {@link resolveBearerCaller} below, or another
+ * protected resource verifying the same token before forwarding it onward.
+ *
+ * @param token - The bearer credential as presented.
+ * @returns The verified token, or `null` when it does not verify.
+ */
+export async function verifyManagementBearerToken(token: string): Promise<AccessToken | null> {
+	let platform = platformTenantStub();
+	let published = await platform.publishKeySet();
+	let keys = await JWK.importLocal(published);
+
+	try {
+		return await AccessToken.verify(token, keys, {
+			issuer: platformTenantIssuer(),
+			algorithms: [JWK.Algorithm.ES256],
+		});
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Resolves a presented bearer token into who it speaks for. A machine
+ * credential names its one reachable tenant at registration, in
+ * {@link AgentClientBinding} — checked here the same way a membership is
+ * checked, since neither a machine credential nor a person's own token ever
+ * needs to carry a tenant claim itself. A token with no binding is a person's
+ * own, obtained through an ordinary authorization-code-with-PKCE consent:
+ * which tenant it reaches, and at what scopes, is resolved fresh against the
+ * URL's own `:tenantId` and that subject's membership there — the
+ * intersection of the role's own scope ceiling and whatever the token's own
+ * consent actually granted, since a consent may have granted fewer scopes
+ * than the role would otherwise allow.
  */
 async function resolveBearerCaller(
 	ctx: RequestContext,
@@ -121,17 +146,8 @@ async function resolveBearerCaller(
 	pathTenantId: string | null,
 	token: string,
 ): Promise<ManagementCaller | { error: Response }> {
-	let platform = platformTenantStub();
-	let published = await platform.publishKeySet();
-	let keys = await JWK.importLocal(published);
-
-	let verified: AccessToken;
-	try {
-		verified = await AccessToken.verify(token, keys, {
-			issuer: platformTenantIssuer(),
-			algorithms: [JWK.Algorithm.ES256],
-		});
-	} catch {
+	let verified = await verifyManagementBearerToken(token);
+	if (verified === null) {
 		return {
 			error: unauthorized(api, "The bearer token did not verify.", { error: "invalid_token" }),
 		};
