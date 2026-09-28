@@ -127,7 +127,7 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 		return renderUpgrade(ctx, { error: INVALID_EMAIL_MESSAGE, status: 400 });
 	}
 
-	let { email } = validation.data;
+	let email = validation.data.email.address;
 	let customer = await ctx.billing.customers.findByEmail(email);
 
 	if (isFailure(customer)) {

@@ -26,13 +26,15 @@ namespace HomeView {
 		attribution: SubscribeForm.Props["attribution"];
 		/** A server-rendered subscribe error, when the visitor just failed to subscribe. */
 		error?: string;
+		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
+		confirmEmail?: SubscribeForm.Props["confirmEmail"];
 	}
 }
 
 /** Renders the homepage. */
 export default function HomeView(handle: Handle<HomeView.Props>) {
 	return () => {
-		let { attribution, error, subscribeAction } = handle.props;
+		let { attribution, confirmEmail, error, subscribeAction } = handle.props;
 
 		return (
 			<div mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), pb(5)]}>
@@ -59,6 +61,7 @@ export default function HomeView(handle: Handle<HomeView.Props>) {
 				<SubscribeFormComponent
 					action={subscribeAction}
 					attribution={attribution}
+					confirmEmail={confirmEmail}
 					error={error}
 					label="Email Address"
 					submitLabel="Subscribe"

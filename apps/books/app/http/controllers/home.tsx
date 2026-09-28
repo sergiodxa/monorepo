@@ -26,10 +26,14 @@ const TITLE = "React Router OAuth2 Handbook";
  *
  * @param ctx - The request context, for its URL and renderer.
  * @param options - `error` shows a subscribe failure under the email field, and `status`
- * lets the subscribe endpoint answer 400 while still returning the page.
+ * lets the subscribe endpoint answer 400 while still returning the page. `confirmEmail` is the
+ * address a typo suggestion was shown for, prefilled so resubmitting it keeps it.
  * @returns The rendered HTML response.
  */
-export function renderHome(ctx: RequestContext, options: { error?: string; status?: number } = {}) {
+export function renderHome(
+	ctx: RequestContext,
+	options: { error?: string; status?: number; confirmEmail?: string } = {},
+) {
 	return ctx.render(
 		<DocumentLayout
 			title={TITLE}
@@ -41,6 +45,7 @@ export function renderHome(ctx: RequestContext, options: { error?: string; statu
 				subscribeAction={routes.api.subscribe.href()}
 				attribution={readAttribution(ctx.url.searchParams)}
 				error={options.error}
+				confirmEmail={options.confirmEmail}
 			/>
 		</DocumentLayout>,
 		options.status ? { status: options.status } : undefined,

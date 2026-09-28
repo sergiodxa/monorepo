@@ -36,6 +36,11 @@ breaks something you cannot see from here:
 - **An address already on the list is a success**, both when subscribing and when
   unlocking the sample chapter. Buttondown reports it as an `email_already_exists`
   error, which is why the subscribe path special-cases it.
+- **A "did you mean" prompt is shown once per address.** The homepage and sample-chapter
+  forms hold back a likely-mistyped provider and render the form with the address prefilled
+  and echoed in a hidden `confirmed` field; resubmitting it unchanged subscribes it as typed.
+  The prompt runs before the disposable check, since the blocklist carries typo domains such
+  as `gmial.com`, and a kept address on a listed domain is still refused.
 - **The sample chapter is not persisted.** Reloading `/sample` shows the form again, by
   design. Do not "fix" this with a session or a cookie — the app has no session
   middleware, and that is deliberate.

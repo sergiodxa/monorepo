@@ -24,10 +24,10 @@ vi.mock("~/app/lib/buttondown", async () => {
 /** The chapter's first heading, which only the unlocked page renders. */
 const CHAPTER_HEADING = "OAuth2 in Simple Terms";
 
-function submit(buttondown: FakeButtondown, email: string) {
+function submit(buttondown: FakeButtondown, email: string, fields: Record<string, string> = {}) {
 	installButtondown(buttondown);
 
-	return fetchApp("/sample", { method: "POST", body: new URLSearchParams({ email }) });
+	return fetchApp("/sample", { method: "POST", body: new URLSearchParams({ email, ...fields }) });
 }
 
 describe("GET /sample", () => {
@@ -128,5 +128,45 @@ describe("POST /sample", () => {
 		expect(response.status).toBe(400);
 		expect(body).toContain("Something went wrong");
 		expect(body).not.toContain("upstream detail");
+	});
+
+	test("refuses an address with a zero-width character the parser rejects", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader\u200b@example.com");
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Invalid email address");
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("refuses a disposable address without unlocking the chapter", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@mailinator.com");
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain("Temporary inboxes");
+		expect(body).not.toContain(CHAPTER_HEADING);
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("asks about a mistyped provider, then unlocks the chapter when the address is kept", async () => {
+		let buttondown = new FakeButtondown();
+
+		let prompt = await submit(buttondown, "reader@gnail.com");
+		let body = await prompt.text();
+
+		expect(prompt.status).toBe(400);
+		expect(body).toContain("Did you mean reader@gmail.com?");
+		expect(body).toContain('name="confirmed" value="reader@gnail.com"');
+		expect(buttondown.subscribed).toEqual([]);
+
+		let kept = await submit(buttondown, "reader@gnail.com", { confirmed: "reader@gnail.com" });
+
+		expect(kept.status).toBe(200);
+		expect(await kept.text()).toContain(CHAPTER_HEADING);
+		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["reader@gnail.com"]);
 	});
 });

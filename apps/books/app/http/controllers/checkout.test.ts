@@ -141,4 +141,26 @@ describe("GET /api/checkout/:type", () => {
 		expect(response.status).toBe(303);
 		expect(checkout.providerData.email).toBeNull();
 	});
+
+	test("drops an IP-literal ?email= the address parser refuses", async () => {
+		let billing = memoryBilling();
+
+		let response = await start(billing, "/api/checkout/essentials?email=reader%40127.0.0.1");
+		let checkout = await openedCheckout(billing, response);
+
+		expect(response.status).toBe(303);
+		expect(checkout.providerData.email).toBeNull();
+	});
+
+	test("forwards ?email= trimmed and with its domain lowercased", async () => {
+		let billing = memoryBilling();
+
+		let response = await start(
+			billing,
+			"/api/checkout/essentials?email=%20Reader%40Example.COM%20",
+		);
+		let checkout = await openedCheckout(billing, response);
+
+		expect(checkout.providerData.email).toBe("Reader@example.com");
+	});
 });

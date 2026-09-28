@@ -20,7 +20,11 @@ import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
+import {
+	INVALID_EMAIL_MESSAGE,
+	SubscribeSchema,
+	screenSubscriberEmail,
+} from "~/app/http/validators/subscribe";
 import { readAttribution } from "~/app/lib/attribution";
 import { buttondown } from "~/app/lib/buttondown";
 import { seo } from "~/app/lib/seo";
@@ -83,15 +87,20 @@ function readChapter() {
  *
  * @param ctx - The request context, for its URL and renderer.
  * @param options - `error` shows a failure under the email field, and `status` lets the form
- * endpoint answer 400 while still returning the page.
+ * endpoint answer 400 while still returning the page. `confirmEmail` is the address a typo
+ * suggestion was shown for, prefilled so resubmitting it keeps it.
  * @returns The rendered HTML response.
  */
-function renderForm(ctx: RequestContext, options: { error?: string; status?: number } = {}) {
+function renderForm(
+	ctx: RequestContext,
+	options: { error?: string; status?: number; confirmEmail?: string } = {},
+) {
 	return ctx.render(
 		<DocumentLayout title={TITLE} description={DESCRIPTION} canonical={seo.canonical(ctx.url)}>
 			<SampleView
 				action={routes.sample.action.href()}
 				attribution={readAttribution(ctx.url.searchParams)}
+				confirmEmail={options.confirmEmail}
 				error={options.error}
 			/>
 		</DocumentLayout>,
@@ -152,6 +161,17 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	}
 
 	let payload = validation.data;
+	let screened = screenSubscriberEmail(payload);
+
+	if (isFailure(screened)) {
+		log.set({ subscribe: { result: "rejected", code: screened.error.reason } });
+		return renderForm(ctx, {
+			error: screened.error.message,
+			status: 400,
+			confirmEmail: screened.error.reason === "typo" ? payload.email.address : undefined,
+		});
+	}
+
 	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
 
 	if (isSuccess(result)) {

@@ -1,6 +1,6 @@
 /**
- * Subscribe controller. Validates the homepage's email form, resolves the visitor's IP,
- * subscribes them through Buttondown, and maps the provider's error codes to the copy a
+ * Subscribe controller. Validates and screens the homepage's email form, subscribes the
+ * address through Buttondown with the visitor's IP, and maps each refusal to the copy a
  * visitor reads. Success — including an address that was already on the list — redirects
  * to the sales page, which is the funnel's actual next step.
  *
@@ -15,7 +15,11 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import { renderHome } from "~/app/http/controllers/home";
-import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
+import {
+	INVALID_EMAIL_MESSAGE,
+	SubscribeSchema,
+	screenSubscriberEmail,
+} from "~/app/http/validators/subscribe";
 import { buttondown } from "~/app/lib/buttondown";
 import { ButtondownError } from "~/app/services/buttondown";
 import { subscribe } from "~/app/services/subscribe";
@@ -42,6 +46,17 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 	}
 
 	let payload = validation.data;
+	let screened = screenSubscriberEmail(payload);
+
+	if (isFailure(screened)) {
+		log.set({ subscribe: { result: "rejected", code: screened.error.reason } });
+		return renderHome(ctx, {
+			error: screened.error.message,
+			status: 400,
+			confirmEmail: screened.error.reason === "typo" ? payload.email.address : undefined,
+		});
+	}
+
 	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
 
 	if (isFailure(result)) {

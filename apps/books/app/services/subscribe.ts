@@ -35,13 +35,13 @@ export async function subscribe(
 	try {
 		let log = currentLog();
 
-		if (await buttondown.isSubscribed(payload.email)) {
+		if (await buttondown.isSubscribed(payload.email.address)) {
 			log?.set({ subscribe: { result: "already-subscribed" } });
 			return success("already-subscribed");
 		}
 
 		await buttondown.subscribe(
-			payload.email,
+			payload.email.address,
 			{ source: payload.source, campaign: payload.campaign, medium: payload.medium },
 			ipAddress,
 		);

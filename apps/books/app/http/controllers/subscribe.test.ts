@@ -128,4 +128,93 @@ describe("POST /api/subscribe", () => {
 		 */
 		expect(buttondown.subscribed).toEqual([]);
 	});
+
+	test("refuses an IP-literal address the parser rejects, forwarding nothing", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@127.0.0.1");
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Invalid email address");
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("subscribes the parsed address: trimmed, with its domain lowercased", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, " Reader@Example.COM ");
+
+		expect(response.status).toBe(303);
+		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["Reader@example.com"]);
+	});
+
+	test("refuses a disposable address with its own copy", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@inbox.mailinator.com");
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Temporary inboxes");
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("keeps refusing a disposable address that arrives marked as confirmed", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@mailinator.com", {
+			confirmed: "reader@mailinator.com",
+		});
+
+		expect(response.status).toBe(400);
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("suggests the provider for a mistyped domain, prefilling the address as typed", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@gnail.com");
+		let body = await response.text();
+
+		expect(response.status).toBe(400);
+		expect(body).toContain("Did you mean reader@gmail.com?");
+		expect(body).toContain('value="reader@gnail.com"');
+		expect(body).toContain('name="confirmed" value="reader@gnail.com"');
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("subscribes a mistyped-looking address once the visitor submits it again", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@gnail.com", { confirmed: "reader@gnail.com" });
+
+		expect(response.status).toBe(303);
+		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["reader@gnail.com"]);
+	});
+
+	test("suggests the provider for a typo domain the disposable list carries, then refuses it if kept", async () => {
+		let buttondown = new FakeButtondown();
+
+		let prompt = await submit(buttondown, "reader@gmial.com");
+
+		expect(prompt.status).toBe(400);
+		expect(await prompt.text()).toContain("Did you mean reader@gmail.com?");
+
+		let kept = await submit(buttondown, "reader@gmial.com", { confirmed: "reader@gmial.com" });
+
+		expect(kept.status).toBe(400);
+		expect(await kept.text()).toContain("Temporary inboxes");
+		expect(buttondown.subscribed).toEqual([]);
+	});
+
+	test("asks again when the address changed since the suggestion was shown", async () => {
+		let buttondown = new FakeButtondown();
+
+		let response = await submit(buttondown, "reader@yaho.com", {
+			confirmed: "reader@gnail.com",
+		});
+
+		expect(response.status).toBe(400);
+		expect(await response.text()).toContain("Did you mean reader@yahoo.com?");
+		expect(buttondown.subscribed).toEqual([]);
+	});
 });

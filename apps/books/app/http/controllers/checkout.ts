@@ -14,11 +14,11 @@ import type { Discount } from "@sdxc/billing";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
-import { email } from "remix/data-schema/checks";
 import { createAction } from "remix/router";
 
 import { Product } from "~/app/data/product";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import { emailAddress } from "~/app/http/validators/email-address";
 import { findApplicableDiscount } from "~/app/services/discount";
 import routes from "~/routes/web";
 
@@ -34,7 +34,7 @@ const TypeSchema = s.object({ type: s.enum_([Product.Essentials, Product.Complet
  * that fails to parse is dropped before it is sent, since the platform would
  * reject the whole checkout — a pre-filled field is worth less than the sale.
  */
-const EmailSchema = s.object({ email: s.optional(s.string().pipe(email())) });
+const EmailSchema = s.object({ email: s.optional(emailAddress()) });
 
 /** GET /api/checkout/:type — opens a hosted checkout and redirects the buyer to it. */
 export default createAction(routes.api.checkout, async (ctx) => {
@@ -53,7 +53,7 @@ export default createAction(routes.api.checkout, async (ctx) => {
 	let emailParsed = s.parseSafe(EmailSchema, {
 		email: ctx.url.searchParams.get("email") ?? undefined,
 	});
-	let customerEmail = emailParsed.success ? emailParsed.value.email : undefined;
+	let customerEmail = emailParsed.success ? emailParsed.value.email?.address : undefined;
 	if (!emailParsed.success) log.note("checkout.email_ignored");
 
 	/** Only Complete carries a launch campaign; Essentials always sells at list price. */

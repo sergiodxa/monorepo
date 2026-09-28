@@ -30,6 +30,8 @@ export namespace SampleView {
 		chapter?: RemixNode;
 		/** A server-rendered error to show under the email field. */
 		error?: string;
+		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
+		confirmEmail?: SubscribeForm.Props["confirmEmail"];
 	}
 }
 
@@ -40,7 +42,7 @@ export namespace SampleView {
  */
 export default function SampleView(handle: Handle<SampleView.Props>) {
 	return () => {
-		let { action, attribution, chapter, error } = handle.props;
+		let { action, attribution, chapter, confirmEmail, error } = handle.props;
 
 		if (chapter) {
 			return (
@@ -50,6 +52,13 @@ export default function SampleView(handle: Handle<SampleView.Props>) {
 			);
 		}
 
-		return <SampleChapterSection action={action} attribution={attribution} error={error} />;
+		return (
+			<SampleChapterSection
+				action={action}
+				attribution={attribution}
+				confirmEmail={confirmEmail}
+				error={error}
+			/>
+		);
 	};
 }

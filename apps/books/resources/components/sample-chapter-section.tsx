@@ -30,6 +30,8 @@ export namespace SampleChapterSection {
 		attribution: SubscribeForm.Props["attribution"];
 		/** A server-rendered error to show under the field. */
 		error?: string;
+		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
+		confirmEmail?: SubscribeForm.Props["confirmEmail"];
 	}
 }
 
@@ -38,7 +40,7 @@ export namespace SampleChapterSection {
  */
 export default function SampleChapterSection(handle: Handle<SampleChapterSection.Props>) {
 	return () => {
-		let { action, attribution, error } = handle.props;
+		let { action, attribution, confirmEmail, error } = handle.props;
 
 		return (
 			<section id="sample" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), pb(5)]}>
@@ -63,6 +65,7 @@ export default function SampleChapterSection(handle: Handle<SampleChapterSection
 				<SubscribeFormComponent
 					action={action}
 					attribution={attribution}
+					confirmEmail={confirmEmail}
 					error={error}
 					label="Email address"
 					submitLabel={SAMPLE.submitLabel}

@@ -51,6 +51,11 @@ export namespace SubscribeForm {
 		/** A server-rendered error to show under the field, replacing the client-side one. */
 		error?: string;
 		/**
+		 * The address a typo suggestion was just shown for. It is prefilled in the field and
+		 * posted back as `confirmed`, so submitting it unchanged keeps it as typed.
+		 */
+		confirmEmail?: string;
+		/**
 		 * Whether to show the "No spam" reassurance line under the field. On by default,
 		 * and off for the upgrade form: someone upgrading is already a customer being asked
 		 * for the address they bought with, not a visitor being asked to join a list.
@@ -69,6 +74,7 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 		let {
 			action,
 			attribution = {},
+			confirmEmail,
 			error,
 			label = "Email address",
 			reassurance = true,
@@ -82,6 +88,7 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 				<input type="hidden" name="campaign" value={attribution.campaign ?? ""} />
 				<input type="hidden" name="medium" value={attribution.medium ?? ""} />
 				<input type="hidden" name="referral" value={attribution.referral ?? ""} />
+				{confirmEmail && <input type="hidden" name="confirmed" value={confirmEmail} />}
 
 				{title && <h2 mix={[pi(5), text("base"), weight("semibold")]}>{title}</h2>}
 
@@ -101,6 +108,7 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 							type="email"
 							name="email"
 							required
+							value={confirmEmail}
 							aria-label={label}
 							placeholder="user@domain.tld"
 							mix={[

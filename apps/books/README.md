@@ -20,6 +20,9 @@ state the app has lives in Buttondown and Polar.
 
 - **Email capture** on the homepage, with UTM attribution carried through from the query
   string and stored on the Buttondown subscriber.
+- **Address screening** on the homepage and sample-chapter forms: addresses on throwaway-inbox
+  domains are refused, and a mistyped provider (`gnail.com`) gets a "did you mean" prompt
+  that submitting the same address again dismisses.
 - **Live pricing** on the release page, read from Polar products with the currently
   applicable launch discount applied.
 - **Gated sample chapter**: an address unlocks the chapter, rendered from Markdown at
