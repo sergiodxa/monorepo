@@ -42,11 +42,11 @@ The suite talks to a live dev server on **`http://localhost:3002`**.
 
 3. Point `DATABASE_URL` at the local Miniflare D1 SQLite file and run the suite
    from the repo root, opting into the config's declared grants. The file is the
-   one `*.sqlite` under `.wrangler/state/**/miniflare-D1DatabaseObject/` that is
+   one `*.sqlite` under `.cloudflare/state/**/miniflare-D1DatabaseObject/` that is
    not `metadata.sqlite`; its name is a stable hash of the D1 binding id:
 
    ```sh
-   DBFILE="$PWD/apps/r3-auth/.wrangler/state/v3/d1/miniflare-D1DatabaseObject/0094cebb889c9019679bc263eb3cf60e33b6588c609a187d5c7df4ce156cf2f9.sqlite"
+   DBFILE="$PWD/apps/r3-auth/.cloudflare/state/v3/d1/miniflare-D1DatabaseObject/0094cebb889c9019679bc263eb3cf60e33b6588c609a187d5c7df4ce156cf2f9.sqlite"
    DATABASE_URL="sqlite://$DBFILE" ./packages/spec/bin/spec run apps/r3-auth/spec --allow-config
    ```
 
@@ -58,7 +58,7 @@ packages/spec/src/cli.ts run apps/r3-auth/spec --allow-config`.
 `DATABASE_URL` (the one variable the `db` seeds read). Nothing is granted without
 it, so a cloned repo can never self-authorize. The `db` capability opens the
 connection string in `DATABASE_URL` — the WAL-mode SQLite file above — which Bun
-can write while `wrangler dev` holds it open.
+can write while `bun dev` holds it open.
 
 ### Structural validity (no live app needed)
 
@@ -104,7 +104,7 @@ through the `db` capability (`commands/seed.spec`), both idempotent:
 
 The server rate-limits its auth surface **per client IP**: the authorization
 endpoint at 30 requests/minute and the login POST at 10/minute
-(`app/services/rate-limiters.ts`, `wrangler.jsonc`). Every guard redirect and
+(`app/services/rate-limiters.ts`, `cloudflare.config.ts`). Every guard redirect and
 every sign-in spends from those budgets, and the whole suite runs from one
 address, so a back-to-back sequence of runs can carry drained budget from the
 previous run into the next and make endpoints answer `429` instead of their

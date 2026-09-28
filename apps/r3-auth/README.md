@@ -19,7 +19,7 @@ depend on, and the cutover steps live in
 2. Run `bun run db:local:migrate` to apply migrations to the local D1 database
 3. Run `bun run dev` to start the development server at http://localhost:3002
 
-Tests run from the repo root: `bun run test`, or `bun test apps/r3-auth --isolate` for this
+Tests run from the repo root: `bun run test`, or `vp test run --project r3-auth` for this
 app only.
 
 ## Cloudflare Services
@@ -29,7 +29,9 @@ app only.
 | D1 Database  | `DB`                      | Subjects, credentials, connections, sessions, clients and grants           |
 | KV           | `KV`                      | Browser sessions, authorization codes, and the API's client/subject caches |
 | R2           | `R2`                      | The ES256 signing key pair behind every issued token and the JWKS          |
-| Queue        | `QUEUE`                   | Producer only — enqueues the daily expired-session sweep                   |
+| Queue        | `QUEUE`                   | Enqueues the daily expired-session sweep this worker consumes              |
+| Queue        | `DLQ`                     | Dead-letter queue for sweeps that spent their three deliveries             |
+| Secrets      | `POLAR_ACCESS_TOKEN`      | Secrets Store token for mirroring a new subject into Polar                 |
 | Email        | `EMAIL`                   | Every transactional message, including the new-sign-in notice              |
 | Rate limiter | `TOKEN_RATE_LIMITER`      | `/oauth/token`, 20 requests / 60s                                          |
 | Rate limiter | `INTROSPECT_RATE_LIMITER` | `/oauth/introspect`, 100 requests / 60s                                    |
@@ -40,12 +42,11 @@ app only.
 Observability is enabled. `nodejs_compat` is on, because the JWT and billing dependencies
 reach for Node built-ins.
 
-The worker declares **only `queues.producers`** — no `queues.consumers`, no
-`triggers.crons`, and no custom-domain `routes` entry. A Cloudflare queue has exactly one
-consumer worker, and the worker serving production still holds that slot along with the
-daily cron that feeds it. The `scheduled` and `queue` handlers in `bootstrap/worker.ts` are
-therefore written but **unreachable** until cutover: nothing sweeps expired sessions from
-this worker, and enqueuing from here is consumed by the other one.
+The worker owns the `auth` queue's single consumer slot and the daily cron that feeds it:
+the cron enqueues the expired-session sweep at midnight UTC, `QUEUE` publishes it, and the
+`queue` handler in `bootstrap/worker.ts` answers it. A message that spends its three
+deliveries lands in `auth-dlq`, which this worker also consumes so the body is recorded and
+acked; `DLQ` writes an unreadable body there directly.
 
 ### Email
 
@@ -53,7 +54,7 @@ this worker, and enqueuing from here is consumed by the other one.
 because every message goes to a subject's own address, so the recipient set is the
 `subjects` table and cannot be enumerated in configuration. The narrower forms
 (`destination_address`, `allowed_destination_addresses`, `allowed_sender_addresses`) would
-each turn an ordinary send into a refusal at send time. `remote: true` means a `wrangler dev`
+each turn an ordinary send into a refusal at send time. `dev: { remote: true }` means a `bun dev`
 send is a **real** send, which bills and delivers like production.
 
 Mail is sent through two mailers over the same transport, opened once in `app/lib/mail.ts`:
@@ -215,7 +216,7 @@ A refused request answers `429` with
 `{ "error": "too_many_requests", "error_description": "Rate limit exceeded. Please try again later." }`,
 the `RateLimit` / `RateLimit-Policy` fields, and `Retry-After` set to the limiter's full
 window. The bindings report no quota state, so `remaining` is omitted rather than guessed,
-and the limits declared in `wrangler.jsonc` must stay in step with the adapters in
+and the limits declared in `cloudflare.config.ts` must stay in step with the adapters in
 `app/services/rate-limiters.ts` or the emitted headers go stale. A binding that cannot
 answer is logged and the request is allowed through: a limiter outage must not stop token
 issuance.
@@ -253,27 +254,28 @@ bun run db:remote:migrate # Apply migrations to production
 
 ## Scripts
 
-| Script              | Description                            |
-| ------------------- | -------------------------------------- |
-| `dev`               | Start the dev server on port 3002      |
-| `build`             | Build the worker and client bundles    |
-| `start`             | Preview the production build           |
-| `typecheck`         | Type-check the app                     |
-| `cf:typegen`        | Regenerate `worker-configuration.d.ts` |
-| `cf:deploy`         | Deploy the worker                      |
-| `db:local:migrate`  | Apply migrations to local D1           |
-| `db:remote:migrate` | Apply migrations to production D1      |
+| Script              | Description                               |
+| ------------------- | ----------------------------------------- |
+| `dev`               | Start the dev server on port 3002         |
+| `build`             | Build the worker and client bundles       |
+| `start`             | Preview the production build              |
+| `typecheck`         | Type-check the app                        |
+| `cf:typegen`        | Regenerate `.cloudflare/types/index.d.ts` |
+| `cf:deploy`         | Deploy the worker                         |
+| `db:local:migrate`  | Apply migrations to local D1              |
+| `db:remote:migrate` | Apply migrations to production D1         |
 
 ## Deployment
 
-Run `bun run build` first — `wrangler deploy` does not build the Vite app — then deploy.
+The worker is configured in `cloudflare.config.ts` and deployed with the `cf` CLI. Run
+`bun run build`, then `bun run cf:deploy`, which uploads that build output as-is.
 
 ```bash
 bun run build
 bun run cf:deploy
 ```
 
-Secrets are set with `bunx wrangler secret put <NAME>`.
+Secrets are set with `cf workers secrets update`.
 
 ## Environment Variables
 
@@ -283,18 +285,21 @@ API key, host or `From` to configure per environment.
 
 `COOKIE_SESSION_SECRET`, `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` and
 `UPTIME_CRON_API_KEY` are plain worker secrets: `.dev.vars` locally,
-`bunx wrangler secret put <NAME>` in production.
+`cf workers secrets update` in production. Each one is declared in `cloudflare.config.ts`
+with `bindings.secret()`, which is what gives it a type on `env`; `.dev.vars` only supplies
+values, and a key it holds that the config does not declare never reaches the worker.
 
 The Polar access token is not. It is the `POLAR_ACCESS_TOKEN` Secrets Store binding
-declared in `wrangler.jsonc`, read as `await env.POLAR_ACCESS_TOKEN.get()` by
+declared in `cloudflare.config.ts`, read as `await env.POLAR_ACCESS_TOKEN.get()` by
 `app/lib/billing.ts`, and there is
-nothing to set with `wrangler secret put` — rotating it is a Secrets Store operation and
+nothing to set with `cf workers secrets` — rotating it is a Secrets Store operation and
 takes effect without redeploying.
 
 A store binding has no value outside Cloudflare's network, and the local simulation of it
 is an empty store, so `get()` throws during `bun dev`. Set `POLAR_ACCESS_TOKEN_LOCAL` in
-`.dev.vars` and the token reader falls back to it; production has no such variable, so a
-failed read there stays a failure. The fallback only matters for the one path that bills —
+`.dev.vars` and the token reader falls back to it. The config declares that secret outside
+production builds only, so production has no such variable and a failed read there stays a
+failure. The fallback only matters for the one path that bills —
 provisioning a subject that has never signed in before — so leaving it unset is fine until
 you exercise a first-time sign-in locally. Tests never need it: they bill against an
 in-memory platform.

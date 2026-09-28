@@ -170,18 +170,22 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 ## Operational Notes
 
-- The worker declares only `queues.producers`, with no `queues.consumers`, no
-  `triggers.crons` and no custom-domain `routes` entry, because a Cloudflare queue has
-  exactly one consumer worker and the worker serving production still holds that slot. The
-  `scheduled` and `queue` handlers therefore exist but are unreachable; do not "fix" this by
-  adding a consumer before cutover.
+- The worker is the `auth` queue's single consumer and owns the midnight cron that feeds
+  it; `auth-dlq` catches a sweep that spends its three deliveries. Adding or renaming a cron
+  means changing both `cloudflare.config.ts` and the job's schedule, which
+  `app/jobs/dispatcher.test.ts` keeps in step.
+- Bindings and secrets live in `cloudflare.config.ts`. A secret declared there with
+  `bindings.secret()` is what gives it a type on `env`, and only declared keys reach the
+  worker from `.dev.vars`.
+- `bun run db:local:migrate` writes to `.cloudflare/state`, the directory `bun dev` reads,
+  so a local reset is `rm -rf .cloudflare/state`.
 - The API caches a resolved client in KV for 7 days, so a deleted client or a rotated secret
   keeps authenticating against `/api/*` until the `clients:<clientId>` key expires.
 - The session cookie is `auth:session` — deliberately not the name the previous server used,
   so a rollback finds its own untouched cookie instead of one it cannot parse.
 - MUST NOT reach into another app's source. Copy and adapt instead.
-- After a `wrangler.jsonc` change: `bun cf:typegen`, then `bun run build`, then
-  `bunx wrangler deploy --dry-run`.
+- After a `cloudflare.config.ts` change: `bun cf:typegen`, then `bun run build`, then
+  `bunx cf deploy --prebuilt --dry-run`.
 
 ## Reference Files
 

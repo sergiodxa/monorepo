@@ -14,7 +14,7 @@ import { CloudflareAdapter } from "@sdxc/rate-limit";
 
 /**
  * Limit and window of every binding, mirroring the `simple: { limit, period }`
- * blocks in `wrangler.jsonc`. The platform never reports these values back, so
+ * blocks in `cloudflare.config.ts`. The platform never reports these values back, so
  * drift here silently makes every `RateLimit` response header wrong.
  */
 const POLICIES = {

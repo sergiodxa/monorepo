@@ -19,7 +19,7 @@ import { createSqliteDatabase } from "remix/data-table/sqlite";
 
 /**
  * Applies every `.sql` migration in `database/migrations/`, filename-sorted the way
- * `wrangler d1 migrations apply` orders them, to the given database. These are the files
+ * `cf d1 migrations apply` orders them, to the given database. These are the files
  * production has already applied, so a test schema cannot drift from the live one.
  *
  * @param sqliteDb - An open SQLite database.

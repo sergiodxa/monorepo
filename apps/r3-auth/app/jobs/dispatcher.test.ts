@@ -1,14 +1,11 @@
 /**
  * Tests the two things nothing else can catch: a job that exists in the map but was never
  * mapped to a handler still accepts enqueues and silently never runs, and a cron a job
- * declares fires nothing unless `wrangler.jsonc` names the same expression.
+ * declares fires nothing unless `cloudflare.config.ts` names the same expression.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
 
 import type { AnyJobDefinition } from "@sdxc/jobs";
 
@@ -16,6 +13,8 @@ import { describe, expect, test } from "vitest";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/jobs/dispatcher";
+
+import config from "../../cloudflare.config";
 
 /** True for a named job, false for a group holding more of them. */
 function isDefinition(value: unknown): value is AnyJobDefinition {
@@ -31,22 +30,12 @@ function leaves(tree: object): AnyJobDefinition[] {
 	});
 }
 
-/**
- * The crons `wrangler.jsonc` declares. Read as text because the file is JSONC: the
- * `crons` array is sliced out and its comments dropped before it can be parsed.
- */
+/** The crons the production build of `cloudflare.config.ts` schedules. */
 function configuredCrons(): string[] {
-	let path = fileURLToPath(new URL("../../wrangler.jsonc", import.meta.url));
-	let match = /"crons"\s*:\s*\[[^\]]*\]/.exec(readFileSync(path, "utf8"));
-
-	if (match === null) throw new Error("wrangler.jsonc declares no crons");
-
-	let array = match[0]
-		.slice(match[0].indexOf("["))
-		.replaceAll(/\/\/[^\n]*/g, "")
-		.replace(/,\s*\]$/, "]");
-
-	return JSON.parse(array) as string[];
+	let { worker } = config({ isPreview: false, mode: "production" });
+	return worker.triggers.flatMap((trigger) =>
+		trigger.type === "scheduled" ? [trigger.schedule] : [],
+	);
 }
 
 describe("dispatcher", () => {
