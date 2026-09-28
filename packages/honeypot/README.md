@@ -17,41 +17,37 @@ package.
 
 ## Usage
 
-### Render the fields
+### Guard a form route
 
-Issue fresh fields for every form you render, and spread them into the component.
+Install the middleware once on the route that renders the form and accepts it. It publishes the
+honeypot as `ctx.honeypot` for rendering, and verifies every submission before the handler runs.
 
 ```tsx
 import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { unwrap } from "@sdxc/result";
 
-let honeypot = new Honeypot({ secret: HONEYPOT_SECRET });
+let trap = new Honeypot({ secret: HONEYPOT_SECRET });
 
-router.get("/contact", async () => {
-	let fields = unwrap(await honeypot.issue());
-	return render(
-		<form method="post" action="/contact">
-			<HoneypotFields {...fields} />
-			<textarea name="message" />
-			<button type="submit">Send</button>
-		</form>,
-	);
-});
-```
-
-### Guard the action
-
-```ts
-import { honeypot as honeypotMiddleware } from "@sdxc/honeypot/middleware";
-import { unwrap } from "@sdxc/result";
-
-router.post("/contact", {
-	middleware: [honeypotMiddleware(honeypot)],
-	handler(ctx) {
-		// Reached only with a verified token and an empty trap.
-		let { renderedAt, elapsedMs } = unwrap(ctx.honeypot);
-		return saveMessage(ctx, { renderedAt });
+router.map(routes.contact, {
+	middleware: [honeypot(trap)],
+	actions: {
+		async index(ctx) {
+			let fields = unwrap(await ctx.honeypot.issue());
+			return render(
+				<form method="post" action="/contact">
+					<HoneypotFields {...fields} />
+					<textarea name="message" />
+					<button type="submit">Send</button>
+				</form>,
+			);
+		},
+		action(ctx) {
+			// Reached only with a verified token and an empty trap.
+			let { renderedAt, elapsedMs } = unwrap(ctx.honeypotOutcome);
+			return saveMessage(ctx, { renderedAt });
+		},
 	},
 });
 ```
@@ -110,14 +106,16 @@ the future are accepted, to allow for clock differences.
 
 ### `@sdxc/honeypot/middleware`
 
-`honeypot(instance, { onFailure? })` verifies the fields on every request of the route it is
-installed on, so install it on the action that accepts the form. It reads the form parsed by
-`remix`'s `formData()` middleware when present, and otherwise a clone of the request, leaving the
-body readable for the handler. `onFailure(error, ctx)` returns a `Response` to refuse, or `null` to
-continue with the failure published; the default is a plain-text `400`.
+`honeypot(instance, { onFailure? })` publishes `instance` as `ctx.honeypot` (and under the
+`HoneypotKey` context key) on every request, so a handler issues fields from it. On every method
+other than GET, HEAD and OPTIONS it also verifies the submitted fields, so one installation covers
+a route that renders a form and accepts it. It reads the form parsed by `remix`'s `formData()`
+middleware when present, and otherwise a clone of the request, leaving the body readable for the
+handler. `onFailure(error, ctx)` returns a `Response` to refuse, or `null` to continue with the
+failure published; the default is a plain-text `400`.
 
-The outcome is published as `ctx.honeypot` (`HoneypotOutcome`, a
-`Result<Honeypot.Verification, HoneypotError>`) and under the `HoneypotKey` context key.
+The verification is published as `ctx.honeypotOutcome` (`HoneypotOutcome`, a
+`Result<Honeypot.Verification, HoneypotError>`) and under the `HoneypotOutcomeKey` context key.
 
 ### `@sdxc/honeypot/ui`
 
@@ -168,7 +166,7 @@ router.post("/comments", {
 		let form = await ctx.request.formData();
 		let assessment = await filter.check({
 			content: String(form.get("content") ?? ""),
-			renderedAt: unwrap(ctx.honeypot).renderedAt,
+			renderedAt: unwrap(ctx.honeypotOutcome).renderedAt,
 		});
 		return saveComment(form, assessment);
 	},

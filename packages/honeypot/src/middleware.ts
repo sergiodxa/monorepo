@@ -1,7 +1,7 @@
 /**
- * Router middleware that verifies a form's honeypot fields before the handler runs, publishes the
- * outcome as `ctx.honeypot`, and refuses a filled trap or a missing or forged token unless the
- * app's `onFailure` decides to answer it or let it through.
+ * Router middleware that publishes a honeypot on the request context as `ctx.honeypot`, so a
+ * handler issues trap fields when it renders a form, and verifies the fields of every submission
+ * before the handler runs, refusing a filled trap or a missing or forged token.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,32 +16,38 @@ import type { Honeypot } from "./index.js";
 
 import { HoneypotError } from "./index.js";
 
-/** What a guarded handler reads: when the form was rendered, or why it was refused. */
+/** What a guarded handler reads after a submission: when the form was rendered, or why not. */
 export type HoneypotOutcome = Result<Honeypot.Verification, HoneypotError>;
 
 /**
- * Declared in an imported module, so a project types `ctx.honeypot` by importing this
- * middleware.
+ * Declared in an imported module, so a project types `ctx.honeypot` and `ctx.honeypotOutcome`
+ * by importing this middleware.
  */
 declare module "remix/router" {
 	interface RequestContext {
+		/** The honeypot `honeypot(instance)` guards the route with, to issue a form's fields. */
+		honeypot: Honeypot;
 		/**
-		 * The outcome of verifying this submission's honeypot fields, published by
-		 * `honeypot(instance)`. A failure reaches the handler only when `onFailure` answered `null`.
+		 * The outcome of verifying this submission's honeypot fields, published for every method
+		 * other than GET, HEAD and OPTIONS. A failure reaches the handler only when `onFailure`
+		 * answered `null`.
 		 */
-		honeypot: HoneypotOutcome;
+		honeypotOutcome: HoneypotOutcome;
 	}
 }
 
 /**
- * The request's honeypot outcome, for code that reads it by key rather than through the
- * installed `honeypot` property. The type is written out because an exported key needs a
- * nameable type to reach a published declaration file.
+ * The request's honeypot, for code that reads it by key rather than through `ctx.honeypot`. The
+ * type is written out because an exported key needs a nameable type to reach a declaration file.
  */
-export const HoneypotKey: { defaultValue?: HoneypotOutcome } = createContextKey<HoneypotOutcome>();
+export const HoneypotKey: { defaultValue?: Honeypot } = createContextKey<Honeypot>();
 
-/** Installs the outcome as `ctx.honeypot` besides the key. */
-const HONEYPOT_PROPERTY = { property: "honeypot" } as const;
+/** The submission's outcome, for code that reads it by key rather than `ctx.honeypotOutcome`. */
+export const HoneypotOutcomeKey: { defaultValue?: HoneypotOutcome } =
+	createContextKey<HoneypotOutcome>();
+
+/** Methods that render a form rather than submit one, which pass through unverified. */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 /** Content types a browser form submits, the only bodies honeypot fields arrive in. */
 const FORM_CONTENT_TYPES = ["application/x-www-form-urlencoded", "multipart/form-data"];
@@ -50,7 +56,7 @@ const FORM_CONTENT_TYPES = ["application/x-www-form-urlencoded", "multipart/form
 export interface HoneypotMiddlewareOptions {
 	/**
 	 * Answers a refused submission: a `Response` refuses the request with it, `null` continues to
-	 * the handler with the failure published on `ctx.honeypot`.
+	 * the handler with the failure published on `ctx.honeypotOutcome`.
 	 *
 	 * @default a plain-text 400 response
 	 */
@@ -61,25 +67,26 @@ export interface HoneypotMiddlewareOptions {
 }
 
 /**
- * Verifies the honeypot fields on every request the route receives, so install it on the action
- * that accepts the form. The body stays readable afterwards; with `formData()` installed, the
- * parsed form is reused. A body that is not a form is `missing-token`.
+ * Publishes `instance` as `ctx.honeypot` on every request, and verifies the fields of every
+ * submission, so one installation covers a route that renders a form and accepts it. The body
+ * stays readable afterwards; with `formData()` installed, the parsed form is reused. A submitted
+ * body that is not a form is `missing-token`.
  *
- * @param instance - The honeypot that issued the form's fields
+ * @param instance - The honeypot that issues and verifies the route's fields
  * @param options - The failure policy
  * @returns The middleware
- * @example router.post(routes.comments, { middleware: [honeypot(instance)], handler })
+ * @example router.map(routes.comments, { middleware: [honeypot(instance)], actions })
  */
-export function honeypot(
-	instance: Honeypot,
-	options: HoneypotMiddlewareOptions = {},
-): Middleware<{ key: typeof HoneypotKey; value: HoneypotOutcome; property: "honeypot" }> {
+export function honeypot(instance: Honeypot, options: HoneypotMiddlewareOptions = {}): Middleware {
 	return async (ctx, next) => {
+		ctx.set(HoneypotKey, instance, { property: "honeypot" });
+		if (SAFE_METHODS.has(ctx.request.method)) return next();
+
 		let form = await readForm(ctx);
 		let outcome: HoneypotOutcome =
 			form === null ? failure(new HoneypotError("missing-token")) : await instance.verify(form);
 
-		ctx.set(HoneypotKey, outcome, HONEYPOT_PROPERTY);
+		ctx.set(HoneypotOutcomeKey, outcome, { property: "honeypotOutcome" });
 		if (!isFailure(outcome)) return next();
 
 		let answer = await (options.onFailure ?? refuse)(outcome.error, ctx);

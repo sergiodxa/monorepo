@@ -1,6 +1,7 @@
 /**
- * Tests the honeypot middleware through a router: it refuses bot submissions before the handler,
- * publishes the verification for accepted ones, reuses a parsed form, and leaves the body readable.
+ * Tests the honeypot middleware through a router: it publishes the honeypot for rendering, refuses
+ * bot submissions before the handler, publishes the verification for accepted ones, reuses a
+ * parsed form, and leaves the body readable.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -40,6 +41,37 @@ async function issuedForm(trapValue = ""): Promise<Record<string, string>> {
 }
 
 describe("honeypot", () => {
+	test("publishes the honeypot and lets a GET through unverified", async () => {
+		let router = createRouter();
+		router.get("/comments", {
+			middleware: [honeypot(HONEYPOT)],
+			async handler(ctx) {
+				let fields = unwrap(await ctx.honeypot.issue());
+				return new Response(fields.tokenField);
+			},
+		});
+
+		let response = await router.fetch("https://example.com/comments");
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toBe("hp-token");
+	});
+
+	test("verifies submissions on any method other than GET, HEAD and OPTIONS", async () => {
+		let router = createRouter();
+		router.put("/comments", {
+			middleware: [honeypot(HONEYPOT)],
+			handler: () => new Response("ok"),
+		});
+
+		let response = await router.fetch("https://example.com/comments", {
+			...post({ content: "hello" }),
+			method: "PUT",
+		});
+
+		expect(response.status).toBe(400);
+	});
+
 	test("passes an untouched form to the handler with its render time", async () => {
 		let seen: HoneypotOutcome | undefined;
 		let body: string | undefined;
@@ -47,7 +79,7 @@ describe("honeypot", () => {
 		router.post("/comments", {
 			middleware: [honeypot(HONEYPOT)],
 			async handler(ctx) {
-				seen = ctx.honeypot;
+				seen = ctx.honeypotOutcome;
 				body = textOf((await ctx.request.formData()).get("content"));
 				return new Response("saved");
 			},
@@ -111,7 +143,7 @@ describe("honeypot", () => {
 		router.post("/comments", {
 			middleware: [honeypot(HONEYPOT, { onFailure: () => null })],
 			handler(ctx) {
-				seen = ctx.honeypot;
+				seen = ctx.honeypotOutcome;
 				return new Response("received");
 			},
 		});

@@ -35,7 +35,7 @@ Parts of that design carry over, and parts do not fit this repo:
 | Timestamp protection     | Encrypted                               | Signed with HMAC; nothing in the token is secret, only unforgeable                  |
 | Field props distribution | React context provider from root loader | The handler issues fields and passes them to the component                          |
 | Failure                  | `onSpam` returns a response             | `onFailure(error, ctx)` returns a response, or `null` to continue with the outcome  |
-| Outcome for the handler  | None                                    | `ctx.honeypot`, a `Result` carrying the verified render time for the spam filter    |
+| Outcome for the handler  | None                                    | `ctx.honeypot` to issue fields, `ctx.honeypotOutcome` with the verified render time |
 | Hiding                   | Inline `display: none` wrapper          | Positioned off-screen, excluded from the accessibility tree, tab order and autofill |
 
 ### Failure modes a honeypot must avoid
@@ -112,15 +112,25 @@ an untouched one.
 ### Middleware
 
 ```typescript
-router.post("/comments", {
+router.map(routes.comments, {
 	middleware: [honeypot(instance)],
-	handler(ctx) {
-		// Reached only with a verified token and an empty trap.
-		let { renderedAt } = unwrap(ctx.honeypot);
-		return saveComment(ctx, renderedAt);
+	actions: {
+		async index(ctx) {
+			return renderForm(unwrap(await ctx.honeypot.issue()));
+		},
+		action(ctx) {
+			// Reached only with a verified token and an empty trap.
+			let { renderedAt } = unwrap(ctx.honeypotOutcome);
+			return saveComment(ctx, renderedAt);
+		},
 	},
 });
 ```
+
+- It publishes the instance as `ctx.honeypot` on every request, so the handler that renders the
+  form issues fields without the app declaring a context property of its own.
+- It verifies on every method other than GET, HEAD and OPTIONS, so one installation covers a
+  route that renders the form and accepts it.
 
 - It reads the form parsed by `remix`'s `formData()` middleware when present, and otherwise a
   clone of the request, so the body stays readable for the handler.
@@ -128,8 +138,8 @@ router.post("/comments", {
   published. The default answers a plain-text `400`. Answering like a success, so a bot learns
   nothing, is left to the app, since only the app knows what success looks like; the README shows
   it as a pattern.
-- The outcome is published as `ctx.honeypot` and under an exported context key with a written
-  type.
+- The verification is published as `ctx.honeypotOutcome`. Both values are also under exported
+  context keys with written types.
 
 ### Component
 
@@ -160,7 +170,7 @@ The honeypot runs first and rejects the certain cases. What passes carries a ver
 which the filter's `timing` rule scores as one signal among many:
 
 ```typescript
-let { renderedAt } = unwrap(ctx.honeypot);
+let { renderedAt } = unwrap(ctx.honeypotOutcome);
 let assessment = await filter.check({ content, author, renderedAt });
 ```
 
