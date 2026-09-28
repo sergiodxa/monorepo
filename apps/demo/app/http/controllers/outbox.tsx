@@ -8,8 +8,8 @@
  */
 
 import { vstack } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { font, fontSize, whiteSpace } from "@sdxc/u/typography";
+import { Card, Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { outbox } from "~/app/lib/mailer";
@@ -22,28 +22,50 @@ export default createAction(routes.outbox, (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout title={ctx.intl.t("outbox.title")} locale={ctx.locale}>
-			<div mix={[vstack({ gap: 6 })]}>
-				<header mix={[vstack({ gap: 2 })]}>
-					<h1 mix={[text("3xl"), weight("light")]}>{ctx.intl.t("outbox.title")}</h1>
-					<p>{ctx.intl.t("outbox.tagline")}</p>
-					<a href={routes.board.index.href()}>{ctx.intl.t("outbox.back")}</a>
+			<div mix={[vstack({ gap: 8 })]}>
+				<header mix={[vstack({ gap: 4 })]}>
+					<div mix={[vstack({ gap: 2 })]}>
+						<Heading level={1} mix={[fontSize("3xl")]}>
+							{ctx.intl.t("outbox.title")}
+						</Heading>
+						<Text mix={[fontSize("base")]}>{ctx.intl.t("outbox.tagline")}</Text>
+					</div>
+					<div>
+						<LinkButton href={routes.board.index.href()} variant="outline" color="neutral">
+							{ctx.intl.t("outbox.back")}
+						</LinkButton>
+					</div>
 				</header>
 
-				{messages.length === 0 ? (
-					<p>{ctx.intl.t("outbox.empty")}</p>
-				) : (
-					<ul mix={[vstack({ gap: 4 })]}>
-						{messages.map((message) => (
-							<li key={message.messageId} mix={[vstack({ gap: 2 }), p(4)]}>
-								<p mix={[text("sm")]}>
-									{ctx.intl.t("outbox.to")}: {message.to.map((address) => address.email).join(", ")}
-								</p>
-								<h2 mix={[text("lg"), weight("medium")]}>{message.subject}</h2>
-								<pre mix={[text("sm")]}>{message.text}</pre>
-							</li>
-						))}
-					</ul>
-				)}
+				<Separator />
+
+				<HeadingScope level={2}>
+					{messages.length === 0 ? (
+						<Empty>
+							<Empty.Title>{ctx.intl.t("outbox.emptyTitle")}</Empty.Title>
+							<Empty.Description>{ctx.intl.t("outbox.empty")}</Empty.Description>
+						</Empty>
+					) : (
+						<ul mix={[vstack({ gap: 4 })]}>
+							{messages.map((message) => (
+								<li key={message.messageId}>
+									<Card>
+										<Card.Header>
+											<Card.Description>
+												{ctx.intl.t("outbox.to")}:{" "}
+												{message.to.map((address) => address.email).join(", ")}
+											</Card.Description>
+											<Card.Title mix={[fontSize("lg")]}>{message.subject}</Card.Title>
+										</Card.Header>
+										<Card.Content mix={[font("mono"), fontSize("sm"), whiteSpace("pre-wrap")]}>
+											{message.text}
+										</Card.Content>
+									</Card>
+								</li>
+							))}
+						</ul>
+					)}
+				</HeadingScope>
 			</div>
 		</DocumentLayout>,
 	);

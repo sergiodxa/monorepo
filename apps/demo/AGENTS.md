@@ -13,6 +13,9 @@ shortest correct version of a thing wins over the clever one.
   job queue — because the app runs from a laptop with no network behind it
 - MUST keep every interaction on HTML the browser already implements: `<dialog>` with
   `commandfor` and `command`, plain forms, and no client script
+- MUST build every view out of `@sdxc/ui` components, styling through their own
+  `variant`/`color`/`size` props and reaching for `@sdxc/u` mixins only for layout no
+  component owns
 - MUST put every user-facing string in `app/locales/`, both languages, and read it through
   `ctx.intl.t`
 - MUST keep the D1 binding and `database/migrations/` real, so `bun run db:local:migrate`
@@ -20,11 +23,12 @@ shortest correct version of a thing wins over the clever one.
 
 ## Reference Files
 
-| Concern                      | File                     |
-| ---------------------------- | ------------------------ |
-| Router assembly              | `bootstrap/app.tsx`      |
-| MCP server                   | `bootstrap/mcp.ts`       |
-| Job dispatcher and its queue | `app/jobs/dispatcher.ts` |
-| Data access                  | `app/data/posting.ts`    |
-| In-memory adapters           | `app/lib/`               |
-| Router-level tests           | `app/lib/test/router.ts` |
+| Concern                      | File                       |
+| ---------------------------- | -------------------------- |
+| Router assembly              | `bootstrap/app.tsx`        |
+| MCP server                   | `bootstrap/mcp.ts`         |
+| Job dispatcher and its queue | `app/jobs/dispatcher.ts`   |
+| Data access                  | `app/data/posting.ts`      |
+| In-memory adapters           | `app/lib/`                 |
+| Palette the theme derives    | `resources/css/colors.css` |
+| Router-level tests           | `app/lib/test/router.ts`   |

@@ -1,0 +1,75 @@
+/*
+ * The raw `--ui-color-{scale}-{step}` palette scales the design system's
+ * semantic `--ui-{tone}-*` tokens derive from. The theme layer ships no
+ * palette of its own, so the board declares these eleven-step scales itself
+ * and every component picks up its color from here.
+ *
+ * All five scales share one lightness ramp (50 lightest -> 950 darkest) so a
+ * badge, a button and a card border line up visually at the same step; only
+ * hue and the chroma curve vary. `brand` and `neutral` share hue 250, which
+ * is what makes the board's greys read as cool and lets the blue accent sit
+ * on them without clashing. Chroma is held inside the sRGB gamut at every
+ * lightness, so the declared value is what renders instead of being clipped
+ * into a different lightness and hue.
+ */
+:root {
+	--ui-color-neutral-50: oklch(0.98 0.004 250);
+	--ui-color-neutral-100: oklch(0.96 0.005 250);
+	--ui-color-neutral-200: oklch(0.91 0.008 250);
+	--ui-color-neutral-300: oklch(0.83 0.011 250);
+	--ui-color-neutral-400: oklch(0.73 0.013 250);
+	--ui-color-neutral-500: oklch(0.62 0.014 250);
+	--ui-color-neutral-600: oklch(0.52 0.014 250);
+	--ui-color-neutral-700: oklch(0.42 0.012 250);
+	--ui-color-neutral-800: oklch(0.32 0.01 250);
+	--ui-color-neutral-900: oklch(0.24 0.008 250);
+	--ui-color-neutral-950: oklch(0.16 0.006 250);
+
+	--ui-color-brand-50: oklch(0.98 0.012 250);
+	--ui-color-brand-100: oklch(0.96 0.03 250);
+	--ui-color-brand-200: oklch(0.91 0.06 250);
+	--ui-color-brand-300: oklch(0.83 0.1 250);
+	--ui-color-brand-400: oklch(0.73 0.14 250);
+	--ui-color-brand-500: oklch(0.62 0.17 250);
+	--ui-color-brand-600: oklch(0.52 0.19 250);
+	--ui-color-brand-700: oklch(0.42 0.16 250);
+	--ui-color-brand-800: oklch(0.32 0.12 250);
+	--ui-color-brand-900: oklch(0.24 0.09 250);
+	--ui-color-brand-950: oklch(0.16 0.06 250);
+
+	--ui-color-danger-50: oklch(0.98 0.02 25);
+	--ui-color-danger-100: oklch(0.96 0.05 25);
+	--ui-color-danger-200: oklch(0.91 0.09 25);
+	--ui-color-danger-300: oklch(0.83 0.13 25);
+	--ui-color-danger-400: oklch(0.73 0.16 25);
+	--ui-color-danger-500: oklch(0.62 0.18 25);
+	--ui-color-danger-600: oklch(0.52 0.18 25);
+	--ui-color-danger-700: oklch(0.42 0.16 25);
+	--ui-color-danger-800: oklch(0.32 0.13 25);
+	--ui-color-danger-900: oklch(0.24 0.09 25);
+	--ui-color-danger-950: oklch(0.16 0.06 25);
+
+	--ui-color-warning-50: oklch(0.98 0.02 85);
+	--ui-color-warning-100: oklch(0.96 0.05 85);
+	--ui-color-warning-200: oklch(0.91 0.08 85);
+	--ui-color-warning-300: oklch(0.83 0.12 85);
+	--ui-color-warning-400: oklch(0.73 0.15 85);
+	--ui-color-warning-500: oklch(0.62 0.16 85);
+	--ui-color-warning-600: oklch(0.52 0.16 85);
+	--ui-color-warning-700: oklch(0.42 0.14 85);
+	--ui-color-warning-800: oklch(0.32 0.11 85);
+	--ui-color-warning-900: oklch(0.24 0.08 85);
+	--ui-color-warning-950: oklch(0.16 0.05 85);
+
+	--ui-color-success-50: oklch(0.98 0.02 152);
+	--ui-color-success-100: oklch(0.96 0.05 152);
+	--ui-color-success-200: oklch(0.91 0.09 152);
+	--ui-color-success-300: oklch(0.83 0.13 152);
+	--ui-color-success-400: oklch(0.73 0.16 152);
+	--ui-color-success-500: oklch(0.62 0.15 152);
+	--ui-color-success-600: oklch(0.52 0.126 152);
+	--ui-color-success-700: oklch(0.42 0.1 152);
+	--ui-color-success-800: oklch(0.32 0.076 152);
+	--ui-color-success-900: oklch(0.24 0.057 152);
+	--ui-color-success-950: oklch(0.16 0.038 152);
+}

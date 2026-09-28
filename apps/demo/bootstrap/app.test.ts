@@ -17,6 +17,18 @@ import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
 import { outbox } from "~/app/lib/mailer";
 import { createTestDatabase, fetchApp } from "~/app/lib/test/router";
 
+/**
+ * Host the captcha provider serves its own widget from. The board links no script of its
+ * own, so a tag from anywhere else is a regression; the challenge's is the one exception,
+ * and it is only ever rendered when a Turnstile site key is configured.
+ */
+const TURNSTILE_HOST = "challenges.cloudflare.com";
+
+/** Every opening `<script>` tag in a rendered document, in source order. */
+function scriptTags(html: string): string[] {
+	return [...html.matchAll(/<script\b[^>]*>/g)].map((match) => match[0]);
+}
+
 /** A complete submission, as the form sends it. */
 function submission(overrides: Record<string, string> = {}): URLSearchParams {
 	return new URLSearchParams({
@@ -75,4 +87,42 @@ test("refuses a submission that fails the captcha", async () => {
 	expect(response.status).toBe(403);
 	expect(await Job.listOpen(db, 10)).toHaveLength(0);
 	expect(outbox.messages).toHaveLength(0);
+});
+
+test("gives every position a dialog its own trigger opens", async () => {
+	let posting = await Job.publish(db, {
+		title: "Senior Remix Engineer",
+		company: "Acme",
+		location: "Remote",
+		salary: "$150k – $180k",
+		description: "We build things with Remix v3.",
+		contact_email: "hiring@acme.test",
+	});
+
+	let html = await (await fetchApp(db, "/")).text();
+	let dialogId = `posting-${posting.id}`;
+
+	expect(html).toMatch(new RegExp(`<button[^>]*commandfor="${dialogId}"[^>]*command="show-modal"`));
+	expect(html).toMatch(new RegExp(`<dialog[^>]*id="${dialogId}"`));
+});
+
+test("reopens the form with the reason when a submission is refused", async () => {
+	let body = submission({ contact_email: "not-an-address" });
+	let response = await fetchApp(db, "/", { method: "POST", body });
+	let html = await response.text();
+
+	expect(response.status).toBe(400);
+	expect(await Job.listOpen(db, 10)).toHaveLength(0);
+	expect(html).toMatch(
+		/<dialog[^>]*\sopen(?=[\s>])[^>]*id="post-a-job"|<dialog[^>]*id="post-a-job"[^>]*\sopen(?=[\s>])/,
+	);
+	expect(html).toContain("Every field is required");
+});
+
+test("ships no script", async () => {
+	let board = await (await fetchApp(db, "/")).text();
+	let outbox = await (await fetchApp(db, "/outbox")).text();
+
+	expect(scriptTags(board).filter((tag) => !tag.includes(TURNSTILE_HOST))).toEqual([]);
+	expect(scriptTags(outbox)).toEqual([]);
 });

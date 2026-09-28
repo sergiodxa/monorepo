@@ -2,7 +2,8 @@
 	"board": {
 		"title": "Remix Job Board",
 		"tagline": "Open positions, newest first.",
-		"empty": "No open positions yet. Be the first to post one.",
+		"emptyTitle": "No open positions",
+		"empty": "Be the first to post one.",
 		"post": "Post a job",
 		"outbox": "Outbox"
 	},
@@ -16,6 +17,7 @@
 	},
 	"form": {
 		"title": "Post a position",
+		"tagline": "It goes live the moment you publish it.",
 		"titleField": "Job title",
 		"company": "Company",
 		"location": "Location",
@@ -29,7 +31,8 @@
 	"outbox": {
 		"title": "Outbox",
 		"tagline": "Every message the board sent, newest first.",
-		"empty": "Nothing sent yet. Publish a position and the confirmation lands here.",
+		"emptyTitle": "Nothing sent yet",
+		"empty": "Publish a position and the confirmation lands here.",
 		"to": "To",
 		"subject": "Subject",
 		"back": "Back to the board"
@@ -42,6 +45,7 @@
 	},
 	"notFound": {
 		"title": "Not found",
-		"description": "There is nothing at this address."
+		"description": "There is nothing at this address.",
+		"back": "Back to the board"
 	}
 }

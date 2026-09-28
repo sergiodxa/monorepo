@@ -2,7 +2,8 @@
 	"board": {
 		"title": "Bolsa de trabajo Remix",
 		"tagline": "Vacantes abiertas, de la más reciente a la más antigua.",
-		"empty": "Todavía no hay vacantes. Publica la primera.",
+		"emptyTitle": "No hay vacantes abiertas",
+		"empty": "Publica la primera.",
 		"post": "Publicar vacante",
 		"outbox": "Bandeja de salida"
 	},
@@ -16,6 +17,7 @@
 	},
 	"form": {
 		"title": "Publicar una vacante",
+		"tagline": "Se publica en cuanto la envías.",
 		"titleField": "Puesto",
 		"company": "Empresa",
 		"location": "Ubicación",
@@ -29,7 +31,8 @@
 	"outbox": {
 		"title": "Bandeja de salida",
 		"tagline": "Todos los mensajes que envió la bolsa, del más reciente al más antiguo.",
-		"empty": "Aún no se envía nada. Publica una vacante y la confirmación aparece aquí.",
+		"emptyTitle": "Todavía no se envía nada",
+		"empty": "Publica una vacante y la confirmación aparece aquí.",
 		"to": "Para",
 		"subject": "Asunto",
 		"back": "Volver a la bolsa"
@@ -42,6 +45,7 @@
 	},
 	"notFound": {
 		"title": "No encontrado",
-		"description": "No hay nada en esta dirección."
+		"description": "No hay nada en esta dirección.",
+		"back": "Volver a la bolsa"
 	}
 }

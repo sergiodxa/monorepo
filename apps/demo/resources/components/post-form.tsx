@@ -1,7 +1,7 @@
 /**
- * The "post a job" modal: a native `<dialog>` holding one plain form that POSTs to the
- * board. It reopens itself when a submission was refused, so the visitor sees the reason
- * next to the fields they filled in without a line of script.
+ * The "post a job" modal: one form that POSTs to the board, inside a native dialog. It
+ * reopens itself through the platform's own `open` attribute when a submission was refused,
+ * so the visitor sees the reason next to the fields they filled in without a line of script.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,15 +11,22 @@ import type { I18n } from "@sdxc/i18n";
 import type { Handle } from "remix/ui";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { raw } from "@sdxc/u/general";
 import { vstack } from "@sdxc/u/layout";
-import { is, maxIs, p } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
+import { when } from "@sdxc/u/state";
+import { Alert, Button, Dialog, Form, Label, TextArea, TextField } from "@sdxc/ui";
 
 import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
 import routes from "~/routes/web";
 
 /** The `id` the board's trigger names in `commandfor`. */
 export const POST_FORM_DIALOG_ID = "post-a-job";
+
+/** The `id` the dialog points `aria-labelledby` at, so the modal is named by its own title. */
+const TITLE_ID = `${POST_FORM_DIALOG_ID}-title`;
+
+/** The `id` wiring the description field's label to the textarea it names. */
+const DESCRIPTION_ID = `${POST_FORM_DIALOG_ID}-description`;
 
 namespace PostForm {
 	export interface Props {
@@ -32,64 +39,86 @@ namespace PostForm {
 	}
 }
 
-/** One labelled text field, since the form is four of them before anything else. */
-function Field(handle: Handle<{ name: string; label: string }>) {
-	return () => {
-		let { label, name } = handle.props;
-
-		return (
-			<label mix={[vstack({ gap: 1 })]}>
-				<span mix={[text("sm")]}>{label}</span>
-				<input name={name} type="text" required mix={[is("100%")]} />
-			</label>
-		);
-	};
-}
-
-/** Renders the submit dialog, open when the last submission was refused. */
+/**
+ * Renders the submit dialog, open when the last submission was refused. A dialog carrying
+ * the `open` attribute is laid out in the page's flow and gets no `::backdrop`, so the
+ * reopened panel centers itself in the viewport and spreads one very large shadow over the
+ * page behind it: the visitor gets back the panel they submitted from, with no script.
+ */
 export default function PostForm(handle: Handle<PostForm.Props>) {
 	return () => {
 		let { error, intl, siteKey } = handle.props;
 
 		return (
-			<dialog
+			<Dialog
 				id={POST_FORM_DIALOG_ID}
 				open={Boolean(error)}
-				mix={[is("100%"), maxIs("40rem"), p(6)]}
+				aria-labelledby={TITLE_ID}
+				mix={[
+					when(
+						"&[open]:not(:modal)",
+						raw({
+							position: "fixed",
+							insetBlock: "0",
+							insetInline: "0",
+							margin: "auto",
+							zIndex: "1",
+							boxShadow: "0 0 0 100vmax rgb(0 0 0 / 0.5)",
+						}),
+					),
+				]}
 			>
-				<form method="post" action={routes.board.action.href()} mix={[vstack({ gap: 3 })]}>
-					<h2 mix={[text("xl"), weight("medium")]}>{intl.t("form.title")}</h2>
-					{error ? <p role="alert">{error}</p> : null}
+				<Dialog.Header>
+					<Dialog.Title id={TITLE_ID}>{intl.t("form.title")}</Dialog.Title>
+					<Dialog.Description>{intl.t("form.tagline")}</Dialog.Description>
+				</Dialog.Header>
 
-					<Field name="title" label={intl.t("form.titleField")} />
-					<Field name="company" label={intl.t("form.company")} />
-					<Field name="location" label={intl.t("form.location")} />
-					<Field name="salary" label={intl.t("form.salary")} />
-					<label mix={[vstack({ gap: 1 })]}>
-						<span mix={[text("sm")]}>{intl.t("form.email")}</span>
-						<input name="contact_email" type="email" required mix={[is("100%")]} />
-					</label>
+				<Form method="post" action={routes.board.action.href()}>
+					{error ? (
+						<Alert color="danger" live="assertive">
+							<Alert.Description>{error}</Alert.Description>
+						</Alert>
+					) : null}
 
-					<label mix={[vstack({ gap: 1 })]}>
-						<span mix={[text("sm")]}>{intl.t("form.description")}</span>
-						<textarea name="description" rows={6} required mix={[is("100%")]} />
-					</label>
+					<TextField name="title" label={intl.t("form.titleField")} required />
+					<TextField name="company" label={intl.t("form.company")} required />
+					<TextField name="location" label={intl.t("form.location")} required />
+					<TextField name="salary" label={intl.t("form.salary")} required />
+					<TextField name="contact_email" type="email" label={intl.t("form.email")} required />
+
+					<div mix={[vstack({ gap: 1.5 })]}>
+						<Label htmlFor={DESCRIPTION_ID}>{intl.t("form.description")}</Label>
+						<TextArea id={DESCRIPTION_ID} name="description" rows={6} required />
+					</div>
 
 					{siteKey ? (
 						<TurnstileWidget siteKey={siteKey} />
 					) : (
-						<label mix={[vstack({ gap: 1 })]}>
-							<span mix={[text("sm")]}>{intl.t("form.captcha", { answer: LOCAL_ANSWER })}</span>
-							<input name={LOCAL_FIELD} type="text" required mix={[is("100%")]} />
-						</label>
+						<TextField
+							name={LOCAL_FIELD}
+							label={intl.t("form.captcha", { answer: LOCAL_ANSWER })}
+							required
+						/>
 					)}
 
-					<button type="submit">{intl.t("form.submit")}</button>
-					<button type="button" commandfor={POST_FORM_DIALOG_ID} command="close">
-						{intl.t("posting.close")}
-					</button>
-				</form>
-			</dialog>
+					<Dialog.Footer>
+						<Button
+							type="button"
+							commandfor={POST_FORM_DIALOG_ID}
+							command="close"
+							variant="outline"
+							color="neutral"
+						>
+							{intl.t("posting.close")}
+						</Button>
+						<Button type="submit" color="brand">
+							{intl.t("form.submit")}
+						</Button>
+					</Dialog.Footer>
+				</Form>
+
+				<Dialog.Close commandfor={POST_FORM_DIALOG_ID} aria-label={intl.t("posting.close")} />
+			</Dialog>
 		);
 	};
 }

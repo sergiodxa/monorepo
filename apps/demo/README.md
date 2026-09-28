@@ -24,6 +24,8 @@ queue live in the worker, and the captcha is a word the form prints.
 ## Features
 
 - **Listing** — open positions, newest first, served from an in-memory cache
+- **Component library** — every view is composed from `@sdxc/ui`, over the palette in
+  `resources/css/colors.css` that the theme derives its semantic tokens from
 - **Native dialogs** — a position and the submit form open as `<dialog>` elements driven by
   `commandfor` and `command`, so the page ships no script
 - **Markdown descriptions** — parsed and rendered as UI nodes
