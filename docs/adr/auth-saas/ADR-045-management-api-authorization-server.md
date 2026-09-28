@@ -2,7 +2,10 @@
 
 ## Status
 
-**Proposed** - 2026-09-27
+**Superseded** by [ADR-046: Platform Tenant as the Management API's Authorization Server](./ADR-046-platform-tenant-as-management-authorization-server.md) - 2026-09-28.
+This ADR's own new authorization server (its own client table, authorization codes, and refresh
+tokens, parallel to the tenant OIDC engine) turned out to be unnecessary: the platform tenant is
+already a complete authorization server, and reusing it directly needs far less new surface.
 
 ## Background
 
