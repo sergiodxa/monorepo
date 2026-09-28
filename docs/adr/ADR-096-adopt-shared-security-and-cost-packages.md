@@ -69,6 +69,9 @@ each app's own bill.
 - auth-saas splits its `d1Rows` meter into rows read and rows written. `COST_RESOURCES` is append-only,
   so the two meters are appended and `d1Rows` stops being written rather than being removed.
 - auth-saas adds R2 meters for the import and export runs, and both apps add Workers Logs.
+- auth-saas's meters outgrow the 20 numbers an Analytics Engine data point holds, so its ledger point
+  carries the priced cents in `double1` and the quantities as one comma-separated blob in
+  `COST_RESOURCES` order, and the usage query sums `double1` for ledger sources only.
 - Analytics Engine stays metered but prices at zero while `AnalyticsEngine.BILLING_ACTIVE` is `false`,
   so the day it becomes billable is a package update, not a code change.
 
@@ -79,8 +82,9 @@ auth-saas and uptime verify through `Turnstile` from `@sdxc/captcha/turnstile` a
 
 - auth-saas keeps `turnstile-challenge.ts`, which decides when a visitor must solve a challenge after
   spending part of the sign-in budget. The verification it runs becomes the `captcha()` middleware on
-  the submitting routes, with `onFailure` returning `null` on `unavailable`, which keeps sign-in failing
-  open when Cloudflare is down.
+  the submitting routes, with `onFailure` returning `null` for every failure: the handler reads
+  `ctx.captcha`, re-renders its form with the localized message, and lets an unchallenged sign-in
+  (which carries no token) through, which also keeps sign-in failing open when Cloudflare is down.
 - uptime's trial guard calls `turnstile.verify()` directly, since it runs the challenge as one step of
   a guard that also checks the target and the budgets.
 - Both apps' tests replace their siteverify stubs with `MemoryCaptcha` from `@sdxc/captcha/memory`,
@@ -94,7 +98,7 @@ what the address is for.
 | Form                                        | Checks                                                                           |
 | ------------------------------------------- | -------------------------------------------------------------------------------- |
 | auth-saas platform sign-up                  | parse, disposable, mail server, typo suggestion                                  |
-| auth-saas hosted sign-up and magic link     | parse; disposable and mail server stay a tenant setting, off by default          |
+| auth-saas hosted sign-up and magic link     | parse only; a tenant setting for disposable and mail server is deferred          |
 | uptime trial lead capture                   | parse, disposable, mail server, typo suggestion                                  |
 | uptime team invites and email alert targets | parse, mail server                                                               |
 | books newsletter and sample-chapter forms   | parse, disposable, typo suggestion                                               |
@@ -103,6 +107,10 @@ what the address is for.
 
 - A mail-server lookup that fails (`lookup-failed`) lets the address through: a resolver outage never
   blocks a sign-up.
+- Where a form runs both, the typo suggestion comes before the disposable check, because the
+  disposable list includes typo domains such as `gmial.com`: a visitor who mistyped Gmail sees
+  "Did you mean gmail.com?" rather than a disposable-address refusal. Keeping the typed address after
+  the suggestion (a hidden confirmation field on the resubmitted form) still runs the disposable check.
 - auth-saas replaces the email half of `foldIdentifier` with `canonical`, and `encodeDomain` with
   `normalizeDomain`. For every address both accept, `canonical` equals today's folded value, so no
   stored identifier changes. The addresses the old folding accepted and the parser refuses (IP
@@ -119,7 +127,12 @@ change. auth-saas also runs `checkPasswordHistory()` on change and reset, replac
   single-factor password and 8 alongside a second factor. The package's default of 15 applies to new
   passwords only; existing ones keep working.
 - The Have I Been Pwned lookup (`breached: true`) is enabled in both. `breach-check-unavailable` lets
-  the password through, since every local check has already passed by then.
+  the password through, since every local check has already passed by then. In auth-saas the tenant
+  object reads it from the `PASSWORD_BREACH_CHECK` var in `wrangler.jsonc`, so tests, which carry no
+  such var, never reach the real API.
+- auth-saas lets a password through when a stored hash cannot be verified
+  (`history-check-unavailable`) and logs it, since refusing would lock that subject out of reset, its
+  recovery path; a match against any other stored hash still refuses.
 - auth-saas's tenant `deniedTerms` and identifier rules map onto `deniedTerms` and `identifiers`, and
   `password-policy-issue.ts` switches over `PasswordPolicyError.issue.reason`.
 - auth-saas hashes the NFKC form of a password today. `checkPasswordHistory()` verifies the value it is
@@ -226,19 +239,27 @@ touch a workspace. One commit per app keeps each app's notes describing what cha
 ## Current Progress
 
 - [x] Packages built and made public
-- [ ] Phase 1: auth-saas cost rates
-- [ ] Phase 1: uptime cost rates
-- [ ] Phase 2: auth-saas trailing slash
-- [ ] Phase 2: blog trailing slash
-- [ ] Phase 2: auth-saas captcha
-- [ ] Phase 2: uptime captcha
-- [ ] Phase 3: auth-saas email folding
-- [ ] Phase 3: email checks in auth-saas, uptime, books, r3-auth and blog
-- [ ] Phase 4: auth-saas password policy
-- [ ] Phase 4: r3-auth password policy
+- [x] Phase 1: auth-saas cost rates
+- [x] Phase 1: uptime cost rates
+- [x] Phase 2: auth-saas trailing slash
+- [x] Phase 2: blog trailing slash
+- [x] Phase 2: auth-saas captcha
+- [x] Phase 2: uptime captcha
+- [x] Phase 3: auth-saas email folding
+- [x] Phase 3: email checks in auth-saas, uptime, books, r3-auth and blog
+- [x] Phase 4: auth-saas password policy
+- [x] Phase 4: r3-auth password policy
+- [ ] Deploy uptime, blog, books and r3-auth
+- [ ] Tenant setting for disposable and mail-server checks on auth-saas's hosted forms
 
 ## Notes
 
+- auth-saas's hosted sign-up and magic link parse addresses only. A per-tenant setting for the
+  disposable and mail-server checks needs a tenant migration, an object method and a management API
+  field, so it waits for its own change.
+- auth-saas hashes the NFKC form of a password when it is set, but sign-in and password change
+  verify the password as typed, so a password whose NFKC form differs from what was typed cannot sign
+  in. That predates this ADR and is tracked separately.
 - The package defaults are not the apps' current values: `minLength` is 15 where both apps use 8. Each
   app passes its value explicitly until the product decision is made.
 - `@sdxc/password-policy`'s root import does not include the history check, whose scrypt verification
