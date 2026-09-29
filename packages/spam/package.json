@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/spam",
 	"version": "0.0.1",
-	"description": "Spam scoring for user-generated content, with local rules, reputation checks and a trainable classifier",
+	"description": "Spam scoring for user content: local rules, reputation checks and a classifier",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
