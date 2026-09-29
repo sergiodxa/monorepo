@@ -294,6 +294,7 @@
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/icons": "workspace:*",
+        "@sdxc/json-schema": "workspace:*",
         "@sdxc/jwt": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
