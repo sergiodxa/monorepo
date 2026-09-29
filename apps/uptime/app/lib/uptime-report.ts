@@ -32,6 +32,19 @@ export function worstStatus(current: UptimeBar.Status, next: UptimeBar.Status): 
 }
 
 /**
+ * The check-weighted success ratio: passed checks over every check, summed across however
+ * many days and monitors a report covers, so a busier day or monitor counts for more.
+ *
+ * @param successful - Checks that passed.
+ * @param total - Checks that ran.
+ * @returns A ratio between 0 and 1, or `null` when nothing was checked.
+ * @example uptimeRatio(437, 500) // 0.874
+ */
+export function uptimeRatio(successful: number, total: number): number | null {
+	return total === 0 ? null : successful / total;
+}
+
+/**
  * A success ratio as the percentage a report prints, without its sign — the emails add that
  * themselves, since where the symbol goes is a property of the language.
  *

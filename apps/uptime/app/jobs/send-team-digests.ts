@@ -36,7 +36,7 @@ import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { features } from "~/app/lib/flags";
 import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
-import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
+import { formatUptime, uptimeRatio, worstStatus } from "~/app/lib/uptime-report";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
 
@@ -392,12 +392,14 @@ function toReport(monitor: TeamDigestMonitor): MonitorReport {
 		status = worstStatus(status, day.status);
 	}
 
+	let ratio = uptimeRatio(successful, checks);
+
 	return {
 		id: monitor.id,
 		name: monitor.name,
 		type: monitor.type,
 		status,
-		uptime: checks === 0 ? null : formatUptime(successful / checks),
+		uptime: ratio === null ? null : formatUptime(ratio),
 	};
 }
 
@@ -441,5 +443,6 @@ function teamUptime(monitors: TeamDigestMonitor[]): string | null {
 		}
 	}
 
-	return checks === 0 ? null : formatUptime(successful / checks);
+	let ratio = uptimeRatio(successful, checks);
+	return ratio === null ? null : formatUptime(ratio);
 }

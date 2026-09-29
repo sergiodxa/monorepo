@@ -1,7 +1,7 @@
 /**
  * Unit tests for the rules every uptime report shares: folding statuses together
  * keeps the worst of them, any measurement outranks an unobserved period, and
- * uptime prints as a plain one-decimal magnitude.
+ * uptime is weighted by checks and prints as a plain one-decimal magnitude.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { formatUptime, worstStatus } from "~/app/lib/uptime-report";
+import { formatUptime, uptimeRatio, worstStatus } from "~/app/lib/uptime-report";
 
 describe("worstStatus", () => {
 	test("keeps the worse of two measured statuses, either way round", () => {
@@ -39,5 +39,17 @@ describe("formatUptime", () => {
 		expect(formatUptime(0.994)).toBe("99.4");
 		expect(formatUptime(1)).toBe("100.0");
 		expect(formatUptime(0)).toBe("0.0");
+	});
+});
+
+describe("uptimeRatio", () => {
+	test("divides passed checks by every check", () => {
+		expect(uptimeRatio(437, 500)).toBe(0.874);
+		expect(uptimeRatio(0, 10)).toBe(0);
+		expect(uptimeRatio(10, 10)).toBe(1);
+	});
+
+	test("reports nothing measured when no check ran", () => {
+		expect(uptimeRatio(0, 0)).toBeNull();
 	});
 });
