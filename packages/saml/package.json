@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/saml",
 	"version": "0.0.1",
-	"description": "SAML 2.0 service provider: verify a signed assertion, build the requests and metadata around it",
+	"description": "SAML 2.0 service provider: verify signed assertions, build requests and metadata",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
