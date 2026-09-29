@@ -11,6 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
+import * as checks from "@sdxc/json-schema/checks";
 import { createContextKey, RequestContext, createRouter } from "remix/router";
 import { route } from "remix/routes";
 import { describe, expect, expectTypeOf, test, vi } from "vitest";
@@ -35,38 +37,27 @@ const Scopes = createContextKey<readonly string[]>();
 const toolset = tools({
 	listPosts: tool("list_posts", {
 		description: "Lists published posts.",
-		input: {
-			type: "object",
-			properties: { limit: { type: "integer", minimum: 1, default: 5 } },
-		},
+		input: s.object({ limit: s.defaulted(s.integer().pipe(checks.min(1)), 5) }),
 		annotations: { readOnlyHint: true },
 	}),
 	posts: tools({
 		get: tool("get_post", {
 			description: "Reads one post.",
-			input: {
-				type: "object",
-				properties: { slug: { type: "string" } },
-				required: ["slug"],
-			},
+			input: s.object({ slug: s.string() }),
 		}),
 		create: tool("create_post", {
 			description: "Creates a post.",
-			input: {
-				type: "object",
-				properties: { title: { type: "string" } },
-				required: ["title"],
-			},
+			input: s.object({ title: s.string() }),
 		}),
 	}),
 	structured: tool("structured", {
 		description: "Answers with a declared shape.",
-		input: { type: "object", properties: {} },
-		output: { type: "object", properties: { count: { type: "integer" } } },
+		input: s.object({}),
+		output: s.object({ count: s.integer() }),
 	}),
 	broken: tool("broken", {
 		description: "Fails unexpectedly.",
-		input: { type: "object", properties: {} },
+		input: s.object({}),
 	}),
 });
 
@@ -303,7 +294,7 @@ describe("tools/call", () => {
 
 		expect(status).toBe(200);
 		expect(body.error?.code).toBe(ErrorCode.InvalidParams);
-		expect(body.error?.data?.issues).toEqual(["limit: expected 1 or more"]);
+		expect(body.error?.data?.issues).toEqual(["limit: Expected number greater than or equal to 1"]);
 	});
 
 	test("reports a tool the caller may not use as unknown, not as forbidden", async () => {

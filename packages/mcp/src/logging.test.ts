@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
 import { Log } from "@sdxc/logger";
 import { describe, expect, test, vi } from "vitest";
 
@@ -23,7 +24,7 @@ const ARTICLE = "https://sergiodxa.com/articles/:slug.md";
 
 const GET_POST = tool("get_post", {
 	description: "Reads one post.",
-	input: { type: "object", properties: { slug: { type: "string" } }, required: ["slug"] },
+	input: s.object({ slug: s.string() }),
 });
 
 const ARTICLE_RESOURCE = resource(ARTICLE, { name: "Article", mimeType: "text/markdown" });

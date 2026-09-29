@@ -1,6 +1,7 @@
 /**
  * The tool declaration tree: the equivalent of a route table, where a tool's name is its
- * address and its input schema is the contract that types the handler.
+ * address and its `@sdxc/json-schema` input schema is what `tools/list` publishes, what
+ * validates a call, and what types the handler.
  *
  * Declaration is separate from handling: this file says what exists and what it takes,
  * while binding a handler and its middleware happens at `map()`, where an application's
@@ -10,8 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DescribedSchema, InferOutput, JSONSchema } from "@sdxc/json-schema";
+
+import { toJSONSchema } from "@sdxc/json-schema";
+import { isFailure } from "@sdxc/result";
+
 import type { AnyRequestContext, ToolContext } from "./context.js";
-import type { FromObjectSchema, ObjectSchema } from "./schema.js";
 
 /**
  * Hints a client may weigh when shaping the approval prompt a person sees before a tool
@@ -31,8 +36,16 @@ export interface ToolAnnotations {
 	readonly openWorldHint?: boolean;
 }
 
+/**
+ * A schema a tool's arguments or structured result are declared with: any
+ * `@sdxc/json-schema` schema whose parse yields an object, since MCP requires both to be
+ * described by a JSON Schema of `type: "object"`.
+ */
+// oxlint-disable-next-line typescript/no-explicit-any -- the accepted input side is whatever the schema documents
+export type ToolSchema = DescribedSchema<any, Record<string, unknown>>;
+
 /** Everything a tool declares about itself. */
-export interface ToolDefinition<Schema extends ObjectSchema> {
+export interface ToolDefinition<Schema extends ToolSchema> {
 	/** Human-readable name for a client that renders one. */
 	title?: string;
 	/**
@@ -42,15 +55,18 @@ export interface ToolDefinition<Schema extends ObjectSchema> {
 	 * and its neighbours, so it should focus on purpose and occasion for use.
 	 */
 	description: string;
-	/** The arguments, as JSON Schema. Also the source of the handler's argument type. */
+	/**
+	 * The arguments. Its input side is published as JSON Schema, its parse validates a call,
+	 * and its output side is the handler's argument type.
+	 */
 	input: Schema;
 	/**
 	 * The shape of the structured result, when the tool returns one.
 	 *
 	 * Declaring it gives a model a result it can consume directly as data, and MCP only
-	 * permits `structuredContent` when it is declared.
+	 * permits `structuredContent` when it is declared. Published from its output side.
 	 */
-	output?: ObjectSchema;
+	output?: ToolSchema;
 	annotations?: ToolAnnotations;
 }
 
@@ -59,8 +75,8 @@ export interface ToolDescriptor {
 	name: string;
 	title?: string;
 	description: string;
-	inputSchema: ObjectSchema;
-	outputSchema?: ObjectSchema;
+	inputSchema: JSONSchema;
+	outputSchema?: JSONSchema;
 	annotations?: ToolAnnotations;
 }
 
@@ -68,14 +84,14 @@ export interface ToolDescriptor {
 const TOOL = Symbol.for("@sdxc/mcp.tool");
 
 /** A declared tool; `map()` binds its handler separately. */
-export interface Tool<Schema extends ObjectSchema = ObjectSchema> {
+export interface Tool<Schema extends ToolSchema = ToolSchema> {
 	readonly [TOOL]: true;
 	/** The name a client calls, and the tool's identity in every response. */
 	readonly name: string;
 	/** The `tools/list` entry, built once at declaration. */
 	readonly descriptor: ToolDescriptor;
-	/** The declared input schema, kept for validating a call's arguments. */
-	readonly inputSchema: Schema;
+	/** The declared input schema, which validates a call's arguments. */
+	readonly input: Schema;
 }
 
 /**
@@ -92,14 +108,15 @@ const TOOL_NAME = /^[a-zA-Z0-9_.-]{1,128}$/;
  * 128 characters.
  * @param definition What the tool takes and what it is for.
  * @returns The declared tool, ready to be mapped to a handler.
- * @throws Error When the name breaks the pattern MCP allows.
+ * @throws Error When the name breaks the pattern MCP allows, or a schema cannot describe
+ * itself as a JSON Schema object.
  * @example
  * let getPost = tool("get_post", {
  * 	description: "Reads one published post in full, as Markdown.",
- * 	input: { type: "object", properties: { slug: { type: "string" } }, required: ["slug"] },
+ * 	input: s.object({ slug: s.string() }),
  * });
  */
-export function tool<const Schema extends ObjectSchema>(
+export function tool<Schema extends ToolSchema>(
 	name: string,
 	definition: ToolDefinition<Schema>,
 ): Tool<Schema> {
@@ -112,13 +129,38 @@ export function tool<const Schema extends ObjectSchema>(
 	let descriptor: ToolDescriptor = {
 		name,
 		description: definition.description,
-		inputSchema: definition.input,
+		inputSchema: describe(name, "input", definition.input),
 	};
 	if (definition.title !== undefined) descriptor.title = definition.title;
-	if (definition.output !== undefined) descriptor.outputSchema = definition.output;
+	if (definition.output !== undefined) {
+		descriptor.outputSchema = describe(name, "output", definition.output);
+	}
 	if (definition.annotations !== undefined) descriptor.annotations = definition.annotations;
 
-	return { [TOOL]: true, name, descriptor, inputSchema: definition.input };
+	return { [TOOL]: true, name, descriptor, input: definition.input };
+}
+
+/**
+ * Publishes one side of a tool's schema. Named schemas stay inline, since a model fills
+ * arguments more reliably from one self-contained object than by following `$ref`s, and
+ * `$schema` is left out because 2020-12 is already MCP's default dialect.
+ *
+ * @throws Error When the schema has no JSON Schema form, or describes something other
+ * than an object, which MCP cannot carry as a tool's schema.
+ */
+function describe(name: string, side: "input" | "output", schema: ToolSchema): JSONSchema {
+	let described = toJSONSchema(schema, { direction: side, refs: "inline" });
+	if (isFailure(described)) {
+		throw new Error(`The ${name} tool's ${side} schema: ${described.error.message}`, {
+			cause: described.error,
+		});
+	}
+
+	let { $schema: _, ...json } = described.data;
+	if (json.type !== "object") {
+		throw new Error(`The ${name} tool's ${side} schema must describe an object`);
+	}
+	return json;
 }
 
 /** A tree of declared tools, nested however an application wants to group them. */
@@ -178,7 +220,7 @@ export function* walk(group: ToolGroup): Generator<Tool> {
  * @example
  * function requireOwnMonitor(): ToolMiddleware<InputOf<typeof toolset.monitors.get>> {}
  */
-export type InputOf<T> = T extends Tool<infer Schema> ? FromObjectSchema<Schema> : never;
+export type InputOf<T> = T extends Tool<infer Schema> ? InferOutput<Schema> : never;
 
 /** A value a handler or middleware may return directly or as a promise. */
 type Awaitable<T> = T | Promise<T>;
@@ -217,21 +259,21 @@ export type ToolHandler<Input = Record<string, unknown>> = (
 ) => Awaitable<unknown>;
 
 /** One tool's handler, with the middleware and visibility that belong to it alone. */
-export interface Action<Schema extends ObjectSchema = ObjectSchema> {
+export interface Action<Schema extends ToolSchema = ToolSchema> {
 	/**
 	 * Whether this tool exists for this caller. A tool this returns `false` for is absent
 	 * from `tools/list` and reported by `tools/call` as unknown, keeping a write tool
 	 * invisible to a read-only credential — checked before any argument is read.
 	 */
 	available?(ctx: AnyRequestContext): boolean;
-	middleware?: ToolMiddleware<FromObjectSchema<Schema>>[];
-	handler: ToolHandler<FromObjectSchema<Schema>>;
+	middleware?: ToolMiddleware<InferOutput<Schema>>[];
+	handler: ToolHandler<InferOutput<Schema>>;
 }
 
 /** An action, or just its handler when it needs neither middleware nor a predicate. */
-export type ActionOrHandler<Schema extends ObjectSchema = ObjectSchema> =
+export type ActionOrHandler<Schema extends ToolSchema = ToolSchema> =
 	| Action<Schema>
-	| ToolHandler<FromObjectSchema<Schema>>;
+	| ToolHandler<InferOutput<Schema>>;
 
 /**
  * Handlers for every tool in one group, under a shared middleware chain. A nested group
@@ -256,7 +298,7 @@ export interface Controller<Group extends ToolGroup> {
  * @example
  * export default createTool(toolset.searchPosts, (ctx) => Post.search(ctx.input.query));
  */
-export function createTool<Schema extends ObjectSchema>(
+export function createTool<Schema extends ToolSchema>(
 	tool: Tool<Schema>,
 	action: ActionOrHandler<Schema>,
 ): ActionOrHandler<Schema> {

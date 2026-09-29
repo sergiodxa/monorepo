@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
+import * as checks from "@sdxc/json-schema/checks";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { InputOf } from "./tools.js";
@@ -18,24 +20,67 @@ import { createTool, createToolController, tool, tools, walk } from "./tools.js"
 /** A tool exercising an enum, a default, an optional, and a required argument. */
 let searchPosts = tool("search_posts", {
 	description: "Searches published posts.",
-	input: {
-		type: "object",
-		properties: {
-			query: { type: "string" },
-			type: { type: "string", enum: ["articles", "tutorials"] },
-			limit: { type: "integer", default: 10 },
-		},
-		required: ["query"],
-	},
+	input: s.object({
+		query: s.string().pipe(checks.minLength(1)).meta({ description: "Words to look for." }),
+		type: s.optional(s.enum_(["articles", "tutorials"])),
+		limit: s.defaulted(s.integer(), 10),
+	}),
 	annotations: { readOnlyHint: true },
 });
+
+/** An input with no arguments, for the cases that only exercise names and grouping. */
+const NO_ARGUMENTS = s.object({});
 
 describe("tool", () => {
 	test("builds the descriptor a tools/list entry is made of", () => {
 		expect(searchPosts.name).toBe("search_posts");
 		expect(searchPosts.descriptor.description).toBe("Searches published posts.");
-		expect(searchPosts.descriptor.inputSchema.required).toEqual(["query"]);
 		expect(searchPosts.descriptor.annotations).toEqual({ readOnlyHint: true });
+	});
+
+	test("publishes the input side of the schema as JSON Schema, without $schema", () => {
+		expect(searchPosts.descriptor.inputSchema).toEqual({
+			type: "object",
+			properties: {
+				query: { type: "string", minLength: 1, description: "Words to look for." },
+				type: { type: "string", enum: ["articles", "tutorials"] },
+				limit: { type: "integer", default: 10 },
+			},
+			required: ["query"],
+		});
+	});
+
+	test("publishes the output side of a declared output schema", () => {
+		let counted = tool("count_posts", {
+			description: "d",
+			input: NO_ARGUMENTS,
+			output: s.object({ count: s.defaulted(s.integer(), 0) }),
+		});
+
+		expect(counted.descriptor.outputSchema).toEqual({
+			type: "object",
+			properties: { count: { type: "integer", default: 0 } },
+			required: ["count"],
+		});
+	});
+
+	test("writes a named schema inline, so the published schema is self-contained", () => {
+		let Author = s.object({ name: s.string() }).meta({ id: "Author" });
+		let byAuthor = tool("posts_by_author", {
+			description: "d",
+			input: s.object({ author: Author }),
+		});
+
+		expect(byAuthor.descriptor.inputSchema).not.toHaveProperty("$defs");
+		expect(byAuthor.descriptor.inputSchema.properties?.author).toMatchObject({ type: "object" });
+	});
+
+	test("refuses a schema whose JSON Schema is not an object, as a union's anyOf is", () => {
+		let input = s.union([s.object({ slug: s.string() }), s.object({ id: s.string() })]);
+
+		expect(() => tool("get_either", { description: "d", input })).toThrow(
+			/input schema must describe an object/,
+		);
 	});
 
 	test("leaves undeclared descriptor keys absent rather than null", () => {
@@ -44,19 +89,17 @@ describe("tool", () => {
 	});
 
 	test("refuses a name a client could not carry in the Mcp-Name header", () => {
-		expect(() =>
-			tool("get post", { description: "d", input: { type: "object", properties: {} } }),
-		).toThrow(/Invalid tool name/);
-		expect(() => tool("", { description: "d", input: { type: "object", properties: {} } })).toThrow(
+		expect(() => tool("get post", { description: "d", input: NO_ARGUMENTS })).toThrow(
 			/Invalid tool name/,
 		);
+		expect(() => tool("", { description: "d", input: NO_ARGUMENTS })).toThrow(/Invalid tool name/);
 	});
 
 	test("accepts every character class MCP allows", () => {
 		expect(
 			tool("admin.tools.list-v2_1", {
 				description: "d",
-				input: { type: "object", properties: {} },
+				input: NO_ARGUMENTS,
 			}).name,
 		).toBe("admin.tools.list-v2_1");
 	});
@@ -75,8 +118,8 @@ describe("tools", () => {
 		let tree = tools({
 			search: searchPosts,
 			posts: tools({
-				list: tool("list_posts", { description: "d", input: { type: "object", properties: {} } }),
-				get: tool("get_post", { description: "d", input: { type: "object", properties: {} } }),
+				list: tool("list_posts", { description: "d", input: NO_ARGUMENTS }),
+				get: tool("get_post", { description: "d", input: NO_ARGUMENTS }),
 			}),
 		});
 
@@ -90,7 +133,7 @@ describe("tools", () => {
 	test("refuses two tools answering to the same name", () => {
 		let duplicate = tool("search_posts", {
 			description: "d",
-			input: { type: "object", properties: {} },
+			input: NO_ARGUMENTS,
 		});
 
 		expect(() => tools({ a: searchPosts, b: tools({ c: duplicate }) })).toThrow(
@@ -124,10 +167,10 @@ describe("createTool", () => {
 describe("createToolController", () => {
 	test("requires an action for every tool in the group", () => {
 		let group = tools({
-			list: tool("list_things", { description: "d", input: { type: "object", properties: {} } }),
+			list: tool("list_things", { description: "d", input: NO_ARGUMENTS }),
 			get: tool("get_thing", {
 				description: "d",
-				input: { type: "object", properties: { id: { type: "string" } }, required: ["id"] },
+				input: s.object({ id: s.string() }),
 			}),
 		});
 

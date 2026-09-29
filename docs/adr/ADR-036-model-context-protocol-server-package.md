@@ -4,6 +4,8 @@
 
 **Accepted** - 2026-08-25
 
+§4 and alternative 3 are superseded by [ADR-102](./ADR-102-mcp-tool-schemas-from-json-schema.md): tool schemas are `@sdxc/json-schema` schemas.
+
 ## Background
 
 Agents are becoming a way people read and operate software, and the Model Context Protocol is how a server tells an agent what it can do. Two apps here have something worth exposing that way: the blog holds writing an agent should be able to search and read on its owner's behalf, and the uptime app holds live operational state plus the ability to start watching something new.

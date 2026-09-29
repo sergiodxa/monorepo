@@ -25,7 +25,6 @@ import type {
 	ResourceContents,
 	ResourceListing,
 } from "./resources.js";
-import type { ObjectSchema } from "./schema.js";
 import type {
 	Action,
 	ActionOrHandler,
@@ -35,6 +34,7 @@ import type {
 	ToolGroup,
 	ToolHandler,
 	ToolMiddleware,
+	ToolSchema,
 } from "./tools.js";
 
 import {
@@ -152,7 +152,7 @@ export interface McpHandler {
 		 *
 		 * @throws Error When a tool is mapped twice, or a nested group appears as an action.
 		 */
-		map<Schema extends ObjectSchema>(tool: Tool<Schema>, action: ActionOrHandler<Schema>): void;
+		map<Schema extends ToolSchema>(tool: Tool<Schema>, action: ActionOrHandler<Schema>): void;
 		map<Group extends ToolGroup>(group: Group, controller: Controller<Group>): void;
 	};
 	resources: {
@@ -460,7 +460,7 @@ async function callTool(
 	let log = currentLog();
 	log?.set({ mcp: { tool: name } });
 
-	let checked = validateArguments(entry.tool.inputSchema, params?.arguments);
+	let checked = validateArguments(entry.tool, params?.arguments);
 	if (isFailure(checked)) {
 		log?.set({ mcp: { is_error: true } });
 		return json(

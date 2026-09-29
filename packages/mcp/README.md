@@ -14,10 +14,11 @@ are its route, a handler and its middleware are its controller, and `fetch` take
 npm add @sdxc/mcp
 ```
 
-Handlers receive the `RequestContext` from [`remix`](https://www.npmjs.com/package/remix),
+Handlers receive the `RequestContext` from [`remix`](https://www.npmjs.com/package/remix), tool
+schemas are [`@sdxc/json-schema`](https://www.npmjs.com/package/@sdxc/json-schema) schemas,
 argument validation reports through
 [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and log enrichment goes through
-[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger). All three install alongside this
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger). All four install alongside this
 package.
 
 ## Usage
@@ -25,25 +26,38 @@ package.
 ### Declare A Tool
 
 A tool declaration is the route table: the name a client calls, the prompt a model chooses it
-by, and the [JSON Schema](https://json-schema.org) its arguments satisfy.
+by, and the schema its arguments satisfy. That one `@sdxc/json-schema` schema is published in
+`tools/list` as [JSON Schema](https://json-schema.org), parses every call, and types the handler.
 
 ```typescript
+import * as s from "@sdxc/json-schema";
+import * as checks from "@sdxc/json-schema/checks";
 import { tool, tools } from "@sdxc/mcp";
 
 export default tools({
 	searchDocuments: tool("search_documents", {
 		description: "Searches published documents by title, excerpt and tags.",
-		input: {
-			type: "object",
-			properties: {
-				query: { type: "string", description: "What to search for." },
-				limit: { type: "integer", minimum: 1, maximum: 50, default: 10 },
-			},
-			required: ["query"],
-		},
+		input: s.object({
+			query: s.string().meta({ description: "What to search for." }),
+			limit: s.defaulted(s.integer().pipe(checks.min(1), checks.max(50)), 10),
+		}),
 		annotations: { readOnlyHint: true },
 	}),
 });
+```
+
+`tools/list` publishes the schema's input side, with `$schema` left out since 2020-12 is MCP's
+default dialect, and named schemas written inline so a model reads one self-contained object:
+
+```json
+{
+	"type": "object",
+	"properties": {
+		"query": { "type": "string", "description": "What to search for." },
+		"limit": { "type": "integer", "minimum": 1, "maximum": 50, "default": 10 }
+	},
+	"required": ["query"]
+}
 ```
 
 ### Handle It
@@ -60,8 +74,8 @@ let mcp = createHandler({
 });
 
 mcp.tools.map(toolset.searchDocuments, async (ctx) => {
-	// ctx.input.query is string and ctx.input.limit is number, both derived from the
-	// schema, with no second declaration.
+	// ctx.input is what the schema's parse yields: query is string, and limit is number
+	// with the default already applied.
 	let documents = await search(ctx.input.query, ctx.input.limit);
 	if (documents.length === 0) throw new ToolError("Nothing matched. Try a broader query.");
 	return documents;
@@ -80,15 +94,13 @@ Grouping is what lets one `map()` call cover several tools under a shared middle
 tool's address stays the name it was declared with, wherever it sits in the tree.
 
 ```typescript
+import * as s from "@sdxc/json-schema";
 import { tool, tools } from "@sdxc/mcp";
 
 let toolset = tools({
 	documents: tools({
-		list: tool("list_documents", { description: "…", input: { type: "object", properties: {} } }),
-		get: tool("get_document", {
-			description: "…",
-			input: { type: "object", properties: { slug: { type: "string" } }, required: ["slug"] },
-		}),
+		list: tool("list_documents", { description: "…", input: s.object({}) }),
+		get: tool("get_document", { description: "…", input: s.object({ slug: s.string() }) }),
 	}),
 });
 
@@ -177,30 +189,34 @@ empty array, which the specification reserves for a resource that exists with no
 
 ## Argument Handling
 
-Arguments are filled in by a language model, so the validator is shaped around what a model
-actually sends rather than around strictness for its own sake.
+Arguments are parsed with the tool's own schema, following `remix/data-schema` semantics, and
+the handler receives what the parse yields. Arguments are filled in by a language model, so the
+parse is shaped around what a model actually sends:
 
-- An **undeclared property is dropped**, not refused. A model that invents an argument has
-  still asked for something the tool can do.
-- **`null` counts as absent.** Models spell an omitted optional as `null` constantly, and
-  treating it as a type error refuses a call that was perfectly clear.
-- A **`default` is substituted**, and the derived type marks that property present — so a
-  handler reads `ctx.input.limit` rather than `ctx.input.limit ?? 20`, which would restate the
-  default the schema already declares.
+- An **undeclared property is dropped**, not refused, as `s.object` strips unknown keys by
+  default. A model that invents an argument has still asked for something the tool can do.
+- **`null` counts as absent** for a property whose schema has no `null` in it. Models spell an
+  omitted optional as `null` constantly, and treating it as a type error refuses a call that
+  was perfectly clear. A property declared with `s.nullable` receives the `null`.
+- A **`s.defaulted` value is substituted**, and the parsed type marks that property present —
+  so a handler reads `ctx.input.limit` rather than `ctx.input.limit ?? 20`, which would restate
+  the default the schema already declares.
 - **Every constraint is checked** before answering, so a caller that got two arguments wrong
-  learns about both in one round trip.
-- Values are taken as sent: `"20"` is not `20`. A model that sent a string for a number misread
-  the schema, and quietly accepting it hides that from the next call.
+  learns about both in one round trip. A missing required argument reads `Required`.
+- Values are taken as sent: `"20"` is not `20` under `s.integer()`. A model that sent a string
+  for a number misread the schema, and quietly accepting it hides that from the next call. An
+  `@sdxc/json-schema/coerce` schema accepts both, and publishes that it does.
+- **Transforms run**, so `ctx.input` holds the schema's output: a `.transform()` that decodes
+  an id hands the handler the decoded value.
 
 Validation runs before tool middleware, which is what lets middleware read `ctx.input` as a
 typed value.
 
-The schema subset is `string` (with `enum`, `minLength`, `maxLength`, `pattern`, `format`,
-`default`), `number` and `integer` (with `minimum`, `maximum`, `default`), `boolean`, `array`
-(with `items`, `minItems`, `maxItems`), and `object` (with `properties`, `required`), nested
-however deep. There is no `oneOf`, no `nullable` and no union: each makes a schema harder for a
-model to satisfy without making the tool more capable, and four clearly named tools beat one
-tool with a union argument.
+A schema's JSON Schema must be `type: "object"` at its root, as MCP requires, so `tool()` throws
+at declaration for a root `s.union`, `s.variant` or `s.nullable`. Inside the object, anything
+`@sdxc/json-schema` describes is allowed; keeping arguments to scalars, enums and arrays is what
+makes a schema easiest for a model to satisfy, and four clearly named tools beat one tool with a
+union argument.
 
 ## Where Each Kind Of Failure Is Reported
 
@@ -280,7 +296,9 @@ surrounding middleware provided; pass a bare `Request` and one is built.
 Declares one tool. `name` is limited to the 1–128 characters MCP allows — letters, digits, `_`,
 `-` and `.` — and anything else throws at declaration rather than failing a call later.
 `definition` carries `description`, `input`, and optionally `title`, `output` and
-`annotations`.
+`annotations`. `input` and `output` are `@sdxc/json-schema` schemas whose parse yields an
+object; `tools/list` publishes the input side of `input` and the output side of `output`, and a
+schema whose JSON Schema is missing or is not an object throws at declaration.
 
 ### `tools(group: ToolGroup): ToolGroup`
 
@@ -325,11 +343,11 @@ Yields every resource in a declaration tree, depth first in declaration order.
 Types one resource's `list` and `read` against its declaration, so they can live in their own
 file with `ctx.variables` typed from the pattern.
 
-### `validateArguments(schema: ObjectSchema, value: unknown): Result<Record<string, unknown>, InvalidArgumentsError>`
+### `validateArguments(tool: Tool, value: unknown): Result<InferOutput<Schema>, InvalidArgumentsError>`
 
-Checks a `tools/call` arguments object against a schema, filling in defaults and dropping
-undeclared properties. The handler runs this for you; call it directly to apply the same rules
-somewhere else.
+Parses a `tools/call` arguments object with a tool's input schema, following the rules in
+[Argument Handling](#argument-handling). The handler runs this for you; call it directly to
+apply the same rules somewhere else.
 
 ### `contextFor(input: Request | RequestContext): RequestContext`
 
@@ -352,7 +370,8 @@ from a stale list.
 #### `InvalidArgumentsError`
 
 Arguments did not satisfy a tool's declared schema. Its `issues` array holds one entry per
-failed constraint, each naming the property path it applies to.
+failed constraint, each naming the property path it applies to (`page.size: Expected integer`,
+`tags[1]: Expected string`, `(root): Expected object`).
 
 ### Protocol Constants
 
@@ -389,12 +408,12 @@ keys the dispatcher publishes `ctx.input`, `ctx.tool`, `ctx.uri`, `ctx.variables
 - `HandlerOptions`, `McpHandler` and `CacheScope` — what `createHandler` takes and returns.
 - `Tool`, `ToolGroup`, `ToolDefinition`, `ToolDescriptor`, `ToolAnnotations`, `Action`,
   `ActionOrHandler`, `Controller`, `ToolHandler`, `ToolMiddleware`, `CallToolResult`,
-  `TextContent` and `InputOf` — the tool side.
+  `TextContent` and `InputOf` — the tool side. `InputOf` is the parsed output of a tool's
+  input schema.
+- `ToolSchema` — what `input` and `output` accept: an `@sdxc/json-schema` schema whose parse
+  yields an object.
 - `Resource`, `ResourceGroup`, `ResourceDeclaration`, `ResourceDescriptor`, `ResourceAction`,
   `ResourceListing`, `ResourceContents` and `ReadResult` — the resource side.
-- `ObjectSchema`, `StringSchema`, `NumberSchema`, `BooleanSchema`, `ArraySchema`,
-  `PropertySchema`, `FromSchema` and `FromObjectSchema` — the schema subset, and the two types
-  that derive a handler's argument type from it.
 - `Implementation` and `ClientCapabilities` — a self-reported name and version, and what a
   client declares it can do.
 

@@ -39,16 +39,6 @@ export type {
 	ResourceListing,
 	Routable,
 } from "./resources.js";
-export type {
-	ArraySchema,
-	BooleanSchema,
-	FromObjectSchema,
-	FromSchema,
-	NumberSchema,
-	ObjectSchema,
-	PropertySchema,
-	StringSchema,
-} from "./schema.js";
 export { createTool, createToolController, tool, tools, walk } from "./tools.js";
 export type {
 	Action,
@@ -64,5 +54,6 @@ export type {
 	ToolGroup,
 	ToolHandler,
 	ToolMiddleware,
+	ToolSchema,
 } from "./tools.js";
 export { validateArguments } from "./validate.js";
