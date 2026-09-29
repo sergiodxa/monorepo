@@ -25,15 +25,30 @@ import { OPTION_GROUP_NAMES } from "~/app/services/option-groups";
  * becoming markup.
  */
 export const TAGS = {
-	hero: {
-		content: "blocks",
+	hero: { content: "blocks" },
+
+	/** Copy on one side and what it is about on the other, stacked on a narrow screen. */
+	split: { content: "blocks" },
+
+	"split-copy": { content: "blocks" },
+
+	"split-media": { content: "blocks" },
+
+	actions: {
+		content: "none",
 		attributes: s.object({
 			"cta-href": s.string(),
 			"cta-label": s.string(),
 			"alt-href": s.optional(s.string()),
 			"alt-label": s.optional(s.string()),
+			size: s.optional(s.enum_(["sm", "lg"])),
 		}),
 	},
+
+	/** A value is written as the tag's content, so it can be a counted `{% $name %}` hole. */
+	stats: { content: "blocks" },
+
+	stat: { content: "inline", attributes: s.object({ label: s.string() }) },
 
 	copyable: { content: "inline" },
 
@@ -44,8 +59,10 @@ export const TAGS = {
 		content: "blocks",
 		attributes: s.object({
 			id: s.string(),
-			title: s.string(),
-			tone: s.optional(s.enum_(["plain", "tinted"])),
+			title: s.optional(s.string()),
+			eyebrow: s.optional(s.string()),
+			tone: s.optional(s.enum_(["plain", "tinted", "grid"])),
+			align: s.optional(s.enum_(["start", "center"])),
 		}),
 	},
 
@@ -60,6 +77,8 @@ export const TAGS = {
 			title: s.string(),
 			icon: s.optional(s.enum_(["globe", "shield", "package", "zap", "book", "compass"])),
 			metric: s.optional(s.string()),
+			href: s.optional(s.string()),
+			"link-label": s.optional(s.string()),
 		}),
 	},
 

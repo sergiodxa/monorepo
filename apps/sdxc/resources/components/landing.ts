@@ -9,6 +9,7 @@
 
 import type { RemixOptions } from "@sdxc/markdown/remix";
 
+import Actions from "~/resources/components/actions";
 import CodeBlock from "~/resources/components/code-block";
 import CodeTabs, { CodeTab } from "~/resources/components/code-tabs";
 import Copyable from "~/resources/components/copyable";
@@ -21,9 +22,17 @@ import Note from "~/resources/components/note";
 import PackageGroups from "~/resources/components/package-groups";
 import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
 import SectionBlock from "~/resources/components/section-block";
+import Split, { SplitCopy, SplitMedia } from "~/resources/components/split";
+import Stats, { Stat } from "~/resources/components/stats";
 
 export const LANDING_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	hero: Hero,
+	split: Split,
+	"split-copy": SplitCopy,
+	"split-media": SplitMedia,
+	actions: Actions,
+	stats: Stats,
+	stat: Stat,
 	copyable: Copyable,
 	"section-block": SectionBlock,
 	"feature-grid": FeatureGrid,

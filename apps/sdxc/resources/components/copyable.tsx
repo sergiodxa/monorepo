@@ -36,7 +36,7 @@ export default function Copyable(handle: Handle<Copyable.Props>) {
 					p(2, 2, 2, 4),
 					rounded("lg"),
 					border({ color: "neutral.border", width: 1, style: "solid" }),
-					bg("neutral.bg"),
+					bg(),
 				]}
 			>
 				<code id={valueId} mix={[font("mono"), text("sm"), fg("neutral.emphasis")]}>

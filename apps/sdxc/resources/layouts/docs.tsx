@@ -12,6 +12,7 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { MenuIcon } from "@sdxc/icons";
 import { borderEdge, fg } from "@sdxc/u/color";
+import { raw } from "@sdxc/u/general";
 import {
 	basis,
 	block,
@@ -19,6 +20,7 @@ import {
 	hstack,
 	inlineFlex,
 	insBs,
+	relative,
 	shrink,
 	sticky,
 	vstack,
@@ -27,7 +29,7 @@ import { overflow, overflowX, overflowY } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, maxBs, maxIs, mis, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
-import { when } from "@sdxc/u/state";
+import { before, when } from "@sdxc/u/state";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
 
@@ -194,6 +196,26 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						mix={[
 							vstack({ gap: 10 }),
 							is("100%"),
+							relative(),
+							raw({ isolation: "isolate" }),
+							/* The faded grid the landing's hero sits on, so a page opens the way the landing does. */
+							before(
+								raw({
+									content: '""',
+									position: "absolute",
+									insetBlockStart: 0,
+									insetInline: 0,
+									blockSize: "28rem",
+									zIndex: -1,
+									backgroundImage:
+										"linear-gradient(to right, var(--ui-neutral-border) 1px, transparent 1px), linear-gradient(to bottom, var(--ui-neutral-border) 1px, transparent 1px)",
+									backgroundSize: "3rem 3rem",
+									opacity: 0.45,
+									maskImage: "radial-gradient(70% 90% at 30% 0%, black, transparent 75%)",
+									WebkitMaskImage: "radial-gradient(70% 90% at 30% 0%, black, transparent 75%)",
+									pointerEvents: "none",
+								}),
+							),
 							p(8, 5, 16, 5),
 							media("(min-width: 60rem)", p(10, 8, 20, 8)),
 							media(ASIDE_BREAKPOINT, [hstack({ gap: 12, align: "start", justify: "between" })]),

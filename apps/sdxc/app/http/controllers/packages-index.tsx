@@ -10,11 +10,9 @@
 
 import { SearchIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
-import { listStyle } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, m, p } from "@sdxc/u/size";
-import { font, text, tracking, weight } from "@sdxc/u/typography";
+import { vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
+import { font, text, textTransform, tracking } from "@sdxc/u/typography";
 import { Button, Keyboard } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
@@ -22,6 +20,8 @@ import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
+import PageTitle from "~/resources/components/page-title";
+import RuledGrid, { RuledCell } from "~/resources/components/ruled-grid";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-palette";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -36,16 +36,15 @@ export default createAction(routes.api.index, async (ctx) => {
 
 	let response = await ctx.render(
 		<DocumentLayout
-			title="API reference — sdxc"
+			title="API — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
 			sponsors={ctx.sponsors}
 		>
 			<DocsLayout tree={tree} activePath={routes.api.index.href()} breadcrumbs={[]}>
-				<header mix={[vstack({ gap: 3 })]}>
-					<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>API reference</h1>
-					<p mix={[m(0), text("lg"), fg("neutral")]}>{DESCRIPTION}</p>
-				</header>
+				<PageTitle eyebrow="API" title="Every package">
+					{DESCRIPTION}
+				</PageTitle>
 
 				{/*
 				 * The header's palette already searches every package alongside every guide,
@@ -66,40 +65,32 @@ export default createAction(routes.api.index, async (ctx) => {
 					</Button>
 				</div>
 
-				<div mix={[vstack({ gap: 10 }), m("3rem", 0, 0, 0)]}>
+				<div mix={[vstack({ gap: 10, align: "stretch" }), m("3rem", 0, 0, 0)]}>
 					{groups.map((group) => (
-						<section key={group.title} mix={[vstack({ gap: 4 })]}>
-							<h2 mix={[m(0), text("sm"), weight("semibold"), tracking("wide"), fg("neutral")]}>
+						<section key={group.title} mix={[vstack({ gap: 4, align: "stretch" })]}>
+							<h2
+								mix={[
+									m(0),
+									font("mono"),
+									text("xs"),
+									textTransform("uppercase"),
+									tracking("widest"),
+									fg("neutral"),
+								]}
+							>
 								{group.title}
 							</h2>
 
-							<ul
-								mix={[
-									grid(),
-									gap(3),
-									m(0),
-									p(0),
-									is("100%"),
-									listStyle("none"),
-									gridTemplate({ columns: "1fr" }),
-									media(
-										"(min-width: 40rem)",
-										gridTemplate({ columns: repeat("auto-fill", "minmax(18rem, 1fr)") }),
-									),
-								]}
-							>
+							<RuledGrid min="16rem">
 								{group.packages.map((entry) => (
-									<li key={entry.name} mix={[vstack({ gap: 1 })]}>
-										<a
-											href={routes.api.show.href({ name: entry.directory })}
-											mix={[font("mono"), text("sm"), weight("medium"), fg("brand")]}
-										>
-											{entry.name}
-										</a>
-										<p mix={[m(0), text("sm"), fg("neutral")]}>{entry.description}</p>
-									</li>
+									<RuledCell
+										key={entry.name}
+										href={routes.api.show.href({ name: entry.directory })}
+										name={entry.name}
+										description={entry.description}
+									/>
 								))}
-							</ul>
+							</RuledGrid>
 						</section>
 					))}
 				</div>

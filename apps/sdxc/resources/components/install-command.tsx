@@ -58,7 +58,7 @@ export default function InstallCommand(handle: Handle<InstallCommand.Props>) {
 					overflow("hidden"),
 					rounded("lg"),
 					border({ color: "neutral.border", width: 1, style: "solid" }),
-					bg("neutral.bg"),
+					bg(),
 				]}
 			>
 				{MANAGERS.map((manager) => {

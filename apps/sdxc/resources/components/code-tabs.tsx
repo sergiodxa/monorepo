@@ -1,8 +1,8 @@
 /**
  * The `code-tabs` and `code-tab` pair: a strip of labels over a set of snippets, with
- * no script involved. Each tab is a radio input paired with its own label and panel;
- * the wrapper around the three is `display: contents`, so the labels line up as one
- * strip while the panel stays a CSS sibling of the input that reveals it.
+ * no script involved. Each tab is a label holding its radio input, followed by its
+ * panel; the wrapper around the two is `display: contents`, so the labels line up as one
+ * strip while the panel stays a CSS sibling of the label whose input reveals it.
  *
  * The strip is a `<form>` because a radio group is scoped to its form owner: two sets
  * of tabs on one page then answer to their own labels rather than to each other's.
@@ -22,8 +22,8 @@ import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
 import { cursor, raw } from "@sdxc/u/general";
 import { basis, flex, flexWrap, gap, hidden } from "@sdxc/u/layout";
-import { p } from "@sdxc/u/size";
-import { precededBy } from "@sdxc/u/state";
+import { minIs, p } from "@sdxc/u/size";
+import { precededBy, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 
 import type { OptionGroupName } from "~/app/services/option-groups";
@@ -94,25 +94,19 @@ export default function CodeTabs(handle: Handle<CodeTabs.Props>) {
 	};
 }
 
-/** Renders one tab: its control, its label in the strip, and its panel below. */
+/**
+ * Renders one tab: its label in the strip, holding the control, and its panel below. The
+ * control sits inside its label, so the pair needs no id to find each other — an id is
+ * only unique within one render, and two strips on a page would otherwise share them.
+ */
 export function CodeTab(handle: Handle<CodeTabs.TabProps>) {
 	return () => {
 		let { children, label, selected } = handle.props;
 		let strip = handle.context.get(CodeTabScope);
-		let inputId = `${handle.id}-tab`;
 
 		return (
 			<div mix={[raw({ display: "contents" })]}>
-				<input
-					type="radio"
-					name={RADIO_GROUP}
-					id={inputId}
-					data-option-value={strip?.name ? label : undefined}
-					defaultChecked={strip?.name ? strip.selected === label : selected}
-					mix={[visuallyHidden()]}
-				/>
 				<label
-					htmlFor={inputId}
 					mix={[
 						raw({ order: -1 }),
 						p(1.5, 3),
@@ -124,14 +118,27 @@ export function CodeTab(handle: Handle<CodeTabs.TabProps>) {
 						weight("medium"),
 						cursor("pointer"),
 						transition("background-color, border-color, color"),
-						precededBy("input:checked", [bg("brand.tint"), fg("brand"), border("brand.border")]),
-						precededBy("input:focus-visible", outline({ color: "brand.ring", offset: 2 })),
+						when("&:has(input:checked)", [bg("brand.tint"), fg("brand"), border("brand.border")]),
+						when("&:has(input:focus-visible)", outline({ color: "brand.ring", offset: 2 })),
 					]}
 				>
+					<input
+						type="radio"
+						name={RADIO_GROUP}
+						data-option-value={strip?.name ? label : undefined}
+						defaultChecked={strip?.name ? strip.selected === label : selected}
+						mix={[visuallyHidden()]}
+					/>
 					{label}
 				</label>
 				<div
-					mix={[basis("100%"), hidden(), precededBy("input:checked", raw({ display: "block" }))]}
+					mix={[
+						basis("100%"),
+						/* A long line scrolls inside its block rather than widening the strip past its column. */
+						minIs(0),
+						hidden(),
+						precededBy("label:has(input:checked)", raw({ display: "block" })),
+					]}
 				>
 					{children}
 				</div>

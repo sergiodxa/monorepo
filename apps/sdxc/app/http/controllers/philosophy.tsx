@@ -13,12 +13,13 @@
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
-import { is, maxIs, p } from "@sdxc/u/size";
+import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readContent } from "~/app/services/content";
+import Band from "~/resources/components/band";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
 import Sponsors from "~/resources/components/sponsors";
@@ -52,10 +53,15 @@ export default createAction(routes.philosophy, async (ctx) => {
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
 				{toRemix(content.data, { components: LANDING_COMPONENTS })}
 
-				{/* The people funding the work close the argument, since it is their argument too. */}
-				<div mix={[is("100%"), maxIs("64rem"), p(0, 5, 16, 5)]}>
-					<Sponsors sponsors={ctx.sponsors} />
-				</div>
+				{/*
+				 * The people funding the work close the argument, since it is their argument too.
+				 * With nobody to name, the page ends on the argument itself.
+				 */}
+				{ctx.sponsors.length > 0 ? (
+					<Band>
+						<Sponsors sponsors={ctx.sponsors} />
+					</Band>
+				) : null}
 			</main>
 		</DocumentLayout>,
 	);

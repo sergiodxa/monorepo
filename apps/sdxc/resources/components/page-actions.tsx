@@ -60,7 +60,10 @@ export default function PageActions(handle: Handle<PageActions.Props>) {
 						<Menu.Item
 							key={link.label}
 							href={link.href}
-							{...(link.external ? { target: "_blank", rel: "noreferrer" } : {})}
+							{...(link.external
+								? { target: "_blank", rel: "noreferrer" }
+								: /* The markdown twin is a text file, so the browser loads it as a document. */
+									{ "data-rmx-document": true })}
 						>
 							{link.label}
 						</Menu.Item>

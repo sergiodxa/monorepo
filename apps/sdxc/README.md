@@ -25,9 +25,12 @@ Observability is enabled, with traces head-sampled at 10%.
 ## Features
 
 - **The landing page is a markdown file.** `resources/content/home.md` holds the whole
-  pitch, written in a small tag vocabulary — `hero`, `section-block`, `feature-grid`,
-  `code-tabs`, `note` — whose components live in `resources/components/`. Editing the
-  copy is editing that one file.
+  pitch, written in a small tag vocabulary — `hero`, `section-block`, `split`, `stats`,
+  `actions`, `feature-grid`, `code-tabs`, `package-groups`, `note` — whose components live
+  in `resources/components/`. Editing the copy is editing that one file.
+- **Every band sits in one frame.** Each section draws a rule across the page, dashed rails
+  down both sides of the content column and a marker where they meet, so the page reads as
+  one frame the sections are set into. The frame is `resources/components/band.tsx`.
 - **Every tag has an attribute schema**, so a mistyped attribute is a parse error
   carrying the line it sits on rather than a section that renders blank.
 - **The package list comes from the workspace.** Names and descriptions are read from

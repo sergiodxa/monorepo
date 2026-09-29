@@ -38,6 +38,7 @@ export default createAction(routes.maintenance, async (ctx) => {
 			sponsors={ctx.sponsors}
 		>
 			<PageLayout
+				eyebrow="Policy"
 				title={frontmatter.title}
 				description={frontmatter.description}
 				lastUpdated={frontmatter.lastUpdated}

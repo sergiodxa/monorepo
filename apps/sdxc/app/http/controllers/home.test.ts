@@ -19,7 +19,17 @@ describe("GET /", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("<!DOCTYPE html>");
-		expect(body).toContain("Small TypeScript packages built on web standards.");
+		expect(body).toMatch(/<h1[^>]*>sdxc<\/h1>/);
+		expect(body).toContain("Take one, or take the set.");
+	});
+
+	test("loads the file links in the footer as documents rather than as client navigations", async () => {
+		let body = await (await fetchApp("/")).text();
+
+		for (let href of ["/llms.txt", "/rss.xml"]) {
+			let anchor = body.match(new RegExp(`<a[^>]*href="${href}"[^>]*>`))?.[0];
+			expect(anchor).toContain("data-rmx-document");
+		}
 	});
 
 	test("counts the collection rather than quoting a written-down number", async () => {
@@ -36,6 +46,14 @@ describe("GET /", () => {
 
 		expect(body).toContain("@sdxc/result");
 		expect(body).toContain("@sdxc/markdown");
+	});
+
+	test("gives every element a unique id, so no tab strip answers another's label", async () => {
+		let body = await (await fetchApp("/")).text();
+		let ids = [...body.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]);
+
+		expect(ids.length).toBeGreaterThan(0);
+		expect(ids.filter((id, index) => ids.indexOf(id) !== index)).toEqual([]);
 	});
 
 	test("answers 404 for an unmapped path", async () => {

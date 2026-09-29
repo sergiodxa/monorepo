@@ -10,9 +10,9 @@
 import type { Handle } from "remix/ui";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
-import { hstack, insBs, sticky } from "@sdxc/u/layout";
+import { hidden, hstack, inline, insBs, sticky } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { is, maxIs, p } from "@sdxc/u/size";
+import { is, maxIs, mi, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { NavLink } from "@sdxc/ui";
@@ -51,9 +51,11 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				mix={[
 					hstack({ gap: 4, align: "center", justify: "between" }),
 					is("100%"),
-					maxIs("80rem"),
-					p(3, 4),
-					media("(min-width: 48rem)", p(4, 8)),
+					/* The bar lines up with the frame the landing bands are drawn in. */
+					maxIs("76rem"),
+					mi("auto"),
+					p(3, 5),
+					media("(min-width: 48rem)", p(4, 12)),
 				]}
 			>
 				<a
@@ -116,9 +118,12 @@ export function SiteNav(handle: Handle<SiteHeader.NavProps>) {
 					<NavLink href={componentsPath} aria-current={onComponents ? "page" : undefined}>
 						UI
 					</NavLink>
-					<NavLink href={REPOSITORY_HREF} rel="noreferrer">
-						GitHub
-					</NavLink>
+					{/* A phone has no room for all six; the footer links the source on every page. */}
+					<span mix={[hidden(), media("(min-width: 30rem)", inline())]}>
+						<NavLink href={REPOSITORY_HREF} rel="noreferrer">
+							GitHub
+						</NavLink>
+					</span>
 				</nav>
 			</div>
 		);

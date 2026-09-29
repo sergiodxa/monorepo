@@ -11,7 +11,7 @@
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, text, tracking, weight } from "@sdxc/u/typography";
+import { font, text, weight } from "@sdxc/u/typography";
 import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -28,6 +28,7 @@ import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import ComponentPreview from "~/resources/components/component-preview";
 import CompositionTree from "~/resources/components/composition-tree";
+import PageTitle from "~/resources/components/page-title";
 import { findPreview } from "~/resources/components/preview-registry.server";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -84,10 +85,9 @@ export default createAction(routes.api.component, async (ctx) => {
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>{reference.name}</h1>
-						<p mix={[m(0), text("lg"), fg("neutral")]}>
+						<PageTitle eyebrow="@sdxc/ui" title={reference.name}>
 							<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
-						</p>
+						</PageTitle>
 					</header>
 
 					{preview ? (

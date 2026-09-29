@@ -16,7 +16,7 @@ import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, text, tracking, weight } from "@sdxc/u/typography";
+import { font, text } from "@sdxc/u/typography";
 import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -35,13 +35,19 @@ import {
 	listComponentEntries,
 	listUtilityGroups,
 } from "~/app/services/navigation";
-import { findPackage, listApplicationsUsing, readPackageReadme } from "~/app/services/packages";
+import {
+	findPackage,
+	listApplicationsUsing,
+	listPackageGroups,
+	readPackageReadme,
+} from "~/app/services/packages";
 import { absoluteUrl } from "~/app/services/site";
 import CatalogueIndex from "~/resources/components/catalogue-index";
 import InstallCommand from "~/resources/components/install-command";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PackageFact from "~/resources/components/package-fact";
 import PageActions from "~/resources/components/page-actions";
+import PageTitle from "~/resources/components/page-title";
 import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -60,6 +66,9 @@ export default createAction(routes.api.show, async (ctx) => {
 	let selections = await readOptionSelections(ctx.request);
 
 	let users = listApplicationsUsing(entry.name);
+	let group = listPackageGroups().find((candidate) =>
+		candidate.packages.some((member) => member.directory === name),
+	)?.title;
 	/* A catalogue's README indexes hundreds of pages, so the page draws that index instead. */
 	let body = CATALOGUE_PACKAGES.has(name) ? null : await readReference(ctx, entry);
 	let anchors: Anchor[] = body?.anchors ?? [];
@@ -82,10 +91,9 @@ export default createAction(routes.api.show, async (ctx) => {
 			>
 				<article>
 					<header mix={[vstack({ gap: 4 })]}>
-						<h1 mix={[m(0), font("mono"), text("3xl"), weight("bold"), tracking("tight")]}>
-							{entry.name}
-						</h1>
-						<p mix={[m(0), text("lg"), fg("neutral")]}>{entry.description}</p>
+						<PageTitle eyebrow={group} title={entry.name} mono>
+							{entry.description}
+						</PageTitle>
 
 						<InstallCommand command={`npm add ${entry.name}`}>{null}</InstallCommand>
 

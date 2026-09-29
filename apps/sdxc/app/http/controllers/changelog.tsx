@@ -24,6 +24,7 @@ import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import Note from "~/resources/components/note";
+import PageTitle from "~/resources/components/page-title";
 import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -70,8 +71,9 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
-						<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>{TITLE}</h1>
-						<p mix={[m(0), text("lg"), fg("neutral")]}>{DESCRIPTION}</p>
+						<PageTitle eyebrow="Releases" title={TITLE}>
+							{DESCRIPTION}
+						</PageTitle>
 					</header>
 
 					{releases.length === 0 ? (

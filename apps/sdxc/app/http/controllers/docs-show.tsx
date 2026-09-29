@@ -13,7 +13,7 @@ import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { text, tracking, weight } from "@sdxc/u/typography";
+import { font, text } from "@sdxc/u/typography";
 import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -27,6 +27,7 @@ import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
+import PageTitle from "~/resources/components/page-title";
 import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
@@ -82,12 +83,11 @@ export default createAction(routes.docs.show, async (ctx) => {
 			>
 				<article>
 					<header mix={[vstack({ gap: 3 })]}>
-						<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>
-							{frontmatter.title}
-						</h1>
-						<p mix={[m(0), text("lg"), fg("neutral")]}>{frontmatter.description}</p>
+						<PageTitle eyebrow={frontmatter.section.title} title={frontmatter.title}>
+							{frontmatter.description}
+						</PageTitle>
 						{frontmatter.lastUpdated ? (
-							<p mix={[m(0), text("sm"), fg("neutral.muted")]}>
+							<p mix={[m(0), font("mono"), text("xs"), fg("neutral.muted")]}>
 								Last updated {frontmatter.lastUpdated}
 							</p>
 						) : null}

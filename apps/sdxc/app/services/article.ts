@@ -16,6 +16,7 @@ import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
 
 import { findPackage, readPackageFacts } from "~/app/services/packages";
+import { listShowcase } from "~/app/services/showcase";
 import routes from "~/routes/web";
 
 /** Where a file in the workspace is read on GitHub, which is where a README's own links point. */
@@ -34,15 +35,33 @@ export interface Anchor {
 	level: number;
 }
 
+/**
+ * The totals the extractor counts on disk beside the catalogues it reads, so a sentence
+ * quoting them is counted from the same run that built their pages.
+ */
+const extractedCounts = import.meta.glob<{ utilities: number; components: number; rfcs: number }>(
+	"../generated/counts.json",
+	{ eager: true, import: "default" },
+);
+
 /** Numbers the copy quotes, written as `{% $name %}` holes so a claim is counted. */
 function contentVariables(): Record<string, string> {
 	let facts = readPackageFacts();
+	let extracted = Object.values(extractedCounts)[0];
 
 	return {
 		packageCount: String(facts.published),
 		standaloneCount: String(facts.standalone),
 		frameworkFreeCount: String(facts.frameworkFree),
 		remixCount: String(facts.remixTargeted),
+		applicationCount: String(listShowcase().length),
+		...(extracted
+			? {
+					componentCount: String(extracted.components),
+					utilityCount: String(extracted.utilities),
+					rfcCount: String(extracted.rfcs),
+				}
+			: {}),
 	};
 }
 

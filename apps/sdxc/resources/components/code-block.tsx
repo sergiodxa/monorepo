@@ -87,7 +87,7 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 						relative(),
 						rounded("lg"),
 						border({ color: "neutral.border", width: 1, style: "solid" }),
-						bg("neutral.bg"),
+						bg(),
 					]}
 				>
 					{code}
@@ -100,11 +100,7 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 
 		return (
 			<div
-				mix={[
-					rounded("lg"),
-					border({ color: "neutral.border", width: 1, style: "solid" }),
-					bg("neutral.bg"),
-				]}
+				mix={[rounded("lg"), border({ color: "neutral.border", width: 1, style: "solid" }), bg()]}
 			>
 				<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), p(2, 2, 2, 3)]}>
 					<span mix={[hstack({ gap: 2, align: "center" }), fg("neutral")]}>

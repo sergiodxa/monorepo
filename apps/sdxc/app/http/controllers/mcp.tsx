@@ -14,9 +14,6 @@ import type { RequestContext } from "remix/router";
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
-import { vstack } from "@sdxc/u/layout";
-import { is, maxIs, p } from "@sdxc/u/size";
-import { Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
@@ -24,9 +21,9 @@ import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readContent } from "~/app/services/content";
 import mcp from "~/bootstrap/mcp";
 import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
-import SiteHeader from "~/resources/components/site-header";
 import mcpSource from "~/resources/content/mcp.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
+import PageLayout from "~/resources/layouts/page";
 import routes from "~/routes/web";
 
 /** The one-sentence summary a search result and a link preview show. */
@@ -54,15 +51,14 @@ export default createAction(routes.mcp, async (ctx) => {
 			canonical={ctx.url.href}
 			sponsors={ctx.sponsors}
 		>
-			<SiteHeader activePath={routes.mcp.href()} />
-
-			<main mix={[vstack({ align: "center" }), is("100%")]}>
-				<div mix={[is("100%"), maxIs("48rem"), p(10, 5, 20, 5)]}>
-					<Typeset preset="docs">
-						{toRemix(content.data, { components: POLICY_COMPONENTS })}
-					</Typeset>
-				</div>
-			</main>
+			<PageLayout
+				eyebrow="For agents"
+				title="The MCP endpoint"
+				description={DESCRIPTION}
+				activePath={routes.mcp.href()}
+			>
+				{toRemix(content.data, { components: POLICY_COMPONENTS })}
+			</PageLayout>
 		</DocumentLayout>,
 	);
 

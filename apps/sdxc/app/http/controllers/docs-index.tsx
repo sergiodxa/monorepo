@@ -8,12 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fg } from "@sdxc/u/color";
-import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { is, m } from "@sdxc/u/size";
-import { text, tracking, weight } from "@sdxc/u/typography";
-import { Card, Link } from "@sdxc/ui";
+import { m } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
@@ -21,6 +16,9 @@ import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { listGuides } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { readPackageFacts } from "~/app/services/packages";
+import Feature from "~/resources/components/feature";
+import FeatureGrid from "~/resources/components/feature-grid";
+import PageTitle from "~/resources/components/page-title";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -74,37 +72,23 @@ export default createAction(routes.docs.index, async (ctx) => {
 			sponsors={ctx.sponsors}
 		>
 			<DocsLayout tree={tree} activePath={routes.docs.index.href()} breadcrumbs={[]}>
-				<header mix={[vstack({ gap: 3 })]}>
-					<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>Documentation</h1>
-					<p mix={[m(0), text("lg"), fg("neutral")]}>{DESCRIPTION}</p>
-				</header>
+				<PageTitle eyebrow="Guides" title="Documentation">
+					{DESCRIPTION}
+				</PageTitle>
 
-				<div
-					mix={[
-						grid(),
-						gap(4),
-						is("100%"),
-						m("2.5rem", 0, 0, 0),
-						gridTemplate({ columns: "1fr" }),
-						media(
-							"(min-width: 40rem)",
-							gridTemplate({ columns: repeat("auto-fit", "minmax(18rem, 1fr)") }),
-						),
-					]}
-				>
-					{destinations.map((destination) => (
-						<Card key={destination.title}>
-							<Card.Header>
-								<Card.Title>{destination.title}</Card.Title>
-								<Card.Description>{destination.description}</Card.Description>
-							</Card.Header>
-							<Card.Footer>
-								<Link href={destination.href} mix={[text("sm"), weight("medium")]}>
-									{destination.label}
-								</Link>
-							</Card.Footer>
-						</Card>
-					))}
+				<div mix={[m("2.5rem", 0, 0, 0)]}>
+					<FeatureGrid columns="2">
+						{destinations.map((destination) => (
+							<Feature
+								key={destination.title}
+								title={destination.title}
+								href={destination.href}
+								link-label={destination.label}
+							>
+								{destination.description}
+							</Feature>
+						))}
+					</FeatureGrid>
 				</div>
 			</DocsLayout>
 		</DocumentLayout>,

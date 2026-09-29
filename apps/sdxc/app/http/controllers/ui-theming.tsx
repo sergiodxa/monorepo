@@ -22,6 +22,7 @@ import type { ThemeDeclaration } from "~/app/services/theming";
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readTheme } from "~/app/services/theming";
+import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
 import Snippet from "~/resources/components/snippet";
@@ -69,11 +70,10 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>Theming</h1>
-						<p mix={[m(0), text("lg"), fg("neutral")]}>
+						<PageTitle eyebrow="@sdxc/ui" title="Theming">
 							Every color a component draws comes from a variable, and every variable belongs to a
 							role. Redefine the variables and the whole catalogue moves with them.
-						</p>
+						</PageTitle>
 					</header>
 
 					<ReferenceSection

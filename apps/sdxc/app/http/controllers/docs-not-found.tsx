@@ -10,14 +10,12 @@
 
 import type { RequestContext } from "remix/router";
 
-import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
-import { m } from "@sdxc/u/size";
-import { text, tracking, weight } from "@sdxc/u/typography";
 import { LinkButton } from "@sdxc/ui";
 
 import type { NavTree } from "~/app/services/navigation";
 
+import PageTitle from "~/resources/components/page-title";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 
@@ -42,10 +40,9 @@ export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
 				breadcrumbs={[{ label: tree.label, href: tree.href }, { label: "Not found" }]}
 			>
 				<div mix={[vstack({ gap: 4, align: "start" })]}>
-					<h1 mix={[m(0), text("3xl"), weight("bold"), tracking("tight")]}>Not found</h1>
-					<p mix={[m(0), text("base"), fg("neutral")]}>
+					<PageTitle eyebrow="404" title="Not found">
 						No documentation page answers to that address.
-					</p>
+					</PageTitle>
 					<LinkButton href={tree.href} variant="outline" color="neutral">
 						Back to {tree.label}
 					</LinkButton>

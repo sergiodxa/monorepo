@@ -48,10 +48,10 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Content & formats",
-		packages: ["markdown", "yaml", "xml", "html", "icalendar", "distill", "jsdoc"],
+		packages: ["markdown", "yaml", "xml", "html", "csv", "icalendar", "distill", "jsdoc"],
 	},
 	{
-		title: "Syndication & the open web",
+		title: "Feeds & publishing",
 		packages: [
 			"rss",
 			"atom",

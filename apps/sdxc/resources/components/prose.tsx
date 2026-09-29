@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
 import { media } from "@sdxc/u/responsive";
@@ -22,6 +22,16 @@ import type { MarkdownProps } from "~/resources/components/markdown-props";
 /** Font size per heading depth, largest first, so the page reads as one outline. */
 const SIZE_BY_LEVEL = ["4xl", "2xl", "xl", "lg", "base", "base"] as const;
 
+/**
+ * Font size per heading depth when a band draws its headings at display size, as the
+ * landing page does: fewer, larger steps, since a band holds one heading and not an outline.
+ */
+const DISPLAY_SIZE_BY_LEVEL = [
+	["5xl", "7xl"],
+	["3xl", "5xl"],
+	["xl", "2xl"],
+] as const;
+
 namespace Prose {
 	export interface HeadingProps extends MarkdownProps {
 		level: 1 | 2 | 3 | 4 | 5 | 6;
@@ -34,11 +44,55 @@ namespace Prose {
 	}
 }
 
+namespace DisplayHeadings {
+	export interface Props {
+		children: RemixNode;
+	}
+
+	/** What a heading inside the scope reads off it. */
+	export interface Value {
+		display: true;
+	}
+}
+
+/**
+ * Draws every heading inside it at display size: set in a lighter weight with tighter
+ * tracking, the way a headline is set rather than a section title.
+ */
+export function DisplayHeadings(handle: Handle<DisplayHeadings.Props, DisplayHeadings.Value>) {
+	handle.context.set({ display: true });
+
+	return () => handle.props.children;
+}
+
 /** Draws every `heading` node in the document. */
 export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
 	return () => {
 		let { children, id, level } = handle.props;
 		let Tag = TAG_BY_LEVEL[level];
+		let display = level <= 3 ? DISPLAY_SIZE_BY_LEVEL[level - 1] : undefined;
+
+		if (display && handle.context.get(DisplayHeadings)?.display) {
+			let [size, wide] = display;
+
+			return (
+				<Tag
+					id={id}
+					mix={[
+						m(0),
+						fg("neutral.emphasis"),
+						weight("medium"),
+						tracking(level === 3 ? "tight" : "-0.04em"),
+						leading(level === 3 ? "tight" : 1.05),
+						balance(),
+						text(size),
+						media("(min-width: 48rem)", text(wide)),
+					]}
+				>
+					{children}
+				</Tag>
+			);
+		}
 
 		return (
 			<Tag

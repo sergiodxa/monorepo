@@ -1,7 +1,7 @@
 /**
  * Writes the catalogue documents the site reads. It walks the two catalogue packages
  * on disk, extracts every utility and component, and emits one JSON file per
- * catalogue under `app/generated`. `dev`, `build` and the test run each start by
+ * catalogue under `app/generated`, plus the totals the landing copy quotes. `dev`, `build` and the test run each start by
  * running it, so the site and its tests always read the packages as they are now.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -58,12 +58,18 @@ function main(): void {
 	let components = buildComponents();
 	let theme = buildTheme();
 
+	let utilityCount = Object.keys(utilities.references).length;
+	let componentCount = Object.keys(components.references).length;
+
 	write("utilities.json", utilities);
 	write("components.json", components);
 	write("theme.json", theme);
+	write("counts.json", {
+		utilities: utilityCount,
+		components: componentCount,
+		rfcs: countPublishedRfcs(),
+	});
 
-	let utilityCount = Object.keys(utilities.references).length;
-	let componentCount = Object.keys(components.references).length;
 	console.log(`@sdxc/u: ${utilityCount} utilities across ${utilities.families.length} families`);
 	console.log(`@sdxc/ui: ${componentCount} components, ${theme.light.length} theme variables`);
 }
@@ -141,6 +147,25 @@ function componentFiles(root: string): string[] {
 	return readdirSync(root)
 		.filter((file) => file.endsWith(".tsx") && !file.endsWith(".test.tsx"))
 		.sort();
+}
+
+/**
+ * How many distinct RFCs the published packages' READMEs name, which is the count of
+ * standards the collection implements or follows. A private package is left out, since
+ * the copy quoting the number is about what a reader can install.
+ */
+function countPublishedRfcs(): number {
+	let rfcs = new Set<string>();
+
+	for (let name of directories(PACKAGES)) {
+		let manifest = read(join(PACKAGES, name, "package.json"));
+		if (manifest === null || (JSON.parse(manifest) as { private?: boolean }).private) continue;
+
+		let readme = read(join(PACKAGES, name, "README.md")) ?? "";
+		for (let match of readme.matchAll(/RFC ?(\d{3,5})/g)) rfcs.add(match[1] ?? "");
+	}
+
+	return rfcs.size;
 }
 
 /** The directories directly under one path. */

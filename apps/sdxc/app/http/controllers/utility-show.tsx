@@ -12,7 +12,7 @@
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, nowrap, text, tracking, weight } from "@sdxc/u/typography";
+import { font, nowrap, text } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -24,6 +24,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { buildUtilitiesNav } from "~/app/services/navigation";
 import { readUtility } from "~/app/services/utilities";
+import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -81,15 +82,9 @@ export default createAction(routes.api.utility, async (ctx) => {
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<p mix={[m(0), font("mono"), text("sm"), fg("brand")]}>{reference.family}</p>
-
-						<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>
-							{reference.property}
-						</h1>
-
-						<p mix={[m(0), text("lg"), fg("neutral")]}>
+						<PageTitle eyebrow={`@sdxc/u/${reference.family}`} title={reference.property}>
 							<ReferenceProse>{reference.summary}</ReferenceProse>
-						</p>
+						</PageTitle>
 
 						{reference.see.map((link) => (
 							<a key={link.href} href={link.href} mix={[m(0), text("sm"), fg("brand")]}>
