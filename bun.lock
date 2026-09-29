@@ -193,6 +193,7 @@
         "@sdxc/http": "workspace:*",
         "@sdxc/i18n": "workspace:*",
         "@sdxc/jobs": "workspace:*",
+        "@sdxc/json-schema": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",
         "@sdxc/markdown": "workspace:*",
