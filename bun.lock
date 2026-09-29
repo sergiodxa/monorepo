@@ -333,6 +333,7 @@
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/icons": "workspace:*",
+        "@sdxc/json-schema": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/mcp": "workspace:*",
