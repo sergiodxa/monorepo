@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/honeypot",
 	"version": "0.0.1",
-	"description": "Honeypot form fields with a signed render timestamp, router middleware and a `remix/ui` component",
+	"description": "Honeypot form fields with a signed timestamp, middleware and a UI component",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
