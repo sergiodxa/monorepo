@@ -189,19 +189,68 @@ and returns a plain
 import { csv, markdown, xml } from "@sdxc/http/response";
 
 xml("<root><item>Hello</item></root>"); // text/xml
-csv("name,age\nAda,36"); // text/csv
+csv("name,age\nAda,36"); // text/csv; charset=utf-8
 markdown("# Hello"); // text/markdown
 ```
 
 `json(body, init?)` serializes any value through `Response.json`. `text`, `html`, `css`,
-`javascript`, `xml`, `csv` and `markdown` each take a string and write their own type.
+`javascript`, `xml` and `markdown` each take a string and write their own type.
 `pdf(body, init?)` writes `application/pdf` and takes a `Blob`, `ArrayBuffer` or
 `ReadableStream`.
 
+#### `csv(body: string | ReadableStream<Uint8Array>, init?: ResponseInit): Response`
+
+Writes `text/csv; charset=utf-8`, so a client decodes accented and non-Latin cells as UTF-8.
+The body is a whole document or a stream of its UTF-8 bytes, which sends each row as it is
+written instead of holding the file in memory:
+
+```typescript
+import { csv } from "@sdxc/http/response";
+
+let encoder = new TextEncoder();
+
+return csv(
+	new ReadableStream<Uint8Array>({
+		async start(controller) {
+			controller.enqueue(encoder.encode("name,city\r\n"));
+			for await (let row of readRows()) {
+				controller.enqueue(encoder.encode(`${row.name},${row.city}\r\n`));
+			}
+			controller.close();
+		},
+	}),
+);
+```
+
+#### `attachment(filename: string): string`
+
+A [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Disposition)
+value that makes a response a download saved under `filename`. The quoted `filename` always
+holds an ASCII version of the name, with quotes and backslashes escaped and every other
+character outside printable ASCII shown as `_`. A name that needed such a replacement also
+gets an RFC 8187 `filename*`, which browsers prefer, carrying the exact name in UTF-8.
+
+```typescript
+import { attachment } from "@sdxc/http/response";
+
+attachment("report.csv");
+// 'attachment; filename="report.csv"'
+attachment("Café report.csv");
+// "attachment; filename=\"Caf_ report.csv\"; filename*=UTF-8''Caf%C3%A9%20report.csv"
+attachment("報告.csv");
+// "attachment; filename=\"__.csv\"; filename*=UTF-8''%E5%A0%B1%E5%91%8A.csv"
+```
+
+Pass it in the `headers` of any builder, so a CSV or a PDF download keeps its own type:
+
+```typescript
+return csv(report, { headers: { "Content-Disposition": attachment("report-2026-08.csv") } });
+```
+
 #### `file(body: Blob | ArrayBuffer | ReadableStream, filename: string, init?: ResponseInit): Response`
 
-A download: `application/octet-stream` plus
-`Content-Disposition: attachment; filename="…"`.
+A download of opaque bytes: `application/octet-stream` plus the `Content-Disposition` that
+`attachment(filename)` writes.
 
 #### `stream(body: ReadableStream, init?: ResponseInit): Response`
 

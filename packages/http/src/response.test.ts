@@ -10,6 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import * as ContentType from "./content-type.js";
 import {
+	attachment,
 	css,
 	csv,
 	file,
@@ -133,9 +134,9 @@ describe(xml, () => {
 });
 
 describe(csv, () => {
-	test("sets CSV content-type", () => {
+	test("sets a UTF-8 CSV content-type", () => {
 		let res = csv("name,age\nJohn,30\nJane,25");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.CSV);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.CSV}; charset=utf-8`);
 	});
 
 	test("returns CSV body", async () => {
@@ -144,11 +145,90 @@ describe(csv, () => {
 		expect(body).toBe("name,age\nJohn,30\nJane,25");
 	});
 
+	test("streams a body as it is written", async () => {
+		let encoder = new TextEncoder();
+		let body = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(encoder.encode("name,city\r\n"));
+				controller.enqueue(encoder.encode("Ada,Zürich\r\n"));
+				controller.close();
+			},
+		});
+		let res = csv(body);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.CSV}; charset=utf-8`);
+		expect(await res.text()).toBe("name,city\r\nAda,Zürich\r\n");
+	});
+
 	test("accepts custom headers", () => {
 		let res = csv("id,value\n1,100", {
-			headers: { "Content-Disposition": "attachment; filename=data.csv" },
+			headers: { "Content-Disposition": attachment("data.csv") },
 		});
-		expect(res.headers.get("Content-Disposition")).toBe("attachment; filename=data.csv");
+		expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="data.csv"');
+	});
+});
+
+describe(attachment, () => {
+	test("writes a plain ASCII name with no filename*", () => {
+		expect(attachment("report-2026-08.csv")).toBe('attachment; filename="report-2026-08.csv"');
+	});
+
+	test("keeps spaces and punctuation in a plain name", () => {
+		expect(attachment("Q3 report (final) #2.csv")).toBe(
+			'attachment; filename="Q3 report (final) #2.csv"',
+		);
+	});
+
+	test("escapes quotes in the fallback", () => {
+		expect(attachment('say "hi".csv')).toBe('attachment; filename="say \\"hi\\".csv"');
+	});
+
+	test("escapes backslashes in the fallback", () => {
+		expect(attachment("a\\b.csv")).toBe('attachment; filename="a\\\\b.csv"');
+	});
+
+	test("adds filename* for a Latin name with accents", () => {
+		expect(attachment("Café report.csv")).toBe(
+			"attachment; filename=\"Caf_ report.csv\"; filename*=UTF-8''Caf%C3%A9%20report.csv",
+		);
+	});
+
+	test("adds filename* for a CJK name", () => {
+		expect(attachment("報告.csv")).toBe(
+			"attachment; filename=\"__.csv\"; filename*=UTF-8''%E5%A0%B1%E5%91%8A.csv",
+		);
+	});
+
+	test("replaces an astral character with one fallback character", () => {
+		expect(attachment("📈.csv")).toBe(
+			"attachment; filename=\"_.csv\"; filename*=UTF-8''%F0%9F%93%88.csv",
+		);
+	});
+
+	test("percent-encodes characters outside RFC 8187 attr-char", () => {
+		expect(attachment("résumé (it's *mine*).csv")).toBe(
+			'attachment; filename="r_sum_ (it\'s *mine*).csv"; ' +
+				"filename*=UTF-8''r%C3%A9sum%C3%A9%20%28it%27s%20%2Amine%2A%29.csv",
+		);
+	});
+
+	test("keeps RFC 8187 attr-char punctuation literal", () => {
+		expect(attachment("ü!#$&+-.^_`|~.csv")).toBe(
+			"attachment; filename=\"_!#$&+-.^_`|~.csv\"; filename*=UTF-8''%C3%BC!#$&+-.^_`|~.csv",
+		);
+	});
+
+	test("replaces control characters so the value is a valid header", () => {
+		let value = attachment("line\nbreak.csv");
+		expect(value).toBe(
+			"attachment; filename=\"line_break.csv\"; filename*=UTF-8''line%0Abreak.csv",
+		);
+		expect(() => new Headers({ "Content-Disposition": value })).not.toThrow();
+	});
+
+	test("encodes a lone surrogate as the replacement character", () => {
+		expect(attachment("a\uD800.csv")).toBe(
+			"attachment; filename=\"a_.csv\"; filename*=UTF-8''a%EF%BF%BD.csv",
+		);
 	});
 });
 
@@ -206,6 +286,14 @@ describe(file, () => {
 		let fileBlob = new Blob(["file content"]);
 		let res = file(fileBlob, "archive.zip");
 		expect(res.headers.get("Content-Disposition")).toBe('attachment; filename="archive.zip"');
+	});
+
+	test("writes a non-ASCII filename through attachment", () => {
+		let res = file(new Blob(["file content"]), 'Café "final".csv');
+		expect(res.headers.get("Content-Disposition")).toBe(attachment('Café "final".csv'));
+		expect(res.headers.get("Content-Disposition")).toBe(
+			'attachment; filename="Caf_ \\"final\\".csv"; filename*=UTF-8\'\'Caf%C3%A9%20%22final%22.csv',
+		);
 	});
 
 	test("sets octet-stream content-type", () => {
