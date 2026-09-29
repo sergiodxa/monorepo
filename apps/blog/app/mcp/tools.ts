@@ -1,6 +1,6 @@
 /**
  * The tools this blog offers an agent, declared the way routes are: a name, a description
- * that is the prompt a model chooses by, and the JSON Schema its arguments must satisfy.
+ * that is the prompt a model chooses by, and the schema its arguments must satisfy.
  *
  * Every tool declares `readOnlyHint`, letting a client run it without asking a person, and
  * `openWorldHint: false`, since nothing here reaches past this blog's own database.
@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import * as s from "@sdxc/json-schema";
+import * as checks from "@sdxc/json-schema/checks";
 import { tool, tools } from "@sdxc/mcp";
 
 const READ_ONLY = { readOnlyHint: true, openWorldHint: false } as const;
@@ -24,35 +26,29 @@ export default tools({
 		title: "Search posts",
 		description:
 			"Search this blog's published articles, tutorials and glossary entries by title, excerpt and tags. Use this first when looking for writing on a topic; it returns slugs that get_post reads in full.",
-		input: {
-			type: "object",
-			properties: {
-				query: {
-					type: "string",
-					description: "Words to look for. Matched against titles, excerpts and tags.",
-					minLength: 1,
-					maxLength: 200,
-				},
-				kind: {
-					type: "string",
-					enum: ["article", "tutorial", "glossary"],
-					description: "Restrict the search to one kind of post.",
-				},
-				tag: {
-					type: "string",
+		input: s.object({
+			query: s
+				.string()
+				.pipe(checks.minLength(1), checks.maxLength(200))
+				.meta({ description: "Words to look for. Matched against titles, excerpts and tags." }),
+			kind: s.optional(
+				s
+					.enum_(["article", "tutorial", "glossary"])
+					.meta({ description: "Restrict the search to one kind of post." }),
+			),
+			tag: s.optional(
+				s.string().pipe(checks.maxLength(100)).meta({
 					description: "Only return posts carrying this tag. Tutorials are the tagged type.",
-					maxLength: 100,
-				},
-				limit: {
-					type: "integer",
-					description: "How many results to return.",
-					minimum: 1,
-					maximum: 50,
-					default: 10,
-				},
-			},
-			required: ["query"],
-		},
+				}),
+			),
+			limit: s.defaulted(
+				s
+					.integer()
+					.pipe(checks.min(1), checks.max(50))
+					.meta({ description: "How many results to return." }),
+				10,
+			),
+		}),
 		annotations: READ_ONLY,
 	}),
 
@@ -61,30 +57,23 @@ export default tools({
 			title: "List posts",
 			description:
 				"List this blog's published articles or tutorials, newest first. Use search_posts when looking for a topic; use this to see what exists.",
-			input: {
-				type: "object",
-				properties: {
-					type: {
-						type: "string",
-						enum: ["articles", "tutorials"],
-						description: "Which collection to list.",
-					},
-					limit: {
-						type: "integer",
-						description: "How many posts to return.",
-						minimum: 1,
-						maximum: 100,
-						default: 20,
-					},
-					offset: {
-						type: "integer",
-						description: "How many posts to skip, for paging through the list.",
-						minimum: 0,
-						default: 0,
-					},
-				},
-				required: ["type"],
-			},
+			input: s.object({
+				type: s.enum_(["articles", "tutorials"]).meta({ description: "Which collection to list." }),
+				limit: s.defaulted(
+					s
+						.integer()
+						.pipe(checks.min(1), checks.max(100))
+						.meta({ description: "How many posts to return." }),
+					20,
+				),
+				offset: s.defaulted(
+					s
+						.integer()
+						.pipe(checks.min(0))
+						.meta({ description: "How many posts to skip, for paging through the list." }),
+					0,
+				),
+			}),
 			annotations: READ_ONLY,
 		}),
 
@@ -92,23 +81,15 @@ export default tools({
 			title: "Read a post",
 			description:
 				"Read one published article or tutorial in full, as Markdown. Needs the slug, which search_posts and list_posts return.",
-			input: {
-				type: "object",
-				properties: {
-					type: {
-						type: "string",
-						enum: ["articles", "tutorials"],
-						description: "Which collection the post belongs to.",
-					},
-					slug: {
-						type: "string",
-						description: "The post's URL slug, without the collection prefix.",
-						minLength: 1,
-						maxLength: 200,
-					},
-				},
-				required: ["type", "slug"],
-			},
+			input: s.object({
+				type: s
+					.enum_(["articles", "tutorials"])
+					.meta({ description: "Which collection the post belongs to." }),
+				slug: s
+					.string()
+					.pipe(checks.minLength(1), checks.maxLength(200))
+					.meta({ description: "The post's URL slug, without the collection prefix." }),
+			}),
 			annotations: READ_ONLY,
 		}),
 	}),
@@ -118,25 +99,19 @@ export default tools({
 			title: "List glossary terms",
 			description:
 				"List every term defined in this blog's glossary. Short enough to read whole, so there is no glossary search.",
-			input: { type: "object", properties: {}, additionalProperties: false },
+			input: s.object({}, { unknownKeys: "error" }),
 			annotations: READ_ONLY,
 		}),
 
 		get: tool("get_glossary_term", {
 			title: "Read a glossary term",
 			description: "Read one glossary term's full definition. Needs the slug from list_glossary.",
-			input: {
-				type: "object",
-				properties: {
-					slug: {
-						type: "string",
-						description: "The term's slug, as list_glossary reports it.",
-						minLength: 1,
-						maxLength: 200,
-					},
-				},
-				required: ["slug"],
-			},
+			input: s.object({
+				slug: s
+					.string()
+					.pipe(checks.minLength(1), checks.maxLength(200))
+					.meta({ description: "The term's slug, as list_glossary reports it." }),
+			}),
 			annotations: READ_ONLY,
 		}),
 	}),
@@ -145,24 +120,22 @@ export default tools({
 		title: "List bookmarks",
 		description:
 			"List the external links this blog's author has bookmarked, newest first. Each is a title and somebody else's URL, so there is nothing here to read in full.",
-		input: {
-			type: "object",
-			properties: {
-				limit: {
-					type: "integer",
-					description: "How many bookmarks to return.",
-					minimum: 1,
-					maximum: 100,
-					default: 20,
-				},
-				offset: {
-					type: "integer",
-					description: "How many bookmarks to skip, for paging through the list.",
-					minimum: 0,
-					default: 0,
-				},
-			},
-		},
+		input: s.object({
+			limit: s.defaulted(
+				s
+					.integer()
+					.pipe(checks.min(1), checks.max(100))
+					.meta({ description: "How many bookmarks to return." }),
+				20,
+			),
+			offset: s.defaulted(
+				s
+					.integer()
+					.pipe(checks.min(0))
+					.meta({ description: "How many bookmarks to skip, for paging through the list." }),
+				0,
+			),
+		}),
 		annotations: READ_ONLY,
 	}),
 });
