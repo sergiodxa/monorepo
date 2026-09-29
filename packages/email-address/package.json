@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/email-address",
 	"version": "0.0.1",
-	"description": "Email address parsing and normalization, disposable-domain detection and mail-server checks",
+	"description": "Email address parsing, normalization, disposable-domain and mail-server checks",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
