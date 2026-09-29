@@ -9,6 +9,7 @@
  */
 
 export type { AnyJobContext, JobContextInit } from "./context.js";
+export type { JobEnqueuer } from "./enqueue.js";
 export type {
 	AnyJobHandler,
 	CurrentJobContext,

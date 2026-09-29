@@ -15,7 +15,8 @@ implementing `JobQueue` from `@sdxc/jobs/queue` and running `@sdxc/jobs/conforma
 against it.
 
 `@cloudflare/workers-types`, `remix` and `vitest` are optional peers, needed only by the
-Cloudflare adapter, the context's typed key store, and the conformance suite respectively.
+Cloudflare adapter, the context's typed key store and the router middleware, and the
+conformance suite respectively.
 
 ## Overview
 
@@ -135,9 +136,27 @@ await dispatcher.enqueueMany(
 );
 ```
 
-A call site that should not pull the dispatcher — and its middleware, loaders, and every
-handler behind them — into its module graph builds the body instead and sends it through
-whatever the app already writes with:
+A route handler enqueues through `ctx.jobs`, which the router middleware at
+`@sdxc/jobs/router` publishes over the same queue the dispatcher delivers from. Only the
+queue enters the request path's module graph; the dispatcher, its middleware, and every
+handler behind them stay out:
+
+```typescript
+import * as cloudflare from "@sdxc/jobs/cloudflare";
+import { jobEnqueuer } from "@sdxc/jobs/router";
+
+let router = createRouter({
+	middleware: [jobEnqueuer(cloudflare.queue(() => env.QUEUE))],
+});
+
+router.post(routes.monitors.check, async (ctx) => {
+	await ctx.jobs.enqueue(jobs.checkHttp, { monitorId: ctx.params.id });
+	return new Response(null, { status: 202 });
+});
+```
+
+A call site outside a router builds the body instead and sends it through whatever the app
+already writes with:
 
 ```typescript
 await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId: monitor.id })]);
@@ -441,6 +460,31 @@ The distinct schedules the mapped jobs declare, for asserting that the code and
 
 ```typescript
 expect([...dispatcher.crons].sort()).toEqual([...config.triggers.crons].sort());
+```
+
+### `jobEnqueuer(queue: JobQueue): Middleware`
+
+The `remix/router` middleware at `@sdxc/jobs/router`, publishing a `JobEnqueuer` as
+`ctx.jobs` and under the exported `Jobs` context key. Importing it is what types
+`ctx.jobs` on every `RequestContext`.
+
+`ctx.jobs.enqueue(job, input?)` and `ctx.jobs.enqueueMany(job, inputs)` take exactly what
+`dispatcher.enqueue` and `dispatcher.enqueueMany` take, and raise the backend's failure as
+the `JobQueueError` it answered with, so a request that could not enqueue fails instead of
+reporting work that never runs. One enqueuer serves every request, and each message carries
+the current trace, so a router running `trace()` from `@sdxc/trace-context/middleware`
+first links every job run to the request that enqueued it.
+
+**Parameters:**
+
+- `queue`: The backend to write through, the same one the app's dispatcher delivers from
+
+**Example:**
+
+```typescript
+import { jobEnqueuer } from "@sdxc/jobs/router";
+
+createRouter({ middleware: [log(logger), trace(), jobEnqueuer(queue)] });
 ```
 
 ### `JobContext`
@@ -834,8 +878,8 @@ what the handler recorded.
 2. **Treat a map key as a wire contract** - Renaming one renames a message's address, and
    messages enqueued by the previous deploy are still in flight.
 3. **Map a loader, not a handler** - `() => import(…)` is what keeps job code out of the
-   request path's module graph. For the same reason, prefer `messageBody()` plus the
-   app's own queue helper when a controller enqueues, over importing the dispatcher.
+   request path's module graph. For the same reason, enqueue from a controller through
+   `ctx.jobs` rather than by importing the dispatcher.
 4. **Never swallow an ending** - A `catch` around a `ctx.*` call catches the thrown
    ending too. Re-throw it with `if (error instanceof Job.Ending) throw error;`.
 5. **Write `return ctx.retry(…)`** - The verbs return `never`, but TypeScript only

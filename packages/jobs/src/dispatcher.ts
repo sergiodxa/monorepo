@@ -20,14 +20,16 @@ import { runWithTrace, startTrace, traceFields } from "@sdxc/trace-context";
 import { validate } from "@sdxc/validate";
 
 import type { JobContext } from "./context.js";
+import type { JobEnqueuer } from "./enqueue.js";
 import type { AnyJobHandler, JobHandler, RunnableJobHandler } from "./handler.js";
 import type { CronExpression } from "./job.js";
-import type { AnyJobDefinition, EnqueueArgs, EnqueueInput, JobDefinition } from "./jobs.js";
+import type { AnyJobDefinition, JobDefinition } from "./jobs.js";
 import type { OnJobEnd } from "./lifecycle.js";
 import type { AnyJobMiddleware, ChainProperties } from "./middleware.js";
 import type { DeadLetterReason, JobDelivery, JobMessage, JobQueue, Settlement } from "./queue.js";
 
 import { openJobLog } from "./context.js";
+import { createJobEnqueuer } from "./enqueue.js";
 import { readMessageBody } from "./jobs.js";
 import { runJob } from "./lifecycle.js";
 import { readDeadLetter } from "./queue.js";
@@ -111,7 +113,7 @@ export interface JobDispatcherOptions<Chain extends readonly AnyJobMiddleware[] 
 }
 
 /** The registry both worker handlers run through. */
-export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
+export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> extends JobEnqueuer {
 	/**
 	 * Registers where a job's handler comes from.
 	 * @param job The job, from the app's map.
@@ -122,25 +124,6 @@ export interface JobDispatcher<Chain extends readonly AnyJobMiddleware[] = []> {
 		job: JobDefinition<Schema, Meta>,
 		load: (() => Promise<{ default: JobHandler<Schema, Meta> }>) | JobHandler<Schema, Meta>,
 	): void;
-	/**
-	 * Enqueues one message for a job.
-	 * @param job The job, from the app's map.
-	 * @param input The payload, typed by that job's own schema.
-	 * @example await dispatcher.enqueue(jobs.checkHttp, { monitorId: monitor.id });
-	 */
-	enqueue<Schema extends StandardSchemaV1 | undefined, Meta>(
-		job: JobDefinition<Schema, Meta>,
-		...input: EnqueueArgs<Schema>
-	): Promise<void>;
-	/**
-	 * Enqueues one message per input, in a single write. Enqueuing nothing does nothing.
-	 * @param job The job, from the app's map.
-	 * @param inputs One payload per message.
-	 */
-	enqueueMany<Schema extends StandardSchemaV1 | undefined, Meta>(
-		job: JobDefinition<Schema, Meta>,
-		inputs: EnqueueInput<Schema>[],
-	): Promise<void>;
 	/**
 	 * Runs the job one delivery names, whatever handed it over.
 	 * @param delivery The message, already read off the backend.
@@ -426,6 +409,8 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 	}
 
 	return {
+		...createJobEnqueuer(send),
+
 		map(job, load) {
 			if (mapped.has(job.name)) throw new Error(`Job "${job.name}" is already mapped`);
 			mapped.set(job.name, { job, load: load as LoadHandler | AnyJobHandler });
@@ -443,14 +428,6 @@ export function createJobDispatcher<const Chain extends readonly AnyJobMiddlewar
 
 		async deliver(delivery, batchSize = 1) {
 			return await deliver(delivery, batchSize);
-		},
-
-		async enqueue(job, ...input) {
-			await send([{ job: job.name, body: input[0] as JSONValue }]);
-		},
-
-		async enqueueMany(job, inputs) {
-			await send(inputs.map((input) => ({ job: job.name, body: input as JSONValue })));
 		},
 
 		async tick({ now, only }) {

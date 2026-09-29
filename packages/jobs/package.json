@@ -11,6 +11,7 @@
 		"./errors": "./src/errors.ts",
 		"./memory": "./src/adapters/memory.ts",
 		"./queue": "./src/queue.ts",
+		"./router": "./src/router.ts",
 		"./uptime": "./src/uptime.ts"
 	},
 	"scripts": {
