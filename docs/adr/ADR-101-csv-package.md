@@ -372,3 +372,5 @@ ISO-looking strings, `NaN`), and every caller already has a schema to validate u
 - [x] Phase 1b: `@sdxc/http/response` stream-capable `csv` and `attachment`
 - [ ] Phase 2: Uptime report exports
 - [ ] Phase 3: Publish
+  - [x] `private` removed, README written for npm, `LICENSE.md`, root README ✅, release build checked
+  - [ ] `bun run release:bootstrap @sdxc/csv`, trusted publisher

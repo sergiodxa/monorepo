@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/csv",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read and write RFC 4180 CSV, with a streaming writer and formula neutralization",
 	"license": "MIT",
 	"type": "module",

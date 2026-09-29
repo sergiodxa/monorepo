@@ -4,16 +4,28 @@ Read and write RFC 4180 CSV, with a streaming writer and formula neutralization.
 
 `parse` reads text into records keyed by the header row, `stringify` writes rows back as one
 string, and `streamify` writes them as a UTF-8 byte stream while they arrive. Each is its own
-named export, so a module that only reads never loads the writers, and a namespace import
-reads `CSV.parse(...)` the way `JSON.parse` does. Every function reports its outcome as a
-`Result` from `@sdxc/result` instead of throwing.
+named export, so a module that only reads leaves the writers out of the bundle, and a
+namespace import reads `CSV.parse(...)` the way
+[`JSON.parse`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)
+does. Where `JSON` throws, every function here returns a `Result`.
 
-The reader returns strings only. CSV has no numbers, dates or nulls, and a guessed type can
-lose data (`"007"` read as `7`), so rows are typed by the caller's schema. The writer takes
-typed cells, quotes exactly what RFC 4180 requires, and by default neutralizes string cells a
-spreadsheet would run as a formula.
+The reader returns strings only: CSV has no numbers, dates or nulls, and a guessed type can
+lose data (`"007"` read as `7`), so rows are typed by your own schema. The writer takes typed
+cells, quotes exactly what [RFC 4180](https://www.rfc-editor.org/rfc/rfc4180) requires, and by
+default neutralizes string cells a spreadsheet would run as a formula.
+
+## Installation
+
+```bash
+npm add @sdxc/csv
+```
+
+Results come from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where
+`unwrap` and `isFailure` come from. It installs alongside this package.
 
 ## Usage
+
+### Write And Read Back
 
 ```typescript
 import * as CSV from "@sdxc/csv";
@@ -33,13 +45,15 @@ import { parse } from "@sdxc/csv";
 import { isFailure } from "@sdxc/result";
 
 let parsed = parse(await file.text());
-if (isFailure(parsed)) return badRequest(parsed.error.message); // names the line
+if (isFailure(parsed)) {
+	return new Response(parsed.error.message, { status: 400 }); // "... at line 12"
+}
 
-for (let warning of parsed.data.warnings) log.warn(warning.message, { line: warning.line });
 let records = parsed.data.rows; // Record<string, string>[]
+let warnings = parsed.data.warnings; // [{ line, message }]
 ```
 
-### Write For A Spreadsheet
+### Write For Excel
 
 ```typescript
 import { stringify } from "@sdxc/csv";
@@ -54,17 +68,21 @@ let result = stringify(rows, {
 });
 ```
 
-`delimiter: ";"` is what Excel expects in decimal-comma locales, and `bom: true` makes it read
-the file as UTF-8.
+Excel in decimal-comma locales (Spanish, German, French, Italian) splits a `.csv` on `;`,
+and it reads the file as UTF-8 only when it starts with a byte order mark.
 
 ### Stream A Download
 
 ```typescript
 import { streamify } from "@sdxc/csv";
-import { attachment, csv } from "@sdxc/http/response";
 
-return csv(streamify(cursor, { columns: [{ key: "date" }, { key: "uptime" }] }), {
-	headers: { "Content-Disposition": attachment("uptime.csv") },
+let body = streamify(cursor, { columns: [{ key: "date" }, { key: "uptime" }] });
+
+return new Response(body, {
+	headers: {
+		"Content-Type": "text/csv; charset=utf-8",
+		"Content-Disposition": 'attachment; filename="uptime.csv"',
+	},
 });
 ```
 
@@ -104,9 +122,9 @@ with no finite value, and has no `row` when the delimiter is unknown.
 ### `streamify(rows, options)`
 
 Takes the same options as `stringify`, with `columns` required, over an `Iterable` or
-`AsyncIterable` of objects. It returns a `ReadableStream<Uint8Array>` holding the same text
-`stringify` would. The header is sent before the first row is read, rows are sent in chunks
-of about 16 KB, and cancelling the stream calls the source iterator's `return()`. A bad cell
+`AsyncIterable` of objects, and returns a `ReadableStream<Uint8Array>` holding the text
+`stringify` would. The header goes out before the first row is read, rows go out in chunks of
+about 16 KB, and cancelling the stream calls the source iterator's `return()`. A bad cell
 errors the stream with a `CSVStringifyError`.
 
 ### Types
@@ -115,38 +133,105 @@ errors the stream with a `CSVStringifyError`.
 `StringifyOptions` and `WriteOptions` are exported at the top level, so a namespace import
 reads `CSV.Cell`.
 
-## Patterns
+## Pattern: Type Uploaded Rows
 
-### Type Rows With A Schema
+Every field arrives as a string, so a check per row turns records into the values your code works with
+and rejects the ones that are not.
 
 ```typescript
 import { parse } from "@sdxc/csv";
 import { isFailure } from "@sdxc/result";
-import { parseSafe } from "@sdxc/validate";
-import * as s from "remix/data-schema";
 
-let MonitorRow = s.object({ name: s.string(), url: s.string() });
+interface Monitor {
+	name: string;
+	url: URL;
+	intervalSeconds: number;
+}
 
 let parsed = parse(source);
-if (isFailure(parsed)) return parsed;
-let monitors = parsed.data.rows.map((row) => parseSafe(MonitorRow, row));
+if (isFailure(parsed)) throw parsed.error;
+
+let monitors: Monitor[] = [];
+let problems: string[] = [];
+
+for (let [index, row] of parsed.data.rows.entries()) {
+	let intervalSeconds = Number(row.interval_seconds);
+	if (!row.name || !URL.canParse(row.url) || !Number.isInteger(intervalSeconds)) {
+		problems.push(`Row ${index + 2} is incomplete`); // + 1 for the header, + 1 for 1-based
+		continue;
+	}
+	monitors.push({ name: row.name, url: new URL(row.url), intervalSeconds });
+}
 ```
 
-### Read Back What Was Written
+## Pattern: Export Rows From A Database Cursor
 
-`parse(unwrap(stringify(rows)))` returns the rows as strings, for every delimiter. Fields
+`streamify` reads an async iterable, so an export can stream straight from a paged query
+without holding every row in memory.
+
+```typescript
+import { streamify } from "@sdxc/csv";
+
+async function* orders(db: Database) {
+	let cursor: string | undefined;
+	do {
+		let page = await db.orders.list({ after: cursor, limit: 500 });
+		yield* page.rows;
+		cursor = page.next;
+	} while (cursor);
+}
+
+let body = streamify(orders(db), {
+	columns: [
+		{ key: "id", header: "Order" },
+		{ key: "placedAt", header: "Placed at" },
+		{ key: "total", header: "Total" },
+	],
+});
+```
+
+## Pattern: Read Back What Was Written
+
+`parse(unwrap(stringify(rows)))` returns the rows as strings for every delimiter. Fields
 holding the delimiter, quotes, line breaks or edge spaces are quoted, and a record of one empty
-field is written as `""`, so it reads back as that field instead of a skipped blank line.
+field is written as `""` so it reads back as that field instead of a skipped blank line.
 
-## Related Packages
+```typescript
+import { parse, stringify } from "@sdxc/csv";
+import { unwrap } from "@sdxc/result";
 
-- [`@sdxc/http`](../http/README.md): `csv()` and `attachment()` serve the output as a download
-- [`@sdxc/validate`](../validate/README.md): types the strings `parse` returns
-- [`@sdxc/result`](../result/README.md): the `Result` every function returns
+let rows = [{ note: 'said "hi", then left\r\nearly' }];
+let text = unwrap(stringify(rows, { delimiter: "\t" }));
 
-## Tips
+unwrap(parse(text, { delimiter: "\t" })).rows; // [{ note: 'said "hi", then left\r\nearly' }]
+```
 
-- Leave `escapeFormulas` on for any file a person opens; turn it off only for files a program
-  reads, where a leading `'` would become part of the value.
-- Pass numbers as `number` cells so they are not neutralized; `-5` as a string becomes `'-5`.
-- Use `bom: true` for files meant for Excel and leave it off for files meant for programs.
+## Versioning
+
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/csv": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
