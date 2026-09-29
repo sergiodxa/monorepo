@@ -1,17 +1,14 @@
 /**
- * The platform's MCP server end to end, built on `@sdxc/mcp`: the generated tool list
- * is non-empty and includes recognizable management operations; a `tools/call` for a
- * real operation, presenting a valid bearer token, reaches the real `subjectsList`
- * management action — mounted here the same way `management-auth.test.ts` and
- * `dashboard.test.ts` mount one real action apiece, over a real tenant Durable Object
- * seeded with a real subject — and returns that route's real data; no token, or one
- * that does not verify, is refused before any such request is ever built; and the
- * protected-resource metadata names the platform tenant's own issuer.
+ * The platform's MCP server end to end: the generated tools publish each operation's own
+ * params, query and body schemas; a call reaches the real `subjectsList` action over a
+ * seeded tenant Durable Object, with parsed query and body values forwarded in the form
+ * the route reads back; an unverified caller is refused before any request is built.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { JSONSchema } from "@sdxc/json-schema";
 import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
 
@@ -194,18 +191,74 @@ beforeEach(async () => {
 	});
 });
 
+/** One `tools/list` entry, reduced to what these tests read. */
+interface ListedTool {
+	name: string;
+	inputSchema: JSONSchema;
+}
+
+/** Lists the tools a valid machine token sees. */
+async function listTools(): Promise<ListedTool[]> {
+	let response = await mcpRouter.fetch(listToolsRequest(await signMachineToken()));
+	expect(response.status).toBe(200);
+
+	let body = (await response.json()) as { result?: { tools?: ListedTool[] } };
+	return body.result?.tools ?? [];
+}
+
+/** The input schema one listed tool publishes, failing the test when the tool is absent. */
+async function inputSchemaOf(name: string): Promise<JSONSchema> {
+	let listed = (await listTools()).find((each) => each.name === name);
+	if (listed === undefined) throw new Error(`${name} is not listed`);
+	return listed.inputSchema;
+}
+
 describe("tools/list", () => {
 	test("is non-empty and includes recognizable management operations", async () => {
-		let response = await mcpRouter.fetch(listToolsRequest(await signMachineToken()));
-		expect(response.status).toBe(200);
-
-		let body = (await response.json()) as { result?: { tools?: Array<{ name: string }> } };
-		let names = body.result?.tools?.map((each) => each.name) ?? [];
+		let names = (await listTools()).map((each) => each.name);
 
 		expect(names.length).toBeGreaterThan(0);
 		expect(names).toEqual(
 			expect.arrayContaining(["subjectsList", "subjectsCreate", "clientsList"]),
 		);
+	});
+
+	test("nests params and query, requiring only the parts whose keys are required", async () => {
+		let schema = await inputSchemaOf("subjectsList");
+
+		expect(schema.required).toEqual(["params"]);
+		expect(schema.properties?.params).toEqual({
+			type: "object",
+			properties: { tenantId: { type: "string" } },
+			required: ["tenantId"],
+		});
+		expect(schema.properties?.query?.properties?.per_page?.type).toEqual(["number", "string"]);
+		expect(schema.properties?.body).toBeUndefined();
+	});
+
+	test("publishes a body using a record, a union and nullable members as its real schema", async () => {
+		let schema = await inputSchemaOf("subjectsCreate");
+		let body = schema.properties?.body;
+
+		expect(body?.type).toBe("object");
+		expect(body?.properties?.attributes).toEqual({ type: "object", additionalProperties: {} });
+		expect(body?.properties?.profile?.properties?.name).toEqual({ type: ["string", "null"] });
+
+		let patch = (await inputSchemaOf("subjectsUpdate")).properties?.body;
+		expect(patch?.properties?.attributes).toEqual({
+			anyOf: [
+				{
+					type: "object",
+					additionalProperties: {
+						anyOf: [
+							{ anyOf: [{ type: "string" }, { type: "number" }, { type: "boolean" }] },
+							{ type: "null" },
+						],
+					},
+				},
+				{ type: "null" },
+			],
+		});
 	});
 });
 
@@ -213,7 +266,9 @@ describe("tools/call", () => {
 	test("a valid bearer token reaches the real subjectsList action and returns its real data", async () => {
 		let token = await signMachineToken();
 
-		let response = await mcpRouter.fetch(callToolRequest("subjectsList", { tenantId }, token));
+		let response = await mcpRouter.fetch(
+			callToolRequest("subjectsList", { params: { tenantId } }, token),
+		);
 		expect(response.status).toBe(200);
 
 		let body = (await response.json()) as {
@@ -226,8 +281,77 @@ describe("tools/call", () => {
 		expect(subjects.map((subject) => subject.id)).toContain(subjectId);
 	});
 
+	test("forwards a coerced query value as the text the route reads back", async () => {
+		let token = await signMachineToken();
+
+		let response = await mcpRouter.fetch(
+			callToolRequest(
+				"subjectsList",
+				{ params: { tenantId }, query: { per_page: "1", status: "active" } },
+				token,
+			),
+		);
+		let body = (await response.json()) as { result: { isError?: boolean } };
+
+		expect(body.result.isError).toBeFalsy();
+		let forwarded = new URL(dispatchCalls[0]?.url ?? "");
+		expect(forwarded.pathname).toBe(`/tenants/${tenantId}/subjects`);
+		expect(forwarded.searchParams.get("per_page")).toBe("1");
+		expect(forwarded.searchParams.get("status")).toBe("active");
+		expect(forwarded.searchParams.has("cursor")).toBe(false);
+	});
+
+	test("forwards the parsed body as JSON, keeping nulls the schema accepts", async () => {
+		let forwarded: { method: string; url: string; contentType: string | null; body: string }[] = [];
+		useManagementDispatchForTesting(async (request) => {
+			forwarded.push({
+				method: request.method,
+				url: request.url,
+				contentType: request.headers.get("Content-Type"),
+				body: await request.text(),
+			});
+			return Response.json({ subjectId: "sub_1", identifiers: [] }, { status: 201 });
+		});
+
+		let response = await mcpRouter.fetch(
+			callToolRequest(
+				"subjectsCreate",
+				{
+					params: { tenantId },
+					body: {
+						profile: { name: null, givenName: "Jane" },
+						attributes: { tier: "gold" },
+						unknown: true,
+					},
+				},
+				await signMachineToken(),
+			),
+		);
+		let body = (await response.json()) as { result: { isError?: boolean } };
+
+		expect(body.result.isError).toBeFalsy();
+		expect(forwarded).toHaveLength(1);
+		expect(forwarded[0]?.method).toBe("POST");
+		expect(new URL(forwarded[0]?.url ?? "").pathname).toBe(`/tenants/${tenantId}/subjects`);
+		expect(forwarded[0]?.contentType).toBe("application/json");
+		expect(JSON.parse(forwarded[0]?.body ?? "null")).toEqual({
+			profile: { name: null, givenName: "Jane" },
+			attributes: { tier: "gold" },
+		});
+	});
+
+	test("refuses arguments outside the nested shape before any request is forwarded", async () => {
+		let response = await mcpRouter.fetch(
+			callToolRequest("subjectsList", { tenantId }, await signMachineToken()),
+		);
+		let body = (await response.json()) as { error?: { data?: { issues?: string[] } } };
+
+		expect(body.error?.data?.issues).toEqual(["params: Required"]);
+		expect(dispatchCalls).toHaveLength(0);
+	});
+
 	test("refuses a request with no bearer token before any request is forwarded", async () => {
-		let response = await mcpRouter.fetch(callToolRequest("subjectsList", { tenantId }));
+		let response = await mcpRouter.fetch(callToolRequest("subjectsList", { params: { tenantId } }));
 
 		expect(response.status).toBe(401);
 		expect(dispatchCalls).toHaveLength(0);
@@ -235,7 +359,7 @@ describe("tools/call", () => {
 
 	test("refuses a bearer token that does not verify before any request is forwarded", async () => {
 		let response = await mcpRouter.fetch(
-			callToolRequest("subjectsList", { tenantId }, "not-a-real-token"),
+			callToolRequest("subjectsList", { params: { tenantId } }, "not-a-real-token"),
 		);
 
 		expect(response.status).toBe(401);

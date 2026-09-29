@@ -45,7 +45,7 @@ const mcp = createHandler({
 	title: "Auth SaaS Management API",
 	version: "1.0.0",
 	instructions:
-		"Manage subjects, clients, agent clients, API keys, webhook endpoints, roles, credentials, audit events and tenant settings through the management API. Each tool maps one management API operation and takes the same arguments its own OpenAPI document describes.",
+		"Manage subjects, clients, agent clients, API keys, webhook endpoints, roles, credentials, audit events and tenant settings through the management API. Each tool maps one management API operation: pass its path variables as `params`, its query-string parameters as `query`, and its request body as `body`, each exactly as the operation's own OpenAPI document describes them.",
 	listTtlMs: LIST_TTL_MS,
 });
 

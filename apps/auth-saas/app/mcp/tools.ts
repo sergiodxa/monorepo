@@ -1,23 +1,17 @@
 /**
  * MCP tools generated mechanically from the management API's own OpenAPI operations:
- * one tool per operation, its input schema narrowed from the operation's own params,
- * query and body schemas into `@sdxc/mcp`'s tool-argument subset, and its name the
- * operation's own `operationId` — the mapping the document already publishes, so
- * adding an operation there is the only change a new tool ever needs.
- *
- * Generation is separate from implementation, the same split `apps/blog`'s hand-written
- * tool tree keeps between its own `tools.ts` and `controllers/**` — this file only
- * decides what exists and what it takes; `app/mcp/controller.ts` forwards a call.
+ * one tool per operation, named by its `operationId`, whose input nests the operation's
+ * own params, query and body schemas, so a new operation there is a new tool here.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DescribedSchema, JSONSchema } from "@sdxc/json-schema";
-import type { ObjectSchema, Tool, ToolAnnotations, ToolGroup } from "@sdxc/mcp";
+import type { DescribedSchema } from "@sdxc/json-schema";
+import type { Tool, ToolAnnotations, ToolGroup } from "@sdxc/mcp";
 import type { Operation } from "@sdxc/openapi";
 
-import { toJSONSchema } from "@sdxc/json-schema";
+import * as s from "@sdxc/json-schema";
 import { tool, tools } from "@sdxc/mcp";
 import { isFailure } from "@sdxc/result";
 
@@ -31,8 +25,6 @@ import { ROLES_OPERATIONS } from "~/app/http/openapi/roles";
 import { SUBJECTS_OPERATIONS } from "~/app/http/openapi/subjects";
 import { TENANTS_OPERATIONS } from "~/app/http/openapi/tenants";
 import { WEBHOOK_ENDPOINTS_OPERATIONS } from "~/app/http/openapi/webhook-endpoints";
-
-import { narrowObject } from "./schema.js";
 
 /** Any operation this module reads only its declared, schema-carrying parts of. */
 // oxlint-disable-next-line typescript/no-explicit-any -- every operation's own params/query/body types differ; only the shared, schema-describing parts are read here
@@ -56,32 +48,14 @@ const MANAGEMENT_OPERATIONS: readonly AnyOperation[] = [
 	...TENANTS_OPERATIONS,
 ] as unknown as readonly AnyOperation[];
 
-/** How a generated tool's own `body` argument reaches the forwarded request. */
-export type BodyMode = "none" | "object" | "string";
-
-/** One operation, generated into a tool, with what its handler needs to rebuild the real request. */
-export interface GeneratedTool {
-	readonly tool: Tool<ObjectSchema>;
-	readonly operation: AnyOperation;
-	/** Argument names that fill the route's own path variables. */
-	readonly paramKeys: readonly string[];
-	/** Argument names that become query-string parameters. */
-	readonly queryKeys: readonly string[];
-	/** Whether the tool has no body, an object narrowed to the subset, or a JSON-encoded string fallback. */
-	readonly bodyMode: BodyMode;
-}
-
 /**
- * Describes a schema as JSON Schema on its output side, the side a coercion (a query
- * parameter accepted as either a number or its string form) resolves to its single
- * clean type rather than the union its input side would otherwise describe.
+ * One operation, generated into a tool. The tool's arguments are `params`, `query` and
+ * `body`, each present only when the operation declares that part, and each validated
+ * by exactly the schema the operation itself parses that part with.
  */
-function describe(schema: AnySchema): JSONSchema {
-	let described = toJSONSchema(schema, { refs: "inline", direction: "output" });
-	if (isFailure(described)) {
-		throw new Error(`Could not describe a schema for a generated tool: ${described.error.message}`);
-	}
-	return described.data;
+export interface GeneratedTool {
+	readonly tool: Tool;
+	readonly operation: AnyOperation;
 }
 
 /** Whether a declared body is one schema itself, rather than a record of media types to schemas. */
@@ -96,10 +70,9 @@ function isJSONMediaType(mediaType: string): boolean {
 
 /**
  * Whether an operation's own declared request body travels as JSON (or a JSON-derived
- * media type such as a merge patch). A body declared only in another media type — the
- * token endpoint's form encoding, a subject import's NDJSON upload — has nothing this
- * generator's JSON-forwarding handler could send correctly, so that operation is left
- * out of the generated set entirely rather than forwarding the wrong media type.
+ * media type such as a merge patch). An operation whose body is declared only in another
+ * media type — the token endpoint's form encoding, a subject import's NDJSON upload — is
+ * left out of the generated set, since its tool's handler forwards every body as JSON.
  */
 function hasJSONCompatibleBody(operation: AnyOperation): boolean {
 	let body = operation.spec.body as AnySchema | Record<string, AnySchema> | undefined;
@@ -125,6 +98,42 @@ function representativeBodySchema(operation: AnyOperation): AnySchema | null {
 	);
 }
 
+/**
+ * Whether a query schema requires at least one key. The real route parses an absent query
+ * string as `{}`, so a query whose every key is optional is itself an optional argument.
+ *
+ * @throws Error When the schema cannot describe itself, which only a change to the
+ * operation, not a call, can fix.
+ */
+function requiresAnyKey(operation: AnyOperation, schema: AnySchema): boolean {
+	let described = s.toJSONSchema(schema, { direction: "input", refs: "inline" });
+	if (isFailure(described)) {
+		throw new Error(`${operation.operationId}: its query schema cannot describe itself`, {
+			cause: described.error,
+		});
+	}
+	return (described.data.required?.length ?? 0) > 0;
+}
+
+/**
+ * The tool's arguments: each part the operation declares, under the name the handler
+ * reads it back by. Params are always required, since every path variable is.
+ */
+function toolInput(operation: AnyOperation): s.Schema<unknown, Record<string, unknown>> {
+	let shape: Record<string, AnySchema> = {};
+
+	let { params, query } = operation.spec;
+	if (params !== undefined) shape.params = params;
+	if (query !== undefined) {
+		shape.query = requiresAnyKey(operation, query) ? query : s.optional(query);
+	}
+
+	let body = representativeBodySchema(operation);
+	if (body !== null) shape.body = body;
+
+	return s.object(shape);
+}
+
 /** An operation's summary and, when it adds anything beyond the summary, its description. */
 function toolDescription(operation: AnyOperation): string {
 	let { summary, description } = operation.spec;
@@ -134,9 +143,8 @@ function toolDescription(operation: AnyOperation): string {
 /**
  * The hints a client weighs before running a tool without asking: read-only for a
  * `GET`, destructive for a `DELETE` or a same-effect removal reachable another way
- * (blocking, revoking, removing an identifier) — `unblock` is excluded, since restoring
- * access is not itself a destructive act. Nothing generated here reaches outside this
- * platform.
+ * (blocking, revoking, removing an identifier) — `unblock` restores access, so it stays
+ * non-destructive. Every generated tool acts on this platform alone.
  */
 function toolAnnotations(operation: AnyOperation): ToolAnnotations {
 	let method = operation.route.method;
@@ -148,77 +156,19 @@ function toolAnnotations(operation: AnyOperation): ToolAnnotations {
 }
 
 /**
- * Narrows an operation's params or query schema, throwing when it does not fit the
- * subset. Both are always flat objects of path or query scalars in this API, so a
- * failure here means the generator, not the operation, needs to change.
- */
-function narrowFlatObject(
-	operation: AnyOperation,
-	schema: AnySchema,
-	part: "params" | "query",
-): ObjectSchema {
-	let narrowed = narrowObject(describe(schema));
-	if (narrowed === null) {
-		throw new Error(
-			`${operation.operationId}: its ${part} schema does not fit the tool argument subset`,
-		);
-	}
-	return narrowed;
-}
-
-/**
  * Generates one tool from one operation, or `null` when the operation's own request
  * body cannot be forwarded as JSON at all (see {@link hasJSONCompatibleBody}).
  */
 function generateTool(operation: AnyOperation): GeneratedTool | null {
 	if (!hasJSONCompatibleBody(operation)) return null;
 
-	let properties: Record<string, ObjectSchema["properties"][string]> = {};
-	let required: string[] = [];
-	let paramKeys: string[] = [];
-	let queryKeys: string[] = [];
-
-	if (operation.spec.params !== undefined) {
-		let narrowed = narrowFlatObject(operation, operation.spec.params, "params");
-		Object.assign(properties, narrowed.properties);
-		if (narrowed.required) required.push(...narrowed.required);
-		paramKeys = Object.keys(narrowed.properties);
-	}
-
-	if (operation.spec.query !== undefined) {
-		let narrowed = narrowFlatObject(operation, operation.spec.query, "query");
-		Object.assign(properties, narrowed.properties);
-		if (narrowed.required) required.push(...narrowed.required);
-		queryKeys = Object.keys(narrowed.properties);
-	}
-
-	let bodyMode: BodyMode = "none";
-	let bodySchema = representativeBodySchema(operation);
-	if (bodySchema !== null) {
-		let narrowedBody = narrowObject(describe(bodySchema));
-		if (narrowedBody !== null) {
-			properties.body = narrowedBody;
-			bodyMode = "object";
-		} else {
-			properties.body = {
-				type: "string",
-				description:
-					"A JSON-encoded object matching this operation's own request body, as its own documentation describes.",
-			};
-			bodyMode = "string";
-		}
-	}
-
-	let input: ObjectSchema = { type: "object", properties };
-	if (required.length > 0) input = { ...input, required };
-
 	let declared = tool(operation.operationId, {
 		description: toolDescription(operation),
-		input,
+		input: toolInput(operation),
 		annotations: toolAnnotations(operation),
 	});
 
-	return { tool: declared, operation, paramKeys, queryKeys, bodyMode };
+	return { tool: declared, operation };
 }
 
 /**
@@ -234,8 +184,8 @@ const GENERATED_TOOLS: readonly GeneratedTool[] = MANAGEMENT_OPERATIONS.map(gene
 
 /**
  * Validates the generated set the same way a hand-written tool tree is validated:
- * every tool's own name must be unique. Never mapped itself — {@link GENERATED_TOOLS}
- * is what `bootstrap/mcp-app.ts` maps, one tool at a time.
+ * every tool's own name must be unique. `bootstrap/mcp-app.ts` maps
+ * {@link GENERATED_TOOLS} one tool at a time, so this tree only runs the check.
  */
 tools(
 	Object.fromEntries(

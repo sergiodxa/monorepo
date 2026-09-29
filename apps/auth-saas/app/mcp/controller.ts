@@ -1,11 +1,8 @@
 /**
- * Implements every generated management tool with one handler: builds a request
- * matching its operation's own method and path, substituting the call's own
- * validated arguments into the path and query, attaches the caller's own
- * already-verified bearer token read off the request context, and forwards it to the
- * real management route. The route's real response, scope enforcement included,
- * becomes the tool's result unchanged — this handler never re-checks or duplicates
- * that enforcement.
+ * Implements every generated management tool with one handler: rebuilds the request its
+ * operation describes from the call's parsed `params`, `query` and `body`, attaches the
+ * caller's already-verified bearer token, and forwards it to the real management route,
+ * whose response, scope enforcement included, becomes the tool's result unchanged.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,57 +18,49 @@ import type { GeneratedTool } from "~/app/mcp/tools";
 import { McpBearerToken } from "~/app/http/middleware/mcp-auth";
 import { dispatchManagementRequest } from "~/app/mcp/dispatch";
 
-/** The path and query arguments a call carries, read off the tool's own recorded argument names. */
-function routeArguments(
-	generated: GeneratedTool,
-	args: Record<string, unknown>,
-): { params: Record<string, unknown>; query: Record<string, string | number> } {
-	let params: Record<string, unknown> = {};
-	for (let key of generated.paramKeys) {
-		if (args[key] !== undefined) params[key] = args[key];
+/**
+ * One parsed query value as the text the route's own query schema reads back to the same
+ * value: a coerced number or boolean becomes its string form, a coerced date its ISO 8601
+ * timestamp, and a structured value its JSON.
+ */
+function queryText(value: unknown): string {
+	if (value instanceof Date) return value.toISOString();
+	if (
+		typeof value === "string" ||
+		typeof value === "number" ||
+		typeof value === "boolean" ||
+		typeof value === "bigint"
+	) {
+		return String(value);
 	}
-
-	let query: Record<string, string | number> = {};
-	for (let key of generated.queryKeys) {
-		let value = args[key];
-		if (typeof value === "string" || typeof value === "number") query[key] = value;
-	}
-
-	return { params, query };
+	return JSON.stringify(value);
 }
 
 /**
- * The forwarded request's own body: `undefined` when the tool declares none, the
- * `body` argument re-serialized when it was narrowed to an object, or the `body`
- * argument's JSON-encoded text re-parsed and re-serialized when the tool fell back to
- * a string argument — re-parsing here is what turns malformed input into a `ToolError`
- * the model can act on, rather than a request the real route would refuse blindly.
+ * The query string for a call's parsed `query` argument. An array repeats its key once per
+ * item, the form the route reads back as an array, and an absent or `undefined` value
+ * leaves its key out, so the route applies its own default for it.
  */
-function forwardedBody(
-	generated: GeneratedTool,
-	args: Record<string, unknown>,
-): string | undefined {
-	if (generated.bodyMode === "object") {
-		return args.body === undefined ? undefined : JSON.stringify(args.body);
-	}
+function searchParams(query: unknown): URLSearchParams {
+	let search = new URLSearchParams();
+	if (typeof query !== "object" || query === null) return search;
 
-	if (generated.bodyMode === "string" && typeof args.body === "string") {
-		try {
-			return JSON.stringify(JSON.parse(args.body));
-		} catch {
-			throw new ToolError("The body argument must be JSON-encoded text, and it did not parse.");
+	for (let [key, value] of Object.entries(query)) {
+		for (let item of Array.isArray(value) ? value : [value]) {
+			if (item !== undefined && item !== null) search.append(key, queryText(item));
 		}
 	}
-
-	return undefined;
+	return search;
 }
 
 /**
  * Builds the one handler every generated tool is mapped to, closing over which
- * operation it forwards to.
+ * operation it forwards to. The call's `body` is the operation's body schema's parse, so
+ * it arrives with unknown keys stripped and defaults applied, and travels as JSON.
  *
- * @param generated - The tool, its operation, and how its arguments map onto a request.
+ * @param generated - The tool and the operation it forwards to.
  * @returns The handler, for `mcp.tools.map(generated.tool, ...)`.
+ * @throws ToolError When the route answers with an error status, carrying its body.
  * @example
  * for (let generated of GENERATED_TOOLS) mcp.tools.map(generated.tool, managementToolHandler(generated));
  */
@@ -79,20 +68,23 @@ export function managementToolHandler(
 	generated: GeneratedTool,
 ): ToolHandler<Record<string, unknown>> {
 	return async (ctx) => {
-		let args = ctx.input;
-		let { params, query } = routeArguments(generated, args);
+		let { params, query, body } = ctx.input;
 
-		let href = generated.operation.route.href(params, { searchParams: query });
+		let href = generated.operation.route.href(params ?? {}, {
+			searchParams: searchParams(query),
+		});
 		let url = new URL(href, `https://api.${env.PLATFORM_DOMAIN}`);
 
 		let method =
 			generated.operation.route.method === "ANY" ? "GET" : generated.operation.route.method;
-		let body = forwardedBody(generated, args);
 
 		let headers = new Headers({ Authorization: `Bearer ${ctx.get(McpBearerToken)}` });
-		if (body !== undefined) headers.set("Content-Type", "application/json");
+		let payload = body === undefined ? undefined : JSON.stringify(body);
+		if (payload !== undefined) headers.set("Content-Type", "application/json");
 
-		let response = await dispatchManagementRequest(new Request(url, { method, headers, body }));
+		let response = await dispatchManagementRequest(
+			new Request(url, { method, headers, body: payload }),
+		);
 		let text = await response.text();
 
 		if (response.status >= 400)
