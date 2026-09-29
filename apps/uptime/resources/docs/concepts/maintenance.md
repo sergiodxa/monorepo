@@ -5,20 +5,17 @@ section:
   title: Concepts
   order: 2
 order: 9
-lastUpdated: 2026-09-26
+lastUpdated: 2026-09-29
 ---
 
 By defining maintenance windows in advance, you prevent false alerts during planned work and keep your team focused on real incidents.
 
 ## Why Maintenance Windows Matter
 
-Without maintenance windows, planned downtime creates problems:
+Planned work looks like an outage to a monitor. A maintenance window tells Uptime the downtime is intentional, which does two things:
 
-- **Alert fatigue** — Your team gets paged for expected outages, reducing trust in the alerting system
-- **Skewed statistics** — Planned maintenance counts against your uptime metrics
-- **Poor communication** — Users see incidents on your status page that aren't really incidents
-
-Maintenance windows solve these issues by telling Uptime when downtime is intentional.
+- **Keeps alerts for real incidents** — your team isn't paged for work it scheduled, so an alert keeps meaning something is wrong
+- **Tells your users ahead of time** — your status page announces the work before it starts
 
 ### Prevent False Alerts
 
@@ -28,9 +25,9 @@ When a monitor is in a maintenance window with alert suppression enabled, Uptime
 
 Maintenance windows can be displayed on your public status page, letting users know about planned work before it happens. This reduces support tickets and builds trust through transparency.
 
-### Keep Accurate Statistics
+### Keep a Complete Record
 
-Checks during maintenance windows can be excluded from uptime calculations, so your metrics reflect actual service reliability rather than planned maintenance events.
+Checks keep running during a maintenance window, and their results count toward uptime like any other check, so your history shows exactly how the service behaved while the work happened. [Reports](/docs/concepts/reports) list the maintenance minutes that covered each monitor beside its uptime, so you can tell planned downtime apart when you share the figures.
 
 ## Configuration Options
 
@@ -185,7 +182,6 @@ If only some services are affected, select specific monitors rather than applyin
 
 - Other services remain fully monitored
 - Status pages accurately reflect what's affected
-- Uptime metrics stay precise
 
 ## Next Steps
 

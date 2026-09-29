@@ -681,7 +681,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{ icon: "calendar", value: "Scheduled", label: "Maintenance" },
 			{ icon: "bell-off", value: "Alert", label: "Suppression" },
 			{ icon: "repeat", value: "Recurring", label: "Windows" },
-			{ icon: "shield", value: "Clean", label: "Metrics" },
+			{ icon: "calendar-clock", value: "Calendar", label: "Feed" },
 		],
 		features: [
 			{
