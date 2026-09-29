@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/problem",
 	"version": "0.0.1",
-	"description": "Build, detect and parse RFC 9457 problem details, and declare an API's problem types in one catalog",
+	"description": "Build, detect and parse RFC 9457 problem details, cataloged per API",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
