@@ -1031,6 +1031,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "Reports",
 						dashboard: "Dashboard",
 						alerts: "Alerts",
 						maintenance: "Maintenance",
@@ -3838,6 +3839,96 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "Reports",
+				description:
+					"Download uptime reports as CSV for a month, a quarter or any range of days, to keep or to send to a client.",
+			},
+			form: {
+				range: {
+					legend: "Date range (UTC days)",
+					from: "From",
+					to: "To",
+					presets: "Quick ranges",
+				},
+				presets: {
+					lastMonth: "Last month",
+					last30Days: "Last 30 days",
+					lastQuarter: "Last quarter",
+					yearToDate: "Year to date",
+				},
+				monitors: {
+					label: "Monitors",
+					all: "All monitors",
+					statusPages: "Monitors on a status page",
+					types: "Monitors of one type",
+				},
+				dialect: {
+					legend: "Format",
+					spreadsheet: {
+						label: "Spreadsheet",
+						description:
+							"Opens in Excel, Numbers or Google Sheets with column names and number format in your language.",
+					},
+					standard: {
+						label: "Standard CSV",
+						description:
+							"Comma-separated, with fixed column names and dot decimals, for scripts and imports.",
+					},
+				},
+				submit: {
+					summary: "Download uptime summary",
+					summaryDescription: "One row per monitor for the whole range.",
+					daily: "Download daily uptime",
+					dailyDescription: "One row per monitor for each day.",
+				},
+			},
+			errors: {
+				invalid: "Enter both dates as real calendar days.",
+				reversed: "The start date must be on or before the end date.",
+				future: "Reports end yesterday at the latest, since today's checks are still coming in.",
+				tooLong: "A report covers at most 366 days.",
+				scope: "Choose one of this team's status pages or a monitor type.",
+			},
+			about: {
+				title: "How the figures are calculated",
+				uptime:
+					"Uptime is successful checks divided by all checks in the range, the same figure the dashboard and digests show. For HTTP monitors, a degraded check counts as failed.",
+				days: "Days are UTC. A day without recorded checks is left out instead of being counted as up.",
+				maintenance:
+					"Maintenance minutes are listed for each monitor. Checks during maintenance still count toward uptime.",
+			},
+			columns: {
+				monitor: "Monitor",
+				type: "Type",
+				target: "Target",
+				days_with_data: "Days with data",
+				total_checks: "Total checks",
+				successful_checks: "Successful checks",
+				failed_checks: "Failed checks",
+				uptime_percent: "Uptime %",
+				avg_response_time_ms: "Avg response time (ms)",
+				max_response_time_ms: "Max response time (ms)",
+				days_down: "Days down",
+				days_degraded: "Days degraded",
+				maintenance_minutes: "Maintenance (minutes)",
+				date: "Date (UTC)",
+				status: "Status",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+				flow: "Flow",
+			},
+			statuses: {
+				up: "Up",
+				degraded: "Degraded",
+				down: "Down",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "Alert History",
@@ -5355,6 +5446,8 @@ export default {
 								"Create and delete the team's API keys. A new key can be given any scope, so this one can grant every other permission.",
 							"ping:trigger":
 								"Run one-off HTTP, DNS and TCP checks without creating a monitor. Each check is billed as one ping and needs an active subscription.",
+							"reports:read":
+								"Download the team's uptime reports: a summary per monitor and daily uptime, over any range of days.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

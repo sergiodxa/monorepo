@@ -111,6 +111,11 @@ export const maintenanceWindowRoutes = {
 	maintenanceEnd: routes.api.v1.maintenance.end,
 };
 
+export const reportsRoutes = {
+	reportsUptimeSummary: routes.api.v1.reports.uptimeSummary,
+	reportsUptimeDaily: routes.api.v1.reports.uptimeDaily,
+};
+
 export const statusPagesRoutes = {
 	statusPagesIndex: routes.api.v1.statusPages.index,
 	statusPagesCreate: routes.api.v1.statusPages.create,

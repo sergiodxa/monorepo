@@ -967,6 +967,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "レポート",
 						dashboard: "ダッシュボード",
 						alerts: "アラート",
 						maintenance: "メンテナンス",
@@ -3766,6 +3767,96 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "レポート",
+				description:
+					"1か月、四半期、または任意の日付範囲の稼働率レポートをCSVでダウンロードし、保管したりクライアントに送ったりできます。",
+			},
+			form: {
+				range: {
+					legend: "日付範囲（UTCの日）",
+					from: "開始日",
+					to: "終了日",
+					presets: "クイック選択",
+				},
+				presets: {
+					lastMonth: "先月",
+					last30Days: "過去30日間",
+					lastQuarter: "前四半期",
+					yearToDate: "年初から今日まで",
+				},
+				monitors: {
+					label: "モニター",
+					all: "すべてのモニター",
+					statusPages: "ステータスページのモニター",
+					types: "種類別のモニター",
+				},
+				dialect: {
+					legend: "形式",
+					spreadsheet: {
+						label: "スプレッドシート",
+						description:
+							"Excel、Numbers、Googleスプレッドシートで、あなたの言語の列名と数値形式で開けます。",
+					},
+					standard: {
+						label: "標準CSV",
+						description:
+							"カンマ区切り、固定の列名、小数点はドットで、スクリプトやインポート向けです。",
+					},
+				},
+				submit: {
+					summary: "稼働率の概要をダウンロード",
+					summaryDescription: "範囲全体について、モニターごとに1行です。",
+					daily: "日別の稼働率をダウンロード",
+					dailyDescription: "モニターごと、1日ごとに1行です。",
+				},
+			},
+			errors: {
+				invalid: "両方の日付に、カレンダーに存在する日を入力してください。",
+				reversed: "開始日は終了日と同じか、それより前にしてください。",
+				future: "今日のチェック結果はまだ集計中のため、レポートは遅くとも昨日までです。",
+				tooLong: "1つのレポートの範囲は最大366日です。",
+				scope: "このチームのステータスページか、モニターの種類を選んでください。",
+			},
+			about: {
+				title: "数値の計算方法",
+				uptime:
+					"稼働率は、範囲内の全チェックに対する成功したチェックの割合で、ダッシュボードやダイジェストと同じ値です。HTTPモニターでは、低下したチェックは失敗として数えます。",
+				days: "日付はUTCです。チェックの記録がない日は、稼働として数えずに除外します。",
+				maintenance:
+					"メンテナンス時間（分）はモニターごとに記載します。メンテナンス中のチェックも稼働率に含まれます。",
+			},
+			columns: {
+				monitor: "モニター",
+				type: "種類",
+				target: "対象",
+				days_with_data: "データのある日数",
+				total_checks: "チェック総数",
+				successful_checks: "成功したチェック",
+				failed_checks: "失敗したチェック",
+				uptime_percent: "稼働率 %",
+				avg_response_time_ms: "平均応答時間 (ms)",
+				max_response_time_ms: "最大応答時間 (ms)",
+				days_down: "ダウンした日数",
+				days_degraded: "低下した日数",
+				maintenance_minutes: "メンテナンス（分）",
+				date: "日付 (UTC)",
+				status: "ステータス",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cronジョブ",
+				flow: "フロー",
+			},
+			statuses: {
+				up: "稼働",
+				degraded: "低下",
+				down: "ダウン",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "アラート履歴",
@@ -5277,6 +5368,8 @@ export default {
 								"チームのAPIキーを作成・削除します。新しいキーには任意のスコープを与えられるため、この権限があれば他のすべての権限を付与できます。",
 							"ping:trigger":
 								"モニターを作成せずに、単発のHTTP・DNS・TCPチェックを実行します。1回のチェックにつき1pingとして課金され、有効なサブスクリプションが必要です。",
+							"reports:read":
+								"チームの稼働率レポートをダウンロードします。任意の日付範囲について、モニターごとの概要と日別の稼働率を取得できます。",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

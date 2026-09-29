@@ -998,6 +998,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "Berichte",
 						dashboard: "Dashboard",
 						alerts: "Benachrichtigungen",
 						maintenance: "Wartung",
@@ -3842,6 +3843,96 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "Berichte",
+				description:
+					"Lade Verfügbarkeitsberichte als CSV für einen Monat, ein Quartal oder einen beliebigen Zeitraum herunter, zum Aufbewahren oder zum Weitergeben an einen Kunden.",
+			},
+			form: {
+				range: {
+					legend: "Zeitraum (UTC-Tage)",
+					from: "Von",
+					to: "Bis",
+					presets: "Schnellauswahl",
+				},
+				presets: {
+					lastMonth: "Letzter Monat",
+					last30Days: "Letzte 30 Tage",
+					lastQuarter: "Letztes Quartal",
+					yearToDate: "Seit Jahresbeginn",
+				},
+				monitors: {
+					label: "Monitore",
+					all: "Alle Monitore",
+					statusPages: "Monitore einer Statusseite",
+					types: "Monitore eines Typs",
+				},
+				dialect: {
+					legend: "Format",
+					spreadsheet: {
+						label: "Tabellenkalkulation",
+						description:
+							"Öffnet sich in Excel, Numbers oder Google Sheets mit Spaltennamen und Zahlenformat in deiner Sprache.",
+					},
+					standard: {
+						label: "Standard-CSV",
+						description:
+							"Kommagetrennt, mit festen Spaltennamen und Dezimalpunkt, für Skripte und Importe.",
+					},
+				},
+				submit: {
+					summary: "Verfügbarkeitszusammenfassung herunterladen",
+					summaryDescription: "Eine Zeile pro Monitor für den gesamten Zeitraum.",
+					daily: "Tägliche Verfügbarkeit herunterladen",
+					dailyDescription: "Eine Zeile pro Monitor und Tag.",
+				},
+			},
+			errors: {
+				invalid: "Gib beide Daten als echte Kalendertage ein.",
+				reversed: "Das Startdatum muss vor dem Enddatum liegen oder ihm entsprechen.",
+				future: "Berichte enden spätestens gestern, weil die heutigen Prüfungen noch eingehen.",
+				tooLong: "Ein Bericht umfasst höchstens 366 Tage.",
+				scope: "Wähle eine Statusseite dieses Teams oder einen Monitortyp.",
+			},
+			about: {
+				title: "Wie die Werte berechnet werden",
+				uptime:
+					"Die Verfügbarkeit ist die Zahl der erfolgreichen Prüfungen geteilt durch alle Prüfungen im Zeitraum, derselbe Wert wie im Dashboard und in den Zusammenfassungen. Bei HTTP-Monitoren zählt eine beeinträchtigte Prüfung als fehlgeschlagen.",
+				days: "Tage sind UTC-Tage. Ein Tag ohne erfasste Prüfungen wird ausgelassen, statt als verfügbar gezählt zu werden.",
+				maintenance:
+					"Wartungsminuten werden für jeden Monitor aufgeführt. Prüfungen während einer Wartung zählen weiterhin zur Verfügbarkeit.",
+			},
+			columns: {
+				monitor: "Monitor",
+				type: "Typ",
+				target: "Ziel",
+				days_with_data: "Tage mit Daten",
+				total_checks: "Prüfungen gesamt",
+				successful_checks: "Erfolgreiche Prüfungen",
+				failed_checks: "Fehlgeschlagene Prüfungen",
+				uptime_percent: "Verfügbarkeit %",
+				avg_response_time_ms: "Durchschn. Antwortzeit (ms)",
+				max_response_time_ms: "Max. Antwortzeit (ms)",
+				days_down: "Tage ausgefallen",
+				days_degraded: "Tage beeinträchtigt",
+				maintenance_minutes: "Wartung (Minuten)",
+				date: "Datum (UTC)",
+				status: "Status",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cronjob",
+				flow: "Flow",
+			},
+			statuses: {
+				up: "Verfügbar",
+				degraded: "Beeinträchtigt",
+				down: "Ausgefallen",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "Benachrichtigungsverlauf",
@@ -5388,6 +5479,8 @@ export default {
 								"API-Schlüssel des Teams erstellen und löschen. Ein neuer Schlüssel kann jeden Bereich erhalten, dieser hier kann also jede andere Berechtigung vergeben.",
 							"ping:trigger":
 								"Einmalige HTTP-, DNS- und TCP-Prüfungen ausführen, ohne einen Monitor anzulegen. Jede Prüfung wird als ein Ping abgerechnet und erfordert ein aktives Abonnement.",
+							"reports:read":
+								"Die Verfügbarkeitsberichte des Teams herunterladen: eine Zusammenfassung pro Monitor und die tägliche Verfügbarkeit für einen beliebigen Zeitraum.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

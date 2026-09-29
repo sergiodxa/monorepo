@@ -387,12 +387,27 @@ the design if reports ever span multiple years of per-check data.
   as `isActiveAt` does; occurrences start at the first one after `created_at`, and
   `ended_early_at` shortens the one-off range only. Minutes are rounded per row, so daily rows can
   sum to a minute more or less than the summary.
+- Implementation: routes are `routes.app.team.reports.index` and `.download`. The builder's
+  monitor filter is one `<select>` whose value is `all`, `status-page:<id>` or `type:<type>`, and
+  the page answers 400 with the problem when a download sent a query back. Presets are links that
+  keep the chosen monitors and format.
+- Implementation: a query without `from` and `to` means last month, for the download as for the
+  builder, so a bookmarked download URL without dates always fetches the previous month.
+- Implementation: `app/lib/report-csv.ts` writes both reports for the download and the API; the
+  spreadsheet dialect also translates the monitor type and daily status cells.
+- Implementation: the API answers CSV only when `text/csv` is preferred over JSON; `*/*` and no
+  `Accept` get JSON, and both carry `Vary: Accept`. A query with one of `from` and `to`, or a
+  broken range rule, is a 400 `validation-error`; a status page the team does not own is a 404.
+- Implementation: the daily JSON cursor holds the boundary row's values (type position, monitor
+  name, monitor id, day), so a monitor deleted between pages leaves the rest of the walk in place.
+  A page skips the rows of earlier monitors as it streams them; letting `dailyRows` start at a
+  monitor would make deep pages cheaper.
 
 ## Current Progress
 
 - [x] Phase 1: Packages
 - [x] Phase 2: Report data
-- [ ] Phase 3: Download and builder page
-- [ ] Phase 4: API
+- [x] Phase 3: Download and builder page
+- [x] Phase 4: API
 - [ ] Phase 5: Incidents
 - [ ] Phase 6: Monthly report email

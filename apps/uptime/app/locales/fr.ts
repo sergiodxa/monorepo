@@ -1006,6 +1006,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "Rapports",
 						dashboard: "Tableau de bord",
 						alerts: "Alertes",
 						maintenance: "Maintenance",
@@ -3843,6 +3844,97 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "Rapports",
+				description:
+					"Téléchargez des rapports de disponibilité au format CSV pour un mois, un trimestre ou n'importe quelle période, à conserver ou à envoyer à un client.",
+			},
+			form: {
+				range: {
+					legend: "Période (jours UTC)",
+					from: "Du",
+					to: "Au",
+					presets: "Périodes rapides",
+				},
+				presets: {
+					lastMonth: "Mois dernier",
+					last30Days: "30 derniers jours",
+					lastQuarter: "Trimestre dernier",
+					yearToDate: "Depuis le début de l'année",
+				},
+				monitors: {
+					label: "Moniteurs",
+					all: "Tous les moniteurs",
+					statusPages: "Moniteurs d'une page de statut",
+					types: "Moniteurs d'un type",
+				},
+				dialect: {
+					legend: "Format",
+					spreadsheet: {
+						label: "Tableur",
+						description:
+							"S'ouvre dans Excel, Numbers ou Google Sheets avec les noms de colonnes et le format des nombres de votre langue.",
+					},
+					standard: {
+						label: "CSV standard",
+						description:
+							"Séparé par des virgules, avec des noms de colonnes fixes et un point décimal, pour les scripts et les imports.",
+					},
+				},
+				submit: {
+					summary: "Télécharger le résumé de disponibilité",
+					summaryDescription: "Une ligne par moniteur pour toute la période.",
+					daily: "Télécharger la disponibilité quotidienne",
+					dailyDescription: "Une ligne par moniteur et par jour.",
+				},
+			},
+			errors: {
+				invalid: "Saisissez deux dates qui existent dans le calendrier.",
+				reversed: "La date de début doit précéder la date de fin ou lui être égale.",
+				future:
+					"Les rapports s'arrêtent au plus tard hier, car les vérifications d'aujourd'hui arrivent encore.",
+				tooLong: "Un rapport couvre au maximum 366 jours.",
+				scope: "Choisissez une page de statut de cette équipe ou un type de moniteur.",
+			},
+			about: {
+				title: "Comment les chiffres sont calculés",
+				uptime:
+					"La disponibilité correspond aux vérifications réussies divisées par toutes les vérifications de la période, le même chiffre que celui du tableau de bord et des récapitulatifs. Pour les moniteurs HTTP, une vérification dégradée compte comme un échec.",
+				days: "Les jours sont en UTC. Un jour sans vérification enregistrée est omis au lieu d'être compté comme disponible.",
+				maintenance:
+					"Les minutes de maintenance sont indiquées pour chaque moniteur. Les vérifications pendant une maintenance comptent toujours dans la disponibilité.",
+			},
+			columns: {
+				monitor: "Moniteur",
+				type: "Type",
+				target: "Cible",
+				days_with_data: "Jours avec données",
+				total_checks: "Vérifications totales",
+				successful_checks: "Vérifications réussies",
+				failed_checks: "Vérifications échouées",
+				uptime_percent: "Disponibilité %",
+				avg_response_time_ms: "Temps de réponse moyen (ms)",
+				max_response_time_ms: "Temps de réponse max (ms)",
+				days_down: "Jours en panne",
+				days_degraded: "Jours dégradés",
+				maintenance_minutes: "Maintenance (minutes)",
+				date: "Date (UTC)",
+				status: "Statut",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Tâche cron",
+				flow: "Flux",
+			},
+			statuses: {
+				up: "Disponible",
+				degraded: "Dégradé",
+				down: "En panne",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "Historique des alertes",
@@ -5375,6 +5467,8 @@ export default {
 								"Créer et supprimer les clés API de l'équipe. Une nouvelle clé peut recevoir n'importe quelle portée, donc celle-ci permet d'accorder toutes les autres.",
 							"ping:trigger":
 								"Exécuter des vérifications HTTP, DNS et TCP ponctuelles sans créer de moniteur. Chaque vérification est facturée comme un ping et nécessite un abonnement actif.",
+							"reports:read":
+								"Télécharger les rapports de disponibilité de l'équipe : un résumé par moniteur et la disponibilité quotidienne, sur n'importe quelle période.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

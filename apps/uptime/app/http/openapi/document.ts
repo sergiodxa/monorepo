@@ -18,6 +18,7 @@ import { OPERATIONS as FLOW_MONITORS } from "~/app/http/openapi/flow-monitors";
 import { OPERATIONS as MAINTENANCE } from "~/app/http/openapi/maintenance";
 import { OPERATIONS as MONITORS } from "~/app/http/openapi/monitors";
 import { OPERATIONS as PING } from "~/app/http/openapi/ping";
+import { OPERATIONS as REPORTS } from "~/app/http/openapi/reports";
 import { OPERATIONS as STATUS } from "~/app/http/openapi/status";
 import { OPERATIONS as STATUS_PAGES } from "~/app/http/openapi/status-pages";
 import { OPERATIONS as TCP_MONITORS } from "~/app/http/openapi/tcp-monitors";
@@ -53,6 +54,7 @@ export function buildApiDocument() {
 		...ALERTS,
 		...MAINTENANCE,
 		...STATUS_PAGES,
+		...REPORTS,
 		...TEAM,
 		...API_KEYS,
 		...PING,

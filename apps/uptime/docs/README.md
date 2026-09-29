@@ -15,6 +15,7 @@ This folder documents the product features observed in `apps/uptime` from a beha
 - `cron-job-monitoring.md`
 - `status-pages.md`
 - `maintenance-windows.md`
+- `reports.md`
 - `team-and-access.md`
 - `analytics.md`
 

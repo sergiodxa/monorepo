@@ -227,6 +227,15 @@ export default route({
 				param: "statusPageId",
 				only: ["index", "new", "edit"],
 			}),
+			reports: {
+				/**
+				 * The report builder. Its form is a `GET` whose buttons name `download` for each
+				 * report through `formaction`, so submitting downloads the file with no JavaScript.
+				 */
+				index: get("/app/:team/reports"),
+				/** One report as CSV; `:report` is `uptime-summary` or `uptime-daily`, filtered by the query. */
+				download: get("/app/:team/reports/:report.csv"),
+			},
 			settings: get("/app/:team/settings"),
 			account: get("/app/:team/account"),
 			/** No `show`/`edit` pages. */
@@ -509,6 +518,15 @@ export default route({
 				/** RFC 7396 merge patch, served by the same action as `update`'s partial `PUT`. */
 				patch: patch("/api/v1/status-pages/:statusPageId"),
 				monitors: put("/api/v1/status-pages/:statusPageId/monitors"),
+			},
+
+			/**
+			 * Uptime reports, read-only and computed from the daily roll-up. Each answers CSV or
+			 * JSON by `Accept`, with the range and monitor filter in the query.
+			 */
+			reports: {
+				uptimeSummary: get("/api/v1/reports/uptime-summary"),
+				uptimeDaily: get("/api/v1/reports/uptime-daily"),
 			},
 
 			invites: resources("/api/v1/invites", {

@@ -55,6 +55,7 @@ describe("listDocs", () => {
 			"/docs/concepts/alerts",
 			"/docs/concepts/status-pages",
 			"/docs/concepts/maintenance",
+			"/docs/concepts/reports",
 		]);
 
 		for (let section of sections) {

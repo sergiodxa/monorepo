@@ -998,6 +998,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "Report",
 						dashboard: "Dashboard",
 						alerts: "Avvisi",
 						maintenance: "Manutenzione",
@@ -3822,6 +3823,97 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "Report",
+				description:
+					"Scarica report di disponibilità in CSV per un mese, un trimestre o qualsiasi intervallo di giorni, da conservare o da inviare a un cliente.",
+			},
+			form: {
+				range: {
+					legend: "Intervallo di date (giorni UTC)",
+					from: "Dal",
+					to: "Al",
+					presets: "Intervalli rapidi",
+				},
+				presets: {
+					lastMonth: "Mese scorso",
+					last30Days: "Ultimi 30 giorni",
+					lastQuarter: "Trimestre scorso",
+					yearToDate: "Da inizio anno",
+				},
+				monitors: {
+					label: "Monitor",
+					all: "Tutti i monitor",
+					statusPages: "Monitor di una pagina di stato",
+					types: "Monitor di un tipo",
+				},
+				dialect: {
+					legend: "Formato",
+					spreadsheet: {
+						label: "Foglio di calcolo",
+						description:
+							"Si apre in Excel, Numbers o Google Sheets con i nomi delle colonne e il formato dei numeri della tua lingua.",
+					},
+					standard: {
+						label: "CSV standard",
+						description:
+							"Separato da virgole, con nomi di colonna fissi e punto decimale, per script e importazioni.",
+					},
+				},
+				submit: {
+					summary: "Scarica il riepilogo di disponibilità",
+					summaryDescription: "Una riga per monitor per l'intero intervallo.",
+					daily: "Scarica la disponibilità giornaliera",
+					dailyDescription: "Una riga per monitor per ogni giorno.",
+				},
+			},
+			errors: {
+				invalid: "Inserisci entrambe le date come giorni reali del calendario.",
+				reversed: "La data di inizio deve precedere la data di fine o coincidere con essa.",
+				future:
+					"I report terminano al più tardi ieri, perché i controlli di oggi stanno ancora arrivando.",
+				tooLong: "Un report copre al massimo 366 giorni.",
+				scope: "Scegli una delle pagine di stato di questo team o un tipo di monitor.",
+			},
+			about: {
+				title: "Come vengono calcolati i valori",
+				uptime:
+					"La disponibilità è il numero di controlli riusciti diviso per tutti i controlli dell'intervallo, lo stesso valore mostrato nella dashboard e nei riepiloghi. Per i monitor HTTP, un controllo degradato conta come fallito.",
+				days: "I giorni sono in UTC. Un giorno senza controlli registrati viene escluso invece di essere contato come disponibile.",
+				maintenance:
+					"I minuti di manutenzione sono indicati per ogni monitor. I controlli durante la manutenzione contano comunque per la disponibilità.",
+			},
+			columns: {
+				monitor: "Monitor",
+				type: "Tipo",
+				target: "Destinazione",
+				days_with_data: "Giorni con dati",
+				total_checks: "Controlli totali",
+				successful_checks: "Controlli riusciti",
+				failed_checks: "Controlli falliti",
+				uptime_percent: "Disponibilità %",
+				avg_response_time_ms: "Tempo di risposta medio (ms)",
+				max_response_time_ms: "Tempo di risposta massimo (ms)",
+				days_down: "Giorni non disponibile",
+				days_degraded: "Giorni degradato",
+				maintenance_minutes: "Manutenzione (minuti)",
+				date: "Data (UTC)",
+				status: "Stato",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Job cron",
+				flow: "Flusso",
+			},
+			statuses: {
+				up: "Disponibile",
+				degraded: "Degradato",
+				down: "Non disponibile",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "Cronologia Avvisi",
@@ -5350,6 +5442,8 @@ export default {
 								"Crea ed elimina le chiavi API del team. Una nuova chiave può ricevere qualsiasi ambito, quindi questo permesso consente di concedere tutti gli altri.",
 							"ping:trigger":
 								"Esegue controlli HTTP, DNS e TCP estemporanei senza creare un monitor. Ogni controllo viene fatturato come un ping e richiede un abbonamento attivo.",
+							"reports:read":
+								"Scaricare i report di disponibilità del team: un riepilogo per monitor e la disponibilità giornaliera, per qualsiasi intervallo di giorni.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

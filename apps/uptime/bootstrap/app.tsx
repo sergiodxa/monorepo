@@ -72,6 +72,7 @@ import {
 	monitorContentChecksRoutes,
 	monitorRoutes,
 	monitorsRoutes,
+	reportsRoutes,
 	statusPageRoutes,
 	statusPagesRoutes,
 	tcpMonitorRoutes,
@@ -530,6 +531,14 @@ export default function application(options: application.Options) {
 	router.map(
 		routes.app.team.alerts.history,
 		lazy(() => import("~/app/http/controllers/app/team/alert-history")),
+	);
+	router.map(
+		routes.app.team.reports.index,
+		lazy(() => import("~/app/http/controllers/app/team/reports")),
+	);
+	router.map(
+		routes.app.team.reports.download,
+		lazy(() => import("~/app/http/controllers/app/team/report-download")),
 	);
 	router.map(
 		routes.app.team.maintenanceWindows.index,
@@ -1024,6 +1033,10 @@ export default function application(options: application.Options) {
 	router.map(
 		statusPagesRoutes,
 		lazy(() => import("~/app/http/controllers/api/status-pages")),
+	);
+	router.map(
+		reportsRoutes,
+		lazy(() => import("~/app/http/controllers/api/reports")),
 	);
 	router.map(
 		statusPageRoutes,

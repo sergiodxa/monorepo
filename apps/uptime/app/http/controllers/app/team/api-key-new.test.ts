@@ -126,6 +126,18 @@ describe("api-key-new form controller", () => {
 		);
 	});
 
+	test("offers reports:read with its description", async () => {
+		let { db, team, membership } = await createFixture();
+
+		let body = await (await get(db, team, membership)).text();
+
+		expect(body).toContain('value="reports:read"');
+		expect(body).toContain(">reports:read<");
+		expect(body).toContain(
+			"Download the team's uptime reports: a summary per monitor and daily uptime, over any range of days.",
+		);
+	});
+
 	test("splits the scope list into two columns only once the page is wide enough", async () => {
 		let { db, team, membership } = await createFixture();
 

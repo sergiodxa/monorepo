@@ -993,6 +993,7 @@ export default {
 
 				navigation: {
 					items: {
+						reports: "Informes",
 						dashboard: "Panel de control",
 						alerts: "Alertas",
 						maintenance: "Mantenimiento",
@@ -3823,6 +3824,97 @@ export default {
 			},
 		},
 
+		reports: {
+			header: {
+				title: "Informes",
+				description:
+					"Descarga informes de disponibilidad en CSV de un mes, un trimestre o cualquier rango de días, para guardarlos o enviarlos a un cliente.",
+			},
+			form: {
+				range: {
+					legend: "Rango de fechas (días UTC)",
+					from: "Desde",
+					to: "Hasta",
+					presets: "Rangos rápidos",
+				},
+				presets: {
+					lastMonth: "Mes pasado",
+					last30Days: "Últimos 30 días",
+					lastQuarter: "Trimestre pasado",
+					yearToDate: "En lo que va del año",
+				},
+				monitors: {
+					label: "Monitores",
+					all: "Todos los monitores",
+					statusPages: "Monitores de una página de estado",
+					types: "Monitores de un tipo",
+				},
+				dialect: {
+					legend: "Formato",
+					spreadsheet: {
+						label: "Hoja de cálculo",
+						description:
+							"Se abre en Excel, Numbers o Google Sheets con los nombres de columna y el formato numérico de tu idioma.",
+					},
+					standard: {
+						label: "CSV estándar",
+						description:
+							"Separado por comas, con nombres de columna fijos y punto decimal, para scripts e importaciones.",
+					},
+				},
+				submit: {
+					summary: "Descargar resumen de disponibilidad",
+					summaryDescription: "Una fila por monitor para todo el rango.",
+					daily: "Descargar disponibilidad diaria",
+					dailyDescription: "Una fila por monitor y por día.",
+				},
+			},
+			errors: {
+				invalid: "Introduce ambas fechas como días reales del calendario.",
+				reversed: "La fecha de inicio debe ser anterior o igual a la fecha de fin.",
+				future:
+					"Los informes terminan como muy tarde ayer, porque las comprobaciones de hoy todavía están llegando.",
+				tooLong: "Un informe cubre como máximo 366 días.",
+				scope: "Elige una de las páginas de estado de este equipo o un tipo de monitor.",
+			},
+			about: {
+				title: "Cómo se calculan las cifras",
+				uptime:
+					"La disponibilidad es el número de comprobaciones correctas dividido entre todas las comprobaciones del rango, la misma cifra que muestran el panel y los resúmenes. En los monitores HTTP, una comprobación degradada cuenta como fallida.",
+				days: "Los días son UTC. Un día sin comprobaciones registradas se omite en lugar de contarse como disponible.",
+				maintenance:
+					"Los minutos de mantenimiento se indican para cada monitor. Las comprobaciones durante el mantenimiento siguen contando para la disponibilidad.",
+			},
+			columns: {
+				monitor: "Monitor",
+				type: "Tipo",
+				target: "Destino",
+				days_with_data: "Días con datos",
+				total_checks: "Comprobaciones totales",
+				successful_checks: "Comprobaciones correctas",
+				failed_checks: "Comprobaciones fallidas",
+				uptime_percent: "Disponibilidad %",
+				avg_response_time_ms: "Tiempo de respuesta medio (ms)",
+				max_response_time_ms: "Tiempo de respuesta máximo (ms)",
+				days_down: "Días caído",
+				days_degraded: "Días degradado",
+				maintenance_minutes: "Mantenimiento (minutos)",
+				date: "Fecha (UTC)",
+				status: "Estado",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Tarea cron",
+				flow: "Flujo",
+			},
+			statuses: {
+				up: "Disponible",
+				degraded: "Degradado",
+				down: "Caído",
+			},
+		},
 		alertHistory: {
 			header: {
 				title: "Historial de alertas",
@@ -5352,6 +5444,8 @@ export default {
 								"Crear y eliminar las claves API del equipo. Una clave nueva puede recibir cualquier alcance, así que este permite conceder todos los demás.",
 							"ping:trigger":
 								"Ejecutar comprobaciones HTTP, DNS y TCP puntuales sin crear un monitor. Cada comprobación se factura como un ping y requiere una suscripción activa.",
+							"reports:read":
+								"Descargar los informes de disponibilidad del equipo: un resumen por monitor y la disponibilidad diaria, para cualquier rango de días.",
 						} satisfies Record<ApiKeyScope, string>,
 					},
 					expiresAt: {

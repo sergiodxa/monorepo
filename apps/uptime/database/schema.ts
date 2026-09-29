@@ -124,10 +124,14 @@ export const apiKeyScopes = [
 	"api-keys:write",
 	/**
 	 * Named for what the holder does, not for a resource — there is no stored ping
-	 * resource for a `:read`/`:write` pair to describe. Appended last because the
-	 * checkbox list on the API-key form renders scopes in this order.
+	 * resource for a `:read`/`:write` pair to describe.
 	 */
 	"ping:trigger",
+	/**
+	 * Read-only by nature: a report is computed from the daily roll-up, so there is no
+	 * `reports:write`. The API-key form lists scopes in this array's order, newest last.
+	 */
+	"reports:read",
 ] as const;
 
 export type ApiKeyScope = (typeof apiKeyScopes)[number];

@@ -19,6 +19,7 @@ import {
 	CheckIcon,
 	ChevronsUpDownIcon,
 	ClockIcon,
+	FileSpreadsheetIcon,
 	FileTextIcon,
 	GlobeIcon,
 	KeyIcon,
@@ -409,6 +410,11 @@ export default function AppShell(handle: Handle<AppShell.Props>) {
 				href: routes.app.team.statusPages.index.href({ team: team.slug }),
 				label: t("sidebar.navigation.items.statusPages"),
 				icon: <FileTextIcon size={16} strokeWidth={1.5} />,
+			},
+			{
+				href: routes.app.team.reports.index.href({ team: team.slug }),
+				label: t("sidebar.navigation.items.reports"),
+				icon: <FileSpreadsheetIcon size={16} strokeWidth={1.5} />,
 			},
 		];
 

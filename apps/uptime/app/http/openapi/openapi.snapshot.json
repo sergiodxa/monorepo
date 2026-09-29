@@ -8366,6 +8366,371 @@
         ]
       }
     },
+    "/api/v1/reports/uptime-summary": {
+      "get": {
+        "operationId": "reportsUptimeSummary",
+        "summary": "Report uptime per monitor",
+        "description": "One row per monitor over a range of whole UTC days, from the daily roll-up. `Accept: text/csv` downloads the CSV; JSON is the default.",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
+              "description": "First UTC day, inclusive. Give it with `to`, or omit both for last month"
+            },
+            "description": "First UTC day, inclusive. Give it with `to`, or omit both for last month"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
+              "description": "Last UTC day, inclusive: yesterday at the latest, and at most 366 days after `from`"
+            },
+            "description": "Last UTC day, inclusive: yesterday at the latest, and at most 366 days after `from`"
+          },
+          {
+            "name": "status_page_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^sp_[0-7][0-9a-hjkmnp-tv-z]{25}$",
+              "description": "Only the monitors attached to this status page"
+            },
+            "description": "Only the monitors attached to this status page"
+          },
+          {
+            "name": "monitor_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "http",
+                "dns",
+                "tcp",
+                "cron",
+                "flow"
+              ],
+              "description": "Only monitors of this type"
+            },
+            "description": "Only monitors of this type"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One summary per monitor, every monitor in one response",
+            "headers": {
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`attachment`, named `<team-slug>-<report>-<range>.csv`; CSV only"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "First UTC day, inclusive"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "Last UTC day, inclusive"
+                        },
+                        "monitors": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/UptimeSummary"
+                          }
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "monitors"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "RFC 4180 CSV, comma-delimited with `.` decimals and no BOM, headed by the snake_case column keys"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ValidationError"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "reports:read"
+            ]
+          }
+        ]
+      }
+    },
+    "/api/v1/reports/uptime-daily": {
+      "get": {
+        "operationId": "reportsUptimeDaily",
+        "summary": "Report daily uptime per monitor",
+        "description": "One row per monitor per UTC day with a roll-up row. `Accept: text/csv` downloads the whole range as CSV; JSON is the default and pages by cursor.",
+        "tags": [
+          "Reports"
+        ],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
+              "description": "First UTC day, inclusive. Give it with `to`, or omit both for last month"
+            },
+            "description": "First UTC day, inclusive. Give it with `to`, or omit both for last month"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "format": "date",
+              "description": "Last UTC day, inclusive: yesterday at the latest, and at most 366 days after `from`"
+            },
+            "description": "Last UTC day, inclusive: yesterday at the latest, and at most 366 days after `from`"
+          },
+          {
+            "name": "status_page_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^sp_[0-7][0-9a-hjkmnp-tv-z]{25}$",
+              "description": "Only the monitors attached to this status page"
+            },
+            "description": "Only the monitors attached to this status page"
+          },
+          {
+            "name": "monitor_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "http",
+                "dns",
+                "tcp",
+                "cron",
+                "flow"
+              ],
+              "description": "Only monitors of this type"
+            },
+            "description": "Only monitors of this type"
+          },
+          {
+            "name": "perPage",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "number",
+                "string"
+              ],
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Rows per page (default 50); JSON only"
+            },
+            "description": "Rows per page (default 50); JSON only"
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "Page to fetch, from a `Link` header; JSON only"
+            },
+            "description": "Page to fetch, from a `Link` header; JSON only"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Days with a roll-up row, by monitor and then date; JSON pages, CSV holds the whole range",
+            "headers": {
+              "Link": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`next` and `prev` page URLs (RFC 8288), when those pages exist"
+              },
+              "Content-Disposition": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "`attachment`, named `<team-slug>-<report>-<range>.csv`; CSV only"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "First UTC day, inclusive"
+                        },
+                        "to": {
+                          "type": "string",
+                          "format": "date",
+                          "description": "Last UTC day, inclusive"
+                        },
+                        "days": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/UptimeDay"
+                          }
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "to",
+                        "days"
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "requestId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "timestamp": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "pagination": {
+                          "$ref": "#/components/schemas/Pagination"
+                        }
+                      },
+                      "required": [
+                        "requestId",
+                        "timestamp",
+                        "pagination"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "data",
+                    "meta"
+                  ]
+                }
+              },
+              "text/csv": {
+                "schema": {
+                  "type": "string",
+                  "description": "RFC 4180 CSV, comma-delimited with `.` decimals and no BOM, headed by the snake_case column keys"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "The request failed validation; The request is malformed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/ValidationErrorProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BadRequestProblem"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          }
+        },
+        "security": [
+          {
+            "apiKey": [
+              "reports:read"
+            ]
+          }
+        ]
+      }
+    },
     "/api/v1/team": {
       "get": {
         "operationId": "teamShow",
@@ -9572,7 +9937,8 @@
                         "cron-jobs:ping",
                         "api-keys:read",
                         "api-keys:write",
-                        "ping:trigger"
+                        "ping:trigger",
+                        "reports:read"
                       ]
                     },
                     "description": "At least one scope, each held by the calling key"
@@ -12022,6 +12388,221 @@
           "cronJobs"
         ]
       },
+      "UptimeSummary": {
+        "type": "object",
+        "properties": {
+          "monitorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^mon_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^dns_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^tcpm_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^cron_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^flow_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              }
+            ],
+            "description": "The monitor's id, prefixed by its type"
+          },
+          "monitor": {
+            "type": "string",
+            "description": "The monitor's name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "http",
+              "dns",
+              "tcp",
+              "cron",
+              "flow"
+            ]
+          },
+          "target": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "URL, hostname, `host:port` or cron expression; null for a flow"
+          },
+          "daysWithData": {
+            "type": "integer",
+            "description": "Days in the range with a roll-up row"
+          },
+          "totalChecks": {
+            "type": "integer"
+          },
+          "successfulChecks": {
+            "type": "integer"
+          },
+          "failedChecks": {
+            "type": "integer",
+            "description": "An HTTP `degraded` check counts as failed"
+          },
+          "uptimePercent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Check-weighted and unrounded, 0 to 100; null when nothing was checked"
+          },
+          "avgResponseTimeMs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Daily averages weighted by their checks; null for a cron job"
+          },
+          "maxResponseTimeMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "daysDown": {
+            "type": "integer"
+          },
+          "daysDegraded": {
+            "type": "integer"
+          },
+          "maintenanceMinutes": {
+            "type": "integer",
+            "description": "Maintenance covering the monitor, overlaps merged; uptime includes it"
+          }
+        },
+        "required": [
+          "monitorId",
+          "monitor",
+          "type",
+          "target",
+          "daysWithData",
+          "totalChecks",
+          "successfulChecks",
+          "failedChecks",
+          "uptimePercent",
+          "avgResponseTimeMs",
+          "maxResponseTimeMs",
+          "daysDown",
+          "daysDegraded",
+          "maintenanceMinutes"
+        ]
+      },
+      "UptimeDay": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "The UTC day"
+          },
+          "monitorId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^mon_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^dns_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^tcpm_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^cron_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              },
+              {
+                "type": "string",
+                "pattern": "^flow_[0-7][0-9a-hjkmnp-tv-z]{25}$"
+              }
+            ],
+            "description": "The monitor's id, prefixed by its type"
+          },
+          "monitor": {
+            "type": "string",
+            "description": "The monitor's name"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "http",
+              "dns",
+              "tcp",
+              "cron",
+              "flow"
+            ]
+          },
+          "totalChecks": {
+            "type": "integer"
+          },
+          "successfulChecks": {
+            "type": "integer"
+          },
+          "failedChecks": {
+            "type": "integer",
+            "description": "An HTTP `degraded` check counts as failed"
+          },
+          "uptimePercent": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Unrounded, 0 to 100; null when the day ran no checks"
+          },
+          "avgResponseTimeMs": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "null for a cron job"
+          },
+          "maxResponseTimeMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down",
+              "degraded"
+            ]
+          },
+          "maintenanceMinutes": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "date",
+          "monitorId",
+          "monitor",
+          "type",
+          "totalChecks",
+          "successfulChecks",
+          "failedChecks",
+          "uptimePercent",
+          "avgResponseTimeMs",
+          "maxResponseTimeMs",
+          "status",
+          "maintenanceMinutes"
+        ]
+      },
       "Team": {
         "type": "object",
         "properties": {
@@ -12228,7 +12809,8 @@
                 "cron-jobs:ping",
                 "api-keys:read",
                 "api-keys:write",
-                "ping:trigger"
+                "ping:trigger",
+                "reports:read"
               ]
             }
           },
