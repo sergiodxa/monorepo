@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/passkey",
 	"version": "0.0.1",
-	"description": "Passkeys on both sides: a one-call WebAuthn browser API and a relying party that verifies the ceremonies",
+	"description": "Passkeys end to end: a WebAuthn browser API and a verifying relying party",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
