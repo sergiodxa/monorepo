@@ -205,7 +205,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 		for (let entry of group.packages) {
 			if (CATALOGUE_DIRECTORIES.has(entry.directory)) continue;
 
-			let href = routes.docs.packages.show.href({ name: entry.directory });
+			let href = routes.api.show.href({ name: entry.directory });
 
 			documents.push({
 				href,
@@ -302,7 +302,7 @@ async function buildPackageCorpus(): Promise<Array<PackageMatch & { haystack: st
 				name: entry.name,
 				directory: entry.directory,
 				description: entry.description,
-				href: routes.docs.packages.show.href({ name: entry.directory }),
+				href: routes.api.show.href({ name: entry.directory }),
 				markdownHref: routes.markdown.package.href({ name: entry.directory }),
 				haystack: `${entry.name} ${entry.description} ${group.title} ${readme}`.toLowerCase(),
 			});

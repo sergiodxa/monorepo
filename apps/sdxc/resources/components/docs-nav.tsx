@@ -1,7 +1,7 @@
 /**
- * The documentation tree as one list of links: the guides under their sections, then
- * the packages under collapsible groups, since sixty leaves opened at once is a wall
- * rather than a tree. It is drawn twice per page, in the docked rail and the drawer.
+ * One sidebar tree as a list of links: each section's own entries, then its groups, each
+ * of which a reader can fold away once they are done with it. It is drawn twice per
+ * page, in the docked rail and the drawer.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,8 +22,6 @@ import { Disclosure, Sidebar } from "@sdxc/ui";
 
 import type { NavGroup, NavTree } from "~/app/services/navigation-tree";
 
-import routes from "~/routes/web";
-
 namespace DocsNav {
 	export interface Props {
 		tree: NavTree;
@@ -32,67 +30,31 @@ namespace DocsNav {
 	}
 }
 
-/** Renders every guide under its section, then every package under its group. */
+/** Renders every section of the tree under its label, in reading order. */
 export default function DocsNav(handle: Handle<DocsNav.Props>) {
 	return () => {
 		let { activePath, tree } = handle.props;
-		let packagesPath = routes.docs.packages.index.href();
 
 		return (
-			<Sidebar.Nav aria-label="Documentation">
-				{tree.guides.map((group) => (
-					<Sidebar.Group key={group.title}>
-						<Sidebar.GroupLabel>{group.title}</Sidebar.GroupLabel>
+			<Sidebar.Nav aria-label={tree.label}>
+				{tree.sections.map((section) => (
+					<Sidebar.Group key={section.title}>
+						<Sidebar.GroupLabel>{section.title}</Sidebar.GroupLabel>
 						<Sidebar.Menu>
-							{group.entries.map((entry) => (
+							{section.entries.map((entry) => (
 								<Sidebar.MenuItem key={entry.href}>
 									<Sidebar.MenuLink href={entry.href} active={entry.href === activePath}>
 										{entry.title}
 									</Sidebar.MenuLink>
 								</Sidebar.MenuItem>
 							))}
+
+							{section.groups.map((group) => (
+								<CollapsibleGroup key={group.title} group={group} activePath={activePath} />
+							))}
 						</Sidebar.Menu>
 					</Sidebar.Group>
 				))}
-
-				<Sidebar.Group>
-					<Sidebar.GroupLabel>Packages</Sidebar.GroupLabel>
-					<Sidebar.Menu>
-						<Sidebar.MenuItem>
-							<Sidebar.MenuLink href={packagesPath} active={activePath === packagesPath}>
-								Every package
-							</Sidebar.MenuLink>
-						</Sidebar.MenuItem>
-
-						{tree.packages.map((group) => (
-							<CollapsibleGroup key={group.title} group={group} activePath={activePath} />
-						))}
-					</Sidebar.Menu>
-				</Sidebar.Group>
-
-				{/* The two catalogue packages carry hundreds of pages each, so they read as
-				    their own bands under the packages rather than as two entries inside them. */}
-				<Sidebar.Group>
-					<Sidebar.GroupLabel>@sdxc/u</Sidebar.GroupLabel>
-					<Sidebar.Menu>
-						{tree.utilities.map((group) => (
-							<CollapsibleGroup key={group.title} group={group} activePath={activePath} />
-						))}
-					</Sidebar.Menu>
-				</Sidebar.Group>
-
-				<Sidebar.Group>
-					<Sidebar.GroupLabel>@sdxc/ui</Sidebar.GroupLabel>
-					<Sidebar.Menu>
-						{tree.components.map((entry) => (
-							<Sidebar.MenuItem key={entry.href}>
-								<Sidebar.MenuLink href={entry.href} active={entry.href === activePath}>
-									{entry.title}
-								</Sidebar.MenuLink>
-							</Sidebar.MenuItem>
-						))}
-					</Sidebar.Menu>
-				</Sidebar.Group>
 			</Sidebar.Nav>
 		);
 	};
@@ -101,7 +63,7 @@ export default function DocsNav(handle: Handle<DocsNav.Props>) {
 namespace CollapsibleGroup {
 	export interface Props {
 		group: NavGroup;
-		/** The path of the page being read, which is what opens one group and marks one link. */
+		/** The path of the page being read, which is what marks one link as current. */
 		activePath: string;
 	}
 }
@@ -113,12 +75,11 @@ function CollapsibleGroup(handle: Handle<CollapsibleGroup.Props>) {
 
 		return (
 			<Sidebar.MenuItem>
-				{/* Open state is decided here so the group holding the page being read is
-				    already expanded on the first paint, before any script runs. */}
-				{/* Each group opens on its own, so the rail and the drawer never
-				    close each other's, and the markup stays the same every render. */}
+				{/* Every group starts open, so the whole tree is scannable on the first paint and
+				    a reader folds away only what they are done with. Each one folds on its own,
+				    so the rail and the drawer never close each other's. */}
 				<Disclosure
-					open={group.entries.some((entry) => entry.href === activePath)}
+					open
 					mix={[
 						is("full"),
 						minIs("0"),
@@ -148,8 +109,13 @@ function CollapsibleGroup(handle: Handle<CollapsibleGroup.Props>) {
 						<ChevronDownIcon data-slot="icon" size={14} aria-hidden="true" />
 					</Disclosure.Trigger>
 
-					<Disclosure.Panel>
-						<Sidebar.MenuSub>
+					{/* The rule under a group title starts beneath that title's first letter, so the
+					    entries read as indented under it rather than as a column set apart. Both
+					    insets replace ones the components set, which is what `style` settles. */}
+					<Disclosure.Panel style={{ paddingInline: 0 }}>
+						<Sidebar.MenuSub
+							style={{ marginInlineStart: "0.625rem", paddingInlineStart: "0.25rem" }}
+						>
 							{group.entries.map((entry) => (
 								<Sidebar.MenuSubItem key={entry.href}>
 									<Sidebar.MenuSubLink href={entry.href} active={entry.href === activePath}>

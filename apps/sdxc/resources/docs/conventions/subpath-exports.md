@@ -36,7 +36,7 @@ at the root, and the one you import decides what you deploy against.
 
 **`/remix`** is a framework binding, on the packages that are framework-free at the root.
 
-Three of those shapes sit side by side in [`@sdxc/cache`](/docs/packages/cache), and its source
+Three of those shapes sit side by side in [`@sdxc/cache`](/api/cache), and its source
 tree reads as the entry points it publishes:
 
 <files title="packages/cache/src">
@@ -63,7 +63,7 @@ the four the manifest names.
 
 ## A package with no root
 
-Some packages publish no root entry point at all — [`@sdxc/http`](/docs/packages/http) is the
+Some packages publish no root entry point at all — [`@sdxc/http`](/api/http) is the
 clearest case:
 
 ```typescript

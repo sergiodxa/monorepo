@@ -22,27 +22,35 @@ export default route({
 	/** What support a dated release carries, which is the question its number raises. */
 	maintenance: get("/maintenance"),
 
-	/**
-	 * Everything documentary. `packages` is a reserved first segment under `/docs`,
-	 * so no guide may take it: a static segment outranks a wildcard when both match,
-	 * and a guide filed there would be unreachable rather than merely shadowed.
-	 */
+	/** The handwritten guides, each one a markdown file in `resources/docs`. */
 	docs: {
 		index: get("/docs"),
-		packages: {
-			index: get("/docs/packages"),
-			/**
-			 * The two catalogue packages answer on their own trees rather than here,
-			 * because a README that indexes hundreds of entries is a site, not a page.
-			 */
-			utility: get("/docs/packages/u/:utility"),
-			component: get("/docs/packages/ui/:component"),
-			show: get("/docs/packages/:name"),
-		},
 		/** The changelog reads GitHub, so it is the one page whose content is fetched. */
 		changelog: get("/docs/releases/changelog"),
 		/** Captures every remaining segment as one slug, e.g. `conventions/naming`. */
 		show: get("/docs/*slug"),
+	},
+
+	/** The reference for every published package, each read from its own README. */
+	api: {
+		index: get("/api"),
+		/**
+		 * The two catalogue packages answer on their own trees, because a README that
+		 * indexes hundreds of entries is a site, not a page.
+		 */
+		utility: get("/api/u/:utility"),
+		component: get("/api/ui/:component"),
+		show: get("/api/:name"),
+	},
+
+	/**
+	 * Where the package reference used to live. Every address under it answers with a
+	 * permanent redirect to the same path under `/api`, so a bookmark or an indexed link
+	 * still lands on its page.
+	 */
+	moved: {
+		packages: get("/docs/packages"),
+		package: get("/docs/packages/*path"),
 	},
 
 	/**
@@ -52,7 +60,7 @@ export default route({
 	 */
 	markdown: {
 		docs: get("/docs/*slug.md"),
-		package: get("/docs/packages/:name.md"),
+		package: get("/api/:name.md"),
 	},
 
 	/** Machine-readable surfaces, each one derived from what is already in the bundle. */

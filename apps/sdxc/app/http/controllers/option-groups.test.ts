@@ -37,7 +37,7 @@ describe("the package manager group", () => {
 	});
 
 	test("renders the reader's manager checked on a package page", async () => {
-		let body = await (await fetchApp("/docs/packages/result", { headers: CHOSE_BUN })).text();
+		let body = await (await fetchApp("/api/result", { headers: CHOSE_BUN })).text();
 
 		expect(control(body, "bun")).toContain("checked");
 		expect(control(body, "npm")).not.toContain("checked");
@@ -75,8 +75,8 @@ describe("the package manager group", () => {
 
 describe("caching a page the reader has chosen on", () => {
 	test("keeps a page rendered from a choice out of shared caches", async () => {
-		let response = await fetchApp("/docs/packages/result", { headers: CHOSE_BUN });
-		let plain = await fetchApp("/docs/packages/result");
+		let response = await fetchApp("/api/result", { headers: CHOSE_BUN });
+		let plain = await fetchApp("/api/result");
 
 		expect(response.headers.get("Vary")?.toLowerCase()).toContain("cookie");
 		expect(response.headers.get("ETag")).not.toBe(plain.headers.get("ETag"));

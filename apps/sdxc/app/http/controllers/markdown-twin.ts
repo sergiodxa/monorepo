@@ -1,5 +1,5 @@
 /**
- * `GET /docs/*slug.md` and `GET /docs/packages/:name.md` — the same pages as markdown.
+ * `GET /docs/*slug.md` and `GET /api/:name.md` — the same pages as markdown.
  * Both sources are markdown files already in the bundle, so each route is a lookup and a
  * `text/markdown` response rather than a render: what a reader sees is built from this
  * file, and what an agent reads is this file.

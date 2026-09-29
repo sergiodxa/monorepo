@@ -38,7 +38,7 @@ function prompt(markdownUrl: string): string {
  * @param markdownUrl - The same twin, absolute, for a reader that is not this browser.
  * @param sourceUrl - Where the page's source is read on GitHub.
  * @returns The menu's entries.
- * @example buildOpenLinks("/docs/packages/result.md", markdownUrl, sourceUrl)
+ * @example buildOpenLinks("/api/result.md", markdownUrl, sourceUrl)
  */
 export function buildOpenLinks(
 	markdownHref: string,

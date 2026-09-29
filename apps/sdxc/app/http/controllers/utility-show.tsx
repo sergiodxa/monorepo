@@ -1,5 +1,5 @@
 /**
- * `GET /docs/packages/u/:utility` — one utility's reference. Every block on the page
+ * `GET /api/u/:utility` — one utility's reference. Every block on the page
  * is read from the module it documents: the quick-reference table is the paired
  * `@example` tags, the theme section is the variables the implementation reads, and
  * the link out is the `@see` the author wrote. Nothing here can disagree with the
@@ -22,7 +22,7 @@ import type { UtilityReference } from "~/app/services/utilities";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildUtilitiesNav } from "~/app/services/navigation";
 import { readUtility } from "~/app/services/utilities";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -39,9 +39,9 @@ const STATE_FAMILY = "state";
 /** The family whose utilities already are the responsive variants, likewise. */
 const RESPONSIVE_FAMILY = "responsive";
 
-export default createAction(routes.docs.packages.utility, async (ctx) => {
+export default createAction(routes.api.utility, async (ctx) => {
 	let { utility } = s.parse(s.object({ utility: s.string() }), ctx.params);
-	let tree = await buildNavTree();
+	let tree = await buildUtilitiesNav();
 
 	let reference = await readUtility(utility);
 	if (reference === null) return notFound(ctx, tree);
@@ -71,11 +71,10 @@ export default createAction(routes.docs.packages.utility, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.packages.utility.href({ utility })}
+				activePath={routes.api.utility.href({ utility })}
 				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Packages", href: routes.docs.packages.index.href() },
-					{ label: "@sdxc/u", href: routes.docs.packages.show.href({ name: "u" }) },
+					{ label: "API", href: routes.api.index.href() },
+					{ label: "@sdxc/u", href: routes.api.show.href({ name: "u" }) },
 					{ label: reference.property },
 				]}
 				aside={<TableOfContents anchors={anchors} />}

@@ -62,7 +62,7 @@ parse gave up, so the response tells the client which line to fix instead of tha
 somewhere, was wrong.
 
 **The response helpers name the status.** `ok`, `badRequest` and `methodNotAllowed` are
-[`@sdxc/response`](/docs/packages/response): each writes its status, its status text and its
+[`@sdxc/response`](/api/response): each writes its status, its status text and its
 JSON content type, and merges an `ok` field into the body so a client has one field to branch
 on.
 

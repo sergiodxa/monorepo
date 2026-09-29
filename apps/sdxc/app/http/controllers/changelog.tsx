@@ -21,7 +21,7 @@ import type { Anchor } from "~/app/services/article";
 
 import { siteCache } from "~/app/services/cache";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildGuidesNav } from "~/app/services/navigation";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import Note from "~/resources/components/note";
 import { TableOfContents } from "~/resources/components/table-of-contents";
@@ -40,7 +40,7 @@ const TIME_ZONE = "UTC";
 const RELEASES_HREF = "https://github.com/sergiodxa/monorepo/releases";
 
 export default createAction(routes.docs.changelog, async (ctx) => {
-	let tree = await buildNavTree();
+	let tree = await buildGuidesNav();
 	let cache = siteCache();
 	let releases = await readChangelog(cache);
 

@@ -50,4 +50,4 @@ into a manifest.
   rule it carries.
 - [Your first handler](/docs/getting-started/your-first-handler) — three packages composed into
   something that runs.
-- [Every package](/docs/packages) — the whole list, filterable.
+- [Every package](/api) — the whole list, filterable.

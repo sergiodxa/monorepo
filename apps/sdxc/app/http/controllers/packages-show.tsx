@@ -1,5 +1,5 @@
 /**
- * `GET /docs/packages/:name` — one package's reference: its own README, framed by
+ * `GET /api/:name` — one package's reference: its own README, framed by
  * facts the app reads from the manifest. The README is the file npm and GitHub show
  * too, so its links are rewritten rather than its text edited, and the frame around
  * it carries what a manifest knows and prose would only repeat badly.
@@ -29,7 +29,12 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { readOptionSelections } from "~/app/http/cookies";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
-import { buildNavTree } from "~/app/services/navigation";
+import {
+	buildPackageNav,
+	CATALOGUE_PACKAGES,
+	listComponentEntries,
+	listUtilityGroups,
+} from "~/app/services/navigation";
 import { findPackage, listApplicationsUsing, readPackageReadme } from "~/app/services/packages";
 import { absoluteUrl } from "~/app/services/site";
 import CatalogueIndex from "~/resources/components/catalogue-index";
@@ -45,16 +50,9 @@ import routes from "~/routes/web";
 /** Where a package's source is read, which is what every "source" link points at. */
 const SOURCE_BASE = "https://github.com/sergiodxa/monorepo/tree/main/packages/";
 
-/**
- * Packages whose README is an index to a catalogue rather than a page: hundreds of
- * utilities and a hundred components, each of which wants its own page. They keep a
- * reference here that says so and sends a reader to the source meanwhile.
- */
-const CATALOGUES = new Set(["u", "ui"]);
-
-export default createAction(routes.docs.packages.show, async (ctx) => {
+export default createAction(routes.api.show, async (ctx) => {
 	let { name } = s.parse(s.object({ name: s.string() }), ctx.params);
-	let tree = await buildNavTree();
+	let tree = await buildPackageNav(name);
 
 	let entry = findPackage(name);
 	if (entry === null) return notFound(ctx, tree);
@@ -62,7 +60,8 @@ export default createAction(routes.docs.packages.show, async (ctx) => {
 	let selections = await readOptionSelections(ctx.request);
 
 	let users = listApplicationsUsing(entry.name);
-	let body = CATALOGUES.has(name) ? null : await readReference(ctx, entry);
+	/* A catalogue's README indexes hundreds of pages, so the page draws that index instead. */
+	let body = CATALOGUE_PACKAGES.has(name) ? null : await readReference(ctx, entry);
 	let anchors: Anchor[] = body?.anchors ?? [];
 	let markdownHref = routes.markdown.package.href({ name });
 
@@ -77,12 +76,8 @@ export default createAction(routes.docs.packages.show, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.packages.show.href({ name })}
-				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Packages", href: routes.docs.packages.index.href() },
-					{ label: entry.name },
-				]}
+				activePath={routes.api.show.href({ name })}
+				breadcrumbs={[{ label: "API", href: routes.api.index.href() }, { label: entry.name }]}
 				aside={<TableOfContents anchors={anchors} />}
 			>
 				<article>
@@ -100,7 +95,7 @@ export default createAction(routes.docs.packages.show, async (ctx) => {
 									{entry.internalDependencies.map((dependency) => (
 										<a
 											key={dependency}
-											href={routes.docs.packages.show.href({ name: dependency })}
+											href={routes.api.show.href({ name: dependency })}
 											mix={[font("mono"), text("sm"), fg("brand")]}
 										>
 											@sdxc/{dependency}
@@ -145,7 +140,7 @@ export default createAction(routes.docs.packages.show, async (ctx) => {
 						</Typeset>
 					) : (
 						<div mix={[m("2.5rem", 0, 0, 0)]}>
-							<CatalogueIndex groups={name === "u" ? tree.utilities : tree.components} />
+							<CatalogueIndex groups={await readCatalogue(name)} />
 						</div>
 					)}
 				</article>
@@ -155,6 +150,18 @@ export default createAction(routes.docs.packages.show, async (ctx) => {
 
 	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
 });
+
+/**
+ * The index a catalogue package's page draws in place of its README: the utilities under
+ * their families, or the theme contract ahead of the components that read it.
+ */
+async function readCatalogue(name: string) {
+	if (name === "u") return await listUtilityGroups();
+	return [
+		{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
+		...(await listComponentEntries()),
+	];
+}
 
 /**
  * The package's README, prepared for this site.

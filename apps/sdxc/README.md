@@ -49,8 +49,8 @@ Observability is enabled, with traces head-sampled at 10%.
   and nothing changes under them after hydration. A strip that names no group is remembered
   nowhere, because two sets of samples are rarely the same question asked twice.
 - **Guides are markdown with validated frontmatter.** `resources/docs/**/*.md` carry a
-  `title`, `description`, `section` and `order`, which is what the sidebar and the hub
-  are built from — no page lists another page by hand.
+  `title`, `description`, `section` and `order`, which is what the `/docs` sidebar and the
+  hub are built from — no page lists another page by hand.
 - **A package's reference is its own README.** The same file npm and GitHub show, with
   its links rewritten to site URLs, framed by the install line, subpath exports,
   dependencies and the applications that depend on it, all read from manifests.
@@ -60,16 +60,20 @@ Observability is enabled, with traces head-sampled at 10%.
 
 ## Routes
 
-| Route                  | Description                                          |
-| ---------------------- | ---------------------------------------------------- |
-| `/`                    | The landing page                                     |
-| `/docs`                | The hub, routing a reader by intent                  |
-| `/docs/<slug>`         | One handwritten guide from `resources/docs`          |
-| `/docs/packages`       | Every published package, grouped and filterable      |
-| `/docs/packages/:name` | One package's README, framed by its manifest's facts |
+| Route                           | Description                                            |
+| ------------------------------- | ------------------------------------------------------ |
+| `/`                             | The landing page                                       |
+| `/docs`                         | The guides hub, routing a reader by intent             |
+| `/docs/<slug>`                  | One handwritten guide from `resources/docs`            |
+| `/api`                          | Every published package, grouped and filterable        |
+| `/api/:name`                    | One package's README, framed by its manifest's facts   |
+| `/api/u`, `/api/u/:utility`     | The `@sdxc/u` catalogue and one utility's reference    |
+| `/api/ui`, `/api/ui/:component` | The `@sdxc/ui` catalogue and one component's reference |
+| `/docs/packages/*`              | Permanent redirects to the same path under `/api`      |
 
-`packages` is a reserved first segment under `/docs`: a static segment outranks the
-`*slug` wildcard, so a guide filed there would be unreachable.
+Each part draws its own sidebar: the guides under `/docs`, every package but the two
+catalogues under `/api`, and one each for `@sdxc/u` and `@sdxc/ui` under their own paths.
+The pager steps only through the sidebar of the page being read.
 
 ## Scripts
 

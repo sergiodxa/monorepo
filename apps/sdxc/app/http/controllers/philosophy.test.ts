@@ -102,7 +102,7 @@ describe("the sponsors block", () => {
 
 describe("a package's used-by line", () => {
 	test("names applications the showcase also lists", async () => {
-		let body = await (await fetchApp("/docs/packages/result")).text();
+		let body = await (await fetchApp("/api/result")).text();
 		let titles = listShowcase().map((entry) => entry.title);
 
 		expect(body).toContain("Used by");

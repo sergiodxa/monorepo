@@ -19,7 +19,7 @@ import { clientEntry } from "remix/ui";
 const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 	<p mix={[m(0), text("sm"), fg("neutral")]}>
 		Every package is published to npm and documented here — start with the{" "}
-		<Link href="/docs/packages/ui">component catalogue</Link>, or read the{" "}
+		<Link href="/api/ui">component catalogue</Link>, or read the{" "}
 		<Link href="/docs">guides</Link> if you are wiring one up for the first time.
 	</p>
 
@@ -55,7 +55,7 @@ export const LinkPreview = clientEntry(
 			<div mix={[vstack({ gap: 3, align: "stretch" }), maxIs("34rem")]}>
 				<p mix={[m(0), text("sm"), fg("neutral")]}>
 					Every package is published to npm and documented here — start with the{" "}
-					<Link href="/docs/packages/ui">component catalogue</Link>, or read the{" "}
+					<Link href="/api/ui">component catalogue</Link>, or read the{" "}
 					<Link href="/docs">guides</Link> if you are wiring one up for the first time.
 				</p>
 

@@ -32,7 +32,7 @@ in exactly the same call.
 
 ## Validating on your own
 
-[`@sdxc/validate`](/docs/packages/validate) is the general case: it takes a schema and a plain
+[`@sdxc/validate`](/api/validate) is the general case: it takes a schema and a plain
 object, a `FormData`, a `URLSearchParams` or a whole `Request`, and answers with a `Result`
 instead of throwing.
 

@@ -25,11 +25,11 @@ describe("buildSearchIndex", () => {
 		/* The two catalogues answer on their own trees, so search carries every other package. */
 		for (let entry of listPackages()) {
 			if (entry.directory === "u" || entry.directory === "ui") {
-				expect(pages).not.toContain(`/docs/packages/${entry.directory}`);
+				expect(pages).not.toContain(`/api/${entry.directory}`);
 				continue;
 			}
 
-			expect(pages).toContain(`/docs/packages/${entry.directory}`);
+			expect(pages).toContain(`/api/${entry.directory}`);
 		}
 
 		for (let section of await listGuides()) {
@@ -60,7 +60,7 @@ describe("buildSearchIndex", () => {
 	test("leaves the npm boilerplate a package page drops out of the index", async () => {
 		let documents = await buildSearchIndex();
 		let titles = documents
-			.filter((entry) => entry.href.startsWith("/docs/packages/result#"))
+			.filter((entry) => entry.href.startsWith("/api/result#"))
 			.map((entry) => entry.title);
 
 		expect(titles.length).toBeGreaterThan(0);
@@ -74,7 +74,7 @@ describe("searchDocs", () => {
 	test("answers a question about a package with that package's own page", async () => {
 		let results = await searchDocs("markdown", 5);
 
-		expect(results.at(0)?.href).toBe("/docs/packages/markdown");
+		expect(results.at(0)?.href).toBe("/api/markdown");
 	});
 });
 
@@ -88,8 +88,8 @@ describe("searchPackages", () => {
 	test("names the page and its markdown twin, so a reader has both", async () => {
 		let [first] = await searchPackages("result", 1);
 
-		expect(first?.href).toBe("/docs/packages/result");
-		expect(first?.markdownHref).toBe("/docs/packages/result.md");
+		expect(first?.href).toBe("/api/result");
+		expect(first?.markdownHref).toBe("/api/result.md");
 	});
 
 	test("puts a package named by the query above one that only mentions it", async () => {

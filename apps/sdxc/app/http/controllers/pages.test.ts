@@ -13,7 +13,7 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
 import { fetchApp } from "~/app/lib/test/router";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildGuidesNav } from "~/app/services/navigation";
 
 /** What the changelog reads, as GitHub sends it. */
 const ENDPOINT = "https://api.github.com/repos/sergiodxa/monorepo/releases";
@@ -57,8 +57,8 @@ describe("GET /docs/releases/changelog", () => {
 	});
 
 	test("joins the Releases section beside the versioning guide", async () => {
-		let tree = await buildNavTree();
-		let releases = tree.guides.find((group) => group.title === "Releases");
+		let tree = await buildGuidesNav();
+		let releases = tree.sections.find((section) => section.title === "Releases");
 
 		expect(releases?.entries.map((entry) => entry.title)).toContain("Versioning");
 		expect(releases?.entries.map((entry) => entry.href)).toContain("/docs/releases/changelog");

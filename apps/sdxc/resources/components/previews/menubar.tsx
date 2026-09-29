@@ -69,7 +69,7 @@ const CODE = `<Menubar aria-label="Editor" mix={[menubarKeys()]}>
 	<Menubar.Trigger commandfor="help-menu">Help</Menubar.Trigger>
 	<Menu id="help-menu" aria-label="Help" placement="bottom" mix={[menuKeys()]}>
 		<Menu.Item href="/docs">Documentation</Menu.Item>
-		<Menu.Item href="/docs/packages/ui">Component catalogue</Menu.Item>
+		<Menu.Item href="/api/ui">Component catalogue</Menu.Item>
 		<Menu.Separator />
 		<Menu.Item>Keyboard shortcuts</Menu.Item>
 	</Menu>
@@ -142,7 +142,7 @@ export const MenubarPreview = clientEntry(
 				<Menubar.Trigger commandfor="preview-menubar-help">Help</Menubar.Trigger>
 				<Menu id="preview-menubar-help" aria-label="Help" placement="bottom" mix={[menuKeys()]}>
 					<Menu.Item href="/docs">Documentation</Menu.Item>
-					<Menu.Item href="/docs/packages/ui">Component catalogue</Menu.Item>
+					<Menu.Item href="/api/ui">Component catalogue</Menu.Item>
 					<Menu.Separator />
 					<Menu.Item>Keyboard shortcuts</Menu.Item>
 				</Menu>

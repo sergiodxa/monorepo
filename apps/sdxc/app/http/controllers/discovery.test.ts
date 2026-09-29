@@ -65,9 +65,9 @@ describe("GET /docs/*slug.md", () => {
 	});
 });
 
-describe("GET /docs/packages/:name.md", () => {
+describe("GET /api/:name.md", () => {
 	test("serves the README, the same file npm and GitHub show", async () => {
-		let response = await fetchApp("/docs/packages/result.md");
+		let response = await fetchApp("/api/result.md");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -77,13 +77,13 @@ describe("GET /docs/packages/:name.md", () => {
 
 	test("every published package has one", async () => {
 		for (let entry of listPackages()) {
-			let response = await fetchApp(`/docs/packages/${entry.directory}.md`);
+			let response = await fetchApp(`/api/${entry.directory}.md`);
 			expect(response.status, entry.directory).toBe(200);
 		}
 	});
 
 	test("answers 404 for a directory that publishes nothing", async () => {
-		expect((await fetchApp("/docs/packages/blog-engine.md")).status).toBe(404);
+		expect((await fetchApp("/api/blog-engine.md")).status).toBe(404);
 	});
 });
 
@@ -95,7 +95,7 @@ describe("GET /llms.txt", () => {
 		expect(response.headers.get("content-type")).toContain("text/plain");
 
 		for (let entry of listPackages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}.md`);
+			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}.md`);
 		}
 
 		for (let section of await listGuides()) {
@@ -128,7 +128,7 @@ describe("GET /sitemap.xml", () => {
 		expect(body).not.toContain(ORIGIN);
 
 		for (let entry of listPackages()) {
-			expect(body).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}`);
+			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}`);
 		}
 	});
 });
@@ -173,9 +173,7 @@ describe("POST /mcp", () => {
 		});
 
 		expect(body.result.isError).not.toBe(true);
-		expect(JSON.stringify(body.result)).toContain(
-			"https://sdxc.sergiodxa.com/docs/packages/markdown.md",
-		);
+		expect(JSON.stringify(body.result)).toContain("https://sdxc.sergiodxa.com/api/markdown.md");
 	});
 
 	test("get_package reads one in full, scope written or not", async () => {
@@ -203,7 +201,7 @@ describe("POST /mcp", () => {
 		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
 
 		for (let entry of listPackages()) {
-			expect(uris).toContain(`https://sdxc.sergiodxa.com/docs/packages/${entry.directory}.md`);
+			expect(uris).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}.md`);
 		}
 
 		for (let section of await listGuides()) {
@@ -215,7 +213,7 @@ describe("POST /mcp", () => {
 
 	test("reading a resource gives the same text its URL serves", async () => {
 		let { body } = await callMcp("resources/read", {
-			uri: "https://sdxc.sergiodxa.com/docs/packages/result.md",
+			uri: "https://sdxc.sergiodxa.com/api/result.md",
 		});
 
 		let contents = body.result.contents as Array<{ text: string }>;
@@ -237,11 +235,9 @@ describe("GET /mcp", () => {
 
 describe("SEO metadata", () => {
 	test("names one origin whichever host served the request", async () => {
-		let body = await (await fetchApp("/docs/packages/result")).text();
+		let body = await (await fetchApp("/api/result")).text();
 
-		expect(body).toContain(
-			'<link rel="canonical" href="https://sdxc.sergiodxa.com/docs/packages/result"',
-		);
+		expect(body).toContain('<link rel="canonical" href="https://sdxc.sergiodxa.com/api/result"');
 		expect(body).toContain('property="og:title"');
 		expect(body).toContain('property="og:site_name"');
 	});

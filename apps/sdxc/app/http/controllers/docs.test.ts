@@ -58,17 +58,17 @@ describe("GET /docs/*slug", () => {
 	});
 });
 
-describe("GET /docs/packages", () => {
+describe("GET /api", () => {
 	test("lists every published package", async () => {
-		let body = await (await fetchApp("/docs/packages")).text();
+		let body = await (await fetchApp("/api")).text();
 
 		for (let entry of listPackages()) expect(body).toContain(entry.name);
 	});
 });
 
-describe("GET /docs/packages/:name", () => {
+describe("GET /api/:name", () => {
 	test("frames the README with what the manifest knows", async () => {
-		let response = await fetchApp("/docs/packages/markdown");
+		let response = await fetchApp("/api/markdown");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
@@ -78,29 +78,80 @@ describe("GET /docs/packages/:name", () => {
 	});
 
 	test("rewrites a sibling's npm link to its page here", async () => {
-		let body = await (await fetchApp("/docs/packages/markdown")).text();
+		let body = await (await fetchApp("/api/markdown")).text();
 
-		expect(body).toContain('href="/docs/packages/result"');
+		expect(body).toContain('href="/api/result"');
 		expect(body).not.toContain("npmjs.com/package/@sdxc/result");
 	});
 
 	test("leaves a link outside the collection alone", async () => {
-		let body = await (await fetchApp("/docs/packages/markdown")).text();
+		let body = await (await fetchApp("/api/markdown")).text();
 
 		expect(body).toContain("npmjs.com/package/remix");
 	});
 
 	test("answers a catalogue package with its own index rather than its README", async () => {
-		let response = await fetchApp("/docs/packages/u");
+		let response = await fetchApp("/api/u");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
-		expect(body).toContain('href="/docs/packages/u/p"');
-		expect(body).toContain('href="/docs/packages/u/hover"');
+		expect(body).toContain('href="/api/u/p"');
+		expect(body).toContain('href="/api/u/hover"');
 	});
 
 	test("answers 404 for a directory that publishes nothing", async () => {
-		expect((await fetchApp("/docs/packages/blog-engine")).status).toBe(404);
+		expect((await fetchApp("/api/blog-engine")).status).toBe(404);
+	});
+});
+
+describe("sidebars", () => {
+	/** The hrefs the docked rail links to, which is the first of the two copies drawn. */
+	function sidebarHrefs(body: string): string[] {
+		let rail = body.slice(body.indexOf("<nav"), body.indexOf("</nav>"));
+		return [...rail.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? "");
+	}
+
+	test("draws only guides beside a guide", async () => {
+		let body = await (await fetchApp("/docs/getting-started/what-these-are")).text();
+		let hrefs = sidebarHrefs(body);
+
+		expect(hrefs).toContain("/docs/releases/changelog");
+		expect(hrefs.some((href) => href.startsWith("/api"))).toBe(false);
+	});
+
+	test("draws every package but the catalogues beside a package", async () => {
+		let hrefs = sidebarHrefs(await (await fetchApp("/api/result")).text());
+
+		expect(hrefs).toContain("/api/markdown");
+		expect(hrefs).not.toContain("/api/u");
+		expect(hrefs).not.toContain("/api/ui");
+		expect(hrefs.some((href) => href.startsWith("/docs"))).toBe(false);
+	});
+
+	test("draws @sdxc/u's own tree beside a utility, and @sdxc/ui's beside a component", async () => {
+		let utility = sidebarHrefs(await (await fetchApp("/api/u/p")).text());
+		let component = sidebarHrefs(await (await fetchApp("/api/ui/theming")).text());
+
+		expect(utility.length).toBeGreaterThan(0);
+		for (let href of utility) expect(href).toMatch(/^\/api\/u(\/|$)/);
+
+		expect(component.length).toBeGreaterThan(0);
+		for (let href of component) expect(href).toMatch(/^\/api\/ui(\/|$)/);
+	});
+});
+
+describe("GET /docs/packages/*path", () => {
+	test("sends the old package addresses to the same path under /api", async () => {
+		for (let [from, to] of [
+			["/docs/packages", "/api"],
+			["/docs/packages/result", "/api/result"],
+			["/docs/packages/result.md", "/api/result.md"],
+			["/docs/packages/u/p", "/api/u/p"],
+		]) {
+			let response = await fetchApp(from ?? "");
+			expect(response.status).toBe(301);
+			expect(response.headers.get("Location")).toBe(to);
+		}
 	});
 });
 

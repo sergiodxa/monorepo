@@ -20,7 +20,7 @@ const TYPESET_CODE = `<Typeset preset="reading">
 	<p>
 		A function that can fail returns a <code>Result</code> instead of throwing, so the
 		failure is part of the signature and the caller decides what to do with it. See the
-		<a href="/docs/packages/result">result package</a> for the full surface.
+		<a href="/api/result">result package</a> for the full surface.
 	</p>
 
 	<ul>
@@ -70,7 +70,7 @@ export const TypesetPreview = clientEntry(
 				<p>
 					A function that can fail returns a <code>Result</code> instead of throwing, so the failure
 					is part of the signature and the caller decides what to do with it. See the{" "}
-					<a href="/docs/packages/result">result package</a> for the full surface.
+					<a href="/api/result">result package</a> for the full surface.
 				</p>
 
 				<ul>

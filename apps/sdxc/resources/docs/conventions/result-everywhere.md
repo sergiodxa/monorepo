@@ -9,7 +9,7 @@ lastUpdated: 2026-09-21
 ---
 
 A function in this collection that can fail returns a
-[`Result`](/docs/packages/result) rather than throwing. The type is a discriminated union:
+[`Result`](/api/result) rather than throwing. The type is a discriminated union:
 
 ```typescript
 type Result<T, E extends Error> = Success<T> | Failure<E>;

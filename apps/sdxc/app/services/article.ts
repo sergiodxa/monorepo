@@ -89,7 +89,7 @@ function rewriteHref(href: string, directory: string): string {
 			: null;
 
 	if (sibling !== null && findPackage(sibling) !== null) {
-		return routes.docs.packages.show.href({ name: sibling });
+		return routes.api.show.href({ name: sibling });
 	}
 
 	if (href.startsWith("/")) return new URL(href.slice(1), SOURCE_BASE).href;

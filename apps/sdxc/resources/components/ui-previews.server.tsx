@@ -927,8 +927,8 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 	},
 
 	"link-button": {
-		code: `<LinkButton href="/docs/packages">Browse the packages</LinkButton>`,
-		render: () => <LinkButton href="/docs/packages">Browse the packages</LinkButton>,
+		code: `<LinkButton href="/api">Browse the packages</LinkButton>`,
+		render: () => <LinkButton href="/api">Browse the packages</LinkButton>,
 	},
 
 	listbox: {

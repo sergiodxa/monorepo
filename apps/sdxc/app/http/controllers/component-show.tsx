@@ -1,5 +1,5 @@
 /**
- * `GET /docs/packages/ui/:component` — one component's reference, and the theming page
+ * `GET /api/ui/:component` — one component's reference, and the theming page
  * that shares the segment with the catalogue. The hero is the component itself: these
  * render as server HTML and work before any script loads, so the preview is this page
  * importing the component rather than a sandbox pretending to be one.
@@ -25,7 +25,7 @@ import themingPage, { THEMING_SLUG } from "~/app/http/controllers/ui-theming";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildComponentsNav } from "~/app/services/navigation";
 import ComponentPreview from "~/resources/components/component-preview";
 import CompositionTree from "~/resources/components/composition-tree";
 import { findPreview } from "~/resources/components/preview-registry.server";
@@ -44,9 +44,9 @@ const INSTALL = `npm add @sdxc/ui`;
 /** The stylesheet an app imports once, which every component reads its colors from. */
 const THEME_IMPORT = `import "@sdxc/ui/theme.css";`;
 
-export default createAction(routes.docs.packages.component, async (ctx) => {
+export default createAction(routes.api.component, async (ctx) => {
 	let { component } = s.parse(s.object({ component: s.string() }), ctx.params);
-	let tree = await buildNavTree();
+	let tree = await buildComponentsNav();
 
 	if (component === THEMING_SLUG) return await themingPage(ctx, tree);
 
@@ -74,11 +74,10 @@ export default createAction(routes.docs.packages.component, async (ctx) => {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.packages.component.href({ component })}
+				activePath={routes.api.component.href({ component })}
 				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Packages", href: routes.docs.packages.index.href() },
-					{ label: "@sdxc/ui", href: routes.docs.packages.show.href({ name: "ui" }) },
+					{ label: "API", href: routes.api.index.href() },
+					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: reference.name },
 				]}
 				aside={<TableOfContents anchors={anchors} />}

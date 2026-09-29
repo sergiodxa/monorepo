@@ -1,5 +1,5 @@
 /**
- * `GET /docs/packages` — every published package, under the same taxonomy the landing
+ * `GET /api` — every published package, under the same taxonomy the landing
  * page groups them by. Sixty names are unscannable as an alphabet, so the page is
  * grouped for a reader browsing and filterable for one who already knows what they
  * are after.
@@ -20,7 +20,7 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-palette";
 import DocsLayout from "~/resources/layouts/docs";
@@ -30,27 +30,20 @@ import routes from "~/routes/web";
 const DESCRIPTION =
 	"Every published package, grouped by the problem it solves and filterable by name or description.";
 
-export default createAction(routes.docs.packages.index, async (ctx) => {
-	let tree = await buildNavTree();
+export default createAction(routes.api.index, async (ctx) => {
+	let tree = await buildPackagesNav();
 	let groups = listPackageGroups();
 
 	let response = await ctx.render(
 		<DocumentLayout
-			title="Packages — sdxc"
+			title="API reference — sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
 			sponsors={ctx.sponsors}
 		>
-			<DocsLayout
-				tree={tree}
-				activePath={routes.docs.packages.index.href()}
-				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Packages" },
-				]}
-			>
+			<DocsLayout tree={tree} activePath={routes.api.index.href()} breadcrumbs={[]}>
 				<header mix={[vstack({ gap: 3 })]}>
-					<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>Packages</h1>
+					<h1 mix={[m(0), text("4xl"), weight("bold"), tracking("tight")]}>API reference</h1>
 					<p mix={[m(0), text("lg"), fg("neutral")]}>{DESCRIPTION}</p>
 				</header>
 
@@ -98,7 +91,7 @@ export default createAction(routes.docs.packages.index, async (ctx) => {
 								{group.packages.map((entry) => (
 									<li key={entry.name} mix={[vstack({ gap: 1 })]}>
 										<a
-											href={routes.docs.packages.show.href({ name: entry.directory })}
+											href={routes.api.show.href({ name: entry.directory })}
 											mix={[font("mono"), text("sm"), weight("medium"), fg("brand")]}
 										>
 											{entry.name}

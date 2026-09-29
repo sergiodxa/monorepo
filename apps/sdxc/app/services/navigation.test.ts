@@ -1,7 +1,7 @@
 /**
- * Tests for the documentation's single ordering. The sidebar and the pager read the
- * same tree, so these assertions are what keep a reader stepping forward from landing
- * somewhere other than the link drawn below the one they came from.
+ * Tests for the documentation's sidebars. Each part of the site draws its own tree and
+ * the pager reads that same tree, so these assertions are what keep a reader stepping
+ * forward inside the part they are reading rather than being carried into another.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,65 +9,80 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { NavTree } from "~/app/services/navigation";
+import {
+	buildComponentsNav,
+	buildGuidesNav,
+	buildPackageNav,
+	buildPackagesNav,
+	buildUtilitiesNav,
+	findNeighbours,
+	flattenNav,
+} from "~/app/services/navigation";
 
-import { buildNavTree, findNeighbours, flattenNav } from "~/app/services/navigation";
+describe("buildGuidesNav", () => {
+	test("holds the guides and nothing from the package reference", async () => {
+		let flat = flattenNav(await buildGuidesNav());
 
-/** How many entries the guides contribute, which is where the packages start. */
-function countGuides(tree: NavTree): number {
-	return tree.guides.reduce((total, group) => total + group.entries.length, 0);
-}
-
-/** How many entries the packages contribute, which is where the catalogues start. */
-function countPackages(tree: NavTree): number {
-	return tree.packages.reduce((total, group) => total + group.entries.length, 0);
-}
-
-describe("flattenNav", () => {
-	test("reads every guide group before every package group", async () => {
-		let tree = await buildNavTree();
-		let flat = flattenNav(tree);
-		let guideCount = countGuides(tree);
-		let packageCount = countPackages(tree);
-
-		expect(tree.guides.length).toBeGreaterThan(0);
-		expect(tree.packages.length).toBeGreaterThan(0);
-
-		expect(flat.slice(0, guideCount)).toEqual(tree.guides.flatMap((group) => group.entries));
-		expect(flat.slice(guideCount, guideCount + packageCount)).toEqual(
-			tree.packages.flatMap((group) => group.entries),
-		);
+		expect(flat.length).toBeGreaterThan(0);
+		for (let entry of flat) expect(entry.href).toMatch(/^\/docs\//);
 	});
+});
 
-	test("reads both catalogues after the packages, so the pager runs to the end of the tree", async () => {
-		let tree = await buildNavTree();
-		let flat = flattenNav(tree);
-		let catalogues = [...tree.utilities.flatMap((group) => group.entries), ...tree.components];
+describe("buildPackagesNav", () => {
+	test("lists every package but the two catalogues, titled as they are installed", async () => {
+		let tree = await buildPackagesNav();
+		let [index, ...groups] = tree.sections;
+		let entries = groups.flatMap((section) => section.entries);
 
-		expect(tree.utilities.length).toBe(13);
-		expect(tree.components.length).toBeGreaterThan(0);
-		expect(flat.slice(-catalogues.length)).toEqual(catalogues);
-	});
+		expect(index?.entries).toEqual([{ title: "Every package", href: "/api" }]);
+		expect(entries.length).toBeGreaterThan(0);
 
-	test("keeps each group's own order, and titles packages as they are installed", async () => {
-		let tree = await buildNavTree();
-		let flat = flattenNav(tree);
-
-		expect(flat.at(0)).toEqual(tree.guides.at(0)?.entries.at(0));
-		expect(flat.at(-1)).toEqual(tree.components.at(-1));
-
-		for (let group of tree.packages) {
-			for (let entry of group.entries) {
-				expect(entry.title).toMatch(/^@sdxc\//);
-				expect(entry.href).toBe(`/docs/packages/${entry.title.slice("@sdxc/".length)}`);
-			}
+		for (let entry of entries) {
+			expect(entry.title).toMatch(/^@sdxc\//);
+			expect(entry.href).toBe(`/api/${entry.title.slice("@sdxc/".length)}`);
 		}
+
+		let titles = entries.map((entry) => entry.title);
+		expect(titles).not.toContain("@sdxc/u");
+		expect(titles).not.toContain("@sdxc/ui");
+	});
+});
+
+describe("buildUtilitiesNav", () => {
+	test("holds only @sdxc/u, its utilities under their thirteen families", async () => {
+		let tree = await buildUtilitiesNav();
+		let flat = flattenNav(tree);
+
+		expect(tree.sections.flatMap((section) => section.groups)).toHaveLength(13);
+		expect(flat.at(0)).toEqual({ title: "Overview", href: "/api/u" });
+		for (let entry of flat.slice(1)) expect(entry.href).toMatch(/^\/api\/u\//);
+	});
+});
+
+describe("buildComponentsNav", () => {
+	test("holds only @sdxc/ui, with theming ahead of the components", async () => {
+		let flat = flattenNav(await buildComponentsNav());
+
+		expect(flat.slice(0, 2)).toEqual([
+			{ title: "Overview", href: "/api/ui" },
+			{ title: "Theming", href: "/api/ui/theming" },
+		]);
+		expect(flat.length).toBeGreaterThan(2);
+		for (let entry of flat.slice(1)) expect(entry.href).toMatch(/^\/api\/ui\//);
+	});
+});
+
+describe("buildPackageNav", () => {
+	test("gives each catalogue its own tree, and every other package the package tree", async () => {
+		expect((await buildPackageNav("u")).label).toBe("@sdxc/u");
+		expect((await buildPackageNav("ui")).label).toBe("@sdxc/ui");
+		expect((await buildPackageNav("result")).label).toBe("API");
 	});
 });
 
 describe("findNeighbours", () => {
 	test("leaves the first page without a previous and the last without a next", async () => {
-		let tree = await buildNavTree();
+		let tree = await buildGuidesNav();
 		let flat = flattenNav(tree);
 		let first = flat.at(0);
 		let last = flat.at(-1);
@@ -85,20 +100,24 @@ describe("findNeighbours", () => {
 		});
 	});
 
-	test("steps from the last guide into the first package", async () => {
-		let tree = await buildNavTree();
-		let flat = flattenNav(tree);
-		let guideCount = countGuides(tree);
-		let lastGuide = flat.at(guideCount - 1);
+	test("ends the guides at their last page rather than stepping into the packages", async () => {
+		let tree = await buildGuidesNav();
+		let last = flattenNav(tree).at(-1);
 
-		expect(lastGuide).toBeDefined();
-		expect(findNeighbours(tree, lastGuide?.href ?? "").next).toEqual(flat.at(guideCount));
+		expect(findNeighbours(tree, last?.href ?? "").next).toBeNull();
+	});
+
+	test("steps across a section boundary inside one tree", async () => {
+		let tree = await buildPackagesNav();
+		let second = tree.sections.at(1)?.entries.at(0);
+
+		expect(findNeighbours(tree, "/api").next).toEqual(second);
 	});
 
 	test("reports neither neighbour for a path the tree has no entry for", async () => {
-		let tree = await buildNavTree();
+		let tree = await buildGuidesNav();
 
 		expect(findNeighbours(tree, "/docs")).toEqual({ previous: null, next: null });
-		expect(findNeighbours(tree, "/docs/packages")).toEqual({ previous: null, next: null });
+		expect(findNeighbours(tree, "/api")).toEqual({ previous: null, next: null });
 	});
 });

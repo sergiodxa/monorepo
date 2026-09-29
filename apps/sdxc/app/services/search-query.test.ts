@@ -15,20 +15,20 @@ import { rankDocuments } from "~/app/services/search-query";
 
 const DOCUMENTS: SearchDocument[] = [
 	{
-		href: "/docs/packages/markdown",
+		href: "/api/markdown",
 		title: "@sdxc/markdown",
 		page: "@sdxc/markdown",
 		section: "Packages · Content & formats",
 		summary: "GFM to a typed AST you can walk, transform and write back.",
 	},
 	{
-		href: "/docs/packages/markdown#parsing",
+		href: "/api/markdown#parsing",
 		title: "Parsing",
 		page: "@sdxc/markdown",
 		section: "Packages · Content & formats",
 	},
 	{
-		href: "/docs/packages/yaml#parsing",
+		href: "/api/yaml#parsing",
 		title: "Parsing",
 		page: "@sdxc/yaml",
 		section: "Packages · Content & formats",
@@ -54,13 +54,13 @@ describe("rankDocuments", () => {
 		let narrow = rankDocuments(DOCUMENTS, "parsing yaml", 10);
 
 		expect(wide.length).toBe(2);
-		expect(narrow.map((document) => document.href)).toEqual(["/docs/packages/yaml#parsing"]);
+		expect(narrow.map((document) => document.href)).toEqual(["/api/yaml#parsing"]);
 	});
 
 	test("finds a page by what its summary says rather than by its name", () => {
 		let results = rankDocuments(DOCUMENTS, "typed ast", 10);
 
-		expect(results.map((document) => document.href)).toEqual(["/docs/packages/markdown"]);
+		expect(results.map((document) => document.href)).toEqual(["/api/markdown"]);
 	});
 
 	test("ignores case on both sides", () => {

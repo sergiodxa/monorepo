@@ -35,6 +35,7 @@ import llms from "~/app/http/controllers/llms";
 import maintenance from "~/app/http/controllers/maintenance";
 import markdownTwin, { packageMarkdown } from "~/app/http/controllers/markdown-twin";
 import mcpPage, { mcpEndpoint } from "~/app/http/controllers/mcp";
+import { movedPackage, movedPackages } from "~/app/http/controllers/moved";
 import packagesIndex from "~/app/http/controllers/packages-index";
 import packagesShow from "~/app/http/controllers/packages-show";
 import philosophy from "~/app/http/controllers/philosophy";
@@ -77,12 +78,14 @@ export default function application() {
 
 	router.map(routes.home, home);
 	router.map(routes.docs.index, docsIndex);
-	router.map(routes.docs.packages.index, packagesIndex);
-	router.map(routes.docs.packages.utility, utilityShow);
-	router.map(routes.docs.packages.component, componentShow);
-	router.map(routes.docs.packages.show, packagesShow);
 	router.map(routes.docs.changelog, changelog);
 	router.map(routes.docs.show, docsShow);
+	router.map(routes.api.index, packagesIndex);
+	router.map(routes.api.utility, utilityShow);
+	router.map(routes.api.component, componentShow);
+	router.map(routes.api.show, packagesShow);
+	router.map(routes.moved.packages, movedPackages);
+	router.map(routes.moved.package, movedPackage);
 	router.map(routes.philosophy, philosophy);
 	router.map(routes.showcase, showcase);
 	router.map(routes.security, security);

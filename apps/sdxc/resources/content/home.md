@@ -1,4 +1,4 @@
-<hero cta-href="/docs" cta-label="Read the docs" alt-href="/docs/packages" alt-label="Browse the packages">
+<hero cta-href="/docs" cta-label="Read the docs" alt-href="/api" alt-label="Browse the packages">
 # Small TypeScript packages built on web standards.
 
 Take one, or take the set. There are {% $packageCount %} of them, written for Remix on
@@ -137,7 +137,7 @@ scheme where the number carries no compatibility meaning.
 </feature>
 
 <feature title="Browsing" icon="compass">
-[Every package](/docs/packages), filterable by name and by what it does.
+[Every package](/api), filterable by name and by what it does.
 </feature>
 
 <feature title="Watching" icon="zap">

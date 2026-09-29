@@ -1,8 +1,8 @@
 /**
- * The shape of the documentation tree, and how a page is located inside it. It holds
- * no reader of its own on purpose: a view drawing the tree or the pager imports only
- * this, so the parsers that assemble the tree stay on the server and out of the
- * client bundle the views are collected into.
+ * The shape of a sidebar tree, and how a page is located inside it. It holds no reader
+ * of its own on purpose: a view drawing the tree or the pager imports only this, so the
+ * parsers that assemble a tree stay on the server and out of the client bundle the views
+ * are collected into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,33 +20,40 @@ export interface NavGroup {
 	entries: NavEntry[];
 }
 
-/** The whole tree, in the order the sidebar draws it from top to bottom. */
+/**
+ * One labelled band of the sidebar: its own links first, then titled groups a reader can
+ * fold away, for a band whose leaves number in the hundreds.
+ */
+export interface NavSection {
+	title: string;
+	entries: NavEntry[];
+	groups: NavGroup[];
+}
+
+/**
+ * One sidebar, in the order it is drawn from top to bottom. Each part of the site draws
+ * its own, so the pager steps only through the pages of the part being read.
+ */
 export interface NavTree {
-	guides: NavGroup[];
-	packages: NavGroup[];
-	/** The `@sdxc/u` catalogue, under the subpath each utility is imported from. */
-	utilities: NavGroup[];
-	/**
-	 * The `@sdxc/ui` catalogue as one list. Their names share a flat namespace and carry no
-	 * grouping worth drawing — banding them under their initial adds a row to open before
-	 * every row a reader wanted.
-	 */
-	components: NavEntry[];
+	/** What the tree is announced as, and the first step of the trail on a page outside it. */
+	label: string;
+	/** The page the tree hangs from, which a reader who is lost inside it is sent back to. */
+	href: string;
+	sections: NavSection[];
 }
 
 /** Every entry in sidebar reading order, which is the order the pager steps through. */
 export function flattenNav(tree: NavTree): NavEntry[] {
-	let grouped = [...tree.guides, ...tree.packages, ...tree.utilities].flatMap(
-		(group) => group.entries,
-	);
-
-	return [...grouped, ...tree.components];
+	return tree.sections.flatMap((section) => [
+		...section.entries,
+		...section.groups.flatMap((group) => group.entries),
+	]);
 }
 
 /**
- * The entries either side of the page being read, crossing group boundaries so the
- * whole tree is one run. A path the tree has no entry for — the hub, the package
- * index — sits outside that run, and reports neither neighbour.
+ * The entries either side of the page being read, crossing section boundaries so the
+ * whole tree is one run. A path the tree has no entry for sits outside that run, and
+ * reports neither neighbour.
  */
 export function findNeighbours(
 	tree: NavTree,

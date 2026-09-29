@@ -23,7 +23,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildGuidesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
@@ -38,7 +38,7 @@ const GUIDE_SOURCE_BASE =
 
 export default createAction(routes.docs.show, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
-	let tree = await buildNavTree();
+	let tree = await buildGuidesNav();
 
 	let source = await readGuide(slug);
 	if (source === null) return notFound(ctx, tree);

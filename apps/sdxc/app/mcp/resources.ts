@@ -15,7 +15,7 @@ import { resource, resources } from "@sdxc/mcp";
 import { SITE_URL } from "~/app/services/site";
 
 export default resources({
-	package: resource(`${SITE_URL}/docs/packages/:name.md`, {
+	package: resource(`${SITE_URL}/api/:name.md`, {
 		name: "package",
 		title: "Package reference",
 		description: "One published package's README, as Markdown.",

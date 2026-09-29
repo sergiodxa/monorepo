@@ -1,8 +1,8 @@
 /**
  * The shell every documentation page composes into: the tree on the left, a trail
  * across the top, the page in the middle, and — where a page has one — its own
- * headings on the right. Guides and package references share it, so a reader moving
- * between the two never loses the tree they were navigating with.
+ * headings on the right. Guides, the package reference and each catalogue draw their
+ * own tree in it, so the shell around a page reads the same wherever the reader is.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -125,7 +125,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					</Sidebar.Content>
 				</Sidebar>
 
-				<Sidebar.MobileNav id={DRAWER_ID} aria-label="Documentation">
+				<Sidebar.MobileNav id={DRAWER_ID} aria-label={tree.label}>
 					<Sidebar.Header>{heading}</Sidebar.Header>
 					<Sidebar.Content>
 						<DocsNav tree={tree} activePath={activePath} />
@@ -145,7 +145,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					>
 						{/* The rail is what a wide screen collapses; a narrow one has the drawer instead. */}
 						<span mix={[inlineFlex(), media(DRAWER_BREAKPOINT, hidden())]}>
-							<Sidebar.Trigger id="docs-rail-toggle" aria-label="Collapse the documentation tree" />
+							<Sidebar.Trigger id="docs-rail-toggle" aria-label="Collapse the sidebar" />
 						</span>
 
 						<span mix={[hidden(), media(DRAWER_BREAKPOINT, inlineFlex())]}>
@@ -156,7 +156,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 								size="sm"
 								commandfor={DRAWER_ID}
 								command="show-modal"
-								aria-label="Open the documentation tree"
+								aria-label="Open the sidebar"
 							>
 								<MenuIcon size={18} aria-hidden="true" />
 							</Button>

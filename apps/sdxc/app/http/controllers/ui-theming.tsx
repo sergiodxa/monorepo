@@ -1,5 +1,5 @@
 /**
- * `GET /docs/packages/ui/theming` — the theme contract: every `--ui-*` variable, what
+ * `GET /api/ui/theming` — the theme contract: every `--ui-*` variable, what
  * it controls, and which components read it, then the two schemes over the same names.
  * The third column is scanned out of the catalogue rather than written, because a list
  * of variables with nothing reading them is a list nobody can act on.
@@ -37,7 +37,7 @@ export const THEMING_SLUG = "theming";
  * Renders the theming page.
  *
  * @param ctx - The request being answered.
- * @param tree - The documentation tree, so the shell around the page still navigates.
+ * @param tree - The `@sdxc/ui` tree, so the shell around the page still navigates.
  * @returns The rendered page, with the cache policy every generated page carries.
  */
 export default async function themingPage(ctx: RequestContext, tree: NavTree) {
@@ -59,11 +59,10 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 		>
 			<DocsLayout
 				tree={tree}
-				activePath={routes.docs.packages.component.href({ component: THEMING_SLUG })}
+				activePath={routes.api.component.href({ component: THEMING_SLUG })}
 				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Packages", href: routes.docs.packages.index.href() },
-					{ label: "@sdxc/ui", href: routes.docs.packages.show.href({ name: "ui" }) },
+					{ label: "API", href: routes.api.index.href() },
+					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
 					{ label: "Theming" },
 				]}
 				aside={<TableOfContents anchors={anchors} />}

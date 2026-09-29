@@ -1,8 +1,8 @@
 /**
- * The one order the documentation reads in: the guides under their sections, then the
- * packages under their groups, then the two catalogues. The tree the sidebar draws and
- * the pager that steps between pages are both built from here, so the two always agree
- * on what comes next.
+ * The sidebars the documentation reads in: the guides under `/docs`, the package
+ * reference under `/api`, and one each for the two catalogues. The tree a page draws and
+ * the pager that steps between its pages are both built from here, so the two always
+ * agree on what comes next.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,74 +20,134 @@ import routes from "~/routes/web";
 const RELEASES_SECTION = "Releases";
 
 /**
- * The tree for one request. Both halves are read per call rather than held in a module
- * constant, because work in the worker's global scope fails upload validation.
+ * The packages whose reference is a catalogue of hundreds of pages. Each draws its own
+ * sidebar under `/api/<name>`, so the package sidebar leaves them out.
  */
-export async function buildNavTree(): Promise<NavTree> {
+export const CATALOGUE_PACKAGES = new Set(["u", "ui"]);
+
+/**
+ * The guides, under the sections their frontmatter files them in. Every builder here
+ * reads per call, because work in the worker's global scope fails upload validation.
+ */
+export async function buildGuidesNav(): Promise<NavTree> {
 	let sections = await listGuides();
 
-	let guides = sections.map((section) => {
-		let entries = section.guides.map((guide) => ({
-			title: guide.frontmatter.title,
-			href: routes.docs.show.href({ slug: guide.slug }),
-		}));
-
-		/* The changelog reads GitHub rather than a file, so it joins here rather than there. */
-		if (section.title === RELEASES_SECTION) {
-			entries.push({ title: "Changelog", href: routes.docs.changelog.href() });
-		}
-
-		return { title: section.title, entries };
-	});
-
-	let packages = listPackageGroups().map((group) => ({
-		title: group.title,
-		entries: group.packages.map((entry) => ({
-			title: entry.name,
-			href: routes.docs.packages.show.href({ name: entry.directory }),
-		})),
-	}));
-
 	return {
-		guides,
-		packages,
-		utilities: await buildUtilities(),
-		components: await buildComponents(),
+		label: "Documentation",
+		href: routes.docs.index.href(),
+		sections: sections.map((section) => {
+			let entries = section.guides.map((guide) => ({
+				title: guide.frontmatter.title,
+				href: routes.docs.show.href({ slug: guide.slug }),
+			}));
+
+			/* The changelog reads GitHub rather than a file, so it joins here rather than there. */
+			if (section.title === RELEASES_SECTION) {
+				entries.push({ title: "Changelog", href: routes.docs.changelog.href() });
+			}
+
+			return { title: section.title, entries, groups: [] };
+		}),
 	};
 }
 
+/** Every package but the two catalogues, under the group the taxonomy files it in. */
+export async function buildPackagesNav(): Promise<NavTree> {
+	let groups = listPackageGroups().map((group) => ({
+		title: group.title,
+		entries: group.packages
+			.filter((entry) => !CATALOGUE_PACKAGES.has(entry.directory))
+			.map((entry) => ({
+				title: entry.name,
+				href: routes.api.show.href({ name: entry.directory }),
+			})),
+		groups: [],
+	}));
+
+	return {
+		label: "API",
+		href: routes.api.index.href(),
+		sections: [
+			{
+				title: "Packages",
+				entries: [{ title: "Every package", href: routes.api.index.href() }],
+				groups: [],
+			},
+			...groups.filter((group) => group.entries.length > 0),
+		],
+	};
+}
+
+/** The `@sdxc/u` catalogue, each utility under the subpath it is imported from. */
+export async function buildUtilitiesNav(): Promise<NavTree> {
+	return {
+		label: "@sdxc/u",
+		href: routes.api.show.href({ name: "u" }),
+		sections: [
+			{
+				title: "@sdxc/u",
+				entries: [{ title: "Overview", href: routes.api.show.href({ name: "u" }) }],
+				groups: [],
+			},
+			{ title: "Utilities", entries: [], groups: await listUtilityGroups() },
+		],
+	};
+}
+
+/** The `@sdxc/ui` catalogue, with the theme contract ahead of the components that read it. */
+export async function buildComponentsNav(): Promise<NavTree> {
+	return {
+		label: "@sdxc/ui",
+		href: routes.api.show.href({ name: "ui" }),
+		sections: [
+			{
+				title: "@sdxc/ui",
+				entries: [
+					{ title: "Overview", href: routes.api.show.href({ name: "ui" }) },
+					{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
+				],
+				groups: [],
+			},
+			{ title: "Components", entries: await listComponentEntries(), groups: [] },
+		],
+	};
+}
+
+/**
+ * The sidebar a package's page draws: a catalogue's own, or the package sidebar for
+ * every other package, including a name that matches none.
+ */
+export async function buildPackageNav(name: string): Promise<NavTree> {
+	if (name === "u") return await buildUtilitiesNav();
+	if (name === "ui") return await buildComponentsNav();
+	return await buildPackagesNav();
+}
+
 /** Each utility family as one collapsible group, named after the subpath it is imported from. */
-async function buildUtilities(): Promise<NavGroup[]> {
+export async function listUtilityGroups(): Promise<NavGroup[]> {
 	let families = await listUtilityFamilies();
 
 	return families.map((family) => ({
 		title: family.name,
 		entries: family.utilities.map((utility) => ({
 			title: utility.name,
-			href: routes.docs.packages.utility.href({ utility: utility.name }),
+			href: routes.api.utility.href({ utility: utility.name }),
 		})),
 	}));
 }
 
 /**
- * Every component as one list, theming first because it is what the rest are read
- * against. The names are already alphabetical, so a reader scans them the way they would
- * scan an index.
+ * Every component as one list. The names are already alphabetical and share a flat
+ * namespace, so a reader scans them the way they would scan an index.
  */
-async function buildComponents(): Promise<NavEntry[]> {
+export async function listComponentEntries(): Promise<NavEntry[]> {
 	let components = await listComponents();
 
-	return [
-		{
-			title: "Theming",
-			href: routes.docs.packages.component.href({ component: "theming" }),
-		},
-		...components.map((entry) => ({
-			title: entry.name,
-			href: routes.docs.packages.component.href({ component: entry.slug }),
-		})),
-	];
+	return components.map((entry) => ({
+		title: entry.name,
+		href: routes.api.component.href({ component: entry.slug }),
+	}));
 }
 
-export type { NavEntry, NavGroup, NavTree };
+export type { NavEntry, NavGroup, NavSection, NavTree } from "~/app/services/navigation-tree";
 export { findNeighbours, flattenNav } from "~/app/services/navigation-tree";

@@ -64,7 +64,7 @@ export const packagesController = createToolController(toolset.packages, {
 				packages: group.packages.map((entry) => ({
 					name: entry.name,
 					description: entry.description,
-					url: absoluteUrl(routes.docs.packages.show.href({ name: entry.directory })),
+					url: absoluteUrl(routes.api.show.href({ name: entry.directory })),
 				})),
 			}));
 		},
@@ -90,7 +90,7 @@ export const packagesController = createToolController(toolset.packages, {
 				installsWith: entry.internalDependencies.map((directory) => `@sdxc/${directory}`),
 				dependsOn: entry.externalDependencies,
 				usedBy: listApplicationsUsing(entry.name),
-				url: absoluteUrl(routes.docs.packages.show.href({ name: entry.directory })),
+				url: absoluteUrl(routes.api.show.href({ name: entry.directory })),
 				markdownUrl: absoluteUrl(routes.markdown.package.href({ name: entry.directory })),
 				readme: (await readPackageReadme(entry.directory)) ?? null,
 			};

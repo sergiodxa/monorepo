@@ -34,8 +34,12 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   the trailing group, rather than disappearing.
 - **A new guide is one file.** Write it under `resources/docs/` with the frontmatter the
   schema in `app/services/docs.ts` holds it to; the sidebar, the hub and the route all
-  read from the file. A guide may not be filed under `packages`, which is a reserved
-  segment.
+  read from the file. A guide may not be filed under `packages`: `/docs/packages/*` is
+  where the package reference used to live, and it redirects to `/api`.
+- **Each part of the site draws its own sidebar.** `/docs` holds the guides, `/api` every
+  package but `u` and `ui`, and `/api/u` and `/api/ui` each hold their own catalogue. The
+  builders are in `app/services/navigation.ts`; a page picks the one for the path it
+  answers, and the pager steps only through that tree.
 - **Name a tab strip only where the choice repeats.** A strip that names an option group
   from `app/services/option-groups.ts` shares one selection with every other strip naming
   it, site-wide, and labels its tabs with that group's options. Adding a group is adding it
@@ -47,7 +51,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 - **Rewrite a README's links, never its text.** A package README is read on npm and on
   GitHub too, so what makes it read correctly here is the link handler in
   `app/services/article.ts`.
-- **Every page keeps its markdown twin.** `/docs/<slug>.md` and `/docs/packages/<name>.md`
+- **Every page keeps its markdown twin.** `/docs/<slug>.md` and `/api/<name>.md`
   serve the source file, and the `Open` menu, `/llms.txt`, the search index and the MCP
   resources all address a page by that URL. A page whose twin stopped answering breaks all
   four at once.
@@ -71,6 +75,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 | The landing copy                                      | `resources/content/home.md`                                   |
 | The group taxonomy                                    | `resources/content/groups.ts`                                 |
 | The guides and their sections                         | `app/services/docs.ts`, `resources/docs/`                     |
+| The four sidebars and the pager's order               | `app/services/navigation.ts`                                  |
 | The shared markdown pass, and the link rewriting      | `app/services/article.ts`                                     |
 | The applications the showcase and a package page name | `resources/content/apps.ts`, `app/services/showcase.ts`       |
 | Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/middleware/sponsors.ts` |

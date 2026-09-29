@@ -22,7 +22,7 @@ the type signature stops lying. A function that says it returns a document retur
 the ones that might not say so in the type rather than in a paragraph of prose nobody reads.
 
 [Result everywhere](/docs/conventions/result-everywhere) is the guide;
-[`@sdxc/result`](/docs/packages/result) is the type itself, and it installs alongside anything in
+[`@sdxc/result`](/api/result) is the type itself, and it installs alongside anything in
 the set that can fail.
 
 </section-block>

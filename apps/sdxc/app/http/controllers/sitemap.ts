@@ -35,7 +35,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		priority: PRIORITY.hub,
 		frequency: "weekly",
 	});
-	sitemap.append(new URL(absoluteUrl(routes.docs.packages.index.href())), {
+	sitemap.append(new URL(absoluteUrl(routes.api.index.href())), {
 		priority: PRIORITY.packageIndex,
 		frequency: "weekly",
 	});
@@ -54,10 +54,10 @@ export default createAction(routes.sitemap, async (ctx) => {
 
 	for (let group of listPackageGroups()) {
 		for (let entry of group.packages) {
-			sitemap.append(
-				new URL(absoluteUrl(routes.docs.packages.show.href({ name: entry.directory }))),
-				{ priority: PRIORITY.package, frequency: "weekly" },
-			);
+			sitemap.append(new URL(absoluteUrl(routes.api.show.href({ name: entry.directory }))), {
+				priority: PRIORITY.package,
+				frequency: "weekly",
+			});
 		}
 	}
 

@@ -37,8 +37,8 @@ const CODE = `<NavigationMenu aria-label="Primary">
 			<NavigationMenu.Content>
 				<NavigationMenu.ContentList>
 					<NavigationMenu.Link href="/docs">Documentation</NavigationMenu.Link>
-					<NavigationMenu.Link href="/docs/packages/ui">Component catalogue</NavigationMenu.Link>
-					<NavigationMenu.Link href="/docs/packages">Packages</NavigationMenu.Link>
+					<NavigationMenu.Link href="/api/ui">Component catalogue</NavigationMenu.Link>
+					<NavigationMenu.Link href="/api">Packages</NavigationMenu.Link>
 					<NavigationMenu.Link href="https://github.com/sergiodxa" target="_blank" rel="noreferrer">
 						Source on GitHub
 					</NavigationMenu.Link>
@@ -51,7 +51,7 @@ const CODE = `<NavigationMenu aria-label="Primary">
 		</NavigationMenu.Item>
 
 		<NavigationMenu.Item>
-			<NavigationMenu.Link href="/docs/packages/ui/navigation-menu" aria-current="page">
+			<NavigationMenu.Link href="/api/ui/navigation-menu" aria-current="page">
 				Catalogue
 			</NavigationMenu.Link>
 		</NavigationMenu.Item>
@@ -103,10 +103,8 @@ export const NavigationMenuPreview = clientEntry(
 						<NavigationMenu.Content>
 							<NavigationMenu.ContentList>
 								<NavigationMenu.Link href="/docs">Documentation</NavigationMenu.Link>
-								<NavigationMenu.Link href="/docs/packages/ui">
-									Component catalogue
-								</NavigationMenu.Link>
-								<NavigationMenu.Link href="/docs/packages">Packages</NavigationMenu.Link>
+								<NavigationMenu.Link href="/api/ui">Component catalogue</NavigationMenu.Link>
+								<NavigationMenu.Link href="/api">Packages</NavigationMenu.Link>
 								<NavigationMenu.Link
 									href="https://github.com/sergiodxa"
 									target="_blank"
@@ -123,7 +121,7 @@ export const NavigationMenuPreview = clientEntry(
 					</NavigationMenu.Item>
 
 					<NavigationMenu.Item>
-						<NavigationMenu.Link href="/docs/packages/ui/navigation-menu" aria-current="page">
+						<NavigationMenu.Link href="/api/ui/navigation-menu" aria-current="page">
 							Catalogue
 						</NavigationMenu.Link>
 					</NavigationMenu.Item>

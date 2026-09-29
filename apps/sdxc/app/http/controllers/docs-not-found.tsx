@@ -20,13 +20,13 @@ import type { NavTree } from "~/app/services/navigation";
 
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
-import routes from "~/routes/web";
 
 /**
  * Renders the documentation 404.
  *
  * @param ctx - The request being answered.
- * @param tree - The documentation tree, so the shell around the message still navigates.
+ * @param tree - The tree of the part of the site the address was under, so the shell
+ * around the message still navigates and the way back leads to where the reader was.
  * @returns The rendered 404 document.
  */
 export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
@@ -39,18 +39,15 @@ export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
 			<DocsLayout
 				tree={tree}
 				activePath=""
-				breadcrumbs={[
-					{ label: "Documentation", href: routes.docs.index.href() },
-					{ label: "Not found" },
-				]}
+				breadcrumbs={[{ label: tree.label, href: tree.href }, { label: "Not found" }]}
 			>
 				<div mix={[vstack({ gap: 4, align: "start" })]}>
 					<h1 mix={[m(0), text("3xl"), weight("bold"), tracking("tight")]}>Not found</h1>
 					<p mix={[m(0), text("base"), fg("neutral")]}>
 						No documentation page answers to that address.
 					</p>
-					<LinkButton href={routes.docs.index.href()} variant="outline" color="neutral">
-						Back to the documentation
+					<LinkButton href={tree.href} variant="outline" color="neutral">
+						Back to {tree.label}
 					</LinkButton>
 				</div>
 			</DocsLayout>

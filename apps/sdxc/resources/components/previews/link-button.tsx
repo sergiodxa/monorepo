@@ -25,7 +25,7 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "center" })]}>
 			<PlusIcon />
 			Create project
 		</LinkButton>
-		<LinkButton href="/docs/packages/ui" color="neutral" variant="outline">
+		<LinkButton href="/api/ui" color="neutral" variant="outline">
 			Read the docs
 		</LinkButton>
 		<LinkButton href="/projects" color="neutral" variant="ghost">
@@ -60,7 +60,7 @@ export const LinkButtonPreview = clientEntry(
 						<PlusIcon />
 						Create project
 					</LinkButton>
-					<LinkButton href="/docs/packages/ui" color="neutral" variant="outline">
+					<LinkButton href="/api/ui" color="neutral" variant="outline">
 						Read the docs
 					</LinkButton>
 					<LinkButton href="/projects" color="neutral" variant="ghost">

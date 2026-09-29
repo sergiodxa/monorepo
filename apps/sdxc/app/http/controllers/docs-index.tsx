@@ -13,27 +13,27 @@ import { gap, grid, gridTemplate, repeat, vstack } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { is, m } from "@sdxc/u/size";
 import { text, tracking, weight } from "@sdxc/u/typography";
-import { Card, LinkButton } from "@sdxc/ui";
+import { Card, Link } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { listGuides } from "~/app/services/docs";
-import { buildNavTree } from "~/app/services/navigation";
+import { buildGuidesNav } from "~/app/services/navigation";
 import { readPackageFacts } from "~/app/services/packages";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 const DESCRIPTION =
-	"Guides to the collection as a whole, and a reference page for every package in it.";
+	"Guides to the collection as a whole: what it is, the conventions it keeps, and how it ships.";
 
 /** Where the day's releases and the commits behind them are published. */
 const RELEASES_HREF = "https://github.com/sergiodxa/monorepo/releases";
 
 export default createAction(routes.docs.index, async (ctx) => {
 	let sections = await listGuides();
-	let tree = await buildNavTree();
+	let tree = await buildGuidesNav();
 	let facts = readPackageFacts();
 
 	/** One destination per intent: a section is entered at its first page. */
@@ -55,7 +55,7 @@ export default createAction(routes.docs.index, async (ctx) => {
 				title: "Browse the packages",
 				description: `All ${facts.published}, filterable by name and by what they do, each with its own reference page.`,
 				label: "Open the index",
-				href: routes.docs.packages.index.href(),
+				href: routes.api.index.href(),
 			},
 			{
 				title: "Watch what ships",
@@ -99,9 +99,9 @@ export default createAction(routes.docs.index, async (ctx) => {
 								<Card.Description>{destination.description}</Card.Description>
 							</Card.Header>
 							<Card.Footer>
-								<LinkButton href={destination.href} variant="outline" color="neutral" size="sm">
+								<Link href={destination.href} mix={[text("sm"), weight("medium")]}>
 									{destination.label}
-								</LinkButton>
+								</Link>
 							</Card.Footer>
 						</Card>
 					))}
