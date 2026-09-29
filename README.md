@@ -105,6 +105,7 @@ Run from the repository root:
 | [cloudflare-pricing](packages/cloudflare-pricing)               | Cloudflare Developer Platform list prices, one module per service                                                 | ✅  |
 | [cron](packages/cron)                                           | Cron schedules with zone-aware occurrences and descriptors                                                        | ✅  |
 | [crypto](packages/crypto)                                       | Web Crypto primitives — hashing, HMAC, tokens, TOTP, AES-GCM — plus scrypt passwords                              | ✅  |
+| [csv](packages/csv)                                             | Read and write RFC 4180 CSV, with a streaming writer and formula neutralization                                   |     |
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                                                        | ✅  |
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                                                   | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                                              | ✅  |

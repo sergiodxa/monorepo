@@ -559,6 +559,13 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/csv": {
+      "name": "@sdxc/csv",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/data-table-d1": {
       "name": "@sdxc/data-table-d1",
       "version": "0.0.0",
@@ -1940,6 +1947,8 @@
     "@sdxc/cron": ["@sdxc/cron@workspace:packages/cron"],
 
     "@sdxc/crypto": ["@sdxc/crypto@workspace:packages/crypto"],
+
+    "@sdxc/csv": ["@sdxc/csv@workspace:packages/csv"],
 
     "@sdxc/data-table-d1": ["@sdxc/data-table-d1@workspace:packages/data-table-d1"],
 
