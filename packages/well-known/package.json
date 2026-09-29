@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/well-known",
 	"version": "0.0.1",
-	"description": "Typed documents for well-known URIs: security.txt, WebFinger, OAuth and OIDC metadata, JWKS and more",
+	"description": "Typed well-known URI documents: security.txt, WebFinger, OIDC metadata, JWKS",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
