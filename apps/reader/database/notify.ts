@@ -11,6 +11,7 @@ import type { Log } from "@sdxc/logger";
 import type { Mailer } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
+import { zonedParts } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
 import { and, isNull } from "remix/data-table";
 
@@ -175,12 +176,7 @@ export async function summarize(db: Database, since: number): Promise<Summary> {
  */
 export function localHour(at: number, timeZone: string): number {
 	try {
-		return Number.parseInt(
-			new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hour12: false }).format(
-				new Date(at),
-			),
-			10,
-		);
+		return zonedParts(at, timeZone).hour;
 	} catch {
 		return new Date(at).getUTCHours();
 	}

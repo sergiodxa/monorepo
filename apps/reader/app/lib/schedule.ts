@@ -7,15 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { DAY_MS } from "@sdxc/dates/zone";
+
 import type { Tier } from "~/app/lib/entitlement";
 
 import { limitsOf } from "~/app/lib/entitlement";
 
 /** How long an account keeps its full cadence after an open. */
-export const DORMANT_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+export const DORMANT_AFTER_MS = 30 * DAY_MS;
 
 /** How long after an open an account backs off to the slowest rung of the ladder. */
-export const DEEPLY_DORMANT_AFTER_MS = 90 * 24 * 60 * 60 * 1000;
+export const DEEPLY_DORMANT_AFTER_MS = 90 * DAY_MS;
 
 /** What an account that has been opened recently checks on, which is what it pays for. */
 export const ACTIVE_MULTIPLIER = 1;
@@ -31,7 +33,7 @@ export const DEEPLY_DORMANT_MULTIPLIER = 24;
  * A velocity is measured from when the world saw a post, so a window closes whether or
  * not the feed it came from is still publishing.
  */
-export const SWEEP_INTERVAL_MS = 24 * 60 * 60 * 1000;
+export const SWEEP_INTERVAL_MS = DAY_MS;
 
 /**
  * What a check interval is multiplied by for a reader who has been away.

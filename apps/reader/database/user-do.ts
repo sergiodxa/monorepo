@@ -19,6 +19,7 @@ import type { KeysetQuery, OrderByTuple, OrderDirection } from "@sdxc/pagination
 import type { Predicate, SqlStatement } from "remix/data-table";
 
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { isValidTimeZone } from "@sdxc/dates";
 import { Feed } from "@sdxc/feed";
 import { Mailer } from "@sdxc/mail";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
@@ -2869,7 +2870,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	async setTimeZone(timeZone: string): Promise<boolean> {
 		let row = await this.#settingsRow();
-		if (!isTimeZone(timeZone) || timeZone === row.time_zone) return false;
+		if (!isValidTimeZone(timeZone) || timeZone === row.time_zone) return false;
 
 		await this.#db.update(settings, { id: SETTINGS_ID }, { time_zone: timeZone });
 
@@ -5098,22 +5099,6 @@ function toFeedSummary(
 function clampHour(value: number, fallback: number): number {
 	if (!Number.isInteger(value) || value < 0 || value > 23) return fallback;
 	return value;
-}
-
-/**
- * Whether the platform recognizes an IANA zone name. A name it does not know would put
- * quiet hours in UTC forever without saying so, so it is refused at the one place it is
- * written.
- *
- * @param value - The name a browser reported.
- */
-function isTimeZone(value: string): boolean {
-	try {
-		new Intl.DateTimeFormat("en-GB", { timeZone: value });
-		return true;
-	} catch {
-		return false;
-	}
 }
 
 /** One registered device as the RPC boundary reports it, with the endpoint left behind. */

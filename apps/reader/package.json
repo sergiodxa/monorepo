@@ -17,6 +17,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"@sdxc/dates": "workspace:*",
 		"@sdxc/distill": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/feed": "workspace:*",

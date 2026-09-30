@@ -12,6 +12,9 @@
 
 import type { I18n } from "@sdxc/i18n";
 
+import { formatDate, formatParts } from "@sdxc/dates";
+import { calendarDayAt } from "@sdxc/dates/zone";
+
 import type { UserStore } from "~/database/user-do";
 import type { TagChips } from "~/resources/views/tag-chips";
 import type { Timeline } from "~/resources/views/timeline";
@@ -29,6 +32,13 @@ const DAY = 24 * HOUR;
  * it was published is the thing they remember it by.
  */
 const RELATIVE_WINDOW = 7 * DAY;
+
+/**
+ * The calendar a date in a column is read in. A request carries the reader's language
+ * and no zone of theirs, so every date is the UTC day it fell on, which is the calendar
+ * the Worker itself runs in.
+ */
+const TIME_ZONE = "UTC";
 
 /** What building a row needs off the request. */
 export interface TimelineContext {
@@ -66,13 +76,17 @@ export function shortDate(moment: number, locale: string, now: number): string {
 	let elapsed = now - moment;
 	if (elapsed >= 0 && elapsed < RELATIVE_WINDOW) return ago(elapsed, locale);
 
-	let isThisYear = new Date(now).getFullYear() === new Date(moment).getFullYear();
+	let isThisYear = calendarDayAt(now, TIME_ZONE).year === calendarDayAt(moment, TIME_ZONE).year;
 
-	return new Intl.DateTimeFormat(locale, {
+	return formatParts(new Date(moment), {
+		locale,
+		timeZone: TIME_ZONE,
 		month: "short",
 		day: "numeric",
 		year: isThisYear ? undefined : "numeric",
-	}).format(moment);
+	})
+		.map((part) => part.value)
+		.join("");
 }
 
 /**
@@ -83,7 +97,7 @@ export function shortDate(moment: number, locale: string, now: number): string {
  * @example exactDate(item.publishedAt, ctx.locale);
  */
 export function exactDate(moment: number, locale: string): string {
-	return new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(moment);
+	return formatDate(new Date(moment), { locale, timeZone: TIME_ZONE });
 }
 
 /**

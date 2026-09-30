@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { DAY_MS } from "@sdxc/dates/zone";
+
 import { TIER_BUDGETS, TIER_SAVED_LIMITS } from "~/database/schema";
 
 /**
@@ -38,13 +40,13 @@ export const DEFAULT_TIER_SOURCE: TierSource = "default";
  * card that expired while somebody was away, and short of the shortest calendar month so
  * a lapse never hands out a second free period.
  */
-export const GRACE_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
+export const GRACE_PERIOD_MS = 14 * DAY_MS;
 
 /**
  * How long a tier may go unconfirmed before a sign-in re-reads it. A lost delivery is
  * repaired well inside {@link GRACE_PERIOD_MS}, so it can never be what drops somebody.
  */
-export const TIER_STALE_MS = 24 * 60 * 60 * 1000;
+export const TIER_STALE_MS = DAY_MS;
 
 /** The counts a tier caps, named so a refusal says which one refused. */
 export type LimitName = "feeds" | "saved" | "rules" | "posts";
@@ -161,9 +163,6 @@ export function tierRank(tier: Tier): number {
 export function limitsOf(tier: Tier): TierLimits {
 	return TIER_LIMITS[tier];
 }
-
-/** A day in milliseconds, which is what a search window is counted in. */
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The oldest post a tier's search may reach, as epoch milliseconds, or `null` for a tier

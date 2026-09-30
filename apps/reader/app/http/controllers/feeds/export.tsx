@@ -19,6 +19,7 @@
 
 import type { OPML } from "@sdxc/opml";
 
+import { toDayKey } from "@sdxc/dates";
 import { stringify } from "@sdxc/opml";
 import { createAction } from "remix/router";
 
@@ -37,7 +38,7 @@ const CONTENT_TYPE = "text/x-opml; charset=utf-8";
  * @param now - When the export was taken.
  */
 function filename(now: Date): string {
-	return `reader-subscriptions-${now.toISOString().slice(0, 10)}.opml`;
+	return `reader-subscriptions-${toDayKey(now, "UTC")}.opml`;
 }
 
 /** GET /feeds.opml — the subscription list as OPML. */
