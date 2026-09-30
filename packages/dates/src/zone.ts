@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isSuccess, wrap } from "@sdxc/result";
+
 import type { CalendarDay, TimeZone, Weekday } from "./types.js";
 
 export type { CalendarDay, TimeZone, Weekday } from "./types.js";
@@ -31,6 +33,15 @@ const PARTS_OPTIONS = {
 	hourCycle: "h23",
 	numberingSystem: "latn",
 } as const satisfies Intl.DateTimeFormatOptions;
+
+/** Days in each month of a common year, January first; February gains one in a leap year. */
+const DAYS_IN_COMMON_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const;
+
+/**
+ * Whether the runtime accepted each zone name asked about, so a zone checked on
+ * every request builds its `Intl` formatter once and a rejected one is never retried.
+ */
+const TIME_ZONE_VALIDITY = new Map<string, boolean>();
 
 /** A full wall-clock reading: the calendar day plus the time of day on it. */
 export interface ZonedParts extends CalendarDay {
@@ -222,4 +233,70 @@ export function weekdayOf(day: CalendarDay): Weekday {
  */
 export function startOfDayInstant(day: CalendarDay, timeZone: TimeZone): number {
 	return instantFromParts({ ...day, hour: 0, minute: 0, second: 0, millisecond: 0 }, timeZone);
+}
+
+/**
+ * Whether the runtime's `Intl` accepts a zone name. Every zone-taking function in
+ * this package lets `Intl` throw a `RangeError` on a zone it rejects, so a zone from
+ * a cookie, header or form is checked here once at the boundary. Answers are cached.
+ *
+ * @param timeZone - Candidate IANA zone name, usually untrusted input.
+ * @returns `true` when the zone can be passed to every function here.
+ *
+ * @example
+ * isValidTimeZone("America/New_York"); // true
+ * @example
+ * isValidTimeZone("Mars/Olympus_Mons"); // false
+ */
+export function isValidTimeZone(timeZone: string): boolean {
+	let cached = TIME_ZONE_VALIDITY.get(timeZone);
+	if (cached !== undefined) return cached;
+	let valid = isSuccess(wrap(() => dateTimeFormatter("en-US", { ...PARTS_OPTIONS, timeZone })));
+	TIME_ZONE_VALIDITY.set(timeZone, valid);
+	return valid;
+}
+
+/**
+ * Whether a year of the proleptic Gregorian calendar has a February 29th.
+ *
+ * @param year - Calendar year, read literally, including years 0-99.
+ * @returns `true` for years divisible by 4, except centuries not divisible by 400.
+ */
+function isLeapYear(year: number): boolean {
+	return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+}
+
+/**
+ * How many days a calendar month has, with no zone involved: a month's length is
+ * the same on every calendar that shares the Gregorian rules.
+ *
+ * @param year - Calendar year, which decides February.
+ * @param month - Month of the year, `1` January through `12` December.
+ * @returns `28` through `31`, or `NaN` for a month outside `1` through `12`.
+ *
+ * @example
+ * daysInMonth(2024, 2); // 29
+ */
+export function daysInMonth(year: number, month: number): number {
+	if (month === 2 && isLeapYear(year)) return 29;
+	return DAYS_IN_COMMON_MONTH[month - 1] ?? Number.NaN;
+}
+
+/**
+ * Move a calendar day by whole months, rolling over years. The day is clamped to
+ * the target month's last day, so January 31st plus one month is the end of
+ * February and a month step never spills into the month after.
+ *
+ * @param day - Day to move.
+ * @param count - Whole months to move by; negative moves back.
+ * @returns The resulting calendar day.
+ *
+ * @example
+ * shiftCalendarMonth({ year: 2026, month: 1, day: 31 }, 1); // { year: 2026, month: 2, day: 28 }
+ */
+export function shiftCalendarMonth(day: CalendarDay, count: number): CalendarDay {
+	let index = day.year * 12 + (day.month - 1) + count;
+	let year = Math.floor(index / 12);
+	let month = index - year * 12 + 1;
+	return { year, month, day: Math.min(day.day, daysInMonth(year, month)) };
 }

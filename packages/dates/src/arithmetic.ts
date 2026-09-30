@@ -1,7 +1,7 @@
 /**
- * Instant arithmetic: moving a point in time by a fixed length, and measuring the
- * length between two points. None of it takes a zone, because a length of time is
- * the same length everywhere; only naming a calendar day needs a zone.
+ * Instant arithmetic: moving a point in time by a fixed length, measuring the length
+ * between two points, and counting epoch seconds. None of it takes a zone, because a
+ * length of time is the same length everywhere; only naming a calendar day needs one.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -92,4 +92,34 @@ export function elapsed(since: Date | number, now: Date | number = Date.now()): 
 	let end = typeof now === "number" ? now : now.getTime();
 	let start = typeof since === "number" ? since : since.getTime();
 	return end - start;
+}
+
+/**
+ * Whole seconds since the epoch, floored: the NumericDate JWT `iat` and `exp`
+ * claims and most HTTP APIs carry. Flooring rounds toward the past on both sides
+ * of 1970, so a token never claims a later second than the instant it was issued at.
+ *
+ * @param date - Instant as a `Date` or a millisecond timestamp.
+ * @returns Integer seconds, negative before 1970.
+ *
+ * @example
+ * toUnixSeconds(new Date("2026-07-29T10:00:00.999Z")); // 1785319200
+ */
+export function toUnixSeconds(date: Date | number): number {
+	let ms = typeof date === "number" ? date : date.getTime();
+	return Math.floor(ms / 1000);
+}
+
+/**
+ * The instant a count of seconds since the epoch names, the inverse of
+ * `toUnixSeconds`, for reading a NumericDate claim back into a `Date`.
+ *
+ * @param seconds - Seconds since the epoch; a fraction keeps its milliseconds.
+ * @returns A new `Date` at that instant.
+ *
+ * @example
+ * fromUnixSeconds(1785319200); // 2026-07-29T10:00:00Z
+ */
+export function fromUnixSeconds(seconds: number): Date {
+	return new Date(seconds * 1000);
 }

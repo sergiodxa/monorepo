@@ -12,10 +12,13 @@ import { describe, expect, test } from "vitest";
 import {
 	calendarDayAt,
 	calendarDayFromEpochDay,
+	daysInMonth,
 	epochDayOf,
 	instantFromParts,
+	isValidTimeZone,
 	offsetMsAt,
 	shiftCalendarDay,
+	shiftCalendarMonth,
 	startOfDayInstant,
 	utcFromParts,
 	weekdayOf,
@@ -182,5 +185,120 @@ describe("startOfDayInstant", () => {
 			month: 3,
 			day: 7,
 		});
+	});
+});
+
+describe("daysInMonth", () => {
+	test("returns each month's length in a common year", () => {
+		let lengths = Array.from({ length: 12 }, (_, index) => daysInMonth(2026, index + 1));
+		expect(lengths).toEqual([31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]);
+	});
+
+	test("gives February 29 days in a leap year only", () => {
+		expect(daysInMonth(2024, 2)).toBe(29);
+		expect(daysInMonth(2000, 2)).toBe(29);
+		expect(daysInMonth(1900, 2)).toBe(28);
+		expect(daysInMonth(2100, 2)).toBe(28);
+	});
+
+	test("reads years 0 through 99 literally", () => {
+		expect(daysInMonth(0, 2)).toBe(29);
+		expect(daysInMonth(4, 2)).toBe(29);
+		expect(daysInMonth(99, 2)).toBe(28);
+	});
+
+	test("returns NaN for a month outside the calendar", () => {
+		expect(daysInMonth(2026, 0)).toBeNaN();
+		expect(daysInMonth(2026, 13)).toBeNaN();
+	});
+});
+
+describe("shiftCalendarMonth", () => {
+	test("keeps the day when the target month has it", () => {
+		expect(shiftCalendarMonth({ year: 2026, month: 7, day: 15 }, 1)).toEqual({
+			year: 2026,
+			month: 8,
+			day: 15,
+		});
+	});
+
+	test("clamps to the last day of a shorter month", () => {
+		expect(shiftCalendarMonth({ year: 2026, month: 1, day: 31 }, 1)).toEqual({
+			year: 2026,
+			month: 2,
+			day: 28,
+		});
+		expect(shiftCalendarMonth({ year: 2024, month: 1, day: 31 }, 1)).toEqual({
+			year: 2024,
+			month: 2,
+			day: 29,
+		});
+		expect(shiftCalendarMonth({ year: 2026, month: 3, day: 31 }, 1)).toEqual({
+			year: 2026,
+			month: 4,
+			day: 30,
+		});
+	});
+
+	test("moves back for a negative count", () => {
+		expect(shiftCalendarMonth({ year: 2026, month: 3, day: 31 }, -1)).toEqual({
+			year: 2026,
+			month: 2,
+			day: 28,
+		});
+	});
+
+	test("rolls over years in both directions", () => {
+		expect(shiftCalendarMonth({ year: 2026, month: 11, day: 30 }, 3)).toEqual({
+			year: 2027,
+			month: 2,
+			day: 28,
+		});
+		expect(shiftCalendarMonth({ year: 2026, month: 2, day: 10 }, -14)).toEqual({
+			year: 2024,
+			month: 12,
+			day: 10,
+		});
+		expect(shiftCalendarMonth({ year: 2026, month: 5, day: 1 }, 24)).toEqual({
+			year: 2028,
+			month: 5,
+			day: 1,
+		});
+	});
+
+	test("returns the same day for a zero count", () => {
+		expect(shiftCalendarMonth({ year: 2026, month: 7, day: 29 }, 0)).toEqual({
+			year: 2026,
+			month: 7,
+			day: 29,
+		});
+	});
+});
+
+describe("isValidTimeZone", () => {
+	test("accepts IANA zones the runtime knows", () => {
+		for (let zone of ["UTC", "America/New_York", "Asia/Kolkata", "Australia/Lord_Howe"]) {
+			expect(isValidTimeZone(zone)).toBe(true);
+		}
+	});
+
+	test("rejects names the runtime does not know", () => {
+		for (let zone of ["", "Mars/Olympus_Mons", "America/Nowhere", "not a zone"]) {
+			expect(isValidTimeZone(zone)).toBe(false);
+		}
+	});
+
+	test("answers the same on a repeated call", () => {
+		expect(isValidTimeZone("Mars/Olympus_Mons")).toBe(false);
+		expect(isValidTimeZone("Mars/Olympus_Mons")).toBe(false);
+		expect(isValidTimeZone("Europe/Madrid")).toBe(true);
+		expect(isValidTimeZone("Europe/Madrid")).toBe(true);
+	});
+
+	test("accepts exactly the zones the zone math can read", () => {
+		expect(isValidTimeZone("Europe/Madrid")).toBe(true);
+		expect(() => zonedParts(0, "Europe/Madrid")).not.toThrow();
+		expect(isValidTimeZone("Mars/Olympus_Mons")).toBe(false);
+		expect(() => zonedParts(0, "Mars/Olympus_Mons")).toThrow(RangeError);
 	});
 });

@@ -35,11 +35,21 @@ formatRelative(publishedAt, { locale, now }); // "3 days ago"
 Operations that answer a calendar question take the zone as a required argument, so the answer is always about a stated calendar.
 
 ```typescript
-import { diffInDays, eachDayOfInterval, isSameDay, startOfDay, toDayKey } from "@sdxc/dates";
+import {
+	addMonths,
+	diffInDays,
+	eachDayOfInterval,
+	isSameDay,
+	startOfDay,
+	startOfMonth,
+	toDayKey,
+} from "@sdxc/dates";
 
 let timeZone = "America/New_York";
 
 startOfDay(new Date(), timeZone);
+startOfMonth(new Date(), timeZone);
+addMonths(new Date("2026-01-31T15:00:00Z"), 1, timeZone); // 2026-02-28, same wall-clock time
 isSameDay(a, b, timeZone);
 diffInDays(b, a, timeZone);
 eachDayOfInterval({ start, end }, timeZone);
@@ -211,6 +221,72 @@ The first instant of the week an instant falls in. `weekStartsOn` is required, `
 startOfWeek(date, "UTC", { weekStartsOn: 1 }); // Monday-based week
 ```
 
+#### `startOfMonth(date: Date, timeZone: TimeZone): Date`
+
+The first instant of the calendar month an instant falls in, in a zone. When DST skips midnight on the 1st it is the first instant that exists that day.
+
+```typescript
+startOfMonth(new Date("2026-07-01T02:00:00Z"), "UTC"); // 2026-07-01T00:00:00Z
+startOfMonth(new Date("2026-07-01T02:00:00Z"), "America/New_York"); // 2026-06-01T04:00:00Z
+```
+
+#### `endOfMonth(date: Date, timeZone: TimeZone): Date`
+
+The last instant of that calendar month, one millisecond before the next month starts, the same closed-range convention as `endOfDay`.
+
+```typescript
+endOfMonth(new Date("2026-02-10T12:00:00Z"), "America/New_York"); // 2026-03-01T04:59:59.999Z
+```
+
+#### `startOfQuarter(date: Date, timeZone: TimeZone): Date`
+
+The first instant of the calendar quarter an instant falls in: the start of January, April, July or October in that zone.
+
+```typescript
+startOfQuarter(new Date("2026-08-15T12:00:00Z"), "UTC"); // 2026-07-01T00:00:00Z
+```
+
+#### `endOfQuarter(date: Date, timeZone: TimeZone): Date`
+
+The last instant of that calendar quarter, one millisecond before the next quarter starts.
+
+```typescript
+endOfQuarter(new Date("2026-08-15T12:00:00Z"), "America/New_York"); // 2026-10-01T03:59:59.999Z
+```
+
+#### `addMonths(date: Date, count: number, timeZone: TimeZone): Date`
+
+Moves an instant by calendar months in a zone, keeping its wall-clock time of day. The day clamps to the target month's last day, so January 31st plus one month is February 28th or 29th, and negative counts move back. A time DST skips or repeats on the target day resolves as `instantFromParts` does.
+
+```typescript
+addMonths(new Date("2026-01-31T15:00:00Z"), 1, "America/New_York"); // 2026-02-28T15:00:00Z
+addMonths(new Date("2026-03-01T15:00:00Z"), 1, "America/New_York"); // 2026-04-01T14:00:00Z, still 10:00 local
+```
+
+#### `daysInMonth(year: number, month: number): number`
+
+How many days a month has, `month` counted `1` through `12`. It takes no zone, reads years 0 to 99 literally, and returns `NaN` for a month outside the calendar.
+
+```typescript
+daysInMonth(2024, 2); // 29
+daysInMonth(2026, 2); // 28
+```
+
+```typescript
+daysInMonth(year, month);
+// same as, for years from 100 on
+new Date(Date.UTC(year, month, 0)).getUTCDate();
+```
+
+#### `isValidTimeZone(timeZone: string): boolean`
+
+Whether the runtime's `Intl` accepts a zone name. Every function here that takes a zone lets `Intl` throw a `RangeError` for one it rejects, so check a zone from a cookie, header or form once at the boundary. Answers are cached per name.
+
+```typescript
+isValidTimeZone("America/New_York"); // true
+isValidTimeZone("Mars/Olympus_Mons"); // false
+```
+
 #### `diffInDays(a: Date, b: Date, timeZone: TimeZone): number`
 
 Calendar days from `b` to `a`: the count of day boundaries crossed, positive when `a` is on a later day.
@@ -288,6 +364,30 @@ elapsed(startedAt);
 Date.now() - startedAt;
 ```
 
+#### `toUnixSeconds(date: Date | number): number`
+
+Whole seconds since the epoch, floored toward the past: the NumericDate a JWT's `iat` and `exp` claims carry.
+
+```typescript
+toUnixSeconds(new Date("2026-07-29T10:00:00.999Z")); // 1785319200
+```
+
+```typescript
+toUnixSeconds(date);
+// same as
+Math.floor(date.getTime() / 1000);
+```
+
+#### `fromUnixSeconds(seconds: number): Date`
+
+The instant a count of seconds since the epoch names, the inverse of `toUnixSeconds`.
+
+```typescript
+fromUnixSeconds(seconds);
+// same as
+new Date(seconds * 1000);
+```
+
 ### Day Grids
 
 #### `daysOfYear(year: number, timeZone: TimeZone): Day[]`
@@ -355,6 +455,29 @@ The error `parseDayKey()` and `fromDayKey()` report, with the rejected text on `
 
 The error `parseDate()` reports, with the rejected value on `error.input`.
 
+### Form Values
+
+#### `toDateTimeLocal(date: Date, timeZone: TimeZone): string`
+
+The value an `<input type="datetime-local">` takes, `"YYYY-MM-DDTHH:mm"`, as a clock in the zone reads the instant. Seconds are dropped to match the input's default one-minute step.
+
+```typescript
+toDateTimeLocal(new Date("2026-07-29T14:30:00Z"), "America/New_York"); // "2026-07-29T10:30"
+```
+
+#### `parseDateTimeLocal(value: string, timeZone: TimeZone): Result<Date, InvalidDateTimeLocalError>`
+
+Reads a submitted `datetime-local` value as the instant it names in a zone. Optional seconds and a one-to-three-digit fraction are accepted, since browsers submit them when `step` is below a minute. A day the month lacks or a time past `23:59:59` is rejected, and a time DST skips or repeats resolves as `instantFromParts` does.
+
+```typescript
+parseDateTimeLocal("2026-07-29T10:30", "America/New_York"); // { status: "success", data: 2026-07-29T14:30:00Z }
+parseDateTimeLocal("2026-02-30T10:00", "UTC"); // { status: "failure", error: InvalidDateTimeLocalError }
+```
+
+#### `InvalidDateTimeLocalError`
+
+The error `parseDateTimeLocal()` reports, with the rejected text on `error.text`.
+
 ### Zone Math
 
 The conversions every operation above is built on, on their own subpath for code that works with wall clocks directly, such as a calendar format reader.
@@ -401,6 +524,14 @@ A calendar day as whole days since 1970-01-01 and back, for DST-proof day differ
 
 A calendar day moved by whole days, rolling over months and years.
 
+#### `shiftCalendarMonth(day: CalendarDay, count: number): CalendarDay`
+
+A calendar day moved by whole months, rolling over years and clamping the day to the target month's last day.
+
+```typescript
+shiftCalendarMonth({ year: 2024, month: 1, day: 31 }, 1); // { year: 2024, month: 2, day: 29 }
+```
+
 #### `weekdayOf(day: CalendarDay): Weekday`
 
 The weekday a calendar day falls on, `0` Sunday through `6` Saturday.
@@ -420,7 +551,7 @@ interface ZonedParts extends CalendarDay {
 }
 ```
 
-The subpath also re-exports `CalendarDay`, `TimeZone` and `Weekday`.
+The subpath also exports `daysInMonth` and `isValidTimeZone`, and re-exports `CalendarDay`, `TimeZone` and `Weekday`.
 
 ### Types
 
@@ -492,6 +623,10 @@ The `dateStyle` and `timeStyle` lengths from `Intl.DateTimeFormat`: `"full" | "l
 
 `FormatDateOptions`, `FormatTimeOptions`, `FormatDateTimeOptions`, `FormatRangeOptions`, `FormatRelativeOptions`, `FormatDurationOptions`, `FormatPartsOptions`, `FormatWeekdayOptions`, `StartOfWeekOptions`, `LastNDaysOptions` and `GroupByWeekOptions` are exported for callers that pass options through their own signatures.
 
+#### Errors
+
+`InvalidDateError`, `InvalidDayKeyError` and `InvalidDateTimeLocalError` are the classes the parsers return inside a `Failure`, each carrying the rejected input.
+
 ## Pattern: One Zone Per Request
 
 Resolve the reader's zone once, at the edge, and pass it down. Every call site below then reads as a statement about that reader's calendar instead of the server's.
@@ -549,6 +684,23 @@ function boundsForKey(key: string, timeZone: string) {
 	let start = fromDayKey(key, timeZone);
 	if (isFailure(start)) return start;
 	return { from: start.data, to: endOfDay(start.data, timeZone) };
+}
+```
+
+## Pattern: A datetime-local Field In The Reader's Zone
+
+The input shows and submits a wall clock with no zone, so pre-fill it and read it back in the same zone the reader sees. The zone usually comes from a cookie, so it is checked before use, and `parseDateTimeLocal()` returns a `Result` because the value arrives from a form.
+
+```typescript
+import { isValidTimeZone, parseDateTimeLocal, toDateTimeLocal } from "@sdxc/dates";
+
+function eventFormValues(event: { startsAt: Date }, timeZone: string) {
+	return { startsAt: toDateTimeLocal(event.startsAt, timeZone) }; // the input's value attribute
+}
+
+function readEventForm(form: FormData, timeZone: string) {
+	let zone = isValidTimeZone(timeZone) ? timeZone : "UTC";
+	return parseDateTimeLocal(String(form.get("startsAt") ?? ""), zone);
 }
 ```
 

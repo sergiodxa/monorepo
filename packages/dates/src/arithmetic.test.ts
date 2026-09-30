@@ -9,7 +9,15 @@
 
 import { describe, expect, test } from "vitest";
 
-import { add, addDays, elapsed, subDays, subtract } from "./arithmetic.js";
+import {
+	add,
+	addDays,
+	elapsed,
+	fromUnixSeconds,
+	subDays,
+	subtract,
+	toUnixSeconds,
+} from "./arithmetic.js";
 
 /** An arbitrary reference instant with no DST transition near it. */
 const REFERENCE = new Date("2026-07-29T10:00:00Z");
@@ -91,5 +99,42 @@ describe("elapsed", () => {
 
 	test("measures against the current time when none is supplied", () => {
 		expect(elapsed(Date.now() - 50)).toBeGreaterThanOrEqual(50);
+	});
+});
+
+describe("toUnixSeconds", () => {
+	test("counts whole seconds since the epoch", () => {
+		expect(toUnixSeconds(REFERENCE)).toBe(1_785_319_200);
+		expect(toUnixSeconds(new Date(0))).toBe(0);
+	});
+
+	test("floors a partial second", () => {
+		expect(toUnixSeconds(new Date("2026-07-29T10:00:00.999Z"))).toBe(1_785_319_200);
+		expect(toUnixSeconds(1_999)).toBe(1);
+	});
+
+	test("floors toward the past before the epoch", () => {
+		expect(toUnixSeconds(-1)).toBe(-1);
+		expect(toUnixSeconds(-1_000)).toBe(-1);
+		expect(toUnixSeconds(-1_001)).toBe(-2);
+	});
+
+	test("accepts a timestamp as well as a Date", () => {
+		expect(toUnixSeconds(REFERENCE.getTime())).toBe(toUnixSeconds(REFERENCE));
+	});
+});
+
+describe("fromUnixSeconds", () => {
+	test("reads seconds since the epoch back into an instant", () => {
+		expect(fromUnixSeconds(1_785_319_200).toISOString()).toBe("2026-07-29T10:00:00.000Z");
+		expect(fromUnixSeconds(-1).toISOString()).toBe("1969-12-31T23:59:59.000Z");
+	});
+
+	test("keeps the milliseconds of a fractional count", () => {
+		expect(fromUnixSeconds(1.5).getTime()).toBe(1_500);
+	});
+
+	test("round-trips a whole-second instant through toUnixSeconds", () => {
+		expect(fromUnixSeconds(toUnixSeconds(REFERENCE)).getTime()).toBe(REFERENCE.getTime());
 	});
 });
