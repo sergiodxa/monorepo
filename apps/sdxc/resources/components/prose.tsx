@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/ui";
 
 import { fg } from "@sdxc/u/color";
 import { media } from "@sdxc/u/responsive";
-import { m, mbe } from "@sdxc/u/size";
+import { m, mbe, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { balance, leading, text, textDecoration, tracking, weight } from "@sdxc/u/typography";
 import { TAG_BY_LEVEL } from "@sdxc/ui";
@@ -36,6 +36,11 @@ namespace Prose {
 	export interface HeadingProps extends MarkdownProps {
 		level: 1 | 2 | 3 | 4 | 5 | 6;
 		id?: string;
+	}
+
+	export interface ListProps extends MarkdownProps {
+		ordered?: boolean;
+		start?: number | null;
 	}
 
 	export interface LinkProps extends MarkdownProps {
@@ -124,6 +129,27 @@ export function ProseHeading(handle: Handle<Prose.HeadingProps>) {
  */
 export function ProseParagraph(handle: Handle<MarkdownProps>) {
 	return () => <p mix={[mbe(0)]}>{handle.props.children}</p>;
+}
+
+/**
+ * Draws every `list` node. It sets the indent and leaves the space around the list to the
+ * container, so under a heading or after a paragraph a list sits at the same distance a
+ * paragraph would.
+ */
+export function ProseList(handle: Handle<Prose.ListProps>) {
+	return () => {
+		let { children, ordered, start } = handle.props;
+
+		if (ordered) {
+			return (
+				<ol start={start ?? undefined} mix={[mbe(0), pis("1.25rem")]}>
+					{children}
+				</ol>
+			);
+		}
+
+		return <ul mix={[mbe(0), pis("1.25rem")]}>{children}</ul>;
+	};
 }
 
 /** Draws every `link` node in the document. */

@@ -12,7 +12,7 @@ import type { RemixOptions } from "@sdxc/markdown/remix";
 import CodeBlock from "~/resources/components/code-block";
 import Files, { File, Folder } from "~/resources/components/files";
 import Note from "~/resources/components/note";
-import { ProseHeading, ProseLink, ProseParagraph } from "~/resources/components/prose";
+import { ProseHeading, ProseLink, ProseList, ProseParagraph } from "~/resources/components/prose";
 
 export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	files: Files,
@@ -21,6 +21,7 @@ export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	code: CodeBlock,
 	heading: ProseHeading,
 	paragraph: ProseParagraph,
+	list: ProseList,
 	link: ProseLink,
 };
 
