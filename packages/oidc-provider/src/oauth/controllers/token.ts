@@ -12,6 +12,7 @@
 import type { Log } from "@sdxc/logger";
 import type { Action } from "remix/router";
 
+import { toUnixSeconds } from "@sdxc/dates";
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -384,7 +385,7 @@ async function handleRefreshToken(db: Database, body: Record<string, unknown>, l
 	});
 	let signedAccessToken = await accessToken.sign(JWK.Algorithm.ES256, signingKeys);
 
-	let authTime = Math.floor(new Date(session.created_at).getTime() / 1000);
+	let authTime = toUnixSeconds(new Date(session.created_at));
 	let idToken = IdToken.generate(
 		`https://${issuer}`,
 		{

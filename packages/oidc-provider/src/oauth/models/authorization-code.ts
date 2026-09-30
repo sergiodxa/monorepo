@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { toUnixSeconds } from "@sdxc/dates";
 import { column as c, table } from "remix/data-table";
 
 export default class AuthorizationCode {
@@ -73,7 +74,7 @@ export default class AuthorizationCode {
 	) {
 		let code = crypto.randomUUID();
 		let now = Date.now();
-		let authTime = Math.floor(now / 1000);
+		let authTime = toUnixSeconds(now);
 
 		await db.create(AuthorizationCode.table, {
 			code,

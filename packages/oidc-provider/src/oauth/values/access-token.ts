@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fromUnixSeconds, toUnixSeconds } from "@sdxc/dates";
 import { JWT } from "@sdxc/jwt";
 
 /** Access token time-to-live in milliseconds (1 hour). */
@@ -47,7 +48,7 @@ export default class AccessToken extends JWT {
 	 * Token issued-at time as Date (iat claim).
 	 */
 	override get issuedAt() {
-		return new Date(this.parser.number("iat") * 1000);
+		return fromUnixSeconds(this.parser.number("iat"));
 	}
 
 	/**
@@ -61,7 +62,7 @@ export default class AccessToken extends JWT {
 	 * Token not-before time as Date (nbf claim).
 	 */
 	override get notBefore() {
-		return new Date(this.parser.number("nbf") * 1000);
+		return fromUnixSeconds(this.parser.number("nbf"));
 	}
 
 	/**
@@ -107,7 +108,7 @@ export default class AccessToken extends JWT {
 		clientId: string;
 		scope?: string[];
 	}) {
-		let now = Math.floor(Date.now() / 1000);
+		let now = toUnixSeconds(Date.now());
 		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
 
 		return new AccessToken({

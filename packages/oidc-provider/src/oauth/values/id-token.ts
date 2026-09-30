@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fromUnixSeconds, toUnixSeconds } from "@sdxc/dates";
 import { JWT } from "@sdxc/jwt";
 
 /** ID token time-to-live in milliseconds (1 hour). */
@@ -93,7 +94,7 @@ export default class IdToken extends JWT {
 	 * Token not-before time as Date (nbf claim).
 	 */
 	override get notBefore() {
-		return new Date(this.parser.number("nbf") * 1000);
+		return fromUnixSeconds(this.parser.number("nbf"));
 	}
 
 	/**
@@ -122,7 +123,7 @@ export default class IdToken extends JWT {
 		options?: { nonce?: string | null; scope?: string[]; authTime?: number; sessionId?: string },
 	) {
 		let scope = options?.scope ?? ["openid"];
-		let now = Math.floor(Date.now() / 1000);
+		let now = toUnixSeconds(Date.now());
 		let expiresAt = now + Math.floor(ID_TOKEN_TTL / 1000);
 
 		return new IdToken({

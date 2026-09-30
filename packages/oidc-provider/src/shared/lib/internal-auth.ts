@@ -11,6 +11,7 @@
 
 import type { JSONValue } from "@sdxc/types";
 
+import { toUnixSeconds } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
@@ -36,8 +37,8 @@ export async function createInternalToken(secret: string): Promise<string> {
 	let header = { alg: "HS256", typ: "JWT" };
 	let payload = {
 		iss: "auth-saas-platform",
-		iat: Math.floor(Date.now() / 1000),
-		exp: Math.floor(Date.now() / 1000) + 300,
+		iat: toUnixSeconds(Date.now()),
+		exp: toUnixSeconds(Date.now()) + 300,
 		purpose: "internal-api",
 	};
 
@@ -90,7 +91,7 @@ export async function verifyInternalToken(token: string, secret: string): Promis
 		if (payload.iss !== "auth-saas-platform") return false;
 		if (payload.purpose !== "internal-api") return false;
 
-		let now = Math.floor(Date.now() / 1000);
+		let now = toUnixSeconds(Date.now());
 		if (payload.exp < now) return false;
 
 		return true;

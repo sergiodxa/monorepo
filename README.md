@@ -80,7 +80,6 @@ Run from the repository root:
 | ----------------------------- | --------------------------------------------- | --------------------------------------------------- |
 | [auth-saas](apps/auth-saas)   | Multi-tenant OIDC/OAuth2 identity platform    | Not deployed                                        |
 | [blog](apps/blog)             | Remix v3 SSR blog and CMS                     | https://sergiodxa.com                               |
-| [blog-saas](apps/blog-saas)   | Multi-tenant blog platform                    | Not deployed                                        |
 | [books](apps/books)           | Remix v3 book landing page and sales funnel   | https://books.sergiodxa.com                         |
 | [demo](apps/demo)             | Job board demo app for the Remix talk         | Local app                                           |
 | [pkmn](apps/pkmn)             | Monster-collecting game engine and browser UI | Local app                                           |

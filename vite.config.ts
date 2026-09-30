@@ -349,22 +349,6 @@ export default defineConfig({
 			},
 			AUTH_SAAS_WORKERS_PROJECT,
 			{
-				root: "apps/blog-saas",
-				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
-				test: {
-					name: "blog-saas",
-					include: ["**/*.test.ts?(x)"],
-					pool: "threads",
-					/**
-					 * Not inherited from the top-level `test` block: a project ignores it, so the
-					 * 5s default applies unless set here. The slowest files spend ~4s applying
-					 * every migration to a fresh database before their first assertion runs.
-					 */
-					testTimeout: 20_000,
-				},
-			},
-			{
 				root: "apps/reader",
 				plugins: [cloudflareWorkersStub()],
 				resolve: { tsconfigPaths: true },

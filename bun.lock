@@ -133,32 +133,6 @@
         "wrangler": "^4.127.1",
       },
     },
-    "apps/blog-saas": {
-      "name": "@apps/blog-saas",
-      "dependencies": {
-        "@sdxc/auth": "workspace:*",
-        "@sdxc/billing": "workspace:*",
-        "@sdxc/blog-engine": "workspace:*",
-        "@sdxc/data-table-d1": "workspace:*",
-        "@sdxc/data-table-sqlstorage": "workspace:*",
-        "@sdxc/dates": "workspace:*",
-        "@sdxc/hostname": "workspace:*",
-        "@sdxc/http": "workspace:*",
-        "@sdxc/jobs": "workspace:*",
-        "@sdxc/logger": "workspace:*",
-        "@sdxc/result": "workspace:*",
-        "@sdxc/trace-context": "workspace:*",
-        "@sdxc/types": "workspace:*",
-        "@sdxc/validate": "workspace:*",
-        "remix": "3.0.0-rc.4",
-      },
-      "devDependencies": {
-        "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
-        "@sdxc/cloudflare-mocks": "workspace:*",
-        "cf": "1.0.0-beta.5",
-        "vite": "^8.2.2",
-      },
-    },
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
@@ -959,6 +933,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
+        "@sdxc/dates": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/jwt": "workspace:*",
         "@sdxc/logger": "workspace:*",
@@ -1335,8 +1310,6 @@
     "@apps/auth-saas": ["@apps/auth-saas@workspace:apps/auth-saas"],
 
     "@apps/blog": ["@apps/blog@workspace:apps/blog"],
-
-    "@apps/blog-saas": ["@apps/blog-saas@workspace:apps/blog-saas"],
 
     "@apps/books": ["@apps/books@workspace:apps/books"],
 
@@ -2580,10 +2553,6 @@
 
     "@apps/blog/vite": ["vite@8.2.2", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.5", "postcss": "^8.5.26", "rolldown": "~1.2.4", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.4.0 || ^0.5.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q=="],
 
-    "@apps/blog-saas/@cloudflare/vite-plugin": ["@cloudflare/vite-plugin@2.0.0-beta.sha-ad79608dd", "", { "dependencies": { "@cloudflare/build-output-utils": "0.8.2", "@cloudflare/config": "0.20.0", "@cloudflare/runtime-types": "0.1.4", "@cloudflare/unenv-preset": "2.16.2", "miniflare": "5.20260926.0-alpha", "unenv": "2.0.0-rc.24", "ws": "8.21.0" }, "peerDependencies": { "vite": "^7.0.0 || ^8.0.0" }, "bin": { "cf-vite": "bin/cf-vite" } }, "sha512-o/R6T7S8V9SLe4pgq4G/G7Y+ey29/wyE7xc0B5+QoC05qfw/1Xl8qqBmVc/ccbkCnKwYUguxMsoV5aSYfnJMkA=="],
-
-    "@apps/blog-saas/vite": ["vite@8.2.2", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.5", "postcss": "^8.5.26", "rolldown": "~1.2.4", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.4.0 || ^0.5.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q=="],
-
     "@apps/books/@cloudflare/vite-plugin": ["@cloudflare/vite-plugin@2.0.0-beta.sha-ad79608dd", "", { "dependencies": { "@cloudflare/build-output-utils": "0.8.2", "@cloudflare/config": "0.20.0", "@cloudflare/runtime-types": "0.1.4", "@cloudflare/unenv-preset": "2.16.2", "miniflare": "5.20260926.0-alpha", "unenv": "2.0.0-rc.24", "ws": "8.21.0" }, "peerDependencies": { "vite": "^7.0.0 || ^8.0.0" }, "bin": { "cf-vite": "bin/cf-vite" } }, "sha512-o/R6T7S8V9SLe4pgq4G/G7Y+ey29/wyE7xc0B5+QoC05qfw/1Xl8qqBmVc/ccbkCnKwYUguxMsoV5aSYfnJMkA=="],
 
     "@apps/books/vite": ["vite@8.2.2", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.5", "postcss": "^8.5.26", "rolldown": "~1.2.4", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.4.0 || ^0.5.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q=="],
@@ -2655,8 +2624,6 @@
     "v8-to-istanbul/@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "vitest/vite": ["vite@8.2.2", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.5", "postcss": "^8.5.26", "rolldown": "~1.2.4", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.4.0 || ^0.5.0", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-cFKLV/PRgAUlIRm5WjMjJ86jrftzpqcgH+Us+DS8mI3CDNiH30Whrz8uHL3+MOLPAgqbMBAqWdAHAphOAM+z/Q=="],
-
-    "@apps/blog-saas/@cloudflare/vite-plugin/@cloudflare/unenv-preset": ["@cloudflare/unenv-preset@2.16.2", "", { "peerDependencies": { "unenv": "2.0.0-rc.24", "workerd": ">1.20260305.0 <2.0.0-0" }, "optionalPeers": ["workerd"] }, "sha512-JBP1+Z7ZSNG/d4mRP+y8VC5dka3tZVMLEZRvS+rzQ4DGV1EoxRFQckcJTTkXbHSQiTj0DtNI01Zwb/V2fX0mvQ=="],
 
     "@apps/books/@cloudflare/vite-plugin/@cloudflare/unenv-preset": ["@cloudflare/unenv-preset@2.16.2", "", { "peerDependencies": { "unenv": "2.0.0-rc.24", "workerd": ">1.20260305.0 <2.0.0-0" }, "optionalPeers": ["workerd"] }, "sha512-JBP1+Z7ZSNG/d4mRP+y8VC5dka3tZVMLEZRvS+rzQ4DGV1EoxRFQckcJTTkXbHSQiTj0DtNI01Zwb/V2fX0mvQ=="],
 

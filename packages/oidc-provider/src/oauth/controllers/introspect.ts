@@ -11,6 +11,7 @@
 
 import type { Action } from "remix/router";
 
+import { toUnixSeconds } from "@sdxc/dates";
 import { ok } from "@sdxc/http/response/json";
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
@@ -106,8 +107,8 @@ const introspectController: Action<typeof routes.oauth.introspect> = createActio
 						active: true,
 						sub: session.subject_id,
 						client_id: session.client_id,
-						exp: Math.floor(new Date(session.expires_at).getTime() / 1000),
-						iat: Math.floor(new Date(session.created_at).getTime() / 1000),
+						exp: toUnixSeconds(new Date(session.expires_at)),
+						iat: toUnixSeconds(new Date(session.created_at)),
 						iss: `https://${issuer}`,
 						aud: session.client_id,
 						token_type: "Bearer",
@@ -146,7 +147,7 @@ const introspectController: Action<typeof routes.oauth.introspect> = createActio
 					sub: accessToken.subject,
 					client_id: tokenClientId,
 					exp: accessToken.expirationTime,
-					iat: Math.floor(accessToken.issuedAt.getTime() / 1000),
+					iat: toUnixSeconds(accessToken.issuedAt),
 					iss: accessToken.issuer,
 					aud: accessToken.audience,
 					token_type: "Bearer",

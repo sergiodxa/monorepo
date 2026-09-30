@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toUnixSeconds } from "@sdxc/dates";
 import { JWT } from "@sdxc/jwt";
 
 /**
@@ -59,7 +60,7 @@ export default class LogoutToken extends JWT {
 	 * let token = LogoutToken.generate(issuer, subject.id, client.id, session.id);
 	 */
 	static generate(issuer: string, subjectId: string, clientId: string, sessionId?: string) {
-		let now = Math.floor(Date.now() / 1000);
+		let now = toUnixSeconds(Date.now());
 		return new LogoutToken({
 			iss: issuer,
 			sub: subjectId,

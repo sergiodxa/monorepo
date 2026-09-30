@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { addDays, subDays } from "@sdxc/dates";
 import { column as c, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "../../shared/lib/db-errors.js";
@@ -77,7 +78,7 @@ export default class Session {
 	static async countMonthlyActiveUsers(db: Database): Promise<number> {
 		let sessions = await db.findMany(Session.table);
 		let now = new Date();
-		let thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
+		let thirtyDaysAgo = subDays(now, 30).toISOString();
 		let nowStr = now.toISOString();
 
 		let activeSubjectIds = new Set(
@@ -127,7 +128,7 @@ export default class Session {
 	) {
 		let id = crypto.randomUUID();
 		let now = new Date();
-		let expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+		let expiresAt = addDays(now, 30);
 
 		await db.create(Session.table, {
 			id,
