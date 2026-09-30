@@ -613,7 +613,8 @@ Sidebar.MobileNav = function SidebarMobileNav(handle: Handle<Sidebar.MobileNavPr
 					bs("full"),
 					is(varUtility("sidebar-width-mobile", "18rem")),
 					maxIs("90vw"),
-					flex(),
+					/** Gated on `[open]` so the UA's own `dialog:not([open])` hiding still applies. */
+					when("&[open]", flex()),
 					flexCol(),
 					overflow("hidden"),
 					willChange("transform"),
