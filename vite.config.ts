@@ -166,6 +166,11 @@ export default defineConfig({
 	},
 
 	test: {
+		/**
+		 * Console output reaches the terminal only from a failing test, where the wide event or
+		 * swallowed error is the evidence; a passing run stays down to the summary.
+		 */
+		silent: "passed-only",
 		projects: [
 			{
 				/**
