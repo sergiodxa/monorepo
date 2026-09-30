@@ -450,33 +450,6 @@
         "remix": "3.0.0-rc.4",
       },
     },
-    "packages/blog-engine": {
-      "name": "@sdxc/blog-engine",
-      "version": "0.0.0",
-      "dependencies": {
-        "@sdxc/auth": "workspace:*",
-        "@sdxc/highlight": "workspace:*",
-        "@sdxc/http": "workspace:*",
-        "@sdxc/location": "workspace:*",
-        "@sdxc/logger": "workspace:*",
-        "@sdxc/markdown": "workspace:*",
-        "@sdxc/microformats": "workspace:*",
-        "@sdxc/result": "workspace:*",
-        "@sdxc/robots": "workspace:*",
-        "@sdxc/rss": "workspace:*",
-        "@sdxc/sitemap": "workspace:*",
-        "@sdxc/trace-context": "workspace:*",
-        "@sdxc/validate": "workspace:*",
-        "@sdxc/websub": "workspace:*",
-        "@sdxc/well-known": "workspace:*",
-        "remix": "3.0.0-rc.4",
-      },
-      "devDependencies": {
-        "@cloudflare/workers-types": "^5.20260901.1",
-        "@sdxc/cloudflare-mocks": "workspace:*",
-        "@sdxc/jwt": "workspace:*",
-      },
-    },
     "packages/bracket-params": {
       "name": "@sdxc/bracket-params",
       "version": "0.0.1",
@@ -1928,8 +1901,6 @@
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
 
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
-
-    "@sdxc/blog-engine": ["@sdxc/blog-engine@workspace:packages/blog-engine"],
 
     "@sdxc/bracket-params": ["@sdxc/bracket-params@workspace:packages/bracket-params"],
 
