@@ -113,6 +113,102 @@ describe("instantFromParts", () => {
 	});
 });
 
+/** One wall-clock reading to invert, with the instant RFC 5545 says it names. */
+interface WallClockCase {
+	zone: string;
+	wall: string;
+	expected: string;
+}
+
+/**
+ * Parse a `YYYY-MM-DDTHH:MM` wall clock into the fields `instantFromParts` takes,
+ * so the case tables read as the clocks a person would write down.
+ */
+function wallParts(wall: string) {
+	let [date = "", time = ""] = wall.split("T");
+	let [year, month, day] = date.split("-").map(Number);
+	let [hour, minute] = time.split(":").map(Number);
+	return {
+		year: year ?? 0,
+		month: month ?? 0,
+		day: day ?? 0,
+		hour: hour ?? 0,
+		minute: minute ?? 0,
+		second: 0,
+		millisecond: 0,
+	};
+}
+
+/** Repeated hours on both sides of Greenwich, each resolving to its earlier instant. */
+const REPEATED_HOURS: WallClockCase[] = [
+	{ zone: "Europe/Madrid", wall: "2026-10-25T02:30", expected: "2026-10-25T00:30:00.000Z" },
+	{ zone: "Europe/Madrid", wall: "2026-10-25T02:00", expected: "2026-10-25T00:00:00.000Z" },
+	{ zone: "Europe/London", wall: "2026-10-25T01:00", expected: "2026-10-25T00:00:00.000Z" },
+	{ zone: "Europe/London", wall: "2026-10-25T01:30", expected: "2026-10-25T00:30:00.000Z" },
+	{ zone: "Pacific/Auckland", wall: "2026-04-05T02:30", expected: "2026-04-04T13:30:00.000Z" },
+	{ zone: "Australia/Lord_Howe", wall: "2026-04-05T01:45", expected: "2026-04-04T14:45:00.000Z" },
+	{ zone: "America/New_York", wall: "2026-11-01T01:30", expected: "2026-11-01T05:30:00.000Z" },
+	{ zone: "America/Los_Angeles", wall: "2026-11-01T01:30", expected: "2026-11-01T08:30:00.000Z" },
+	{ zone: "America/Santiago", wall: "2026-04-04T23:30", expected: "2026-04-05T02:30:00.000Z" },
+];
+
+/** Skipped hours on both sides of Greenwich, each read with the offset before the gap. */
+const SKIPPED_HOURS: WallClockCase[] = [
+	{ zone: "Europe/Madrid", wall: "2026-03-29T02:30", expected: "2026-03-29T01:30:00.000Z" },
+	{ zone: "Europe/London", wall: "2026-03-29T01:30", expected: "2026-03-29T01:30:00.000Z" },
+	{ zone: "Pacific/Auckland", wall: "2026-09-27T02:30", expected: "2026-09-26T14:30:00.000Z" },
+	{ zone: "Australia/Lord_Howe", wall: "2026-10-04T02:15", expected: "2026-10-03T15:45:00.000Z" },
+	{ zone: "America/New_York", wall: "2026-03-08T02:30", expected: "2026-03-08T07:30:00.000Z" },
+	{ zone: "America/Los_Angeles", wall: "2026-03-08T02:30", expected: "2026-03-08T10:30:00.000Z" },
+	{ zone: "America/Santiago", wall: "2026-09-06T00:30", expected: "2026-09-06T04:30:00.000Z" },
+];
+
+/** Wall clocks in zones with no transition nearby, which have exactly one instant. */
+const UNAMBIGUOUS_CLOCKS: WallClockCase[] = [
+	{ zone: "Asia/Kolkata", wall: "2026-10-25T02:30", expected: "2026-10-24T21:00:00.000Z" },
+	{ zone: "Asia/Kolkata", wall: "2026-03-29T02:30", expected: "2026-03-28T21:00:00.000Z" },
+	{ zone: "Pacific/Apia", wall: "2026-07-01T00:30", expected: "2026-06-30T11:30:00.000Z" },
+	{ zone: "Pacific/Kiritimati", wall: "2026-01-01T00:30", expected: "2025-12-31T10:30:00.000Z" },
+	{ zone: "Pacific/Kiritimati", wall: "2026-10-25T02:30", expected: "2026-10-24T12:30:00.000Z" },
+	{ zone: "Pacific/Pago_Pago", wall: "2026-10-25T02:30", expected: "2026-10-25T13:30:00.000Z" },
+];
+
+describe("instantFromParts across zones", () => {
+	test.each(REPEATED_HOURS)(
+		"resolves the repeated $wall in $zone to its earlier instant",
+		({ zone, wall, expected }) => {
+			let parts = wallParts(wall);
+			let instant = instantFromParts(parts, zone);
+			expect(new Date(instant).toISOString()).toBe(expected);
+			expect(zonedParts(instant, zone)).toMatchObject(parts);
+			expect(zonedParts(instant - 3_600_000, zone)).not.toMatchObject(parts);
+		},
+	);
+
+	test.each(SKIPPED_HOURS)(
+		"reads the skipped $wall in $zone with the offset before the gap",
+		({ zone, wall, expected }) => {
+			let instant = instantFromParts(wallParts(wall), zone);
+			expect(new Date(instant).toISOString()).toBe(expected);
+		},
+	);
+
+	test.each(UNAMBIGUOUS_CLOCKS)(
+		"inverts $wall in $zone to its only instant",
+		({ zone, wall, expected }) => {
+			let parts = wallParts(wall);
+			let instant = instantFromParts(parts, zone);
+			expect(new Date(instant).toISOString()).toBe(expected);
+			expect(zonedParts(instant, zone)).toMatchObject(parts);
+		},
+	);
+
+	test("opens a day whose midnight a zone east of Greenwich skips at the first instant after it", () => {
+		let instant = startOfDayInstant({ year: 2026, month: 3, day: 29 }, "Asia/Beirut");
+		expect(new Date(instant).toISOString()).toBe("2026-03-28T22:00:00.000Z");
+	});
+});
+
 describe("utcFromParts", () => {
 	test("keeps a two-digit year literal instead of mapping it to the 1900s", () => {
 		let instant = utcFromParts({

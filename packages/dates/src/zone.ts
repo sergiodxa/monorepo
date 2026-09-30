@@ -149,9 +149,9 @@ function readsBackAs(instant: number, parts: ZonedParts, timeZone: TimeZone): bo
 }
 
 /**
- * Invert a wall clock into the instant it names in a zone. A repeated hour yields
- * its earlier instant, and a skipped one is read with the offset before the gap,
- * so it lands as far past the gap as it was into it (RFC 5545 §3.3.5).
+ * Invert a wall clock into the instant it names in a zone, trying the offsets a day
+ * either side and at the clock itself. A repeated hour yields its earlier instant; a
+ * skipped one uses the offset before the gap, landing as far past it (RFC 5545 §3.3.5).
  *
  * @param parts - Wall-clock fields as a reader would write them.
  * @param timeZone - IANA zone the clock belongs to.
@@ -159,18 +159,15 @@ function readsBackAs(instant: number, parts: ZonedParts, timeZone: TimeZone): bo
  */
 export function instantFromParts(parts: ZonedParts, timeZone: TimeZone): number {
 	let asUtc = utcFromParts(parts);
-	let firstOffset = offsetMsAt(asUtc, timeZone);
-	let first = asUtc - firstOffset;
-	let secondOffset = offsetMsAt(first, timeZone);
-	if (secondOffset === firstOffset) return first;
-
-	let second = asUtc - secondOffset;
-	let firstExists = readsBackAs(first, parts, timeZone);
-	let secondExists = readsBackAs(second, parts, timeZone);
-	if (firstExists && secondExists) return Math.min(first, second);
-	if (firstExists) return first;
-	if (secondExists) return second;
-	return Math.max(first, second);
+	let offsetBefore = offsetMsAt(asUtc - DAY_MS, timeZone);
+	let offsets = [offsetBefore, offsetMsAt(asUtc, timeZone), offsetMsAt(asUtc + DAY_MS, timeZone)];
+	let earliest = Number.POSITIVE_INFINITY;
+	for (let offset of offsets) {
+		let candidate = asUtc - offset;
+		if (candidate < earliest && readsBackAs(candidate, parts, timeZone)) earliest = candidate;
+	}
+	if (Number.isFinite(earliest)) return earliest;
+	return asUtc - offsetBefore;
 }
 
 /**
