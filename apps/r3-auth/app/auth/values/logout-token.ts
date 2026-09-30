@@ -9,12 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toUnixSeconds } from "@sdxc/dates";
+import { toMs, toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
 import { ISSUER } from "~/app/config";
 
 /** How long a logout token stays acceptable: the two minutes the specification caps it at. */
-const LOGOUT_TOKEN_TTL = 2 * 60 * 1000;
+const LOGOUT_TOKEN_TTL = toMs("2 minutes");
 
 /** A back-channel logout notification addressed to one relying party. */
 export default class LogoutToken extends JWT {
@@ -44,7 +46,8 @@ export default class LogoutToken extends JWT {
 	}
 
 	/**
-	 * Mints a logout token for one relying party.
+	 * Mints a logout token for one relying party, timestamped in the seconds RFC 7519
+	 * NumericDate defines so a relying party's `iat`/`exp` checks accept it.
 	 *
 	 * `sid` is written only when a session id is supplied, so the session identifier
 	 * reaches only the clients that require session-specific logout.
@@ -54,14 +57,14 @@ export default class LogoutToken extends JWT {
 	 * @param sessionId - Session to name, when the client requires session-specific logout.
 	 */
 	static generate(subjectId: string, clientId: string, sessionId?: string) {
-		let now = Date.now();
+		let now = toUnixSeconds(Date.now());
 
 		return new LogoutToken({
 			iss: ISSUER,
 			sub: subjectId,
 			aud: clientId,
 			iat: now,
-			exp: now + LOGOUT_TOKEN_TTL,
+			exp: now + toSeconds(LOGOUT_TOKEN_TTL),
 			jti: crypto.randomUUID(),
 			...(sessionId && { sid: sessionId }),
 			events: {
