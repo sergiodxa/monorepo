@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { addDays, addMonths } from "@sdxc/dates";
 import { failure, isFailure, success } from "@sdxc/result";
 import { sign, verify } from "@sdxc/webhooks";
 import * as s from "remix/data-schema";
@@ -88,6 +89,9 @@ const CHECKOUT_TTL_MS = 30 * 60 * 1000;
 
 /** Days in a week, for advancing a weekly billing period. */
 const DAYS_PER_WEEK = 7;
+
+/** Months a yearly billing period spans. */
+const MONTHS_PER_YEAR = 12;
 
 /** Percent the whole of an amount represents, for applying a percentage discount. */
 const WHOLE_PERCENT = 100;
@@ -336,17 +340,14 @@ const ORDER_SCHEMA = s.object({
 
 /**
  * Advances a date by one billing period, so a subscription's next period end
- * lands on the calendar date a platform would bill on.
+ * lands on the calendar date a platform would bill on: a month or year step
+ * clamps to the target month's last day, so January 31st renews on February 28th.
  */
 function addInterval(date: Date, interval: BillingInterval): Date {
-	let next = new Date(date);
-
-	if (interval === "day") next.setUTCDate(next.getUTCDate() + 1);
-	else if (interval === "week") next.setUTCDate(next.getUTCDate() + DAYS_PER_WEEK);
-	else if (interval === "month") next.setUTCMonth(next.getUTCMonth() + 1);
-	else next.setUTCFullYear(next.getUTCFullYear() + 1);
-
-	return next;
+	if (interval === "day") return addDays(date, 1);
+	if (interval === "week") return addDays(date, DAYS_PER_WEEK);
+	if (interval === "month") return addMonths(date, 1, "UTC");
+	return addMonths(date, MONTHS_PER_YEAR, "UTC");
 }
 
 /** Reads what kind of price a seed describes from which fields it carries. */

@@ -8,7 +8,7 @@
  */
 
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import type { Customer, Order } from "../../core/types.js";
 
@@ -92,6 +92,33 @@ describe("MemoryBilling", () => {
 		expect(subscription.currentPeriodEnd?.getTime()).toBeGreaterThan(Date.now());
 	});
 
+	test("renews a subscription bought on a month's last day on the next month's last day", async () => {
+		vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-01-31T12:00:00Z") });
+
+		try {
+			let billing = build();
+			billing.seed({ team: { amount: 9900, currency: "usd", interval: "year" } });
+
+			let monthly = await buy(billing, "pro", "u_monthly");
+			let monthlySubscription = await unwrap(
+				billing.subscriptions.find(monthly.checkout.subscriptionId ?? ""),
+			);
+
+			expect(monthlySubscription.currentPeriodEnd).toEqual(new Date("2026-02-28T12:00:00Z"));
+
+			vi.setSystemTime(new Date("2024-02-29T12:00:00Z"));
+
+			let yearly = await buy(billing, "team", "u_yearly");
+			let yearlySubscription = await unwrap(
+				billing.subscriptions.find(yearly.checkout.subscriptionId ?? ""),
+			);
+
+			expect(yearlySubscription.currentPeriodEnd).toEqual(new Date("2025-02-28T12:00:00Z"));
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	test("leaves a one-time sale without a subscription", async () => {
 		let billing = build();
 
@@ -154,8 +181,18 @@ describe("MemoryBilling", () => {
 
 		await unwrap(
 			billing.usage.ingest([
-				{ name: "pings", customer: { externalId: "u_1" }, externalId: "e_1" },
-				{ name: "pings", customer: { externalId: "u_1" }, externalId: "e_2" },
+				{
+					name: "pings",
+					customer: { externalId: "u_1" },
+					externalId: "e_1",
+					timestamp: new Date("2026-09-10T00:00:00Z"),
+				},
+				{
+					name: "pings",
+					customer: { externalId: "u_1" },
+					externalId: "e_2",
+					timestamp: new Date("2026-09-11T00:00:00Z"),
+				},
 			]),
 		);
 
