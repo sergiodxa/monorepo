@@ -72,4 +72,3 @@ let idToken = await IdToken.verify(rawToken, keys, {
 ## Related
 
 - `@sdxc/duration` — the duration strings the `exp`, `iat` and `nbf` claims accept; skill `sdxc-duration`
-- `@sdxc/oidc-provider` — an OIDC server built on these payload classes and key sets; skill `sdxc-oidc-provider`
