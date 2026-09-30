@@ -9,13 +9,12 @@
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
-import * as cloudflare from "@sdxc/jobs/cloudflare";
-import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
 import { logger } from "~/bootstrap/logger";
 
 import { database } from "./middleware/database";
+import { jobQueue } from "./queue";
 
 /**
  * The registry both worker entrypoints run through. The timeout sits under the
@@ -26,9 +25,7 @@ export const dispatcher = createJobDispatcher({
 	logger,
 	middleware: [database()],
 	timeout: "2 minutes",
-
-	/** Resolved per call, so importing this module touches no binding. */
-	queue: cloudflare.queue(() => env.QUEUE),
+	queue: jobQueue,
 });
 
 dispatcher.map(jobs.webmentions.verify, () => import("~/app/jobs/webmentions/verify"));

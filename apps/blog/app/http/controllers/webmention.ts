@@ -12,7 +12,6 @@ import { accepted, parseRequest, rejected } from "@sdxc/webmention/receiver";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
 import routes from "~/routes/web";
@@ -39,6 +38,6 @@ export default createAction(routes.webmention, async (ctx) => {
 		return accepted();
 	}
 
-	await dispatcher.enqueue(jobs.webmentions.verify, { source: source.href, target: target.href });
+	await ctx.jobs.enqueue(jobs.webmentions.verify, { source: source.href, target: target.href });
 	return accepted();
 });

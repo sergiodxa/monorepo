@@ -16,7 +16,6 @@ import { createController } from "remix/router";
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { ArticleSchema } from "~/app/schemas/cms/article";
@@ -82,7 +81,7 @@ export default createController(routes.cms.articles, {
 			if (!created)
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
-			await dispatcher.enqueue(jobs.webmentions.send, { postId: created.id });
+			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
 
 			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
@@ -106,7 +105,7 @@ export default createController(routes.cms.articles, {
 			let article = await ArticlePost.findById(ctx.db, id);
 
 			let destroyed = await ArticlePost.destroy(ctx.db, id);
-			if (destroyed) await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
+			if (destroyed) await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 
 			if (article) ctx.cache.purgeLater(TAGS.post("articles", article.meta.slug));
 
@@ -185,7 +184,7 @@ export default createController(routes.cms.articles, {
 				return ctx.render(CMSArticlesActionView, viewProps, { status: 404 });
 			}
 
-			await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
+			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);

@@ -20,6 +20,7 @@ import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { redirect } from "@sdxc/http/response";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -53,6 +54,7 @@ import session from "~/app/http/middleware/session";
 import supportDesk from "~/app/http/middleware/support-desk";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
+import { jobQueue } from "~/app/jobs/queue";
 import mcpRateLimit from "~/app/mcp/rate-limit";
 import { createDatabase } from "~/app/services/database";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -129,7 +131,8 @@ export interface ApplicationOptions {
  * `workersCache` sits outside session and auth so its refusal check reads the finished
  * response, downgrading a public declaration once the visitor turns out to be identified.
  * `database(createDatabase)` is global, so `ctx.db` is there for a route the app maps and
- * for a handler behind a route-agnostic boundary alike.
+ * for a handler behind a route-agnostic boundary alike; `jobEnqueuer` publishes `ctx.jobs`
+ * after it, so every message a handler enqueues carries the request's trace.
  * @param env Worker environment bindings injected into request context.
  * @param options Services a test substitutes for the ones the bindings provide.
  * @returns Configured router instance for the worker fetch entrypoint.
@@ -145,6 +148,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
 		asyncContext(),
 		database(createDatabase),
+		jobEnqueuer(jobQueue),
 		workersCache({ cache: () => platformCache }),
 		htmlOnly(session),
 		formData(),

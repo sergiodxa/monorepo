@@ -16,7 +16,6 @@ import { createController } from "remix/router";
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 import { Post } from "~/app/repositories/post";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { TutorialSchema } from "~/app/schemas/cms/tutorial";
@@ -84,7 +83,7 @@ export default createController(routes.cms.tutorials, {
 					status: redirect.Status.SeeOther,
 				});
 
-			await dispatcher.enqueue(jobs.webmentions.send, { postId: created.id });
+			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
 
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
@@ -108,7 +107,7 @@ export default createController(routes.cms.tutorials, {
 			let tutorial = await TutorialPost.findById(ctx.db, id);
 
 			let destroyed = await TutorialPost.destroy(ctx.db, id);
-			if (destroyed) await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
+			if (destroyed) await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 
 			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
 
@@ -189,7 +188,7 @@ export default createController(routes.cms.tutorials, {
 				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}
 
-			await dispatcher.enqueue(jobs.webmentions.send, { postId: id });
+			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);
