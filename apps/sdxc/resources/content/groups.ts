@@ -109,6 +109,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"semver",
 			"location",
 			"validate",
+			"bracket-params",
 			"uuid",
 			"typeid",
 		],
