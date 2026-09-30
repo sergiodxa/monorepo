@@ -18,6 +18,7 @@ import type {
 } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
+import { currentLog } from "@sdxc/logger";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
@@ -168,7 +169,10 @@ export async function reprojectTenant(
 		 * stay stale until the next successful projection, the same billing
 		 * outage degradation this function already accepts for `read_at`.
 		 */
-		console.error("failed to push entitlements onto the tenant's object", error);
+		currentLog()?.warn("billing.entitlements_push_failed", {
+			tenant: tenant.id,
+			message: error instanceof Error ? error.message : String(error),
+		});
 	}
 }
 
