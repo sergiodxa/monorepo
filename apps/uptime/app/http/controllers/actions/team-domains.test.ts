@@ -14,6 +14,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -53,6 +54,7 @@ beforeEach(() => {
  * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */
 let { addDomain, removeDomain, retryDomainVerification } = await import("./team-domains");
+let { jobQueue } = await import("~/app/lib/queue");
 
 /** Creates an in-memory database seeded with one team and an admin membership. */
 async function createFixture() {
@@ -92,7 +94,12 @@ async function send(
 	params: Record<string, string>,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), formData() as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			jobEnqueuer(jobQueue),
+			formData() as Middleware,
+		],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 

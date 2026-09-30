@@ -1,9 +1,8 @@
 /**
  * Every producer's sends pass through here, where a queue write is billed and one place
- * counts every send. {@link enqueue} and {@link enqueueMany} are what call sites reach
- * for: they take a job from the map, so the payload is typed and the message is addressed
- * from the job's own name. They name the map and nothing else, which keeps the dispatcher,
- * its middleware and every handler loader out of the request path's module graph.
+ * counts every send. A controller enqueues through `ctx.jobs`, published over {@link jobQueue};
+ * {@link enqueue} and {@link enqueueMany} serve code with no request context, typed by the job
+ * map alone, so the dispatcher and its handler loaders stay out of the request path.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

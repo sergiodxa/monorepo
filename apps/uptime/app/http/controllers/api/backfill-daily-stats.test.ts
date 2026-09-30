@@ -10,6 +10,7 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -34,6 +35,7 @@ let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");
 let { teams } = await import("~/database/schema");
 let { backfillDailyStatsCreate } = await import("./backfill-daily-stats");
+let { jobQueue } = await import("~/app/lib/queue");
 let routes = (await import("~/routes/web")).default;
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -58,7 +60,9 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), jobEnqueuer(jobQueue)],
+	});
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 
 	return router.fetch(request);

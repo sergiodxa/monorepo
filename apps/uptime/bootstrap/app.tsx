@@ -24,6 +24,7 @@ import featureFlags from "@sdxc/flags/middleware/router";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
@@ -54,6 +55,7 @@ import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
 import { flags } from "~/app/lib/flags";
+import { jobQueue } from "~/app/lib/queue";
 import { securityTxtEntry } from "~/app/lib/security-txt";
 import { logger } from "~/bootstrap/logger";
 import {
@@ -145,6 +147,11 @@ export default function application(options: application.Options) {
 		 * controller below read from it, so it leads the chain that reaches storage.
 		 */
 		database(createDatabase),
+		/**
+		 * Publishes `ctx.jobs` on every surface, over the same billed queue the dispatcher
+		 * writes through, so a controller enqueues without importing the dispatcher.
+		 */
+		jobEnqueuer(jobQueue) as Middleware,
 		/**
 		 * Publishes `ctx.email` on every surface, including machine ones — the
 		 * cron-job ping endpoint dispatches alerts too. Sits after the log so
