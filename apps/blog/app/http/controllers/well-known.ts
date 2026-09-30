@@ -19,6 +19,9 @@ import { createController } from "remix/router";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
+/** Every feed stream, each advertised in all three formats it is served in. */
+const FEED_STREAMS = ["feed", "articles", "tutorials", "bookmarks"] as const;
+
 /**
  * RFC 7033 §5 asks every WebFinger answer, errors included, to allow any origin, so a
  * browser-based client can read why a lookup failed as well as what it found.
@@ -59,7 +62,7 @@ function normalizeResource(resource: string) {
  * Returns the stable JRD payload advertised for Sergio's public site identity.
  *
  * @param subject Canonical resource identifier to expose in the JRD payload.
- * @returns WebFinger document with homepage, avatar, RSS, and social profile links.
+ * @returns WebFinger document with homepage, avatar, feed, and social profile links.
  */
 function createWebFingerDocument(subject: string): Jrd {
 	let home = new URL("/", PROFILE.canonical.origin).toString();
@@ -79,10 +82,11 @@ function createWebFingerDocument(subject: string): Jrd {
 			link("self", home, "text/html"),
 			link("http://webfinger.net/rel/profile-page", home, "text/html"),
 			link("http://webfinger.net/rel/avatar", avatar, "image/png"),
-			link("alternate", feed(routes.rss.feed.href()), "application/rss+xml"),
-			link("alternate", feed(routes.rss.articles.href()), "application/rss+xml"),
-			link("alternate", feed(routes.rss.tutorials.href()), "application/rss+xml"),
-			link("alternate", feed(routes.rss.bookmarks.href()), "application/rss+xml"),
+			...FEED_STREAMS.flatMap((stream) => [
+				link("alternate", feed(routes.rss[stream].href()), "application/rss+xml"),
+				link("alternate", feed(routes.atom[stream].href()), "application/atom+xml"),
+				link("alternate", feed(routes.jsonFeed[stream].href()), "application/feed+json"),
+			]),
 			link("me", PROFILE.x.profile),
 			link("me", PROFILE.github.profile),
 			link("me", PROFILE.github.sponsor),

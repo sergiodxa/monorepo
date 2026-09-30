@@ -62,9 +62,17 @@ Smart Placement and Observability are enabled.
 | `/tutorials/:slug`     | Tutorial detail page                       |
 | `/bookmarks`           | Saved bookmarks                            |
 | `/rss`                 | Main RSS feed                              |
+| `/atom.xml`            | Main feed as Atom                          |
+| `/feed.json`           | Main feed as JSON Feed                     |
 | `/articles.rss`        | Articles RSS feed                          |
 | `/tutorials.rss`       | Tutorials RSS feed                         |
 | `/bookmarks.rss`       | Bookmarks RSS feed                         |
+| `/articles.atom`       | Articles Atom feed                         |
+| `/tutorials.atom`      | Tutorials Atom feed                        |
+| `/bookmarks.atom`      | Bookmarks Atom feed                        |
+| `/articles.json`       | Articles JSON Feed                         |
+| `/tutorials.json`      | Tutorials JSON Feed                        |
+| `/bookmarks.json`      | Bookmarks JSON Feed                        |
 | `/sitemap.xml`         | Sitemap for search engines                 |
 | `/webmention`          | Webmention endpoint (POST)                 |
 | `/apps/encore/support` | Encore support page and form               |

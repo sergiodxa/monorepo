@@ -101,6 +101,7 @@ describe("advertiseHub", () => {
 	test("declares the hub and the topic in the feed and in the Link header", () => {
 		let hub = advertiseHub("https://sergiodxa.com/rss");
 
+		expect(hub.hubUrl).toBe(HUB);
 		expect(hub.atomLink).toEqual([
 			{ rel: "self", href: "https://sergiodxa.com/rss", type: "application/rss+xml" },
 			{ rel: "hub", href: HUB },

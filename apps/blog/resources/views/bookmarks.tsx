@@ -110,7 +110,9 @@ export function BookmarksView() {
 				</Heading>
 				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>Links that I read and liked.</p>
 				<p mix={[m(0), text("lg"), fg("neutral")]}>
-					Subscribe to my bookmarks using <Link href={routes.rss.bookmarks.href()}>RSS</Link>.
+					Subscribe to my bookmarks using <Link href={routes.rss.bookmarks.href()}>RSS</Link>,{" "}
+					<Link href={routes.atom.bookmarks.href()}>Atom</Link>, or{" "}
+					<Link href={routes.jsonFeed.bookmarks.href()}>JSON Feed</Link>.
 				</p>
 				{model.items.length === 0 ? (
 					<p mix={[m(0), text("base"), fg("neutral")]}>No bookmarks yet.</p>

@@ -16,6 +16,8 @@ import { env } from "cloudflare:workers";
 
 /** What a feed carries so a subscriber discovers the hub and the topic it subscribes to. */
 export interface HubAdvertisement {
+	/** The hub's URL, for a format that declares its hub outside `atom:link`. */
+	hubUrl: string;
 	/** The channel's `atom:link` entries: `rel="self"` naming the topic and `rel="hub"`. */
 	atomLink: RSS.AtomLink[];
 	/** The `Link` header with the same hub and topic. */
@@ -26,13 +28,15 @@ export interface HubAdvertisement {
  * The hub and topic a feed declares in both places WebSub says a subscriber looks.
  *
  * @param self The feed's absolute URL, which subscribers key their subscription by.
+ * @param type The feed's media type, declared on the `rel="self"` link.
  * @example let hub = advertiseHub(self); new RSS({ ...channel, atomLink: hub.atomLink });
  */
-export function advertiseHub(self: string): HubAdvertisement {
+export function advertiseHub(self: string, type = "application/rss+xml"): HubAdvertisement {
 	let hub = env.WEBSUB_HUB;
 	return {
+		hubUrl: hub,
 		atomLink: [
-			{ rel: "self", href: self, type: "application/rss+xml" },
+			{ rel: "self", href: self, type },
 			{ rel: "hub", href: hub },
 		],
 		headers: { link: links({ hubs: [hub], self }) },

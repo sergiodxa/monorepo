@@ -90,7 +90,9 @@ export function TutorialsView() {
 					Learn about Remix, React, and more.
 				</p>
 				<p mix={[m(0), text("lg"), fg("neutral")]}>
-					Subscribe to my tutorials using <Link href={routes.rss.tutorials.href()}>RSS</Link>.
+					Subscribe to my tutorials using <Link href={routes.rss.tutorials.href()}>RSS</Link>,{" "}
+					<Link href={routes.atom.tutorials.href()}>Atom</Link>, or{" "}
+					<Link href={routes.jsonFeed.tutorials.href()}>JSON Feed</Link>.
 				</p>
 				{model.items.length === 0 ? (
 					<p mix={[m(0), text("base"), fg("neutral")]}>No tutorials yet.</p>

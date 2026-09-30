@@ -89,7 +89,9 @@ export function ArticlesView() {
 				</Heading>
 				<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>These are my articles.</p>
 				<p mix={[m(0), text("lg"), fg("neutral")]}>
-					Subscribe to my articles using <Link href={routes.rss.articles.href()}>RSS</Link>.
+					Subscribe to my articles using <Link href={routes.rss.articles.href()}>RSS</Link>,{" "}
+					<Link href={routes.atom.articles.href()}>Atom</Link>, or{" "}
+					<Link href={routes.jsonFeed.articles.href()}>JSON Feed</Link>.
 				</p>
 				{model.items.length === 0 ? (
 					<p mix={[m(0), text("base"), fg("neutral")]}>No articles yet.</p>

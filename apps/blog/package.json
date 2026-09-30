@@ -13,6 +13,7 @@
 		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
 	},
 	"dependencies": {
+		"@sdxc/atom": "workspace:*",
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
@@ -24,6 +25,7 @@
 		"@sdxc/honeypot": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
+		"@sdxc/json-feed": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",

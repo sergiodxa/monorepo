@@ -1,6 +1,6 @@
 /**
  * Top-level route table for the blog, joining the public pages with the auth,
- * RSS, and CMS sub-trees so every URL resolves from one declaration.
+ * feed, and CMS sub-trees so every URL resolves from one declaration.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -8,8 +8,10 @@
 
 import { form, get, post, route } from "remix/routes";
 
+import atom from "~/routes/atom";
 import auth from "~/routes/auth";
 import cms from "~/routes/cms";
+import jsonFeed from "~/routes/json-feed";
 import rss from "~/routes/rss";
 
 /**
@@ -74,6 +76,8 @@ export default route({
 	auth,
 
 	rss,
+	atom,
+	jsonFeed,
 
 	cms: route("/cms", cms),
 });

@@ -40,6 +40,7 @@ import { createRouter } from "remix/router";
 import { renderToStream } from "remix/ui/server";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
+import type { Syndication } from "~/app/http/view-models/syndication";
 
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
@@ -109,6 +110,14 @@ const CMS_GUARDS: Middleware[] = [requireCMSAuth, requireAdmin];
 
 /** The same, for the routes that write, which invalidate the shared listing afterwards. */
 const CMS_WRITE_GUARDS: Middleware[] = [...CMS_GUARDS, purgePostList];
+
+/**
+ * A feed stream's routes in every format it is served in, which the WebSub hub is pinged
+ * with together because one stored write changes all of them.
+ */
+function feedsOf(stream: Syndication.Stream) {
+	return [routes.rss[stream], routes.atom[stream], routes.jsonFeed[stream]];
+}
 
 /** Services {@link createApplication} otherwise builds from the Worker's bindings. */
 export interface ApplicationOptions {
@@ -285,14 +294,18 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		routes.wellKnown,
 		lazy(() => import("~/app/http/controllers/well-known")),
 	);
-	router.map(routes.rss, {
-		actions: {
-			feed: lazy(() => import("~/app/http/controllers/rss/feed")),
-			articles: lazy(() => import("~/app/http/controllers/rss/articles")),
-			tutorials: lazy(() => import("~/app/http/controllers/rss/tutorials")),
-			bookmarks: lazy(() => import("~/app/http/controllers/rss/bookmarks")),
-		},
-	});
+	router.map(
+		routes.rss,
+		lazy(() => import("~/app/http/controllers/feeds/rss")),
+	);
+	router.map(
+		routes.atom,
+		lazy(() => import("~/app/http/controllers/feeds/atom")),
+	);
+	router.map(
+		routes.jsonFeed,
+		lazy(() => import("~/app/http/controllers/feeds/json-feed")),
+	);
 	router.map(
 		routes.auth.login,
 		lazy(() => import("~/app/http/controllers/auth").then((it) => it.loginController)),
@@ -317,28 +330,28 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		routes.cms.articles,
 		lazy(
 			() => import("~/app/http/controllers/cms/articles"),
-			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.articles)],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"), ...feedsOf("articles"))],
 		),
 	);
 	router.map(
 		routes.cms.tutorials,
 		lazy(
 			() => import("~/app/http/controllers/cms/tutorials"),
-			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.tutorials)],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"), ...feedsOf("tutorials"))],
 		),
 	);
 	router.map(
 		routes.cms.bookmarks,
 		lazy(
 			() => import("~/app/http/controllers/cms/bookmarks"),
-			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.bookmarks)],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"), ...feedsOf("bookmarks"))],
 		),
 	);
 	router.map(
 		routes.cms.glossary,
 		lazy(
 			() => import("~/app/http/controllers/cms/glossary"),
-			[...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed)],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"))],
 		),
 	);
 	router.map(

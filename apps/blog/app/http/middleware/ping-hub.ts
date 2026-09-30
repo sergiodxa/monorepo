@@ -28,7 +28,7 @@ interface FeedRoute {
  *
  * @param feeds The feed routes a stored write on this route changes.
  * @returns Middleware that pings the hub once per stored write.
- * @example lazy(() => import("./cms/articles"), [...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.rss.articles)])
+ * @example lazy(() => import("./cms/articles"), [...CMS_WRITE_GUARDS, pingHubFor(routes.rss.feed, routes.atom.feed)])
  */
 export default function pingHubFor(...feeds: FeedRoute[]): Middleware {
 	return async (ctx, next) => {

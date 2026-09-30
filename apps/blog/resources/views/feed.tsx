@@ -98,7 +98,9 @@ export function FeedView() {
 					OAuth2.
 				</p>
 				<p mix={[m(0), mbs(1), fg("neutral"), text("lg")]}>
-					Subscribe to my content using <Link href={routes.rss.feed.href()}>RSS</Link>.
+					Subscribe to my content using <Link href={routes.rss.feed.href()}>RSS</Link>,{" "}
+					<Link href={routes.atom.feed.href()}>Atom</Link>, or{" "}
+					<Link href={routes.jsonFeed.feed.href()}>JSON Feed</Link>.
 				</p>
 
 				<Heading level={2} mix={[m(0), mbs(2), text("2xl")]}>
