@@ -165,7 +165,7 @@ let scopeOption = css({
 
 let scopeTitle = css({ fontWeight: "500", color: "#111827" });
 
-let scopeDescription = css({ color: "#6b7280", display: "block" });
+let scopeDescription = css({ color: "#6b7280", display: "block", fontWeight: "400" });
 
 let mutedText = css({ color: "#6b7280", fontSize: "0.875rem" });
 
@@ -421,8 +421,8 @@ export function AgentClientsPage(handle: Handle<AgentClientsPage.Props>) {
 													value={scope}
 													checked={selected.has(scope)}
 												/>
-												<span>
-													<span mix={[scopeTitle]}>{scopeTitles[scope]}</span>
+												<span mix={[scopeTitle]}>
+													{scopeTitles[scope]}
 													<span mix={[scopeDescription]}>{scopeDescriptions[scope]}</span>
 												</span>
 											</label>
