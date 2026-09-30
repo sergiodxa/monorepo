@@ -38,6 +38,7 @@ import type { NavTree } from "~/app/services/navigation-tree";
 import { findNeighbours } from "~/app/services/navigation-tree";
 import DocsNav from "~/resources/components/docs-nav";
 import DocsPager from "~/resources/components/docs-pager";
+import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
 import { SiteNav } from "~/resources/components/site-header";
 import routes from "~/routes/web";
 
@@ -132,6 +133,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 					<Sidebar.Content>
 						<DocsNav tree={tree} activePath={activePath} />
 					</Sidebar.Content>
+					<DrawerDismiss />
 				</Sidebar.MobileNav>
 
 				<Sidebar.Inset mix={[overflow("visible")]}>
@@ -164,30 +166,26 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 							</Button>
 						</span>
 
+						{/* A phone has room for the trail or the destinations, and only the destinations lead elsewhere. */}
 						{breadcrumbs.length > 0 ? (
-							<Breadcrumbs aria-label="Breadcrumb">
-								<Breadcrumbs.List>
-									{breadcrumbs.map((crumb) => (
-										<Breadcrumbs.Item key={crumb.label}>
-											{crumb.href ? (
-												<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
-											) : (
-												<span>{crumb.label}</span>
-											)}
-										</Breadcrumbs.Item>
-									))}
-								</Breadcrumbs.List>
-							</Breadcrumbs>
+							<span mix={[hidden(), media("(min-width: 48rem)", inlineFlex())]}>
+								<Breadcrumbs aria-label="Breadcrumb">
+									<Breadcrumbs.List>
+										{breadcrumbs.map((crumb) => (
+											<Breadcrumbs.Item key={crumb.label}>
+												{crumb.href ? (
+													<Breadcrumbs.Link href={crumb.href}>{crumb.label}</Breadcrumbs.Link>
+												) : (
+													<span>{crumb.label}</span>
+												)}
+											</Breadcrumbs.Item>
+										))}
+									</Breadcrumbs.List>
+								</Breadcrumbs>
+							</span>
 						) : null}
 
-						{/* The trail already fills a narrow header; the drawer carries these there. */}
-						<span
-							mix={[
-								hidden(),
-								mis("auto"),
-								media("(min-width: 48rem)", hstack({ gap: 3, align: "center" })),
-							]}
-						>
+						<span mix={[mis("auto")]}>
 							<SiteNav activePath={activePath} />
 						</span>
 					</header>

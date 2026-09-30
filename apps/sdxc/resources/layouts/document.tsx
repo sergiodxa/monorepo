@@ -14,7 +14,9 @@ import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { Seo } from "@sdxc/seo";
 import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
 import { m, minBs } from "@sdxc/u/size";
+import { when } from "@sdxc/u/state";
 import { font } from "@sdxc/u/typography";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
@@ -68,7 +70,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		let { canonical, children, description, og, selections, sponsors = [], title } = handle.props;
 
 		return (
-			<html lang="en" class="system" mix={[colorScheme("light dark")]}>
+			<html
+				lang="en"
+				class="system"
+				mix={[
+					colorScheme("light dark"),
+					/* A modal holds the reader's attention, so the page behind it stays where it was left. */
+					when("&:has(dialog:modal)", overflow("hidden")),
+				]}
+			>
 				<head>
 					<meta charSet="utf-8" data-rmx-key="charset" />
 					<meta

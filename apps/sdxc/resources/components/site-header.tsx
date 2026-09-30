@@ -12,7 +12,7 @@ import type { Handle } from "remix/ui";
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { hidden, hstack, inline, insBs, sticky } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { is, maxIs, mi, p } from "@sdxc/u/size";
+import { bs, is, maxIs, mi, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { text, tracking, weight } from "@sdxc/u/typography";
 import { NavLink } from "@sdxc/ui";
@@ -43,6 +43,8 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				/* The bar holds the viewport, so it has to paint over the page passing under it. */
 				z(10),
 				is("100%"),
+				/* The documentation shell's header is this tall too, so the bar holds still between them. */
+				bs("4rem"),
 				bg(),
 				borderEdge("block-end", { color: "neutral.border", width: 1, style: "solid" }),
 			]}
@@ -51,11 +53,12 @@ export default function SiteHeader(handle: Handle<SiteHeader.Props>) {
 				mix={[
 					hstack({ gap: 4, align: "center", justify: "between" }),
 					is("100%"),
+					bs("100%"),
 					/* The bar lines up with the frame the landing bands are drawn in. */
 					maxIs("76rem"),
 					mi("auto"),
-					p(3, 5),
-					media("(min-width: 48rem)", p(4, 12)),
+					p(0, 5),
+					media("(min-width: 48rem)", p(0, 12)),
 				]}
 			>
 				<a
