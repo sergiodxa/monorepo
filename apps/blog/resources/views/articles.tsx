@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatParts, parseDate } from "@sdxc/dates";
+import { isFailure } from "@sdxc/result";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
@@ -51,14 +53,23 @@ export function articlePath(slug: string) {
 }
 
 /**
- * Formats an article date for compact list display.
+ * Formats an article date for compact list display, read on the UTC calendar so the day
+ * shown is the same wherever the page renders.
  * @param value ISO-like timestamp used by the row.
  * @returns Short English date or an empty string when invalid.
  */
 function formatDate(value: string) {
-	let date = new Date(value);
-	if (Number.isNaN(date.getTime())) return "";
-	return date.toLocaleDateString("en", { month: "short", day: "2-digit", year: "2-digit" });
+	let parsed = parseDate(value);
+	if (isFailure(parsed)) return "";
+	return formatParts(parsed.data, {
+		locale: "en",
+		timeZone: "UTC",
+		month: "short",
+		day: "2-digit",
+		year: "2-digit",
+	})
+		.map((part) => part.value)
+		.join("");
 }
 
 /**

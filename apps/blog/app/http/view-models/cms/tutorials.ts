@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { parseDate, toDayKey } from "@sdxc/dates";
+import { isFailure } from "@sdxc/result";
 import { slugify } from "@sdxc/strings";
 
 import routes from "~/routes/web";
@@ -210,14 +212,9 @@ export class TutorialViewModel {
 	 */
 	private static parsePublishedAt(value: string | undefined): string | null {
 		if (!value) return null;
-		if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-			let parsed = new Date(`${value}T00:00:00.000Z`);
-			if (Number.isNaN(parsed.getTime())) return null;
-			return parsed.toISOString();
-		}
-		let parsed = new Date(value);
-		if (Number.isNaN(parsed.getTime())) return null;
-		return parsed.toISOString();
+		let parsed = parseDate(value);
+		if (isFailure(parsed)) return null;
+		return parsed.data.toISOString();
 	}
 
 	/**
@@ -226,9 +223,9 @@ export class TutorialViewModel {
 	 */
 	private static toDateInputValue(value: string | null): string {
 		if (!value) return "";
-		let parsed = new Date(value);
-		if (Number.isNaN(parsed.getTime())) return "";
-		return parsed.toISOString().slice(0, 10);
+		let parsed = parseDate(value);
+		if (isFailure(parsed)) return "";
+		return toDayKey(parsed.data, "UTC");
 	}
 
 	/**

@@ -7,9 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDate, parseDate } from "@sdxc/dates";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
-import { succeeded } from "@sdxc/result";
+import { isSuccess, succeeded } from "@sdxc/result";
 
 import type { Webmention } from "~/app/repositories/webmention";
 
@@ -259,7 +260,7 @@ export class PostViewModel {
 		let reactions: Array<PostViewModel.Mention> = [];
 
 		for (let row of rows) {
-			let published = row.published_at ? new Date(row.published_at) : null;
+			let published = row.published_at ? parseDate(row.published_at) : null;
 			let mention: PostViewModel.Mention = {
 				kind: MENTION_KINDS.find((kind) => kind === row.kind) ?? "mention",
 				url: row.url,
@@ -268,8 +269,8 @@ export class PostViewModel {
 				authorPhoto: row.author_photo,
 				contentHtml: row.content_html,
 				publishedLabel:
-					published && !Number.isNaN(published.getTime())
-						? published.toLocaleDateString("en", { dateStyle: "medium", timeZone: "UTC" })
+					published && isSuccess(published)
+						? formatDate(published.data, { locale: "en", timeZone: "UTC" })
 						: "",
 			};
 
@@ -295,11 +296,10 @@ export class PostViewModel {
 		if (Number.isNaN(timestamp)) return { url, published: null, publishedLabel: "" };
 
 		let published = new Date(timestamp);
-		let publishedLabel = published.toLocaleDateString("en", {
-			month: "long",
-			day: "numeric",
-			year: "numeric",
+		let publishedLabel = formatDate(published, {
+			locale: "en",
 			timeZone: "UTC",
+			dateStyle: "long",
 		});
 		return { url, published, publishedLabel };
 	}

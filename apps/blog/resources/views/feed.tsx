@@ -10,7 +10,9 @@
 
 import type { ColorValue } from "@sdxc/u";
 
+import { formatParts, parseDate } from "@sdxc/dates";
 import { mf } from "@sdxc/microformats/ui";
+import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@sdxc/u/layout";
@@ -50,13 +52,22 @@ export namespace FeedView {
 }
 
 /**
- * Formats an activity date for the timeline; an unparseable value yields an
+ * Formats an activity date for the timeline on the UTC calendar, so the day shown
+ * is the same wherever the page renders; an unparseable value yields an
  * empty string so the row still renders.
  */
 function formatDate(value: string) {
-	let date = new Date(value);
-	if (Number.isNaN(date.getTime())) return "";
-	return date.toLocaleDateString("en", { month: "short", day: "2-digit", year: "2-digit" });
+	let parsed = parseDate(value);
+	if (isFailure(parsed)) return "";
+	return formatParts(parsed.data, {
+		locale: "en",
+		timeZone: "UTC",
+		month: "short",
+		day: "2-digit",
+		year: "2-digit",
+	})
+		.map((part) => part.value)
+		.join("");
 }
 
 /**
@@ -64,9 +75,9 @@ function formatDate(value: string) {
  * a microformats parser reads; `undefined` for an unparseable value, omitting it.
  */
 function isoDate(value: string) {
-	let date = new Date(value);
-	if (Number.isNaN(date.getTime())) return undefined;
-	return date.toISOString();
+	let parsed = parseDate(value);
+	if (isFailure(parsed)) return undefined;
+	return parsed.data.toISOString();
 }
 
 /**
