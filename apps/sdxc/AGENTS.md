@@ -34,8 +34,11 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   the trailing group, rather than disappearing.
 - **A new guide is one file.** Write it under `resources/docs/` with the frontmatter the
   schema in `app/services/docs.ts` holds it to; the sidebar, the hub and the route all
-  read from the file. A guide may not be filed under `packages`: `/docs/packages/*` is
-  where the package reference used to live, and it redirects to `/api`.
+  read from the file. Its code samples are formatted at 86 columns with four-column tabs
+  (a `fmt.overrides` entry in the root `vite.config.ts`), the width a guide's code column
+  shows without scrolling, so `bun check:fix` keeps them fitting. A guide may not be filed
+  under `packages`: `/docs/packages/*` is where the package reference used to live, and it
+  redirects to `/api`.
 - **Each part of the site draws its own sidebar.** `/docs` holds the guides, `/api` every
   package but `u` and `ui`, and `/api/u` and `/api/ui` each hold their own catalogue. The
   builders are in `app/services/navigation.ts`; a page picks the one for the path it

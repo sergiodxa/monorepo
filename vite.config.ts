@@ -440,6 +440,17 @@ export default defineConfig({
 				["side_effect"],
 			],
 		},
+		overrides: [
+			{
+				/**
+				 * The sdxc guides render their code in a column 86 characters wide, with tabs
+				 * drawn four columns wide. Formatting their samples to that width keeps every
+				 * line of every guide visible without scrolling sideways.
+				 */
+				files: ["apps/sdxc/resources/docs/**/*.md"],
+				options: { printWidth: 86, tabWidth: 4 },
+			},
+		],
 	},
 
 	lint: {

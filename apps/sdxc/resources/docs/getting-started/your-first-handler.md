@@ -2,8 +2,8 @@
 title: Your first handler
 description: Three packages composed into a request handler that never throws, and what each line of it demonstrates.
 section:
-  title: Getting started
-  order: 1
+    title: Getting started
+    order: 1
 order: 3
 lastUpdated: 2026-09-21
 ---
@@ -29,9 +29,12 @@ let Frontmatter = s.object({
 
 export default {
 	async fetch(request: Request): Promise<Response> {
-		if (request.method !== "POST") return methodNotAllowed({ error: "Send a POST" });
+		if (request.method !== "POST")
+			return methodNotAllowed({ error: "Send a POST" });
 
-		let parsed = Markdown.parse(await request.text(), { frontmatter: Frontmatter });
+		let parsed = Markdown.parse(await request.text(), {
+			frontmatter: Frontmatter,
+		});
 
 		if (isFailure(parsed)) {
 			return badRequest({

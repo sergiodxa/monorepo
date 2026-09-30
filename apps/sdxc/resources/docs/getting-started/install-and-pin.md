@@ -2,8 +2,8 @@
 title: Install and pin
 description: How a package arrives, what it installs alongside itself, and where the record of a release is kept.
 section:
-  title: Getting started
-  order: 1
+    title: Getting started
+    order: 1
 order: 2
 lastUpdated: 2026-09-21
 ---

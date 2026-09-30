@@ -2,8 +2,8 @@
 title: Result everywhere
 description: Every fallible entry point answers with a value instead of throwing, and what that buys you at the call site.
 section:
-  title: Conventions
-  order: 2
+    title: Conventions
+    order: 2
 order: 1
 lastUpdated: 2026-09-21
 ---
@@ -81,7 +81,9 @@ one failure should not cost you the other nine results:
 ```typescript
 import { partition } from "@sdxc/result";
 
-let [responses, errors] = partition(await Promise.all(urls.map((url) => wrap(() => fetch(url)))));
+let [responses, errors] = partition(
+	await Promise.all(urls.map((url) => wrap(() => fetch(url)))),
+);
 ```
 
 ## Errors carry position

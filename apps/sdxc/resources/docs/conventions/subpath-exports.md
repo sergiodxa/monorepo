@@ -2,8 +2,8 @@
 title: Subpath exports
 description: A package is split into entry points so importing one concern leaves the others out of your bundle.
 section:
-  title: Conventions
-  order: 2
+    title: Conventions
+    order: 2
 order: 3
 lastUpdated: 2026-09-21
 ---

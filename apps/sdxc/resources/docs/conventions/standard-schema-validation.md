@@ -2,8 +2,8 @@
 title: Standard Schema validation
 description: Where a package needs a schema it accepts any Standard Schema, so the validation library is yours to choose.
 section:
-  title: Conventions
-  order: 2
+    title: Conventions
+    order: 2
 order: 2
 lastUpdated: 2026-09-21
 ---
@@ -42,7 +42,8 @@ import { validate } from "@sdxc/validate";
 
 async function handler(request: Request) {
 	let result = await validate(request, schema);
-	if (isFailure(result)) return Response.json({ errors: result.error.issues }, { status: 400 });
+	if (isFailure(result))
+		return Response.json({ errors: result.error.issues }, { status: 400 });
 
 	return Response.json({ id: await create(result.data) });
 }

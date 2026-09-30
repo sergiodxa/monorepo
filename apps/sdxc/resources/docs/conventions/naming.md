@@ -2,8 +2,8 @@
 title: Naming
 description: What a package name tells you, and the conventions its exports follow, so the next package reads like the last one.
 section:
-  title: Conventions
-  order: 2
+    title: Conventions
+    order: 2
 order: 4
 lastUpdated: 2026-09-21
 ---

@@ -2,8 +2,8 @@
 title: What these are
 description: A collection of small TypeScript packages that agree with each other, built on what the web platform already provides.
 section:
-  title: Getting started
-  order: 1
+    title: Getting started
+    order: 1
 order: 1
 lastUpdated: 2026-09-21
 ---
