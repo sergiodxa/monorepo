@@ -9,16 +9,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { diffInDays, formatWeekday } from "@sdxc/dates";
+
 import { dayKey } from "~/app/services/month-grid";
 
-const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000;
-
-/** Sunday of an arbitrary week, from which the seven weekday captions are read in order. */
-const REFERENCE_WEEK_START = new Date(2026, 0, 4);
-
 const MONTH_FORMAT = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
-
-const WEEKDAY_FORMAT = new Intl.DateTimeFormat("en-US", { weekday: "short" });
 
 const DAY_FORMAT = new Intl.DateTimeFormat("en-US", {
 	weekday: "long",
@@ -43,14 +38,9 @@ export function monthLabel(month: Date): string {
  * @returns Short weekday names in calendar order.
  */
 export function weekdayLabels(): string[] {
-	return Array.from({ length: 7 }, (_unused, offset) => {
-		let day = new Date(
-			REFERENCE_WEEK_START.getFullYear(),
-			REFERENCE_WEEK_START.getMonth(),
-			REFERENCE_WEEK_START.getDate() + offset,
-		);
-		return WEEKDAY_FORMAT.format(day);
-	});
+	return ([0, 1, 2, 3, 4, 5, 6] as const).map((weekday) =>
+		formatWeekday(weekday, { locale: "en-US" }),
+	);
 }
 
 /**
@@ -80,17 +70,16 @@ export function parseDayValue(value: string): Date | null {
 }
 
 /**
- * Whole days from one day to another, counted between local midnights so a distance
- * stays an integer across a daylight-saving boundary.
+ * Whole days from one day to another, counted as calendar days in the zone the page runs
+ * in, where every day here sits at local midnight, so a distance stays an integer across
+ * a daylight-saving boundary.
  *
  * @param from - The day counted from.
  * @param to - The day counted to.
  * @returns The signed number of days, positive when `to` comes later.
  */
 export function dayDistance(from: Date, to: Date): number {
-	let fromMidnight = Date.UTC(from.getFullYear(), from.getMonth(), from.getDate());
-	let toMidnight = Date.UTC(to.getFullYear(), to.getMonth(), to.getDate());
-	return Math.round((toMidnight - fromMidnight) / MILLISECONDS_PER_DAY);
+	return diffInDays(to, from, Intl.DateTimeFormat().resolvedOptions().timeZone);
 }
 
 /**
