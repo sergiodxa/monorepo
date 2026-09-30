@@ -1,0 +1,23 @@
+{
+	"name": "@sdxc/bracket-params",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/location": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@standard-schema/spec": "^1.1.0"
+	},
+	"devDependencies": {
+		"remix": "3.0.0-rc.4"
+	}
+}

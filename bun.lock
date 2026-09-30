@@ -501,6 +501,19 @@
         "@sdxc/jwt": "workspace:*",
       },
     },
+    "packages/bracket-params": {
+      "name": "@sdxc/bracket-params",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/location": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+      },
+      "devDependencies": {
+        "remix": "3.0.0-rc.4",
+      },
+    },
     "packages/cache": {
       "name": "@sdxc/cache",
       "version": "0.0.1",
@@ -1941,6 +1954,8 @@
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
 
     "@sdxc/blog-engine": ["@sdxc/blog-engine@workspace:packages/blog-engine"],
+
+    "@sdxc/bracket-params": ["@sdxc/bracket-params@workspace:packages/bracket-params"],
 
     "@sdxc/cache": ["@sdxc/cache@workspace:packages/cache"],
 
