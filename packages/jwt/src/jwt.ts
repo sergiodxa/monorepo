@@ -185,7 +185,7 @@ export class JWT implements jose.JWTPayload {
 	 * @returns The issuance time, or `null` when the claim is absent.
 	 */
 	get issuedAt(): Date | null {
-		if (this.parser.has("iat")) return new Date(this.parser.number("iat"));
+		if (this.parser.has("iat")) return new Date(this.parser.number("iat") * MS_PER_SECOND);
 		return null;
 	}
 
@@ -230,7 +230,7 @@ export class JWT implements jose.JWTPayload {
 	 * @returns The start of validity, or `null` when the claim is absent.
 	 */
 	get notBefore(): Date | null {
-		if (this.parser.has("nbf")) return new Date(this.parser.number("nbf"));
+		if (this.parser.has("nbf")) return new Date(this.parser.number("nbf") * MS_PER_SECOND);
 		return null;
 	}
 

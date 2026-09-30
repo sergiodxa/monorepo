@@ -361,6 +361,14 @@ describe("registered claim accessors", () => {
 		expect(token.payload.nbf).toBe(issued.getTime() / 1000);
 	});
 
+	test("read `iat` and `nbf` back as the dates the epoch seconds name", () => {
+		let issued = new Date("2026-01-01T00:00:00.000Z");
+		let token = new JWT({ iat: issued.getTime() / 1000, nbf: issued.getTime() / 1000 });
+
+		expect(token.issuedAt?.toISOString()).toBe(issued.toISOString());
+		expect(token.notBefore?.toISOString()).toBe(issued.toISOString());
+	});
+
 	test("read the identifier, issuer, and subject, and answer null when absent", () => {
 		let empty = new JWT();
 
