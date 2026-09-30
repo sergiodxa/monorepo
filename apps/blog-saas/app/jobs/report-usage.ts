@@ -8,6 +8,7 @@
  */
 import type { UsageEvent } from "@sdxc/billing";
 
+import { subDays, toDayKey } from "@sdxc/dates";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
@@ -24,7 +25,7 @@ import { queryDailyPageViews } from "~/app/services/analytics";
  * @returns Yesterday's date as `YYYY-MM-DD` in UTC.
  */
 function yesterday(): string {
-	return new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	return toDayKey(subDays(new Date(), 1), "UTC");
 }
 
 /**

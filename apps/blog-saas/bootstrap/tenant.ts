@@ -10,6 +10,7 @@ import type { BlogEngine } from "@sdxc/blog-engine";
 
 import { createBlogEngine } from "@sdxc/blog-engine";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
+import { addDays, startOfDay } from "@sdxc/dates";
 import { DurableObject } from "cloudflare:workers";
 
 import { logger } from "./logger";
@@ -266,9 +267,7 @@ export default class Blog extends DurableObject<Cloudflare.Env> {
 	private async scheduleAlarm(): Promise<void> {
 		let existing = await this.ctx.storage.getAlarm();
 		if (existing) return;
-		let tomorrow = new Date();
-		tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
-		tomorrow.setUTCHours(0, 0, 0, 0);
-		await this.ctx.storage.setAlarm(tomorrow.getTime());
+		let nextMidnight = startOfDay(addDays(new Date(), 1), "UTC");
+		await this.ctx.storage.setAlarm(nextMidnight.getTime());
 	}
 }

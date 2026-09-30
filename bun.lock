@@ -141,6 +141,7 @@
         "@sdxc/blog-engine": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/dates": "workspace:*",
         "@sdxc/hostname": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/jobs": "workspace:*",

@@ -7,6 +7,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { toDayKey } from "@sdxc/dates";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
@@ -140,7 +141,7 @@ function trackPageView(request: Request, response: Response, blogId: string): vo
 	if (!isBillablePageView(request, response)) return;
 	let url = new URL(request.url);
 	env.ANALYTICS.writeDataPoint({
-		blobs: [blogId, "page_view", url.hostname, new Date().toISOString().slice(0, 10)],
+		blobs: [blogId, "page_view", url.hostname, toDayKey(new Date(), "UTC")],
 		doubles: [1],
 		indexes: [blogId],
 	});

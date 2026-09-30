@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { subDays } from "@sdxc/dates";
 import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
@@ -19,7 +20,7 @@ const RETENTION_DAYS = 30;
  * reach for the next day's purge, which selects them again.
  */
 export default createJobHandler(jobs.purgeDeletedBlogs, async (ctx) => {
-	let cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+	let cutoff = subDays(new Date(), RETENTION_DAYS).toISOString();
 	let expired = await Blog.findDeletedBefore(ctx.database, cutoff);
 	ctx.log.set({ blogs: { cutoff, expired: expired.length } });
 
