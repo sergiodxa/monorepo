@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { fromUnixSeconds, toUnixSeconds } from "@sdxc/dates";
+import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
 import { ACCESS_TOKEN_TTL, ISSUER } from "~/app/config";
@@ -31,7 +33,7 @@ export default class AccessToken extends JWT {
 
 	/** When the token was issued, converted from the seconds RFC 7519 stores. */
 	override get issuedAt() {
-		return new Date(this.parser.number("iat") * 1000);
+		return fromUnixSeconds(this.parser.number("iat"));
 	}
 
 	/** The authorization server that signed the token (`iss`). */
@@ -85,8 +87,8 @@ export default class AccessToken extends JWT {
 		clientId: string;
 		scope?: string[];
 	}) {
-		let now = Math.floor(Date.now() / 1000);
-		let expiresAt = now + Math.floor(ACCESS_TOKEN_TTL / 1000);
+		let now = toUnixSeconds(Date.now());
+		let expiresAt = now + toSeconds(ACCESS_TOKEN_TTL);
 
 		return new AccessToken({
 			aud: claims.audience,
@@ -102,6 +104,6 @@ export default class AccessToken extends JWT {
 
 	/** Token lifetime in seconds, which is the unit `expires_in` is reported in. */
 	static get ttl() {
-		return Math.floor(ACCESS_TOKEN_TTL / 1000);
+		return toSeconds(ACCESS_TOKEN_TTL);
 	}
 }

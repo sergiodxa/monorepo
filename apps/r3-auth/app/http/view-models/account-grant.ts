@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatParts } from "@sdxc/dates";
+
 import type { GrantWithClient } from "~/app/data/grant";
 
 /** One row of the authorized-apps list, ready to render. */
@@ -48,11 +50,15 @@ export function toGrantRow(
 		clientName: grant.client?.name ?? grant.client_id,
 		clientDescription: grant.client?.description ?? null,
 		clientLogoUrl: grant.client?.logo_url ?? null,
-		authorizedOn: new Intl.DateTimeFormat(locale, {
+		authorizedOn: formatParts(new Date(grant.created_at), {
+			locale,
+			timeZone: "UTC",
 			year: "numeric",
 			month: "short",
 			day: "numeric",
-		}).format(new Date(grant.created_at)),
+		})
+			.map((part) => part.value)
+			.join(""),
 		isAuthServer: grant.client_id === authServerClientId,
 	};
 }

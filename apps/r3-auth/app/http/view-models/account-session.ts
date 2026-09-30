@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatParts } from "@sdxc/dates";
+
 import type { SessionWithClient } from "~/app/data/session";
 
 /** How long a session may go untouched before the list marks it stale. */
@@ -87,16 +89,20 @@ export interface SessionRow {
 }
 
 /**
- * Formats a date for a listing column: day, short month and year, in the request's
- * language. The list answers "which devices, roughly when", so second-level precision
- * would only add noise.
+ * Formats a date for a listing column: day, short month and year of the UTC calendar,
+ * in the request's language. The list answers "which devices, roughly when", so
+ * second-level precision would only add noise.
  */
 function formatDate(epochMs: number, locale: string): string {
-	return new Intl.DateTimeFormat(locale, {
+	return formatParts(new Date(epochMs), {
+		locale,
+		timeZone: "UTC",
 		year: "numeric",
 		month: "short",
 		day: "2-digit",
-	}).format(new Date(epochMs));
+	})
+		.map((part) => part.value)
+		.join("");
 }
 
 /**

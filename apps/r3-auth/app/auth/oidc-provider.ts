@@ -12,7 +12,7 @@ import type { PasswordPolicyError } from "@sdxc/password-policy";
 import type { Result } from "@sdxc/result";
 
 import { Base64Url, Hex, password, randomBytes, sha256, timingSafeEqual } from "@sdxc/crypto";
-import { elapsed } from "@sdxc/dates";
+import { elapsed, subtract, toUnixSeconds } from "@sdxc/dates";
 import { JWK, JWT } from "@sdxc/jwt";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
@@ -20,6 +20,7 @@ import { checkNewPassword } from "~/app/auth/password-policy";
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";
 import LogoutToken from "~/app/auth/values/logout-token";
+import { SESSION_TTL } from "~/app/data/session";
 
 /**
  * Bytes of entropy behind the session-state salt, matching the length this
@@ -620,8 +621,8 @@ export class OIDC {
 					active: true,
 					sub: session.subjectId,
 					client_id: session.clientId,
-					exp: Math.floor(session.expiresAt.getTime() / 1000),
-					iat: Math.floor(session.expiresAt.getTime() / 1000) - 30 * 24 * 60 * 60,
+					exp: toUnixSeconds(session.expiresAt),
+					iat: toUnixSeconds(subtract(session.expiresAt, SESSION_TTL)),
 					iss: this.issuer,
 					aud: session.clientId,
 					token_type: "Bearer",
@@ -654,7 +655,7 @@ export class OIDC {
 			sub: accessToken.data.subject,
 			client_id: accessToken.data.clientId ?? undefined,
 			exp: accessToken.data.expirationTime,
-			iat: Math.floor(accessToken.data.issuedAt.getTime() / 1000),
+			iat: toUnixSeconds(accessToken.data.issuedAt),
 			iss: accessToken.data.issuer,
 			aud: accessToken.data.audience ?? undefined,
 			token_type: "Bearer",
@@ -821,7 +822,7 @@ export class OIDC {
 	 */
 	async generateAuthzCode(input: OIDC.GenerateAuthzCodeInput) {
 		let issued = await wrap(async () => {
-			let authTime = Math.floor(Date.now() / 1000);
+			let authTime = toUnixSeconds(Date.now());
 
 			let [session, _grant] = await Promise.all([
 				this.repository.createSession(
@@ -1365,7 +1366,7 @@ export class OIDC {
 			}),
 		);
 
-		let authTime = Math.floor(session.createdAt.getTime() / 1000);
+		let authTime = toUnixSeconds(session.createdAt);
 
 		let idToken = await this.signJWT(
 			IdToken.generate(

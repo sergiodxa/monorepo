@@ -10,6 +10,8 @@
 
 import type { RequestContext } from "remix/router";
 
+import { formatParts } from "@sdxc/dates";
+
 import type { SessionWithClient } from "~/app/data/session";
 import type { SelectClient, SelectConnection, SelectSubject } from "~/database/schema";
 
@@ -244,7 +246,7 @@ export function toChrome(
 }
 
 /**
- * Formats an epoch-ms column as a readable date and time in the request's language.
+ * Formats an epoch-ms column as a readable UTC date and time in the request's language.
  *
  * The views render this string verbatim, so the formatting has to happen here: an ISO
  * timestamp in a table cell is both unreadable and wide enough to wrap the column.
@@ -252,13 +254,17 @@ export function toChrome(
 function toDateTime(value: number | null, locale: string): string | null {
 	if (value === null) return null;
 
-	return new Intl.DateTimeFormat(locale, {
+	return formatParts(new Date(value), {
+		locale,
+		timeZone: "UTC",
 		year: "numeric",
 		month: "short",
 		day: "numeric",
 		hour: "2-digit",
 		minute: "2-digit",
-	}).format(new Date(value));
+	})
+		.map((part) => part.value)
+		.join("");
 }
 
 /** First two characters of a name, for the avatar fallback when no image loads. */

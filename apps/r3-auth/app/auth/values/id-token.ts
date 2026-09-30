@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toUnixSeconds } from "@sdxc/dates";
+import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
 import { ID_TOKEN_TTL, ISSUER } from "~/app/config";
@@ -81,8 +83,8 @@ export default class IdToken extends JWT {
 		options?: { nonce?: string | null; scope?: string[]; authTime?: number },
 	) {
 		let scope = options?.scope ?? ["openid"];
-		let now = Math.floor(Date.now() / 1000);
-		let expiresAt = now + Math.floor(ID_TOKEN_TTL / 1000);
+		let now = toUnixSeconds(Date.now());
+		let expiresAt = now + toSeconds(ID_TOKEN_TTL);
 
 		return new IdToken({
 			sub: subject.id,
