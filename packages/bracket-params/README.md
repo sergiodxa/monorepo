@@ -3,14 +3,11 @@
 Read and write nested query strings and form data with bracket syntax, validated by a Standard
 Schema.
 
-`URLSearchParams` and `FormData` are flat: a name maps to values. `parse` reads bracket keys
-(`filter[status]=open&sort[0][field]=date&tags[]=a`) into nested objects and arrays and runs the
-result through your schema in the same call. `stringify` writes a nested object back as a query
-string, and `toFormData` writes it as a form, files included. Decoding and encoding are the
-platform's own.
-
-Every text value is read as a string: types come from the schema (`coerce.number()`), so `"007"`
-is never guessed into `7`. `parse` returns a `Result` instead of throwing.
+[`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams) and
+[`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) map a name to flat
+values. This package reads bracket keys such as `filter[status]=open` and `items[0][quantity]=2`
+into nested objects and arrays, runs them through your schema in the same call, and writes a
+nested value back in the same syntax.
 
 ## Installation
 
@@ -18,12 +15,20 @@ is never guessed into `7`. `parse` returns a `Result` instead of throwing.
 npm add @sdxc/bracket-params
 ```
 
-The schema comes from any [Standard Schema](https://standardschema.dev) library; the examples use
-[`remix/data-schema`](https://www.npmjs.com/package/remix).
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) installs alongside and supplies
-`isFailure` and `unwrap`.
+Schemas come from any [Standard Schema](https://standardschema.dev) library, such as
+[`remix`](https://www.npmjs.com/package/remix)'s `remix/data-schema`, installed alongside.
 
 ## Usage
+
+### Read A Query String
+
+```typescript
+import { parse } from "@sdxc/bracket-params";
+import * as s from "remix/data-schema";
+
+parse("?tags[]=a&tags[]=b", s.object({ tags: s.array(s.string()) }));
+// { status: "success", data: { tags: ["a", "b"] } }
+```
 
 ### Read A URL
 
@@ -38,25 +43,25 @@ let Filters = s.object({
 	page: coerce.number(),
 });
 
+// https://example.com/tasks?filter[status]=open&filter[tags][]=a&page=2
 let result = parse(new URL(request.url), Filters);
-// ?filter[status]=open&filter[tags][]=a&page=2
 
 if (isFailure(result)) return Response.json(result.error.issues, { status: 400 });
 result.data; // { filter: { status: "open", tags: ["a"] }, page: 2 }
 ```
 
-`parse` also reads a query string (with or without its `?`), a `URLSearchParams` and an
-[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location) `Location`.
-
 ### Read A Form
 
 ```typescript
+import { parse } from "@sdxc/bracket-params";
+import * as s from "remix/data-schema";
+
 let Post = s.object({
 	post: s.object({ title: s.string(), photos: s.array(s.instanceof_(File)) }),
 });
 
-let result = parse(await request.formData(), Post);
 // post[title]=Hi, post[photos][]=<file>, post[photos][]=<file>
+let result = parse(await request.formData(), Post);
 ```
 
 ### Write A Query Or A Form
@@ -64,9 +69,8 @@ let result = parse(await request.formData(), Post);
 ```typescript
 import { stringify, toFormData } from "@sdxc/bracket-params";
 
-let query = stringify({ filter: { status: "open", tags: ["a", "b"] }, page: 2 });
-// "filter%5Bstatus%5D=open&filter%5Btags%5D%5B0%5D=a&filter%5Btags%5D%5B1%5D=b&page=2"
-let params = new URLSearchParams(query);
+let query = stringify({ filter: { status: "open" }, page: 2 });
+// "filter%5Bstatus%5D=open&page=2"
 
 let form = toFormData({ post: { title: "Hi", photos: [file] } });
 await fetch("/posts", { method: "POST", body: form });
@@ -76,9 +80,12 @@ await fetch("/posts", { method: "POST", body: form });
 
 ### `parse(source, schema, options?)`
 
-Reads a query string, `URLSearchParams`, `URL`, `Location` or `FormData` into nested values and
-validates them against a synchronous schema, returning the schema's output or a
-`ValidationError` whose `issues` carry each path. How keys read:
+Reads a query string (with or without its `?`), `URLSearchParams`, `URL`,
+[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location) `Location` or `FormData` into
+nested values and validates them with a synchronous schema, returning an
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) `Result` with the schema's output or
+an [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) `ValidationError` whose
+`issues` carry each path.
 
 | Source          | Value                       |
 | --------------- | --------------------------- |
@@ -88,44 +95,51 @@ validates them against a synchronous schema, returning the schema's output or a
 | `a[1]=y&a[0]=x` | `{ a: ["x", "y"] }`         |
 | `a[0][b]=1`     | `{ a: [{ b: "1" }] }`       |
 | `a[0]=x&a[k]=y` | `{ a: { 0: "x", k: "y" } }` |
-| `a[b=1`         | `{ "a[b": "1" }` (literal)  |
+| `a[b=1`         | `{ "a[b": "1" }`            |
 
-A group whose keys are all indices becomes an array ordered by index, with gaps closed. Files in
-a `FormData` arrive as values unchanged. A key used both as a value and as a group
-(`a=1&a[b]=2`) fails, and a parameter with a `__proto__` segment is ignored.
+Text values stay strings, so types come from the schema (`coerce.number()`), and files arrive
+unchanged. A key used both as a value and as a group (`a=1&a[b]=2`) fails the parse, and a key
+with a `__proto__` segment is ignored.
 
-`options.depth` (default `5`) bounds the bracket segments of one key, and
-`options.parameterLimit` (default `1000`) bounds the entries of one source; exceeding either
-fails the parse.
+- `options.depth`: bracket segments one key may nest before the parse fails. Default `5`.
+- `options.parameterLimit`: entries one source may carry before the parse fails. Default `1000`.
 
 ### `stringify(value)`
 
-Writes an object as a query string without a leading `?`. Objects write `key[child]`, arrays
-write `key[index]`, a `Date` writes its ISO string, other values write `String(value)`, and
-`null`, `undefined` and empty groups write nothing. `parse(stringify(value))` reproduces any value
-whose leaves are strings.
+Writes an object as a query string without its `?`, with objects as `key[child]`, arrays as
+`key[index]` and a `Date` as its ISO string, skipping `null` and `undefined`. It stands in for
+appending every bracket key by hand:
+
+```typescript
+let params = new URLSearchParams();
+params.append("filter[status]", "open");
+params.append("page", "2");
+params.toString(); // what stringify({ filter: { status: "open" }, page: 2 }) returns
+```
 
 ### `toFormData(value)`
 
-Writes an object as `FormData` with the same keys `stringify` writes, appending each `Blob` or
-`File` as its own field, so `parse(toFormData(value))` also reproduces files.
+Writes an object as `FormData` with the keys `stringify` writes, appending each `Blob` or `File`
+as its own field so it keeps its name and type.
 
 ### `fieldName(path)`
 
-Writes a path as its bracket field name, the inverse of how `parse` reads one key:
-`fieldName(["items", 0, "quantity"])` is `"items[0][quantity]"`. It takes a schema issue's
-`path` as-is, so a form can place each issue on the input it belongs to.
+Writes a path as its bracket field name, so `fieldName(["items", 0, "quantity"])` is
+`"items[0][quantity]"`. It takes a schema issue's `path` as-is.
 
 ### Types
 
-`BracketParamsSource` is what `parse` reads and `ParseOptions` its limits. `TextValue` is what
-`stringify` writes as text, `FormValue` adds `Blob` for `toFormData`, and
-`BracketInput<Value, Leaf>` is the nested shape both writers accept. `PathSegment` is one
-segment `fieldName` takes.
+- `BracketParamsSource`: the sources `parse` reads.
+- `ParseOptions`: the `depth` and `parameterLimit` options of `parse`.
+- `TextValue`: a value the writers write as text: string, number, boolean, bigint, `Date`, `null` or `undefined`.
+- `FormValue`: a `TextValue` or a `Blob`, which only `toFormData` accepts.
+- `BracketInput<Value, Leaf>`: the nested shape of objects and arrays the writers accept.
+- `PathSegment`: one segment of a `fieldName` path, a key or a schema issue's `{ key }`.
 
 ## Pattern: Filter Links That Keep The Current Query
 
-Read the current filters, change one, and write the link back:
+Read the current filters, replace one, and write the link back. Every other part of the query
+carries over.
 
 ```typescript
 import { parse, stringify } from "@sdxc/bracket-params";
@@ -133,18 +147,61 @@ import { unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 let Query = s.object({
+	q: s.defaulted(s.string(), ""),
 	filter: s.defaulted(s.object({ status: s.optional(s.string()) }), {}),
-	q: s.optional(s.string()),
 });
 
 let current = unwrap(parse(new URL(request.url), Query));
 let openHref = `?${stringify({ ...current, filter: { ...current.filter, status: "open" } })}`;
 ```
 
+## Pattern: Show Each Issue On Its Input
+
+A form names its inputs with `fieldName`, and the same function turns each issue's path back into
+that name, so a refused submission can mark the exact input that failed.
+
+```typescript
+import { fieldName, parse } from "@sdxc/bracket-params";
+import * as s from "remix/data-schema";
+import { min } from "remix/data-schema/checks";
+import * as coerce from "remix/data-schema/coerce";
+
+let Order = s.object({
+	items: s.array(s.object({ sku: s.string(), quantity: coerce.number().pipe(min(1)) })),
+});
+
+// <input name={fieldName(["items", 0, "quantity"])} /> submits items[0][quantity]
+let result = parse(await request.formData(), Order);
+
+if (result.status === "failure") {
+	let errors = new Map(
+		result.error.issues.map((issue) => [fieldName(issue.path ?? []), issue.message]),
+	);
+	errors.get("items[0][quantity]"); // "Expected number greater than or equal to 1"
+}
+```
+
 ## Versioning
 
-Releases are dated (`2026.9.30`) and carry no compatibility promise between dates; pin an exact
-version.
+Releases are dated rather than semantic. A version is the UTC date it was published, written
+`YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out
+per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/bracket-params": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later
+release in the same year. An exact version keeps the upgrade yours to schedule.
 
 ## License
 
