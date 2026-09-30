@@ -12,6 +12,8 @@
 import type { Database } from "remix/data-table";
 
 import { Schedule } from "@sdxc/cron";
+import { endOfMonth, startOfDay, startOfMonth, toDayKey } from "@sdxc/dates";
+import { DAY_MS } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
 import { and, eq, inList, notNull } from "remix/data-table";
@@ -34,8 +36,6 @@ import {
 
 /** The bucket size for a scheduled check's job id. */
 const MS_PER_MINUTE = 60_000;
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Today plus yesterday, so the monthly ping counts hold whether or not the 01:00 UTC
@@ -269,19 +269,19 @@ export default class Monitor {
 	 * tables for the most recent {@link RAW_PING_WINDOW_DAYS}; each day counts once.
 	 */
 	static async countConsumedPingsByTeam(db: Database, teamId: string, date: Date): Promise<number> {
-		let monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
-		let monthEnd = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999);
+		let monthStart = startOfMonth(date, "UTC").getTime();
+		let monthEnd = endOfMonth(date, "UTC").getTime();
 
-		let dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * MS_PER_DAY);
+		let dayStart = startOfDay(date, "UTC").getTime();
+		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * DAY_MS);
 
 		/**
 		 * The rollup half ends the day before the raw half begins. Early in the month
 		 * that lands in the previous month, leaving `BETWEEN` an empty range — correct,
 		 * since the raw window already covers everything the month contains.
 		 */
-		let rollupFrom = utcDate(monthStart);
-		let rollupTo = utcDate(rawStart - MS_PER_DAY);
+		let rollupFrom = toDayKey(new Date(monthStart), "UTC");
+		let rollupTo = toDayKey(new Date(rawStart - DAY_MS), "UTC");
 
 		/** What each sub-count binds, in the order the query's placeholders read them. */
 		let rollupScope = [teamId, rollupFrom, rollupTo];
@@ -342,19 +342,19 @@ export default class Monitor {
 		monitorId: string,
 		date: Date,
 	): Promise<number> {
-		let monthStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
-		let monthEnd = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999);
+		let monthStart = startOfMonth(date, "UTC").getTime();
+		let monthEnd = endOfMonth(date, "UTC").getTime();
 
-		let dayStart = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * MS_PER_DAY);
+		let dayStart = startOfDay(date, "UTC").getTime();
+		let rawStart = Math.max(monthStart, dayStart - (RAW_PING_WINDOW_DAYS - 1) * DAY_MS);
 
 		/**
 		 * The rollup half ends the day before the raw half begins. Early in the month
 		 * that lands in the previous month, leaving `BETWEEN` an empty range — correct,
 		 * since the raw window already covers everything the month contains.
 		 */
-		let rollupFrom = utcDate(monthStart);
-		let rollupTo = utcDate(rawStart - MS_PER_DAY);
+		let rollupFrom = toDayKey(new Date(monthStart), "UTC");
+		let rollupTo = toDayKey(new Date(rawStart - DAY_MS), "UTC");
 
 		let result = await db.exec(
 			`SELECT
@@ -379,8 +379,8 @@ export default class Monitor {
 		teamId: string,
 		date: Date,
 	): Promise<number> {
-		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		let start = startOfMonth(date, "UTC");
+		let end = endOfMonth(date, "UTC");
 		let monthMs = end.getTime() - start.getTime();
 
 		let [httpMonitors, teamDnsMonitors, teamTcpMonitors, teamCronJobs] = await Promise.all([
@@ -436,15 +436,10 @@ export default class Monitor {
 		let monitor = await db.findOne(monitors, { where: { id: monitorId } });
 		if (!monitor) return 0;
 
-		let start = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-		let end = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+		let start = startOfMonth(date, "UTC");
+		let end = endOfMonth(date, "UTC");
 		let monthMs = end.getTime() - start.getTime();
 
 		return Math.round(monthMs / (monitor.interval_seconds * 1000));
 	}
-}
-
-/** An epoch-ms timestamp as the `"YYYY-MM-DD"` UTC date string `monitor_daily_stats.date` holds. */
-function utcDate(timestamp: number): string {
-	return new Date(timestamp).toISOString().slice(0, 10);
 }

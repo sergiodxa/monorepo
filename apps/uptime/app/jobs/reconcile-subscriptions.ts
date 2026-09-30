@@ -20,6 +20,7 @@
 
 import type { CustomerRef } from "@sdxc/billing";
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
@@ -45,9 +46,6 @@ const LIVE_STATUSES = ["active", "trialing"] as const;
  * what keeps this table from growing without a bound.
  */
 const DELIVERY_RETENTION_DAYS = 30;
-
-/** Milliseconds in a day, for the retention cut-off. */
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 	let stored = await Subscription.listAll(ctx.database);
@@ -144,7 +142,7 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 
 	let pruned = await WebhookDeliveries.prune(
 		ctx.database,
-		Date.now() - DELIVERY_RETENTION_DAYS * MS_PER_DAY,
+		Date.now() - DELIVERY_RETENTION_DAYS * DAY_MS,
 	);
 
 	ctx.log.set({

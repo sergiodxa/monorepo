@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
 import type { BatchedSweepResult } from "~/app/lib/retention";
@@ -21,8 +22,6 @@ import TrialWatch from "~/app/data/trial-watch";
 import jobs from "~/app/jobs";
 import { deleteOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * Retention windows, in days, one named constant per table so each is tunable without
@@ -106,7 +105,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	 * concurrently would immediately undo.
 	 */
 	for (let entry of RETAINED_TABLES) {
-		let cutoff = now - entry.retentionDays * MS_PER_DAY;
+		let cutoff = now - entry.retentionDays * DAY_MS;
 		let swept = await deleteOlderThan(ctx.database, entry.table, entry.dateColumn, cutoff);
 		tables.push(record(entry.table, swept));
 	}

@@ -16,6 +16,7 @@ import type { Adapter, RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Result } from "@sdxc/result";
 
 import { Turnstile } from "@sdxc/captcha/turnstile";
+import { toDayKey } from "@sdxc/dates";
 import { resolve } from "@sdxc/doh";
 import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
@@ -667,7 +668,7 @@ async function verifyChallenge(
  * @returns Probes left after this one, or a refusal when the day is spent.
  */
 async function spendDailyBudget(): Promise<Result<number, TrialRefusal>> {
-	let day = new Date().toISOString().slice(0, 10);
+	let day = toDayKey(new Date(), "UTC");
 	let key = `${BUDGET_PREFIX}:${day}`;
 
 	let used = 0;

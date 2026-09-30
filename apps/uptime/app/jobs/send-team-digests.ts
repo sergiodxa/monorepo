@@ -14,7 +14,7 @@ import type { Translate } from "@sdxc/i18n";
 import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
 
-import { subDays, toDayKey } from "@sdxc/dates";
+import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 
 import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
@@ -39,8 +39,6 @@ import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import { formatUptime, uptimeRatio, worstStatus } from "~/app/lib/uptime-report";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** The zone every window and the once-a-day bound are counted in. */
 const BOUND_ZONE = "UTC";
@@ -91,7 +89,11 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	 */
 	let now = Date.now();
 	let reported = digestWindow(period, now);
-	let recipients = await TeamDigest.listDue(ctx.database, period, startOfUtcDay(now));
+	let recipients = await TeamDigest.listDue(
+		ctx.database,
+		period,
+		startOfDay(new Date(now), BOUND_ZONE).getTime(),
+	);
 	ctx.log.set({ digests: { period, due: recipients.length } });
 
 	/**
@@ -334,12 +336,6 @@ function email(send: {
 	});
 }
 
-/** Midnight UTC on the day `now` falls in, which is the once-a-day bound as an instant. */
-function startOfUtcDay(now: number): number {
-	let date = new Date(now);
-	return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-}
-
 /**
  * The UTC days one period reports, oldest first and ending yesterday. Yesterday and not
  * today, since the roll-up runs once, at 01:00, for the day that just closed — a window
@@ -350,7 +346,7 @@ function startOfUtcDay(now: number): number {
  * @returns The window, as the days it covers and its two ends.
  */
 function digestWindow(period: DigestPeriod, now: number): DigestWindow {
-	let yesterday = new Date(now - MS_PER_DAY);
+	let yesterday = subDays(new Date(now), 1);
 	let count = WINDOW_DAYS[period];
 	let days = Array.from({ length: count }, (_, index) =>
 		toDayKey(subDays(yesterday, count - 1 - index), BOUND_ZONE),

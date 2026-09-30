@@ -12,6 +12,7 @@
 import type { Database } from "remix/data-table";
 
 import { toDayKey } from "@sdxc/dates";
+import { DAY_MS } from "@sdxc/dates/zone";
 import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
@@ -49,8 +50,6 @@ export const TRIAL_WATCH_CONVERSION_WINDOW_DAYS = 30;
  * afternoon, at 168 checks a week — a rounding error against a paying monitor.
  */
 export const TRIAL_WATCH_INTERVAL_SECONDS = 3600;
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * The zone the once-per-day change-email bound is counted in. UTC so every
@@ -177,8 +176,8 @@ export default class TrialWatch {
 				...input,
 				normalized_url: normalizeTrialUrl(input.url),
 				report_token: generateUUID(),
-				expires_at: now + TRIAL_WATCH_DURATION_DAYS * MS_PER_DAY,
-				converts_until: now + TRIAL_WATCH_CONVERSION_WINDOW_DAYS * MS_PER_DAY,
+				expires_at: now + TRIAL_WATCH_DURATION_DAYS * DAY_MS,
+				converts_until: now + TRIAL_WATCH_CONVERSION_WINDOW_DAYS * DAY_MS,
 				next_due_at: now + TRIAL_WATCH_INTERVAL_SECONDS * 1000,
 			},
 			{ touch: true, returnRow: true },

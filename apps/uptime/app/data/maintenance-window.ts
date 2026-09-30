@@ -10,6 +10,8 @@
 import type { ICalendar } from "@sdxc/icalendar";
 import type { Database } from "remix/data-table";
 
+import { daysInMonth, startOfDay, subDays } from "@sdxc/dates";
+import { calendarDayAt, DAY_MS, weekdayOf } from "@sdxc/dates/zone";
 import { utc } from "@sdxc/icalendar";
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
@@ -37,7 +39,6 @@ type Weekday = (typeof WEEKDAYS)[number];
 const RRULE_WEEKDAYS: ICalendar.Weekday[] = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 
 const MINUTE_MS = 60_000;
-const DAY_MS = 86_400_000;
 
 /**
  * How long after its end a one-off window stays on a status page's calendar, so a
@@ -249,14 +250,12 @@ function recurrenceRule(pattern: RecurringPattern): ICalendar.RecurrenceRule {
 
 /** Whether a pattern's occurrence starts on the UTC day beginning at `dayStart`. */
 function startsOn(pattern: RecurringPattern, dayStart: number): boolean {
-	let day = new Date(dayStart);
-	if (pattern.type === "weekly")
-		return day.getUTCDay() === WEEKDAYS.indexOf(pattern.dayOfWeek ?? "sunday");
+	let day = calendarDayAt(dayStart, "UTC");
+	if (pattern.type === "weekly") {
+		return weekdayOf(day) === WEEKDAYS.indexOf(pattern.dayOfWeek ?? "sunday");
+	}
 	if (pattern.type === "monthly") {
-		let daysInMonth = new Date(
-			Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1, 0),
-		).getUTCDate();
-		return day.getUTCDate() === Math.min(pattern.dayOfMonth ?? 1, daysInMonth);
+		return day.day === Math.min(pattern.dayOfMonth ?? 1, daysInMonth(day.year, day.month));
 	}
 	return true;
 }
@@ -277,7 +276,7 @@ export function recurringEvent(window: SelectMaintenanceWindow): ICalendar.Event
 	if (lengthMinutes === 0) return null;
 	if (lengthMinutes < 0) lengthMinutes += 24 * 60;
 
-	let dayStart = Math.floor(window.created_at / DAY_MS) * DAY_MS - DAY_MS;
+	let dayStart = subDays(startOfDay(new Date(window.created_at), "UTC"), 1).getTime();
 	let start = dayStart + startMinutes * MINUTE_MS;
 	while (!startsOn(pattern, dayStart) || start + lengthMinutes * MINUTE_MS <= window.created_at) {
 		dayStart += DAY_MS;

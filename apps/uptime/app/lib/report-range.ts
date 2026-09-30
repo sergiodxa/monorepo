@@ -9,15 +9,24 @@
 
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import {
+	addMonths,
+	diffInDays,
+	endOfMonth,
+	endOfQuarter,
+	fromDayKey,
+	startOfDay,
+	startOfMonth,
+	startOfQuarter,
+	subDays,
+	toDayKey,
+} from "@sdxc/dates";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import { getYesterdayDateUtc } from "~/app/data/monitor-daily-stats";
 
 /** The longest range a report covers, a leap year of daily rows. */
 export const MAX_REPORT_DAYS = 366;
-
-/** Milliseconds in a UTC day, which has no DST. */
-const DAY_MS = 86_400_000;
 
 /**
  * An inclusive range of UTC days as `YYYY-MM-DD`.
@@ -69,21 +78,20 @@ export type ReportPreset = (typeof REPORT_PRESETS)[number];
 export function presetRange(preset: ReportPreset, now: number = Date.now()): ReportRange {
 	let yesterday = getYesterdayDateUtc(now);
 	let today = new Date(now);
-	let year = today.getUTCFullYear();
-	let month = today.getUTCMonth();
 
 	switch (preset) {
 		case "lastMonth": {
-			return { from: isoDate(Date.UTC(year, month - 1, 1)), to: isoDate(Date.UTC(year, month, 0)) };
+			let previous = addMonths(startOfMonth(today, "UTC"), -1, "UTC");
+			return { from: toDayKey(previous, "UTC"), to: toDayKey(endOfMonth(previous, "UTC"), "UTC") };
 		}
 		case "last30Days": {
-			return { from: isoDate(parseDay(yesterday)! - 29 * DAY_MS), to: yesterday };
+			return { from: toDayKey(subDays(startOfDay(today, "UTC"), 30), "UTC"), to: yesterday };
 		}
 		case "lastQuarter": {
-			let quarterStart = month - (month % 3);
+			let previous = addMonths(startOfQuarter(today, "UTC"), -3, "UTC");
 			return {
-				from: isoDate(Date.UTC(year, quarterStart - 3, 1)),
-				to: isoDate(Date.UTC(year, quarterStart, 0)),
+				from: toDayKey(previous, "UTC"),
+				to: toDayKey(endOfQuarter(previous, "UTC"), "UTC"),
 			};
 		}
 		case "yearToDate": {
@@ -107,7 +115,7 @@ export function checkRange(
 	let from = parseDay(range.from);
 	let to = parseDay(range.to);
 	if (from === null || to === null) return failure(new ReportRangeError("invalid"));
-	if (from > to) return failure(new ReportRangeError("reversed"));
+	if (from.getTime() > to.getTime()) return failure(new ReportRangeError("reversed"));
 	if (range.to > getYesterdayDateUtc(now)) return failure(new ReportRangeError("future"));
 	if (dayCount(range) > MAX_REPORT_DAYS) return failure(new ReportRangeError("tooLong"));
 	return success(range);
@@ -120,7 +128,7 @@ export function checkRange(
  * @returns The day count
  */
 export function dayCount(range: ReportRange): number {
-	return Math.round((parseDay(range.to)! - parseDay(range.from)!) / DAY_MS) + 1;
+	return diffInDays(parseDay(range.to)!, parseDay(range.from)!, "UTC") + 1;
 }
 
 /**
@@ -130,33 +138,23 @@ export function dayCount(range: ReportRange): number {
  * @returns `true` for the first through the last day of one month
  */
 export function isWholeMonth(range: ReportRange): boolean {
-	if (!range.from.endsWith("-01") || range.from.slice(0, 7) !== range.to.slice(0, 7)) {
-		return false;
-	}
-	let [year, month] = range.from.split("-").map(Number);
-	return range.to === isoDate(Date.UTC(year!, month!, 0));
+	let from = parseDay(range.from);
+	if (from === null) return false;
+	return (
+		range.from === toDayKey(startOfMonth(from, "UTC"), "UTC") &&
+		range.to === toDayKey(endOfMonth(from, "UTC"), "UTC")
+	);
 }
 
 /**
- * Reads `YYYY-MM-DD` as the UTC midnight it names, rejecting days the calendar lacks
- * (`2026-02-30`), which `Date.UTC` would otherwise roll into March.
+ * Reads `YYYY-MM-DD` exactly as written as the UTC midnight it names, so a day the
+ * calendar lacks (`2026-02-30`) or a value with surrounding whitespace reads as `null`.
  *
  * @param value - The submitted day
- * @returns Epoch milliseconds, or `null` when the day does not exist
+ * @returns The day's first instant, or `null` when the value names no day
  */
-function parseDay(value: string): number | null {
-	let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-	if (!match) return null;
-	let instant = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
-	return isoDate(instant) === value ? instant : null;
-}
-
-/**
- * Writes an instant as its UTC day.
- *
- * @param instant - Epoch milliseconds
- * @returns `YYYY-MM-DD`
- */
-function isoDate(instant: number): string {
-	return new Date(instant).toISOString().slice(0, 10);
+function parseDay(value: string): Date | null {
+	let parsed = fromDayKey(value, "UTC");
+	if (isFailure(parsed) || toDayKey(parsed.data, "UTC") !== value) return null;
+	return parsed.data;
 }

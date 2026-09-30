@@ -11,6 +11,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
+import { DAY_MS } from "@sdxc/dates/zone";
 import { generateUUID } from "@sdxc/uuid";
 import { and, eq, gte } from "remix/data-table";
 
@@ -28,9 +30,7 @@ export const UPTIME_WINDOW_DAYS = 90;
 
 /** The oldest `"YYYY-MM-DD"` date a `days`-long window ending today (inclusive) covers. */
 function windowStartDate(days: number): string {
-	let today = new Date();
-	let end = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
-	return new Date(end - (days - 1) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	return toDayKey(subDays(startOfDay(new Date(), "UTC"), days - 1), "UTC");
 }
 
 export interface DailyStatsInput {
@@ -100,12 +100,11 @@ export function calculateDailyStatus(
 
 /** Yesterday's date in UTC, as `"YYYY-MM-DD"` — the day `AggregateDailyStatsJob` rolls up. */
 export function getYesterdayDateUtc(now: number = Date.now()): string {
-	let yesterday = new Date(now - 24 * 60 * 60 * 1000);
-	return yesterday.toISOString().slice(0, 10);
+	return toDayKey(subDays(new Date(now), 1), "UTC");
 }
 
 /** The `[start, end)` epoch-ms bounds of a UTC calendar day, for D1 `WHERE` clauses. */
 export function utcDayBounds(date: string): { start: number; end: number } {
 	let start = new Date(`${date}T00:00:00.000Z`).getTime();
-	return { start, end: start + 24 * 60 * 60 * 1000 };
+	return { start, end: start + DAY_MS };
 }

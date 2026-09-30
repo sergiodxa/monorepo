@@ -12,6 +12,7 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
@@ -43,14 +44,12 @@ import {
 import { HttpCheck } from "~/app/services/http-check";
 import routes from "~/routes/web";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
 /**
  * How long after creation a watch's first unattended check is still looked for. A day is
  * generous for a delayed sweep, and keeps the extra indexed read that confirms
  * `checks_run === 1` off the other 167 checks a watch gets over the week.
  */
-const FIRST_CHECK_WINDOW_MS = MS_PER_DAY;
+const FIRST_CHECK_WINDOW_MS = DAY_MS;
 
 /** Origin the wrap-up's call to action points at; the host this app is served from. */
 const APP_ORIGIN = "https://uptime.sergiodxa.com";
@@ -338,7 +337,7 @@ async function sendSummary(
 		new TrialWeeklyDigestEmail({
 			to: lead.email,
 			url: row.url,
-			segments: segmentsOver(results, row.created_at, MS_PER_DAY, TRIAL_WATCH_DURATION_DAYS),
+			segments: segmentsOver(results, row.created_at, DAY_MS, TRIAL_WATCH_DURATION_DAYS),
 			stats: watchStats(row),
 			subscribeUrl,
 			/**

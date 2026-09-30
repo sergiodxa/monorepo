@@ -10,6 +10,7 @@
 import type { ICalendar } from "@sdxc/icalendar";
 import type { Database } from "remix/data-table";
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
 
@@ -28,7 +29,7 @@ import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope
 const PRODUCT_ID = "-//sergiodxa//uptime//EN";
 
 /** How far ahead the page looks for a recurring window's next occurrence. */
-const LOOKAHEAD_MS = 62 * 86_400_000;
+const LOOKAHEAD_MS = 62 * DAY_MS;
 
 /** A service on a status page, under the name the page shows it by. */
 export interface NamedStatusPageService extends StatusPageService {

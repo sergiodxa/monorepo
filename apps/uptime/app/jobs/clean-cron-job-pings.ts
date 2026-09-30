@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
 import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
@@ -16,8 +17,6 @@ import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { deleteOlderThan, redactOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
  * How long a ping keeps the request details it was recorded with, before they are nulled
@@ -42,7 +41,7 @@ export default createJobHandler(jobs.cleanCronJobPings, async (ctx) => {
 		ctx.database,
 		"cron_job_pings",
 		"created_at",
-		now - PING_RETENTION_DAYS * MS_PER_DAY,
+		now - PING_RETENTION_DAYS * DAY_MS,
 	);
 
 	let redacted = await redactOlderThan(
@@ -50,7 +49,7 @@ export default createJobHandler(jobs.cleanCronJobPings, async (ctx) => {
 		"cron_job_pings",
 		"created_at",
 		PING_DETAIL_COLUMNS,
-		now - PING_DETAIL_RETENTION_DAYS * MS_PER_DAY,
+		now - PING_DETAIL_RETENTION_DAYS * DAY_MS,
 	);
 
 	ctx.log.set({

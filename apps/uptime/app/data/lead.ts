@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { toDayKey } from "@sdxc/dates";
+import { startOfDay, toDayKey } from "@sdxc/dates";
 import { generateUUID } from "@sdxc/uuid";
 import { getTableName } from "remix/data-table";
 
@@ -78,12 +78,6 @@ export function shouldSendDigest(
 ) {
 	let since = lead.last_digest_at ?? lead.created_at;
 	return toDayKey(new Date(since), BOUND_ZONE) !== toDayKey(new Date(now), BOUND_ZONE);
-}
-
-/** Midnight UTC on the day `now` falls in, which is the digest bound as an instant. */
-function startOfUtcDay(now: number) {
-	let date = new Date(now);
-	return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
 export default class Lead {
@@ -161,7 +155,7 @@ export default class Lead {
 			                  FROM ${getTableName(trialWatches)} w
 			                 WHERE w.lead_id = l.id AND w.next_due_at IS NOT NULL)
 			  ORDER BY l.created_at ASC`,
-			[startOfUtcDay(now)],
+			[startOfDay(new Date(now), BOUND_ZONE).getTime()],
 		);
 
 		return (result.rows ?? []) as unknown as SelectLead[];

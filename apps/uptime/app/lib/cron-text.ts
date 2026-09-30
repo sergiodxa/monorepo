@@ -9,9 +9,11 @@
  */
 
 import type { InvalidCronExpression, TimeOfDay } from "@sdxc/cron";
+import type { Weekday } from "@sdxc/dates";
 import type { Translate } from "@sdxc/i18n";
 
 import { Schedule } from "@sdxc/cron";
+import { formatWeekday } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 
 /** The translator and locale a schedule sentence is built from. */
@@ -21,12 +23,6 @@ export interface ScheduleTextOptions {
 	/** The request's translator, i.e. `ctx.intl.t`. */
 	t: Translate;
 }
-
-/** A Sunday at UTC midnight, the anchor weekday index `0` names. */
-const WEEKDAY_ANCHOR_MS = Date.UTC(2026, 0, 4);
-
-/** Milliseconds in a day, for stepping the weekday anchor. */
-const MS_PER_DAY = 86_400_000;
 
 /**
  * Describes a stored cron expression in the viewer's language: the descriptor's `kind`
@@ -152,7 +148,8 @@ function pad(value: number): string {
 }
 
 /**
- * The localized name of a weekday, indexed as the cron field is: `0` is Sunday.
+ * The localized name of a weekday, indexed as the cron field is: `0` is Sunday, the
+ * same numbering a calendar weekday uses.
  *
  * @param weekday - Weekday index from a descriptor.
  * @param locale - Locale the name comes from.
@@ -162,9 +159,7 @@ function pad(value: number): string {
  * weekdayName(1, "es"); // "lunes"
  */
 function weekdayName(weekday: number, locale: string): string {
-	return new Intl.DateTimeFormat(locale, { timeZone: "UTC", weekday: "long" }).format(
-		new Date(WEEKDAY_ANCHOR_MS + weekday * MS_PER_DAY),
-	);
+	return formatWeekday(weekday as Weekday, { locale, style: "long" });
 }
 
 /**

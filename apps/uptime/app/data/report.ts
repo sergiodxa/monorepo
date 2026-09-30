@@ -9,6 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { DAY_MS } from "@sdxc/dates/zone";
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
 import { getTableName } from "remix/data-table";
@@ -123,8 +124,6 @@ const D1_BOUND_PARAMETER_LIMIT = 100;
 const MONITORS_PER_QUERY = D1_BOUND_PARAMETER_LIMIT - 2;
 
 const MINUTE_MS = 60_000;
-
-const DAY_MS = 86_400_000;
 
 /**
  * Every monitor of every type as one relation of `(id, type, type_order, name, team_id,

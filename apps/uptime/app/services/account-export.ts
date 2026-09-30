@@ -11,6 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { toDayKey } from "@sdxc/dates";
 import { inList } from "remix/data-table";
 
 import type {
@@ -208,7 +209,7 @@ export async function buildAccountExport(
  * other in a downloads folder.
  */
 export function accountExportFilename(subjectId: string, now: Date = new Date()): string {
-	let day = now.toISOString().slice(0, 10);
+	let day = toDayKey(now, "UTC");
 	return `uptime-account-export-${day}-${subjectId}.json`;
 }
 

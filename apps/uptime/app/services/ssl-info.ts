@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { SelectMonitor } from "~/database/schema";
+import { DAY_MS } from "@sdxc/dates/zone";
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+import type { SelectMonitor } from "~/database/schema";
 
 /** Days-until-expiry thresholds `shouldAlertOnSslStatus` treats as alert-worthy. */
 const WARNING_THRESHOLDS_DAYS = [30, 14, 7, 1];
@@ -32,7 +32,7 @@ export function calculateSslStatus(
 ): { status: SslStatus; daysUntilExpiry: number | null } {
 	if (expiresAt === null) return { status: "unknown", daysUntilExpiry: null };
 
-	let daysUntilExpiry = Math.floor((expiresAt - Date.now()) / MS_PER_DAY);
+	let daysUntilExpiry = Math.floor((expiresAt - Date.now()) / DAY_MS);
 
 	if (daysUntilExpiry < 0) return { status: "expired", daysUntilExpiry };
 	if (daysUntilExpiry <= warningDays) return { status: "expiring", daysUntilExpiry };
