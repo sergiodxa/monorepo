@@ -13,6 +13,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { formatDateTime, formatRange } from "@sdxc/dates";
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { notFound } from "@sdxc/http/response/html";
 import {
@@ -268,11 +269,6 @@ export default createAction(routes.statusPage, async (ctx) => {
 			now,
 		)
 	).flatMap((entry) => (entry.next ? [{ ...entry, next: entry.next }] : []));
-	let maintenanceTime = new Intl.DateTimeFormat(ctx.locale, {
-		dateStyle: "medium",
-		timeStyle: "short",
-		timeZone: "UTC",
-	});
 	let feedUrl = new URL(routes.statusPageCalendar.href({ slug }), ctx.url);
 	let webcalUrl = `webcal://${feedUrl.host}${feedUrl.pathname}`;
 	let googleUrl = `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
@@ -378,7 +374,11 @@ export default createAction(routes.statusPage, async (ctx) => {
 								</div>
 								<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 									{ctx.intl.t("statusPage.maintenance.when", {
-										range: maintenanceTime.formatRange(entry.next.start, entry.next.end),
+										range: formatRange(new Date(entry.next.start), new Date(entry.next.end), {
+											locale: ctx.locale,
+											timeZone: "UTC",
+											timeStyle: "short",
+										}),
 									})}
 								</p>
 								{entry.affected.length > 0 && (
@@ -497,7 +497,10 @@ export default createAction(routes.statusPage, async (ctx) => {
 										<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
 											{ctx.intl.t("statusPage.cronJobs.lastPing")}:{" "}
 											{service.lastPingAt
-												? new Date(service.lastPingAt).toLocaleString()
+												? formatDateTime(new Date(service.lastPingAt), {
+														locale: ctx.locale,
+														timeZone: "UTC",
+													})
 												: ctx.intl.t("statusPage.cronJobs.never")}
 										</p>
 									</div>
@@ -508,7 +511,10 @@ export default createAction(routes.statusPage, async (ctx) => {
 				)}
 
 				<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>
-					{ctx.intl.t("statusPage.footer.lastUpdated", { date: renderedAt.toLocaleString() })} ·{" "}
+					{ctx.intl.t("statusPage.footer.lastUpdated", {
+						date: formatDateTime(renderedAt, { locale: ctx.locale, timeZone: "UTC" }),
+					})}{" "}
+					·{" "}
 					<a
 						href={routes.home.href()}
 						mix={[fg("brand"), textDecoration("none"), hover(textDecoration("underline"))]}

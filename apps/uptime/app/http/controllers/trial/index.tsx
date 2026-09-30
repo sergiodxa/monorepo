@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
+import { formatDateTime } from "@sdxc/dates";
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import {
 	ActivityIcon,
@@ -458,9 +459,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 	let redirected = probe !== undefined && isRedirectProbe(probe);
 
 	let checkedAt = probe
-		? new Intl.DateTimeFormat(ctx.locale, { dateStyle: "medium", timeStyle: "short" }).format(
-				new Date(probe.checkedAt),
-			)
+		? formatDateTime(new Date(probe.checkedAt), { locale: ctx.locale, timeZone: "UTC" })
 		: "";
 
 	let benefits: SellingPoint[] = [

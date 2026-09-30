@@ -7,6 +7,7 @@
 
 import type { Translate } from "@sdxc/i18n";
 
+import { formatDateTime } from "@sdxc/dates";
 import { BellIcon, HistoryIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { fontSize } from "@sdxc/u/typography";
@@ -148,7 +149,12 @@ export default createAction(routes.app.team.alerts.history, {
 														</p>
 													)}
 												</Table.Cell>
-												<Table.Cell>{new Date(event.sent_at).toLocaleString()}</Table.Cell>
+												<Table.Cell>
+													{formatDateTime(new Date(event.sent_at), {
+														locale: ctx.locale,
+														timeZone: "UTC",
+													})}
+												</Table.Cell>
 											</Table.Row>
 										))}
 									</Table.Body>

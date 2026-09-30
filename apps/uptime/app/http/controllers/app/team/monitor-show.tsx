@@ -11,7 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
-import { formatDateTime, formatRelative } from "@sdxc/dates";
+import { formatDate, formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import {
@@ -254,7 +254,7 @@ function SslCard(handle: Handle<SslCard.Props>) {
 						<p mix={[fontSize("1.125rem"), weight(600)]}>
 							{monitor.ssl_expires_at === null
 								? "—"
-								: new Date(monitor.ssl_expires_at).toLocaleDateString()}
+								: formatDate(new Date(monitor.ssl_expires_at), { locale, timeZone: "UTC" })}
 						</p>
 						{daysUntilExpiry !== null && (
 							<p mix={[fontSize("0.8125rem"), fg("neutral.muted")]}>

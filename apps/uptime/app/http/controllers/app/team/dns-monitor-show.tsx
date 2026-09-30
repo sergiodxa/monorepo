@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { PencilIcon, PlayIcon, RefreshCwIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -153,7 +154,10 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								value={
 									monitor.zone_file_imported_at === null
 										? ctx.intl.t("page.dnsMonitorDetail.info.zoneFileNeverImported")
-										: new Date(monitor.zone_file_imported_at).toLocaleString()
+										: formatDateTime(new Date(monitor.zone_file_imported_at), {
+												locale: ctx.locale,
+												timeZone: "UTC",
+											})
 								}
 							/>
 						</div>

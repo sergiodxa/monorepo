@@ -11,6 +11,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { toDayKey } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -218,7 +219,7 @@ function SslSettingsSection(handle: Handle<SslSettingsSection.Props>) {
 	return () => {
 		let { team, monitor, intl } = handle.props;
 		let expiresAtValue = monitor.ssl_expires_at
-			? new Date(monitor.ssl_expires_at).toISOString().slice(0, 10)
+			? toDayKey(new Date(monitor.ssl_expires_at), "UTC")
 			: "";
 
 		return (

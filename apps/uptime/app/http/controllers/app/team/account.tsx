@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDate } from "@sdxc/dates";
 import { DownloadIcon, LogOutIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
@@ -618,7 +619,10 @@ export default createAction(routes.app.team.account, {
 										</h3>
 										<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
 											{ctx.intl.t("page.account.deleteAccount.queued.requestedAt", {
-												date: new Date(queuedDeletion.requested_at).toISOString().slice(0, 10),
+												date: formatDate(new Date(queuedDeletion.requested_at), {
+													locale: ctx.locale,
+													timeZone: "UTC",
+												}),
 											})}
 										</p>
 									</div>

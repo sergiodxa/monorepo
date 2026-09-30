@@ -16,8 +16,10 @@ import { describe, expect, test } from "vitest";
 
 import {
 	CreateMaintenanceWindowSchema,
+	createMaintenanceWindowSchema,
 	MaintenanceWindowIdSchema,
 	UpdateMaintenanceWindowSchema,
+	updateMaintenanceWindowSchema,
 } from "~/app/http/validators/maintenance-window";
 
 function baseFormData(overrides: Record<string, string> = {}): FormData {
@@ -124,6 +126,46 @@ describe("CreateMaintenanceWindowSchema", () => {
 		if (result.success) {
 			expect(result.value.recurring_pattern).toBe("daily:02:00-04:00");
 		}
+	});
+});
+
+/**
+ * Regression: the wall clock was once parsed with `new Date(value)`, which reads it in
+ * the process zone, so the stored instant depended on where the server ran.
+ */
+describe("datetime-local zone", () => {
+	test("reads the default schema's clocks as UTC, whatever the process zone", () => {
+		let result = s.parseSafe(CreateMaintenanceWindowSchema, baseFormData());
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.value.starts_at).toBe(Date.UTC(2026, 0, 5, 2, 0));
+			expect(result.value.ends_at).toBe(Date.UTC(2026, 0, 5, 4, 0));
+		}
+	});
+
+	test("resolves a create submitted in a non-UTC zone to that zone's instant", () => {
+		let schema = createMaintenanceWindowSchema("America/New_York");
+		let result = s.parseSafe(schema, baseFormData());
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.value.starts_at).toBe(Date.UTC(2026, 0, 5, 7, 0));
+			expect(result.value.ends_at).toBe(Date.UTC(2026, 0, 5, 9, 0));
+		}
+	});
+
+	test("resolves an update submitted in a non-UTC zone to that zone's instant", () => {
+		let schema = updateMaintenanceWindowSchema("Asia/Tokyo");
+		let result = s.parseSafe(schema, baseFormData({ window_id: "win_1" }));
+		expect(result.success).toBe(true);
+		if (result.success) expect(result.value.starts_at).toBe(Date.UTC(2026, 0, 4, 17, 0));
+	});
+
+	test("rejects a day the month lacks", () => {
+		let result = s.parseSafe(
+			CreateMaintenanceWindowSchema,
+			baseFormData({ starts_at: "2026-02-30T02:00" }),
+		);
+		expect(result.success).toBe(false);
 	});
 });
 

@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toDateTimeLocal } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -24,6 +25,7 @@ import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { MAINTENANCE_TIME_ZONE } from "~/app/http/validators/maintenance-window";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";
 import FormPage from "~/resources/components/form-page";
@@ -35,13 +37,6 @@ import routes from "~/routes/web";
 
 /** `id` shared by the delete-confirmation trigger and its {@link AlertDialog}. */
 const DELETE_DIALOG_ID = "delete-maintenance-window";
-
-/** Formats an epoch-ms timestamp for a `datetime-local` input's default value. */
-function toDatetimeLocal(epochMs: number): string {
-	let date = new Date(epochMs);
-	let pad = (n: number) => String(n).padStart(2, "0");
-	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 /** GET /app/:team/maintenance/:windowId/edit — a maintenance window's edit form. */
 export default createAction(routes.app.team.maintenanceWindows.edit, {
@@ -133,7 +128,10 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 													type="datetime-local"
 													name="starts_at"
 													required
-													defaultValue={toDatetimeLocal(window.starts_at)}
+													defaultValue={toDateTimeLocal(
+														new Date(window.starts_at),
+														MAINTENANCE_TIME_ZONE,
+													)}
 												/>
 											</div>
 
@@ -144,7 +142,10 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 													type="datetime-local"
 													name="ends_at"
 													required
-													defaultValue={toDatetimeLocal(window.ends_at)}
+													defaultValue={toDateTimeLocal(
+														new Date(window.ends_at),
+														MAINTENANCE_TIME_ZONE,
+													)}
 												/>
 											</div>
 										</SettingsSection.Body>

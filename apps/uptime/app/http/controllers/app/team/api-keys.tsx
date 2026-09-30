@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDate, formatDateTime } from "@sdxc/dates";
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { KeyIcon, PlusIcon } from "@sdxc/icons";
 import { border } from "@sdxc/u/color";
@@ -148,13 +149,19 @@ export default createAction(routes.app.team.apiKeys.index, {
 													</Table.Cell>
 													<Table.Cell>
 														{apiKey.last_used_at
-															? new Date(apiKey.last_used_at).toLocaleString()
+															? formatDateTime(new Date(apiKey.last_used_at), {
+																	locale: ctx.locale,
+																	timeZone: "UTC",
+																})
 															: ctx.intl.t("page.apiKeys.table.lastUsed.never")}
 													</Table.Cell>
 													<Table.Cell>
 														{apiKey.expires_at ? (
 															<Badge {...badgeVariant(isExpired ? "down" : "neutral")}>
-																{new Date(apiKey.expires_at).toLocaleDateString()}
+																{formatDate(new Date(apiKey.expires_at), {
+																	locale: ctx.locale,
+																	timeZone: "UTC",
+																})}
 															</Badge>
 														) : (
 															ctx.intl.t("page.apiKeys.table.expires.never")

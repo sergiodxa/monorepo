@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { flex, flexWrap, gap } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";
@@ -106,7 +107,12 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 								<Table.Body>
 									{results.map((result) => (
 										<Table.Row key={result.id}>
-											<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
+											<Table.Cell>
+												{formatDateTime(new Date(result.checked_at), {
+													locale: ctx.locale,
+													timeZone: "UTC",
+												})}
+											</Table.Cell>
 											<Table.Cell>
 												<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
 													{ctx.intl.t(`page.tcpMonitors.table.status.${result.status}`)}

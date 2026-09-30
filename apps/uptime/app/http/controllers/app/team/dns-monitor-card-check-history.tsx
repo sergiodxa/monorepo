@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDateTime } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -86,7 +87,12 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 							<Table.Body>
 								{results.map((result) => (
 									<Table.Row key={result.id}>
-										<Table.Cell>{new Date(result.checked_at).toLocaleString()}</Table.Cell>
+										<Table.Cell>
+											{formatDateTime(new Date(result.checked_at), {
+												locale: ctx.locale,
+												timeZone: "UTC",
+											})}
+										</Table.Cell>
 										<Table.Cell>
 											<Badge {...badgeVariant(STATUS_BADGE_TONE[result.status] ?? "neutral")}>
 												{result.status}

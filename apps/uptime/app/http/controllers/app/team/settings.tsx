@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { addDays, formatDate, formatRelative } from "@sdxc/dates";
 import { Trans } from "@sdxc/i18n/ui";
 import {
 	BadgeMinusIcon,
@@ -81,27 +82,17 @@ export const TEAM_LOGO_ERROR = "teamLogoError";
 /** DOM id of the logo field's error, referenced by the input's `aria-describedby`. */
 const LOGO_ERROR_ID = "team-logo-error";
 
-function getInviteExpirationDate(createdAt: number): Date {
-	let expiresAt = new Date(createdAt);
-	expiresAt.setDate(expiresAt.getDate() + INVITE_EXPIRATION_DAYS);
-	return expiresAt;
-}
-
-/** A locale-formatted "in 3 days" description of `target` relative to now, or `isExpired: true` once it's past. */
-function formatRelativeTime(target: Date, locale: string): { text: string; isExpired: boolean } {
-	let diffMs = target.getTime() - Date.now();
-	if (diffMs <= 0) return { text: "", isExpired: true };
-
-	let rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
-	let diffSeconds = Math.floor(diffMs / 1000);
-	let diffMinutes = Math.floor(diffSeconds / 60);
-	let diffHours = Math.floor(diffMinutes / 60);
-	let diffDays = Math.floor(diffHours / 24);
-
-	if (diffDays > 0) return { text: rtf.format(diffDays, "day"), isExpired: false };
-	if (diffHours > 0) return { text: rtf.format(diffHours, "hour"), isExpired: false };
-	if (diffMinutes > 0) return { text: rtf.format(diffMinutes, "minute"), isExpired: false };
-	return { text: rtf.format(diffSeconds, "second"), isExpired: false };
+/**
+ * How long an invite has left, worded for `locale`, or `isExpired: true` once its
+ * {@link INVITE_EXPIRATION_DAYS} have passed so the row shows the expired label instead.
+ */
+function describeInviteExpiration(
+	createdAt: number,
+	locale: string,
+): { text: string; isExpired: boolean } {
+	let expiresAt = addDays(new Date(createdAt), INVITE_EXPIRATION_DAYS);
+	if (expiresAt.getTime() <= Date.now()) return { text: "", isExpired: true };
+	return { text: formatRelative(expiresAt, { locale }), isExpired: false };
 }
 
 /**
@@ -547,10 +538,7 @@ export default createAction(routes.app.team.settings, {
 											</Table.Header>
 											<Table.Body>
 												{pendingInvites.map((invite) => {
-													let expiration = formatRelativeTime(
-														getInviteExpirationDate(invite.created_at),
-														ctx.locale,
-													);
+													let expiration = describeInviteExpiration(invite.created_at, ctx.locale);
 													let revokeDialogId = `revoke-invite-${invite.id}`;
 													let revokeDialogTitleId = `${revokeDialogId}-title`;
 
@@ -789,7 +777,10 @@ export default createAction(routes.app.team.settings, {
 															</Table.Cell>
 															<Table.Cell mix={[textAlign("end")]}>
 																{domain.verified_at !== null
-																	? new Date(domain.verified_at).toLocaleDateString(ctx.locale)
+																	? formatDate(new Date(domain.verified_at), {
+																			locale: ctx.locale,
+																			timeZone: "UTC",
+																		})
 																	: ctx.intl.t("page.settings.domains.table.verifiedAt.pending")}
 															</Table.Cell>
 															<Table.Cell mix={[textAlign("center")]}>

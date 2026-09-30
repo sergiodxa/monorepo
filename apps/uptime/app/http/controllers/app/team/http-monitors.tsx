@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDateTime } from "@sdxc/dates";
 import { EyeIcon, MonitorIcon, PencilIcon, PlusIcon, TrashIcon, UploadIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { fg } from "@sdxc/u/color";
@@ -173,7 +174,10 @@ export default createAction(routes.app.team.monitors.index, {
 													</Table.Cell>
 													<Table.Cell>
 														{monitor.last_checked_at !== null ? (
-															new Date(monitor.last_checked_at).toLocaleString()
+															formatDateTime(new Date(monitor.last_checked_at), {
+																locale: ctx.locale,
+																timeZone: "UTC",
+															})
 														) : (
 															<span mix={[fg("neutral.muted")]}>
 																{ctx.intl.t("page.httpMonitors.table.neverChecked")}

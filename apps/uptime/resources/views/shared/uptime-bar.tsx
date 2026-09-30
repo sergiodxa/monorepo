@@ -13,6 +13,7 @@
 
 import type { Handle } from "remix/ui";
 
+import { lastNDays } from "@sdxc/dates";
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
@@ -24,16 +25,12 @@ import type { SelectMonitorDailyStats } from "~/database/schema";
 
 import { UPTIME_WINDOW_DAYS } from "~/app/data/monitor-daily-stats";
 
-/** The last {@link UPTIME_WINDOW_DAYS} days (today inclusive) as `"YYYY-MM-DD"` strings, oldest first. */
+/**
+ * The last {@link UPTIME_WINDOW_DAYS} UTC days (today inclusive) as day keys, oldest first,
+ * counted in UTC because `monitor_daily_stats.date` is keyed by the UTC day.
+ */
 function buildLastNDays(): string[] {
-	let today = new Date();
-	let end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-
-	let dates: string[] = [];
-	for (let i = UPTIME_WINDOW_DAYS - 1; i >= 0; i--) {
-		dates.push(new Date(end.getTime() - i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-	}
-	return dates;
+	return lastNDays(UPTIME_WINDOW_DAYS, { timeZone: "UTC" }).map((day) => day.key);
 }
 
 /**

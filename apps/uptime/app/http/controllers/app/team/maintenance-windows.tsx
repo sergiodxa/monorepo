@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { formatDateTime } from "@sdxc/dates";
 import { PlusIcon, WrenchIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { hover } from "@sdxc/u/state";
@@ -19,6 +20,7 @@ import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { MAINTENANCE_TIME_ZONE } from "~/app/http/validators/maintenance-window";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
@@ -161,9 +163,17 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 																</Table.Cell>
 																<Table.Cell>{scopeLabel(window)}</Table.Cell>
 																<Table.Cell>
-																	{new Date(window.starts_at).toLocaleString()}
+																	{formatDateTime(new Date(window.starts_at), {
+																		locale: ctx.locale,
+																		timeZone: MAINTENANCE_TIME_ZONE,
+																	})}
 																</Table.Cell>
-																<Table.Cell>{new Date(window.ends_at).toLocaleString()}</Table.Cell>
+																<Table.Cell>
+																	{formatDateTime(new Date(window.ends_at), {
+																		locale: ctx.locale,
+																		timeZone: MAINTENANCE_TIME_ZONE,
+																	})}
+																</Table.Cell>
 																<Table.Cell>
 																	<a
 																		href={routes.app.team.maintenanceWindows.edit.href({
