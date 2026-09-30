@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/bracket-params",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema",
 	"license": "MIT",
 	"type": "module",

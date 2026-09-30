@@ -98,7 +98,7 @@ Run from the repository root:
 | [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`                          | ✅  |
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint                                            | ✅  |
 | [blog-engine](packages/blog-engine)                             | Host-agnostic blog engine                                                                                         |     |
-| [bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema             |     |
+| [bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema             | ✅  |
 | [cache](packages/cache)                                         | Cache contract with adapters for memory and Cloudflare KV                                                         | ✅  |
 | [captcha](packages/captcha)                                     | CAPTCHA verification for Turnstile, hCaptcha and reCAPTCHA, with router middleware, widgets and a test provider   | ✅  |
 | [catch-response-middleware](packages/catch-response-middleware) | Router middleware that turns a thrown `Response` into the request's response                                      | ✅  |
