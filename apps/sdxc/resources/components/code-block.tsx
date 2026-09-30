@@ -12,7 +12,8 @@ import type { Handle } from "remix/ui";
 import { FileCodeIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { absolute, hstack, inlineFlex, insIe, insTop, relative } from "@sdxc/u/layout";
+import { raw } from "@sdxc/u/general";
+import { hstack, inlineFlex, shrink } from "@sdxc/u/layout";
 import { overflowX, overscrollBehavior } from "@sdxc/u/overflow";
 import { m, p } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
@@ -55,9 +56,16 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 		let code = (
 			<pre
 				className={`language-${language}`}
+				/*
+				 * The block around the code draws its frame and background, so a prose stylesheet's
+				 * own rules for `pre` would draw a second box inside it; the inline style clears them.
+				 */
+				style={{ border: 0, borderRadius: 0, background: "transparent" }}
 				mix={[
 					m(0),
 					p(4),
+					/* Beside the copy button the code takes the rest of the row and scrolls within it. */
+					raw({ flex: "1 1 auto", minInlineSize: 0 }),
 					overflowX("auto"),
 					overscrollBehavior("contain"),
 					font("mono"),
@@ -81,17 +89,22 @@ export default function CodeBlock(handle: Handle<CodeBlock.Props>) {
 		);
 
 		if (!heading) {
+			/*
+			 * The copy button takes its own column rather than floating over the code, so a
+			 * long line scrolls beside it instead of under it. A single line centers the
+			 * button on itself; a longer block keeps it level with the first line.
+			 */
 			return (
 				<div
 					mix={[
-						relative(),
+						hstack({ gap: 0, align: content.trim().includes("\n") ? "start" : "center" }),
 						rounded("lg"),
 						border({ color: "neutral.border", width: 1, style: "solid" }),
 						bg(),
 					]}
 				>
 					{code}
-					<span mix={[absolute(), insTop(2), insIe(2)]}>
+					<span mix={[inlineFlex(), shrink(0), p(2)]}>
 						<CopyButton target={codeId} bare />
 					</span>
 				</div>
