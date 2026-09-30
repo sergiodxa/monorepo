@@ -541,6 +541,7 @@
       "name": "@sdxc/cron",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
