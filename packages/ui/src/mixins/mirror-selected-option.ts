@@ -34,7 +34,7 @@ export const mirrorSelectedOption: MixinFactory<HTMLElement> = createMixin<HTMLE
 			let option = slot.closest("select")?.selectedOptions[0];
 			if (!option) return;
 
-			slot.append(...[...option.childNodes].map((child) => child.cloneNode(true)));
+			for (let child of option.childNodes) slot.appendChild(child.cloneNode(true));
 		});
 
 		return () => {};
