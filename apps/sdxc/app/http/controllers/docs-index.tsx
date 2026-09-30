@@ -24,7 +24,7 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 const DESCRIPTION =
-	"Guides to the collection as a whole: what it is, the conventions it keeps, and how it ships.";
+	"What the collection is, the conventions it keeps, and how to build a Remix app with it, from the router to the jobs behind it.";
 
 /** Where the day's releases and the commits behind them are published. */
 const RELEASES_HREF = "https://github.com/sergiodxa/monorepo/releases";

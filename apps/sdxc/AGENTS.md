@@ -43,6 +43,10 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   package but `u` and `ui`, and `/api/u` and `/api/ui` each hold their own catalogue. The
   builders are in `app/services/navigation.ts`; a page picks the one for the path it
   answers, and the pager steps only through that tree.
+- **A guide documents the packages and how they meet Remix, not Remix itself.** Show a
+  Remix API only where a package step builds on it — the schema `@sdxc/validate` checks, the
+  route a handler is mapped to — and leave a Remix feature a package does not touch (the
+  renderer, `cop`, cookies, the data-table query API) to Remix's own documentation.
 - **Name a tab strip only where the choice repeats.** A strip that names an option group
   from `app/services/option-groups.ts` shares one selection with every other strip naming
   it, site-wide, and labels its tabs with that group's options. Adding a group is adding it

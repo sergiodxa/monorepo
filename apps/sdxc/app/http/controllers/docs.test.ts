@@ -20,7 +20,7 @@ describe("GET /docs", () => {
 		let body = await (await fetchApp("/docs")).text();
 
 		expect(sections.length).toBeGreaterThan(0);
-		for (let section of sections) expect(body).toContain(section.title);
+		for (let section of sections) expect(body).toContain(section.title.replaceAll("&", "&amp;"));
 		expect(body).toContain("Browse the packages");
 	});
 

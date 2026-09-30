@@ -2,8 +2,8 @@
 title: License
 description: Every package in the collection is published under the MIT license, on the same terms, and each one carries its own copy of it.
 section:
-  title: License
-  order: 4
+    title: License
+    order: 10
 order: 1
 lastUpdated: 2026-09-21
 ---
