@@ -41,6 +41,6 @@ describe("the markdown corpus round-trips", () => {
 		let source = readFileSync(join(ROOT, file), "utf8");
 		let written = roundTrip(source);
 
-		expect(format(written, ROOT)).toBe(written);
+		expect(format(written, ROOT, file)).toBe(written);
 	});
 });

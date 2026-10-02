@@ -23,16 +23,17 @@ export function contentFiles(root: string): string[] {
 }
 
 /**
- * Formats markdown the way the repository formats a file on disk, reading standard
+ * Formats markdown the way the repository formats `file` on disk, reading standard
  * input so a candidate string can be compared against its formatted self without
- * a file being written anywhere.
+ * a file being written anywhere. The path selects any per-path formatter override.
  *
  * @param source - The markdown to format
  * @param root - The repository root, where the formatter finds its configuration
+ * @param file - The repository-relative path `source` is formatted as
  * @returns The formatted source
  */
-export function format(source: string, root: string): string {
-	return execFileSync("vp", ["fmt", "--stdin-filepath=content.md"], {
+export function format(source: string, root: string, file: string): string {
+	return execFileSync("vp", ["fmt", `--stdin-filepath=${file}`], {
 		cwd: root,
 		encoding: "utf8",
 		input: source,
