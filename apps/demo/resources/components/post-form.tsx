@@ -12,7 +12,7 @@ import type { Handle } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { raw } from "@sdxc/u/general";
-import { vstack } from "@sdxc/u/layout";
+import { gap, grid, gridColumn, gridTemplate, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { Alert, Button, Dialog, Form, Label, TextArea, TextField } from "@sdxc/ui";
 
@@ -80,26 +80,37 @@ export default function PostForm(handle: Handle<PostForm.Props>) {
 						</Alert>
 					) : null}
 
-					<TextField name="title" label={intl.t("form.titleField")} required />
-					<TextField name="company" label={intl.t("form.company")} required />
-					<TextField name="location" label={intl.t("form.location")} required />
-					<TextField name="salary" label={intl.t("form.salary")} required />
-					<TextField name="contact_email" type="email" label={intl.t("form.email")} required />
-
-					<div mix={[vstack({ gap: 1.5 })]}>
-						<Label htmlFor={DESCRIPTION_ID}>{intl.t("form.description")}</Label>
-						<TextArea id={DESCRIPTION_ID} name="description" rows={6} required />
-					</div>
-
-					{siteKey ? (
-						<TurnstileWidget siteKey={siteKey} />
-					) : (
+					<div mix={[grid(), gridTemplate({ columns: "repeat(2, minmax(0, 1fr))" }), gap(4)]}>
+						<TextField name="title" label={intl.t("form.titleField")} required />
+						<TextField name="company" label={intl.t("form.company")} required />
+						<TextField name="location" label={intl.t("form.location")} required />
+						<TextField name="salary" label={intl.t("form.salary")} required />
 						<TextField
-							name={LOCAL_FIELD}
-							label={intl.t("form.captcha", { answer: LOCAL_ANSWER })}
+							name="contact_email"
+							type="email"
+							label={intl.t("form.email")}
 							required
+							mix={[gridColumn("1 / -1")]}
 						/>
-					)}
+
+						<div mix={[vstack({ gap: 1.5 }), gridColumn("1 / -1")]}>
+							<Label htmlFor={DESCRIPTION_ID}>{intl.t("form.description")}</Label>
+							<TextArea id={DESCRIPTION_ID} name="description" rows={4} required />
+						</div>
+
+						{siteKey ? (
+							<div mix={[gridColumn("1 / -1")]}>
+								<TurnstileWidget siteKey={siteKey} />
+							</div>
+						) : (
+							<TextField
+								name={LOCAL_FIELD}
+								label={intl.t("form.captcha", { answer: LOCAL_ANSWER })}
+								required
+								mix={[gridColumn("1 / -1")]}
+							/>
+						)}
+					</div>
 
 					<Dialog.Footer>
 						<Button
