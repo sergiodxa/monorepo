@@ -1531,6 +1531,7 @@ const ELEMENT_MARKER = "data-spec-element";
  * What the page does not render is marked `hidden` for the same reason: a
  * closed `<dialog>` or a collapsed panel is a stylesheet's doing, which the
  * markup alone cannot see, while a dropdown's options stay listed either way.
+ * A `display: contents` wrapper counts as rendered, since its children are.
  * The mark comes off before the script returns, so a read shows nothing new.
  */
 const READ_DOCUMENT = [
@@ -1539,7 +1540,9 @@ const READ_DOCUMENT = [
 	"	let marked = [];",
 	'	for (let element of document.querySelectorAll("*")) {',
 	`		element.setAttribute(${JSON.stringify(ELEMENT_MARKER)}, String(index++));`,
-	"		let rendered = element.checkVisibility({ visibilityProperty: true });",
+	"		let rendered =",
+	"			element.checkVisibility({ visibilityProperty: true }) ||",
+	'			getComputedStyle(element).display === "contents";',
 	'		let listed = element.tagName === "OPTION" || element.tagName === "OPTGROUP";',
 	'		if (!rendered && !listed && !element.hasAttribute("hidden")) {',
 	'			element.setAttribute("hidden", "");',

@@ -1903,7 +1903,8 @@ describe("the fetch verbs resolve under the ADR's spelling", () => {
  * The page the dropdown and modal suite addresses: a `<select>` whose options
  * read as a person reads them, two controls sharing one `name` attribute so a
  * write has a group to narrow, an open `<dialog>` that a button closes, a
- * `<dialog>` that was never opened, and a `div` carrying the role instead.
+ * `<dialog>` that was never opened, a `div` carrying the role instead, and a
+ * modal opened inside a `display: contents` wrapper.
  */
 const FORM_PAGE = `<!doctype html>
 <html><head><title>Checkout</title></head><body>
@@ -1923,6 +1924,11 @@ const FORM_PAGE = `<!doctype html>
 	</dialog>
 	<dialog aria-label="Receipt"><p>Thanks</p></dialog>
 	<div role="dialog" aria-modal="true" aria-label="Welcome"><p>Hi there</p></div>
+	<div style="display: contents">
+		<h2>Shipping</h2>
+		<dialog id="terms" aria-label="Terms"><p>Read these first</p></dialog>
+	</div>
+	<button type="button" commandfor="terms" command="show-modal">Read terms</button>
 	<script>
 		document.getElementById("country").addEventListener("change", function (event) {
 			document.getElementById("chosen").textContent = "chose " + event.target.value;
@@ -2089,6 +2095,23 @@ describe("dropdowns and modals against a real browser", () => {
 				await plugin.call("element", [word("dialog"), value("Receipt"), word("exists")], context),
 			),
 		).toBe(false);
+	});
+
+	/**
+	 * A layout wrapper styled `display: contents` draws no box of its own, so
+	 * `checkVisibility` calls it unrendered while everything inside it shows.
+	 */
+	test.skipIf(!AVAILABLE)("what a display: contents wrapper holds stays addressable", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+		expect(expectSuccess(await plugin.call("heading", [value("Shipping")], context))).toBe(
+			"Shipping",
+		);
+
+		expectSuccess(await plugin.call("click", [word("button"), value("Read terms")], context));
+		expect(
+			expectSuccess(await plugin.call("element", [word("dialog"), value("Terms")], context)),
+		).toBe("Read these first");
 	});
 
 	test.skipIf(!AVAILABLE)("a dismissed modal is gone from the page", async () => {
