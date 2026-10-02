@@ -11,9 +11,10 @@ import type { Posting } from "~/database/schema";
 
 import resourceset from "~/app/mcp/resources";
 
-/** The summary `search_jobs` returns, carrying the URI that reads the position in full. */
+/** The summary `search_jobs` returns, carrying the id `get_job` reads and the resource URI. */
 export function summarize(posting: Posting) {
 	return {
+		id: posting.id,
 		uri: resourceset.posting.href({ id: posting.id }),
 		title: posting.title,
 		company: posting.company,

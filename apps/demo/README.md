@@ -37,7 +37,7 @@ queue live in the worker, and the captcha is a word the form prints.
 - **Background jobs** — a confirmation email per submission, and a nightly expiry sweep
 - **Outbox** — every message the board sent, at `/outbox`
 - **i18n** — English and Spanish, detected per request
-- **MCP** — `search_jobs` and a posting resource, mounted as an ordinary route
+- **MCP** — `list_jobs`, `search_jobs`, `get_job`, `publish_job` and a posting resource, mounted as an ordinary route
 
 ## Routes
 

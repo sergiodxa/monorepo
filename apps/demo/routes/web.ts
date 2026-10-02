@@ -25,6 +25,6 @@ export default route({
 	/** Every message the in-memory transport captured, newest first. */
 	outbox: get("/outbox"),
 
-	/** The Model Context Protocol endpoint, answering `search_jobs` and the posting resource. */
+	/** The Model Context Protocol endpoint, answering the job tools and the posting resource. */
 	mcp: post("/mcp"),
 });
