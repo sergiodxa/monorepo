@@ -85,7 +85,6 @@ D1 binding + migrations   -> apps/r3-auth
 Durable Object            -> apps/uptime (app/do/geo-fetch.ts)
 Queues + cron triggers    -> apps/uptime
 Router-level tests        -> apps/books (app/lib/test/router.ts)
-Client-only SPA (no SSR)  -> apps/r3-gallery
 ```
 
 ### Wiring (HIGH)

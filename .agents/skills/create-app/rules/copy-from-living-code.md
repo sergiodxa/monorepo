@@ -33,7 +33,6 @@ that. Name the app in the commit or the ADR, not in the new app's own comments.
 | Queues, cron triggers, Analytics Engine, rate limiters, email | `apps/uptime` (`wrangler.jsonc`) | The one app with every binding kind, each with the reasoning for its settings written next to it |
 | Service container wiring | `apps/books` (`app/lib/container.ts`) | Scoped vs singleton registration, and reading secrets inside the factory so a missing one fails the request, not module load |
 | Router-level tests | `apps/books` (`app/lib/test/router.ts`) | Fetches the real router inside a container scope, overriding services rather than the network |
-| Client-only SPA, no worker SSR | `apps/r3-gallery` | A `src/`-based static build with `not_found_handling: single-page-application` and no `main` — the deliberate exception to the layout rule |
 | i18n | `apps/uptime` (`app/locales/`, `@sdxc/i18n` middleware) | Locale files plus the middleware that puts `ctx.i18next.t` on the context |
 | Server-rendered document shell and styling | `apps/blog` (`resources/layouts/document.tsx`, `resources/css/colors.css`) | Stylesheet ordering, head keying, and an sRGB-checked palette |
 

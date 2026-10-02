@@ -76,17 +76,16 @@ Run from the repository root:
 
 ## Apps
 
-| App                           | Description                                   | URL                                                 |
-| ----------------------------- | --------------------------------------------- | --------------------------------------------------- |
-| [auth-saas](apps/auth-saas)   | Multi-tenant OIDC/OAuth2 identity platform    | Not deployed                                        |
-| [blog](apps/blog)             | Remix v3 SSR blog and CMS                     | https://sergiodxa.com                               |
-| [books](apps/books)           | Remix v3 book landing page and sales funnel   | https://books.sergiodxa.com                         |
-| [demo](apps/demo)             | Job board demo app for the Remix talk         | Local app                                           |
-| [pkmn](apps/pkmn)             | Monster-collecting game engine and browser UI | Local app                                           |
-| [r3-auth](apps/r3-auth)       | OAuth 2.0 / OIDC authorization server         | https://auth.sergiodxa.com                          |
-| [r3-gallery](apps/r3-gallery) | Client-only Remix UI photo gallery SPA        | https://r3-gallery.sergiodxa-cloudflare.workers.dev |
-| [sdxc](apps/sdxc)             | Documentation site for the published packages | https://sdxc.sergiodxa.com                          |
-| [uptime](apps/uptime)         | Uptime and infrastructure monitoring service  | https://uptime.sergiodxa.com                        |
+| App                         | Description                                   | URL                          |
+| --------------------------- | --------------------------------------------- | ---------------------------- |
+| [auth-saas](apps/auth-saas) | Multi-tenant OIDC/OAuth2 identity platform    | Not deployed                 |
+| [blog](apps/blog)           | Remix v3 SSR blog and CMS                     | https://sergiodxa.com        |
+| [books](apps/books)         | Remix v3 book landing page and sales funnel   | https://books.sergiodxa.com  |
+| [demo](apps/demo)           | Job board demo app for the Remix talk         | Local app                    |
+| [pkmn](apps/pkmn)           | Monster-collecting game engine and browser UI | Local app                    |
+| [r3-auth](apps/r3-auth)     | OAuth 2.0 / OIDC authorization server         | https://auth.sergiodxa.com   |
+| [sdxc](apps/sdxc)           | Documentation site for the published packages | https://sdxc.sergiodxa.com   |
+| [uptime](apps/uptime)       | Uptime and infrastructure monitoring service  | https://uptime.sergiodxa.com |
 
 ## Packages
 
@@ -198,7 +197,7 @@ repeats it. `@sdxc/*` workspace dependencies are listed under [Packages](#packag
 | `typescript`                      | Root                                                                                    | The type checker behind every `tsc --noEmit`.                                                   |
 | `msw`                             | Root                                                                                    | Mocks outbound HTTP in tests.                                                                   |
 | `wrangler`                        | Every app except `pkmn`                                                                 | Deploys Workers and applies D1 migrations.                                                      |
-| `@cloudflare/vite-plugin`         | Every app except `pkmn` and `r3-gallery`                                                | Runs the Worker inside Vite dev and build.                                                      |
+| `@cloudflare/vite-plugin`         | Every app except `pkmn`                                                                 | Runs the Worker inside Vite dev and build.                                                      |
 | `@cloudflare/vitest-pool-workers` | Root                                                                                    | Runs tests inside workerd against real bindings.                                                |
 | `@cloudflare/workers-types`       | `cache`, `cloudflare-mocks`, `data-table-d1`, `data-table-sqlstorage`, `jobs`, `logger` | Workerd runtime types; apps generate theirs with `wrangler types`.                              |
 | `@total-typescript/tsconfig`      | Root                                                                                    | The base tsconfig every workspace extends.                                                      |
