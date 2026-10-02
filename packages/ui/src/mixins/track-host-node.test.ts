@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinHandle } from "remix/ui";
+import type { MixinHandle } from "remix/component";
 
 import { describe, expect, test } from "vitest";
 

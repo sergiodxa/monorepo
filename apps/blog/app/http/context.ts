@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { ContextWithEntries, RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { Auth } from "remix/middleware/auth";
 import { Renderer } from "remix/middleware/render";

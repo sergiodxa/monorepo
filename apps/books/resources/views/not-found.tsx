@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs, p, pbs } from "@sdxc/u/size";

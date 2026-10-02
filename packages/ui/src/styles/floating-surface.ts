@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ElementProps, MixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";

@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToStream } from "remix/ui/server";
+import { renderToStream } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import type { Timeline } from "~/resources/views/timeline";

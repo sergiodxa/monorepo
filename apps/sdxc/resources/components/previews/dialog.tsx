@@ -12,7 +12,7 @@
 import { vstack } from "@sdxc/u/layout";
 import { Button, Dialog, Keyboard, Label, Select, Text, TextArea, TextField } from "@sdxc/ui";
 import { hotkey } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const DIALOG_CODE = `<Button commandfor="invite" command="show-modal">Invite people</Button>

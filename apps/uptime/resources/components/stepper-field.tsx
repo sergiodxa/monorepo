@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Description, Label, NumberField } from "@sdxc/ui";
 import {
@@ -21,7 +21,7 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** Declared as a `type` alias so it satisfies `SerializableProps`. */
 type StepperFieldProps = {

@@ -1,6 +1,6 @@
 /**
  * `GET /` — the public marketing landing page for Auth SaaS. Rendered with
- * `remix/ui` JSX via `ctx.render`.
+ * `remix/component` JSX via `ctx.render`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

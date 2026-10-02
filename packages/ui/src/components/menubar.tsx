@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
@@ -16,7 +16,7 @@ import { flex, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { pb, pi } from "@sdxc/u/size";
 import { active, disabled, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import {

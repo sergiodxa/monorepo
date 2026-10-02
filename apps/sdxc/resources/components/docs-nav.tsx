@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { border } from "@sdxc/u/color";

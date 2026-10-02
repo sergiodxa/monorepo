@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { keyframes } from "@sdxc/u/animation";
 import { bg, border, borderEdge, fg, outline } from "@sdxc/u/color";
@@ -21,7 +21,7 @@ import { at } from "@sdxc/u/responsive";
 import { is, maxIs, pb, pi, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, textAlign, textDecoration, tracking, weight } from "@sdxc/u/typography";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { easings } from "../animations/tokens.js";
 

@@ -13,12 +13,12 @@
  */
 
 import type { HeadingLevel } from "@sdxc/ui";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is, pis } from "@sdxc/u/size";
 import { Heading, HeadingScope, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const HEADING_CODE = `// The page knows the depth it is placing the island at, and hands it over:

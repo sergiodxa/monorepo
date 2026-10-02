@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/* @jsxImportSource remix/ui */
+/* @jsxImportSource remix/component */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import type { Markdown } from "../index.js";

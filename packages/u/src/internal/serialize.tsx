@@ -1,5 +1,5 @@
 /**
- * Test-only helpers that render a utility mixin through `remix/ui`'s server
+ * Test-only helpers that render a utility mixin through `remix/component`'s server
  * renderer and hand back the CSS text it produced, so a test asserts on the
  * declarations a browser will see. The serializer rewrites values on the way
  * out — most notably appending `px` to unitless numbers — so the emitted CSS
@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 
 import type { UtilityMixin } from "./descriptor.js";
 

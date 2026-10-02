@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { borderEdge, fg } from "@sdxc/u/color";
 import { rounded, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";

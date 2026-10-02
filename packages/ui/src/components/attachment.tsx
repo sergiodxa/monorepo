@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
@@ -33,7 +33,7 @@ import { media } from "@sdxc/u/responsive";
 import { aspect, bs, fit, is, minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, textAlign, truncate, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { shimmer } from "../animations/keyframes.js";
 import { scrollFade } from "../animations/scroll.js";

@@ -12,7 +12,7 @@ npm add @sdxc/captcha
 ```
 
 The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router and the widgets
-render with `remix/ui`; every verification returns an
+render with `remix/component`; every verification returns an
 [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value. Both install alongside this
 package.
 
@@ -40,7 +40,7 @@ router.post("/sign-up", {
 ### Render the widget
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 

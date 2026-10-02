@@ -217,12 +217,12 @@ whole document it gives you the prose for a word count or a search index; pass
 
 ## Render it in a route
 
-`toRemix` from `@sdxc/markdown/remix` turns the tree into `remix/ui` nodes, and its
+`toRemix` from `@sdxc/markdown/remix` turns the tree into `remix/component` nodes, and its
 `components` map is where a tag gets its markup. A component receives the tag's attributes as
 props, already validated by the schema you registered, plus its rendered `children`:
 
 ```tsx {% title="app/components/callout.tsx" %}
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { Alert } from "@sdxc/ui";
 
@@ -341,6 +341,6 @@ typed renders as escaped text in both renderers, so neither one writes markup yo
   posts to feed readers, with `toHTML` supplying each item's body.
 - [Join the IndieWeb](/docs/content-and-feeds/indieweb) — send a Webmention to every page a
   post links to.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) — the
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
   components and mixins the page around the article is built from.
 - [`@sdxc/markdown`](/api/markdown) — variables, annotations, GitHub alerts and the full AST.

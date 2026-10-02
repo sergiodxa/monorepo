@@ -12,6 +12,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@remix-run/ui": "0.12.1",
 		"@sdxc/api-client": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/dates": "workspace:*",
@@ -30,7 +31,7 @@
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/user-agent": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",

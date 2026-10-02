@@ -9,12 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { flexRow, gap, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 

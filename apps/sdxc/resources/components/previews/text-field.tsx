@@ -14,7 +14,7 @@
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Button, Card, TextField } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const TEXT_FIELD_CODE = `<form

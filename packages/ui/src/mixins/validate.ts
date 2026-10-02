@@ -11,8 +11,8 @@
 
 import type { Schema } from "remix/data-schema";
 
+import { createElement, createMixin, on } from "remix/component";
 import { parseSafe } from "remix/data-schema";
-import { createElement, createMixin, on } from "remix/ui";
 
 /**
  * Native form control types that implement the Constraint Validation API —

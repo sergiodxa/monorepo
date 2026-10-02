@@ -138,7 +138,7 @@ image, the setup key for anyone who cannot scan, and the URI as a link, which op
 directly on a phone:
 
 ```tsx {% title="resources/views/enroll-two-factor.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button, TextField } from "@sdxc/ui";
 

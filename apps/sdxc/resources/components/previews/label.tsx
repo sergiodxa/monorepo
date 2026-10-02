@@ -13,7 +13,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Description, Input, Label } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<form mix={[vstack({ gap: 5, align: "stretch" })]}>

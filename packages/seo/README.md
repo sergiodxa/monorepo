@@ -16,7 +16,7 @@ npm add @sdxc/seo
 ```
 
 The head elements are [`remix`](https://www.npmjs.com/package/remix) components, rendered
-by `remix/ui`, which installs alongside this package, as does
+by `remix/component`, which installs alongside this package, as does
 [`@sdxc/robots`](https://www.npmjs.com/package/@sdxc/robots), which writes the `robots`
 directives. The URL helpers, schema builders and
 `jsonLdString` are plain functions and run anywhere.
@@ -132,7 +132,7 @@ seo.robotsTag(); // "index, follow"
 Serializes one node or several for a `<script type="application/ld+json">` body. Every `<`
 becomes its unicode escape, so no string value can emit a `</script` or `<!--` sequence and
 break out of the script element; the JSON still parses back to the original text. Use it
-wherever the JSX is not `remix/ui`, and `Seo.JsonLd` where it is.
+wherever the JSX is not `remix/component`, and `Seo.JsonLd` where it is.
 
 ### `seo.baseUrl: string`
 
@@ -266,7 +266,7 @@ seo.schema.book({
 
 ### `Seo`
 
-`remix/ui` component emitting a page's whole head contribution: the `Seo.Meta` tag set, plus
+`remix/component` component emitting a page's whole head contribution: the `Seo.Meta` tag set, plus
 a `Seo.JsonLd` script when `schema` is given.
 
 **Props:**
@@ -280,7 +280,7 @@ a `Seo.JsonLd` script when `schema` is given.
 
 ### `Seo.Meta`
 
-`remix/ui` component emitting the title, description, canonical link, robots directives, and
+`remix/component` component emitting the title, description, canonical link, robots directives, and
 the Open Graph and Twitter tag sets. Both social namespaces restate the title and
 description, because every consumer of these cards reads its own namespace and ignores the
 other's. A tag whose input is missing is skipped, so a page states only what it has.
@@ -306,7 +306,7 @@ other's. A tag whose input is missing is skipped, so a page states only what it 
 
 ### `Seo.JsonLd`
 
-`remix/ui` component emitting structured data as one `application/ld+json` script. Several
+`remix/component` component emitting structured data as one `application/ld+json` script. Several
 nodes go into a single script as an array, which is valid and far easier to audit than
 several scripts. The JSON is set through `innerHTML`, since JSX escapes text nodes and would
 leave the data unparseable.
@@ -402,7 +402,7 @@ its own copy and structured data while the tag set stays identical everywhere.
 
 ```tsx
 import { Seo } from "@sdxc/seo";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 interface Props {
 	children: RemixNode;
@@ -423,9 +423,9 @@ function DocumentLayout(handle: Handle<Props>) {
 }
 ```
 
-## Pattern: Serializing Outside `remix/ui`
+## Pattern: Serializing Outside `remix/component`
 
-Where the JSX is not `remix/ui`, build the same nodes and serialize them by hand.
+Where the JSX is not `remix/component`, build the same nodes and serialize them by hand.
 
 ```tsx
 let body = seo.jsonLdString([organization, article]);

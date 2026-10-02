@@ -1,6 +1,6 @@
 /**
  * Opens a ContextMenu's popover surface at the pointer position when its
- * host receives a right-click, anchoring it with `remix/ui/anchor`'s
+ * host receives a right-click, anchoring it with `@remix-run/ui/anchor`'s
  * point-based positioning since no markup can anchor a floating surface to
  * a pointer position. Without this mixin the host falls back to the
  * platform's native right-click menu.
@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { attrs, createElement, createMixin, on, type ElementProps } from "remix/ui";
-import { anchor, type AnchorOptions, type AnchorPoint } from "remix/ui/anchor";
+import { anchor, type AnchorOptions, type AnchorPoint } from "@remix-run/ui/anchor";
+import { attrs, createElement, createMixin, on, type ElementProps } from "remix/component";
 
 /** Placement `contextMenu()` anchors the surface to when `options` doesn't specify one. */
 const DEFAULT_PLACEMENT = "bottom-start";
@@ -26,7 +26,7 @@ const SECONDARY_BUTTON = 2;
  * stays up until the next press rather than being dismissed by that same one.
  *
  * @param id `id` of the popover surface to open.
- * @param options Anchor placement and offsets forwarded to `remix/ui/anchor`; placement defaults to `"bottom-start"`. Safe to omit — `contextMenu(id)` resets the runtime's trailing current-props argument back to an empty options object.
+ * @param options Anchor placement and offsets forwarded to `@remix-run/ui/anchor`; placement defaults to `"bottom-start"`. Safe to omit — `contextMenu(id)` resets the runtime's trailing current-props argument back to an empty options object.
  * @example
  * <div id="row-1" mix={contextMenu("row-1-menu")}>Row 1</div>
  * <div id="row-1-menu" popover="auto" role="menu">...</div>

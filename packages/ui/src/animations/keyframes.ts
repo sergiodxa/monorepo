@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, MixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { animationHost, keyframes } from "@sdxc/u/animation";
 import { colorMix, linearGradient } from "@sdxc/u/color";

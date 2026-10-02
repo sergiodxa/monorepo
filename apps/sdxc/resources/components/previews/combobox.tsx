@@ -4,7 +4,7 @@
  * readable and tabbable before any script arrives. Narrowing that list to the typed text
  * and committing one stable value are the consumer's, so the preview carries the same
  * `comboboxFilter()` wiring a reader would write on the input, inside the
- * `remix/ui/combobox` context that owns the draft text, the popup surface and the option
+ * `@remix-run/ui/combobox` context that owns the draft text, the popup surface and the option
  * registry — typing hides every zone that does not match by city, country or offset, and
  * picking one writes its IANA id into the hidden input a form submits.
  *
@@ -12,8 +12,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
+import * as combobox from "@remix-run/ui/combobox";
 import { fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
@@ -24,8 +25,7 @@ import { text } from "@sdxc/u/typography";
 import { ComboBox, Description, Item, Label } from "@sdxc/ui";
 import { comboboxFilter } from "@sdxc/ui/mixins";
 import { floatingSurface } from "@sdxc/ui/styles";
-import { clientEntry } from "remix/ui";
-import * as combobox from "remix/ui/combobox/primitives";
+import { clientEntry } from "remix/component";
 
 /** The zones a scheduling form offers, each searchable by city, country or offset. */
 const ZONES = [

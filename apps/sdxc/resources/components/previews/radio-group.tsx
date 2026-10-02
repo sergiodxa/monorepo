@@ -16,7 +16,7 @@ import { has } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Header, RadioGroup } from "@sdxc/ui";
 import { ariaChecked } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The shipping options the checkout offers, in the order it lists them. */
 const METHODS = [

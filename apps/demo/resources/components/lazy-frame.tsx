@@ -14,9 +14,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixElement } from "remix/ui";
+import type { Handle, RemixElement } from "remix/component";
 
-import { clientEntry, Frame, ref } from "remix/ui";
+import { clientEntry, Frame, ref } from "remix/component";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client entry's props

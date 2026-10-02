@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";

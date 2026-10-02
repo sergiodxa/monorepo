@@ -21,18 +21,18 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@remix-run/data-schema": "^0.3.0",
+		"@remix-run/data-schema": "^1.0.0",
 		"@sdxc/result": "workspace:*",
 		"@standard-schema/spec": "^1.1.0"
 	},
 	"devDependencies": {
 		"@sdxc/http": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"peerDependencies": {
 		"@sdxc/http": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@sdxc/http": {

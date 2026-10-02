@@ -15,7 +15,7 @@ import { text, weight } from "@sdxc/u/typography";
 import { Resizable } from "@sdxc/ui";
 import { ResizeSession } from "@sdxc/ui/behaviors";
 import { resizeHandle } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 export const RESIZABLE_CODE = `// A session per group, since each one drags along its own axis.

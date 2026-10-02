@@ -1,5 +1,5 @@
 /**
- * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/ui` JSX as
+ * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/component` JSX as
  * HTML and fetches every `<Frame>`'s `src` back through the router that is rendering the
  * document, so a fragment shares the request's cookies and middleware chain instead of
  * going out over the network.
@@ -17,13 +17,13 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
+import type { ResolveFrameContext } from "remix/component/server";
 import type { RequestContext, Router } from "remix/router";
-import type { RemixNode } from "remix/ui";
-import type { ResolveFrameContext } from "remix/ui/server";
 
 import { currentLog } from "@sdxc/logger";
+import { renderToStream, renderToString } from "remix/component/server";
 import { createHtmlResponse } from "remix/response/html";
-import { renderToStream, renderToString } from "remix/ui/server";
 
 import FrameFallback from "~/resources/views/frame-fallback";
 

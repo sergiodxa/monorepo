@@ -11,12 +11,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { is, bs } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { Avatar as UIAvatar } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Props are declared as a `type` alias to satisfy `SerializableProps`. */
 type AvatarProps = { src: string | null; name: string; size?: number };

@@ -10,13 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { hstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Badge, Checkbox, Table, Text } from "@sdxc/ui";
 import { SelectionModel } from "@sdxc/ui/behaviors";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import { readSort, sortHref, sortInvoices } from "~/app/services/invoice-sort";
 

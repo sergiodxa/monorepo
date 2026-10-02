@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { visibility } from "@sdxc/u/effects";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * `aria-hidden="true"` applied through {@link attrs} unless a consumer

@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg, outline, outlineStyle, outlineWidth } from "@sdxc/u/color";
@@ -32,7 +32,7 @@ import { media } from "@sdxc/u/responsive";
 import { bs, is, m, p, pb, pi } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
 import { text, textAlign, truncate } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { mirrorSelectedOption } from "../mixins/mirror-selected-option.js";
 

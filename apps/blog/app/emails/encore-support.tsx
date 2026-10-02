@@ -10,7 +10,7 @@
 
 import type { Address, Email as EmailContract } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 

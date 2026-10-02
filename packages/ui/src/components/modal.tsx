@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { opacity, transition, transitionBehavior, transitionProperty } from "@sdxc/u/effects";
 import { media, startingStyle } from "@sdxc/u/responsive";

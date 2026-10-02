@@ -8,7 +8,7 @@
  */
 
 import type { Honeypot } from "@sdxc/honeypot";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { HoneypotFields } from "@sdxc/honeypot/ui";
 import { bg, border } from "@sdxc/u/color";

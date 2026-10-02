@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinFactory } from "remix/ui";
+import type { MixinFactory } from "remix/component";
 
-import { createMixin } from "remix/ui";
+import { createMixin } from "remix/component";
 
 /**
  * Writes the selected `<option>`'s content back into the host

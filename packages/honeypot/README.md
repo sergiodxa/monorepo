@@ -1,7 +1,7 @@
 # @sdxc/honeypot
 
 Honeypot form fields with a signed render timestamp: a trap field people never see, router
-middleware that refuses a filled trap or a forged token before the handler runs, and a `remix/ui`
+middleware that refuses a filled trap or a forged token before the handler runs, and a `remix/component`
 component that renders both fields without client JavaScript.
 
 ## Installation
@@ -11,7 +11,7 @@ npm add @sdxc/honeypot
 ```
 
 The middleware runs on the [`remix`](https://www.npmjs.com/package/remix) router and the component
-renders with `remix/ui`; every verification returns an
+renders with `remix/component`; every verification returns an
 [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value. Both install alongside this
 package.
 

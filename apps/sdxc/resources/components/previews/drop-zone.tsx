@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ImageIcon, XIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -23,7 +23,7 @@ import { text, weight } from "@sdxc/u/typography";
 import { Button, DropZone, Empty, Header, Item } from "@sdxc/ui";
 import { DragSession } from "@sdxc/ui/behaviors";
 import { dropZone } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import { formatFileSize } from "~/app/services/file-size";
 

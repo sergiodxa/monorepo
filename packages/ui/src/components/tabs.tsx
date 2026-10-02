@@ -13,7 +13,7 @@
 
 import type { UtilityMixin } from "@sdxc/u";
 import type { SizeValue, SpacingValue } from "@sdxc/u/tokens";
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, transition } from "@sdxc/u/effects";
@@ -36,7 +36,7 @@ import { bs, is, mbe, mie, pb, pi } from "@sdxc/u/size";
 import { after, data, when } from "@sdxc/u/state";
 import { boxLength, spacing } from "@sdxc/u/tokens";
 import { text, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 

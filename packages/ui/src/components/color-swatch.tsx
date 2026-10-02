@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -22,7 +22,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { bs, is } from "@sdxc/u/size";
 import { after, before, data } from "@sdxc/u/state";
 import { verticalAlign } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { mergeStyle } from "../utils/merge-style.js";
 

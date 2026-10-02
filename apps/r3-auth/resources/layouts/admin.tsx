@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";

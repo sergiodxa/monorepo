@@ -7,7 +7,7 @@ every other app signs in with.
 Production URL: https://auth.sergiodxa.com (still served by the `auth` worker; this worker
 is reachable on its `workers.dev` subdomain until the custom domain moves)
 
-This is a Remix v3 (fetch-router + `remix/ui`) rebuild of that server. It binds the same
+This is a Remix v3 (fetch-router + `remix/component`) rebuild of that server. It binds the same
 D1 database, KV namespace, R2 signing keys and queue, so both workers can run side by side
 while this one is verified endpoint by endpoint. The plan, the contracts relying parties
 depend on, and the cutover steps live in

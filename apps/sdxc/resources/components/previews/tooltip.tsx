@@ -13,7 +13,7 @@
 import { ArchiveIcon, StarIcon, Trash2Icon } from "@sdxc/icons";
 import { anchorName, hstack, positionAnchor } from "@sdxc/u/layout";
 import { Button, Toolbar, Tooltip } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The icon-only actions the row offers, each with the hint that names it. */
 const ACTIONS = [

@@ -12,9 +12,9 @@
 
 import type { UsageEvent } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import billing from "@sdxc/billing/middleware";
 import {
@@ -24,13 +24,13 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { renderToString } from "remix/ui/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";

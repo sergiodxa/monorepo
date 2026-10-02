@@ -14,7 +14,7 @@
 
 import { existsSync } from "node:fs";
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { StepperField } from "./stepper-field";

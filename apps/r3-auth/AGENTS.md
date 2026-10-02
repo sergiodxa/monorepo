@@ -59,12 +59,12 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST use `remix/router` (`createAction` / `createController`) for HTTP actions, and
   MUST declare every URL in `routes/web.ts` and link through `routes.<name>.href(...)`
   rather than writing a path string.
-- MUST render pages as `remix/ui` JSX through `ctx.render(...)`, built from `@sdxc/ui`
+- MUST render pages as `remix/component` JSX through `ctx.render(...)`, built from `@sdxc/ui`
   components with inline `css()` mixins from `@sdxc/u` for the gaps. No React, no Tailwind,
   no HTML strings. The one documented exception is `/oidc/check-session`, whose body is a
   script page defined by OIDC Session Management 1.0.
 - MUST use the Handle pattern for components and MUST NOT call a component as a plain
-  function; MUST NOT pass `key=` to a `remix/ui` or `@sdxc/ui` component.
+  function; MUST NOT pass `key=` to a `remix/component` or `@sdxc/ui` component.
 - MUST validate every external input with `remix/data-schema` through `@sdxc/validate`, in a
   validator module under `app/http/validators/`. Zod MUST NOT be added back.
 - MUST persist through `remix/data-table` (`@sdxc/data-table-d1` in production) from

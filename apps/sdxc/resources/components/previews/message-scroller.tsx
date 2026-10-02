@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ArrowDownIcon, ArrowUpIcon, MessageSquareDashedIcon, RotateCwIcon } from "@sdxc/icons";
 import { bg, border, borderEdge } from "@sdxc/u/color";
@@ -23,7 +23,7 @@ import { Bubble, Button, Heading, HeadingScope, Input, MessageScroller, Text } f
 import { scrollFade } from "@sdxc/ui/animations";
 import { ScrollFollowModel } from "@sdxc/ui/behaviors";
 import { messageFollow } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** One exchange the Send button plays, so every press adds a question and its answer. */
 interface Exchange {

@@ -9,8 +9,8 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
-import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
 

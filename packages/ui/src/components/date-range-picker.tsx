@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { DateField } from "./date-field.js";
 import { DatePicker } from "./date-picker.js";

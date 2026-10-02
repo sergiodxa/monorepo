@@ -1,6 +1,6 @@
 /**
  * Delegated arrow-key activation for a Tabs list: a single `keydown`
- * listener on the tablist container reads the shared `remix/ui/tabs`
+ * listener on the tablist container reads the shared `@remix-run/ui/tabs`
  * context to move the roving tab stop, instead of binding one listener
  * per tab. Needed because the WAI-ARIA tabs keyboard pattern has no
  * HTML/CSS equivalent; without JS every tab stays reachable through Tab.
@@ -9,8 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createElement, createMixin, on } from "remix/ui";
-import * as tabs from "remix/ui/tabs/primitives";
+import * as tabs from "@remix-run/ui/tabs";
+import { createElement, createMixin, on } from "remix/component";
 
 /**
  * Options accepted by {@link tabKeys}. Reserved for future configuration;
@@ -20,7 +20,7 @@ export interface TabKeysOptions {}
 
 /**
  * Adds delegated arrow-key activation to a Tabs list, adapting the shared
- * `remix/ui/tabs` context instead of tracking tab order itself. Capturing
+ * `@remix-run/ui/tabs` context instead of tracking tab order itself. Capturing
  * and stopping handled keys pre-empts a same-key `tab()` binding per tab.
  *
  * @example

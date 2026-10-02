@@ -1,5 +1,5 @@
 /**
- * The application's design tokens expressed as `remix/ui` mixins: five OKLCH
+ * The application's design tokens expressed as `remix/component` mixins: five OKLCH
  * color ramps, the Inter-first font stack, and the document surface that
  * follows the viewer's color scheme. Views compose these instead of shipping a
  * stylesheet, so the palette travels with the markup that uses it.
@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 /**
  * Every palette step as `--ui-color-{name}-{step}` custom properties and the

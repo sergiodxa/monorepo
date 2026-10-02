@@ -14,7 +14,7 @@ import { gap, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Item, SentinelRow, Separator, Spinner } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The page of notifications already loaded, which the sentinel row trails. */
 const LOADED = [

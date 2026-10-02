@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -19,7 +19,7 @@ import { inlineFlex, items } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** How long the confirmation label stays before the button reads as copyable again. */
 const CONFIRMATION_MS = 2000;

@@ -7,21 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { Base64Url, Hex, hmac } from "@sdxc/crypto";
 import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { renderToString } from "remix/ui/server";
 import { describe, expect, test, vi } from "vitest";
 
 import UserPreferences from "~/app/data/user-preferences";

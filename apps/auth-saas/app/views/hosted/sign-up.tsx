@@ -9,7 +9,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { is, maxIs } from "@sdxc/u/size";

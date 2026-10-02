@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import type { FieldPartsProps } from "../utils/field-parts.js";
 

@@ -1,12 +1,12 @@
 /**
- * Google reCAPTCHA's v2 checkbox as a `remix/ui` component: the container Google's script
+ * Google reCAPTCHA's v2 checkbox as a `remix/component` component: the container Google's script
  * renders into, carrying its configuration as `data-*` attributes, then the script. Placed
  * inside a form, so the `g-recaptcha-response` token it writes submits with the form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 /** Google's loader, which renders every `.g-recaptcha` container once it runs. */
 const RECAPTCHA_SCRIPT_SRC = "https://www.google.com/recaptcha/api.js";

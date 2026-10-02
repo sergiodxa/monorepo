@@ -8,7 +8,7 @@
 
 import type { Translate } from "@sdxc/i18n";
 import type { MailingList } from "@sdxc/mail";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { formatDate } from "@sdxc/dates";
 

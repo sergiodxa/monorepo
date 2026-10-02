@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { flex, vstack } from "@sdxc/u/layout";
@@ -18,7 +18,7 @@ import { text } from "@sdxc/u/typography";
 import { RangeCalendar } from "@sdxc/ui";
 import { CalendarModel } from "@sdxc/ui/behaviors";
 import { calendarKeys, rangePreview } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import type { MonthDay } from "~/app/services/month-grid";
 

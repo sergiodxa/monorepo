@@ -18,14 +18,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CircleCheckIcon, CircleIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { flex, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
-import { clientEntry, on, ref } from "remix/ui";
+import { clientEntry, on, ref } from "remix/component";
 
 import { SIDEBAR_FEEDS_FRAME } from "~/resources/components/sidebar-frame";
 

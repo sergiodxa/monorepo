@@ -14,7 +14,7 @@ import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Button, Header, Input, Label, Popover, Separator } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `<Button commandfor="result-filters" command="toggle-popover" variant="outline">

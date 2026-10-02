@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, linearGradient, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, ringShadow, rounded, transition, transitionDuration } from "@sdxc/u/effects";
@@ -20,7 +20,7 @@ import { bs, is, m } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { mergeStyle } from "../utils/merge-style.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";

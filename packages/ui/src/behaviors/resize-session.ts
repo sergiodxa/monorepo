@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { TypedEventTarget } from "remix/ui";
+import { TypedEventTarget } from "remix/component";
 
 const DEFAULT_PANEL_MIN_SIZE = 0;
 

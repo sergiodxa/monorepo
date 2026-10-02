@@ -11,10 +11,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
-import { css } from "remix/ui";
-import { renderToString } from "remix/ui/server";
+import { css } from "remix/component";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { Tabs, tabIndicatorMix } from "./tabs.js";

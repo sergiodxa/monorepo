@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Props } from "remix/ui";
+import type { Props } from "remix/component";
 
 /** The `style` prop an element accepts: CSS text, a declaration object, or nothing. */
 export type StyleProp = Props<"div">["style"];
@@ -23,7 +23,7 @@ export type StyleDeclarations = Record<string, string | number | null | undefine
 
 /**
  * Merges declarations into a host's `style` prop and returns a new value, so
- * shared props stay untouched. Assigned via `Object.assign`, since remix/ui's
+ * shared props stay untouched. Assigned via `Object.assign`, since remix/component's
  * style type's `Symbol.iterator` key type-checks under a spread despite carrying no runtime iterator.
  *
  * @param style The host's incoming `style` prop, in either form.

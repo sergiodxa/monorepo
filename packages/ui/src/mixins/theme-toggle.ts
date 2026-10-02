@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, MixinFactory } from "remix/ui";
+import type { ElementProps, MixinFactory } from "remix/component";
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 import { asCommandEvent } from "../utils/command-event.js";
 import { writeCookie } from "../utils/write-cookie.js";

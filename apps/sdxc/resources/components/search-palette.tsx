@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { SearchIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -25,7 +25,7 @@ import { font, text, textDecoration, truncate, weight } from "@sdxc/u/typography
 import { Button, Command, Keyboard } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
 import { commandKeys, hotkey } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import type { SearchDocument } from "~/app/services/search-query";
 

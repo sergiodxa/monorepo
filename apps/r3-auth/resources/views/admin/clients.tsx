@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flex, gap, items } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";

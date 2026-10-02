@@ -8,7 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { gap, vstack } from "@sdxc/u/layout";

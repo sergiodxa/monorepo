@@ -8,15 +8,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";

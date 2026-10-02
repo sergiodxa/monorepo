@@ -1,5 +1,5 @@
 /**
- * Browser entry for the dev tools. Renders the `remix/ui` tree client-side into
+ * Browser entry for the dev tools. Renders the `remix/component` tree client-side into
  * `#app` via `createRoot` and switches between the launcher and the tool views
  * through the History API, so navigation stays in the browser. Bundled by Bun.
  *
@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { createRoot, css, on } from "remix/ui";
+import { createRoot, css, on } from "remix/component";
 
 import { ImporterTool } from "./views/importer";
 import { Launcher } from "./views/launcher";
@@ -107,7 +107,7 @@ function App(handle: Handle<Record<string, never>>) {
  *
  * @param path The active tool path.
  * @param navigate Client navigation callback passed to the launcher.
- * @returns The `remix/ui` element for the active view.
+ * @returns The `remix/component` element for the active view.
  */
 function renderView(path: ToolPath, navigate: (path: ToolPath) => void) {
 	if (path === "/sprite") return <SpriteDrawingTool />;

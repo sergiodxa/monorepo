@@ -10,7 +10,7 @@
 
 import type { Translate } from "@sdxc/i18n";
 import type { Address, EmailTableRow } from "@sdxc/mail";
-import type { Handle, RemixElement } from "remix/ui";
+import type { Handle, RemixElement } from "remix/component";
 
 import { formatDateTime } from "@sdxc/dates";
 import { Email } from "@sdxc/mail";

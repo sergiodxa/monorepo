@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { bs, is } from "@sdxc/u/size";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * Default `aria-hidden` value applied through {@link attrs}, keeping a

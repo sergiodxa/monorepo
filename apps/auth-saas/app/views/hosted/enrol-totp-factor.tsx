@@ -11,12 +11,12 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Alert, Button, Card, Text, TextField } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 export namespace EnrolTotpFactorPage {
 	export interface Props {

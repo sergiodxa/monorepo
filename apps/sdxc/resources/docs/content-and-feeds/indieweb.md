@@ -34,7 +34,7 @@ send is only as good as the markup it points at. `mf` from `@sdxc/microformats/u
 that adds the class names, typed so a misspelled property is a compile error:
 
 ```tsx {% title="app/components/post-entry.tsx" %}
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { MicroTime, mf } from "@sdxc/microformats/ui";
 
@@ -222,7 +222,7 @@ as `Example Webmention (+https://example.com)`, so a publisher can see who is fe
 
 A `linked` mention carries its `kind` (`reply`, `like`, `repost`, `bookmark` or `mention`), its
 author and its content. `content.html` is already sanitized with the source as its base, so an
-approved reply renders as it stands (in `remix/ui`, through `unsafeHTML`); mark each one up as
+approved reply renders as it stands (in `remix/component`, through `unsafeHTML`); mark each one up as
 an `mf("h-cite")` so the replies under your post are themselves readable microformats.
 
 Store mentions as pending and show them once you approve them; the endpoint is anonymous, and

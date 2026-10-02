@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flex, flexCol, flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
 import { m, mis, p } from "@sdxc/u/size";
 import { font, overflowWrap, weight } from "@sdxc/u/typography";
 import { Avatar, Badge, Card, Label, LinkButton, Text } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 

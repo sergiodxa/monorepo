@@ -1,5 +1,5 @@
 /**
- * Shared `remix/ui` style constants for public (pre-authentication) views.
+ * Shared `remix/component` style constants for public (pre-authentication) views.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

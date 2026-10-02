@@ -1,14 +1,14 @@
 /**
- * Writes microformats from `remix/ui` templates: typed class names as a mixin that sits
+ * Writes microformats from `remix/component` templates: typed class names as a mixin that sits
  * in `mix` beside the `css()` mixins, the same names as a `class` string, and a `<time>`
  * that carries an instant with its offset, so a misspelled class is a compile error.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ElementProps, Handle, MixinDescriptor, RemixNode } from "remix/ui";
+import type { ElementProps, Handle, MixinDescriptor, RemixNode } from "remix/component";
 
-import { createElement, createMixin } from "remix/ui";
+import { createElement, createMixin } from "remix/component";
 
 /**
  * Groups the class-name types under a single import surface.

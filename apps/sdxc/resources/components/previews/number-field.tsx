@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
@@ -20,7 +20,7 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** What one seat costs a month, so the subtotal is worth reading. */
 const PRICE_PER_SEAT = 12;

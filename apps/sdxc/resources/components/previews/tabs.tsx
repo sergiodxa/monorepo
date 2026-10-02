@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, Tabs, Text } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Each tab's own page, so the panel changes with the URL rather than with state. */
 const SECTIONS = [

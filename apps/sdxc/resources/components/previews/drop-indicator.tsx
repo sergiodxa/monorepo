@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { GripVerticalIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -20,7 +20,7 @@ import { text } from "@sdxc/u/typography";
 import { Badge, DropIndicator, Header, Item } from "@sdxc/ui";
 import { DragSession } from "@sdxc/ui/behaviors";
 import { dragReorder } from "@sdxc/ui/mixins";
-import { clientEntry, on, ref } from "remix/ui";
+import { clientEntry, on, ref } from "remix/component";
 
 import { reorder } from "~/app/services/reorder-list";
 

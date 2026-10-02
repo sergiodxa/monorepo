@@ -8,10 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button } from "@sdxc/ui";
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 import type { Photo } from "../data/types";
 

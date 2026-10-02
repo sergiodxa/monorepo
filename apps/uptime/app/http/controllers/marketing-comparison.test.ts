@@ -13,15 +13,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { renderToString } from "remix/ui/server";
 import { afterAll, describe, expect, test } from "vitest";
 
 import type { MarketingContent } from "~/resources/content/marketing";

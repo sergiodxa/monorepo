@@ -175,7 +175,7 @@ rendering it takes a branch per item and no arithmetic. `@sdxc/ui`'s `Pagination
 
 ```tsx {% title="resources/views/pager.tsx" %}
 import type { Pagination as Page } from "@sdxc/pagination";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Pagination } from "@sdxc/ui";
 
@@ -365,7 +365,7 @@ which is how `cursors.next` comes back `null` on the last page without a count.
   these handlers answer with, and a keyset API list.
 - [Describe your API with OpenAPI](/docs/http-apis/openapi): document the `page`,
   `per_page` and `cursor` parameters and the `Link` header.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui):
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui):
   the layout and components the HTML lists render into.
 - [`@sdxc/pagination`](/api/pagination): every option, `toJSON()` for an envelope, and the
   cursor functions.

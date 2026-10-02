@@ -11,7 +11,7 @@ npm add @sdxc/microformats
 Fallible functions return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values;
 it installs alongside this package, as do [`@sdxc/html`](https://www.npmjs.com/package/@sdxc/html),
 which builds the tree the parser walks, and [`remix`](https://www.npmjs.com/package/remix), whose
-`remix/data-schema` validates items and whose `remix/ui` renders the `./ui` helpers.
+`remix/data-schema` validates items and whose `remix/component` renders the `./ui` helpers.
 
 [Microformats2](https://microformats.org/wiki/microformats2-parsing) is the vocabulary the
 IndieWeb reads a page through: class names on ordinary HTML (`h-entry`, `p-name`,
@@ -25,7 +25,7 @@ repost; Micropub's JSON request body and its `q=source` answer are the same JSON
 - **`@sdxc/microformats/vocabulary`** gives typed views of `h-entry`, `h-card`, `h-feed` and
   `h-cite`, and the IndieWeb living algorithms built on them: authorship, the representative
   `h-card`, Post Type Discovery, and which entry on a page responds to a URL.
-- **`@sdxc/microformats/ui`** gives `remix/ui` templates typed class names, as a mixin that sits
+- **`@sdxc/microformats/ui`** gives `remix/component` templates typed class names, as a mixin that sits
   in `mix` beside `css()`, and a `<time>` component.
 
 The parser runs the official [microformats test suite](https://github.com/microformats/tests)

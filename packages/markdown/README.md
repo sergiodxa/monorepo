@@ -82,7 +82,7 @@ Or UI nodes, for a view that owns the markup around them:
 
 ```tsx
 import type { Markdown } from "@sdxc/markdown";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { toRemix } from "@sdxc/markdown/remix";
 

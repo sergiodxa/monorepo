@@ -1,17 +1,17 @@
 /**
- * Adapts `remix/ui/listbox`'s ARIA listbox keyboard pattern onto a ListBox's
+ * Adapts `@remix-run/ui/listbox`'s ARIA listbox keyboard pattern onto a ListBox's
  * option-list host, delegating arrow keys, `Home`/`End`, typeahead, and
- * `Enter`/`Space` to `remix/ui/listbox`'s own `list()` primitive, and reports
+ * `Enter`/`Space` to `@remix-run/ui/listbox`'s own `list()` primitive, and reports
  * the shared context's selected value and active option as a typed event.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinFactory } from "remix/ui";
+import type { MixinFactory } from "remix/component";
 
-import { createMixin, on } from "remix/ui";
-import * as listbox from "remix/ui/listbox";
+import * as listbox from "@remix-run/ui/listbox";
+import { createMixin, on } from "remix/component";
 
 import { trackHostNode } from "./track-host-node.js";
 
@@ -47,7 +47,7 @@ export class ListboxChangeEvent extends Event {
 
 /**
  * Turns a ListBox's option-list host into the ARIA listbox keyboard surface
- * by delegating to `remix/ui/listbox`'s `list()` primitive. Use it inside an
+ * by delegating to `@remix-run/ui/listbox`'s `list()` primitive. Use it inside an
  * ancestor `listbox.Context` alongside a matching `option()` mixin.
  *
  * @example

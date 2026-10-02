@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { outline } from "@sdxc/u/color";
 import { opacity, rounded, transition } from "@sdxc/u/effects";
@@ -16,7 +16,7 @@ import { hstack, inlineFlex, items, justify, relative, shrink, vstack } from "@s
 import { media } from "@sdxc/u/responsive";
 import { bs, is, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";
 

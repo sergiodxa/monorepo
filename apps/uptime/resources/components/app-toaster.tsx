@@ -13,12 +13,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 import { Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /**
  * Name of the `document`-level event {@link showToast} dispatches and {@link AppToaster}

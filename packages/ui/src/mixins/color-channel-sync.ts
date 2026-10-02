@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinFactory } from "remix/ui";
+import type { MixinFactory } from "remix/component";
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 /**
  * `data-*` attribute a ColorSlider channel's native range thumb carries,

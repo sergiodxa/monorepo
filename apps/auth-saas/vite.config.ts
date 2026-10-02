@@ -1,7 +1,7 @@
 /**
  * Vite build configuration for the auth-saas worker: registers the Cloudflare plugin,
  * resolves tsconfig path aliases, and defines a `client` build environment that bundles
- * the browser hydration entry so server-rendered `remix/ui` pages hydrate. The
+ * the browser hydration entry so server-rendered `remix/component` pages hydrate. The
  * `@cloudflare/vite-plugin` detects this environment and serves the bundle through the
  * `ASSETS` binding.
  *
@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { defineConfig } from "vite";
 
-/** Absolute path to the browser entrypoint that boots the `remix/ui` runtime. */
+/** Absolute path to the browser entrypoint that boots the `remix/component` runtime. */
 let clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
 
 export default defineConfig({

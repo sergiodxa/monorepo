@@ -7,20 +7,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { log } from "@sdxc/logger/middleware";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { renderToString } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";

@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
 import { rounded, transition } from "@sdxc/u/effects";
 import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * Default {@link DropIndicator.Props.isDropTarget}, leaving the bar unpainted

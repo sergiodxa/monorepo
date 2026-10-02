@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/* @jsxImportSource remix/ui */
+/* @jsxImportSource remix/component */
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { Fence } from "./fence.js";

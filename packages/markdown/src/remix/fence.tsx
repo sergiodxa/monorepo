@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/* @jsxImportSource remix/ui */
+/* @jsxImportSource remix/component */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 /**
  * Groups the code fence's types under the component name.

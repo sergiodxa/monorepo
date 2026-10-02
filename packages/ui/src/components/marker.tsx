@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -18,7 +18,7 @@ import { basis, center, gap, grow, inlineFlex, items, shrink } from "@sdxc/u/lay
 import { bs, is, minIs, pb, pi } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 import { fontSize, leading, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /** Visual shape {@link Marker} falls back to when `variant` is omitted. */
 const DEFAULT_VARIANT: Marker.Variant = "default";

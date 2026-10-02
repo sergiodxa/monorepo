@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -28,7 +28,7 @@ import {
 	weight,
 	whiteSpace,
 } from "@sdxc/u/typography";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { SubscribeForm } from "~/resources/components/subscribe-form";
 import type { PackageCopy } from "~/resources/content/release";

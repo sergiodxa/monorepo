@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { bg } from "@sdxc/u/color";
@@ -30,7 +30,7 @@ import {
 import { bs, is, mbe, p, width } from "@sdxc/u/size";
 import { translateY } from "@sdxc/u/transform";
 import { Button, LinkButton, Text } from "@sdxc/ui";
-import { Frame, navigate, on } from "remix/ui";
+import { Frame, navigate, on } from "remix/component";
 
 import type { Album, Photo } from "../data/types";
 

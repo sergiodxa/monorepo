@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 /**
  * Set on `<html>` while a client-side navigation is in flight, read by

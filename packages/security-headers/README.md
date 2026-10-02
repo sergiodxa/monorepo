@@ -270,12 +270,12 @@ handler read it.
 
 ## Pattern: The Managed Import Map
 
-`remix/ui` keeps the attributes of `<ImportMap>` on the `<script type="importmap">` it writes,
+`remix/component` keeps the attributes of `<ImportMap>` on the `<script type="importmap">` it writes,
 and its client runtime copies that script's nonce onto every import map it appends later. A
 document that uses client entries renders it with the nonce:
 
 ```tsx
-import { ImportMap } from "remix/ui/server";
+import { ImportMap } from "remix/component/server";
 
 <head>
 	<ImportMap value={importMap} nonce={ctx.securityHeaders.nonce} />
@@ -340,7 +340,7 @@ expect(policy?.directives.frameSrc).toEqual(["https://challenges.example.com"]);
 ## Pattern: Choosing Sources That Hold Up
 
 - Keep `styleSrc: ["self", "unsafe-inline"]` and never put `"nonce"` in `styleSrc`:
-  `remix/ui` emits one `<style>` per `css()` mixin without a nonce, and a nonce in `style-src`
+  `remix/component` emits one `<style>` per `css()` mixin without a nonce, and a nonce in `style-src`
   makes browsers ignore `'unsafe-inline'` and block those styles.
 - A cached HTML response replays its nonce to every visitor. Behind a shared cache, run a policy
   without `"nonce"` and use `sha256-…` sources for fixed inline scripts.

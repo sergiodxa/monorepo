@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { Confirm } from "./confirm.js";

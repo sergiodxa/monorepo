@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/ui";
+import type { RemixNode } from "remix/component";
 
 import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
 import { vstack } from "@sdxc/u/layout";

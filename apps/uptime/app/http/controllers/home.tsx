@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/ui";
+import type { RemixNode } from "remix/component";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { HoneypotFields } from "@sdxc/honeypot/ui";

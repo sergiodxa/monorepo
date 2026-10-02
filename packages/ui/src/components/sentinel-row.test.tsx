@@ -7,8 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { css } from "remix/ui";
-import { renderToString } from "remix/ui/server";
+import { css } from "remix/component";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { SentinelRow } from "./sentinel-row.js";

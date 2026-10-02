@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",

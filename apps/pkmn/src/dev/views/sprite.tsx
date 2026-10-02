@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { css, on, ref } from "remix/ui";
+import { css, on, ref } from "remix/component";
 
 /** The raw parameter type of the `css()` mixin, narrowed by {@link Styles}. */
 type CssMixinStyles = Parameters<typeof css>[0];

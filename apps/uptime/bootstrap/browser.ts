@@ -2,7 +2,7 @@
  * Browser entry point that hydrates the uptime client. It registers a
  * module-scoped translator so every independently hydrated island
  * (`Avatar`, `Logo`, `CopyButton`, `RunMonitorButton`, `DocsNav`) can call
- * `intl`/`Trans` without an `IntlProvider` of its own, then runs remix/ui's
+ * `intl`/`Trans` without an `IntlProvider` of its own, then runs remix/component's
  * client runtime against the globbed resource and route modules.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -13,7 +13,7 @@ import type { Messages } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 const SUPPORTED_LANGUAGES = ["en", "es", "de", "ja", "fr", "it"] as const;
 

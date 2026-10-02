@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -21,7 +21,7 @@ import { m, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { fontSize, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { NavLink, SearchField } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** One doc link, reduced to the fields the sidebar actually renders. */
 type DocsNavDoc = { path: string; title: string };

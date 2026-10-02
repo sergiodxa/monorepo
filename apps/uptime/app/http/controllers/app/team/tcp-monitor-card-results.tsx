@@ -18,9 +18,9 @@ import { notFound } from "@sdxc/http/response/html";
 import { flex, flexWrap, gap } from "@sdxc/u/layout";
 import { mbe } from "@sdxc/u/size";
 import { Badge, Empty, Table } from "@sdxc/ui";
+import { Fragment } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Fragment } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 

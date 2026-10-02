@@ -16,7 +16,7 @@ import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Avatar } from "@sdxc/ui";
 import { imageFallback } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** Portraits drawn as data URIs, so a reviewer row fetches nothing to render. */
 const PORTRAITS = {

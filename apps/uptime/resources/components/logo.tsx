@@ -8,13 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { bs, is } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { Logo as UILogo } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type LogoProps = { src: string | null; name: string; size?: number };

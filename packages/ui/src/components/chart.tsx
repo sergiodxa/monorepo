@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import {
@@ -44,7 +44,7 @@ import { z } from "@sdxc/u/stacking";
 import { focusVisible, hover, when } from "@sdxc/u/state";
 import { scaleProperty, translateProperty } from "@sdxc/u/transform";
 import { fontSize, leading, nowrap, textDecoration, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import type { Point } from "../utils/chart-path.js";
 import type { PieAngles } from "../utils/chart-scale.js";

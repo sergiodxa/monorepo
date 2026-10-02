@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { outlineColor } from "@sdxc/u/color";
 import { roundedCorner } from "@sdxc/u/effects";
@@ -18,7 +18,7 @@ import { flex, items } from "@sdxc/u/layout";
 import { mis } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * Default ARIA role applied through {@link attrs} unless a consumer

@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "@sdxc/icons";
 import {
@@ -41,7 +41,7 @@ import {
 	weight,
 	when,
 } from "@sdxc/u";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";

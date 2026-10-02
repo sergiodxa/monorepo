@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -19,7 +19,7 @@ import { fit, height, minHeight, p, width } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { fontSize, leading, lineClamp, textDecoration } from "@sdxc/u/typography";
 import { AspectRatio, Badge, Button, Card, Form } from "@sdxc/ui";
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 import type { Photo } from "../data/types";
 import type { LikeToggleResult } from "../middleware/likes";

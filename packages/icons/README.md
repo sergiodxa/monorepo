@@ -1,6 +1,6 @@
 # @sdxc/icons
 
-[Lucide](https://lucide.dev) icons as `remix/ui` components, one tree-shakeable export per
+[Lucide](https://lucide.dev) icons as `remix/component` components, one tree-shakeable export per
 icon.
 
 Lucide publishes its icons as framework-agnostic data — a list of SVG tag and attribute
@@ -16,7 +16,7 @@ prop names, the same `aria-hidden` fallback.
 npm add @sdxc/icons
 ```
 
-Every icon is a `remix/ui` component, so [`remix`](https://www.npmjs.com/package/remix)
+Every icon is a `remix/component` component, so [`remix`](https://www.npmjs.com/package/remix)
 installs alongside this package and renders them.
 
 ## Usage
@@ -79,7 +79,7 @@ misspelling is a compile error:
 
 ```tsx
 import type { IconName } from "@sdxc/icons";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Icon } from "@sdxc/icons";
 
@@ -177,7 +177,7 @@ a list of keys and one component:
 
 ```tsx
 import type { IconName } from "@sdxc/icons";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Icon, iconExportNames } from "@sdxc/icons";
 
@@ -216,10 +216,10 @@ A component wrapped in `clientEntry` is bundled for the browser, and there the s
 import is what you want — it carries one icon's data:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { HeartIcon } from "@sdxc/icons";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 export let LikeButton = clientEntry(
 	"/assets/like-button.js#LikeButton",

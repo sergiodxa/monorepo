@@ -57,7 +57,7 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 ```
 
 A few choices here are load-bearing. `styleSrc` keeps `"unsafe-inline"` and never takes
-`"nonce"`: `remix/ui` writes one `<style>` per `css()` mixin without a nonce, and a nonce in
+`"nonce"`: `remix/component` writes one `<style>` per `css()` mixin without a nonce, and a nonce in
 `style-src` makes browsers ignore `'unsafe-inline'` and block every one of them. `formAction`
 names your identity provider, because a login form that posts to it — the one in
 [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) — is a form action
@@ -110,9 +110,9 @@ tag. The nonce is generated on first read, and a response that never reads it ge
 `"nonce"` source removed, so an unused nonce is never advertised.
 
 ```tsx {% title="resources/layouts/document.tsx" %}
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
-import { ImportMap } from "remix/ui/server";
+import { ImportMap } from "remix/component/server";
 
 import { BOOT_SCRIPT } from "~/app/http/security-policy";
 
@@ -136,7 +136,7 @@ The handler reads the nonce and passes it in, as
 no nonce, because its hash is in the policy.
 
 A page with client entries — the passkey button from [Add passkeys](/docs/identity-and-security/passkeys),
-say — needs this. `remix/ui` keeps the attributes of `<ImportMap>` on the import map it writes
+say — needs this. `remix/component` keeps the attributes of `<ImportMap>` on the import map it writes
 and copies its nonce onto every import map it appends later; without it, a nonce-based
 `script-src` blocks the client entries. `TurnstileWidget` and the other CAPTCHA widgets take a
 `nonce` prop for their loader script the same way.

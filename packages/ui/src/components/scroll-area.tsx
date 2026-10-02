@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, outline } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -19,7 +19,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { bs, is } from "@sdxc/u/size";
 import { data, hover, when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { panelChrome } from "../styles/panel-chrome.js";
 

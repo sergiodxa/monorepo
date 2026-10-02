@@ -10,14 +10,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Passkey } from "@sdxc/passkey/client";
 import { isFailure } from "@sdxc/result";
 import { is } from "@sdxc/u/size";
 import { Alert, Button } from "@sdxc/ui";
+import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
-import { clientEntry, on } from "remix/ui";
 
 /** `beginPasskeyAuthentication`'s JSON answer: a ceremony id and the options to run it with. */
 const OptionsResponseSchema = s.object({

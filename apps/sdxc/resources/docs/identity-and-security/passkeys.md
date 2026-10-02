@@ -15,7 +15,7 @@ enrollment for an account that is already signed in, and a sign-in that needs no
 
 [`@sdxc/passkey`](/api/passkey) covers both halves. `@sdxc/passkey/server` issues ceremony
 options and verifies what the browser signs; `@sdxc/passkey/client` runs the ceremony in the
-browser, from a `remix/ui` client entry. Every failure on either side is a
+browser, from a `remix/component` client entry. Every failure on either side is a
 [`@sdxc/result`](/api/result) value.
 
 ```bash
@@ -281,10 +281,10 @@ A `CancelledError` means the person dismissed the prompt, which deserves silence
 error message. The island wraps it in a button and shows whatever message comes back:
 
 ```tsx {% title="resources/components/passkey-sign-in.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import { signInWithPasskey } from "./passkey-ceremony";
 
@@ -317,7 +317,7 @@ Render it beside your other sign-in options, passing
 `routes.passkeys.signIn.challenge.href()` and `routes.passkeys.signIn.verify.href()` as the
 two URLs; a browser without WebAuthn gets an `UnsupportedError` message from the same button.
 How client entries hydrate is covered in
-[Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui).
+[Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui).
 
 Enrollment is the same shape with `Passkey.register` in place of `Passkey.authenticate`. There,
 an `AlreadyRegisteredError` means this device is already enrolled, so point the person at
@@ -334,6 +334,6 @@ aborts it when the island disconnects, which releases the one ceremony a browser
   and account these endpoints build on.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — the nonce the
   client-entry import map needs under a strict policy.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) —
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   client entries and hydration.
 - [`@sdxc/passkey`](/api/passkey) — second-factor use, attestation, and every error class.

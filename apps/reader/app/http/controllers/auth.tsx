@@ -8,8 +8,8 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
-import type { RemixNode } from "remix/ui";
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 import { contextOf } from "@sdxc/auth/remix/context";

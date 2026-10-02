@@ -12,7 +12,7 @@
 import type { Messages } from "@sdxc/i18n";
 
 import { createI18n } from "@sdxc/i18n";
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import de from "~/app/locales/de";

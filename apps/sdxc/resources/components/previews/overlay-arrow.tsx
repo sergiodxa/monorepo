@@ -14,7 +14,7 @@ import { flexWrap, hstack, relative, vstack } from "@sdxc/u/layout";
 import { bs, is, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { OverlayArrow } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /**
  * Every side a surface takes, with the stacking that puts the trigger on the side the

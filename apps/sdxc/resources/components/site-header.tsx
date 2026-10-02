@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, borderEdge, fg } from "@sdxc/u/color";
 import { hidden, hstack, inline, insBs, sticky } from "@sdxc/u/layout";

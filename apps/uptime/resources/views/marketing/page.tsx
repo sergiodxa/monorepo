@@ -11,7 +11,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, CheckIcon, Icon } from "@sdxc/icons";
 import { bg, border, fg, linearGradient, radialGradient } from "@sdxc/u/color";

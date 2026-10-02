@@ -8,12 +8,12 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flex, gap, items, justify, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Badge, Button, Card, Text } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { ConsentScreen } from "~/database/consent";
 

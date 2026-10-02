@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -20,7 +20,7 @@ import { raw } from "@sdxc/u/general";
 import { flex, flexWrap, gap, inlineFlex, items } from "@sdxc/u/layout";
 import { bs, is, maxIs, mbs, minIs, p } from "@sdxc/u/size";
 import { text, textDecoration } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /** Height of the strip's own controls, which keeps a chip a chip rather than a button. */
 const CHIP_HEIGHT = "1.5rem";

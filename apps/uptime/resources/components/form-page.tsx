@@ -10,7 +10,7 @@
  */
 
 import type { SizeValue } from "@sdxc/u/tokens";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { is, maxIs, mi } from "@sdxc/u/size";
 

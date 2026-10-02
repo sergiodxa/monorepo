@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { isFailure } from "@sdxc/result";
-import { css, on, ref } from "remix/ui";
+import { css, on, ref } from "remix/component";
 
 import manifest from "~/content/manifest.json";
 import {

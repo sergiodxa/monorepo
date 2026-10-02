@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+import type { ResolveFrameContext } from "remix/component/server";
 import type { Middleware, RequestContext, RequestHandler, Router } from "remix/router";
-import type { RemixNode } from "remix/ui";
-import type { ResolveFrameContext } from "remix/ui/server";
 
 import billing from "@sdxc/billing/middleware";
 import {
@@ -20,6 +20,7 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,7 +29,6 @@ import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { renderToStream } from "remix/ui/server";
 import { describe, expect, test, vi } from "vitest";
 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";

@@ -115,7 +115,7 @@ back to the schema's `[]`. The current sort travels along in hidden inputs, so f
 it.
 
 ```tsx {% title="resources/views/tasks.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button, Checkbox, CheckboxGroup, Label, TextField } from "@sdxc/ui";
 
@@ -177,7 +177,7 @@ writes a nested value back in the syntax `parse` reads, so a link is the current
 field replaced:
 
 ```tsx {% title="resources/views/task-links.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { stringify } from "@sdxc/bracket-params";
 import { Link } from "@sdxc/ui";
@@ -246,7 +246,7 @@ and `fieldName(path)` writes a path as its bracket name: `fieldName(["items", 0,
 is `items[0][quantity]`. The file input submits one `attachments[]` per chosen file.
 
 ```tsx {% title="resources/views/new-invoice.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fieldName } from "@sdxc/bracket-params";
 import { Button, FileTrigger, Form, TextField } from "@sdxc/ui";
@@ -399,7 +399,7 @@ optional field can be passed as-is.
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params): flat forms,
   route params and JSON bodies, with `@sdxc/validate`.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui): the
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui): the
   components the forms above are built from.
 - [Paginate lists](/docs/http-apis/paginate-lists): cursors and page links for the list the
   filters narrow.

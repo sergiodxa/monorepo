@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flex, flexCol, items, justify } from "@sdxc/u/layout";
 import { is, maxIs, minBs, p } from "@sdxc/u/size";

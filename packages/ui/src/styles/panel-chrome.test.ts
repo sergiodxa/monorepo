@@ -1,4 +1,4 @@
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
 /**
  * Covers {@link panelChrome} as pure `css()` output: the exact property set

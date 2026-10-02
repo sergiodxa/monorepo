@@ -1,5 +1,5 @@
 /**
- * Client-side entry for the platform dashboard. Boots the `remix/ui` runtime so
+ * Client-side entry for the platform dashboard. Boots the `remix/component` runtime so
  * server-rendered pages hydrate in the browser, loading `clientEntry()` component
  * modules on demand and resolving `<Frame>` navigations. The built asset is
  * emitted to `assets/clientEntry.js` and loaded via a `<script type="module">`.
@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 /**
  * Every client-loadable module, keyed by its source path. Globs only the

@@ -9,20 +9,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Middleware, RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import changelog from "~/app/http/controllers/changelog";
 import componentShow from "~/app/http/controllers/component-show";

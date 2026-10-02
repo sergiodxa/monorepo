@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { border, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -17,7 +17,7 @@ import { absolute, basis, gap, grow, inset, relative, self, shrink, vstack } fro
 import { bs, is, mbe, minIs, p, pis } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { fontSize, leading, tracking, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 

@@ -1,6 +1,6 @@
 # @sdxc/i18n
 
-Language detection, translators for [Unicode MessageFormat 2](https://messageformat.unicode.org) messages, a Remix middleware that publishes one per request, and `remix/ui` components that render messages containing markup.
+Language detection, translators for [Unicode MessageFormat 2](https://messageformat.unicode.org) messages, a Remix middleware that publishes one per request, and `remix/component` components that render messages containing markup.
 
 Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@sdxc/messageformat).
 
@@ -10,13 +10,13 @@ Messages format through [`@sdxc/messageformat`](https://www.npmjs.com/package/@s
 npm add @sdxc/i18n
 ```
 
-Requires `remix` (v3) as a companion; the `remix/ui` exports are only needed when rendering through `remix/ui`.
+Requires `remix` (v3) as a companion; the `remix/component` exports are only needed when rendering through `remix/component`.
 
 The package ships three entry points:
 
 - `@sdxc/i18n` — `createI18n`, `createTranslator`, `LanguageDetector`, `getClientLocales`, and the `I18n`/`Translate`/`Messages` types. No router or logger dependency, so it runs in the browser.
 - `@sdxc/i18n/middleware` — the default-exported `i18n` middleware for `remix/router`.
-- `@sdxc/i18n/ui` — `IntlProvider`, `intl`, `setIntl`, and `Trans` for `remix/ui`. Browser-safe.
+- `@sdxc/i18n/ui` — `IntlProvider`, `intl`, `setIntl`, and `Trans` for `remix/component`. Browser-safe.
 
 ## Messages
 
@@ -106,7 +106,7 @@ let translate = createTranslator({
 let { locale, t } = translate(user.language);
 ```
 
-### Rendering with `remix/ui`
+### Rendering with `remix/component`
 
 ```tsx
 import { intl, IntlProvider } from "@sdxc/i18n/ui";
@@ -223,7 +223,7 @@ A language outside `supportedLanguages` resolves to `fallbackLanguage` first, so
 
 ### `IntlProvider`
 
-`remix/ui` context provider, from `@sdxc/i18n/ui`. Publishes the `intl` prop to every descendant through context and renders `children` unchanged. To switch language on the client, render it with a new `I18n`.
+`remix/component` context provider, from `@sdxc/i18n/ui`. Publishes the `intl` prop to every descendant through context and renders `children` unchanged. To switch language on the client, render it with a new `I18n`.
 
 ### `setIntl(intl: I18n): void`
 
@@ -235,10 +235,10 @@ From `@sdxc/i18n/ui`. Reads the `I18n` published by the nearest ancestor `IntlPr
 
 ### `Trans`
 
-`remix/ui` component, from `@sdxc/i18n/ui`, for a message containing markup. Each `{#name}…{/name}` pair renders as the `components[name]` element with the content between them, nested markup included, as its children; a standalone `{#name/}` renders the element with no children.
+`remix/component` component, from `@sdxc/i18n/ui`, for a message containing markup. Each `{#name}…{/name}` pair renders as the `components[name]` element with the content between them, nested markup included, as its children; a standalone `{#name/}` renders the element with no children.
 
 - `intl`: Translator to format through, typed or not; defaults to the nearest ancestor `IntlProvider`'s (via `intl`)
-- `i18nKey`: Message key. Named `i18nKey` because `key` is `remix/ui`'s own reconciliation prop and never reaches the component
+- `i18nKey`: Message key. Named `i18nKey` because `key` is `remix/component`'s own reconciliation prop and never reaches the component
 - `values`: Values for the message's variables
 - `components`: Elements keyed by markup name
 

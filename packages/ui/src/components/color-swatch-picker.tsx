@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { border, outline } from "@sdxc/u/color";
@@ -16,7 +16,7 @@ import { opacity, ringShadow, transition } from "@sdxc/u/effects";
 import { cursor } from "@sdxc/u/general";
 import { flexWrap, hstack, inlineFlex } from "@sdxc/u/layout";
 import { precededBy, when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { ColorSwatch } from "./color-swatch.js";
 

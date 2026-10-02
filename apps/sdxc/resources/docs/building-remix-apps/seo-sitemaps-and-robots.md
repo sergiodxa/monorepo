@@ -47,7 +47,7 @@ Let the document layout take the page's metadata as a prop and render it with th
 component, so each page decides its own copy and the tag set stays identical everywhere.
 
 ```tsx {% title="resources/layouts/document.tsx" %}
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { Seo } from "@sdxc/seo";
 

@@ -13,14 +13,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { BellIcon, MailIcon, SmartphoneIcon } from "@sdxc/icons";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Description, Header, Item, Switch } from "@sdxc/ui";
 import { ariaChecked } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The rows the list holds, each with the channel it governs. */
 const CHANNELS = [

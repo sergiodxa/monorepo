@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinHandle } from "remix/ui";
+import type { MixinHandle } from "remix/component";
 
 /**
  * Caches the DOM node behind a mixin's own host element for as long as it

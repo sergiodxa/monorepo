@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
@@ -20,7 +20,7 @@ import { gap, inlineFlex, items, justify, shrink } from "@sdxc/u/layout";
 import { bs, is, minBs, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { hasAccessibleText } from "../utils/has-accessible-text.js";

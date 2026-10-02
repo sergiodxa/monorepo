@@ -1,6 +1,6 @@
 ---
 name: sdxc-ui
-description: "@sdxc/ui is a catalog of styled, accessible `remix/ui` components rendered as server HTML — forms, overlays, navigation, feedback, charts, color and layout — with variants driven by `data-*` attributes and `--ui-*` variables. Use when building a page out of Dialog, Button, Form fields, Menu, Table, Toast or Chart, when adding DOM behavior through a `mix` mixin in a hydrated island, or for its headless behavior classes."
+description: "@sdxc/ui is a catalog of styled, accessible `remix/component` components rendered as server HTML — forms, overlays, navigation, feedback, charts, color and layout — with variants driven by `data-*` attributes and `--ui-*` variables. Use when building a page out of Dialog, Button, Form fields, Menu, Table, Toast or Chart, when adding DOM behavior through a `mix` mixin in a hydrated island, or for its headless behavior classes."
 ---
 
 # @sdxc/ui
@@ -26,7 +26,7 @@ Declare the workspace dependency, then import:
 ```
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Badge } from "@sdxc/ui";
 

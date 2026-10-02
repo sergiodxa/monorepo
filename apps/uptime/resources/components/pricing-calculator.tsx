@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 import { PlusIcon, XIcon } from "@sdxc/icons";
@@ -40,7 +40,7 @@ import { bs, is, m, mbs, p, pis } from "@sdxc/u/size";
 import { before } from "@sdxc/u/state";
 import { fontSize, tabularNums, weight } from "@sdxc/u/typography";
 import { Button, Card, Heading, HeadingScope, Label, Separator, Slider } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import {
 	BASE_PRICE_USD,

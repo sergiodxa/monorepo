@@ -30,9 +30,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixElement } from "remix/ui";
+import type { Handle, RemixElement } from "remix/component";
 
-import { clientEntry, Frame, ref } from "remix/ui";
+import { clientEntry, Frame, ref } from "remix/component";
 
 /**
  * The band at the top of the viewport a page has to reach into to be the one being read.

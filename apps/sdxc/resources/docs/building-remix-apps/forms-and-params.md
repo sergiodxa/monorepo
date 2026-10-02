@@ -126,7 +126,7 @@ field finds its own messages by `name`, marks itself `aria-invalid`, and the fir
 field takes focus, with no client JavaScript.
 
 ```tsx {% title="resources/views/new-team.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button, Form, TextField } from "@sdxc/ui";
 
@@ -266,7 +266,7 @@ API prefers plain JSON, `badRequest({ errors: body.error.issues })` from
 
 ## Where to go next
 
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) —
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   the components the form above is built from.
 - [Build a JSON API with problem details](/docs/http-apis/json-apis) — a catalog of problem
   types instead of one-off documents.

@@ -1,6 +1,6 @@
 # @sdxc/ui
 
-Styled, accessible `remix/ui` components rendered as server HTML.
+Styled, accessible `remix/component` components rendered as server HTML.
 
 Every component is a plain function taking a `Handle<Props>` and rendered through JSX, with
 variants, states and colors driven by a `data-*` attribute contract and a set of `--ui-*`
@@ -28,7 +28,7 @@ package.
 Every component takes a `Handle<Props>` and returns a render closure, and is used as JSX:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Badge } from "@sdxc/ui";
 
@@ -106,9 +106,9 @@ A widget that wants interactivity gets it from a mixin applied through `mix` ins
 hydrated island. The components themselves stay pure UI:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 import { Command } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
@@ -327,7 +327,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `colorAreaDrag()`               | `ColorArea`                | Drags the root as one 2D gesture across its paired axis inputs.                                                  |
 | `colorPreview()`                | `ColorField`               | Updates the paired `ColorSwatch` as a typed value parses.                                                        |
 | `colorWheelDrag()`              | `ColorWheel`               | Reshapes the hue input into a ring and drags it as an angular gesture.                                           |
-| `comboboxFilter()`              | `ComboBox.Input`           | As-you-type narrowing through `remix/ui/combobox`.                                                               |
+| `comboboxFilter()`              | `ComboBox.Input`           | As-you-type narrowing through `@remix-run/ui/combobox`.                                                          |
 | `commandFilter(model)`          | `Command`                  | Filtering against a `FilterModel`, mirrored onto items as `hidden`.                                              |
 | `commandKeys(model)`            | `Command`                  | Arrow keys move the active match; Enter activates its nested link or button.                                     |
 | `contextMenu(id)`               | `ContextMenu.Trigger`      | Opens the named popover at the pointer on right-click or the Context Menu key.                                   |
@@ -340,7 +340,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `headingLevelFallback(options)` | an island's heading root   | Recovers the ambient heading depth from `data-heading-level` at a hydration boundary.                            |
 | `hotkey(combo)`                 | any `<dialog>`/`[popover]` | A document-level shortcut opening or closing its host regardless of focus.                                       |
 | `imageFallback()`               | `Avatar` / `Logo` images   | Flags a failed image load, including retroactively for cached images.                                            |
-| `listboxKeys()`                 | `ListBox`                  | Arrow/Home/End/typeahead through `remix/ui/listbox`.                                                             |
+| `listboxKeys()`                 | `ListBox`                  | Arrow/Home/End/typeahead through `@remix-run/ui/listbox`.                                                        |
 | `longPress(options?)`           | any element                | Fires once a pointer holds still past a duration and movement tolerance.                                         |
 | `menuKeys(options?)`            | `Menu`                     | The WAI-ARIA menu pattern: roving tabindex, arrows, Home/End, typeahead.                                         |
 | `menubarKeys(options?)`         | `Menubar`                  | The WAI-ARIA menubar pattern, handing off into whichever `Menu` opens.                                           |
@@ -351,7 +351,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `rangePreview(model)`           | `RangeCalendar.Grid`       | Hover and focus range preview against a `CalendarModel`'s pending anchor.                                        |
 | `resizeHandle(axis, session)`   | `Resizable.Handle`         | Pointer resize against a `ResizeSession`, mirrored as a custom property.                                         |
 | `stepper(options?)`             | `NumberField.Group`        | Press-and-hold repeat for the increment and decrement buttons.                                                   |
-| `tabKeys(options?)`             | `Tabs.List`                | Delegated arrow/Home/End activation through the shared `remix/ui/tabs` context.                                  |
+| `tabKeys(options?)`             | `Tabs.List`                | Delegated arrow/Home/End activation through the shared `@remix-run/ui/tabs` context.                             |
 | `themeToggle(options?)`         | any host                   | Switches `<html>` between light, dark and system through commands, persisted to a cookie.                        |
 | `treeKeys(model)`               | `Tree`                     | The WAI-ARIA tree pattern against a `SelectionModel`, typeahead included.                                        |
 | `validate(schema)`              | a native form control      | Applies a `remix/data-schema` schema through `setCustomValidity()`, mirrored into a `FieldError`.                |
@@ -444,9 +444,9 @@ the component and not in the mixin. The island owns the instance and re-renders 
 events:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 import { Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
@@ -533,7 +533,7 @@ A style recipe, an animation factory, and a local `css()` call compose as disjoi
 in one array:
 
 ```tsx
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { zoom } from "@sdxc/ui/animations";
 import { floatingSurface, interactiveTransition } from "@sdxc/ui/styles";
@@ -570,7 +570,7 @@ part. `TextField`'s four — `label`, `input`, `description`, `error` — are th
 every field wrapper extends:
 
 ```tsx
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { TextField } from "@sdxc/ui";
 
@@ -625,7 +625,7 @@ context. The canonical shape is an action that parses the submission and re-rend
 page with `issues` set:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import * as s from "remix/data-schema";
 import { parseSafe } from "remix/data-schema";
@@ -670,7 +670,7 @@ appears in the same order as its matching series: the toggle wiring keys off sib
 position rather than a series id.
 
 ```tsx
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { Chart } from "@sdxc/ui";
 
@@ -704,7 +704,7 @@ nearest point under the pointer or focus.
 until a person scrolls away from the live edge:
 
 ```tsx
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import { Bubble, Message, MessageScroller } from "@sdxc/ui";
 import { ScrollFollowModel } from "@sdxc/ui/behaviors";

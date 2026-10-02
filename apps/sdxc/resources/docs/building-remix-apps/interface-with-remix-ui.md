@@ -1,5 +1,5 @@
 ---
-title: Build the interface with remix/ui
+title: Build the interface with remix/component
 description: Compose pages from @sdxc/ui components, lay them out with @sdxc/u mixins, and hydrate only the island that needs script.
 section:
     title: Building Remix apps
@@ -8,7 +8,7 @@ order: 3
 lastUpdated: 2026-09-29
 ---
 
-A page in a Remix v3 app is `remix/ui` JSX rendered on the server. This guide builds a
+A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a
 projects page from [`@sdxc/ui`](/api/ui) components: a header, a grid of cards, and a dialog
 holding a form. It lays them out with [`@sdxc/u`](/api/u) mixins, adds glyphs from
 [`@sdxc/icons`](/api/icons), and hydrates exactly one small island, a copy-link button, since
@@ -38,7 +38,7 @@ reset, your palette, then the theme, in that order, from the document layout.
 ```
 
 ```tsx {% title="resources/layouts/document.tsx" %}
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
@@ -72,11 +72,11 @@ script deciding the scheme and nothing flashing on first paint.
 
 ## Compose a card
 
-Every `@sdxc/ui` component is a `remix/ui` component used as JSX, and compound parts such as
+Every `@sdxc/ui` component is a `remix/component` component used as JSX, and compound parts such as
 `Card.Header` hang off the root. A component of your own composes them:
 
 ```tsx {% title="resources/components/project-card.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Badge, Card, LinkButton } from "@sdxc/ui";
 
@@ -131,7 +131,7 @@ components.
 responsive behavior. Every export is a mixin, and a `mix` array composes them.
 
 ```tsx {% title="resources/components/project-grid.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { container, gap, grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { at } from "@sdxc/u/responsive";
@@ -169,7 +169,7 @@ one inside a narrow sidebar, whatever the viewport. Narrow is the unwrapped case
 
 Reach for a component before a pile of mixins. When `@sdxc/ui` has the element, the
 component already carries its spacing, focus ring and states. When it is close but not
-exact, pass a small `css({...})` from `remix/ui` in its `mix` rather than rebuilding it.
+exact, pass a small `css({...})` from `remix/component` in its `mix` rather than rebuilding it.
 
 ## A dialog with no script
 
@@ -178,7 +178,7 @@ button names its target with `commandfor` and the verb with `command`, and there
 open-state for you to track.
 
 ```tsx {% title="resources/components/new-project-dialog.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { PlusIcon } from "@sdxc/icons";
 import { Button, Dialog, Form, TextField } from "@sdxc/ui";
@@ -242,16 +242,16 @@ action side.
 ## An island, only where it's needed
 
 Copying a URL to the clipboard is behavior the platform has no declarative form for, so that
-one button becomes a `remix/ui` client entry. The `@sdxc/ui` side of it is small: a `Button`
+one button becomes a `remix/component` client entry. The `@sdxc/ui` side of it is small: a `Button`
 takes a behavior mixin such as `on("click", …)` through `mix` like any element does, and the
 icons swap on the next render.
 
 ```tsx {% title="resources/components/copy-link.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CheckIcon, CopyIcon } from "@sdxc/icons";
 import { Button } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 export type CopyLinkProps = { href: string; label: string };
 
@@ -283,7 +283,7 @@ export const CopyLink = clientEntry(
 ```
 
 Everything else about islands, from the client bootstrap that loads them to which props can
-cross to the browser, is `remix/ui`'s own; see Remix's
+cross to the browser, is `remix/component`'s own; see Remix's
 [hydration guide](https://github.com/remix-run/remix/blob/main/packages/ui/docs/hydration.md).
 Link the client script only from pages that render an island, and every other page ships no
 script at all.

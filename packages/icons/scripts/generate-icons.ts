@@ -2,7 +2,7 @@
  * Codegen script that reads Lucide's framework-agnostic icon data from
  * `lucide-static` and emits `src/registry.ts` (one named export per icon's
  * raw node data), `src/icon-names.ts` (the kebab-case name -> registry export
- * name lookup), one `remix/ui` component module per icon under `src/icons/`,
+ * name lookup), one `remix/component` component module per icon under `src/icons/`,
  * and the barrel `src/index.ts` that re-exports all of them.
  * Re-run with `bun run generate` whenever `lucide-static` is upgraded.
  *
@@ -182,7 +182,7 @@ async function writeIndexFile(iconNames: string[]) {
 	let reExports = iconNames.map((iconName) => `export * from "./icons/${iconName}.js";`).join("\n");
 	let content = `/**
  * Public entry point for \`@sdxc/icons\` — Lucide icons
- * (https://lucide.dev) as \`remix/ui\` components, one module per icon so
+ * (https://lucide.dev) as \`remix/component\` components, one module per icon so
  * bundlers can tree-shake unused ones, matching \`lucide-react\`'s package
  * shape.
  *

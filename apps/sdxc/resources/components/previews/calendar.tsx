@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -18,7 +18,7 @@ import { text } from "@sdxc/u/typography";
 import { Calendar } from "@sdxc/ui";
 import { CalendarModel } from "@sdxc/ui/behaviors";
 import { calendarKeys } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import { dayKey, monthGrid } from "~/app/services/month-grid";
 

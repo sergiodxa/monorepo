@@ -9,8 +9,8 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { Handle, RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Handle, RemixNode } from "remix/ui";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { formatDateTime } from "@sdxc/dates";

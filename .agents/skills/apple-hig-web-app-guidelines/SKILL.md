@@ -5,7 +5,7 @@ description: Apple Human Interface Guidelines adapted for Remix UI web apps. Use
 
 # Apple HIG for Remix UI Web Apps
 
-Design guidance based on Apple's Human Interface Guidelines, adapted for browser-based apps in this monorepo. Contains 10 rules across 5 categories focused on applying iOS and macOS design principles with `remix/ui` JSX and `css()` mixins, not React components or utility CSS classes.
+Design guidance based on Apple's Human Interface Guidelines, adapted for browser-based apps in this monorepo. Contains 10 rules across 5 categories focused on applying iOS and macOS design principles with `remix/component` JSX and `css()` mixins, not React components or utility CSS classes.
 
 Source: https://developer.apple.com/design/human-interface-guidelines/
 
@@ -23,7 +23,7 @@ Reference these guidelines when:
 
 Use the HIG as product design guidance, not as a requirement to copy native Apple apps. Ignore platform-only guidance that web apps cannot implement meaningfully, such as CarPlay, watchOS, tvOS, visionOS, system extensions, hardware-only sensors, App Store flows, native menu bar APIs, and OS-level permissions UI.
 
-Use `remix/ui` components and host elements with `mix={css(...)}` for styling. Use `on(...)`, `ref(...)`, `link(...)`, and native platform features when behavior is needed. Do not introduce React hooks, React component patterns, `className`, or Tailwind utility classes.
+Use `remix/component` components and host elements with `mix={css(...)}` for styling. Use `on(...)`, `ref(...)`, `link(...)`, and native platform features when behavior is needed. Do not introduce React hooks, React component patterns, `className`, or Tailwind utility classes.
 
 Prefer browser conventions and this monorepo's existing design system. Do not fake native system chrome, home indicators, traffic-light window controls, or Safari UI.
 
@@ -167,5 +167,5 @@ Make control states immediate, progress visible, and destructive actions explici
 
 ## Related Skills
 
-- Use `remix` for implementation details around `remix/ui`, `css(...)`, `on(...)`, component handles, and server-rendered UI.
+- Use `remix` for implementation details around `remix/component`, `css(...)`, `on(...)`, component handles, and server-rendered UI.
 - Use `web-design-guidelines` when the user asks for a broad UI audit.

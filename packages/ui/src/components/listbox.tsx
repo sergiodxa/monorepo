@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, fg, outline } from "@sdxc/u/color";
@@ -22,7 +22,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { maxBs, p, pb, pi } from "@sdxc/u/size";
 import { active, hover, when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";

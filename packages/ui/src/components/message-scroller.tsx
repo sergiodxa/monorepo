@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { border } from "@sdxc/u/color";
 import { rounded, shadow } from "@sdxc/u/effects";
@@ -32,7 +32,7 @@ import { pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { translateProperty } from "@sdxc/u/transform";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { Button } from "./button.js";
 import { ScrollArea } from "./scroll-area.js";

@@ -1,15 +1,15 @@
 /**
  * Shared factory that turns Lucide's framework-agnostic icon data into a
- * `remix/ui` component, so every generated icon in `src/icons/*` stays a
+ * `remix/component` component, so every generated icon in `src/icons/*` stays a
  * one-line call that reuses this module's `<svg>` rendering logic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props } from "remix/ui";
+import type { Handle, Props } from "remix/component";
 
-import { createElement } from "remix/ui";
+import { createElement } from "remix/component";
 
 /**
  * A single primitive drawing instruction from Lucide's icon data — an SVG tag
@@ -50,13 +50,13 @@ const DEFAULT_ATTRIBUTES = {
 } as const;
 
 /**
- * Builds a `remix/ui` icon component from a Lucide icon name and its node
+ * Builds a `remix/component` icon component from a Lucide icon name and its node
  * data, matching `lucide-react`'s `createLucideIcon` prop contract: size,
  * color, and strokeWidth props, plus auto `aria-hidden` when no accessible name is given.
  *
  * @param iconName Lucide's kebab-case icon name (e.g. `"circle-alert"`), used for the `lucide-<name>` class.
  * @param iconNode The icon's SVG child elements as `[tag, attrs]` tuples.
- * @returns A `remix/ui` component that renders the icon as an `<svg>`.
+ * @returns A `remix/component` component that renders the icon as an `<svg>`.
  */
 export function createLucideIcon(iconName: string, iconNode: IconNode) {
 	function LucideIcon({ props }: Handle<LucideProps>) {

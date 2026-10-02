@@ -32,8 +32,8 @@
 
 import type { Client } from "@sdxc/flags";
 import type { I18n } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
-import type { RemixNode } from "remix/ui";
 
 import { redirect } from "@sdxc/http/response";
 import { UnprocessableEntity } from "@sdxc/http/status-code";
@@ -50,10 +50,10 @@ import { bs, is, maxIs, minIs, p } from "@sdxc/u/size";
 import { text, textDecoration, truncate } from "@sdxc/u/typography";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton } from "@sdxc/ui";
 import { waitUntil } from "cloudflare:workers";
+import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
-import { attrs } from "remix/ui";
 
 import type { QueueView } from "~/app/http/controllers/queue-view";
 import type { UserStore } from "~/database/user-do";

@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"devDependencies": {
 		"@sdxc/response": "workspace:*"

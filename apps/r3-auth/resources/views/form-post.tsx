@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 /**
  * The one line of script this page carries: submitting the form as soon as it renders.
@@ -39,7 +39,7 @@ namespace FormPostView {
  * Renders the auto-submitting authorization response form.
  *
  * The submit runs as a one-line `<script>` text node, the shape of inline script
- * `remix/ui` supports; the `<noscript>` button covers browsers that skip it.
+ * `remix/component` supports; the `<noscript>` button covers browsers that skip it.
  */
 export default function FormPostView(handle: Handle<FormPostView.Setup>) {
 	return () => {

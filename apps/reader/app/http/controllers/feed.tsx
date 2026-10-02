@@ -54,9 +54,9 @@ import {
 	Menu,
 	Text,
 } from "@sdxc/ui";
+import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { attrs } from "remix/ui";
 
 import type { FeedStatus } from "~/database/feed-schema";
 

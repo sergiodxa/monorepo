@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { LoaderCircleIcon } from "@sdxc/icons";
 import { bs, fg, inlineFlex, is, items, justify, when } from "@sdxc/u";

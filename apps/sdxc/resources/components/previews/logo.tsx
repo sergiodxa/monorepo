@@ -15,7 +15,7 @@ import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Logo } from "@sdxc/ui";
 import { imageFallback } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 5, align: "start" })]}>

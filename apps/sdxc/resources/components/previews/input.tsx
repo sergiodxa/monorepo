@@ -11,14 +11,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
 import { Description, FieldError, Input, Label } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const INPUT_CODE = `let name = "edge-router";

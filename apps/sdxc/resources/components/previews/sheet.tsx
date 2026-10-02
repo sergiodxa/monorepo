@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Trash2Icon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
@@ -17,7 +17,7 @@ import { bs, is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, Button, Empty, Keyboard, Separator, Sheet, Text } from "@sdxc/ui";
 import { hotkey } from "@sdxc/ui/mixins";
-import { clientEntry, css, on } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
 
 /** One line of the cart, so removing an item visibly changes the total. */
 interface Line {

@@ -14,7 +14,7 @@ import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { ColorField } from "@sdxc/ui";
 import { colorPreview } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<form mix={[vstack({ gap: 5, align: "stretch" }), is("100%"), maxIs("22rem")]}>

@@ -13,7 +13,7 @@ import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { fit, is, m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { AspectRatio, Badge } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** Posters drawn as data URIs, so a layout demo fetches nothing to lay out. */
 const POSTERS = {

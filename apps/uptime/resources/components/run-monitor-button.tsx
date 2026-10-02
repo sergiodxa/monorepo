@@ -14,14 +14,14 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 import { PlayIcon } from "@sdxc/icons";
 import { m } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
+import { clientEntry, on } from "remix/component";
 import * as s from "remix/data-schema";
-import { clientEntry, on } from "remix/ui";
 
 import type { AppToast } from "~/resources/components/app-toaster";
 

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixElement } from "remix/ui";
+import type { RemixElement } from "remix/component";
 
 import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";

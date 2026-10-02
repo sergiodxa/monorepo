@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { KeyboardIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -25,7 +25,7 @@ import { m, mbs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Button, Keyboard, Modal, Text } from "@sdxc/ui";
 import { Announcer } from "@sdxc/ui/behaviors";
-import { clientEntry, ref } from "remix/ui";
+import { clientEntry, ref } from "remix/component";
 
 import routes from "~/routes/web";
 

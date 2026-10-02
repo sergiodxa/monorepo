@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
@@ -21,7 +21,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { bs, is, maxBs, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, textAlign } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { floatingSurface } from "../styles/floating-surface.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";

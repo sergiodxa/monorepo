@@ -15,7 +15,7 @@
 import { vstack } from "@sdxc/u/layout";
 import { is, pis } from "@sdxc/u/size";
 import { Empty, Heading, HeadingScope, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const HEADING_SCOPE_CODE = `<HeadingScope>

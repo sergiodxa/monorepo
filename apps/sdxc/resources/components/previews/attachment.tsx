@@ -24,7 +24,7 @@ import {
 import { is, maxIs } from "@sdxc/u/size";
 import { Attachment, Dialog } from "@sdxc/ui";
 import { attachmentTrigger } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<>

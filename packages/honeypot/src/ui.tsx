@@ -1,14 +1,14 @@
 /**
- * The honeypot fields as a `remix/ui` component: the signed token as a hidden input, and the trap
+ * The honeypot fields as a `remix/component` component: the signed token as a hidden input, and the trap
  * as a text input moved off-screen, out of the tab order, the accessibility tree and autofill.
  * It needs no client JavaScript, so the form stays a plain HTML form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { Honeypot } from "./index.js";
 

@@ -9,12 +9,12 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Button, Card, Text } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 export namespace RecoveryCodesPage {
 	export interface Props {

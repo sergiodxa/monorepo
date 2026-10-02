@@ -152,7 +152,7 @@ export default createAction(routes.welcome, (ctx) =>
 );
 ```
 
-The prop is `i18nKey` because `key` is `remix/ui`'s own reconciliation prop and never reaches
+The prop is `i18nKey` because `key` is `remix/component`'s own reconciliation prop and never reaches
 the component.
 
 ## Reach the translator from any component
@@ -161,7 +161,7 @@ Passing `ctx.intl` down through every prop gets old quickly. `IntlProvider` publ
 through context, and `intl(handle)` reads it back wherever the component sits.
 
 ```tsx {% title="resources/components/empty-projects.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 
@@ -306,7 +306,7 @@ the same package compiles it once and formats it with `format(values)` as often 
 
 ## Where to go next
 
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) —
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   the components the translated copy renders into.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — enqueuing the
   job that carries `ctx.locale`.

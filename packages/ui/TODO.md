@@ -140,15 +140,15 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] ColorProvider/useColor — intentionally omitted; color cascading is expressed as [data-color="x"] & descendant selectors in the stylesheet instead
 - [x] Direction/useDirection — intentionally omitted; RTL/LTR is achieved natively via the `dir` attribute and logical properties throughout, no JS provider needed
 
-## Mixins — adapters over remix/ui primitives
+## Mixins — adapters over remix/component primitives
 
-- [x] `listboxKeys()` — ListBox; wraps `remix/ui/listbox` for the ARIA listbox selection model and keyboard interaction
-- [x] `comboboxFilter()` — ComboBox; wraps `remix/ui/combobox` for as-you-type option filtering and active-option management
-- [x] `tabKeys()` — Tabs list; wraps `remix/ui/tabs` for ARIA tabs arrow-key activation for in-page panels
+- [x] `listboxKeys()` — ListBox; wraps `@remix-run/ui/listbox` for the ARIA listbox selection model and keyboard interaction
+- [x] `comboboxFilter()` — ComboBox; wraps `@remix-run/ui/combobox` for as-you-type option filtering and active-option management
+- [x] `tabKeys()` — Tabs list; wraps `@remix-run/ui/tabs` for ARIA tabs arrow-key activation for in-page panels
 
 ## Mixins — custom
 
-- [x] `menuKeys()` — Menu surface; ARIA menu keyboard pattern (roving tabindex, arrow keys, Home/End, typeahead) — a self-contained adapter over Menu's own `data-*`/`role` markup, not a wrapper around `remix/ui/menu`'s composed primitive
+- [x] `menuKeys()` — Menu surface; ARIA menu keyboard pattern (roving tabindex, arrow keys, Home/End, typeahead) — a self-contained adapter over Menu's own `data-*`/`role` markup, not a wrapper around `@remix-run/ui/menu`'s composed primitive
 - [x] `menubarKeys()` — Menubar row; ARIA menubar roving-tabindex/arrow-key pattern (Left/Right across top-level triggers, Home/End, typeahead), opening and moving the focused trigger's own Menu
 - [x] `chartTooltip()` — Chart root; pointer-tracked nearest-point lookup and positioned tooltip content, since no CSS selector computes interpolated placement or dynamic per-point text
 - [x] `contextMenu(id)` — ContextMenu trigger area; `contextmenu` has no HTML equivalent, opens the surface at the pointer position
@@ -199,7 +199,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 
 - [x] `enterExit()` composer — emits the `@starting-style` entry state, base exit state, and `transition` with `transition-behavior: allow-discrete`, keyed off platform state with a `when` option for custom states
 - [x] `fade()`, `zoom()`, `slide({ from })` presets — sugar over `enterExit()`; one animation mixin per host, composing two on one element is a conflict by design
-- [x] `durations`/`easings` motion tokens — shared design-system motion vocabulary; hydrated islands feed the same tokens into `remix/ui/animation`'s `spring`/`tween` configs
+- [x] `durations`/`easings` motion tokens — shared design-system motion vocabulary; hydrated islands feed the same tokens into `@remix-run/ui/animation`'s `spring`/`tween` configs
 - [x] `spin()`, `pulse()`, `shimmer()` keyframes — back Spinner, Skeleton, and indeterminate ProgressBar
 - [x] `scrollShadow()` — sticky header/toolbar gains a shadow once content scrolls beneath it; Chromium-only, `@supports (animation-timeline: scroll())`-gated
 - [x] `scrollProgress({ axis })` — progress indicator linked to scroll position (Carousel progress, reading progress); Chromium-only, `@supports`-gated
@@ -209,7 +209,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 
 ## Testing & tooling
 
-- [x] bun:test suite enforcing component-purity (only css/attrs/types imports from remix/ui in src/components/)
+- [x] bun:test suite enforcing component-purity (only css/attrs/types imports from remix/component in src/components/)
 - [x] Behavior class unit tests — construct, call methods, assert state and dispatched events, no DOM
 - [x] Dev-mode contract-check warnings (missing Dialog id, icon-only Button label, Command.Item without value, stripped from production)
 

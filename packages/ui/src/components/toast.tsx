@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { XIcon } from "@sdxc/icons";
 import { bg, border, colorMix, fg } from "@sdxc/u/color";
@@ -37,7 +37,7 @@ import { is, bs, maxIs, minIs, pb, pi, pie } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { translateX } from "@sdxc/u/transform";
 import { fontSize, leading, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { graphicHostStyle } from "../styles/graphic-host.js";
 import { warnIfNoAccessibleLabel } from "../utils/warn-if-no-accessible-name.js";

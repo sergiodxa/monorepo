@@ -1,6 +1,6 @@
 # uptime
 
-uptime is a Remix v3 (fetch-router + remix/ui) port of `apps/uptime`, reusing the
+uptime is a Remix v3 (fetch-router + remix/component) port of `apps/uptime`, reusing the
 same Cloudflare D1 database, KV namespace, queue, Durable Object, and Analytics
 Engine dataset. Full plan and decision log: `docs/adr/uptime/ADR-001-port-uptime-to-remix-v3.md`.
 

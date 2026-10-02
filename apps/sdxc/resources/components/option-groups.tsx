@@ -12,10 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { hidden } from "@sdxc/u/layout";
-import { clientEntry, ref } from "remix/ui";
+import { clientEntry, ref } from "remix/component";
 
 import type { OptionGroupName, OptionSelections } from "~/app/services/option-groups";
 

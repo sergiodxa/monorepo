@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/icons",
 	"version": "0.0.1",
-	"description": "Lucide icons as remix/ui components, one tree-shakeable export per icon",
+	"description": "Lucide icons as remix/component components, one tree-shakeable export per icon",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
@@ -13,7 +13,7 @@
 		"generate": "bun run scripts/generate-icons.ts"
 	},
 	"dependencies": {
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"devDependencies": {
 		"@types/node": "^26.4.0",

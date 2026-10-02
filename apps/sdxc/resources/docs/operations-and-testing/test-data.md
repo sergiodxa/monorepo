@@ -213,7 +213,7 @@ your code can change it. Generated data meets that bar once the seed and the ref
 instant are fixed:
 
 ```tsx {% title="app/components/invoice-card.test.tsx" %}
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { expect, test } from "vitest";
 
 import { InvoiceCard } from "~/app/components/invoice-card";
@@ -284,5 +284,5 @@ Because the seed is in the suite's name, a failure prints it, and
   generation, drawn inside a `.spec` suite.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases): the models the
   seeding function writes through.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui): the
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui): the
   components the previews render.

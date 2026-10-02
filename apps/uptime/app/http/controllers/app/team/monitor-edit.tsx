@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { toDayKey } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";

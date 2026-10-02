@@ -15,7 +15,7 @@ import { bs, is, maxIs, minBs, pi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Bubble, ToggleButton } from "@sdxc/ui";
 import { pressToggle } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%"), maxIs("30rem")]}>

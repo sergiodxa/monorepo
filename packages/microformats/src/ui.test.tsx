@@ -6,11 +6,11 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Handle, Props, RemixNode } from "remix/ui";
+import type { Handle, Props, RemixNode } from "remix/component";
 
 import { unwrap } from "@sdxc/result";
-import { css } from "remix/ui";
-import { renderToString } from "remix/ui/server";
+import { css } from "remix/component";
+import { renderToString } from "remix/component/server";
 import { describe, expect, expectTypeOf, test } from "vitest";
 
 import type { MF2UI } from "./ui.js";

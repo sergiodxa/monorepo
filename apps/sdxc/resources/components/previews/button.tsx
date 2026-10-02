@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CheckIcon, CopyIcon, PlusIcon, Trash2Icon } from "@sdxc/icons";
 import { bg } from "@sdxc/u/color";
@@ -20,7 +20,7 @@ import { p } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
 import { Button } from "@sdxc/ui";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** What the copy button reads as, before a press and after each of the two outcomes. */
 const COPY_LABELS = {

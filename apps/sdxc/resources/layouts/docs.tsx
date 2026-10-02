@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { MenuIcon } from "@sdxc/icons";
 import { borderEdge, fg } from "@sdxc/u/color";

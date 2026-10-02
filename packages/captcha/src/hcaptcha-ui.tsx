@@ -1,12 +1,12 @@
 /**
- * hCaptcha's widget as a `remix/ui` component: the container hCaptcha's script renders
+ * hCaptcha's widget as a `remix/component` component: the container hCaptcha's script renders
  * into, carrying the widget's configuration as `data-*` attributes, then the script. Placed
  * inside a form, so the `h-captcha-response` token it writes submits with the form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 /** hCaptcha's loader, which renders every `.h-captcha` container once it runs. */
 const HCAPTCHA_SCRIPT_SRC = "https://js.hcaptcha.com/1/api.js";

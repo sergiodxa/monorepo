@@ -1,17 +1,17 @@
 ---
 name: sdxc-u
-description: "@sdxc/u is utility-first styling for `remix/ui`: every export is a mixin factory that drops into a `mix` prop, covering CSS primitives across thirteen families plus wrappers like `u.hover()`, `u.at()` and `u.dark()` that re-nest other utilities. Use when styling a `remix/ui` component without a stylesheet, writing responsive or stateful styles inline, resolving `--ui-*` design tokens, or extending the palette and tone names."
+description: "@sdxc/u is utility-first styling for `remix/component`: every export is a mixin factory that drops into a `mix` prop, covering CSS primitives across thirteen families plus wrappers like `u.hover()`, `u.at()` and `u.dark()` that re-nest other utilities. Use when styling a `remix/component` component without a stylesheet, writing responsive or stateful styles inline, resolving `--ui-*` design tokens, or extending the palette and tone names."
 ---
 
 # @sdxc/u
 
-Every export is a `remix/ui` mixin factory returning a `UtilityMixin` — a real host-element mixin valid directly in a `mix` prop, carrying a hidden style tree the wrapper utilities can read and re-nest. Families cover the CSS primitives (layout, size, color, typography, effects, overflow, stacking, a11y, state, responsive, animation, transform, general) plus composed patterns such as `u.surface()`, `u.hstack()` and `u.vstack()`. Logical properties are the default, each with a physical counterpart for values that must not flip with writing mode. Token names resolve straight to `var(--ui-*)` at call time with no runtime registry, and `theme.css` ships the semantic tone layer and the spacing, breakpoint, font and text-size scales. Its only dependency is `remix`.
+Every export is a `remix/component` mixin factory returning a `UtilityMixin` — a real host-element mixin valid directly in a `mix` prop, carrying a hidden style tree the wrapper utilities can read and re-nest. Families cover the CSS primitives (layout, size, color, typography, effects, overflow, stacking, a11y, state, responsive, animation, transform, general) plus composed patterns such as `u.surface()`, `u.hstack()` and `u.vstack()`. Logical properties are the default, each with a physical counterpart for values that must not flip with writing mode. Token names resolve straight to `var(--ui-*)` at call time with no runtime registry, and `theme.css` ships the semantic tone layer and the spacing, breakpoint, font and text-size scales. Its only dependency is `remix`.
 
 Full API, options and examples: [packages/u/README.md](packages/u/README.md)
 
 ## When to reach for it
 
-- A `remix/ui` component needs styling and you would otherwise write a stylesheet or a one-off `css()` block.
+- A `remix/component` component needs styling and you would otherwise write a stylesheet or a one-off `css()` block.
 - A style has to vary by breakpoint, container width, color scheme, or an interaction state such as hover, focus-visible, checked or disabled.
 - A style keys off a `data-*` or `aria-*` attribute, a pseudo-element, or a `:has()` relationship.
 - A design token — a spacing step, a radius, a blur, a tone — has to be resolved to its `var(--ui-*)` value in a raw CSS string.

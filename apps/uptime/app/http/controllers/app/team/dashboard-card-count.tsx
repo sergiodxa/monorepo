@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { isFailure } from "@sdxc/result";
 import { flex, flexWrap, gap, items } from "@sdxc/u/layout";

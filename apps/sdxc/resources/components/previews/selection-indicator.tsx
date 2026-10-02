@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CheckIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -17,7 +17,7 @@ import { is, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Header, SelectionIndicator, Text } from "@sdxc/ui";
 import { ariaChecked } from "@sdxc/ui/mixins";
-import { clientEntry, css, on } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
 
 /** The orders the menu offers, so the indicator has somewhere to move between. */
 const ORDERS = [

@@ -1,5 +1,5 @@
 /**
- * The head-of-document elements, as `remix/ui` components: one input produces the
+ * The head-of-document elements, as `remix/component` components: one input produces the
  * title, description, canonical link, robots directives, and the Open Graph and Twitter
  * tag sets, and structured data goes out as a single escaped `application/ld+json`
  * script. It exists so every page emits the same tag set instead of hand-written pairs
@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { unsafeHTML } from "remix/ui";
+import { unsafeHTML } from "remix/component";
 
 import type { SeoSite } from "../create-seo.js";
 import type { SchemaOrg } from "../lib/schema.js";

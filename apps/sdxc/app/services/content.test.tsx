@@ -10,7 +10,7 @@
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
-import { renderToStream } from "remix/ui/server";
+import { renderToStream } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import type { OptionSelections } from "~/app/services/option-groups";

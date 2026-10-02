@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { MinusIcon, PlusIcon } from "@sdxc/icons";
 import { bg, border, borderEdge, fg, outline, outlineWidth } from "@sdxc/u/color";
@@ -19,7 +19,7 @@ import { basis, flex, grow, inlineFlex, items, justify, shrink } from "@sdxc/u/l
 import { bs, is } from "@sdxc/u/size";
 import { active, focusVisible, hover, invalid, when } from "@sdxc/u/state";
 import { textAlign } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { fieldStackLayout } from "../styles/field-stack-layout.js";
 import { interactiveTransition } from "../styles/interactive-transition.js";

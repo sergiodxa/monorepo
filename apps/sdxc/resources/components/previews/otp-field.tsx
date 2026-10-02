@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
@@ -16,7 +16,7 @@ import { is, m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Button, Description, Header, Label, Link, OtpField } from "@sdxc/ui";
 import { otpSlots } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** How many characters the code carries, which is how many slots the group renders. */
 const LENGTH = 6;

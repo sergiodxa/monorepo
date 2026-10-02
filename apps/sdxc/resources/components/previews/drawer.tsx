@@ -15,7 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ShoppingCartIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
@@ -29,7 +29,7 @@ import {
 	NUMBER_FIELD_STEP_UP_COMMAND,
 	stepper,
 } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import type { CartLine } from "~/app/services/preview-cart";
 

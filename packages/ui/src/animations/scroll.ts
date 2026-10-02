@@ -9,7 +9,7 @@
  */
 
 import type { UtilityMixin } from "@sdxc/u";
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
 import { animation, keyframes } from "@sdxc/u/animation";
 import { mask } from "@sdxc/u/effects";

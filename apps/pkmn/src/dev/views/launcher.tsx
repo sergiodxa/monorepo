@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { css, on } from "remix/ui";
+import { css, on } from "remix/component";
 
 import type { ToolPath } from "../client";
 

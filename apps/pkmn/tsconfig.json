@@ -6,7 +6,7 @@
 		"noEmit": true,
 		"resolveJsonModule": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "remix/ui",
+		"jsxImportSource": "remix/component",
 		"types": ["bun", "node"],
 		"rootDirs": ["."],
 		"paths": {

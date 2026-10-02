@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { isFailure } from "@sdxc/result";
-import { css, on } from "remix/ui";
+import { css, on } from "remix/component";
 
 import type { Species } from "~/game/data/species";
 

@@ -18,9 +18,9 @@ import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { is, m, mbe, mbs } from "@sdxc/u/size";
 import { fontSize, nowrap, overflowWrap } from "@sdxc/u/typography";
 import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Frame } from "remix/ui";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";

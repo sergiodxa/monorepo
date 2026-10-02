@@ -80,7 +80,7 @@ Apply Apple's HIG as design guidance for clarity, consistency, feedback, adaptat
 ## Rules
 
 1. Keep HIG principles; drop native-only implementation details.
-2. Use `remix/ui` JSX, semantic HTML, `css()` mixins, and browser APIs.
+2. Use `remix/component` JSX, semantic HTML, `css()` mixins, and browser APIs.
 3. Do not fake OS chrome, hardware affordances, or unavailable platform features.
 4. Prefer browser conventions when HIG and web expectations conflict.
 5. Test on real mobile and desktop browsers because browser chrome changes available space.

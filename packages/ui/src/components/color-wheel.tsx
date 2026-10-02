@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, outline, outlineStyle } from "@sdxc/u/color";
 import { mask, opacity, rounded, shadow, transition, transitionDuration } from "@sdxc/u/effects";

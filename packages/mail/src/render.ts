@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixElement } from "remix/ui";
+import type { RemixElement } from "remix/component";
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 
 import { htmlToText } from "./lib/html-to-text.js";
 

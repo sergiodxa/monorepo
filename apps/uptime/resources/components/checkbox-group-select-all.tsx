@@ -12,11 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 import { Checkbox } from "@sdxc/ui";
-import { clientEntry, on, ref } from "remix/ui";
+import { clientEntry, on, ref } from "remix/component";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type CheckboxGroupSelectAllProps = {

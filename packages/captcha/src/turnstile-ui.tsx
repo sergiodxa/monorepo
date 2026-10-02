@@ -1,12 +1,12 @@
 /**
- * Cloudflare Turnstile's widget as a `remix/ui` component: the container Cloudflare's
+ * Cloudflare Turnstile's widget as a `remix/component` component: the container Cloudflare's
  * script renders into, carrying the widget's configuration as `data-*` attributes, then
  * the script itself. Placed inside a form, so the token it mints submits with the form.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 /** Cloudflare's Turnstile loader, which scans for `.cf-turnstile` once it runs. */
 const TURNSTILE_SCRIPT_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js";

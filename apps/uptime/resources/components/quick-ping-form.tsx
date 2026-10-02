@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -38,7 +38,7 @@ import { is, m, maxIs, minIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { Button, Input, Label } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /**
  * The form's own element id, which the fragment's narrow-viewport trigger button points

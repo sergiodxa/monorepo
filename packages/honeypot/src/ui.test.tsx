@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { isSuccess, unwrap } from "@sdxc/result";
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { expect, test } from "vitest";
 
 import { HoneypotFields } from "./ui.js";

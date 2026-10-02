@@ -12,7 +12,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, Card, Separator, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const SEPARATOR_CODE = `<Card>

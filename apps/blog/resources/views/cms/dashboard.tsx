@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";

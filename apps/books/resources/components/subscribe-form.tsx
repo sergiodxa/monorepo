@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -19,7 +19,7 @@ import { dark, media } from "@sdxc/u/responsive";
 import { is, maxIs, pb, pi } from "@sdxc/u/size";
 import { focusVisible, placeholder, when } from "@sdxc/u/state";
 import { pretty, text, textTransform, weight, whiteSpace } from "@sdxc/u/typography";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 /** The viewport width the field and button stop stacking at, matching the site's `lg`. */
 const SIDE_BY_SIDE = "(min-width: 64rem)";

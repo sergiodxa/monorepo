@@ -13,8 +13,8 @@
 
 import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
+import type { ResolveFrameContext } from "remix/component/server";
 import type { Middleware, RequestContext } from "remix/router";
-import type { ResolveFrameContext } from "remix/ui/server";
 
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
@@ -30,6 +30,7 @@ import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -37,7 +38,6 @@ import { methodOverride } from "remix/middleware/method-override";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";

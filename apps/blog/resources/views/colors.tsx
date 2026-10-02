@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, border, borderEdge, fg } from "@sdxc/u/color";
 import { ringShadow, rounded } from "@sdxc/u/effects";

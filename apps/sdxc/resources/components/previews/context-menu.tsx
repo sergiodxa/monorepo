@@ -26,7 +26,7 @@ import { is, maxIs, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { ContextMenu, Item } from "@sdxc/ui";
 import { contextMenu, menuKeys } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("28rem")]}>

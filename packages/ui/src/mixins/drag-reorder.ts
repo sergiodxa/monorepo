@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 import type { DragSession } from "../behaviors/drag-session.js";
 

@@ -1,5 +1,5 @@
 /**
- * Adapts `remix/ui/combobox`'s input behavior onto a ComboBox's text input:
+ * Adapts `@remix-run/ui/combobox`'s input behavior onto a ComboBox's text input:
  * narrows the popup's options to the typed text, moves the active option
  * with arrow keys, and commits or clears the draft on blur and `Escape`,
  * mirroring the result as `aria-activedescendant` and `aria-expanded`.
@@ -10,10 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinFactory } from "remix/ui";
+import type { MixinFactory } from "remix/component";
 
-import { createMixin } from "remix/ui";
-import * as combobox from "remix/ui/combobox/primitives";
+import * as combobox from "@remix-run/ui/combobox";
+import { createMixin } from "remix/component";
 
 /** DOM event type dispatched by {@link comboboxFilter} whenever the draft filter or the active option changes. */
 const FILTER_CHANGE_EVENT = "ui:combobox-filter-change" as const;
@@ -27,7 +27,7 @@ declare global {
 /**
  * Dispatched on a ComboBox's input by {@link comboboxFilter} whenever the
  * filter text, active option, or open state moves, letting a consumer
- * react to live narrowing without reading `remix/ui/combobox`'s context.
+ * react to live narrowing without reading `@remix-run/ui/combobox`'s context.
  */
 export class ComboboxFilterChangeEvent extends Event {
 	/** Id of the option `Enter` would commit right now, or `null` when none is active. */
@@ -51,7 +51,7 @@ export class ComboboxFilterChangeEvent extends Event {
 /**
  * Turns a ComboBox's text input into the as-you-type filter for its popup
  * option list by delegating typing, arrow-key movement, and blur/`Escape`
- * commit to `remix/ui/combobox`'s `input()` primitive.
+ * commit to `@remix-run/ui/combobox`'s `input()` primitive.
  *
  * @example
  * <combobox.Context name="airport">

@@ -14,7 +14,7 @@ import { bs, is, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, ScrollArea, Separator, Text } from "@sdxc/ui";
 import { scrollFade, scrollShadow } from "@sdxc/ui/animations";
-import { clientEntry, css } from "remix/ui";
+import { clientEntry, css } from "remix/component";
 
 /** One row of the log the viewport scrolls, so the example reads as a real deploy history. */
 interface Deploy {

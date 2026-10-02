@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import { createI18n } from "../lib/i18n.js";

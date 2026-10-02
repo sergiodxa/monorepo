@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { ChevronLeftIcon, ChevronRightIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
@@ -29,7 +29,7 @@ import { bs, is, mbe, p, pbe } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { scaleX } from "@sdxc/u/transform";
 import { text, textAlign, textDecoration, verticalAlign, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import {

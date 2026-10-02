@@ -13,7 +13,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Card, Skeleton } from "@sdxc/ui";
 import { pulse } from "@sdxc/ui/animations";
-import { clientEntry, css } from "remix/ui";
+import { clientEntry, css } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const SKELETON_CODE = `<Card aria-busy="true" aria-label="Loading comments">

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ListIcon } from "@sdxc/icons";
 import { bg, borderEdge, fg } from "@sdxc/u/color";
@@ -17,7 +17,7 @@ import { absolute, block, hstack, insBs, insIs, relative, vstack } from "@sdxc/u
 import { bs, is, m, mis, p, pis } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { text, truncate, weight } from "@sdxc/u/typography";
-import { clientEntry, ref } from "remix/ui";
+import { clientEntry, ref } from "remix/component";
 
 /**
  * The band at the top of the viewport a heading has to sit in to count as the one

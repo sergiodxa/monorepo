@@ -10,20 +10,20 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { RemixNode } from "remix/component";
 import type { Middleware, RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import checkout from "~/app/http/controllers/checkout";
 import defaultHandler from "~/app/http/controllers/default-handler";

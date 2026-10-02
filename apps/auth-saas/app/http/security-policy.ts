@@ -31,7 +31,7 @@ const PERMISSIONS_POLICY: SecurityHeaders.Policy["permissionsPolicy"] = {
 };
 
 /**
- * The hosted sign-in pages on a tenant's host. `remix/ui` writes its styles inline, so
+ * The hosted sign-in pages on a tenant's host. `remix/component` writes its styles inline, so
  * `style-src` allows them; `form-action` stays open because an authorization completes
  * by redirecting a form submission to the client's own origin. `Referrer-Policy:
  * no-referrer` keeps the tokens a magic link or reset URL carries out of `Referer`, and

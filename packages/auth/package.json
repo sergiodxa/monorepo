@@ -24,7 +24,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@remix-run/data-schema": "^0.3.0",
+		"@remix-run/data-schema": "^1.0.0",
 		"@sdxc/catch-response-middleware": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
@@ -40,10 +40,10 @@
 	},
 	"devDependencies": {
 		"@sdxc/cache": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"peerDependencies": {
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	},
 	"peerDependenciesMeta": {
 		"remix": {

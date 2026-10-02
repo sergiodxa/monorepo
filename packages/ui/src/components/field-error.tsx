@@ -12,11 +12,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { text, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * `data-field-error` applied through {@link attrs} unless a consumer

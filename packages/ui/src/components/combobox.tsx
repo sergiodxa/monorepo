@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { ChevronDownIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";

@@ -15,7 +15,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CheckIcon, ClipboardIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -23,7 +23,7 @@ import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Button, Description, Group, Input, Label, Select } from "@sdxc/ui";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const GROUP_CODE = `let copied = false;

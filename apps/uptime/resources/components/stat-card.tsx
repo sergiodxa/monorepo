@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { PlusIcon } from "@sdxc/icons";
 import { bg, fg } from "@sdxc/u/color";

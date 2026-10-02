@@ -106,16 +106,16 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST follow the guidelines in this document, and suggest improvements when necessary
 - MUST use `bunx` instead of `npx`, or any other package runner, to ensure consistent behavior across environments
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
-- MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/ui` over custom equivalents
+- MUST check what Remix v3 provides before hand-rolling middleware/helpers — prefer `remix/cop-middleware`, `remix/session-middleware`, `createAction`/`createController`, `remix/data-schema`, `remix/auth`, and `remix/component` over custom equivalents
 - MUST publish app services (Database, API clients) onto the request or job context from middleware (ADR-057), so a handler reads `ctx.db` / `ctx.database` and a test installs its own; a service nothing substitutes is a module function the caller imports
-- MUST render server HTML as `remix/ui` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
-- MUST build application UI with `remix/ui`, not React components/hooks or Tailwind utility classes; style with `css()` mixins through `mix`, and attach behavior with Remix UI mixins or native HTML platform features
+- MUST render server HTML as `remix/component` JSX with `css()` mixins; never build HTML from strings (`remix/html-template` or inline HTML template literals)
+- MUST build application UI with `remix/component`, not React components/hooks or Tailwind utility classes; style with `css()` mixins through `mix`, and attach behavior with Remix UI mixins or native HTML platform features
 - MUST build dialogs, popovers, menus, tooltips, and disclosure UI with native HTML platform features instead of JavaScript: `<dialog>` (with `.showModal()`/`::backdrop`) for modals, the Popover API (`popover` + `popovertarget` attributes) for popovers/menus/tooltips, the Command Invoker API (`<button commandfor command>` with `command="show-modal"`/`"close"`/`"toggle-popover"`/`"show-popover"`/`"hide-popover"` or `command="--custom"` handled via the `command` event) to wire buttons to targets declaratively, and `<details>`/`<summary>` for disclosures — reach for JS only for behavior the platform genuinely cannot express, and prefer progressive enhancement over JS-driven open/close state
 - MUST call the global `fetch` directly; never add an injectable fetch parameter (e.g. `fetchImpl: typeof fetch = fetch`)
 - MUST describe code on its own terms in comments; never name another app or package as the source of a pattern (e.g. "mirrors the blog app")
 - MUST keep `packages/*` app-agnostic: no imports from, or references to, `apps/*` in code or comments
 - MUST keep public blog content package-agnostic: articles and tutorials must not mention internal package names, `@sdxc/*` imports, or `packages/*` paths; use public APIs or local example modules instead
-- MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/ui`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
+- MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/component`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
 
 ### Publishing
 

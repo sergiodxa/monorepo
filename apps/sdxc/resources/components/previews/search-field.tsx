@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Empty, Item, Label, SearchField, Text } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** What the field searches, so the example narrows real rows rather than a placeholder. */
 const PACKAGES = [

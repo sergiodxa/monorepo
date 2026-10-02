@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { hstack, vstack } from "@sdxc/u/layout";
@@ -17,7 +17,7 @@ import { font, text, weight } from "@sdxc/u/typography";
 import { ColorSwatch, ColorWheel, Label } from "@sdxc/ui";
 import { colorWheelDrag } from "@sdxc/ui/mixins";
 import { formatHex, hslToRgb } from "@sdxc/ui/utils";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let hue = 210;

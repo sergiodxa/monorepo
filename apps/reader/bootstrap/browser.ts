@@ -1,6 +1,6 @@
 /**
  * Browser entry point. It registers a module-scoped translator so any independently
- * hydrated island can translate without an `IntlProvider` above it, then runs remix/ui's
+ * hydrated island can translate without an `IntlProvider` above it, then runs remix/component's
  * client runtime against the globbed resource and route modules and reports whatever fails
  * to come up.
  *
@@ -12,7 +12,7 @@ import type { Messages } from "@sdxc/i18n";
 
 import { createTranslator } from "@sdxc/i18n";
 import { setIntl } from "@sdxc/i18n/ui";
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 const SUPPORTED_LANGUAGES = ["en", "es"] as const;
 

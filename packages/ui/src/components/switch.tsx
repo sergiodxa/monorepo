@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import {
 	absolute,
@@ -37,7 +37,7 @@ import {
 	transitionDuration,
 	when,
 } from "@sdxc/u";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
 

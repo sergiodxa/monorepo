@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, borderEdge, fg, outline } from "@sdxc/u/color";
 import { opacity, roundedCorner, rounded, transition, transitionDuration } from "@sdxc/u/effects";

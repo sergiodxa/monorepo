@@ -8,7 +8,7 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { RemixElement } from "remix/ui";
+import type { RemixElement } from "remix/component";
 
 import type { MailError } from "./errors.js";
 

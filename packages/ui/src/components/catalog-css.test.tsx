@@ -1,5 +1,5 @@
 /**
- * A catalog-wide guard against one silent CSS failure: `remix/ui`'s style
+ * A catalog-wide guard against one silent CSS failure: `remix/component`'s style
  * serializer only treats a nested style-tree key as a selector when it leads
  * with `&`, `@`, `:`, `[` or `.` — every other key falls through to the
  * declaration path and serializes as `key: [object Object]`, which browsers
@@ -11,8 +11,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { jsx } from "remix/ui/jsx-runtime";
-import { renderToString } from "remix/ui/server";
+import { jsx } from "remix/component/jsx-runtime";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import * as catalog from "./index.js";

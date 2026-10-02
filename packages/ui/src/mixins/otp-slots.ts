@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 /**
  * Attribute every OtpField slot input exposes itself on. `otpSlots()` reads

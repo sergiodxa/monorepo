@@ -9,13 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CloudIcon, MapPinIcon, RouteIcon } from "@sdxc/icons";
 import { hstack, vstack } from "@sdxc/u/layout";
 import { Group, Text, ToggleButton } from "@sdxc/ui";
 import { pressToggle } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The layers the controls switch, so the toggles differ by more than their glyph. */
 const LAYERS = [

@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";

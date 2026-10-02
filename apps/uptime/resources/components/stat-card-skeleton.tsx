@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { rounded } from "@sdxc/u/effects";
 import { basis, flex, flexCol, gap, grow, items, shrink } from "@sdxc/u/layout";

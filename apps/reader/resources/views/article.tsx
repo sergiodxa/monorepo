@@ -13,13 +13,13 @@
  */
 
 import type { DOMElement, DOMNode } from "@sdxc/html/document";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { parseDocument } from "@sdxc/html/document";
 import { isFailure } from "@sdxc/result";
 import { maxIs } from "@sdxc/u/size";
 import { font, leading } from "@sdxc/u/typography";
-import { createElement } from "remix/ui";
+import { createElement } from "remix/component";
 
 /** What a tree calls an element, and what it calls a run of text. */
 const ELEMENT_NODE = 1;

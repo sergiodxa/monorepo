@@ -8,7 +8,7 @@
  */
 
 import type { I18n } from "@sdxc/i18n";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { fontSize } from "@sdxc/u/typography";

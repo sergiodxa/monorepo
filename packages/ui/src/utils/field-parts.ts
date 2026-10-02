@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Props as TagProps } from "remix/ui";
+import type { Props as TagProps } from "remix/component";
 
 /**
  * Per-part styling for a field's caption, control, supporting description,

@@ -8,7 +8,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { bg, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { backdropBlur } from "@sdxc/u/effects";

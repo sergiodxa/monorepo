@@ -14,7 +14,7 @@ import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, Button, Card, Separator } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[hstack({ gap: 4, align: "stretch" }), flexWrap()]}>

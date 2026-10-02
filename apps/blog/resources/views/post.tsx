@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { MicroTime, mf } from "@sdxc/microformats/ui";
@@ -18,7 +18,7 @@ import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdx
 import { bleed, bs, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
 import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@sdxc/u/typography";
 import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@sdxc/ui";
-import { Frame, unsafeHTML } from "remix/ui";
+import { Frame, unsafeHTML } from "remix/component";
 
 import type { PostViewModel } from "~/app/http/view-models/post";
 

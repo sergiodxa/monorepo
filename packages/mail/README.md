@@ -1,7 +1,7 @@
 # @sdxc/mail
 
 Transport-agnostic transactional email: pluggable transports, one mailer that normalizes
-every message, and a `remix/ui` layout kit that renders both body parts.
+every message, and a `remix/component` layout kit that renders both body parts.
 
 A `Mailer` owns normalization — sender defaults, address coercion, plain-text derivation,
 validation — and hands the result to a `Transport`, the only piece that knows a provider.
@@ -15,7 +15,7 @@ npm add @sdxc/mail
 
 Send outcomes are reported as a `Result` from
 [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure`
-and `unwrap` come from, and bodies are `remix/ui` trees from
+and `unwrap` come from, and bodies are `remix/component` trees from
 [`remix`](https://www.npmjs.com/package/remix). The middleware records deferred sends on
 the current log from [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and
 `@sdxc/mail/markdown` renders documents parsed by
@@ -60,7 +60,7 @@ second authoring step.
 
 ```tsx
 import type { Email as EmailContract } from "@sdxc/mail";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
@@ -259,7 +259,7 @@ product identity.
 
 ### Types
 
-`Result` below comes from `@sdxc/result` and `RemixElement` from `remix/ui`.
+`Result` below comes from `@sdxc/result` and `RemixElement` from `remix/component`.
 
 ```typescript
 interface Address {

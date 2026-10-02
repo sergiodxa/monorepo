@@ -1,15 +1,15 @@
 /**
- * Public (pre-authentication) `remix/ui` views: the marketing landing page, shown to
+ * Public (pre-authentication) `remix/component` views: the marketing landing page, shown to
  * signed-out visitors with its own lightweight document shell and `css()` mixins.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { CheckIcon, GlobeIcon, LockIcon, ZapIcon } from "@sdxc/icons";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import tenantRoutes from "~/routes/tenant";
 import routes from "~/routes/web";

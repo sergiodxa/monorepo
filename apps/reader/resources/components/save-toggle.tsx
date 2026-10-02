@@ -19,14 +19,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { BookmarkCheckIcon, BookmarkIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
 import { flex, shrink } from "@sdxc/u/layout";
 import { bs, is, pb, pi } from "@sdxc/u/size";
 import { Button } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /**
  * The header this control sends when it has already moved the post itself, which is what

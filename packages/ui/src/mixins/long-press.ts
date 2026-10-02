@@ -9,10 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, MixinFactory } from "remix/ui";
-import type { AnchorPoint } from "remix/ui/anchor";
+import type { AnchorPoint } from "@remix-run/ui/anchor";
+import type { ElementProps, MixinFactory } from "remix/component";
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 import { isNewPrimaryPress } from "../utils/is-new-primary-press.js";
 
@@ -58,7 +58,7 @@ export namespace LongPress {
  * `AnchorPoint` so a consumer can anchor a menu, tooltip, or preview to it.
  */
 export class LongPressEvent extends Event {
-	/** Pointer position the press held, in viewport coordinates, ready to pass straight into `remix/ui/anchor`'s point-based anchoring. */
+	/** Pointer position the press held, in viewport coordinates, ready to pass straight into `@remix-run/ui/anchor`'s point-based anchoring. */
 	readonly point: AnchorPoint;
 
 	/**

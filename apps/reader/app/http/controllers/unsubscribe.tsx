@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
 import { fg } from "@sdxc/u/color";

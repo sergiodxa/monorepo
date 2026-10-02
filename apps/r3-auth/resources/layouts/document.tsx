@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { container } from "@sdxc/u/layout";
 import resetStyles from "@sdxc/ui/reset.css?url";

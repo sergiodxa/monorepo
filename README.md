@@ -117,11 +117,11 @@ Run from the repository root:
 | [flags-engine](packages/flags-engine)                           | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                             | ✅  |
 | [get-client-ip](packages/get-client-ip)                         | Read the client IP from a Cloudflare Workers request                                                              | ✅  |
 | [highlight](packages/highlight)                                 | Syntax highlighting as tokens, with a markdown visitor that paints code blocks                                    | ✅  |
-| [honeypot](packages/honeypot)                                   | Honeypot form fields with a signed render timestamp, router middleware and a `remix/ui` component                 | ✅  |
+| [honeypot](packages/honeypot)                                   | Honeypot form fields with a signed render timestamp, router middleware and a `remix/component` component          | ✅  |
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains                            | ✅  |
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name                                | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           | ✅  |
-| [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/ui                                 | ✅  |
+| [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/component                          | ✅  |
 | [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                                         | ✅  |
 | [idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                     | ✅  |

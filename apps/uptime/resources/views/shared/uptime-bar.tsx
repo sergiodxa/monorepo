@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { lastNDays } from "@sdxc/dates";
 import { bg, fg } from "@sdxc/u/color";

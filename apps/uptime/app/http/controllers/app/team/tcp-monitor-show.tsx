@@ -18,9 +18,9 @@ import { PencilIcon } from "@sdxc/icons";
 import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
 import { m, mbe, mbs } from "@sdxc/u/size";
 import { Badge, Button, LinkButton } from "@sdxc/ui";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Frame } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 

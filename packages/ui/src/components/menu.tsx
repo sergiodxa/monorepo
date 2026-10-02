@@ -10,7 +10,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, Handle, MixinDescriptor, Props as TagProps, RemixNode } from "remix/ui";
+import type {
+	ElementProps,
+	Handle,
+	MixinDescriptor,
+	Props as TagProps,
+	RemixNode,
+} from "remix/component";
 
 import { bg, fg, outline } from "@sdxc/u/color";
 import { rounded, opacity } from "@sdxc/u/effects";
@@ -19,7 +25,7 @@ import { flex, gap, items, shrink } from "@sdxc/u/layout";
 import { bs, is, minIs, mb, pb, pi, p } from "@sdxc/u/size";
 import { active, disabled, focusVisible, hover, when } from "@sdxc/u/state";
 import { text, textAlign, textDecoration, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";

@@ -14,7 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
@@ -26,9 +26,9 @@ import { overflow } from "@sdxc/u/overflow";
 import { m, mbe, p, pb, pie, pis } from "@sdxc/u/size";
 import { font, fontSize, nowrap, overflowWrap, weight, whiteSpace } from "@sdxc/u/typography";
 import { Badge, Empty, Table } from "@sdxc/ui";
+import { Fragment } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Fragment } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 

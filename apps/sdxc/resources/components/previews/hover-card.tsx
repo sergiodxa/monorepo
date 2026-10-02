@@ -19,7 +19,7 @@ import { bs, is } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Avatar, Button, HoverCard, Link, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const HOVER_CARD_CODE = `<Text>

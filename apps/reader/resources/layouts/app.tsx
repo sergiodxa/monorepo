@@ -16,7 +16,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import {
 	BookmarkIcon,
@@ -79,7 +79,7 @@ import { z } from "@sdxc/u/stacking";
 import { hover, when } from "@sdxc/u/state";
 import { tabularNums, text, textDecoration, truncate, weight } from "@sdxc/u/typography";
 import { Avatar, Heading, Logo, Menu, NavLink, Sidebar } from "@sdxc/ui";
-import { Frame } from "remix/ui";
+import { Frame } from "remix/component";
 
 import type { Shortcuts } from "~/resources/components/shortcuts";
 

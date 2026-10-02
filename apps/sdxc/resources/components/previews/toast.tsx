@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CircleAlertIcon, CircleCheckIcon, InfoIcon } from "@sdxc/icons";
 import { hstack } from "@sdxc/u/layout";
 import { Button, Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
 import { dismiss } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** What each queued toast carries, which is all the region needs to draw one. */
 interface Notice {

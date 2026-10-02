@@ -8,20 +8,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware, RequestContext, Router } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 

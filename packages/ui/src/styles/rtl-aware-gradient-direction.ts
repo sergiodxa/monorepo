@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ElementProps, MixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { combine, vars } from "@sdxc/u/general";
 import { when } from "@sdxc/u/state";

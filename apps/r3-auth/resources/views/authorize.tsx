@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
 import {
@@ -29,7 +29,7 @@ import { at, dark } from "@sdxc/u/responsive";
 import { is, m, maxIs, minBs, p, pbs } from "@sdxc/u/size";
 import { text, textAlign, weight } from "@sdxc/u/typography";
 import { Button, Card, Form, Heading, Link, Logo, Separator, Text, TextField } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import routes from "~/routes/web";
 

@@ -1,17 +1,17 @@
 ---
 name: sdxc-icons
-description: "@sdxc/icons ships the whole Lucide catalog as `remix/ui` components, one tree-shakeable `<PascalCaseName>Icon` export per icon, plus `<Icon name />` for a name chosen at runtime, the `IconName` union, `iconExportNames` and `createLucideIcon`. Use when adding an icon to a `remix/ui` component, rendering an icon stored as data, building an icon picker, labelling an icon for assistive technology, or drawing a glyph Lucide does not ship."
+description: "@sdxc/icons ships the whole Lucide catalog as `remix/component` components, one tree-shakeable `<PascalCaseName>Icon` export per icon, plus `<Icon name />` for a name chosen at runtime, the `IconName` union, `iconExportNames` and `createLucideIcon`. Use when adding an icon to a `remix/component` component, rendering an icon stored as data, building an icon picker, labelling an icon for assistive technology, or drawing a glyph Lucide does not ship."
 ---
 
 # @sdxc/icons
 
-Lucide publishes its icons as framework-agnostic data; this package turns that data into `remix/ui` components ahead of time, so an icon is a plain import with no codegen step of your own and a bundler drops the ~1700 icons you never name. Every icon in the catalog is exported as `<PascalCaseName>Icon`, `<Icon name />` resolves one at runtime against the `IconName` union, and `createLucideIcon` builds a component of your own with the same props, defaults and classes. The prop contract matches `lucide-react`: the same defaults, the same prop names, the same `aria-hidden` fallback.
+Lucide publishes its icons as framework-agnostic data; this package turns that data into `remix/component` components ahead of time, so an icon is a plain import with no codegen step of your own and a bundler drops the ~1700 icons you never name. Every icon in the catalog is exported as `<PascalCaseName>Icon`, `<Icon name />` resolves one at runtime against the `IconName` union, and `createLucideIcon` builds a component of your own with the same props, defaults and classes. The prop contract matches `lucide-react`: the same defaults, the same prop names, the same `aria-hidden` fallback.
 
 Full API, options and examples: [packages/icons/README.md](packages/icons/README.md)
 
 ## When to reach for it
 
-- Putting an icon beside a label in a `remix/ui` component.
+- Putting an icon beside a label in a `remix/component` component.
 - Rendering an icon whose name arrives as data — a content field, a config value, a database row — with the name typed so a misspelling is a compile error.
 - Building an icon picker, or validating a stored icon name against the catalog.
 - Giving an icon its own accessible name, or keeping it out of the accessibility tree beside visible text.

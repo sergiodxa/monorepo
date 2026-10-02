@@ -1,6 +1,6 @@
 ---
 title: Send email
-description: Write emails as remix/ui classes, translate them for the reader, send them from a job, and assert on them with an in-memory transport.
+description: Write emails as remix/component classes, translate them for the reader, send them from a job, and assert on them with an in-memory transport.
 section:
     title: Data & background work
     order: 6
@@ -10,7 +10,7 @@ lastUpdated: 2026-09-29
 
 This guide sends the message a job board owes someone who just published a position: a short
 confirmation, in the language they posted in, delivered through Cloudflare's email binding. The
-email is a class with a `remix/ui` body, the copy comes from your message bundles, and the send
+email is a class with a `remix/component` body, the copy comes from your message bundles, and the send
 happens in a background job so a slow provider never delays the page the poster lands on.
 
 [`@sdxc/mail`](/api/mail) provides the mailer, the layout components and the transports,
@@ -50,13 +50,13 @@ own subpath, so importing this one never pulls another provider into your bundle
 
 ## Write the email as a class
 
-An email is anything with a `to`, a `subject` and a `body()` returning a `remix/ui` element. A
+An email is anything with a `to`, a `subject` and a `body()` returning a `remix/component` element. A
 class that implements the `Email` contract keeps the data an email needs in its constructor and
 the markup beside it:
 
 ```tsx {% title="app/emails/posting-published.tsx" %}
 import type { Email as EmailContract } from "@sdxc/mail";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
@@ -371,6 +371,6 @@ locally and render its messages on a page.
   job runs in.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — the request side of the
   same message bundles.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) — the
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
   component model the email body uses.
 - [Test Workers apps](/docs/operations-and-testing/testing) — more on driving the app in a test.

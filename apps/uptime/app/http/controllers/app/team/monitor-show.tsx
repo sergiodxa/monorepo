@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { formatDate, formatDateTime, formatRelative } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
@@ -28,10 +28,10 @@ import { flex, flexWrap, gap, grid, gridTemplate, items, justify } from "@sdxc/u
 import { m, mbe, mbs, p } from "@sdxc/u/size";
 import { fontSize, weight } from "@sdxc/u/typography";
 import { Badge, LinkButton } from "@sdxc/ui";
+import { Fragment, Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
-import { Fragment, Frame } from "remix/ui";
 
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { SelectMonitor } from "~/database/schema";

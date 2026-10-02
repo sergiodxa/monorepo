@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RenderResult } from "remix/ui/test";
+import type { RenderResult } from "remix/component/test";
 
-import { render } from "remix/ui/test";
+import { render } from "remix/component/test";
 import { afterEach, describe, expect, test } from "vitest";
 
 import { SelectionModel } from "../behaviors/selection-model.js";

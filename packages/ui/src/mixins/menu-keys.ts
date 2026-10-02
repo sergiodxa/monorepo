@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, MixinFactory } from "remix/ui";
+import type { ElementProps, MixinFactory } from "remix/component";
 
-import { createMixin, ref } from "remix/ui";
+import { createMixin, ref } from "remix/component";
 
 import {
 	focusItem,

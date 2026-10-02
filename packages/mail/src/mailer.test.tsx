@@ -9,7 +9,7 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";

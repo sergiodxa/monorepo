@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
@@ -18,13 +18,13 @@ import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { unwrap } from "@sdxc/result";
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { renderToString } from "remix/ui/server";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";

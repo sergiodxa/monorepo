@@ -10,15 +10,16 @@
 
 import type { Billing } from "@sdxc/billing";
 import type { Transport } from "@sdxc/mail";
+import type { RemixNode } from "remix/component";
+import type { ResolveFrameContext } from "remix/component/server";
 import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext, Router } from "remix/router";
-import type { RemixNode } from "remix/ui";
-import type { ResolveFrameContext } from "remix/ui/server";
 
 import billing from "@sdxc/billing/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
@@ -26,7 +27,6 @@ import { methodOverride } from "remix/middleware/method-override";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import type Limiters from "~/app/services/rate-limiters";
 

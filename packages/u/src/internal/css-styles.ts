@@ -1,6 +1,6 @@
 /**
  * The style object shape `css()` accepts, aliased from its own parameter type
- * because `remix/ui` exposes the shape only through that parameter. Every
+ * because `remix/component` exposes the shape only through that parameter. Every
  * utility mixin's internal style tree matches it, so a tree can be merged,
  * nested under a wrapper's selector or at-rule, and handed to `css()`
  * unchanged.
@@ -8,7 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 /**
  * The style object shape {@link css} accepts: a plain CSS-in-JS declaration

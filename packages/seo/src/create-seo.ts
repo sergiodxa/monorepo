@@ -70,7 +70,7 @@ export interface SeoService {
 	robotsTag(options?: RobotsOptions): string;
 	/**
 	 * Serializes nodes for an `application/ld+json` script body, escaped so content can
-	 * never close the script early. For JSX outside `remix/ui`; `remix/ui` pages use
+	 * never close the script early. For JSX outside `remix/component`; `remix/component` pages use
 	 * `Seo.JsonLd`.
 	 */
 	jsonLdString(schema: SchemaOrg.Node | SchemaOrg.Node[]): string;

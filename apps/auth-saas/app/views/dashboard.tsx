@@ -1,5 +1,5 @@
 /**
- * `remix/ui` views for the platform's own administrative dashboard: the tenant list
+ * `remix/component` views for the platform's own administrative dashboard: the tenant list
  * and create-tenant form, and a tenant's agent-clients list and registration form.
  * Rendered inside `landing.tsx`'s own `PublicDocument` shell, with the same plain
  * English copy and module-level `css()` mixins `signup.tsx` already established —
@@ -10,9 +10,9 @@
  */
 
 import type { Form } from "@sdxc/ui";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { AgentClientBindingRow } from "~/app/models/agent-client-binding";
 import type { AdministeredTenant, MembershipRole } from "~/app/models/membership";

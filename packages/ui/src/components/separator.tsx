@@ -8,12 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg } from "@sdxc/u/color";
 import { bs, is, minBs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * ARIA role applied through {@link attrs} so the host `<div>` is announced

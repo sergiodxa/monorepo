@@ -14,7 +14,7 @@ import { m } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Button, Description, Input, Keyboard, Label, Modal } from "@sdxc/ui";
 import { hotkey } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="invite-modal" command="show-modal">Invite members</Button>

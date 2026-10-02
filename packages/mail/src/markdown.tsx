@@ -10,7 +10,7 @@
 import type { Token } from "@sdxc/highlight";
 import type {} from "@sdxc/highlight/markdown";
 import type { Markdown as Ast } from "@sdxc/markdown";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { tokenize } from "@sdxc/highlight";
 

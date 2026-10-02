@@ -30,9 +30,9 @@ import { boxSizing, flex, gap, items, vstack } from "@sdxc/u/layout";
 import { bs, maxIs, minIs, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Alert, Button, Confirm, Empty, HeadingScope, LinkButton, Menu } from "@sdxc/ui";
+import { attrs } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { attrs } from "remix/ui";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { FOLDER_PARAM, TITLE_FIELD } from "~/app/http/controllers/folders/create";

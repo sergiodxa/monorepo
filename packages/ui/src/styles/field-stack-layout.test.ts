@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
 import { describe, expect, test } from "vitest";
 

@@ -1,8 +1,8 @@
 # @sdxc/u
 
-Utility-first styling for `remix/ui`, composed from small, terse mixins.
+Utility-first styling for `remix/component`, composed from small, terse mixins.
 
-Every export is a `remix/ui` mixin factory that drops straight into a `mix` prop, and the
+Every export is a `remix/component` mixin factory that drops straight into a `mix` prop, and the
 wrappers compose with any other utility to build responsive, stateful styles:
 
 ```tsx
@@ -19,7 +19,7 @@ counterpart for the values that must not flip with writing mode.
 npm add @sdxc/u
 ```
 
-Every utility returns a `remix/ui` mixin, so [`remix`](https://www.npmjs.com/package/remix) installs alongside this package.
+Every utility returns a `remix/component` mixin, so [`remix`](https://www.npmjs.com/package/remix) installs alongside this package.
 
 ## Usage
 
@@ -106,7 +106,7 @@ No runtime registry backs any of this — a utility resolves a token name straig
 
 ## API
 
-Every function below returns a `UtilityMixin`: a real `remix/ui` host-element mixin, valid directly in a `mix` prop, that also carries a hidden style tree wrapper utilities (`u.hover()`, `u.at()`, `u.media()`, ...) can read and re-nest. Anywhere a parameter is typed `UtilityInput`, it accepts a single `UtilityMixin`, a falsy value (dropped), or a (possibly nested) array of the same.
+Every function below returns a `UtilityMixin`: a real `remix/component` host-element mixin, valid directly in a `mix` prop, that also carries a hidden style tree wrapper utilities (`u.hover()`, `u.at()`, `u.media()`, ...) can read and re-nest. Anywhere a parameter is typed `UtilityInput`, it accepts a single `UtilityMixin`, a falsy value (dropped), or a (possibly nested) array of the same.
 
 ### General
 

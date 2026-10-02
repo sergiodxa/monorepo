@@ -14,12 +14,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { RefreshCwIcon } from "@sdxc/icons";
 import { LinkButton } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
-import { clientEntry, link, on } from "remix/ui";
+import { clientEntry, link, on } from "remix/component";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type RefreshFrameButtonProps = {

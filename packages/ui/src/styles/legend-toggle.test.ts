@@ -1,4 +1,4 @@
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
 /**
  * Covers `legendToggle()` as pure `css()` output: the exact rule block a

@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ArrowRightIcon, ArrowUpRightIcon } from "@sdxc/icons";
 import { flexWrap, hstack } from "@sdxc/u/layout";

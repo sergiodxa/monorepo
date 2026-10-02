@@ -10,12 +10,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Button, Description, FieldError, Label, Text, TextArea } from "@sdxc/ui";
-import { clientEntry, css, on } from "remix/ui";
+import { clientEntry, css, on } from "remix/component";
 
 /** The shortest review the composer accepts, mirrored onto the field's own `minLength`. */
 const MIN_LENGTH = 30;

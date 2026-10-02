@@ -22,7 +22,7 @@ import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
 import { Carousel } from "@sdxc/ui";
 import { carouselControls } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** One screenshot in the tour: its poster, its heading and the line under it. */
 const SLIDES = [

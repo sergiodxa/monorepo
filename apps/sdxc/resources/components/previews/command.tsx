@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import {
 	ExternalLinkIcon,
@@ -29,7 +29,7 @@ import { text, textAlign } from "@sdxc/u/typography";
 import { Command, Keyboard } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
 import { commandFilter, commandKeys } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Every action the palette offers, in the order a workspace lists them. */
 const ACTIONS = [

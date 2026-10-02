@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { run } from "remix/ui";
+import { run } from "remix/component";
 
 /**
  * The island modules a hydration record can name. It lists them one by one rather than

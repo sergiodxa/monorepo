@@ -1,13 +1,13 @@
 /**
  * End-to-end tests rendering real `<div mix={...}>` elements through
- * `remix/ui`'s server renderer, asserting on the generated CSS text and class
+ * `remix/component`'s server renderer, asserting on the generated CSS text and class
  * attribute in the rendered HTML, so merging, nesting, and dedupe are observed
  * the way a real consumer sees them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { bg } from "../color/bg.js";

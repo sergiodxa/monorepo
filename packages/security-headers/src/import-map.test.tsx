@@ -1,5 +1,6 @@
+import { ImportMap, renderToString } from "remix/component/server";
 /**
- * Checks the nonce against what `remix/ui` renders: an `<ImportMap nonce>` keeps the nonce on
+ * Checks the nonce against what `remix/component` renders: an `<ImportMap nonce>` keeps the nonce on
  * the managed import map script the client runtime reads it back from, and it matches the
  * nonce the middleware wrote into `script-src`.
  *
@@ -7,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createRouter } from "remix/router";
-import { ImportMap, renderToString } from "remix/ui/server";
 import { expect, test } from "vitest";
 
 import { securityHeaders } from "./middleware.js";

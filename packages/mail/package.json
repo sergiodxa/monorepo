@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/mail",
 	"version": "0.0.1",
-	"description": "Transport-agnostic transactional email with pluggable transports and remix/ui rendering",
+	"description": "Transport-agnostic transactional email with pluggable transports and remix/component rendering",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -21,6 +21,6 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/result": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	}
 }

@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -21,7 +21,7 @@ import { textDecoration } from "@sdxc/u/typography";
 import { Button, Command, Keyboard } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
 import { commandFilter, commandKeys, hotkey } from "@sdxc/ui/mixins";
-import { on } from "remix/ui";
+import { on } from "remix/component";
 
 import type { Album } from "../data/types";
 

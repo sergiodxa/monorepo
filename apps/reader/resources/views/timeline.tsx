@@ -23,7 +23,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { FlagIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -57,7 +57,7 @@ import {
 	weight,
 } from "@sdxc/u/typography";
 import { Text } from "@sdxc/ui";
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { TagChips } from "~/resources/views/tag-chips";
 

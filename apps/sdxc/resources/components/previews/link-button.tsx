@@ -14,7 +14,7 @@ import { flexWrap, hstack, vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { LinkButton } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<div mix={[vstack({ gap: 5, align: "center" })]}>

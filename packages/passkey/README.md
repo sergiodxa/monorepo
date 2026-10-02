@@ -330,11 +330,11 @@ router.map(routes.passkey.verify, verify);
 The one component on the page that ships JavaScript. Its body runs once at hydration, which is where the autofill ceremony starts; `handle.signal` aborts when the component is disconnected, so navigating away releases the browser's single ceremony slot.
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CancelledError, Passkey } from "@sdxc/passkey/client";
 import { isFailure } from "@sdxc/result";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client

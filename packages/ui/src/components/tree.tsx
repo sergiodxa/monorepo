@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { ChevronRightIcon } from "@sdxc/icons";
 import { bg, fg, outline } from "@sdxc/u/color";
@@ -24,7 +24,7 @@ import { bs, is, pb, pie, pi } from "@sdxc/u/size";
 import { detailsContent, when } from "@sdxc/u/state";
 import { rotate } from "@sdxc/u/transform";
 import { text } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { interactiveTransition } from "../styles/interactive-transition.js";
 import { panelChrome } from "../styles/panel-chrome.js";

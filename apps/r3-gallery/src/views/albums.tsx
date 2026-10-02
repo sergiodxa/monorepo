@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, fg, outline } from "@sdxc/u/color";
@@ -40,7 +40,7 @@ import {
 	stepper,
 } from "@sdxc/ui/mixins";
 import { panelChrome } from "@sdxc/ui/styles";
-import { navigate, on } from "remix/ui";
+import { navigate, on } from "remix/component";
 
 import type { Album } from "../data/types";
 

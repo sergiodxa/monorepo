@@ -8,14 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flexCol, hstack, items } from "@sdxc/u/layout";
 import { pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * `role="toolbar"` applied through {@link attrs} unless a consumer supplies

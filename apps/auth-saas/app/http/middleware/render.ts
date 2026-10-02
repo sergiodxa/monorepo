@@ -1,20 +1,20 @@
 /**
  * Installs a request-scoped `ctx.render(jsx)` helper, shared by the platform and
- * tenant routers, so controllers can return `remix/ui` JSX documents as complete
+ * tenant routers, so controllers can return `remix/component` JSX documents as complete
  * HTML responses.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
+import { renderToString } from "remix/component/server";
 import { renderWith } from "remix/middleware/render";
-import { renderToString } from "remix/ui/server";
 
 /**
- * Builds the request-scoped renderer. It serializes a `remix/ui` node to a full HTML
+ * Builds the request-scoped renderer. It serializes a `remix/component` node to a full HTML
  * document (with the `<!doctype html>` prefix) and returns it as an HTML response.
  *
  * @param _context - The router request context, supplied to match the `renderWith`
@@ -38,8 +38,8 @@ export default renderWith(createHtmlRenderer);
 declare module "remix/router" {
 	interface RequestContext {
 		/**
-		 * Renders a `remix/ui` node as a complete HTML document response.
-		 * @param node - The `remix/ui` JSX tree to serialize.
+		 * Renders a `remix/component` node as a complete HTML document response.
+		 * @param node - The `remix/component` JSX tree to serialize.
 		 * @param init - Optional response init (status, extra headers).
 		 * @returns A `Response` with the serialized HTML and `text/html` content type.
 		 */

@@ -1,6 +1,6 @@
 /**
  * Enforces the package's "Component Purity" rule: modules under
- * `src/components/` may import `css`, `attrs`, and types from `remix/ui`,
+ * `src/components/` may import `css`, `attrs`, and types from `remix/component`,
  * never `on`, `ref`, or `createMixin` — those carry behavior and belong in
  * a mixin or behavior class the consumer attaches explicitly. Fixture-based
  * cases exercise the scanner before it runs over real files, since a
@@ -19,29 +19,29 @@ import { describe, expect, test } from "vitest";
 /** Absolute path to `src/components/`, the directory the purity rule covers. */
 const COMPONENTS_DIR = dirname(fileURLToPath(import.meta.url));
 
-/** Bindings from `remix/ui` that carry behavior and may never appear in a component module. */
+/** Bindings from `remix/component` that carry behavior and may never appear in a component module. */
 const BANNED_BINDINGS = ["on", "ref", "createMixin"];
 
-/** One binding a `remix/ui` import statement pulls in, kept alongside the statement it came from for error messages. */
+/** One binding a `remix/component` import statement pulls in, kept alongside the statement it came from for error messages. */
 interface RemixUiBinding {
 	name: string;
 	statement: string;
 }
 
 /**
- * Scans `source` for `import ... from "remix/ui"` statements, stripping
+ * Scans `source` for `import ... from "remix/component"` statements, stripping
  * comment trivia first so it can't corrupt the comma split, and returns
  * the bindings it names — a namespace import reports as a single `"*"`.
  */
 function extractRemixUiBindings(source: string): RemixUiBinding[] {
 	let bindings: RemixUiBinding[] = [];
 
-	let namespacePattern = /import\s+\*\s+as\s+[\w$]+\s+from\s*["']remix\/ui["'];?/g;
+	let namespacePattern = /import\s+\*\s+as\s+[\w$]+\s+from\s*["']remix\/component["'];?/g;
 	for (let match of source.matchAll(namespacePattern)) {
 		bindings.push({ name: "*", statement: match[0].trim() });
 	}
 
-	let namedPattern = /import\s+(?:type\s+)?\{([\s\S]*?)\}\s*from\s*["']remix\/ui["'];?/g;
+	let namedPattern = /import\s+(?:type\s+)?\{([\s\S]*?)\}\s*from\s*["']remix\/component["'];?/g;
 	for (let match of source.matchAll(namedPattern)) {
 		let statement = match[0].trim();
 		let body = (match[1] ?? "").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/.*$/gm, "");
@@ -71,56 +71,58 @@ function findPurityViolations(source: string): string[] {
 describe("findPurityViolations (scanner self-check)", () => {
 	test("passes a clean component-style import", () => {
 		let source = `
-			import type { Handle, Props as TagProps } from "remix/ui";
+			import type { Handle, Props as TagProps } from "remix/component";
 
-			import { attrs, css } from "remix/ui";
+			import { attrs, css } from "remix/component";
 		`;
 
 		expect(findPurityViolations(source)).toEqual([]);
 	});
 
-	test("passes a file with no remix/ui import at all", () => {
+	test("passes a file with no remix/component import at all", () => {
 		expect(findPurityViolations('import { Button } from "./button.js";')).toEqual([]);
 	});
 
 	test.each(BANNED_BINDINGS)("flags a bare %s import", (banned) => {
-		let source = `import { css, ${banned} } from "remix/ui";`;
+		let source = `import { css, ${banned} } from "remix/component";`;
 
 		expect(findPurityViolations(source)).toEqual([`imports \`${banned}\` via: ${source}`]);
 	});
 
 	test("flags a banned import even when locally aliased", () => {
-		let source = 'import { on as onMixin } from "remix/ui";';
+		let source = 'import { on as onMixin } from "remix/component";';
 
 		expect(findPurityViolations(source)).toEqual([`imports \`on\` via: ${source}`]);
 	});
 
 	test("flags a banned import inside a multi-line import block", () => {
-		let source = ["import {", "\tattrs,", "\tref,", "\tcss,", '} from "remix/ui";'].join("\n");
+		let source = ["import {", "\tattrs,", "\tref,", "\tcss,", '} from "remix/component";'].join(
+			"\n",
+		);
 
 		expect(findPurityViolations(source)).toEqual([`imports \`ref\` via: ${source}`]);
 	});
 
 	test("flags a banned import written as a per-specifier `type` import", () => {
-		let source = 'import { type Handle, createMixin } from "remix/ui";';
+		let source = 'import { type Handle, createMixin } from "remix/component";';
 
 		expect(findPurityViolations(source)).toEqual([`imports \`createMixin\` via: ${source}`]);
 	});
 
 	test("flags a namespace import as unverifiable regardless of what it accesses", () => {
-		let source = 'import * as UI from "remix/ui";';
+		let source = 'import * as UI from "remix/component";';
 
 		expect(findPurityViolations(source)).toEqual([`imports \`*\` via: ${source}`]);
 	});
 
 	test("does not mistake a same-prefixed identifier for a banned binding", () => {
-		let source = 'import { type RefObject, onSomethingElse } from "remix/ui";';
+		let source = 'import { type RefObject, onSomethingElse } from "remix/component";';
 
 		expect(findPurityViolations(source)).toEqual([]);
 	});
 
 	test("reports every violation in a statement that has more than one", () => {
-		let source = 'import { on, ref, css } from "remix/ui";';
+		let source = 'import { on, ref, css } from "remix/component";';
 
 		expect(findPurityViolations(source)).toEqual([
 			`imports \`on\` via: ${source}`,
@@ -152,7 +154,7 @@ describe("component purity (src/components/**)", () => {
 	});
 
 	for (let relative of modules) {
-		test(`${relative} imports only css/attrs/types from remix/ui`, () => {
+		test(`${relative} imports only css/attrs/types from remix/component`, () => {
 			let source = readFileSync(join(COMPONENTS_DIR, relative), "utf8");
 
 			expect(findPurityViolations(source)).toEqual([]);

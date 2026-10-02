@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as ElementProps } from "remix/ui";
+import type { Handle, Props as ElementProps } from "remix/component";
 
 import { XIcon } from "@sdxc/icons";
 import { bg, fg, outline, outlineColor } from "@sdxc/u/color";
@@ -21,7 +21,7 @@ import { flex, flexWrap, gap, inlineFlex, items, vstack } from "@sdxc/u/layout";
 import { bs, is, m, mie, p, pb, pi } from "@sdxc/u/size";
 import { active, data, hover, when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import type { SemanticColor } from "../utils/semantic-color.js";
 

@@ -1,6 +1,6 @@
 /**
  * Transport-agnostic transactional mail: the message contract, the mailer that
- * normalizes and delivers it, the rendering layer that turns a `remix/ui` tree into
+ * normalizes and delivers it, the rendering layer that turns a `remix/component` tree into
  * both body parts, and the unbranded layout kit for authoring one. Transports live
  * behind their own subpaths so importing one never pulls another's dependency.
  *

@@ -1,6 +1,6 @@
 ---
 name: sdxc-seo
-description: "@sdxc/seo resolves canonical URLs, typed schema.org structured data and head metadata through one `createSeo()` instance, plus `Seo`, `Seo.Meta` and `Seo.JsonLd` remix/ui components. Use when a page needs a canonical link, Open Graph and Twitter tags, a robots directive, or JSON-LD nodes (Organization, Article, BreadcrumbList, FAQPage, SoftwareApplication, Book), or when preview deployments are emitting the wrong origin in the head."
+description: "@sdxc/seo resolves canonical URLs, typed schema.org structured data and head metadata through one `createSeo()` instance, plus `Seo`, `Seo.Meta` and `Seo.JsonLd` remix/component components. Use when a page needs a canonical link, Open Graph and Twitter tags, a robots directive, or JSON-LD nodes (Organization, Article, BreadcrumbList, FAQPage, SoftwareApplication, Book), or when preview deployments are emitting the wrong origin in the head."
 ---
 
 # @sdxc/seo
@@ -11,7 +11,7 @@ and `@type` exactly, and JSON-LD must not let page content close its own `<scrip
 `createSeo()` takes the site's identity and returns `canonical`, `absolute`, `robotsTag`,
 `jsonLdString`, a `schema` builder set and a `site` identity object; the `Seo`, `Seo.Meta`
 and `Seo.JsonLd` components render the head elements. The URL helpers, schema builders and
-`jsonLdString` are plain functions and run on any runtime; the components need `remix/ui`.
+`jsonLdString` are plain functions and run on any runtime; the components need `remix/component`.
 
 Full API, options and examples: [packages/seo/README.md](packages/seo/README.md)
 
@@ -60,7 +60,7 @@ seo.absolute("/og/cover.png"); // "https://example.com/og/cover.png"
 ## Suggestions
 
 - Build the instance once at module scope and share it — the configuration is read at boot, so calling the factory per request buys nothing. `seo.canonical(request.url)` is then the whole of what a page does about canonicalization.
-- `Seo.JsonLd` sets the JSON through `innerHTML` because JSX escapes text nodes. Where the JSX is not `remix/ui`, call `seo.jsonLdString()` yourself and pass it to `dangerouslySetInnerHTML` — it escapes every `<` so no string value can close the script element.
+- `Seo.JsonLd` sets the JSON through `innerHTML` because JSX escapes text nodes. Where the JSX is not `remix/component`, call `seo.jsonLdString()` yourself and pass it to `dangerouslySetInnerHTML` — it escapes every `<` so no string value can close the script element.
 - `canonical` drops the trailing slash and the hash but preserves the query string verbatim, so a slash sitting before a `?` survives; `absolute` does no trailing-slash normalization and leaves an already-absolute CDN URL alone.
 
 ## Related

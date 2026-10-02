@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps } from "remix/ui";
+import type { Handle, Props as TagProps } from "remix/component";
 
 import { bg, border, fg, outline, outlineStyle } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
@@ -31,7 +31,7 @@ import {
 import { overflow } from "@sdxc/u/overflow";
 import { bs, is, maxBs, maxIs, minBs, minIs } from "@sdxc/u/size";
 import { before, data, focusVisible, hover, when } from "@sdxc/u/state";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { mergeStyle } from "../utils/merge-style.js";
 

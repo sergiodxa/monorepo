@@ -9,7 +9,7 @@
 
 import type { Translate, Translation } from "@sdxc/i18n";
 import type { Email as EmailContract, MailingList, Unsubscribe } from "@sdxc/mail";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { createTranslator } from "@sdxc/i18n";
 import { currentLog } from "@sdxc/logger";

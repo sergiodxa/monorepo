@@ -8,9 +8,9 @@
  */
 
 import type { MemoryBilling } from "@sdxc/billing/providers/memory";
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
@@ -20,11 +20,11 @@ import { log } from "@sdxc/logger/middleware";
 import { failure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
+import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
-import { renderToString } from "remix/ui/server";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import Customer from "~/app/data/customer";

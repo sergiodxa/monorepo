@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { colorScheme } from "@sdxc/u/color";

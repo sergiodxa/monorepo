@@ -11,7 +11,7 @@
 import { ChevronDownIcon } from "@sdxc/icons";
 import { maxIs } from "@sdxc/u/size";
 import { Accordion } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Accordion mix={[maxIs("34rem")]}>

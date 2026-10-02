@@ -9,9 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { FrameHandle, MixinFactory } from "remix/ui";
+import type { FrameHandle, MixinFactory } from "remix/component";
 
-import { createElement, createMixin } from "remix/ui";
+import { createElement, createMixin } from "remix/component";
 
 import { prefersReducedMotion } from "../utils/prefers-reduced-motion.js";
 

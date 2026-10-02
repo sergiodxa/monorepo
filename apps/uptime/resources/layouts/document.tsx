@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { Seo } from "@sdxc/seo";
@@ -19,7 +19,7 @@ import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
-import { ImportMap } from "remix/ui/server";
+import { ImportMap } from "remix/component/server";
 
 import { SEO } from "~/app/lib/seo";
 import { CspNonce } from "~/resources/components/csp-nonce";

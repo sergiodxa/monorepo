@@ -9,14 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CircleAlertIcon, CircleCheckIcon, TriangleAlertIcon } from "@sdxc/icons";
 import { self, vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Alert, Button } from "@sdxc/ui";
 import { dismiss } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let dismissed = false;

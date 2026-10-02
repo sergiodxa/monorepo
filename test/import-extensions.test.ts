@@ -52,7 +52,7 @@ describe("relative imports inside packages carry a .js extension", () => {
 				'import raw from "../schema.sql?raw";',
 				'import styles from "./theme.css";',
 				'import { b } from "@sdxc/result";',
-				'import { c } from "remix/ui";',
+				'import { c } from "remix/component";',
 				'import { d } from "node:fs";',
 			].join("\n");
 
@@ -81,7 +81,7 @@ describe("relative imports inside packages carry a .js extension", () => {
 			expect(isRelative("./a")).toBe(true);
 			expect(isRelative("../a")).toBe(true);
 			expect(isRelative("..")).toBe(true);
-			expect(isRelative("remix/ui")).toBe(false);
+			expect(isRelative("remix/component")).toBe(false);
 			expect(hasExtension("./a.js")).toBe(true);
 			expect(hasExtension("./a.d.ts")).toBe(true);
 			expect(hasExtension("./a")).toBe(false);

@@ -91,7 +91,7 @@ like any other; `bun run upgrade` moves them across the whole repo at once.
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "remix/ui",
+		"jsxImportSource": "remix/component",
 		"types": ["@total-typescript/ts-reset", "vite/client", "bun"],
 		"rootDirs": ["."],
 		"paths": {
@@ -248,7 +248,7 @@ and not a module-level singleton.
  */
 
 import type { Middleware, RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
+import type { RemixNode } from "remix/component";
 
 import logger from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
@@ -257,7 +257,7 @@ import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
+import { renderToStream } from "remix/component/server";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import home from "~/app/http/controllers/home";
@@ -289,7 +289,7 @@ export default function application() {
 
 /**
  * Creates the request-scoped renderer controllers reach through `ctx.render`, streaming
- * a `remix/ui` node as an HTML response.
+ * a `remix/component` node as an HTML response.
  */
 function createHtmlRenderer(_ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
@@ -402,7 +402,7 @@ and head values; they never build the shell themselves.
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import { colorScheme } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -467,11 +467,11 @@ import type { Renderer } from "remix/middleware/render";
  * @copyright Sergio Xalambrí 2026
  */
 import type {} from "remix/router";
-import type { RemixNode } from "remix/ui";
+import type { RemixNode } from "remix/component";
 
 declare module "remix/router" {
 	interface RequestContext {
-		/** Renders a `remix/ui` node into an HTML `Response`. */
+		/** Renders a `remix/component` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;
 		/** The request's parsed `FormData`, populated by the global `formData()` middleware. */
 		formData: FormData;

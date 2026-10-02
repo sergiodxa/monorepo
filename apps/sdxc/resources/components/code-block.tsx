@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { FileCodeIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";

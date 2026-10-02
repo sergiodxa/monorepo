@@ -1,6 +1,6 @@
 ---
 name: sdxc-markdown
-description: "@sdxc/markdown parses GitHub Flavored Markdown into a typed JSON-serializable AST, validates the frontmatter block against a Standard Schema, walks and rewrites the tree, and writes it back — with renderers to HTML, plain text and remix/ui nodes. Use when reading content files, validating frontmatter, transforming or linting a document, or rendering markdown into a response or a view."
+description: "@sdxc/markdown parses GitHub Flavored Markdown into a typed JSON-serializable AST, validates the frontmatter block against a Standard Schema, walks and rewrites the tree, and writes it back — with renderers to HTML, plain text and remix/component nodes. Use when reading content files, validating frontmatter, transforming or linting a document, or rendering markdown into a response or a view."
 ---
 
 # @sdxc/markdown

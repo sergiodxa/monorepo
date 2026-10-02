@@ -15,7 +15,7 @@ import { m, pb, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 import { Header, NavLink } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The page the sidebar is rendered for, which is what decides `aria-current`. */
 const ACTIVE_PATH = "/settings/billing";

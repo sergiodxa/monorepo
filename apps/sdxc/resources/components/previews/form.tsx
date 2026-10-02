@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/component";
 import type { Issue } from "remix/data-schema";
-import type { Handle } from "remix/ui";
 
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
@@ -26,7 +26,7 @@ import {
 	Select,
 	TextField,
 } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 import { checkNewWorkspace, issueFor } from "~/app/services/preview-form-schemas";
 

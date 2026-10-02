@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { ActivityIcon, ClockIcon, GlobeIcon, NetworkIcon, PlusIcon } from "@sdxc/icons";
 import { isFailure } from "@sdxc/result";
@@ -19,9 +19,9 @@ import { is, mbe } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table, Tabs } from "@sdxc/ui";
+import { link } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { link } from "remix/ui";
 
 import type { MonitorHealth, SparklinePoint } from "~/app/services/analytics";
 import type {

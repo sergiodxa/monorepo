@@ -233,7 +233,7 @@ since `Intl` throws on a name it does not know. For the locale,
 The page handler passes `viewerOf(ctx.request)` down to the component that renders the date:
 
 ```tsx {% title="resources/components/post-meta.tsx" %}
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { diffInDays, formatDate, formatRelative } from "@sdxc/dates";
 import { pluralize } from "@sdxc/strings";

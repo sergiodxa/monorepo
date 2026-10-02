@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { hidden } from "@sdxc/u/layout";
-import { clientEntry, ref } from "remix/ui";
+import { clientEntry, ref } from "remix/component";
 
 /**
  * Closes the `<dialog>` this renders inside. It owns no markup, and a page restored from

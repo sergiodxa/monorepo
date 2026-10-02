@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/u",
 	"version": "0.0.1",
-	"description": "Utility-first styling for remix/ui, composed from small, terse mixins",
+	"description": "Utility-first styling for remix/component, composed from small, terse mixins",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
@@ -40,6 +40,6 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	}
 }

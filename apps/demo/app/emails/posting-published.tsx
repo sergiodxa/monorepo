@@ -8,7 +8,7 @@
  */
 
 import type { Email as EmailContract } from "@sdxc/mail";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 

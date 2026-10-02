@@ -26,7 +26,7 @@ import { vstack } from "@sdxc/u/layout";
 import { bs, is, minBs, p } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Button, Heading, HeadingScope, Sidebar, Text } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const SIDEBAR_CODE = `<Sidebar.Provider>

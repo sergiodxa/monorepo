@@ -9,7 +9,7 @@
 
 import type { I18n } from "@sdxc/i18n";
 import type { Markdown } from "@sdxc/markdown";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { flexWrap, hstack, vstack } from "@sdxc/u/layout";

@@ -13,7 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { intl } from "@sdxc/i18n/ui";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -25,7 +25,7 @@ import { dark } from "@sdxc/u/responsive";
 import { p } from "@sdxc/u/size";
 import { fontSize } from "@sdxc/u/typography";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type CopyButtonProps = { value: string; label?: string };

@@ -1,6 +1,6 @@
 /**
  * Regression tests for the wide-table edge fade's `@keyframes` rule. Its stops
- * are percentages, and `remix/ui`'s serializer only reads keyframe stops as
+ * are percentages, and `remix/component`'s serializer only reads keyframe stops as
  * stop selectors while the `@keyframes` rule sits outside any selector block —
  * nested inside the table's own selector, every stop serialized as a dropped
  * `0%: [object Object]` declaration and the animation did nothing.
@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { renderToString } from "remix/ui/server";
+import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
 import { Typeset } from "./typeset.js";

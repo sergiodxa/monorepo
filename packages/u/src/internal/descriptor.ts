@@ -8,9 +8,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { ElementProps, MixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/component";
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { CSSStyles } from "./css-styles.js";
 
@@ -30,7 +30,7 @@ export interface UtilityNode {
 }
 
 /**
- * A `remix/ui` host-element mixin produced by this package. Valid anywhere a
+ * A `remix/component` host-element mixin produced by this package. Valid anywhere a
  * plain `css()` mixin is valid in a `mix` prop, plus inspectable by wrapper
  * utilities through its hidden {@link UTILITY} metadata.
  */

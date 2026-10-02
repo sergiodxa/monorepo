@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { HeartIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";

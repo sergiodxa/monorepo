@@ -7,9 +7,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { CSSMixinDescriptor } from "remix/ui";
+import type { CSSMixinDescriptor } from "remix/component";
 
-import { css } from "remix/ui";
+import { css } from "remix/component";
 
 import type { CSSStyles } from "../utils/css-styles.js";
 

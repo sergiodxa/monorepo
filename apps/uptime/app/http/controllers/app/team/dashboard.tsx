@@ -15,10 +15,10 @@ import { media } from "@sdxc/u/responsive";
 import { mbe } from "@sdxc/u/size";
 import { Empty, Skeleton } from "@sdxc/ui";
 import { pulse } from "@sdxc/ui/animations";
+import { Frame } from "remix/component";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
-import { Frame } from "remix/ui";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 

@@ -1,11 +1,11 @@
 ---
 name: sdxc-mail
-description: "@sdxc/mail is transactional email: a Mailer that normalizes every message, pluggable Transports, a remix/ui layout kit that renders the HTML and text parts, and a MIME builder. Use when sending transactional mail from a worker, authoring an email body as a component or from parsed markdown, deferring sends until after the response, or asserting on sent mail in a test without mocking a provider."
+description: "@sdxc/mail is transactional email: a Mailer that normalizes every message, pluggable Transports, a remix/component layout kit that renders the HTML and text parts, and a MIME builder. Use when sending transactional mail from a worker, authoring an email body as a component or from parsed markdown, deferring sends until after the response, or asserting on sent mail in a test without mocking a provider."
 ---
 
 # @sdxc/mail
 
-Transport-agnostic transactional email. A `Mailer` owns normalization — sender defaults, address coercion, plain-text derivation, validation — and hands the result to a `Transport`, the only piece that knows a provider. Delivery is a value rather than an exception: `send()` and `flush()` return a `Result` and never throw. `Email` names both the contract an email class implements and the unbranded `remix/ui` layout kit its body is built from, so `implements Email` and `<Email.Layout>` come from one import. Transports ship from their own subpaths, so importing one never pulls another's platform dependency into a bundle.
+Transport-agnostic transactional email. A `Mailer` owns normalization — sender defaults, address coercion, plain-text derivation, validation — and hands the result to a `Transport`, the only piece that knows a provider. Delivery is a value rather than an exception: `send()` and `flush()` return a `Result` and never throw. `Email` names both the contract an email class implements and the unbranded `remix/component` layout kit its body is built from, so `implements Email` and `<Email.Layout>` come from one import. Transports ship from their own subpaths, so importing one never pulls another's platform dependency into a bundle.
 
 Full API, options and examples: [packages/mail/README.md](packages/mail/README.md)
 

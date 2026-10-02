@@ -16,7 +16,7 @@ import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Button, Description, FieldError, Input, Label } from "@sdxc/ui";
 import { validate } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 import { CustomDomain } from "~/app/services/preview-form-schemas";
 

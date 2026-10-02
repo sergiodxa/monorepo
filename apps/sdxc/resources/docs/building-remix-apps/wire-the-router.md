@@ -256,7 +256,7 @@ export default {
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — what to do
   with `ctx.formData` and `ctx.params` once they arrive.
-- [Build the interface with remix/ui](/docs/building-remix-apps/interface-with-remix-ui) —
+- [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) —
   what goes inside `ctx.render`.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — getting more out
   of `ctx.log` and `ctx.trace`.

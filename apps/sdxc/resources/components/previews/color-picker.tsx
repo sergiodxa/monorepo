@@ -12,7 +12,7 @@
  */
 
 import type { ColorChannelChangeEvent } from "@sdxc/ui/mixins";
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { basis, grow, hstack, vstack } from "@sdxc/u/layout";
@@ -30,7 +30,7 @@ import {
 } from "@sdxc/ui";
 import { channelSync, colorAreaDrag, colorWheelDrag } from "@sdxc/ui/mixins";
 import { formatHex, hsvToRgb, parseColor, rgbToHsv } from "@sdxc/ui/utils";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** The starting brand color, kept as the three channels every surface in the panel edits. */
 const OPENING_COLOR = { hue: 210, saturation: 80, brightness: 70 };

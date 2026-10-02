@@ -22,9 +22,9 @@ import { media } from "@sdxc/u/responsive";
 import { mbe } from "@sdxc/u/size";
 import { nowrap } from "@sdxc/u/typography";
 import { Badge, LinkButton } from "@sdxc/ui";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
-import { Frame } from "remix/ui";
 
 import type { BadgeTone } from "~/resources/components/badge";
 

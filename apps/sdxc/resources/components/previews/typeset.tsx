@@ -11,7 +11,7 @@
 
 import { is, maxIs } from "@sdxc/u/size";
 import { Badge, Typeset } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const TYPESET_CODE = `<Typeset preset="reading">

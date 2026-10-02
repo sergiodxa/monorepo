@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/ui",
 	"version": "0.0.1",
-	"description": "Styled, accessible remix/ui components rendered as server HTML",
+	"description": "Styled, accessible remix/component components rendered as server HTML",
 	"license": "MIT",
 	"type": "module",
 	"sideEffects": false,
@@ -19,8 +19,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@remix-run/ui": "0.12.1",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/u": "workspace:*",
-		"remix": "3.0.0-rc.4"
+		"remix": "3.0.0"
 	}
 }

@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/component";
 import type { getContext as getContextType } from "remix/middleware/async-context";
-import type { Handle } from "remix/ui";
 
 import { notFound } from "@sdxc/http/response/html";
 import { IntlProvider } from "@sdxc/i18n/ui";

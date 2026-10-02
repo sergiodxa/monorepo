@@ -9,7 +9,7 @@
  */
 
 import type { SchemaOrg } from "@sdxc/seo";
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { Seo } from "@sdxc/seo";

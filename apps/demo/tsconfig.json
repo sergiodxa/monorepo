@@ -15,7 +15,7 @@
 		"noEmit": true,
 		"allowImportingTsExtensions": true,
 		"jsx": "react-jsx",
-		"jsxImportSource": "remix/ui",
+		"jsxImportSource": "remix/component",
 		"types": ["@total-typescript/ts-reset", "vite/client", "bun"],
 		"rootDirs": ["."],
 		"paths": {

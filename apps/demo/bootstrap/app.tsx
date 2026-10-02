@@ -8,20 +8,20 @@
  */
 
 import type { Captcha } from "@sdxc/captcha";
+import type { RemixNode } from "remix/component";
 import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { captcha } from "@sdxc/captcha/middleware";
 import i18n from "@sdxc/i18n/middleware";
 import { log } from "@sdxc/logger/middleware";
+import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
 import { createRouter } from "remix/router";
-import { renderToStream } from "remix/ui/server";
 
 import * as board from "~/app/http/controllers/board";
 import defaultHandler from "~/app/http/controllers/default-handler";

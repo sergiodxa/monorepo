@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ElementProps, MixinDescriptor } from "remix/ui";
+import type { ElementProps, MixinDescriptor } from "remix/component";
 
 import { transition } from "@sdxc/u/effects";
 

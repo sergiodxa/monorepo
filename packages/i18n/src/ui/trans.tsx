@@ -8,9 +8,9 @@
  */
 
 import type { MessagePart } from "@sdxc/messageformat";
-import type { Handle, RemixElement, RemixNode } from "remix/ui";
+import type { Handle, RemixElement, RemixNode } from "remix/component";
 
-import { createElement } from "remix/ui";
+import { createElement } from "remix/component";
 
 import type { I18n } from "../lib/i18n.js";
 
@@ -26,7 +26,7 @@ export namespace Trans {
 		 */
 		intl?: I18n<any>;
 		/**
-		 * Message key to look up. Named `i18nKey` because `key` is `remix/ui`'s own
+		 * Message key to look up. Named `i18nKey` because `key` is `remix/component`'s own
 		 * reconciliation prop and never reaches `handle.props`.
 		 */
 		i18nKey: string;

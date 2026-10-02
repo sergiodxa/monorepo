@@ -15,8 +15,8 @@ import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { AlertDialog, Button, Description, FieldError, Input, Label } from "@sdxc/ui";
 import { validate } from "@sdxc/ui/mixins";
+import { clientEntry } from "remix/component";
 import * as s from "remix/data-schema";
-import { clientEntry } from "remix/ui";
 
 /** The name a reader has to type back before the panel will delete anything. */
 const DATABASE_NAME = "acme-production";

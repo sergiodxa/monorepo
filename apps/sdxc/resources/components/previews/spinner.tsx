@@ -14,7 +14,7 @@ import { is, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Button, Card, Spinner, Text } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const SPINNER_CODE = `<Button isPending parts={{ spinner: [spin()] }}>

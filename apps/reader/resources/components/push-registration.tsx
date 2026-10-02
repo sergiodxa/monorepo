@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
-import { clientEntry, ref } from "remix/ui";
+import { clientEntry, ref } from "remix/component";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client entry's props

@@ -6,9 +6,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 /**
  * `bootstrap/app.tsx` installs `renderWith(createHtmlRenderer)` in its global middleware
@@ -17,7 +17,7 @@ import type { RemixNode } from "remix/ui";
  */
 declare module "remix/router" {
 	interface RequestContext {
-		/** Renders a `remix/ui` node into an HTML `Response`. */
+		/** Renders a `remix/component` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;
 		/** The request's parsed `FormData`, populated by the global `formData()` middleware. */
 		formData: FormData;

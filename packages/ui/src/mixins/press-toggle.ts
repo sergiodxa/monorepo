@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinFactory } from "remix/ui";
+import type { MixinFactory } from "remix/component";
 
-import { createElement, createMixin, on } from "remix/ui";
+import { createElement, createMixin, on } from "remix/component";
 
 import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 

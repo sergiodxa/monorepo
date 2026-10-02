@@ -9,7 +9,7 @@
  */
 
 import { NavigationMenu } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<NavigationMenu aria-label="Primary">

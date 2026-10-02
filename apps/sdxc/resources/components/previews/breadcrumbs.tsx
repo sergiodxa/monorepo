@@ -13,7 +13,7 @@ import { fg } from "@sdxc/u/color";
 import { hstack } from "@sdxc/u/layout";
 import { text } from "@sdxc/u/typography";
 import { Breadcrumbs } from "@sdxc/ui";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Breadcrumbs aria-label="Breadcrumb">

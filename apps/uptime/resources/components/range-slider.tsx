@@ -13,13 +13,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { flex, flexCol, gap, items, justify } from "@sdxc/u/layout";
 import { fontSize, tabularNums, weight } from "@sdxc/u/typography";
 import { Description, Label, Slider } from "@sdxc/ui";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Props must be a `type` (not `interface`) to satisfy `SerializableProps`. */
 type RangeSliderProps = {

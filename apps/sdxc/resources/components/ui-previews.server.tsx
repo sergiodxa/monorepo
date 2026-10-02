@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/ui";
+import type { RemixNode } from "remix/component";
 
 import {
 	BoldIcon,

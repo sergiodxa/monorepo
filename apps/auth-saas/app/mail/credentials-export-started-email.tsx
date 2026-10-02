@@ -9,7 +9,7 @@
 
 import type { Translate } from "@sdxc/i18n";
 import type { Address, Email as EmailContract } from "@sdxc/mail";
-import type { RemixElement } from "remix/ui";
+import type { RemixElement } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 

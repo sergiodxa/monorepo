@@ -2,11 +2,11 @@
 
 ## Purpose
 
-Guidance for implementing and updating components, mixins, behaviors, and animations in `packages/ui`, a styled, accessible component catalog for `remix/ui`. This file keeps day-to-day contributions consistent with the architecture described in the sections below.
+Guidance for implementing and updating components, mixins, behaviors, and animations in `packages/ui`, a styled, accessible component catalog for `remix/component`. This file keeps day-to-day contributions consistent with the architecture described in the sections below.
 
 ## Core Principles
 
-- Every component is a `remix/ui` component using the Handle pattern — `function Name(handle: Handle<Props>) { return () => <... /> }` — and is always rendered through JSX (`<Name />`), never called as a plain function.
+- Every component is a `remix/component` component using the Handle pattern — `function Name(handle: Handle<Props>) { return () => <... /> }` — and is always rendered through JSX (`<Name />`), never called as a plain function.
 - The only dependencies are `remix` and `@sdxc/icons`.
 - Components style themselves via a `css()` object on the host element, keyed off a `data-*` attribute contract (`data-color`, `data-variant`, `data-size`, `data-placement`, …) and `--ui-*` semantic color variables.
 - Components are markup plus styling only — they never carry behavior and the library never hydrates them. Anything that needs JavaScript ships as an opt-in mixin (from `mixins/`) or behavior class (from `behaviors/`) that the consumer applies explicitly, in their own hydrated island.
@@ -113,7 +113,7 @@ The layer contract is fixed and every component and consumer must respect it:
 reset.css (@layer base)  →  theme.css  →  app styles
 ```
 
-- `reset.css` opens with `@layer base, rmx;` and puts the base reset in `base`. `remix/ui` emits every generated `css()` rule under its own `rmx` layer, so component styles automatically beat the reset — no specificity games, no `!important`, no ordering component styles after the reset by hand.
+- `reset.css` opens with `@layer base, rmx;` and puts the base reset in `base`. `remix/component` emits every generated `css()` rule under its own `rmx` layer, so component styles automatically beat the reset — no specificity games, no `!important`, no ordering component styles after the reset by hand.
 - `theme.css` (the `--ui-*` semantic variable layer) is plain CSS with no layer of its own; import it after the reset and before app styles.
 - App styles come last. Apps that add their own element-level globals (a bare `button { ... }` reset, typography defaults) should put them in a layer ordered before `rmx` — unlayered author CSS outranks all layered CSS, so an app's unlayered globals would silently override component styles if left unlayered.
 
@@ -121,8 +121,8 @@ reset.css (@layer base)  →  theme.css  →  app styles
 
 Components never hydrate and never carry behavior of their own. When a widget needs JavaScript, the behavior lives in exactly one of two places:
 
-- **Mixins** (`mixins/`), built with `createMixin` from `remix/ui`, applied to a host element through its `mix` prop. Use a mixin for DOM adapters: translating DOM events into calls, wrapping a first-party `remix/ui` behavior primitive (`menu`, `listbox`, `combobox`, `tabs`, `popover`), or coordinating a widget's descendants through the same `data-*` contract the styles use.
-- **Behavior classes** (`behaviors/`), plain classes that extend `TypedEventTarget` from `remix/ui`. Use a class for real state: a toast queue, a selection set, a drag session — anything an app calls imperatively, that multiple components observe, or that's complex enough to deserve DOM-free unit tests. Classes never touch the DOM; they own state and dispatch typed events, and mixins or island components are the thin adapters around them.
+- **Mixins** (`mixins/`), built with `createMixin` from `remix/component`, applied to a host element through its `mix` prop. Use a mixin for DOM adapters: translating DOM events into calls, wrapping a first-party `remix/component` behavior primitive (`menu`, `listbox`, `combobox`, `tabs`, `popover`), or coordinating a widget's descendants through the same `data-*` contract the styles use.
+- **Behavior classes** (`behaviors/`), plain classes that extend `TypedEventTarget` from `remix/component`. Use a class for real state: a toast queue, a selection set, a drag session — anything an app calls imperatively, that multiple components observe, or that's complex enough to deserve DOM-free unit tests. Classes never touch the DOM; they own state and dispatch typed events, and mixins or island components are the thin adapters around them.
 
 Rules that apply to both:
 
@@ -130,7 +130,7 @@ Rules that apply to both:
 - **Hydration belongs to the consuming app.** The island component that renders the widget and applies the mixin (or constructs the behavior class) is what gets a `clientEntry(...)` — nothing inside this package itself does.
 - **Custom events are namespaced.** DOM-dispatched events use the `ui:*` prefix, extend `Event` with a typed payload, and are declared on `HTMLElementEventMap`. Behavior-class events use plain names (`"change"`, `"toast"`) since the `ui:*` namespace is reserved for DOM hosts.
 - **Cleanup rides abort signals.** Mixin listeners and behavior-class subscriptions alike pass `{ signal: handle.signal }` so they detach when the island unmounts.
-- **Adapt first-party primitives instead of reimplementing.** Where `remix/ui` already ships the behavior (`menu`, `listbox`, `combobox`, `tabs`, `popover`), wrap it and bind it to the library's markup and `data-*` contract rather than rewriting it.
+- **Adapt first-party primitives instead of reimplementing.** Where `remix/component` already ships the behavior (`menu`, `listbox`, `combobox`, `tabs`, `popover`), wrap it and bind it to the library's markup and `data-*` contract rather than rewriting it.
 
 Every mixin module must open with a doc comment stating why JavaScript is required and what the no-JS baseline does without it — this is not optional boilerplate, it is the record that keeps the JavaScript cost of every behavior explicit and reviewable:
 
@@ -147,15 +147,15 @@ Because no component carries behavior, every component works with JavaScript dis
 
 ## Component Purity
 
-`src/components/**` modules may import only `css`, `attrs`, and types from `remix/ui` — never `on`, `ref`, or `createMixin`. This is enforced mechanically, not by convention: a `bun:test` suite asserts on the import list of every module under `src/components/`, and an `on`, `ref`, or `createMixin` import in a component module fails the suite. If a component needs behavior, that behavior is a mixin or behavior class the consumer attaches — it is never added to the component module itself.
+`src/components/**` modules may import only `css`, `attrs`, and types from `remix/component` — never `on`, `ref`, or `createMixin`. This is enforced mechanically, not by convention: a `bun:test` suite asserts on the import list of every module under `src/components/`, and an `on`, `ref`, or `createMixin` import in a component module fails the suite. If a component needs behavior, that behavior is a mixin or behavior class the consumer attaches — it is never added to the component module itself.
 
-Non-visual helper logic a component builds on — scale/path math, color parsing, anything with zero `remix/ui` dependency of its own — lives under `src/utils/` instead of alongside the component, so purity checks and framework-free logic never mix in the same module. A component imports what it needs from there the same way it imports a sibling component.
+Non-visual helper logic a component builds on — scale/path math, color parsing, anything with zero `remix/component` dependency of its own — lives under `src/utils/` instead of alongside the component, so purity checks and framework-free logic never mix in the same module. A component imports what it needs from there the same way it imports a sibling component.
 
 ## Style Mixin Factories
 
 A recurring border, focus ring, panel chrome, or gradient recipe shared by several components is a mixin factory under `src/styles/`: it calls `css()` itself and returns a ready mixin, composed directly in a `mix` array (`mix={[floatingSurface(), css({ ...ownStyles })]}`) exactly the way an animation factory already does (`mix={[fade(), css({ ... })]}`) — never a plain CSS-properties object a component spreads with `...` into its own inline `css()` call. A factory that varies by an option (the selector a focus ring gates on, the property and combinator a chart's categorical palette paints) takes that option the same way an animation factory takes `duration`/`easing`/`when`; one with nothing to vary stays a plain zero-argument call.
 
-This is exactly what `src/utils/` cannot hold: calling `css()` means importing it from `remix/ui`, and `src/utils/` modules stay free of that import so purity checks and framework-free logic never mix in the same layer. `src/styles/` is where that `remix/ui` dependency lives instead, wired the same way `src/animations/`, `src/behaviors/`, and `src/mixins/` already are — its own barrel, its own `"./styles"` package export.
+This is exactly what `src/utils/` cannot hold: calling `css()` means importing it from `remix/component`, and `src/utils/` modules stay free of that import so purity checks and framework-free logic never mix in the same layer. `src/styles/` is where that `remix/component` dependency lives instead, wired the same way `src/animations/`, `src/behaviors/`, and `src/mixins/` already are — its own barrel, its own `"./styles"` package export.
 
 ## Copy: the library ships no strings
 
@@ -185,6 +185,6 @@ Where the type system can't enforce a required a11y wiring (children shapes, id 
 
 - The only allowed dependencies are `remix`, `@sdxc/icons`, and `@sdxc/u`.
 - Reach for a `@sdxc/u` utility mixin instead of hand-rolling a recipe it already covers exactly (a parameter-free clipping or layout recipe, for instance). Where a recipe depends on this package's own semantic color or spacing vocabulary — `--ui-primary-ring` rather than `@sdxc/u`'s own token names, or a runtime `data-color` switch a build-time utility call can't express — keep it a local `src/styles/` factory instead of forcing a mismatched abstraction.
-- Use `remix/ui`'s first-party behavior primitives (`remix/ui/popover`, `menu`, `listbox`, `select`, `combobox`, `accordion`, `tabs`, `checkbox`, `radio`, `toggle`, `input`, `anchor`, `breadcrumbs`, `button`) from inside mixins instead of hand-rolling keyboard/selection behavior that already exists.
+- Use `remix/component`'s first-party behavior primitives (`@remix-run/ui/popover`, `menu`, `listbox`, `select`, `combobox`, `accordion`, `tabs`, `checkbox`, `radio`, `toggle`, `input`, `anchor`, `breadcrumbs`, `button`) from inside mixins instead of hand-rolling keyboard/selection behavior that already exists.
 - Use `bun:test` for everything under this package, not `remix/test` — it's the repo's runner, and it's also what exercises the component-purity import check.
 - Use the `agent-browser` CLI for interaction, accessibility, and visual-parity verification against `apps/ui-docs` — never Playwright.

@@ -9,9 +9,9 @@
 
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { I18n } from "@sdxc/i18n";
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Renderer } from "remix/middleware/render";
-import type { RemixNode } from "remix/ui";
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 import { contextOf } from "@sdxc/auth/remix/context";

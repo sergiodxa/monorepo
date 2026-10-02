@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { PanelLeftIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -83,7 +83,7 @@ import {
 	truncate,
 	weight,
 } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
 import { warnIfNoAccessibleName } from "../utils/warn-if-no-accessible-name.js";

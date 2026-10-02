@@ -20,7 +20,7 @@ import {
 import { grow } from "@sdxc/u/layout";
 import { Button, Header, Keyboard, Menu, Section } from "@sdxc/ui";
 import { menuKeys } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `<Button commandfor="issue-menu" command="toggle-popover" variant="outline">

@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { formatDateTime, formatRange } from "@sdxc/dates";
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";

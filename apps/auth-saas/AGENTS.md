@@ -29,7 +29,7 @@ bun run db:remote:migrate # Apply migrations to remote database
 - MUST use `bunx wrangler` when running Cloudflare Workers commands, never use `wrangler` directly
 - MUST use `remix/*` packages for the app, not React or React Router
 - MUST check Remix docs on https://github.com/remix-run/remix for any questions about how to do things in Remix way
-- MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/ui` for UI
+- MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/component` for UI
 
 ## Structure
 

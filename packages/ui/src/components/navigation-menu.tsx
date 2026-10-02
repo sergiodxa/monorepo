@@ -10,7 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, fg, outline, outlineStyle } from "@sdxc/u/color";
 import {
@@ -40,7 +40,7 @@ import { z } from "@sdxc/u/stacking";
 import { data, disabled, hover, when } from "@sdxc/u/state";
 import { scaleProperty } from "@sdxc/u/transform";
 import { fontSize, leading, text, textDecoration, weight } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 import { durations, easings } from "../animations/tokens.js";
 import { floatingSurface } from "../styles/floating-surface.js";

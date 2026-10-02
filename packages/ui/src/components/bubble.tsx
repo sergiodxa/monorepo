@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -18,7 +18,7 @@ import { block, flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { maxIs, mie, mis, pb, pbe, pi, width } from "@sdxc/u/size";
 import { data, when } from "@sdxc/u/state";
 import { wordBreak } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /** Selector matching every framed variant, the ones that hug their own text. */
 const FRAMED = '&:not([data-variant="ghost"])';

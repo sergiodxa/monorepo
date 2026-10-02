@@ -132,7 +132,7 @@ There is no `.partial()` helper, so a variant where every field is optional wrap
 `ValidationError.issues` already matches the issue shape [`@sdxc/ui`](https://www.npmjs.com/package/@sdxc/ui)'s `Form` takes, so a refusal re-renders the same page with the array passed straight through. Each field looks its own messages up by `name`, renders them, marks itself `aria-invalid`, and the first invalid field of the render takes focus — so nothing else is threaded down:
 
 ```tsx
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { Button, Form, TextField } from "@sdxc/ui";
 

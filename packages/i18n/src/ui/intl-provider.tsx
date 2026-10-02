@@ -1,5 +1,5 @@
 /**
- * `remix/ui` context provider that publishes an `I18n` translator to descendants, the
+ * `remix/component` context provider that publishes an `I18n` translator to descendants, the
  * render-tree counterpart to `context.intl` from `@sdxc/i18n/middleware`. A translator is
  * immutable, so switching language means rendering the provider with a new one.
  *
@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixNode } from "remix/ui";
+import type { Handle, RemixNode } from "remix/component";
 
 import type { I18n } from "../lib/i18n.js";
 

@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, Props as TagProps, RemixNode } from "remix/ui";
+import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg, outline } from "@sdxc/u/color";
@@ -22,7 +22,7 @@ import { bs, is } from "@sdxc/u/size";
 import { after, precededBy, when } from "@sdxc/u/state";
 import { scale } from "@sdxc/u/transform";
 import { text } from "@sdxc/u/typography";
-import { attrs } from "remix/ui";
+import { attrs } from "remix/component";
 
 /**
  * `role="radiogroup"` applied through {@link attrs} unless a consumer

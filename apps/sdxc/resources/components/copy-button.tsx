@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/ui";
+import type { Handle } from "remix/component";
 
 import { CheckIcon, CopyIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
@@ -18,7 +18,7 @@ import { inlineFlex, items, justify } from "@sdxc/u/layout";
 import { p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { COPY_COMMAND, copyToClipboard } from "@sdxc/ui/mixins";
-import { clientEntry, on } from "remix/ui";
+import { clientEntry, on } from "remix/component";
 
 /** Props must be a `type` rather than an `interface` to satisfy `SerializableProps`. */
 type CopyButtonProps = {

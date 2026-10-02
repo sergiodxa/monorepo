@@ -1,5 +1,5 @@
 /**
- * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/ui` JSX
+ * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/component` JSX
  * as HTML and fetches every `<Frame>`'s `src` back through the router that is rendering
  * the document, so a fragment shares the request's cookies and middleware chain instead
  * of going out over the network. The response's CSP nonce is read before the stream starts,
@@ -13,14 +13,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
+import type { ResolveFrameContext } from "remix/component/server";
 import type { RequestContext, Router } from "remix/router";
-import type { RemixNode } from "remix/ui";
-import type { ResolveFrameContext } from "remix/ui/server";
 
 import { currentLog } from "@sdxc/logger";
 import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
+import { renderToStream } from "remix/component/server";
 import { createHtmlResponse } from "remix/response/html";
-import { renderToStream } from "remix/ui/server";
 
 import { CspNonce } from "~/resources/components/csp-nonce";
 

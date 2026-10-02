@@ -16,7 +16,7 @@ import { is, maxIs } from "@sdxc/u/size";
 import { text, textAlign, weight } from "@sdxc/u/typography";
 import { Chart } from "@sdxc/ui";
 import { ariaChecked } from "@sdxc/ui/mixins";
-import { clientEntry } from "remix/ui";
+import { clientEntry } from "remix/component";
 
 /** Two quarters of support volume, one row per month and one value per series. */
 const VOLUME = [

@@ -9,12 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
-import type { RemixNode } from "remix/ui";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -23,7 +24,6 @@ import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createSession } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
-import { renderToStream } from "remix/ui/server";
 import { describe, expect, test, vi } from "vitest";
 
 import type { QuickPingError, QuickPingResult } from "~/app/http/controllers/actions/ping";
