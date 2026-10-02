@@ -58,6 +58,19 @@ bun run db:local:migrate    # apply migrations to the local D1 copy
 The local copy lives in `.cloudflare/state`, the same directory `bun run dev` reads, so a
 fresh checkout needs the migration once before the board has a table.
 
+## Spec
+
+`spec/board.spec` drives the running board through a real browser: it publishes a position
+through the dialog, opens it, and finds the confirmation in the outbox. Its `setup` empties
+the `postings` table in the local D1 copy first, so start `bun run dev` and run:
+
+```bash
+bun run spec
+```
+
+The board caches its listing for a minute in the dev server's memory, so a run started
+within a minute of the previous one still sees that run's position.
+
 ## Scripts
 
 | Script                     | Purpose                                    |
@@ -66,6 +79,7 @@ fresh checkout needs the migration once before the board has a table.
 | `bun run build`            | Build for production                       |
 | `bun run cf:typegen`       | Generate types for the Cloudflare bindings |
 | `bun run db:local:migrate` | Apply migrations locally                   |
+| `bun run spec`             | Run the spec suite against the dev server  |
 
 ## Deployment
 

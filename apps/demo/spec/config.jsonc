@@ -1,0 +1,21 @@
+{
+	// The dev server `bun dev` starts. Set DEMO_BASE_URL to run the suite elsewhere.
+	"bases": {
+		"web": { "env": "DEMO_BASE_URL", "default": "http://localhost:3008" },
+	},
+	// The D1 database `bun db:local:migrate` creates, opened as the SQLite file Miniflare keeps
+	// it in, so `setup` can empty the board before the suite runs.
+	"databases": {
+		"local": {
+			"env": "DEMO_DATABASE_URL",
+			"default": "sqlite://.cloudflare/state/v3/d1/miniflare-D1DatabaseObject/faaf2b0445ab934c3aac48ddf0cdfade8f9bac050be98993748742cdd2cb05fb.sqlite",
+		},
+	},
+	// Applied once a run adds `--allow-config`, which the `spec` script does.
+	"permissions": {
+		"allow": [
+			["net", "localhost:3008"],
+			["db", "local"],
+		],
+	},
+}
