@@ -43,6 +43,12 @@
 			"runtimeArgs": ["run", "dev"],
 			"cwd": "apps/sdxc",
 			"port": 3007
+		},
+		{
+			"name": "demo",
+			"runtimeExecutable": "bun",
+			"runtimeArgs": ["run", "--cwd", "apps/demo", "dev"],
+			"port": 3008
 		}
 	]
 }
