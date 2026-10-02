@@ -5,7 +5,7 @@ A `<Frame>` renders server content into the page. Frames can stream in after the
 ## Basic usage
 
 ```tsx
-import { Frame } from 'remix/ui'
+import { Frame } from 'remix/component'
 
 function App() {
   return () => (
@@ -69,7 +69,7 @@ When a server frame response is itself rendered with `renderToStream()`, pass `f
 Client entries inside a frame can trigger a reload via `handle.frame.reload()`:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let RefreshButton = clientEntry(
   '/assets/refresh.js#RefreshButton',
@@ -140,7 +140,7 @@ function SearchWidget() {
 }
 ```
 
-During server rendering and streaming, Remix UI still renders the element's attributes and children. During initial client boot, hydration still discovers and hydrates client entries inside the element. The attribute only affects later frame reconciliation: when incoming frame HTML contains `data-rmx-preserve-dom` on a matched element, Remix UI preserves the current element attributes and children instead of applying incoming DOM changes below that element.
+During server rendering and streaming, the component runtime still renders the element's attributes and children. During initial client boot, hydration still discovers and hydrates client entries inside the element. The attribute only affects later frame reconciliation: when incoming frame HTML contains `data-rmx-preserve-dom` on a matched element, the component runtime preserves the current element attributes and children instead of applying incoming DOM changes below that element.
 
 Use this for custom elements, third-party widgets, and imperative integrations that take ownership of their own subtree after initial render. Keep the preserved boundary as small as possible, and add `data-rmx-key` when the element can move among siblings so reloads can match the same live element before falling back to index-based matching.
 
@@ -261,7 +261,7 @@ submissions use `URLSearchParams` for `application/x-www-form-urlencoded`, CRLF-
 additional headers, another body encoding, or a different response policy. Custom resolvers receive
 `signal` and the frame name as `target` when named; non-GET form submissions also provide `formData`, `method`, and `encType`.
 
-The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants Remix UI to render the response body.
+The default resolver accepts `2xx` responses and `3xx` or `4xx` responses whose `Content-Type` includes `text/html`, ignoring case. It rejects other `3xx` or `4xx` responses and all `5xx` responses with an error containing their status and status text. A custom resolver may return a `Response` with any status when it wants the component runtime to render the response body.
 
 A client resolver may return frame content directly or return the fetched `Response`. Returning the
 response lets Remix stream its body. When `fetch()` followed a redirect during a top-frame navigation,

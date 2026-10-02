@@ -28,7 +28,7 @@ Install the standard render middleware and render a full page from an action:
 ```tsx
 import { render } from 'remix/middleware/render'
 import { createRouter } from 'remix/router'
-import { Frame } from 'remix/ui'
+import { Frame } from 'remix/component'
 import { Counter } from './assets/counter.tsx'
 
 function App() {
@@ -58,7 +58,7 @@ router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 Mark components that need client-side interactivity with `clientEntry`. They render on the server and hydrate on the client:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -93,7 +93,7 @@ The first argument is the module URL and export name the client will use to load
 Boot the client with `run`. It finds all client entries in the page, loads their modules, and hydrates them:
 
 ```tsx
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -635,7 +635,7 @@ function Header(handle: Handle) {
 Setting context values does not automatically trigger updates. If a provider needs to render its own context values, call `handle.update()` after setting them. However, since providers often don't render context values themselves, calling `update()` can cause expensive updates of the entire subtree. Instead, make your context an [EventTarget](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget) and have consumers subscribe to changes.
 
 ```tsx
-import { TypedEventTarget } from 'remix/ui'
+import { TypedEventTarget } from 'remix/component'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
@@ -716,9 +716,6 @@ function List(handle: Handle) {
 - [Composition](./composition.md)
 - [Patterns](./patterns.md)
 - [Test](../src/test/README.md)
-- Animations
-  - [spring](./spring.md)
-  - [tween](./tween.md)
 - [Server](../src/server/README.md)
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

@@ -1,14 +1,14 @@
 # Getting Started
 
-Create interactive UIs with Remix UI using a two-phase component model: setup runs once, and render runs on every update.
+Create interactive UIs with the component runtime using a two-phase component model: setup runs once, and render runs on every update.
 
 ## Client-Only Root
 
-To start using Remix UI on the client, create a root and render your top-level component:
+To start using the component runtime on the client, create a root and render your top-level component:
 
 ```tsx
-import { createRoot } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { createRoot } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
   return () => (
@@ -29,8 +29,8 @@ root.render(<App />)
 The `createRoot` function takes a DOM element (or `document.body`) and returns a root object with a `render` method. You can call `render` multiple times to update the app:
 
 ```tsx
-import { createRoot, on } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { createRoot, on } from 'remix/component'
+import type { Handle } from 'remix/component'
 
 function App(handle: Handle) {
   let count = 0
@@ -77,7 +77,7 @@ root.flush()
 root.dispose()
 ```
 
-For browser tests, prefer [`render()` from `remix/ui/test`](https://github.com/remix-run/remix/blob/main/packages/ui/src/test/README.md), which provides `act()` and cleanup around a root.
+For browser tests, prefer [`render()` from `remix/component/test`](https://github.com/remix-run/remix/blob/main/packages/component/src/test/README.md), which provides `act()` and cleanup around a root.
 
 ## Server-Rendered App
 
@@ -88,7 +88,7 @@ For a server-rendered app, define your page as a component, install the standard
 ```tsx
 import { render } from 'remix/middleware/render'
 import { createRouter } from 'remix/router'
-import { Frame } from 'remix/ui'
+import { Frame } from 'remix/component'
 import { Counter } from './assets/counter.tsx'
 
 function App() {
@@ -117,7 +117,7 @@ router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 
 ```tsx
 // assets/entry.tsx
-import { run } from 'remix/ui'
+import { run } from 'remix/component'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -139,7 +139,7 @@ needs custom request headers, body encoding, or response policy. See
 
 ```tsx
 // assets/counter.tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',

@@ -5,7 +5,7 @@ Mixins attach reusable behavior and props to the host element you render. Use `c
 ## Setup and render
 
 ```tsx
-import { createMixin, on } from 'remix/ui'
+import { createMixin, on } from 'remix/component'
 
 const clickCount = createMixin<HTMLElement, [label: string]>((handle) => {
   let count = 0
@@ -41,7 +41,7 @@ Setup and render also run during server rendering. Put DOM access in lifecycle l
 
 ## The mixin handle
 
-`MixinHandle` is available as a type from `remix/ui`. It differs from the handle passed to a component:
+`MixinHandle` is available as a type from `remix/component`. It differs from the handle passed to a component:
 
 | Member                   | Use                                                                                                                                                         |
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -60,7 +60,7 @@ The signals passed to `queueTask` and returned by `update` belong to the host ru
 Register lifecycle listeners in the setup function:
 
 ```tsx
-import { createMixin } from 'remix/ui'
+import { createMixin } from 'remix/component'
 
 const observeSize = createMixin<HTMLElement>((handle) => {
   let observer: ResizeObserver | undefined
@@ -93,10 +93,10 @@ const observeSize = createMixin<HTMLElement>((handle) => {
 
 ## Deferring removal with `persistNode`
 
-For ordinary exit animations, use `animateExit` from `remix/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
+For ordinary exit animations, use `animateExit` from `@remix-run/ui/animation`. Custom mixins can use the same underlying lifecycle API when they need control over teardown:
 
 ```tsx
-import { createMixin } from 'remix/ui'
+import { createMixin } from 'remix/component'
 
 const fadeOut = createMixin<HTMLElement>((handle) => {
   let node: HTMLElement
@@ -152,4 +152,4 @@ Without reclamation, `beforeRemove` runs first, then the teardown callbacks sett
 - `link(href, options?)` adds navigation behavior and link semantics.
 - `css(styles)` applies generated styles through `mix`.
 
-See [Event Mixins](https://github.com/remix-run/remix/blob/main/packages/ui/docs/interactions.md) for custom event composition and [Animation](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for entrance, exit, and layout helpers.
+See [Event Mixins](https://github.com/remix-run/remix/blob/main/packages/component/docs/interactions.md) for custom event composition and [Animation](https://github.com/remix-run/remix/blob/main/packages/ui/src/animation/README.md) for entrance, exit, and layout helpers.

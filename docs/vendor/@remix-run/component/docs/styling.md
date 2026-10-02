@@ -84,9 +84,9 @@ function ProgressBar(handle: Handle) {
 
 Generated `css(...)` rules are emitted in native CSS cascade layers under the stable parent layer `rmx`. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as `@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
 
-Unlayered author CSS outranks normal layered CSS. That means global styles can override generated component styles even when Remix UI inserts its rules later.
+Unlayered author CSS outranks normal layered CSS. That means global styles can override generated component styles even when the component runtime inserts its rules later.
 
-No extra layer setup is needed unless the app adds layers that should sit before or after Remix UI. Put layers that should provide defaults before `rmx`. The layer can use any app-owned name; `base` is a common choice:
+No extra layer setup is needed unless the app adds layers that should sit before or after the generated component styles. Put layers that should provide defaults before `rmx`. The layer can use any app-owned name; `base` is a common choice:
 
 ```css
 @layer base, rmx;
@@ -118,7 +118,7 @@ No extra layer setup is needed unless the app adds layers that should sit before
 }
 ```
 
-Put layers that should override Remix UI after `rmx`:
+Put layers that should override generated component styles after `rmx`:
 
 ```css
 @layer base, rmx, app;
@@ -578,4 +578,4 @@ This example demonstrates:
 
 ## See Also
 
-- [Spring API](./spring.md) - Physics-based animation easing
+- [Spring API](https://github.com/remix-run/remix/blob/main/packages/ui/docs/spring.md) - Physics-based animation easing

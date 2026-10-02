@@ -20,7 +20,7 @@ Skip it when:
 ## Example: Drag Release Mixin
 
 ```tsx
-import { createMixin, on } from 'remix/ui'
+import { createMixin, on } from 'remix/component'
 
 export let dragReleaseType = 'myapp:drag-release' as const
 
@@ -107,7 +107,7 @@ function DraggableCard() {
 ## Example: Tap Tempo Mixin
 
 ```tsx
-import { createMixin, on } from 'remix/ui'
+import { createMixin, on } from 'remix/component'
 
 export let tempoType = 'myapp:tempo' as const
 

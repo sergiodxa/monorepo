@@ -166,7 +166,7 @@ function Analytics(handle: Handle<{ apiKey: string; event: string; data?: any }>
 ### EventEmitters
 
 ```tsx
-import { TypedEventTarget } from 'remix/ui'
+import { TypedEventTarget } from 'remix/component'
 
 class DataEvent extends Event {
   constructor(public value: string) {

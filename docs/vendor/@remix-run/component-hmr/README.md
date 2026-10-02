@@ -1,8 +1,8 @@
-# ui-hmr
+# component-hmr
 
-Hot module replacement transforms for Remix UI components, with integrations for Node and `remix/assets`.
+Hot module replacement transforms for Remix components, with integrations for Node and `remix/assets`.
 
-`ui-hmr` rewrites supported Remix UI component modules so they can use the standard `import.meta.hot` APIs provided by packages like [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) and [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr).
+`component-hmr` rewrites supported Remix component modules so they can use the standard `import.meta.hot` APIs provided by packages like [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) and [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr).
 
 ## Features
 
@@ -19,17 +19,17 @@ npm i remix
 
 ## Usage
 
-Use `remix/ui-hmr/node` as a Node import hook for server modules:
+Use `remix/component-hmr/node` as a Node import hook for server modules:
 
 ```sh
-node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
+node --import remix/node-tsx --import remix/component-hmr/node ./server.ts
 ```
 
-Use `uiHmr()` from `remix/ui-hmr/assets` with `remix/assets` for browser modules:
+Use `componentHmr()` from `remix/component-hmr/assets` with `remix/assets` for browser modules:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/assets'
+import { componentHmr } from 'remix/component-hmr/assets'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 
@@ -45,7 +45,7 @@ let assetServer = createAssetServer({
       }
     : undefined,
   scripts: {
-    loaders: isDevelopment ? [uiHmr()] : undefined,
+    loaders: isDevelopment ? [componentHmr()] : undefined,
   },
   watch: isDevelopment,
 })
@@ -58,7 +58,7 @@ HMR appends mappings for updated modules to the document in additional `<script 
 Use the direct transform APIs when you are writing your own loader, Node module hooks, or build integration.
 
 ```ts
-import { transformComponentsForBrowser } from 'remix/ui-hmr'
+import { transformComponentsForBrowser } from 'remix/component-hmr'
 
 let result = transformComponentsForBrowser(source, {
   importSource: 'remix',
@@ -70,10 +70,10 @@ if (result.transformed) {
 }
 ```
 
-`transformComponentsForBrowser(source, options)` rewrites browser component modules and emits `import.meta.hot.accept()` code for browser updates. The direct transform uses `importSource` to derive imports for the UI refresh runtime and browser HMR runtime.
+`transformComponentsForBrowser(source, options)` rewrites browser component modules and emits `import.meta.hot.accept()` code for browser updates. The direct transform uses `importSource` to derive imports for the component refresh runtime and browser HMR runtime.
 
 ```ts
-import { transformComponentsForServer } from 'remix/ui-hmr'
+import { transformComponentsForServer } from 'remix/component-hmr'
 
 let result = transformComponentsForServer(source, {
   importSource: 'remix',
@@ -110,13 +110,13 @@ transformComponentsForServer(source, {
 })
 ```
 
-`importSource: 'remix'` generates imports from `remix/ui` and `remix/ui-hmr`. `importSource: '@remix-run'` generates imports from `@remix-run/ui` and `@remix-run/ui-hmr`. Custom import sources follow the same nested import layout.
+`importSource: 'remix'` generates imports from `remix/component` and `remix/component-hmr`. `importSource: '@remix-run'` generates imports from `@remix-run/component` and `@remix-run/component-hmr`. Custom import sources follow the same nested import layout.
 
 ## Related Packages
 
 - [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Runs loaders while compiling assets
 - [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Component APIs transformed by `ui-hmr`
+- [`component`](https://github.com/remix-run/remix/tree/main/packages/component) - Component APIs transformed by `component-hmr`
 
 ## License
 
