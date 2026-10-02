@@ -357,7 +357,7 @@ test "mkdir, copy, and remove move files around the workspace" {
 
 ### `cli` — run processes · `--allow-run`
 
-`run` spawns a program in the workspace and returns
+`run` spawns a program in the workspace, waits for it to exit, and returns
 `{ stdout, stderr, exit_code }`. The grant is scoped by executable basename. The
 child gets a minimal environment (`PATH`, `HOME`, `TMPDIR`, plus only the
 variables granted with `--allow-env`), so your host environment stays out of it.
@@ -378,6 +378,44 @@ test "run captures stdout and the exit code" {
 
 ```bash
 npx spec run spec --allow-run=echo
+```
+
+`in <directory>` runs the program somewhere other than the workspace, resolved
+against the directory `spec run` was invoked from. Reaching it needs the host
+filesystem on top of the program:
+
+```
+let result = run "bun" "run" "build" in "apps/web"
+```
+
+#### Long-lived programs
+
+`start` takes the same arguments and returns as soon as the program is running,
+handing back a process to pass to `output` and `stop`. `output` is an
+observable — everything the program printed so far, stdout and stderr
+interleaved — so `eventually` waits on it, and `contains` asserts on part of it:
+
+```
+use cli
+
+setup {
+	let server = start "bun" "run" "dev" in "."
+	eventually within 30s {
+		expect output server contains "localhost:3000"
+	}
+}
+```
+
+A started program belongs to the run rather than to the hook or test that
+started it, so a server started in `setup` serves every test, and the run stops
+whatever is still running when it ends. `stop` ends one sooner and returns
+`{ exit_code, output }`. Both signal the program's whole process group, so a
+script that spawns the real server takes that server down with it. An
+`output … contains` that fails on a program that already exited says so, which
+is the diagnosis when a server crashed on boot.
+
+```bash
+npx spec run spec --allow-run=bun --allow-host-fs=.
 ```
 
 ### `http` — call an HTTP API · `--allow-net`

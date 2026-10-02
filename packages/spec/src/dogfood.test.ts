@@ -68,7 +68,9 @@ test(
 				[
 					"run",
 					"spec",
-					"--allow-run=spec,echo",
+					"--allow-run=spec,echo,sh",
+					/** `spec/cli.spec` runs a program inside the suite's own directory. */
+					"--allow-host-fs=spec",
 					/**
 					 * `spec/env.spec` reads this through `env.get`, and
 					 * `cli.run` forwards only granted names into its

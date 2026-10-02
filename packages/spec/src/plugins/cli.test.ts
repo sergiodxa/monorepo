@@ -1,7 +1,7 @@
 /**
  * Tests for the built-in `cli` plugin: real child processes spawned in a
  * temp-directory workspace, permission gating through a stubbed grant set,
- * and the filtered environment children receive.
+ * the filtered environment children receive, and the lifetime of started ones.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +18,7 @@ import { createRandom } from "@sdxc/sample";
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 
 import type { PermissionSet } from "../permissions.js";
-import type { ToolContext } from "../plugin.js";
+import type { Plugin, ToolContext } from "../plugin.js";
 import type { ToolArg, Value } from "../values.js";
 import type { Workspace } from "../workspace.js";
 
@@ -47,14 +47,14 @@ afterEach(async () => {
 });
 
 describe("createCliPlugin", () => {
-	test("exposes a single run action requiring the run permission", () => {
+	test("launching a program needs the run permission, and output is an observable", () => {
 		expect(plugin.namespace).toBe("cli");
-		let descriptors = plugin.describe();
-		expect(descriptors).toHaveLength(1);
-		let descriptor = descriptors[0];
-		expect(descriptor?.name).toBe("run");
-		expect(descriptor?.kind).toBe("action");
-		expect(descriptor?.requires).toBe("run");
+		let byName = new Map(plugin.describe().map((tool) => [tool.name, tool]));
+		expect([...byName.keys()]).toEqual(["run", "start", "output", "stop"]);
+		expect(byName.get("run")?.requires).toBe("run");
+		expect(byName.get("start")?.requires).toBe("run");
+		expect(byName.get("output")?.kind).toBe("observable");
+		expect(byName.get("stop")?.kind).toBe("action");
 	});
 
 	test("fails on a tool it does not expose", async () => {
@@ -154,9 +154,150 @@ describe("run", () => {
 	});
 });
 
+describe("in", () => {
+	test("runs the program in the directory it names", async () => {
+		let elsewhere = await realpath(await mkdtemp(join(tmpdir(), "spec-cli-in-")));
+		try {
+			let result = await plugin.call(
+				"run",
+				[value("pwd"), word("in"), value(elsewhere)],
+				makeContext(),
+			);
+			expect(expectSuccess(result)).toMatchObject({ stdout: `${elsewhere}\n`, exit_code: 0 });
+		} finally {
+			await rm(elsewhere, { recursive: true, force: true });
+		}
+	});
+
+	test("needs the host filesystem grant for that directory", async () => {
+		let error = expectFailure(
+			await plugin.call(
+				"run",
+				[value("pwd"), word("in"), value(tmpdir())],
+				makeContext({ run: "all", hostFs: false }),
+			),
+		);
+		expect(error).toBeInstanceOf(PermissionDeniedError);
+		expect(error.message).toContain("host-fs");
+	});
+
+	test("comes last, followed by the directory", async () => {
+		let error = expectFailure(
+			await plugin.call("run", [value("pwd"), word("in"), value(root), value("x")], makeContext()),
+		);
+		expect(error.message).toContain("`in` last");
+	});
+});
+
+describe("start, output and stop", () => {
+	test("start returns while the program runs, and output reads what it printed", async () => {
+		let started = createCliPlugin();
+		let context = makeContext();
+		try {
+			let handle = expectSuccess(
+				await started.call(
+					"start",
+					[value("sh"), value("-c"), value("echo up; sleep 30")],
+					context,
+				),
+			);
+			await waitForOutput(started, handle, "up");
+			expect(
+				expectSuccess(
+					await started.call("output", [value(handle), word("contains"), value("up")], context),
+				),
+			).toBe(true);
+		} finally {
+			await started.dispose?.();
+		}
+	});
+
+	test("output names a program that exited without printing what was expected", async () => {
+		let started = createCliPlugin();
+		let context = makeContext();
+		let handle = expectSuccess(
+			await started.call("start", [value("sh"), value("-c"), value("echo nope; exit 4")], context),
+		);
+		let message = "";
+		let deadline = Date.now() + 2000;
+		while (!message.includes("exited") && Date.now() < deadline) {
+			let read = await started.call(
+				"output",
+				[value(handle), word("contains"), value("ready")],
+				context,
+			);
+			message = isFailure(read) ? read.error.message : "";
+			await new Promise((settle) => setTimeout(settle, 20));
+		}
+		expect(message).toContain("exited with code 4");
+
+		let stopped = expectSuccess(await started.call("stop", [value(handle)], context));
+		expect(stopped).toEqual({ exit_code: 4, output: "nope\n" });
+	});
+
+	/**
+	 * `bun run dev` is a script that spawns the real server, so stopping only the
+	 * script would leave the server holding its port.
+	 */
+	test("stop takes down the processes the program spawned", async () => {
+		let started = createCliPlugin();
+		let context = makeContext();
+		let handle = expectSuccess(
+			await started.call(
+				"start",
+				[value("sh"), value("-c"), value("sleep 30 & echo $!; wait")],
+				context,
+			),
+		);
+		let grandchild = Number((await waitForOutput(started, handle, "\n")).trim());
+		expectSuccess(await started.call("stop", [value(handle)], context));
+		expect(isAlive(grandchild)).toBe(false);
+	});
+
+	test("disposing the plugin stops every program still running", async () => {
+		let started = createCliPlugin();
+		let handle = expectSuccess(
+			await started.call("start", [value("sleep"), value("30")], makeContext()),
+		);
+		let pid = (handle as { pid: number }).pid;
+		expect(isAlive(pid)).toBe(true);
+		await started.dispose?.();
+		expect(isAlive(pid)).toBe(false);
+	});
+
+	test("output and stop refuse anything but a handle start returned", async () => {
+		let error = expectFailure(await plugin.call("stop", [value({ id: "99" })], makeContext()));
+		expect(error.message).toContain("the handle cli.start returned");
+	});
+});
+
+/** Poll a started program's output until it includes `text`, failing after two seconds. */
+async function waitForOutput(started: Plugin, handle: Value, text: string): Promise<string> {
+	let deadline = Date.now() + 2000;
+	while (Date.now() < deadline) {
+		let read = await started.call("output", [value(handle)], makeContext());
+		if (isSuccess(read) && typeof read.data === "string" && read.data.includes(text))
+			return read.data;
+		await new Promise((settle) => setTimeout(settle, 20));
+	}
+	throw new Error(`the program never printed ${JSON.stringify(text)}`);
+}
+
+/** Whether a process with this id still exists. */
+function isAlive(pid: number): boolean {
+	try {
+		process.kill(pid, 0);
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 interface StubGrants {
 	/** `"all"` admits any executable; a list admits those basenames only. */
 	run?: "all" | string[];
+	/** Whether the host filesystem is reachable; it is unless this is `false`. */
+	hostFs?: boolean;
 	/** Variable names `grantedEnvNames` reports. */
 	envNames?: string[];
 }
@@ -189,7 +330,7 @@ function createPermissionsStub(grants: StubGrants): PermissionSet {
 		run: grants.run === "all" ? { mode: "all" } : { mode: "scoped", scopes: grants.run ?? [] },
 		net: { mode: "all" },
 		env: { mode: "scoped", scopes: [...(grants.envNames ?? [])] },
-		hostFs: { mode: "all" },
+		hostFs: grants.hostFs === false ? { mode: "denied" } : { mode: "all" },
 		db: { mode: "all" },
 	});
 }
