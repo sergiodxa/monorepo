@@ -60,16 +60,14 @@ fresh checkout needs the migration once before the board has a table.
 
 ## Spec
 
-`spec/board.spec` drives the running board through a real browser: it publishes a position
-through the dialog, opens it, and finds the confirmation in the outbox. Its `setup` empties
-the `postings` table in the local D1 copy first, so start `bun run dev` and run:
+`spec/board.spec` drives the board through a real browser: it publishes a position through
+the dialog, opens it, and finds the confirmation in the outbox. Its `setup` empties the
+`postings` table in the local D1 copy and starts a dev server of its own on port 3008, which
+the run stops when it ends, so keep that port free and run:
 
 ```bash
 bun run spec
 ```
-
-The board caches its listing for a minute in the dev server's memory, so a run started
-within a minute of the previous one still sees that run's position.
 
 ## Scripts
 
@@ -79,7 +77,7 @@ within a minute of the previous one still sees that run's position.
 | `bun run build`            | Build for production                       |
 | `bun run cf:typegen`       | Generate types for the Cloudflare bindings |
 | `bun run db:local:migrate` | Apply migrations locally                   |
-| `bun run spec`             | Run the spec suite against the dev server  |
+| `bun run spec`             | Start a dev server and run the spec suite  |
 
 ## Deployment
 

@@ -1,5 +1,5 @@
 {
-	// The dev server `bun dev` starts. Set DEMO_BASE_URL to run the suite elsewhere.
+	// The dev server `setup` starts. Set DEMO_BASE_URL to run the suite elsewhere.
 	"bases": {
 		"web": { "env": "DEMO_BASE_URL", "default": "http://localhost:3008" },
 	},
@@ -11,9 +11,12 @@
 			"default": "sqlite://.cloudflare/state/v3/d1/miniflare-D1DatabaseObject/faaf2b0445ab934c3aac48ddf0cdfade8f9bac050be98993748742cdd2cb05fb.sqlite",
 		},
 	},
-	// Applied once a run adds `--allow-config`, which the `spec` script does.
+	// Applied once a run adds `--allow-config`, which the `spec` script does: `setup` starts
+	// `bun run dev` in this app's directory and empties the local database.
 	"permissions": {
 		"allow": [
+			["run", "bun"],
+			["host-fs", "."],
 			["net", "localhost:3008"],
 			["db", "local"],
 		],

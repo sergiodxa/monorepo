@@ -1,14 +1,19 @@
-# The board end to end, against a running dev server: a visitor publishes a position
-# through the dialog, reads it back, and the poster is mailed.
+# The board end to end: a visitor publishes a position through the dialog, reads it
+# back, and the poster is mailed.
 
 use browser
+use cli
 use db
 use http
 use html
 
-# Starts every run from an empty board.
+# Empties the board and starts a dev server of its own, which the run stops once it ends.
 setup {
 	db.query "delete from postings" on "local"
+	let server = cli.start "bun" "run" "dev" in "."
+	eventually within 30s {
+		expect cli.output server contains "localhost:3008"
+	}
 }
 
 # Fills the "post a job" dialog and submits it, waiting for the board to list the position.
