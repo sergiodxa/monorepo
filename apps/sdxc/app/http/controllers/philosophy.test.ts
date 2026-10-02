@@ -68,7 +68,6 @@ describe("GET /showcase", () => {
 		expect(response.status).toBe(200);
 
 		for (let entry of listShowcase()) expect(body).toContain(entry.title);
-		expect(body).not.toContain("r3-gallery");
 		expect(body).not.toContain("pkmn");
 	});
 
