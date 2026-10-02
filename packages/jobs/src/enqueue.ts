@@ -19,7 +19,7 @@ export interface JobEnqueuer {
 	 * Enqueues one message for a job.
 	 * @param job The job, from the app's map.
 	 * @param input The payload, typed by that job's own schema.
-	 * @example await ctx.jobs.enqueue(jobs.checkHttp, { monitorId: monitor.id });
+	 * @example await ctx.jobs.enqueue(jobs.sendReceipt, { orderId, locale: "en" });
 	 */
 	enqueue<Schema extends StandardSchemaV1 | undefined, Meta>(
 		job: JobDefinition<Schema, Meta>,

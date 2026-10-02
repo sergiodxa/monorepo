@@ -110,7 +110,7 @@ function isLeaf(value: AnyJobLeaf | JobTree): value is AnyJobLeaf {
  *
  * @param job The job the message is for.
  * @param input The payload, absent for a job that declares no schema.
- * @example await sendQueueBatch([messageBody(jobs.checkHttp, { monitorId })]);
+ * @example await sendQueueBatch([messageBody(jobs.sendReceipt, { orderId, locale: "en" })]);
  */
 export function messageBody(job: AnyJobDefinition, input?: unknown): JSONValue {
 	return envelope(job.name, input);
