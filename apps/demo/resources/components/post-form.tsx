@@ -1,7 +1,7 @@
 /**
- * The "post a job" modal: one form that POSTs to the board, inside a native dialog. It
- * reopens itself through the platform's own `open` attribute when a submission was refused,
- * so the visitor sees the reason next to the fields they filled in without a line of script.
+ * The "post a job" modal: one form that POSTs to the board, inside a native dialog. The
+ * browser submits it as a whole document, so a published posting lands on a fresh board with
+ * the dialog closed, and a refused one reopens it through the platform's own `open` attribute.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -73,7 +73,7 @@ export default function PostForm(handle: Handle<PostForm.Props>) {
 					<Dialog.Description>{intl.t("form.tagline")}</Dialog.Description>
 				</Dialog.Header>
 
-				<Form method="post" action={routes.board.action.href()}>
+				<Form method="post" action={routes.board.action.href()} data-rmx-document>
 					{error ? (
 						<Alert color="danger" live="assertive">
 							<Alert.Description>{error}</Alert.Description>

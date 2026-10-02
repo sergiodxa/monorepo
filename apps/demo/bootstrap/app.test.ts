@@ -183,6 +183,16 @@ test("reopens the form with the reason when a submission is refused", async () =
 });
 
 /**
+ * A dialog opened with `showModal()` stays modal through an in-place update, since being
+ * modal is state the markup never carries; a whole-document submission is what closes it.
+ */
+test("submits the post form as a whole document, so publishing closes its dialog", async () => {
+	let html = await (await fetchApp(db, "/")).text();
+
+	expect(html).toMatch(/<form[^>]*method="post"[^>]*data-rmx-document/);
+});
+
+/**
  * The board carries one island — the frame that fills a position's dialog — so it links the
  * client entry and nothing else. Every other page is complete as the server sent it, and a
  * script tag on one of them would be a bundle downloaded to do nothing.
