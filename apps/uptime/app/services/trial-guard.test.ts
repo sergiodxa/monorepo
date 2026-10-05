@@ -531,8 +531,16 @@ describe("guardTrialProbe", () => {
 			billed: false,
 		});
 
-		expect(limiter.count("trial-probe:198.51.100.2")).toBe(1);
-		expect(limiter.count("trial-probe:1.2.3.4")).toBe(0);
+		expect(limiter.count("trial-probe:198.51.100.2/32")).toBe(1);
+		expect(limiter.count("trial-probe:1.2.3.4/32")).toBe(0);
+	});
+
+	/** A subscriber holds a whole /64, so stepping through its addresses spends one budget. */
+	test("keys an IPv6 caller's budget on its /64", async () => {
+		await guardTrialProbe(submission("example.com", { address: "2001:db8:5:1::1" }));
+		await guardTrialProbe(submission("example.com", { address: "2001:db8:5:1:ffff::2" }));
+
+		expect(limiter.count("trial-probe:2001:db8:5:1::/64")).toBe(2);
 	});
 
 	test("spends exactly one unit of the binding's budget per probe", async () => {
@@ -543,7 +551,7 @@ describe("guardTrialProbe", () => {
 		 * second call here would silently cut a visitor's allowance from three probes to one.
 		 * Cheap to assert, and a failure here reads as the feature breaking outright.
 		 */
-		expect(limiter.count("trial-probe:203.0.113.9")).toBe(1);
+		expect(limiter.count("trial-probe:203.0.113.9/32")).toBe(1);
 	});
 
 	/**
@@ -552,7 +560,7 @@ describe("guardTrialProbe", () => {
 	 */
 	test("refuses an address that is over its budget, before anything is spent on it", async () => {
 		for (let spent = 0; spent < TRIAL_PROBE_LIMIT; spent++) {
-			await limiter.limit({ key: "trial-probe:203.0.113.9" });
+			await limiter.limit({ key: "trial-probe:203.0.113.9/32" });
 		}
 
 		let result = await guardTrialProbe(submission("example.com"));
@@ -640,7 +648,7 @@ describe("guardTrialProbe", () => {
 		if (isFailure(result)) return;
 		/** A billed probe takes nothing out of the day's allowance, so there is nothing to report. */
 		expect(result.data.budgetRemaining).toBeNull();
-		expect(limiter.count("trial-probe:203.0.113.9")).toBe(0);
+		expect(limiter.count("trial-probe:203.0.113.9/32")).toBe(0);
 		expect(kvGet).not.toHaveBeenCalled();
 		expect(kvPut).not.toHaveBeenCalled();
 		expect(captcha.calls).toEqual([]);

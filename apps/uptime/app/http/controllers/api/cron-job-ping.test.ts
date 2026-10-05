@@ -12,6 +12,7 @@ import type { Middleware } from "remix/router";
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv, createRateLimit } from "@sdxc/cloudflare-mocks";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
@@ -158,6 +159,7 @@ async function dispatch(db: Db, request: Request) {
 			asyncContext(),
 			database(() => db),
 			log() as Middleware,
+			getClientIP(),
 			billing({ provider: () => testBilling }),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),
 		],
@@ -177,10 +179,14 @@ async function dispatch(db: Db, request: Request) {
  * `CF-Connecting-IP` is the only address the caller budget keys on, so a test that omits
  * it lands in the shared "unknown" bucket — which is why the budget tests name one.
  */
-function ping(cronJobId: string, options: { key?: string; address?: string } = {}) {
+function ping(
+	cronJobId: string,
+	options: { key?: string; address?: string; forwardedFor?: string } = {},
+) {
 	let headers = new Headers();
 	if (options.key !== undefined) headers.set("Authorization", `Bearer ${options.key}`);
 	if (options.address !== undefined) headers.set("CF-Connecting-IP", options.address);
+	if (options.forwardedFor !== undefined) headers.set("X-Forwarded-For", options.forwardedFor);
 
 	return new Request(`https://uptime.test${routes.api.cronJobPing.href({ cronJobId })}`, {
 		method: "POST",
@@ -413,6 +419,45 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 
 		expect(refused.headers.get("Retry-After")).not.toBeNull();
 		await expectProblem(refused, "rateLimited");
+	});
+
+	/**
+	 * A subscriber holds a whole /64, so stepping to the next address in it still
+	 * spends the budget the first address started.
+	 */
+	test("shares one budget across IPv6 addresses in the same /64", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		for (let attempt = 0; attempt < CALLER_LIMIT; attempt++) {
+			await dispatch(db, ping(monitor.id, { key, address: `2001:db8:a:1::${attempt + 1}` }));
+		}
+
+		let refused = await dispatch(db, ping(monitor.id, { key, address: "2001:db8:a:1:ffff::1" }));
+		expect(refused.status).toBe(429);
+		expect(refused.headers.get("RateLimit-Policy")).toBe(`${CALLER_LIMIT};w=60`);
+	});
+
+	test("records the connecting address in canonical form", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		await dispatch(db, ping(monitor.id, { key, address: "2001:DB8:B:0:0:0:0:1" }));
+
+		let [row] = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
+		expect(row?.source_ip).toBe("2001:db8:b::1");
+	});
+
+	/** `X-Forwarded-For` is whatever the caller wrote, so it never becomes the recorded source. */
+	test("records no source address for a ping carrying only X-Forwarded-For", async () => {
+		let { db } = createTestDatabase();
+		let { monitor, key } = await createCaller(db);
+
+		let response = await dispatch(db, ping(monitor.id, { key, forwardedFor: "198.51.100.7" }));
+		expect(response.status).toBe(201);
+
+		let [row] = await db.findMany(cronJobPings, { where: { cron_job_monitor_id: monitor.id } });
+		expect(row?.source_ip).toBeNull();
 	});
 
 	/**

@@ -18,6 +18,7 @@ import type { Result } from "@sdxc/result";
 import { Turnstile } from "@sdxc/captcha/turnstile";
 import { toDayKey } from "@sdxc/dates";
 import { resolve } from "@sdxc/doh";
+import { getClientIP } from "@sdxc/get-client-ip";
 import { IP } from "@sdxc/ip";
 import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
@@ -58,8 +59,8 @@ const CALLER_WINDOW = "1 minute";
 const CALLER_PREFIX = "trial-probe";
 
 /**
- * Stand-in for a caller whose address the platform did not report, so every such request
- * counts against one shared bucket, keeping an unidentifiable caller inside the limit.
+ * Stand-in for a caller whose address the platform did not report or reported malformed, so
+ * every such request counts against one shared bucket, keeping it inside the limit.
  */
 const UNKNOWN_ADDRESS = "unknown";
 
@@ -148,8 +149,8 @@ export interface TrialProbeRequest {
 	/** The token Turnstile's widget produced, or `null` when the form sent none. */
 	token: string | null;
 	/**
-	 * The request being served, read only for `CF-Connecting-IP`. Passing the request keeps
-	 * the "never trust `X-Forwarded-For`" rule enforced in this one place.
+	 * The request being served, read only for the address Cloudflare saw connect
+	 * (`CF-Connecting-IP`), so a client-written header never reaches a limit or the challenge.
 	 */
 	request: Request;
 	/**
@@ -246,9 +247,9 @@ function createCallerAdapter(): Adapter {
 }
 
 /**
- * Spends one probe from the calling address's budget, keyed on `CF-Connecting-IP` since
- * `X-Forwarded-For` is spoofable by the client. Fails **open** on a broken backend, since
- * this limit only shapes traffic — {@link spendDailyBudget} is what bounds real spend.
+ * Spends one probe from the calling address's budget, keyed on the connecting address and,
+ * for IPv6, on its /64 so one subscriber's block shares a budget. Fails **open** on a broken
+ * backend, since this limit only shapes traffic — {@link spendDailyBudget} bounds real spend.
  *
  * @param request - The request being served.
  * @returns A refusal when the address is over budget, `null` when it may proceed.
@@ -256,7 +257,7 @@ function createCallerAdapter(): Adapter {
 async function consumeCallerBudget(request: Request): Promise<TrialRefusal | null> {
 	callerLimiter ??= createCallerAdapter();
 
-	let address = request.headers.get("CF-Connecting-IP") ?? UNKNOWN_ADDRESS;
+	let address = getClientIP(request)?.network({ v4: 32, v6: 64 }).toString() ?? UNKNOWN_ADDRESS;
 	let decision = await callerLimiter.consume(`${CALLER_PREFIX}:${address}`);
 
 	if (isFailure(decision)) {
@@ -505,7 +506,7 @@ export async function guardTrialProbe(
 	if (isFailure(target)) return target;
 
 	if (!probe.billed) {
-		let address = probe.request.headers.get("CF-Connecting-IP");
+		let address = getClientIP(probe.request)?.toString() ?? null;
 		let challenge = await verifyChallenge(probe.token, address, probe.captcha);
 		if (challenge !== null) return failure(challenge);
 	}

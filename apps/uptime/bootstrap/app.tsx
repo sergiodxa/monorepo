@@ -21,6 +21,7 @@ import type { Middleware } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
@@ -137,6 +138,11 @@ export default function application(options: application.Options) {
 		 * on the request's record, and every job enqueued while serving carries it along.
 		 */
 		trace() as Middleware,
+		/**
+		 * Publishes `ctx.ip` on every surface, parsed once from `CF-Connecting-IP`, so
+		 * rate limits and recorded addresses all read the same canonical address.
+		 */
+		getClientIP(),
 		/**
 		 * Answers `/.well-known/security.txt` before anything that reads a session or the
 		 * database, since the file is static and a researcher's probe carries no cookie.

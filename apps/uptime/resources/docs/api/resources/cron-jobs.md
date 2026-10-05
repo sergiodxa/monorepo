@@ -291,7 +291,7 @@ Because this URL lives in crontabs and deploy scripts, it also accepts the monit
 
 **Rate Limits:** Two limits apply, and both answer a `429` `rate-limited` problem with a `Retry-After` header giving the seconds to wait:
 
-- **Caller budget:** 60 requests per minute for each calling IP address (`CF-Connecting-IP`) and monitor pair, counted whether or not the ping is accepted. It is spent before the API key is checked, so requests with a missing or invalid key count against it too. Responses from this limit also carry the quota headers.
+- **Caller budget:** 60 requests per minute for each calling IP address (`CF-Connecting-IP`) and monitor pair, where every IPv6 address in one /64 network counts as one caller, counted whether or not the ping is accepted. It is spent before the API key is checked, so requests with a missing or invalid key count against it too. Responses from this limit also carry the quota headers.
 - **Minimum interval:** a monitor accepts one ping every 30 seconds. A ping that arrives sooner after the previous accepted one is rejected.
 
 <!-- operation: cronJobPing -->

@@ -111,10 +111,10 @@ const limitByCaller: Middleware = (context, next) => {
 			let monitor =
 				(params.success ? decodeIdOrUUID("cron", params.value.cronJobId) : null) ?? UNKNOWN_BUCKET;
 			/**
-			 * Only `CF-Connecting-IP`: `X-Forwarded-For` is client-supplied, so keying on
-			 * it would let a caller mint a fresh bucket per request.
+			 * An IPv6 caller is keyed on its /64, the block one subscriber holds, so cycling
+			 * through the addresses it was assigned spends the one budget.
 			 */
-			let address = ctx.request.headers.get("CF-Connecting-IP") ?? UNKNOWN_BUCKET;
+			let address = ctx.ip?.network({ v4: 32, v6: 64 }).toString() ?? UNKNOWN_BUCKET;
 			return `${address}:${monitor}`;
 		},
 		/** The API's own `rate-limited` problem; the middleware adds `Retry-After` and the quota headers. */
@@ -174,9 +174,12 @@ export default createAction(routes.api.cronJobPing, {
 				: monitor.next_expected_at + monitor.grace_period_seconds * 1000;
 		let wasOnTime = deadline === null || Date.now() <= deadline;
 
+		/**
+		 * The recorded source is the address Cloudflare saw connect, so a caller can
+		 * never write an address of its choosing into the ping history.
+		 */
 		let pingId = await CronJobMonitor.recordPing(ctx.db, monitor, wasOnTime, {
-			sourceIp:
-				ctx.request.headers.get("CF-Connecting-IP") ?? ctx.request.headers.get("X-Forwarded-For"),
+			sourceIp: ctx.ip?.toString() ?? null,
 			userAgent: ctx.request.headers.get("User-Agent"),
 		});
 
