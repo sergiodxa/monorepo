@@ -34,6 +34,7 @@
 		"@sdxc/icalendar": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/idempotency": "workspace:*",
+		"@sdxc/ip": "workspace:*",
 		"@sdxc/jobs": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",

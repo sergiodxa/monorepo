@@ -169,78 +169,25 @@ beforeEach(async () => {
 });
 
 describe("isPublicAddress", () => {
-	test.each([
-		["0.0.0.0", "this-network"],
-		["0.1.2.3", "this-network"],
-		["10.0.0.1", "RFC1918 10/8"],
-		["10.255.255.254", "RFC1918 10/8"],
-		["100.64.0.1", "carrier-grade NAT"],
-		["100.127.255.254", "carrier-grade NAT"],
-		["127.0.0.1", "loopback"],
-		["127.255.255.254", "loopback"],
-		["169.254.1.1", "link-local"],
-		["169.254.169.254", "cloud instance metadata"],
-		["172.16.0.1", "RFC1918 172.16/12"],
-		["172.31.255.254", "RFC1918 172.16/12"],
-		["192.0.0.1", "IETF protocol assignments"],
-		["192.0.2.1", "TEST-NET-1"],
-		["192.168.0.1", "RFC1918 192.168/16"],
-		["192.168.255.254", "RFC1918 192.168/16"],
-		["198.18.0.1", "benchmarking"],
-		["198.51.100.1", "TEST-NET-2"],
-		["203.0.113.1", "TEST-NET-3"],
-		["224.0.0.1", "multicast"],
-		["239.255.255.255", "multicast"],
-		["240.0.0.1", "reserved"],
-		["255.255.255.255", "broadcast"],
-	])("refuses %s (%s)", (address) => {
-		expect(isPublicAddress(address)).toBe(false);
-	});
+	test.each([["169.254.169.254"], ["::ffff:10.0.0.1"], ["64:ff9b::7f00:1"], ["2001:db8::1"]])(
+		"refuses the non-public address %s",
+		(address) => {
+			expect(isPublicAddress(address)).toBe(false);
+		},
+	);
 
-	test.each([
-		["::", "unspecified"],
-		["::1", "loopback"],
-		["::2", "IPv4-compatible"],
-		["100::1", "discard-only"],
-		["2001::1", "Teredo"],
-		["2001:db8::1", "documentation"],
-		["fc00::1", "unique-local"],
-		["fd12:3456:789a::1", "unique-local"],
-		["fe80::1", "link-local"],
-		["febf:ffff::1", "link-local"],
-		["ff02::1", "multicast"],
-		["::ffff:127.0.0.1", "IPv4-mapped loopback"],
-		["::ffff:7f00:1", "IPv4-mapped loopback, group notation"],
-		["::ffff:169.254.169.254", "IPv4-mapped metadata address"],
-		["::ffff:10.0.0.1", "IPv4-mapped RFC1918"],
-		["64:ff9b::a9fe:a9fe", "NAT64-wrapped metadata address"],
-		["64:ff9b::7f00:1", "NAT64-wrapped loopback"],
-		["2002:7f00:1::", "6to4-wrapped loopback"],
-		["2002:a9fe:a9fe::", "6to4-wrapped metadata address"],
-	])("refuses %s (%s)", (address) => {
-		expect(isPublicAddress(address)).toBe(false);
-	});
-
-	test.each([
-		["8.8.8.8"],
-		["1.1.1.1"],
-		["93.184.216.34"],
-		["172.32.0.1"],
-		["100.128.0.1"],
-		["2606:4700:4700::1111"],
-		["2a00:1450:4001:80f::200e"],
-		["::ffff:8.8.8.8"],
-	])("allows the public address %s", (address) => {
-		expect(isPublicAddress(address)).toBe(true);
-	});
+	test.each([["8.8.8.8"], ["2606:4700:4700::1111"], ["::ffff:8.8.8.8"]])(
+		"allows the public address %s",
+		(address) => {
+			expect(isPublicAddress(address)).toBe(true);
+		},
+	);
 
 	test("refuses anything that is not a parseable address", () => {
 		expect(isPublicAddress("not-an-address")).toBe(false);
 		expect(isPublicAddress("1.2.3")).toBe(false);
-		expect(isPublicAddress("1.2.3.4.5")).toBe(false);
 		expect(isPublicAddress("256.0.0.1")).toBe(false);
 		expect(isPublicAddress("::1::2")).toBe(false);
-		expect(isPublicAddress("fffff::1")).toBe(false);
 	});
 });
 

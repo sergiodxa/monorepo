@@ -18,9 +18,10 @@ import type { Result } from "@sdxc/result";
 import { Turnstile } from "@sdxc/captcha/turnstile";
 import { toDayKey } from "@sdxc/dates";
 import { resolve } from "@sdxc/doh";
+import { IP } from "@sdxc/ip";
 import { currentLog } from "@sdxc/logger";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { recordCost } from "~/app/services/cost";
@@ -61,43 +62,6 @@ const CALLER_PREFIX = "trial-probe";
  * counts against one shared bucket, keeping an unidentifiable caller inside the limit.
  */
 const UNKNOWN_ADDRESS = "unknown";
-
-/**
- * Address ranges that are not on the public internet, as `[network, prefix length]`.
- * `169.254.0.0/16` matters most: it holds the cloud metadata address
- * `169.254.169.254`, the highest-value target an open prober could reach.
- */
-const BLOCKED_IPV4: readonly (readonly [string, number])[] = [
-	["0.0.0.0", 8],
-	["10.0.0.0", 8],
-	["100.64.0.0", 10],
-	["127.0.0.0", 8],
-	["169.254.0.0", 16],
-	["172.16.0.0", 12],
-	["192.0.0.0", 24],
-	["192.0.2.0", 24],
-	["192.168.0.0", 16],
-	["198.18.0.0", 15],
-	["198.51.100.0", 24],
-	["203.0.113.0", 24],
-	["224.0.0.0", 4],
-	["240.0.0.0", 4],
-];
-
-/**
- * IPv6 ranges that are not on the public internet, as `[network, prefix length]`. Teredo
- * (`2001::/32`) is blocked as a whole prefix, since no genuine monitored site sits behind
- * it; the prefixes carrying a routable IPv4 are unpacked and checked — see {@link embeddedIpv4}.
- */
-const BLOCKED_IPV6: readonly (readonly [string, number])[] = [
-	["::", 96],
-	["100::", 64],
-	["2001::", 32],
-	["2001:db8::", 32],
-	["fc00::", 7],
-	["fe80::", 10],
-	["ff00::", 8],
-];
 
 /**
  * Name suffixes that never denote a public host: resolver-local names, private-network
@@ -305,173 +269,6 @@ async function consumeCallerBudget(request: Request): Promise<TrialRefusal | nul
 }
 
 /**
- * Parses a canonical dotted-quad into a 32-bit number. `URL` normalizes every legacy
- * spelling — octal, hex, bare integers — into dotted decimal while parsing, which is why
- * the blocklist safely runs against the already-normalized `url.hostname`.
- *
- * @param literal - A dotted-decimal address.
- * @returns The address as a number, or `null` when it is not one.
- */
-function parseIpv4(literal: string): number | null {
-	let parts = literal.split(".");
-	if (parts.length !== 4) return null;
-
-	let value = 0;
-	for (let part of parts) {
-		if (!/^\d{1,3}$/.test(part)) return null;
-		let octet = Number(part);
-		if (octet > 255) return null;
-		value = value * 256 + octet;
-	}
-	return value;
-}
-
-/**
- * Converts textual IPv6 groups into numbers, expanding a trailing dotted quad into the two
- * groups it occupies.
- *
- * @param parts - Colon-separated groups, without any `::` compression.
- * @returns The groups as numbers, or `null` when any of them is malformed.
- */
-function parseIpv6Groups(parts: string[]): number[] | null {
-	let groups: number[] = [];
-
-	for (let [index, part] of parts.entries()) {
-		if (part.includes(".")) {
-			if (index !== parts.length - 1) return null;
-			let embedded = parseIpv4(part);
-			if (embedded === null) return null;
-			groups.push(Math.floor(embedded / 65_536), embedded % 65_536);
-			continue;
-		}
-
-		if (!/^[0-9a-f]{1,4}$/i.test(part)) return null;
-		groups.push(Number.parseInt(part, 16));
-	}
-
-	return groups;
-}
-
-/**
- * An IPv6 address, as the eight 16-bit groups it is made of: a tuple, so the prefix table
- * and {@link embeddedIpv4} can index every position with a guaranteed value present.
- */
-type Ipv6Groups = readonly [number, number, number, number, number, number, number, number];
-
-/**
- * Narrows a list of groups to an address, rejecting any length but eight. The destructured
- * defaults below are unreachable once the length check passes; they exist only to give the
- * destructure a tuple type.
- *
- * @param groups - The groups parsed out of a literal.
- * @returns The address, or `null` when there are not exactly eight groups.
- */
-function toIpv6Groups(groups: number[]): Ipv6Groups | null {
-	if (groups.length !== 8) return null;
-	let [a = 0, b = 0, c = 0, d = 0, e = 0, f = 0, g = 0, h = 0] = groups;
-	return [a, b, c, d, e, f, g, h];
-}
-
-/**
- * Parses an IPv6 literal into its eight groups. `rawTail` is `undefined` exactly when the
- * literal used no `::` compression, which decides whether the groups need zero-padding.
- *
- * @param literal - An IPv6 address without surrounding brackets.
- * @returns Eight 16-bit groups, or `null` when the literal is not a valid address.
- */
-function parseIpv6(literal: string): Ipv6Groups | null {
-	let halves = literal.split("::");
-	if (halves.length > 2) return null;
-	let [rawHead = "", rawTail] = halves;
-
-	let head = parseIpv6Groups(rawHead === "" ? [] : rawHead.split(":"));
-	let tail = parseIpv6Groups(rawTail === undefined || rawTail === "" ? [] : rawTail.split(":"));
-	if (head === null || tail === null) return null;
-
-	if (rawTail === undefined) return toIpv6Groups(head);
-
-	let missing = 8 - head.length - tail.length;
-	if (missing < 1) return null;
-	return toIpv6Groups([...head, ...Array.from({ length: missing }, () => 0), ...tail]);
-}
-
-/**
- * The IPv4 address an IPv6 address carries inside it: `::ffff:0:0/96` IPv4-mapped,
- * `64:ff9b::/96` NAT64, and `2002::/16` 6to4 — three notations that could otherwise
- * smuggle an address like `169.254.169.254` past an IPv6-only blocklist.
- *
- * @param groups - The eight groups of an IPv6 address.
- * @returns The embedded IPv4 as a number, or `null` when this address embeds none.
- */
-function embeddedIpv4(groups: Ipv6Groups): number | null {
-	let isMapped =
-		groups[0] === 0 &&
-		groups[1] === 0 &&
-		groups[2] === 0 &&
-		groups[3] === 0 &&
-		groups[4] === 0 &&
-		groups[5] === 0xffff;
-	if (isMapped) return groups[6] * 65_536 + groups[7];
-
-	let isNat64 =
-		groups[0] === 0x0064 &&
-		groups[1] === 0xff9b &&
-		groups[2] === 0 &&
-		groups[3] === 0 &&
-		groups[4] === 0 &&
-		groups[5] === 0;
-	if (isNat64) return groups[6] * 65_536 + groups[7];
-
-	if (groups[0] === 0x2002) return groups[1] * 65_536 + groups[2];
-
-	return null;
-}
-
-/**
- * Whether an IPv4 address falls inside a `[network, prefix]` range. Compares by division:
- * a 32-bit shift in JavaScript operates on signed integers, so masking `240.0.0.0/4`
- * would produce a negative number, breaking the comparison at the top of the address space.
- *
- * @param address - The address, as a number.
- * @param network - The range's network address, dotted-decimal.
- * @param prefix - The range's prefix length in bits.
- * @returns Whether the address is in the range.
- */
-function inIpv4Range(address: number, network: string, prefix: number): boolean {
-	let base = parseIpv4(network);
-	if (base === null) return false;
-	let size = 2 ** (32 - prefix);
-	return Math.floor(address / size) === Math.floor(base / size);
-}
-
-/**
- * The 128 bits of an IPv6 address, most significant first, so a prefix comparison is a
- * string comparison.
- *
- * @param groups - The address, as eight groups.
- * @returns 128 characters of `0` and `1`.
- */
-function toBits(groups: Ipv6Groups): string {
-	return groups.map((group) => group.toString(2).padStart(16, "0")).join("");
-}
-
-/**
- * Whether an IPv6 address falls inside a `[network, prefix]` range. Compared as text, bit
- * by bit, since a prefix off a group boundary — `fc00::/7`, `fe80::/10` — needs a partial
- * mask, and a wrong one would silently widen or narrow the range.
- *
- * @param address - The address, as eight groups.
- * @param network - The range's network address, in IPv6 notation.
- * @param prefix - The range's prefix length in bits.
- * @returns Whether the address is in the range.
- */
-function inIpv6Range(address: Ipv6Groups, network: string, prefix: number): boolean {
-	let base = parseIpv6(network);
-	if (base === null) return false;
-	return toBits(address).slice(0, prefix) === toBits(base).slice(0, prefix);
-}
-
-/**
  * Whether an address literal is one a trial probe may be pointed at.
  *
  * An unparseable literal is refused, so only a form this function fully recognizes can
@@ -481,20 +278,8 @@ function inIpv6Range(address: Ipv6Groups, network: string, prefix: number): bool
  * @returns Whether the address is on the public internet.
  */
 export function isPublicAddress(literal: string): boolean {
-	let ipv4 = parseIpv4(literal);
-	if (ipv4 !== null) {
-		return !BLOCKED_IPV4.some(([network, prefix]) => inIpv4Range(ipv4, network, prefix));
-	}
-
-	let ipv6 = parseIpv6(literal);
-	if (ipv6 === null) return false;
-
-	let embedded = embeddedIpv4(ipv6);
-	if (embedded !== null) {
-		return !BLOCKED_IPV4.some(([network, prefix]) => inIpv4Range(embedded, network, prefix));
-	}
-
-	return !BLOCKED_IPV6.some(([network, prefix]) => inIpv6Range(ipv6, network, prefix));
+	let ip = IP.parse(literal);
+	return isSuccess(ip) && ip.data.isPublic;
 }
 
 /**
@@ -508,7 +293,7 @@ export function isPublicAddress(literal: string): boolean {
  */
 function addressLiteral(hostname: string): string | null {
 	if (hostname.startsWith("[")) return hostname.slice(1, -1);
-	return parseIpv4(hostname) === null ? null : hostname;
+	return isSuccess(IP.parse(hostname)) ? hostname : null;
 }
 
 /**

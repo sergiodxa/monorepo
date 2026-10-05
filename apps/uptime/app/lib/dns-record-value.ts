@@ -16,6 +16,7 @@
 import type { DoH } from "@sdxc/doh";
 
 import { parseRecordData } from "@sdxc/doh";
+import { IP } from "@sdxc/ip";
 import { isSuccess } from "@sdxc/result";
 
 /** The record types tracked by a domain monitor, and the only ones normalized here. */
@@ -43,16 +44,13 @@ export function normalizeDnsName(name: string): string {
 }
 
 /**
- * An IPv4 address in dotted-quad form, each octet 0-255 and written without leading zeros.
- *
- * Leading zeros are refused: `inet_aton` reads `010` as octal while browsers read it as
- * decimal, so an address carrying them has no single meaning to guess at.
+ * Whether a string is a dotted-quad IPv4 literal this app will store as-is: it parses,
+ * and it is already its own canonical text. Leading zeros are refused, since `inet_aton`
+ * reads `010` as octal while browsers read it as decimal.
  */
-const IPV4_PATTERN = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
-
-/** Whether a string is a dotted-quad IPv4 literal this app will store as-is. */
 export function isIpv4Address(value: string): boolean {
-	return IPV4_PATTERN.test(value);
+	let ip = IP.parse(value);
+	return isSuccess(ip) && ip.data.version === 4 && ip.data.toString() === value;
 }
 
 /** Reads a dotted quad into its four octets, or `null` when it is not one. */
