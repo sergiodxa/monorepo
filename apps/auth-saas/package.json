@@ -15,6 +15,7 @@
 	},
 	"dependencies": {
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/backoff": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/captcha": "workspace:*",
 		"@sdxc/cloudflare-pricing": "workspace:*",

@@ -8,6 +8,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createBackoff } from "@sdxc/backoff";
 
 /** How many consecutive failures a tenant tolerates before backoff begins, when it has never configured its own threshold. */
 export const DEFAULT_FAILURE_THRESHOLD = 4;
@@ -20,12 +21,6 @@ const BACKOFF_CEILING_MS = 15 * 60 * 1000;
 
 /** How long a failure counter sits untouched before the next failure starts it over rather than continuing it. */
 const BACKOFF_DECAY_MS = 24 * 60 * 60 * 1000;
-
-/** The exponential delay a failure count past the threshold earns: one second at the threshold itself, doubling with each failure beyond it, capped at the ceiling. */
-export function backoffDelayMs(failedAttempts: number, threshold: number): number {
-	let stepsPastThreshold = failedAttempts - threshold;
-	return Math.min(BACKOFF_BASE_MS * 2 ** stepsPastThreshold, BACKOFF_CEILING_MS);
-}
 
 /** The three columns a credential row carries for this backoff, wherever it lives. */
 export interface BackoffState {
@@ -48,11 +43,15 @@ export function nextFailureState(
 	let decayed =
 		current.last_failure_at === null || now - current.last_failure_at > BACKOFF_DECAY_MS;
 	let failedAttempts = decayed ? 1 : current.failed_attempts + 1;
+	let backoff = createBackoff({
+		free: Math.max(threshold - 1, 0),
+		base: BACKOFF_BASE_MS,
+		max: BACKOFF_CEILING_MS,
+	});
 
 	return {
 		failed_attempts: failedAttempts,
-		retry_after:
-			failedAttempts >= threshold ? now + backoffDelayMs(failedAttempts, threshold) : null,
+		retry_after: failedAttempts >= threshold ? backoff.at(failedAttempts, now) : null,
 		last_failure_at: now,
 	};
 }

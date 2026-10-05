@@ -17,9 +17,9 @@
 import type { KeysetCursors } from "@sdxc/pagination";
 import type { Database, TableRow } from "remix/data-table";
 
+import { createBackoff } from "@sdxc/backoff";
 import { open } from "@sdxc/crypto";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
-import { systemRandom } from "@sdxc/random";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -42,30 +42,6 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** How many delivery attempts a row gets before it is marked exhausted rather than scheduled again. */
 const MAX_ATTEMPTS = 8;
-
-/**
- * The delay before the attempt after `attempts` just failed: 1 answers the
- * gap after a first failed attempt, 7 the gap after a seventh. Eight
- * attempts at these gaps reach about a day from the first one.
- */
-function retryDelayMs(attempts: number): number {
-	switch (attempts) {
-		case 1:
-			return 15 * 1000;
-		case 2:
-			return 60 * 1000;
-		case 3:
-			return 5 * 60 * 1000;
-		case 4:
-			return 30 * 60 * 1000;
-		case 5:
-			return 2 * 60 * 60 * 1000;
-		case 6:
-			return 6 * 60 * 60 * 1000;
-		default:
-			return 12 * 60 * 60 * 1000;
-	}
-}
 
 /** The largest fraction of a retry delay that jitter may add or take away. */
 const MAX_JITTER_FRACTION = 0.2;
@@ -356,18 +332,15 @@ let SettleDeliverySchema = s.object({
 	snippet: s.optional(s.string()),
 });
 
-/** The Web Crypto stream retry jitter draws from, shared across every delivery in the isolate. */
-const JITTER_RANDOM = systemRandom();
-
 /**
- * Randomizes a retry delay within {@link MAX_JITTER_FRACTION} of its base, so
- * a batch of deliveries due at once does not retry in lockstep against a
- * receiver recovering from an outage.
+ * The gap before each retry, one step per failed attempt, jittered within
+ * {@link MAX_JITTER_FRACTION} so a batch due at once does not retry in lockstep
+ * against a recovering receiver. Eight attempts at these gaps reach about a day.
  */
-function jitteredDelay(baseMs: number): number {
-	let jitter = JITTER_RANDOM.float(1 - MAX_JITTER_FRACTION, 1 + MAX_JITTER_FRACTION);
-	return Math.round(baseMs * jitter);
-}
+const deliveryBackoff = createBackoff({
+	steps: ["15 seconds", "1 minute", "5 minutes", "30 minutes", "2 hours", "6 hours", "12 hours"],
+	jitter: MAX_JITTER_FRACTION,
+});
 
 /**
  * Records one delivery attempt and decides what happens next: a `delivered`
@@ -457,7 +430,7 @@ export async function settleDelivery(
 		return { ok: true, status: "exhausted" };
 	}
 
-	let nextAttemptAt = now + jitteredDelay(retryDelayMs(attempts));
+	let nextAttemptAt = deliveryBackoff.at(attempts, now);
 
 	await db.update(
 		webhookDeliveries,
