@@ -253,7 +253,9 @@ function mcpBudget() {
 			window: "1 minute",
 		}),
 		prefix: "mcp",
-		key: (ctx) => getClientIP(ctx.request) ?? "unknown",
+		key: (ctx) =>
+			getClientIP(ctx.request)?.network({ v4: 32, v6: 64 }).toString() ??
+			"unknown",
 	});
 }
 

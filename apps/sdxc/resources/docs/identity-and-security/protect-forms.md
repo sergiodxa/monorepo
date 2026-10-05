@@ -138,9 +138,11 @@ export function answerTrappedBots(error: HoneypotError): Response | null {
 
 ## A budget per address
 
-An anonymous form has one thing to key a budget on: the connecting address. `getClientIP` reads
+An anonymous form has one thing to key a budget on: the connecting address. `getClientIP` parses
 the `CF-Connecting-IP` header Cloudflare attaches, and answers `null` when something else served
-the request, so every unidentified request shares one bucket rather than going unlimited.
+the request or the header is not an address, so every unidentified request shares one bucket
+rather than going unlimited. An IPv6 client controls a whole `/64`, so the key is the network
+the address sits in: the full address for IPv4, its `/64` for IPv6.
 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
 import type { Middleware } from "remix/router";
@@ -154,7 +156,9 @@ export function callerBudget(prefix: string, limit: number): Middleware {
 	return rateLimit({
 		adapter: new KVAdapter(env.RATE_LIMITS, { limit, window: "10 minutes" }),
 		prefix,
-		key: (ctx) => getClientIP(ctx.request) ?? "unknown",
+		key: (ctx) =>
+			getClientIP(ctx.request)?.network({ v4: 32, v6: 64 }).toString() ??
+			"unknown",
 	});
 }
 ```
@@ -279,7 +283,7 @@ export async function action(ctx: RequestContext): Promise<Response> {
 		content: form.data.about ?? "",
 		author: {
 			email: email.data.address,
-			ip: getClientIP(ctx.request) ?? undefined,
+			ip: getClientIP(ctx.request)?.toString(),
 		},
 		renderedAt: trap.data.renderedAt,
 	});
