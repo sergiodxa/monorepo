@@ -1,6 +1,6 @@
 # @sdxc/expression
 
-Boolean conditions over a context, stored as typed JSON, with operators you add.
+Boolean conditions over a context, stored as typed JSON or written as text, with operators you add.
 
 ## Installation
 
@@ -35,6 +35,24 @@ if (isSuccess(compiled)) {
 ```
 
 Compile once, when the condition is loaded, and evaluate as often as you like: evaluation is synchronous and pure.
+
+### Writing a condition as text
+
+```typescript
+let conditions = createLanguage({ reference: "segment" });
+
+let parsed = conditions.parse(
+	`plan.tier == "pro" and (country in ["AR", "UY"] or segment("internal"))`,
+);
+// Success: the same JSON form compile() takes
+
+conditions.parse(`plan.tier == "pro" and`);
+// Failure: ExpressionError { line: 1, column: 23, message: "Expected a condition after 'and'" }
+
+conditions.stringify({ op: "not", of: { op: "exists", field: "beta" } }); // "not exists(beta)"
+```
+
+The JSON form stays the one to store; the text form is for people typing a rule into a form, a config file or an environment variable.
 
 ### Sharing conditions by name
 
@@ -106,6 +124,8 @@ Defines a dialect and returns a `Language`. Every option is optional:
 - `schema`: a Standard Schema for the dialect's JSON form, to validate an expression before storing it.
 - `compile(expression, { references }?)`: validates an expression, runs every operator's compile step and resolves references. Returns `Result<Compiled, ExpressionError>`.
 - `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is a JSON object, with `Date` values allowed.
+- `parse(text)`: reads the text form into the JSON form, validated against the schema. Returns `Result<Expression, ExpressionError>`, the error carrying the `line` and `column` the text broke at.
+- `stringify(expression)`: prints the canonical text, which `parse` reads back to the same JSON.
 - `Expression` and `Compiled`: type-only members; write `typeof language.Expression` for the JSON form's type and `typeof language.Compiled` for the compiled one.
 
 ### Built-in operators
@@ -124,17 +144,49 @@ Defines a dialect and returns a `Language`. Every option is optional:
 
 `field` is a dotted path: `plan.tier` reads a nested object and `roles.0` an array element. A path that resolves to nothing makes every operator except `exists` false. Every comparison stays within one type, so `eq` between `"5"` and `5` is false and `lt` on a string is false. `matches` compiles its pattern with the [`v` flag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) at compile time, so a bad pattern fails the compile.
 
+### Text form
+
+| Text                                     | JSON form                                                |
+| ---------------------------------------- | -------------------------------------------------------- |
+| `a and b`, `a or b`, `not a`             | `all`, `any`, `not`; `not` binds over `and` over `or`    |
+| `(a or b)`                               | grouping, kept as its own node                           |
+| `true`                                   | `always`                                                 |
+| `field == v`, `!=`, `<`, `<=`, `>`, `>=` | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`                     |
+| `field in [...]`, `field not in [...]`   | `in`, `notIn`                                            |
+| `op(field, ...args)`                     | any other operator, arguments in the order of its `args` |
+| `segment("internal")`                    | a reference, under the dialect's spelling                |
+| `all(...)`, `any(...)`                   | a chain of fewer than two members                        |
+
+Values are JSON literals, written exactly as they are stored. A field is a bare dotted path such as `plan.tier` or `roles.0`; one a bare path cannot spell, such as `user-agent` or a keyword like `in`, is quoted in backticks: `` `user-agent` == "bot" ``.
+
 ### `defineOperator(definition)`
 
 Declares a field operator. `op` is its name, `args` lists its fields in call order starting with `field`, `schema` validates the fields beyond `op` and `field`, and `test(value, node, prepared)` answers for a value that is there. The optional `compile(node)` returns a `Result`; what it prepares is kept on the compiled node as `prepared` and passed to `test`.
 
 ### `ExpressionError`
 
-The failure every step reports. `path` names the failing node in the JSON form, like `of.1.pattern`, and is empty for the root.
+The failure every step reports. `path` names the failing node in the JSON form, like `of.1.pattern`, and is empty for the root. A `parse` failure also sets `line` and `column`, both 1-based.
 
 ### `read(context, path)`
 
 Reads a dotted path out of a context exactly as an expression does, returning `undefined` for a miss and keeping a `Date` whole. Use it when code beside an expression reads the same fields.
+
+## Pattern: A sampling exemption from an environment variable
+
+```typescript
+import { createLanguage } from "@sdxc/expression";
+import { isSuccess } from "@sdxc/result";
+
+let conditions = createLanguage();
+
+// KEEP_WHEN = `kind == "job" or status >= 500 or exists(error)`
+let parsed = conditions.parse(process.env.KEEP_WHEN ?? "true");
+let compiled = isSuccess(parsed) ? conditions.compile(parsed.data) : parsed;
+
+function keep(fields: Record<string, string | number | boolean | null>) {
+	return isSuccess(compiled) && conditions.evaluate(compiled.data, fields);
+}
+```
 
 ## Pattern: Validating a rule before storing it
 

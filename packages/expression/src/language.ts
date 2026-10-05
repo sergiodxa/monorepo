@@ -1,7 +1,7 @@
 /**
  * A dialect of the expression language, defined once: the built-ins it keeps,
  * the operators it adds and how it spells a reference. The language carries
- * the schema, compile and evaluate typed to exactly that dialect.
+ * the schema, compile, evaluate, parse and stringify typed to that dialect.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -27,6 +27,8 @@ import { BUILTIN_NAMES } from "./builtins.js";
 import { compile } from "./compile.js";
 import { evaluate } from "./evaluate.js";
 import { createGrammar } from "./grammar.js";
+import { parse } from "./parse.js";
+import { stringify } from "./stringify.js";
 
 /**
  * How a dialect is configured.
@@ -82,6 +84,20 @@ export interface Language<E, C> {
 	 * @param context JSON fields, with `Date` values allowed.
 	 */
 	evaluate(compiled: C, context: Context): boolean;
+	/**
+	 * Reads the text form into the JSON form, validated against the schema. A
+	 * failure carries the `line` and `column` the text broke at.
+	 *
+	 * @param text Like `plan.tier == "pro" and (country in ["AR"] or exists(beta))`.
+	 */
+	parse(text: string): Result<E, ExpressionError>;
+	/**
+	 * Prints an expression in the canonical text form, which `parse` reads back
+	 * to the same JSON.
+	 *
+	 * @param expression A valid expression of this language.
+	 */
+	stringify(expression: E): string;
 }
 
 /**
@@ -117,6 +133,12 @@ export function createLanguage<
 		},
 		evaluate(compiled, context) {
 			return evaluate(grammar, compiled as Node, context);
+		},
+		parse(text) {
+			return parse(grammar, text) as Result<E, ExpressionError>;
+		},
+		stringify(expression) {
+			return stringify(grammar, expression as Node);
 		},
 	};
 }
