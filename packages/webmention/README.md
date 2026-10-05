@@ -32,7 +32,10 @@ stay with you.
 - **`@sdxc/webmention`** holds the shared `Webmention` types and the three errors.
 
 Every outbound fetch is bounded: HTTP(S) to public hosts only, every redirect hop re-checked,
-five hops, one megabyte and five seconds by default.
+five hops, one megabyte and five seconds by default. A public host is a name, never an address
+literal, outside the reserved suffixes (`localhost`, `local`, `internal`, `test`, `example` and
+the like), and a URL carrying credentials is refused. The five seconds cover the redirect chain
+and the body read after it.
 
 ## Usage
 
@@ -120,9 +123,9 @@ text `rejected` sends.
 
 #### `WebmentionFetchError`
 
-A fetch that did not finish. `retryable` is `true` for a timeout, a network failure, a
-redirect chain over the limit, or a `5xx`/`429` answer, and `false` for a refused host or a
-body over the cap.
+A fetch that did not finish. `retryable` is `true` for a timeout, a network failure (a body
+that broke off mid-read included), or a `5xx`/`429` answer, and `false` for a refused host, a
+redirect chain over the limit, or a body over the cap.
 
 #### `WebmentionSendError`
 

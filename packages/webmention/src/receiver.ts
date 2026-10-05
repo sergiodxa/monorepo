@@ -12,7 +12,6 @@ import type { MF2 } from "@sdxc/microformats";
 import type { Vocabulary } from "@sdxc/microformats/vocabulary";
 import type { Result } from "@sdxc/result";
 
-import { addressable, release } from "@sdxc/distill/retrieve";
 import { HTML } from "@sdxc/html";
 import { parseDocument } from "@sdxc/html/document";
 import { fromDocument, parseJSON } from "@sdxc/microformats";
@@ -23,11 +22,19 @@ import {
 	representativeCard,
 	responseTo,
 } from "@sdxc/microformats/vocabulary";
+import { release } from "@sdxc/outbound";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 
 import type { Bounds } from "./lib/fetch.js";
 
-import { essenceOf, fetchBounded, isHTML, readBody, transientStatus } from "./lib/fetch.js";
+import {
+	addressable,
+	essenceOf,
+	fetchBounded,
+	isHTML,
+	readBody,
+	transientStatus,
+} from "./lib/fetch.js";
 import { absolute, baseOf, resolve, withoutFragment } from "./lib/urls.js";
 
 import type { Webmention, WebmentionFetchError } from "./index.js";

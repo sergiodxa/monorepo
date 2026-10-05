@@ -7,10 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Retrieved } from "@sdxc/distill/retrieve";
 import type { Result } from "@sdxc/result";
 
-import { addressable, DistillRefusedError, follow, readWithin } from "@sdxc/distill/retrieve";
+import { checkUrl, follow, readText } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { WebmentionFetchError } from "../index.js";
@@ -24,6 +23,12 @@ export const TIMEOUT_MS = 5_000;
 /** A page that has moved moves once or twice; five hops is generous. */
 export const MAX_REDIRECTS = 5;
 
+/**
+ * What every fetch asks for. Mentions are written in HTML, so a server that negotiates
+ * answers with the format links, endpoints and microformats are read from.
+ */
+const ACCEPT = "text/html,application/xhtml+xml";
+
 /** What a fetch may spend, and the name it asks under. */
 export interface Bounds {
 	/** Sent on every request, so a publisher can tell who is asking. */
@@ -36,48 +41,60 @@ export interface Bounds {
 	maxRedirects?: number | undefined;
 }
 
-/** A response, where the chain ended, and the deadline still running over its body. */
-export interface Fetched extends Retrieved {
-	signal: AbortSignal;
+/** The last response of a chain, beside the URL it came from. */
+export interface Fetched {
+	/** Its body carries the fetch's deadline, so reading it later still runs under it. */
+	response: Response;
+	/** Where the chain ended, which is what a relative URL in the body resolves against. */
+	url: string;
 }
 
 /**
- * Requests a page under the bounds and answers the last response of the chain whatever
- * its status. A refused host is final; a timeout, a network failure or an overlong chain
- * may clear up, so those are retryable.
+ * Whether a URL is somewhere this package sends a request: HTTP(S), no credentials, and
+ * a public name rather than an address literal or a name reserved for a private network.
+ * A refusal is final, so it is never retryable.
+ *
+ * @param input - The URL as a stranger wrote it.
+ */
+export function addressable(input: string | URL): Result<URL, WebmentionFetchError> {
+	let checked = checkUrl(input, { literals: "refuse" });
+	if (isFailure(checked)) return failure(new WebmentionFetchError(checked.error.message, false));
+	return checked;
+}
+
+/**
+ * Requests a page under the bounds, every redirect hop passing `addressable`, and
+ * answers the last response of the chain whatever its status. A timeout or a network
+ * failure is retryable; a refused host or an overlong chain is final.
  */
 export async function fetchBounded(
 	input: URL,
 	bounds: Bounds,
 ): Promise<Result<Fetched, WebmentionFetchError>> {
-	let address = addressable(input.href);
-	if (isFailure(address)) return failure(new WebmentionFetchError(address.error.message, false));
-
-	let signal = AbortSignal.timeout(bounds.timeoutMs ?? TIMEOUT_MS);
-	let followed = await follow(address.data, {
-		userAgent: bounds.userAgent,
+	let followed = await follow(input, {
+		headers: { accept: ACCEPT, "user-agent": bounds.userAgent },
+		timeout: bounds.timeoutMs ?? TIMEOUT_MS,
 		maxRedirects: bounds.maxRedirects ?? MAX_REDIRECTS,
-		signal,
+		literals: "refuse",
 	});
 	if (isFailure(followed)) {
-		let retryable = !(followed.error instanceof DistillRefusedError);
-		return failure(new WebmentionFetchError(followed.error.message, retryable));
+		return failure(new WebmentionFetchError(followed.error.message, followed.error.retryable));
 	}
 
-	return success({ ...followed.data, signal });
+	return success({ response: followed.data.response, url: followed.data.url.href });
 }
 
 /**
- * Reads a body within the byte cap. Running out of time mid-body is retryable; a body
- * over the cap, or one that broke off, is final.
+ * Reads a body within the byte cap, still under the fetch's deadline. Running out of
+ * time or a body that broke off mid-read is retryable; a body over the cap is final.
  */
 export async function readBody(
 	fetched: Fetched,
 	bounds: Bounds,
 ): Promise<Result<string, WebmentionFetchError>> {
-	let read = await readWithin(fetched, bounds.maxBytes ?? MAX_BYTES);
+	let read = await readText(fetched.response, { maxBytes: bounds.maxBytes ?? MAX_BYTES });
 	if (isFailure(read)) {
-		return failure(new WebmentionFetchError(read.error.message, fetched.signal.aborted));
+		return failure(new WebmentionFetchError(read.error.message, read.error.retryable));
 	}
 	return success(read.data.text);
 }
@@ -86,7 +103,7 @@ export async function readBody(
  * The failure a status stands for when asking again later can change it: a server error,
  * or a `429` asking the client to slow down. Any other status is an answer.
  */
-export function transientStatus(fetched: Retrieved): WebmentionFetchError | null {
+export function transientStatus(fetched: Fetched): WebmentionFetchError | null {
 	let { status } = fetched.response;
 	if (status < 500 && status !== 429) return null;
 	return new WebmentionFetchError(`Failed to read ${fetched.url}: it answered ${status}`, true);

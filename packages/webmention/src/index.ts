@@ -74,7 +74,10 @@ export class WebmentionRequestError extends Error {
  */
 export class WebmentionFetchError extends Error {
 	override name = "WebmentionFetchError";
-	/** `true` for a timeout, a network failure or a 5xx or 429 answer; `false` for a refusal or a cap. */
+	/**
+	 * `true` for a timeout, a network failure (a body breaking off included) or a 5xx or 429
+	 * answer; `false` for a refused host, a redirect chain over the limit or a body over the cap.
+	 */
 	readonly retryable: boolean;
 
 	/**

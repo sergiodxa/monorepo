@@ -9,14 +9,21 @@
 
 import type { Result } from "@sdxc/result";
 
-import { addressable, release } from "@sdxc/distill/retrieve";
 import { parseDocument } from "@sdxc/html/document";
+import { release } from "@sdxc/outbound";
 import { parseLinkHeader } from "@sdxc/pagination";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Bounds } from "./lib/fetch.js";
 
-import { essenceOf, fetchBounded, isHTML, readBody, transientStatus } from "./lib/fetch.js";
+import {
+	addressable,
+	essenceOf,
+	fetchBounded,
+	isHTML,
+	readBody,
+	transientStatus,
+} from "./lib/fetch.js";
 import { absolute, resolve } from "./lib/urls.js";
 
 import { WebmentionFetchError } from "./index.js";
@@ -99,8 +106,8 @@ export async function discover(
 
 	if (endpoint === null) return success(null);
 
-	let checked = addressable(endpoint.href);
-	if (isFailure(checked)) return failure(new WebmentionFetchError(checked.error.message, false));
+	let checked = addressable(endpoint);
+	if (isFailure(checked)) return checked;
 	return success(endpoint);
 }
 

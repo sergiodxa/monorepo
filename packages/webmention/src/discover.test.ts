@@ -118,6 +118,21 @@ describe("discover", () => {
 		expect(isFailure(result) && result.error.retryable).toBe(true);
 	});
 
+	test("refuses an endpoint carrying credentials or on a reserved name", async () => {
+		for (let endpoint of ["https://u:p@example.com/wm", "https://wm.home.arpa/"]) {
+			server.use(
+				http.get(
+					"https://example.com/post",
+					() => new HttpResponse(null, { headers: { Link: `<${endpoint}>; rel="webmention"` } }),
+				),
+			);
+
+			let result = await discover("https://example.com/post", { userAgent: AGENT });
+
+			expect(isFailure(result) && result.error.retryable).toBe(false);
+		}
+	});
+
 	test("refuses a private target before any request", async () => {
 		let result = await discover("http://localhost/post", { userAgent: AGENT });
 

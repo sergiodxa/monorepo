@@ -22,7 +22,7 @@ const AGENT = "ExampleSender/1.0 (+https://example.com/sender)";
 const SOURCE = new URL("https://example.com/articles/hello");
 
 /** The page it mentions. */
-const TARGET = new URL("https://ada.example/notes/1");
+const TARGET = new URL("https://ada.example.com/notes/1");
 
 const server = setupServer();
 
@@ -41,21 +41,21 @@ function targetAdvertising(endpoint: string) {
 describe("outboundLinks", () => {
 	test("keeps other origins' links, resolved, once each, in document order", () => {
 		let html = `<p>
-			<a href="https://ada.example/notes/1">Ada</a>
+			<a href="https://ada.example.com/notes/1">Ada</a>
 			<a href="/articles/other">mine</a>
 			<a href="https://example.com/about">mine too</a>
-			<a href="//bob.example/post">Bob</a>
-			<a href="https://ada.example/notes/1">Ada again</a>
-			<a href="mailto:someone@ada.example">mail</a>
+			<a href="//bob.example.com/post">Bob</a>
+			<a href="https://ada.example.com/notes/1">Ada again</a>
+			<a href="mailto:someone@ada.example.com">mail</a>
 			<a href="#top">top</a>
-			<img src="https://img.example/photo.jpg">
-			<map><area href="https://carol.example/" alt=""></map>
+			<img src="https://img.example.com/photo.jpg">
+			<map><area href="https://carol.example.com/" alt=""></map>
 		</p>`;
 
 		expect(outboundLinks(html, SOURCE).map((url) => url.href)).toEqual([
-			"https://ada.example/notes/1",
-			"https://bob.example/post",
-			"https://carol.example/",
+			"https://ada.example.com/notes/1",
+			"https://bob.example.com/post",
+			"https://carol.example.com/",
 		]);
 	});
 
@@ -66,17 +66,17 @@ describe("outboundLinks", () => {
 
 describe("plan", () => {
 	test("notifies current links and the ones removed since", () => {
-		let a = new URL("https://a.example/");
-		let b = new URL("https://b.example/");
-		let c = new URL("https://c.example/");
+		let a = new URL("https://a.example.com/");
+		let b = new URL("https://b.example.com/");
+		let c = new URL("https://c.example.com/");
 
-		let { targets } = plan([a, b], [new URL("https://b.example/"), c]);
+		let { targets } = plan([a, b], [new URL("https://b.example.com/"), c]);
 
 		expect(targets.map((url) => url.href)).toEqual([a.href, b.href, c.href]);
 	});
 
 	test("notifies every past target on delete", () => {
-		let past = [new URL("https://a.example/"), new URL("https://b.example/")];
+		let past = [new URL("https://a.example.com/"), new URL("https://b.example.com/")];
 		expect(plan([], past).targets).toEqual(past);
 	});
 });
@@ -86,7 +86,7 @@ describe("send", () => {
 		let received: { url: string; body: string; type: string | null } | null = null;
 		server.use(
 			targetAdvertising("/webmention?key=1"),
-			http.post("https://ada.example/webmention", async ({ request }) => {
+			http.post("https://ada.example.com/webmention", async ({ request }) => {
 				received = {
 					url: request.url,
 					body: await request.text(),
@@ -100,12 +100,12 @@ describe("send", () => {
 
 		expect(isSuccess(result) && result.data).toEqual({
 			status: "sent",
-			endpoint: new URL("https://ada.example/webmention?key=1"),
+			endpoint: new URL("https://ada.example.com/webmention?key=1"),
 			code: 202,
 			location: null,
 		});
 		let params = new URLSearchParams(received!.body);
-		expect(received!.url).toBe("https://ada.example/webmention?key=1");
+		expect(received!.url).toBe("https://ada.example.com/webmention?key=1");
 		expect(received!.type).toContain("application/x-www-form-urlencoded");
 		expect(params.get("source")).toBe(SOURCE.href);
 		expect(params.get("target")).toBe(TARGET.href);
@@ -113,9 +113,9 @@ describe("send", () => {
 
 	test("reports the status page a 201 names, absolute", async () => {
 		server.use(
-			targetAdvertising("https://ada.example/webmention"),
+			targetAdvertising("https://ada.example.com/webmention"),
 			http.post(
-				"https://ada.example/webmention",
+				"https://ada.example.com/webmention",
 				() => new HttpResponse(null, { status: 201, headers: { Location: "/status/9" } }),
 			),
 		);
@@ -123,7 +123,7 @@ describe("send", () => {
 		let result = await send({ source: SOURCE, target: TARGET }, { userAgent: AGENT });
 
 		expect(isSuccess(result) && result.data.status === "sent" && result.data.location).toBe(
-			"https://ada.example/status/9",
+			"https://ada.example.com/status/9",
 		);
 	});
 
@@ -137,8 +137,11 @@ describe("send", () => {
 
 	test("reports an endpoint's refusal with its status", async () => {
 		server.use(
-			targetAdvertising("https://ada.example/webmention"),
-			http.post("https://ada.example/webmention", () => new HttpResponse("no", { status: 400 })),
+			targetAdvertising("https://ada.example.com/webmention"),
+			http.post(
+				"https://ada.example.com/webmention",
+				() => new HttpResponse("no", { status: 400 }),
+			),
 		);
 
 		let result = await send({ source: SOURCE, target: TARGET }, { userAgent: AGENT });
@@ -158,8 +161,8 @@ describe("send", () => {
 
 	test("reports an endpoint that never answers as retryable", async () => {
 		server.use(
-			targetAdvertising("https://ada.example/webmention"),
-			http.post("https://ada.example/webmention", () => HttpResponse.error()),
+			targetAdvertising("https://ada.example.com/webmention"),
+			http.post("https://ada.example.com/webmention", () => HttpResponse.error()),
 		);
 
 		let result = await send({ source: SOURCE, target: TARGET }, { userAgent: AGENT });

@@ -9,8 +9,8 @@
 
 import type { Result } from "@sdxc/result";
 
-import { release } from "@sdxc/distill/retrieve";
 import { parseDocument } from "@sdxc/html/document";
+import { release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Discover } from "./discover.js";

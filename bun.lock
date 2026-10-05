@@ -272,6 +272,7 @@
         "@sdxc/mail": "workspace:*",
         "@sdxc/mcp": "workspace:*",
         "@sdxc/opml": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -361,6 +362,7 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/merge-patch": "workspace:*",
         "@sdxc/openapi": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/problem": "workspace:*",
         "@sdxc/random": "workspace:*",
@@ -577,6 +579,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/html": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/robots": "workspace:*",
       },
@@ -619,6 +622,7 @@
       "dependencies": {
         "@sdxc/atom": "workspace:*",
         "@sdxc/json-feed": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/rss": "workspace:*",
         "@sdxc/xml": "workspace:*",
@@ -1256,9 +1260,9 @@
       "name": "@sdxc/webmention",
       "version": "0.0.1",
       "dependencies": {
-        "@sdxc/distill": "workspace:*",
         "@sdxc/html": "workspace:*",
         "@sdxc/microformats": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0",
@@ -1269,6 +1273,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/crypto": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
     },

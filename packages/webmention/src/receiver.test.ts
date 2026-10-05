@@ -25,7 +25,7 @@ const AGENT = "ExampleReceiver/1.0 (+https://example.com/receiver)";
 const TARGET = new URL("https://example.com/articles/hello");
 
 /** The page mentioning it. */
-const SOURCE = new URL("https://ada.example/replies/1");
+const SOURCE = new URL("https://ada.example.com/replies/1");
 
 const server = setupServer();
 
@@ -57,7 +57,7 @@ function acceptsOwnPosts(target: URL): boolean {
 const REPLY = `<!doctype html>
 <html><head><title>Ada's reply</title></head><body>
 <article class="h-entry">
-	<div class="p-author h-card"><a class="u-url p-name" href="https://ada.example/">Ada</a><img class="u-photo" src="/ada.jpg" alt=""></div>
+	<div class="p-author h-card"><a class="u-url p-name" href="https://ada.example.com/">Ada</a><img class="u-photo" src="/ada.jpg" alt=""></div>
 	<a class="u-in-reply-to" href="https://example.com/articles/hello">In reply to</a>
 	<div class="e-content">Great post! <script>alert(1)</script><a href="/more">more</a></div>
 	<a class="u-url" href="/replies/1"><time class="dt-published" datetime="2026-09-20T10:00:00Z">Sep 20</time></a>
@@ -77,12 +77,19 @@ describe("parseRequest", () => {
 		["media-type", { source: SOURCE.href, target: TARGET.href }, "application/json"],
 		["missing", { target: TARGET.href }, undefined],
 		["missing", { source: SOURCE.href, target: " " }, undefined],
-		["invalid-url", { source: "ftp://ada.example/1", target: TARGET.href }, undefined],
+		["invalid-url", { source: "ftp://ada.example.com/1", target: TARGET.href }, undefined],
 		["invalid-url", { source: "http://127.0.0.1/1", target: TARGET.href }, undefined],
+		["invalid-url", { source: "https://wiki.corp.internal/1", target: TARGET.href }, undefined],
+		["invalid-url", { source: "https://ada.example/1", target: TARGET.href }, undefined],
+		["invalid-url", { source: "https://u:p@ada.example.com/1", target: TARGET.href }, undefined],
 		["invalid-url", { source: SOURCE.href, target: "/articles/hello" }, undefined],
 		["invalid-url", { source: SOURCE.href, target: "mailto:someone@example.com" }, undefined],
 		["same-url", { source: TARGET.href, target: TARGET.href }, undefined],
-		["target-not-accepted", { source: SOURCE.href, target: "https://other.example/" }, undefined],
+		[
+			"target-not-accepted",
+			{ source: SOURCE.href, target: "https://other.example.com/" },
+			undefined,
+		],
 	] as const)("rejects with %s", async (reason, fields, contentType) => {
 		let [req, formData] = request(fields, contentType);
 
@@ -163,14 +170,14 @@ describe("summarize", () => {
 		let mention = summarize(document, SOURCE, TARGET);
 
 		expect(mention.kind).toBe("reply");
-		expect(mention.url).toBe("https://ada.example/replies/1");
+		expect(mention.url).toBe("https://ada.example.com/replies/1");
 		expect(mention.author).toEqual({
 			name: "Ada",
-			url: "https://ada.example/",
-			photo: "https://ada.example/ada.jpg",
+			url: "https://ada.example.com/",
+			photo: "https://ada.example.com/ada.jpg",
 		});
 		expect(mention.content?.text).toContain("Great post!");
-		expect(mention.content?.html).toContain(`href="https://ada.example/more"`);
+		expect(mention.content?.html).toContain(`href="https://ada.example.com/more"`);
 		expect(mention.content?.html).not.toContain("script");
 		expect(mention.published?.toISOString()).toBe("2026-09-20T10:00:00.000Z");
 		expect(mention.name).toBeNull();
@@ -369,16 +376,44 @@ describe("verify", () => {
 
 	test("stops a redirect chain at the limit", async () => {
 		server.use(
-			http.get("https://ada.example/loop/:n", ({ params }) =>
-				HttpResponse.redirect(`https://ada.example/loop/${Number(params.n) + 1}`, 302),
+			http.get("https://ada.example.com/loop/:n", ({ params }) =>
+				HttpResponse.redirect(`https://ada.example.com/loop/${Number(params.n) + 1}`, 302),
 			),
 		);
 
 		let result = await verify(
-			{ source: new URL("https://ada.example/loop/0"), target: TARGET },
+			{ source: new URL("https://ada.example.com/loop/0"), target: TARGET },
 			{ userAgent: AGENT, maxRedirects: 2 },
 		);
 
-		expect(isFailure(result)).toBe(true);
+		expect(isFailure(result) && result.error.retryable).toBe(false);
+	});
+
+	test("reports a source whose body breaks off mid-read as retryable", async () => {
+		server.use(
+			http.get(SOURCE.href, () => {
+				let body = new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(new TextEncoder().encode("<p>"));
+						controller.error(new Error("connection reset"));
+					},
+				});
+				return new HttpResponse(body, { headers: { "content-type": "text/html" } });
+			}),
+		);
+
+		let result = await verify(pair, { userAgent: AGENT });
+
+		expect(isFailure(result) && result.error.retryable).toBe(true);
+	});
+
+	test("refuses a redirect to a reserved name for good", async () => {
+		server.use(
+			http.get(SOURCE.href, () => HttpResponse.redirect("https://admin.corp.internal/", 302)),
+		);
+
+		let result = await verify(pair, { userAgent: AGENT });
+
+		expect(isFailure(result) && result.error.retryable).toBe(false);
 	});
 });
