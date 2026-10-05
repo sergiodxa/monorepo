@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 9
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 A customer who types `shop.example.com` into your settings page is making a claim. Before your
@@ -17,11 +17,11 @@ This guide builds that flow end to end. [`@sdxc/doh`](/api/doh) does the lookups
 HTTPS, since a Worker has no DNS socket. [`@sdxc/hostname`](/api/hostname) registers the proven
 domain as a Cloudflare for SaaS custom hostname and reports when its certificate is live.
 [`@sdxc/jobs`](/api/jobs) runs both checks in the background and retries them until DNS catches
-up.
+up, on a schedule from [`@sdxc/backoff`](/api/backoff).
 
 ```bash
-npm add @sdxc/doh @sdxc/hostname @sdxc/jobs @sdxc/crypto @sdxc/validate @sdxc/result \
-	@sdxc/http remix
+npm add @sdxc/doh @sdxc/hostname @sdxc/jobs @sdxc/backoff @sdxc/crypto @sdxc/validate \
+	@sdxc/result @sdxc/http remix
 ```
 
 ## Declare the two jobs
@@ -145,6 +145,7 @@ name that does not exist yet is `success(false)`, because a record not yet publi
 ordinary state of a verification, while a resolver that failed to answer stays a failure:
 
 ```typescript {% title="app/jobs/domains/verify.ts" %}
+import { createBackoff } from "@sdxc/backoff";
 import { verifyTxtRecord } from "@sdxc/doh";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
@@ -153,6 +154,8 @@ import { Domains } from "~/app/data/domains";
 import { challengeFor } from "~/app/domains/challenge";
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/jobs/dispatcher";
+
+const recheck = createBackoff({ base: "1 minute", max: "15 minutes" });
 
 export default createJobHandler(jobs.domains.verify, async (ctx) => {
 	let domain = await Domains.find(ctx.database, ctx.input.domainId);
@@ -167,7 +170,7 @@ export default createJobHandler(jobs.domains.verify, async (ctx) => {
 
 	if (!found.data) {
 		return ctx.retry({
-			delay: ctx.attempts < 5 ? "1 minute" : "15 minutes",
+			delay: recheck.delay(ctx.attempts),
 			reason: "The TXT record is not published yet",
 		});
 	}
@@ -178,7 +181,8 @@ export default createJobHandler(jobs.domains.verify, async (ctx) => {
 ```
 
 Each outcome ends the run differently. A missing record retries soon at first, since the
-customer is probably at their DNS host right now, then backs off. A resolver that could not
+customer is probably at their DNS host right now, then backs off: one minute, two, four, eight,
+and every fifteen minutes from then on. A resolver that could not
 answer, a `TransportError` or `ServerFailureError`, is retried as an unknown rather than read
 as "not published". A match marks the row and hands over to the next job, and the handler
 holds the dispatcher here because it is already running inside it.

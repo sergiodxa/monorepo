@@ -5,21 +5,22 @@ section:
     title: HTTP APIs
     order: 4
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 This guide builds a books API in a Remix v3 app: list the books, create one, and read one
 back. Every failure answers as an RFC 9457 problem document, lists page by cursor with `Link`
 headers, and every response states how much of the caller's rate limit is left.
 
-Five packages do the work. [`@sdxc/validate`](/api/validate) checks the body against a
+Six packages do the work. [`@sdxc/validate`](/api/validate) checks the body against a
 `remix/data-schema` schema, [`@sdxc/http`](/api/http) names the success statuses,
 [`@sdxc/problem`](/api/problem) names the failures, [`@sdxc/pagination`](/api/pagination)
-pages the list, and [`@sdxc/rate-limit`](/api/rate-limit) counts the calls.
+pages the list, [`@sdxc/rate-limit`](/api/rate-limit) counts the calls, and
+[`@sdxc/get-client-ip`](/api/get-client-ip) names the caller they are counted against.
 
 ```bash
 npm add @sdxc/validate @sdxc/http @sdxc/problem @sdxc/pagination \
-	@sdxc/rate-limit @sdxc/result
+	@sdxc/rate-limit @sdxc/get-client-ip @sdxc/result
 ```
 
 The handlers read the database as `ctx.db`, published by middleware as described in
@@ -247,6 +248,7 @@ it either way.
 
 ```typescript {% title="app/http/middleware/api-rate-limit.ts" %}
 import { env } from "cloudflare:workers";
+import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
@@ -257,7 +259,9 @@ export function apiRateLimit() {
 	return rateLimit({
 		adapter: new CloudflareAdapter(env.API_RATE_LIMITER, limit),
 		prefix: "api",
-		key: (ctx) => ctx.request.headers.get("CF-Connecting-IP") ?? "unknown",
+		key: (ctx) =>
+			getClientIP(ctx.request)?.network({ v4: 32, v6: 64 }).toString() ??
+			"unknown",
 		onLimit: () =>
 			problems.rateLimited({ detail: "Wait for the time in Retry-After." }),
 	});
@@ -266,8 +270,12 @@ export function apiRateLimit() {
 
 `API_RATE_LIMITER` is a Workers rate limiting binding, and the adapter's `limit` and `window`
 must mirror the binding's own: the binding does the counting, and the adapter uses the
-numbers to compute the reset. Once your API authenticates callers, key on the caller's
-identity instead of the address, so one client cannot spend another's budget.
+numbers to compute the reset. `getClientIP` parses the `CF-Connecting-IP` header into an
+address, and the key is the network it sits in: the address itself for IPv4, its `/64` for
+IPv6, since an IPv6 client holds the whole block and could rotate through it. A request
+without a parseable header shares the `"unknown"` budget. Once your API authenticates
+callers, key on the caller's identity instead of the address, so one client cannot spend
+another's budget.
 
 Mount the limiter once over the three actions, so they share one budget per caller. The
 `application()` below shows only that mapping; the app's own router also runs the global

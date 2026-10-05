@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 The IndieWeb is a set of small protocols that let independent sites talk to each other.
@@ -17,11 +17,11 @@ the entry, its author and its date.
 This guide adds all three to a Remix v3 app. It combines
 [`@sdxc/microformats`](/api/microformats), [`@sdxc/webmention`](/api/webmention) and
 [`@sdxc/micropub`](/api/micropub), with [`@sdxc/jobs`](/api/jobs) running every outbound
-fetch off the request.
+fetch off the request and [`@sdxc/backoff`](/api/backoff) spacing out the retries.
 
 ```bash
 npm add remix @sdxc/microformats @sdxc/webmention @sdxc/micropub @sdxc/jobs \
-	@sdxc/result
+	@sdxc/backoff @sdxc/result
 ```
 
 The packages hold the protocols. Storing posts and mentions, moderation, and verifying access
@@ -188,6 +188,7 @@ five seconds by default), checks that it links to the target, and summarizes it 
 microformats. Key what you store on the pair, since a repeated pair is an update:
 
 ```typescript {% title="app/jobs/webmentions/verify.ts" %}
+import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 import { verify } from "@sdxc/webmention/receiver";
@@ -195,6 +196,8 @@ import { verify } from "@sdxc/webmention/receiver";
 import jobs from "~/app/jobs";
 import { deleteMention, saveMention } from "~/app/models/mentions";
 import { USER_AGENT } from "~/app/services/webmention";
+
+const retryBackoff = createBackoff({ base: "2 minutes", max: "1 hour", jitter: 0.2 });
 
 export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 	let pair = {
@@ -205,7 +208,8 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 	let outcome = await verify(pair, { userAgent: USER_AGENT });
 	if (isFailure(outcome)) {
 		if (!outcome.error.retryable) return ctx.ack(outcome.error.message);
-		return ctx.retry({ delay: "10 minutes", cause: outcome.error });
+		let delay = retryBackoff.delay(ctx.attempts);
+		return ctx.retry({ delay, cause: outcome.error });
 	}
 
 	if (outcome.data.status !== "linked") return await deleteMention(ctx.db, pair);
@@ -215,8 +219,11 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 });
 ```
 
-A timeout, a `5xx` or a `429` is `retryable`; a refused host or an oversized body is not, and
-retrying would get the same answer. `gone` (the source answered `410`) and `unlinked` both mean
+A timeout, a broken connection, a `5xx` or a `429` is `retryable`; a refused host, a redirect
+chain past the limit or an oversized body is not, and retrying would get the same answer. A
+retry waits two minutes after the first failure and doubles from there up to an hour, so a
+source that was briefly down is read again quickly and one that stays down is left alone;
+the jitter spreads out retries that failed together. `gone` (the source answered `410`) and `unlinked` both mean
 the mention no longer stands, so both delete it. `USER_AGENT` is a string naming your site, such
 as `Example Webmention (+https://example.com)`, so a publisher can see who is fetching.
 
@@ -275,6 +282,7 @@ before the job runs, and each receiver's own verification sees the deletion and 
 mention. One delivery per target means a slow endpoint delays nobody else:
 
 ```typescript {% title="app/jobs/webmentions/deliver.ts" %}
+import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 import { WebmentionFetchError } from "@sdxc/webmention";
@@ -284,6 +292,12 @@ import jobs from "~/app/jobs";
 import { forgetTarget, recordTarget } from "~/app/models/mentions";
 import { findPost } from "~/app/models/posts";
 import { USER_AGENT } from "~/app/services/webmention";
+
+const retryBackoff = createBackoff({
+	base: "5 minutes",
+	max: "6 hours",
+	jitter: 0.2,
+});
 
 export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 	let { postId, removed, target } = ctx.input;
@@ -299,7 +313,8 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 			error instanceof WebmentionFetchError
 				? error.retryable
 				: error.status >= 500 || error.status === 429;
-		if (transient) return ctx.retry({ delay: "30 minutes", cause: error });
+		let delay = retryBackoff.delay(ctx.attempts);
+		if (transient) return ctx.retry({ delay, cause: error });
 		return ctx.ack(error.message);
 	}
 
@@ -312,7 +327,10 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 `<a>` in the page) and POSTs the pair. It answers `{ status: "no-endpoint" }` for a page that
 takes no mentions, which is an ordinary outcome, not a failure. A failure is either a
 `WebmentionFetchError`, which says itself whether it is `retryable`, or a
-`WebmentionSendError` carrying the status the endpoint answered.
+`WebmentionSendError` carrying the status the endpoint answered. A receiver is someone else's
+server, so delivery backs off longer than verification: five minutes, doubling to six hours.
+[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) covers the
+schedule's options.
 
 ## Accept posts over Micropub
 

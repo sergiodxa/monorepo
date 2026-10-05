@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 A webhook endpoint is a public URL that accepts `POST`s from anyone, so its signature check is
@@ -16,10 +16,12 @@ background job, then turns around and signs deliveries of its own.
 [`@sdxc/webhooks`](/api/webhooks) implements [Standard Webhooks](https://www.standardwebhooks.com/)
 on WebCrypto, [`@sdxc/jobs`](/api/jobs) runs the work off the request, and
 [`@sdxc/billing`](/api/billing) shows the same shape for a billing platform's deliveries.
+Sending your own, [`@sdxc/outbound`](/api/outbound) keeps each delivery on the public internet
+and [`@sdxc/backoff`](/api/backoff) spaces out the retries.
 
 ```bash
 npm add @sdxc/webhooks @sdxc/jobs @sdxc/result @sdxc/http @sdxc/logger \
-	@sdxc/crypto @sdxc/billing
+	@sdxc/crypto @sdxc/billing @sdxc/outbound @sdxc/backoff
 ```
 
 ## Declare the job a delivery becomes
@@ -203,7 +205,9 @@ and a failed attempt is retried by the queue. Enqueue one for each subscriber wi
 happens, or with `dispatcher.enqueueMany` when it happens inside another job.
 
 ```typescript {% title="app/jobs/webhooks/deliver.ts" %}
+import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
+import { checkUrl, release } from "@sdxc/outbound";
 import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 
@@ -211,11 +215,16 @@ import jobs from "~/app/jobs";
 import { Endpoints } from "~/app/repositories/endpoints";
 import { Events } from "~/app/repositories/events";
 
+const retryBackoff = createBackoff({ base: "1 minute", max: "6 hours", jitter: 0.2 });
+
 export default createJobHandler(jobs.webhooks.deliver, async (ctx) => {
 	let endpoint = await Endpoints.find(ctx.database, ctx.input.endpointId);
 	let event = await Events.find(ctx.database, ctx.input.eventId);
 	if (endpoint === null || event === null)
 		return ctx.exit("Endpoint or event is gone");
+
+	let url = checkUrl(endpoint.url);
+	if (isFailure(url)) return ctx.exit(url.error.message);
 
 	let signed = await Webhooks.sign(event.payload, {
 		secret: endpoint.secret,
@@ -227,13 +236,37 @@ export default createJobHandler(jobs.webhooks.deliver, async (ctx) => {
 	let { headers, body } = signed.data;
 	headers.set("Content-Type", "application/json");
 
-	let response = await fetch(endpoint.url, { method: "POST", headers, body });
+	let response = await fetch(url.data, {
+		method: "POST",
+		headers,
+		body,
+		redirect: "manual",
+		signal: AbortSignal.timeout(10_000),
+	});
+	release(response.body);
+
 	if (response.status === 429 || response.status >= 500) {
-		return ctx.retry({ delay: "1 minute" });
+		return ctx.retry({ delay: retryBackoff.delay(ctx.attempts) });
 	}
 	if (!response.ok) return ctx.exit(`Endpoint answered ${response.status}`);
 });
 ```
+
+The endpoint URL is one a subscriber typed, so it is checked before anything is sent:
+`checkUrl` refuses anything but HTTP(S), credentials in the URL, private and reserved
+addresses such as `169.254.169.254`, and names that cannot be public, such as `localhost` or
+`.internal`. Run the same check when a subscriber saves the URL, so they see the refusal on the
+form rather than in a failed delivery. `redirect: "manual"` keeps a redirect from carrying the
+signed body somewhere the check never saw; the delivery reads it as a failure, since a
+receiver answers a webhook directly. Nothing reads the receiver's reply, so `release` lets go
+of it at once.
+
+A receiver that is down gets a minute before the second attempt, then twice as long each time
+up to six hours, with ±20% jitter so the deliveries that failed together do not all return at
+once. `ctx.attempts` is the delivery count the queue keeps, so the schedule needs no row of its
+own. [Fetch URLs a stranger chose](/docs/identity-and-security/fetch-untrusted-urls) and
+[Retry on a growing delay](/docs/data-and-background-work/retry-with-backoff) cover both
+packages further.
 
 Reuse the same `id` on every attempt, so the receiver can recognize a retry, and sign each
 attempt with a fresh `timestamp`, so a slow retry still lands inside its tolerance. Send

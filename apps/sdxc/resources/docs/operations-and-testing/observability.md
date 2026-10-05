@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 8
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 When a request misbehaves in production you want to answer three questions quickly: what
@@ -267,6 +267,33 @@ export const logger = createLogger({
 
 A `degraded` or `error` record is always written, `keep` exempts every request, and one in
 twenty successful job runs is kept. `slowerThanMs` keeps slow successes too.
+
+`keep` also takes a condition in the JSON form of [`@sdxc/expression`](/api/expression), which
+is data rather than code, so the exemption can come from configuration. While you chase a
+problem for one customer, keep every one of their events and sample everyone else's:
+
+```typescript {% title="bootstrap/logger.ts" %}
+import { createLogger } from "@sdxc/logger";
+
+export const logger = createLogger({
+	service: "jobs-board",
+	sample: {
+		rate: 0.05,
+		keep: {
+			op: "any",
+			of: [
+				{ op: "ne", field: "kind", value: "job" },
+				{ op: "eq", field: "team.id", value: "team_01j9z3kq" },
+			],
+		},
+	},
+});
+```
+
+A field is read by its dotted path, so `team.id` matches what `ctx.log.set({ team: { id } })`
+recorded. The condition compiles once, the first time an event is checked against it, and
+one that does not compile keeps every event: a typo in the exemption costs volume, never the record you were
+looking for.
 
 ## Where to go next
 

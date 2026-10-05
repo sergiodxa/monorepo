@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 5
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-05
 ---
 
 A feature flag lets you ship code that is switched off, turn it on for one team, then for ten
@@ -198,11 +198,11 @@ export const RULED_SET: FlagSet = {
 Typing the set as `FlagSet` rather than `StoredFlagSet` checks every rule as you write it. It is
 still a `StoredFlagSet`, so it goes into `InMemoryFlagStore` the same way.
 
-Conditions are a typed union, so an editor completes `op` rather than you learning an expression
-language: `eq`, `in`, `lt`, `startsWith`, `matches`, `semver`, `exists`, and `all`, `any` and
-`not` to combine them. `field` is a dotted path into the context. A path that resolves to nothing
-makes every operator except `exists` false, so a rule about a field the caller left out never
-matches everyone.
+Conditions are the JSON form of [`@sdxc/expression`](/api/expression), typed so an editor
+completes `op` as you write one: `eq`, `in`, `lt`, `startsWith`, `matches`, `semver`, `exists`,
+and `all`, `any` and `not` to combine them. `field` is a dotted path into the context. A path
+that resolves to nothing makes every operator except `exists` false, so a rule about a field the
+caller left out never matches everyone.
 
 Segments are conditions declared once under the set's `segments` and referenced by name, like
 `staff` above. Twenty flags can then share one definition of who counts as staff.
@@ -244,6 +244,44 @@ running.
 `waitUntil` behind a response and log a failure rather than failing the request. An admin page
 writes a new set with `store.write(set)`, and validates an edit first against
 `FLAG_DEFINITION_SCHEMA`, the same schema the engine parses with.
+
+## Edit a rule as text
+
+A person editing a rule in an admin page reads `plan.tier == "pro" and segment("staff")` faster
+than the JSON it stands for. `flagConditions` is the dialect the engine evaluates with, and it
+converts between the two: `stringify` shows a stored condition as text, and `parse` reads what
+was typed back into JSON, with the line and column where it broke:
+
+```typescript {% title="app/lib/flag-rule-editor.ts" %}
+import type { FlagSet } from "@sdxc/flags-engine";
+
+import { flagConditions } from "@sdxc/flags-engine";
+import { isFailure, success } from "@sdxc/result";
+
+export function conditionText(set: FlagSet, flag: string, rule: number) {
+	let when = set.flags[flag]?.targeting?.[rule]?.when;
+	return when ? flagConditions.stringify(when) : "";
+}
+
+export function readCondition(set: FlagSet, text: string) {
+	let parsed = flagConditions.parse(text);
+	if (isFailure(parsed)) return parsed;
+
+	let compiled = flagConditions.compile(parsed.data, {
+		references: set.segments ?? {},
+	});
+	if (isFailure(compiled)) return compiled;
+
+	return success(parsed.data);
+}
+```
+
+Store the JSON that `parse` answered, never the text: the text form is for people, and the
+stored set stays the one the engine reads. Compiling against the set's segments catches what
+parsing cannot — a segment nobody declared, two segments that reference each other, a `matches`
+pattern that does not compile — and the error's `path` names the node, so the page can point at
+it. [Rules your users write](/docs/data-and-background-work/conditions) covers the condition language
+on its own, for rules that are not flags.
 
 ## Test with a pinned flag
 
