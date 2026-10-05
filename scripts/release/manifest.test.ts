@@ -214,6 +214,17 @@ describe("publishManifest", () => {
 		});
 	});
 
+	test("credits the author and points npm at the docs page and the sponsor link", () => {
+		let output = publish();
+
+		expect(output.homepage).toBe("https://sdxc.sergiodxa.com/api/example");
+		expect(output.author).toEqual({ name: "Sergio Xalambrí", url: "https://sergiodxa.com" });
+		expect(output.funding).toEqual({
+			type: "github",
+			url: "https://github.com/sponsors/sergiodxa",
+		});
+	});
+
 	test("leaves the workspace manifest untouched", () => {
 		let source = manifest({
 			dependencies: { "@sdxc/result": "workspace:*" },

@@ -1,7 +1,8 @@
 /**
  * The manifest a package publishes with, generated from its workspace manifest at release
  * time: export and bin targets move from `src/*.ts` to `dist/*.js`, `workspace:` ranges become
- * the exact versions shipping alongside, and the registry-only fields are stamped in.
+ * the exact versions shipping alongside, and the registry-only fields — repository, docs page,
+ * author and funding — are stamped in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -22,6 +23,15 @@ const WORKSPACE_ONLY_FIELDS = new Set(["private", "scripts", "devDependencies"])
 const SOURCE_TARGET = /^\.\/src\/(.+)\.tsx?$/;
 
 const WORKSPACE_RANGE = "workspace:";
+
+/** Who npm credits on every package page. */
+const AUTHOR = { name: "Sergio Xalambrí", url: "https://sergiodxa.com" };
+
+/** Where `npm fund` sends a consumer of any package in the scope. */
+const FUNDING = { type: "github", url: "https://github.com/sponsors/sergiodxa" };
+
+/** The documentation site, whose API pages are keyed by package directory. */
+const DOCS_URL = "https://sdxc.sergiodxa.com";
 
 /** Where a published package says it lives; npm checks it against the trusted publisher. */
 export interface PublishRepository {
@@ -78,6 +88,9 @@ export function publishManifest(
 		url: options.repository.url,
 		directory: options.repository.directory,
 	};
+	output.homepage = `${DOCS_URL}/api/${pkg.dir}`;
+	output.author = AUTHOR;
+	output.funding = FUNDING;
 	return checkPublishable(pkg.name, output);
 }
 
