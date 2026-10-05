@@ -16,6 +16,7 @@
 		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
+		"@sdxc/random": "workspace:*",
 		"cron-parser": "^5.10.0"
 	}
 }

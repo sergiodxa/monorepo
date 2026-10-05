@@ -8,6 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Random } from "@sdxc/random";
+
+import { createRandom } from "@sdxc/random";
+
 import type { CronFieldSet } from "../src/fields.js";
 import type { CronFieldName } from "../src/types.js";
 
@@ -243,36 +247,6 @@ export const CORPUS_SIZE = Number(process.env.CRON_FUZZ_ITERATIONS ?? 2_000);
 const INVALID_CHARACTERS = "%$~^&()=!;:|+.".split("");
 
 /**
- * A deterministic pseudo-random source. `Math.random` would make a failing case
- * unreproducible, which is the one thing a fuzz corpus cannot afford.
- *
- * @param seed - Any integer; the same seed always yields the same sequence.
- * @returns A function returning the next value in `[0, 1)`.
- */
-function randomFrom(seed: number): () => number {
-	let state = seed >>> 0;
-	return () => {
-		state = (state + 0x6d2b_79f5) >>> 0;
-		let mixed = state;
-		mixed = Math.imul(mixed ^ (mixed >>> 15), mixed | 1);
-		mixed ^= mixed + Math.imul(mixed ^ (mixed >>> 7), mixed | 61);
-		return ((mixed ^ (mixed >>> 14)) >>> 0) / 4_294_967_296;
-	};
-}
-
-/**
- * An integer in an inclusive range.
- *
- * @param random - The seeded source.
- * @param min - Smallest value.
- * @param max - Largest value.
- * @returns The value.
- */
-function between(random: () => number, min: number, max: number): number {
-	return min + Math.floor(random() * (max - min + 1));
-}
-
-/**
  * One list item drawn from a slice of a field, as a value, a range, or either with a
  * step, written as a number or an abbreviation.
  *
@@ -282,20 +256,20 @@ function between(random: () => number, min: number, max: number): number {
  * @param high - Largest value the item may name.
  * @returns The item text.
  */
-function randomItem(random: () => number, spec: FieldSpec, low: number, high: number): string {
+function randomItem(random: Random, spec: FieldSpec, low: number, high: number): string {
 	let write = (value: number) => {
 		let name = spec.names?.[value - spec.min];
-		if (name !== undefined && random() < 0.3) return name;
+		if (name !== undefined && random.next() < 0.3) return name;
 		return `${value}`;
 	};
 
-	let shape = random();
-	if (shape < 0.4 || low === high) return write(between(random, low, high));
+	let shape = random.next();
+	if (shape < 0.4 || low === high) return write(random.int(low, high));
 
-	let start = between(random, low, high);
-	let end = between(random, start, high);
+	let start = random.int(low, high);
+	let end = random.int(start, high);
 	if (shape < 0.75) return `${write(start)}-${write(end)}`;
-	return `${write(start)}-${write(end)}/${between(random, 1, high - low + 1)}`;
+	return `${write(start)}-${write(end)}/${random.int(1, high - low + 1)}`;
 }
 
 /**
@@ -307,13 +281,13 @@ function randomItem(random: () => number, spec: FieldSpec, low: number, high: nu
  * @param spec - The field being written.
  * @returns The field text.
  */
-function randomField(random: () => number, spec: FieldSpec): string {
+function randomField(random: Random, spec: FieldSpec): string {
 	let span = spec.limit - spec.min + 1;
-	let shape = random();
+	let shape = random.next();
 	if (shape < 0.3) return "*";
-	if (shape < 0.45) return `*/${between(random, 1, span)}`;
+	if (shape < 0.45) return `*/${random.int(1, span)}`;
 
-	let count = Math.min(between(random, 1, 3), span);
+	let count = Math.min(random.int(1, 3), span);
 	let size = Math.floor(span / count);
 	let items: string[] = [];
 
@@ -355,7 +329,7 @@ function namesARealDate(dayOfMonth: string, month: string): boolean {
  * @param random - The seeded source.
  * @returns The five fields separated by single spaces.
  */
-function drawExpression(random: () => number): string {
+function drawExpression(random: Random): string {
 	let drawn = FIELD_SPECS.map((spec) => randomField(random, spec));
 	let [minute, hour, dayOfMonth = "*", month = "*", dayOfWeek] = drawn;
 
@@ -379,7 +353,7 @@ function drawExpression(random: () => number): string {
  * randomExpressions({ seed: CORPUS_SEED, count: 10 });
  */
 export function randomExpressions(options: { seed: number; count: number }): string[] {
-	let random = randomFrom(options.seed);
+	let random = createRandom(options.seed);
 	let expressions: string[] = [];
 	for (let index = 0; index < options.count; index++) expressions.push(drawExpression(random));
 	return expressions;
@@ -394,13 +368,13 @@ export function randomExpressions(options: { seed: number; count: number }): str
  * @returns The strings, in generation order.
  */
 export function randomInvalidExpressions(options: { seed: number; count: number }): string[] {
-	let random = randomFrom(options.seed);
+	let random = createRandom(options.seed);
 	let corpus: string[] = [];
 
 	for (let index = 0; index < options.count; index++) {
 		let valid = drawExpression(random);
-		let at = between(random, 0, valid.length);
-		let character = INVALID_CHARACTERS[between(random, 0, INVALID_CHARACTERS.length - 1)] ?? "%";
+		let at = random.int(0, valid.length);
+		let character = INVALID_CHARACTERS[random.int(0, INVALID_CHARACTERS.length - 1)] ?? "%";
 		corpus.push(`${valid.slice(0, at)}${character}${valid.slice(at)}`);
 	}
 
