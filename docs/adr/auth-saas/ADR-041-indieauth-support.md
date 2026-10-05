@@ -70,9 +70,9 @@ including `introspectionEndpoint`, `revocationEndpoint` and
 `authorizationResponseIssParameterSupported`, with an `extensions` record for members the
 RFC does not list (`userinfo_endpoint` is an OIDC member, so it rides there).
 
-`@sdxc/distill/retrieve` exposes the bounded fetch Webmention uses (ADR-094): `addressable`
-refuses private and literal-IP hosts, `retrieve` re-checks every redirect hop and caps bytes
-and time.
+`@sdxc/outbound` (ADR-108) exposes the bounded fetch Webmention uses: `checkUrl` refuses
+private hosts and reserved names, `follow` re-checks every redirect hop under one deadline,
+and `readText` caps bytes.
 
 ## Decision
 
@@ -122,7 +122,7 @@ The rules:
   email address and a profile host grants the right to assert a URL, and one row meaning
   both would let either decision widen the other.
 - **The page is checked at bind time.** Binding fetches the profile URL through
-  `@sdxc/distill/retrieve` and requires a `rel="indieauth-metadata"` (or legacy
+  `@sdxc/outbound` and requires a `rel="indieauth-metadata"` (or legacy
   `rel="authorization_endpoint"`) naming this tenant, the same check a client will make.
   This catches a misconfigured site before a client does; it proves nothing about
   ownership, which is the TXT record's job.
@@ -148,7 +148,7 @@ and never touches the `clients` table.
   authorization and the token paths.
 - **Fetch in the Worker**: network I/O stays out of the Durable Object, as with
   organization domains. `authorize.tsx` fetches the client id through
-  `@sdxc/distill/retrieve` (private hosts refused, five redirects, 8 seconds, capped at
+  `@sdxc/outbound` (private hosts refused, five redirects, 8 seconds, capped at
   64 KB for this document) with `Accept: application/json`, caches the parsed document with
   `@sdxc/workers-cache` for ten minutes keyed by the canonical id, and passes it to
   `beginAuthorization` as `clientMetadata`. The document is validated with

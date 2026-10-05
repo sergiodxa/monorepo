@@ -319,10 +319,11 @@ this route may exist at all. There is no expiry — an expiring URL breaks an im
 page rendered a moment ago and buys nothing, since replaying a valid signature re-fetches
 an image we chose to fetch. Rotating the secret is the revocation.
 
-Before the fetch: the URL must be `http:` or `https:`, on port 80 or 443, and its host
-must not be an IP literal in a loopback, private, link-local or unique-local range.
-Redirects are followed manually with `redirect: "manual"`, at most 3, with the same check
-re-run on every hop — the same two bounds ADR-002 added to `@sdxc/feed`, applied to the
+Before the fetch: the URL must be `http:` or `https:` on the scheme's own port, carry no
+credentials, and name a public host — an IP literal outside every special-purpose range, or
+a name with a dot outside the reserved suffixes (`.local`, `.internal`, `.test` and the
+rest). `@sdxc/outbound` (ADR-108) makes that check and follows redirects manually, at most
+3, re-running it on every hop, with 10 seconds for the chain and the body together — the same two bounds ADR-002 added to `@sdxc/feed`, applied to the
 second thing this app retrieves from strangers. DNS rebinding is not fully defeated by a
 host check, because a Worker cannot pin the address a name resolved to. What does hold is
 architectural: this Worker's D1, KV and two object namespaces are reached through bindings
