@@ -55,7 +55,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => void promise,
 }));
 
-let { checkTarget, guardTrialProbe, isPublicAddress, TRIAL_DAILY_BUDGET, trialTurnstileSiteKey } =
+let { checkTarget, guardTrialProbe, TRIAL_DAILY_BUDGET, trialTurnstileSiteKey } =
 	await import("~/app/services/trial-guard");
 
 /** Records this test's DNS answers, keyed `name:type`. */
@@ -63,6 +63,9 @@ let dnsRecords = new Map<string, string[]>();
 
 /** Queries that should fail outright, keyed `name:type`, for the unresolvable cases. */
 let dnsFailures = new Set<string>();
+
+/** Names the resolver answers NXDOMAIN for, whatever the record type. */
+let dnsMissing = new Set<string>();
 
 /** The challenge provider every free submission verifies with, unless it uses Turnstile's own. */
 let captcha = new MemoryCaptcha();
@@ -104,6 +107,7 @@ let server = setupServer(
 		let type = url.searchParams.get("type") ?? "";
 		dnsQueries.push({ name, type });
 		if (dnsFailures.has(`${name}:${type}`)) return new HttpResponse("{}", { status: 502 });
+		if (dnsMissing.has(name)) return HttpResponse.json({ Status: 3 });
 
 		let values = dnsRecords.get(`${name}:${type}`) ?? [];
 		return HttpResponse.json({
@@ -161,34 +165,12 @@ beforeEach(async () => {
 
 	dnsRecords.clear();
 	dnsFailures.clear();
+	dnsMissing.clear();
 	dnsRecords.set("example.com:A", ["93.184.216.34"]);
 	dnsRecords.set("example.com:AAAA", []);
 
 	dnsQueries = [];
 	verifications = [];
-});
-
-describe("isPublicAddress", () => {
-	test.each([["169.254.169.254"], ["::ffff:10.0.0.1"], ["64:ff9b::7f00:1"], ["2001:db8::1"]])(
-		"refuses the non-public address %s",
-		(address) => {
-			expect(isPublicAddress(address)).toBe(false);
-		},
-	);
-
-	test.each([["8.8.8.8"], ["2606:4700:4700::1111"], ["::ffff:8.8.8.8"]])(
-		"allows the public address %s",
-		(address) => {
-			expect(isPublicAddress(address)).toBe(true);
-		},
-	);
-
-	test("refuses anything that is not a parseable address", () => {
-		expect(isPublicAddress("not-an-address")).toBe(false);
-		expect(isPublicAddress("1.2.3")).toBe(false);
-		expect(isPublicAddress("256.0.0.1")).toBe(false);
-		expect(isPublicAddress("::1::2")).toBe(false);
-	});
 });
 
 describe("checkTarget", () => {
@@ -228,7 +210,7 @@ describe("checkTarget", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
-		expect(result.error.detail).toBe("unsupported-scheme");
+		expect(result.error.detail).toBe("refused-scheme");
 	});
 
 	test("refuses credentials in the URL rather than presenting them to a third party", () => {
@@ -236,7 +218,7 @@ describe("checkTarget", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("credentials-in-url");
+		expect(result.error.detail).toBe("refused-credentials");
 	});
 
 	test("allows the two default ports and refuses every other one", () => {
@@ -246,7 +228,7 @@ describe("checkTarget", () => {
 		let result = checkTarget("https://example.com:8080");
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("unsupported-port");
+		expect(result.error.detail).toBe("refused-port");
 	});
 
 	test.each([
@@ -271,6 +253,23 @@ describe("checkTarget", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
+		expect(result.error.detail).toBe("refused-host");
+	});
+
+	test("reads a port without a scheme as a port, not as a scheme", () => {
+		let result = checkTarget("example.com:8080");
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.detail).toBe("refused-port");
+	});
+
+	test("refuses a target that is not a URL at all", () => {
+		let result = checkTarget("exa mple.com");
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.detail).toBe("invalid-url");
 	});
 
 	test("does not mistake a public name for a reserved suffix", () => {
@@ -296,7 +295,7 @@ describe("checkTarget", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("private-address");
+		expect(result.error.detail).toBe("refused-address");
 	});
 
 	test.each([
@@ -309,7 +308,7 @@ describe("checkTarget", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("private-address");
+		expect(result.error.detail).toBe("refused-address");
 	});
 
 	test("allows a public literal", () => {
@@ -337,7 +336,7 @@ describe("guardTrialProbe", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
-		expect(result.error.detail).toBe("private-address");
+		expect(result.error.detail).toBe("refused-address");
 	});
 
 	test("refuses when any one of the resolved addresses is private", async () => {
@@ -348,10 +347,10 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("private-address");
+		expect(result.error.detail).toBe("refused-address");
 	});
 
-	test("refuses a name that does not resolve at all", async () => {
+	test("refuses a name the resolver could not answer for", async () => {
 		dnsFailures.add("example.com:A");
 		dnsFailures.add("example.com:AAAA");
 
@@ -359,7 +358,7 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("unresolvable");
+		expect(result.error.detail).toBe("network");
 	});
 
 	test("refuses rather than judging a name on half an answer", async () => {
@@ -369,7 +368,17 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("partial-resolution");
+		expect(result.error.detail).toBe("network");
+	});
+
+	test("refuses a name that does not exist", async () => {
+		dnsMissing.add("example.com");
+
+		let result = await guardTrialProbe(submission("example.com"));
+
+		expect(isFailure(result)).toBe(true);
+		if (!isFailure(result)) return;
+		expect(result.error.detail).toBe("refused-host");
 	});
 
 	test("refuses a name whose address data it cannot read", async () => {
@@ -380,7 +389,7 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("partial-resolution");
+		expect(result.error.detail).toBe("refused-address");
 	});
 
 	test("refuses a name that resolves to nothing", async () => {
@@ -391,7 +400,7 @@ describe("guardTrialProbe", () => {
 
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
-		expect(result.error.detail).toBe("no-address");
+		expect(result.error.detail).toBe("refused-host");
 	});
 
 	test("does not resolve an address literal, since there is no name to resolve", async () => {
@@ -401,6 +410,15 @@ describe("guardTrialProbe", () => {
 		if (isFailure(result)) return;
 		expect(result.data.addresses).toEqual(["8.8.8.8"]);
 
+		expect(dnsQueries).toEqual([]);
+	});
+
+	test("records a bracketed IPv6 literal as its bare address", async () => {
+		let result = await guardTrialProbe(submission("https://[2606:4700:4700::1111]"));
+
+		expect(isFailure(result)).toBe(false);
+		if (isFailure(result)) return;
+		expect(result.data.addresses).toEqual(["2606:4700:4700::1111"]);
 		expect(dnsQueries).toEqual([]);
 	});
 
@@ -672,7 +690,7 @@ describe("guardTrialProbe", () => {
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.reason).toBe("blocked-target");
-		expect(result.error.detail).toBe("private-address");
+		expect(result.error.detail).toBe("refused-address");
 	});
 });
 

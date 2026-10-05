@@ -26,7 +26,9 @@ anything else runs: a filled trap gets an ordinary `200` page from `/try` and th
 receipt from `/try/lead`, while nothing is checked, recorded or sent, and a missing or forged token renders the form again with what was typed, asking to send
 it again. The honeypot's key derives from `COOKIE_SESSION_SECRET`, so it needs no secret of its
 own. Past the honeypot, `POST /try` runs `app/services/trial-guard.ts`: a per-address rate limit, a
-public-target check, the Turnstile challenge and a daily budget of free probes.
+public-target check, the Turnstile challenge and a daily budget of free probes. The target check
+is `@sdxc/outbound`'s `checkUrl` (ports 80 and 443 only) and `resolveHost`, so a refusal's logged
+`detail` is that package's error code, and its README states the DNS rebinding limit the check carries.
 
 ## Development
 

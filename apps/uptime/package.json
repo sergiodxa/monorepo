@@ -45,6 +45,7 @@
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/merge-patch": "workspace:*",
 		"@sdxc/openapi": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/random": "workspace:*",

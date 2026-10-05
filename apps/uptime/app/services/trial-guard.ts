@@ -17,12 +17,11 @@ import type { Result } from "@sdxc/result";
 
 import { Turnstile } from "@sdxc/captcha/turnstile";
 import { toDayKey } from "@sdxc/dates";
-import { resolve } from "@sdxc/doh";
 import { getClientIP } from "@sdxc/get-client-ip";
-import { IP } from "@sdxc/ip";
 import { currentLog } from "@sdxc/logger";
+import { checkUrl, resolveHost } from "@sdxc/outbound";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
-import { failure, isFailure, isSuccess, success } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { recordCost } from "~/app/services/cost";
@@ -65,26 +64,10 @@ const CALLER_PREFIX = "trial-probe";
 const UNKNOWN_ADDRESS = "unknown";
 
 /**
- * Name suffixes that never denote a public host: resolver-local names, private-network
- * conventions, and RFC 2606 reserved TLDs. Matched against the name's last labels, so
- * listing `example` blocks suffixes like `foo.example` while leaving `example.com` alone.
+ * Ports a trial probe may use: the two HTTP defaults, an omitted port counting as its
+ * scheme's own, which keeps the page from scanning a host's other services.
  */
-const BLOCKED_SUFFIXES: readonly string[] = [
-	"localhost",
-	"local",
-	"internal",
-	"intranet",
-	"lan",
-	"corp",
-	"private",
-	"home.arpa",
-	"test",
-	"invalid",
-	"example",
-];
-
-/** Ports a trial probe may use. */
-const ALLOWED_PORTS: readonly string[] = ["", "80", "443"];
+const ALLOWED_PORTS: readonly number[] = [80, 443];
 
 /** Why a trial probe was refused, at the granularity the page needs to explain itself. */
 export type TrialRefusalReason =
@@ -171,9 +154,9 @@ export interface TrialProbeGrant {
 	/** The normalized absolute URL to probe. */
 	url: URL;
 	/**
-	 * The addresses the hostname resolved to when it was checked, all of them public — a
-	 * record of what was verified. {@link guardTrialProbe} explains why the probe itself
-	 * cannot be pinned to them.
+	 * The addresses the hostname resolved to when it was checked, all of them public, or
+	 * the literal itself — a record of what was verified. The probe's own connection
+	 * resolves again, so a name may answer differently to it.
 	 */
 	addresses: string[];
 	/**
@@ -270,134 +253,33 @@ async function consumeCallerBudget(request: Request): Promise<TrialRefusal | nul
 }
 
 /**
- * Whether an address literal is one a trial probe may be pointed at.
- *
- * An unparseable literal is refused, so only a form this function fully recognizes can
- * get through.
- *
- * @param literal - An IPv4 or IPv6 address, without brackets.
- * @returns Whether the address is on the public internet.
- */
-export function isPublicAddress(literal: string): boolean {
-	let ip = IP.parse(literal);
-	return isSuccess(ip) && ip.data.isPublic;
-}
-
-/**
- * The bare address a hostname encodes directly, when the hostname is itself a literal.
- *
- * A bracketed hostname is IPv6 by definition; anything else is a literal only if it parses
- * as IPv4, since `URL` leaves those bare.
- *
- * @param hostname - A hostname as `URL` normalized it, IPv6 still bracketed.
- * @returns The bare address, or `null` when the hostname is a name.
- */
-function addressLiteral(hostname: string): string | null {
-	if (hostname.startsWith("[")) return hostname.slice(1, -1);
-	return isSuccess(IP.parse(hostname)) ? hostname : null;
-}
-
-/**
- * Whether a hostname is one a trial probe may be pointed at, judged on the name alone. A
- * single-label name is refused since resolver search domains could turn it into an
- * internal host, and a trailing root dot is stripped first so `localhost.` still matches.
- *
- * @param hostname - A normalized hostname, already lowercased by `URL`.
- * @returns Whether the name may be probed.
- */
-function isAllowedHostname(hostname: string): boolean {
-	let name = hostname.replace(/\.+$/, "");
-	if (!name.includes(".")) return false;
-	return !BLOCKED_SUFFIXES.some((suffix) => name === suffix || name.endsWith(`.${suffix}`));
-}
-
-/**
- * Normalizes what the visitor typed and applies every rule decidable from the URL alone.
- * Credentials are refused, since this Worker would otherwise relay them to a third party,
- * and only the two HTTP default ports are allowed, keeping the page from scanning a host.
+ * Normalizes what the visitor typed and applies every rule decidable from the URL alone:
+ * a bare name is read as `https://`, and the shared outbound check refuses credentials,
+ * any port but {@link ALLOWED_PORTS}, and every host that is not on the public internet.
  *
  * @param target - The target as typed.
- * @returns The normalized URL, or a refusal naming the rule that fired.
+ * @returns The normalized URL, or a refusal whose `detail` is `empty` or an outbound code.
  */
 export function checkTarget(target: string): Result<URL, TrialRefusal> {
 	let trimmed = target.trim();
 	if (trimmed === "") return failure(new TrialRefusal("blocked-target", "empty"));
 
-	/**
-	 * A scheme is only recognized when it is followed by `//`. Without that, `example.com:8080`
-	 * reads as the scheme `example.com`, since a scheme may contain dots.
-	 */
-	let scheme = /^([a-z][a-z0-9+.-]*):\/\//i.exec(trimmed)?.[1]?.toLowerCase();
-	if (scheme !== undefined && scheme !== "http" && scheme !== "https") {
-		return failure(new TrialRefusal("blocked-target", "unsupported-scheme"));
-	}
+	let checked = checkUrl(hasScheme(trimmed) ? trimmed : `https://${trimmed}`, {
+		ports: ALLOWED_PORTS,
+	});
+	if (isFailure(checked)) return failure(new TrialRefusal("blocked-target", checked.error.code));
 
-	let url: URL;
-	try {
-		url = new URL(scheme === undefined ? `https://${trimmed}` : trimmed);
-	} catch {
-		return failure(new TrialRefusal("blocked-target", "unparseable"));
-	}
-
-	if (url.hostname === "") return failure(new TrialRefusal("blocked-target", "no-hostname"));
-	if (url.username !== "" || url.password !== "") {
-		return failure(new TrialRefusal("blocked-target", "credentials-in-url"));
-	}
-	if (!ALLOWED_PORTS.includes(url.port)) {
-		return failure(new TrialRefusal("blocked-target", "unsupported-port"));
-	}
-
-	let literal = addressLiteral(url.hostname);
-	if (literal !== null) {
-		if (!isPublicAddress(literal)) {
-			return failure(new TrialRefusal("blocked-target", "private-address"));
-		}
-		return success(url);
-	}
-
-	if (!isAllowedHostname(url.hostname)) {
-		return failure(new TrialRefusal("blocked-target", "blocked-hostname"));
-	}
-
-	return success(url);
+	return success(checked.data);
 }
 
 /**
- * Resolves a hostname and checks every address it answers with. A literal blocklist only
- * stops `http://127.0.0.1`; the real attack is a public name whose `A` record points at an
- * internal address — caught only by resolving the name first, so any resolution failure refuses the target.
+ * Whether the visitor typed a scheme, recognized only when followed by `//`: otherwise
+ * `example.com:8080` would read as the scheme `example.com`, since a scheme may contain dots.
  *
- * @param hostname - The hostname to resolve.
- * @returns The resolved public addresses, or a refusal.
+ * @param target - The trimmed target.
  */
-async function checkResolvedAddresses(hostname: string): Promise<Result<string[], TrialRefusal>> {
-	let [a, aaaa] = await Promise.all([resolve(hostname, "A"), resolve(hostname, "AAAA")]);
-
-	if (isFailure(a) && isFailure(aaaa)) {
-		return failure(new TrialRefusal("blocked-target", "unresolvable"));
-	}
-	/** An address the reader could not parse is one the fence cannot judge, so it refuses too. */
-	if (
-		isFailure(a) ||
-		isFailure(aaaa) ||
-		a.data.unparsed.length > 0 ||
-		aaaa.data.unparsed.length > 0
-	) {
-		return failure(new TrialRefusal("blocked-target", "partial-resolution"));
-	}
-
-	let addresses = [...a.data.records, ...aaaa.data.records].map((record) => record.address);
-	if (addresses.length === 0) {
-		return failure(new TrialRefusal("blocked-target", "no-address"));
-	}
-
-	for (let address of addresses) {
-		if (!isPublicAddress(address)) {
-			return failure(new TrialRefusal("blocked-target", "private-address"));
-		}
-	}
-
-	return success(addresses);
+function hasScheme(target: string): boolean {
+	return /^[a-z][a-z0-9+.-]*:\/\//i.test(target);
 }
 
 /**
@@ -511,13 +393,11 @@ export async function guardTrialProbe(
 		if (challenge !== null) return failure(challenge);
 	}
 
-	let literal = addressLiteral(target.data.hostname);
-	let addresses = literal === null ? [] : [literal];
-	if (literal === null) {
-		let resolved = await checkResolvedAddresses(target.data.hostname);
-		if (isFailure(resolved)) return resolved;
-		addresses = resolved.data;
+	let resolved = await resolveHost(target.data);
+	if (isFailure(resolved)) {
+		return failure(new TrialRefusal("blocked-target", resolved.error.code));
 	}
+	let addresses = resolved.data;
 
 	if (probe.billed) return success({ url: target.data, addresses, budgetRemaining: null });
 
