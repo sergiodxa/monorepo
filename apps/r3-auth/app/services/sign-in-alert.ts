@@ -15,8 +15,6 @@
 import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
-
 import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { NewSignInEmail } from "~/app/emails/new-sign-in";
@@ -52,7 +50,7 @@ export async function notifyNewSignIn(
 				browser: ua.browser,
 				os: ua.os,
 				deviceType: ua.deviceType,
-				ip: getClientIP(ctx.request),
+				ip: ctx.ip?.toString() ?? null,
 				locale: DEFAULT_EMAIL_LOCALE,
 				t: emailTranslator(DEFAULT_EMAIL_LOCALE).t,
 			}),

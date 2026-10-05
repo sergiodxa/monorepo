@@ -11,7 +11,6 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { badRequest } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
@@ -24,7 +23,7 @@ import { getAuthz, unsetAuthz } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
-import { spendRateLimit } from "~/app/services/rate-limit";
+import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import routes from "~/routes/web";
 
@@ -79,7 +78,7 @@ async function errorResponse(
 export default createAction(routes.auth.providerCallback, async (ctx) => {
 	ctx.log.set({ auth: { provider: ctx.params.provider } });
 
-	let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+	let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
 	if (limited) return limited;
 
 	if (ctx.params.provider !== "github") {
@@ -111,7 +110,7 @@ export default createAction(routes.auth.providerCallback, async (ctx) => {
 	let result = await oidc.loginWithProvider({
 		subjectId: subject.data,
 		clientId: authz.clientId,
-		ip: getClientIP(ctx.request),
+		ip: ctx.ip?.toString() ?? null,
 		ua: ctx.request.headers.get("user-agent"),
 		redirectUri: authz.redirectUri,
 		state: authz.state,

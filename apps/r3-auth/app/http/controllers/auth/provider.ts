@@ -8,12 +8,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
 import { startGitHubLogin } from "~/app/services/github-login";
-import { spendRateLimit } from "~/app/services/rate-limit";
+import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
 import routes from "~/routes/web";
 
 /**
@@ -22,7 +21,7 @@ import routes from "~/routes/web";
  * use, because every attempt here ends in a session being created.
  */
 export default createAction(routes.auth.provider, async (ctx) => {
-	let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+	let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
 	if (limited) return limited;
 
 	if (ctx.params.provider !== "github") {

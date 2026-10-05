@@ -9,6 +9,7 @@
  */
 
 import type { Adapter } from "@sdxc/rate-limit";
+import type { RequestContext } from "remix/router";
 
 import { toSeconds } from "@sdxc/duration";
 import { tooManyRequests } from "@sdxc/http/response/json";
@@ -23,12 +24,21 @@ const LIMITED_ERROR = "too_many_requests";
 const LIMITED_DESCRIPTION = "Rate limit exceeded. Please try again later.";
 
 /**
+ * The budget key for the request's client address. An IPv6 client is keyed by its
+ * `/64`, the block one subscriber is handed, so rotating addresses inside it spends
+ * one budget; requests with no usable address share the single `"unknown"` budget.
+ */
+export function clientAddressKey(ctx: RequestContext): string {
+	return ctx.ip?.network({ v4: 32, v6: 64 }).toString() ?? "unknown";
+}
+
+/**
  * Spends one unit of a limiter's budget for a key, returning a response to
  * send when it's gone. Fails open: a binding that cannot answer is recorded as a
  * warning and the request proceeds, since a limiter outage must not take down logins.
  *
  * @param adapter - The limiter to spend from.
- * @param key - Identity the budget belongs to, such as a client id or a client IP.
+ * @param key - Identity the budget belongs to, such as a client id or {@link clientAddressKey}.
  * @returns A `429` to return immediately — its `Retry-After` reports the
  * limiter's full window, the value published to relying parties and always
  * safe for a client to wait out in full — or `null` when the request may

@@ -15,7 +15,6 @@
 import type { RequestContext } from "remix/router";
 
 import { password } from "@sdxc/crypto";
-import { getClientIP } from "@sdxc/get-client-ip";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
@@ -30,7 +29,7 @@ import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { unsetTokens } from "~/app/http/middleware/session";
 import { ResetPasswordSchema, ResetTokenQuerySchema } from "~/app/http/validators/password";
 import { consumePasswordResetToken, peekPasswordResetToken } from "~/app/services/password-reset";
-import { spendRateLimit } from "~/app/services/rate-limit";
+import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
 import DocumentLayout from "~/resources/layouts/document";
 import PasswordNoticeView from "~/resources/views/password/notice";
 import ResetPasswordView from "~/resources/views/password/reset";
@@ -158,7 +157,7 @@ export default createController(routes.password.reset, {
 				return invalidPage(ctx);
 			}
 
-			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+			let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
 			if (limited) return limited;
 
 			let subjectId = await peekPasswordResetToken(query.data.token);
@@ -176,7 +175,7 @@ export default createController(routes.password.reset, {
 		 * so a refused password leaves the link usable for the next attempt.
 		 */
 		action: async (ctx) => {
-			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+			let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
 			if (limited) return limited;
 
 			let result = await validate(ctx.formData, ResetPasswordSchema);

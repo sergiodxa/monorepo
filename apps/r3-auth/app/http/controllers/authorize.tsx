@@ -12,7 +12,6 @@
 
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
@@ -41,7 +40,7 @@ import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { startGitHubLogin } from "~/app/services/github-login";
-import { spendRateLimit } from "~/app/services/rate-limit";
+import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
@@ -226,10 +225,7 @@ export default createController(routes.authorize, {
 			let query = result.data;
 			ctx.log.set({ client: { id: query.client_id } });
 
-			let limited = await spendRateLimit(
-				ctx.limiters.authorize,
-				getClientIP(ctx.request) ?? "unknown",
-			);
+			let limited = await spendRateLimit(ctx.limiters.authorize, clientAddressKey(ctx));
 			if (limited) return limited;
 
 			let client = await Client.findById(ctx.db, query.client_id);
@@ -270,7 +266,7 @@ export default createController(routes.authorize, {
 				let code = await createOidcProvider(ctx.db).generateAuthzCode({
 					subjectId,
 					clientId: client.id,
-					ip: getClientIP(ctx.request),
+					ip: ctx.ip?.toString() ?? null,
 					ua: ctx.request.headers.get("user-agent"),
 					redirectUri: query.redirect_uri,
 					state: query.state,
@@ -326,7 +322,7 @@ export default createController(routes.authorize, {
 		 * alone. This server's own client keeps its parked request for its callback.
 		 */
 		action: async (ctx) => {
-			let limited = await spendRateLimit(ctx.limiters.login, getClientIP(ctx.request) ?? "unknown");
+			let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
 			if (limited) return limited;
 
 			let authz = getAuthz();
@@ -349,7 +345,7 @@ export default createController(routes.authorize, {
 				name: result.data.name,
 				username: result.data.username,
 				clientId: authz.clientId,
-				ip: getClientIP(ctx.request),
+				ip: ctx.ip?.toString() ?? null,
 				ua: ctx.request.headers.get("user-agent"),
 				redirectUri: authz.redirectUri,
 				state: authz.state,

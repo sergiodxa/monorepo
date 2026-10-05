@@ -41,7 +41,7 @@ export default class RateLimiters {
 	readonly introspect: CloudflareAdapter;
 	/** Revocation endpoint. */
 	readonly revoke: CloudflareAdapter;
-	/** Authorization endpoint, keyed on the client IP. */
+	/** Authorization endpoint, keyed on the client's address (its `/64` for IPv6). */
 	readonly authorize: CloudflareAdapter;
 	/** Interactive and provider login, the strictest budget: it guards password attempts. */
 	readonly login: CloudflareAdapter;

@@ -16,6 +16,7 @@ import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext, Router } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
@@ -115,6 +116,7 @@ export default function application(options: application.Options) {
 		database(() => options.db ?? createDatabase()),
 		rateLimiters(() => options.limiters ?? createRateLimiters()),
 		log(logger) as Middleware,
+		getClientIP(),
 		formData() as Middleware,
 		methodOverride(),
 		createSessionMiddleware(

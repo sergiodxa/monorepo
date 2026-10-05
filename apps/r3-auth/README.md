@@ -212,6 +212,10 @@ through `@sdxc/rate-limit`. Limits are per Cloudflare location (edge-local).
 | `GET /authorize`                  | 30 req/min  | IP                                          |
 | `POST /authorize`, `POST /auth/*` | 10 req/min  | IP                                          |
 
+An IP key is the client's IPv4 address, or the `/64` its IPv6 address belongs to, so a
+client rotating addresses inside its prefix spends one budget. Requests whose
+`CF-Connecting-IP` is absent or malformed share a single budget.
+
 A refused request answers `429` with
 `{ "error": "too_many_requests", "error_description": "Rate limit exceeded. Please try again later." }`,
 the `RateLimit` / `RateLimit-Policy` fields, and `Retry-After` set to the limiter's full

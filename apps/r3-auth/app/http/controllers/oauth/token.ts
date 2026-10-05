@@ -8,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { badRequest, internalServerError, ok, unauthorized } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -19,7 +18,7 @@ import { OIDC } from "~/app/auth/oidc-provider";
 import { createOidcProvider } from "~/app/auth/repository";
 import { TokenRequestSchema } from "~/app/http/validators/oauth";
 import { readClientCredentials } from "~/app/services/client-credentials";
-import { spendRateLimit } from "~/app/services/rate-limit";
+import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
 import routes from "~/routes/web";
 
 /**
@@ -90,7 +89,7 @@ export default createAction(routes.oauth.token, async (ctx) => {
 		ctx.limiters.token,
 		body.grant_type === "client_credentials" && credentials
 			? credentials.clientId
-			: (getClientIP(ctx.request) ?? "unknown"),
+			: clientAddressKey(ctx),
 	);
 	if (limited) return limited;
 
