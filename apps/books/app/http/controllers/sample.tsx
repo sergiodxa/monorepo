@@ -11,7 +11,6 @@
 import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
@@ -172,7 +171,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 		});
 	}
 
-	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
+	let result = await subscribe(buttondown(), payload, ctx.ip?.toString() ?? null);
 
 	if (isSuccess(result)) {
 		log.set({ sample: { unlocked: true } });

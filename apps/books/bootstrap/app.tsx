@@ -14,6 +14,7 @@ import type { RemixNode } from "remix/component";
 import type { Middleware, RequestContext } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
@@ -53,6 +54,7 @@ export default function application(provider: Billing = polar) {
 		headRequests(),
 		asyncContext(),
 		log(logger) as Middleware,
+		getClientIP(),
 		trace() as Middleware,
 		formData() as Middleware,
 

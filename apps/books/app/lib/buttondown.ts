@@ -18,7 +18,7 @@ import { Buttondown } from "~/app/services/buttondown";
  * @returns A client bound to this deployment's credentials.
  * @throws {Error} When `BUTTONDOWN_API_KEY` is unset.
  * @example
- * let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
+ * let result = await subscribe(buttondown(), payload, ctx.ip?.toString() ?? null);
  */
 export function buttondown(): Buttondown {
 	return new Buttondown({

@@ -8,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -57,7 +56,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 		});
 	}
 
-	let result = await subscribe(buttondown(), payload, getClientIP(ctx.request));
+	let result = await subscribe(buttondown(), payload, ctx.ip?.toString() ?? null);
 
 	if (isFailure(result)) {
 		let error = result.error;

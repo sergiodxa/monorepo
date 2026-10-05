@@ -23,7 +23,7 @@ import type { Buttondown } from "~/app/services/buttondown";
  *
  * @param buttondown - The newsletter client.
  * @param payload - The validated form payload.
- * @param ipAddress - The visitor's IP, or `null` when it cannot be resolved.
+ * @param ipAddress - The visitor's canonical address, or `null` when `CF-Connecting-IP` is absent or malformed.
  * @returns `success` once the address is on the list, `failure` with the underlying
  * error — a {@link ButtondownError} carries the provider's `code` — otherwise.
  */
