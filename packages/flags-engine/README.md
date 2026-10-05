@@ -353,6 +353,8 @@ The targeting dialect itself: every built-in condition, the `semver` operator an
 spelled `segment`. `flagConditions.compile(condition, { references: segments })` validates and
 compiles one condition the way `parseFlagSet` does, and `flagConditions.evaluate(compiled,
 context)` answers whether it holds, which is what an editor uses to check a rule before saving it.
+`flagConditions.parse(text)` and `flagConditions.stringify(condition)` convert between the stored
+JSON and a text form such as `plan.tier == "pro" and semver(appVersion, ">=", "2.0.0")`.
 
 ### Schemas
 
@@ -612,6 +614,32 @@ import { FLAG_DEFINITION_SCHEMA } from "@sdxc/flags-engine";
 import * as s from "remix/data-schema";
 
 let checked = s.parseSafe(FLAG_DEFINITION_SCHEMA, draft);
+```
+
+A rule's condition can be edited as text: `flagConditions.stringify` shows the stored JSON the way
+a person reads it, and `flagConditions.parse` turns what they typed back into that JSON, with a
+failure naming the line and column. Compiling against the set's segments then catches what the
+schema cannot — an unknown segment, a segment cycle, a pattern that does not compile:
+
+```typescript
+import { flagConditions } from "@sdxc/flags-engine";
+import { isFailure } from "@sdxc/result";
+
+flagConditions.stringify(rule.when);
+// `segment("internal") or semver(appVersion, ">=", "2.0.0")`
+
+function readCondition(text: string, segments: Record<string, unknown>) {
+	let parsed = flagConditions.parse(text);
+	if (isFailure(parsed)) {
+		let { message, line, column } = parsed.error;
+		return { error: message, line, column };
+	}
+
+	let compiled = flagConditions.compile(parsed.data, { references: segments });
+	if (isFailure(compiled)) return { error: compiled.error.message, at: compiled.error.path };
+
+	return { when: parsed.data };
+}
 ```
 
 ## Versioning
