@@ -820,6 +820,9 @@
     "packages/logger": {
       "name": "@sdxc/logger",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/random": "workspace:*",
+      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",
         "@types/node": "^26.4.0",

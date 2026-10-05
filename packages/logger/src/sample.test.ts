@@ -6,6 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createRandom } from "@sdxc/random";
 import { describe, expect, test } from "vitest";
 
 import { shouldKeep } from "./sample.js";
@@ -14,8 +15,11 @@ const NO_FIELDS = {};
 
 describe(shouldKeep, () => {
 	test("keeps everything with no options and with the default rate", () => {
-		expect(shouldKeep(undefined, "ok", NO_FIELDS, 1, () => 0.99)).toBe(true);
-		expect(shouldKeep({}, "ok", NO_FIELDS, 1, () => 0.99)).toBe(true);
+		let random = createRandom("logger-default");
+		for (let index = 0; index < 100; index++) {
+			expect(shouldKeep(undefined, "ok", NO_FIELDS, 1, random)).toBe(true);
+			expect(shouldKeep({}, "ok", NO_FIELDS, 1, random)).toBe(true);
+		}
 	});
 
 	test("keeps a degraded or failed log whatever the rate", () => {
@@ -23,9 +27,23 @@ describe(shouldKeep, () => {
 		expect(shouldKeep({ rate: 0 }, "error", NO_FIELDS, 1)).toBe(true);
 	});
 
-	test("keeps an ok log by rate", () => {
-		expect(shouldKeep({ rate: 0.05 }, "ok", NO_FIELDS, 1, () => 0.04)).toBe(true);
-		expect(shouldKeep({ rate: 0.05 }, "ok", NO_FIELDS, 1, () => 0.05)).toBe(false);
+	test("keeps roughly the sampled fraction of ok logs", () => {
+		let random = createRandom("logger-rate");
+		let kept = 0;
+		for (let index = 0; index < 10_000; index++) {
+			if (shouldKeep({ rate: 0.1 }, "ok", NO_FIELDS, 5, random)) kept++;
+		}
+
+		expect(kept).toBeGreaterThan(900);
+		expect(kept).toBeLessThan(1100);
+	});
+
+	test("drops every ok log at a rate of zero and keeps every one at a rate of one", () => {
+		let random = createRandom("logger-bounds");
+		for (let index = 0; index < 100; index++) {
+			expect(shouldKeep({ rate: 0 }, "ok", NO_FIELDS, 1, random)).toBe(false);
+			expect(shouldKeep({ rate: 1 }, "ok", NO_FIELDS, 1, random)).toBe(true);
+		}
 	});
 
 	test("keeps a slow ok log regardless of rate", () => {

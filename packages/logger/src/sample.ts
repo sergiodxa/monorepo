@@ -7,6 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Random } from "@sdxc/random";
+
+import { systemRandom } from "@sdxc/random";
+
 import type { Log } from "./log.js";
 
 export namespace Sample {
@@ -27,6 +31,9 @@ export namespace Sample {
 	}
 }
 
+/** The stream every unseeded sampling draw reads, shared so a log costs no new buffer. */
+const SYSTEM_RANDOM = systemRandom();
+
 /**
  * Whether a log is written. Anything that is not `ok` is; an `ok` log is kept by the
  * exemptions first and by the rate last.
@@ -35,19 +42,19 @@ export namespace Sample {
  * @param outcome How the log ended.
  * @param fields The log's fields, `kind` included.
  * @param durationMs How long the invocation took.
- * @param random Source of the draw against `rate`, replaceable for a deterministic test.
+ * @param random Source of the draw against `rate`; a test passes a seeded stream.
  */
 export function shouldKeep(
 	options: Sample.Options | undefined,
 	outcome: Log.Outcome,
 	fields: Readonly<Record<string, Log.Value>>,
 	durationMs: number,
-	random: () => number = Math.random,
+	random: Random = SYSTEM_RANDOM,
 ): boolean {
 	if (outcome !== "ok") return true;
 	if (options === undefined) return true;
 	if (options.keep?.(fields) === true) return true;
 	if (options.slowerThanMs !== undefined && durationMs >= options.slowerThanMs) return true;
 	if (options.rate === undefined) return true;
-	return random() < options.rate;
+	return random.bool(options.rate);
 }

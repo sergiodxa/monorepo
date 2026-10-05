@@ -11,6 +11,9 @@
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
+	"dependencies": {
+		"@sdxc/random": "workspace:*"
+	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
 		"@types/node": "^26.4.0",
