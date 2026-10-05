@@ -81,6 +81,8 @@ Reads one file's source text into its documentation module: the header comment, 
 - `options.id`: Prefix for every node id, as `<id>#<name>` (default: `path` with its extension removed)
 - `options.includeInternal`: Keep symbols tagged `@internal`, dropped by default so a published site shows only what its readers can use (default `false`)
 
+The file's first `/** … */` block is the module's header when a blank line follows it, when a second block follows it, or when the first statement is an import; otherwise it documents the declaration below it.
+
 Returns a `DocModule`, or an `ExtractError` listing every syntax error with its position.
 
 ```typescript

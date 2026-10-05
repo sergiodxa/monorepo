@@ -41,6 +41,21 @@ export function add() {}`);
 		expect(child(module, "add")?.comment?.description).toBe("The function.");
 	});
 
+	test("claims the file header written directly above an import", () => {
+		let module = documented(`/**
+ * The module header.
+ */
+import { join } from "node:path";
+
+/** The function. */
+export function add() {
+	return join("a", "b");
+}`);
+
+		expect(module.comment?.description).toBe("The module header.");
+		expect(child(module, "add")?.comment?.description).toBe("The function.");
+	});
+
 	test("leaves a header attached to the declaration it documents", () => {
 		let module = documented(`/**
  * The function.

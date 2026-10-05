@@ -22,8 +22,9 @@ export interface ModuleComment {
 
 /**
  * Read the file's header block: the first documentation comment, when a blank
- * line or a second block separates it from the first declaration. Without that
- * separation the block documents the declaration, and the module has none.
+ * line or a second block separates it from the first declaration, or when the first
+ * statement is an import, which carries no documentation of its own. Otherwise the
+ * block documents the declaration, and the module has none.
  *
  * @param file - The parsed source file.
  * @returns The module's comment and the offset declarations start looking after.
@@ -37,8 +38,13 @@ export function moduleComment(file: ts.SourceFile): ModuleComment {
 	let [first] = ranges;
 	if (!first) return { comment: null, end: 0 };
 
-	let follows = text.slice(first.end, file.statements.at(0)?.getStart() ?? text.length);
-	let separated = ranges.length > 1 || /\n[ \t]*\n/.test(follows) || file.statements.length === 0;
+	let statement = file.statements.at(0);
+	let follows = text.slice(first.end, statement?.getStart() ?? text.length);
+	let separated =
+		ranges.length > 1 ||
+		/\n[ \t]*\n/.test(follows) ||
+		statement === undefined ||
+		ts.isImportDeclaration(statement);
 	if (!separated) return { comment: null, end: 0 };
 
 	return { comment: parseComment(text.slice(first.pos, first.end)), end: first.end };
