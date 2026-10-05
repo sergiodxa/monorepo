@@ -19,6 +19,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { open } from "@sdxc/crypto";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
+import { systemRandom } from "@sdxc/random";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
@@ -355,13 +356,16 @@ let SettleDeliverySchema = s.object({
 	snippet: s.optional(s.string()),
 });
 
+/** The Web Crypto stream retry jitter draws from, shared across every delivery in the isolate. */
+const JITTER_RANDOM = systemRandom();
+
 /**
  * Randomizes a retry delay within {@link MAX_JITTER_FRACTION} of its base, so
  * a batch of deliveries due at once does not retry in lockstep against a
  * receiver recovering from an outage.
  */
 function jitteredDelay(baseMs: number): number {
-	let jitter = 1 + (Math.random() * 2 - 1) * MAX_JITTER_FRACTION;
+	let jitter = JITTER_RANDOM.float(1 - MAX_JITTER_FRACTION, 1 + MAX_JITTER_FRACTION);
 	return Math.round(baseMs * jitter);
 }
 
