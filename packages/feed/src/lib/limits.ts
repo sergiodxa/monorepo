@@ -1,15 +1,17 @@
 /**
- * Bounds the two things an origin decides for a client that asks it for a feed:
- * how far it can send that client before answering, and how much it can make it
- * hold in memory once it does.
+ * Bounds the three things an origin decides for a client that asks it for a feed:
+ * where it can send that client, how far before answering, and how much it can make
+ * it hold in memory once it does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { OutboundError } from "@sdxc/outbound";
 import type { Result } from "@sdxc/result";
 
-import { failure, success } from "@sdxc/result";
+import { follow, readText } from "@sdxc/outbound";
+import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Feed } from "../index.js";
 
@@ -35,9 +37,6 @@ const MAX_BYTES = 10 * 1024 * 1024;
  */
 const MAX_REDIRECTS = 5;
 
-/** The statuses that answer with another URL to ask instead. */
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-
 /** A response, beside the URL it finally came from. */
 export interface Retrieved {
 	response: Response;
@@ -45,15 +44,13 @@ export interface Retrieved {
 }
 
 /**
- * Requests a URL, walking the redirect chain itself.
- *
- * Following the chain here is what gives it a length it can exceed, and it
- * keeps the final URL a fact this package tracked rather than one the runtime
- * is trusted to report.
+ * Requests a URL, walking the redirect chain with every hop checked against the
+ * caller's host policy, so a feed URL that passed can only redirect somewhere that
+ * would have passed too. The final response is answered whatever its status.
  *
  * @param input - The URL to request
  * @param headers - The headers to send on every hop
- * @param options - The caller's redirect limit and abort signal
+ * @param options - The caller's host policy, redirect limit and abort signal
  * @returns The response and where it came from, or the reason there is none
  */
 export async function retrieve(
@@ -61,36 +58,23 @@ export async function retrieve(
 	headers: Headers,
 	options: Feed.FetchOptions,
 ): Promise<Result<Retrieved, FeedFetchError>> {
-	let limit = options.maxRedirects ?? MAX_REDIRECTS;
-	let url = input;
+	let followed = await follow(input, {
+		headers,
+		hosts: options.hosts ?? "public",
+		maxRedirects: options.maxRedirects ?? MAX_REDIRECTS,
+		signal: options.signal,
+	});
+	if (isFailure(followed)) return failure(toFeedError(followed.error));
 
-	for (let followed = 0; ; followed++) {
-		let response: Response;
-		try {
-			response = await fetch(url, { headers, signal: options.signal, redirect: "manual" });
-		} catch (error) {
-			return failure(new FeedFetchError(`Failed to fetch ${input}: ${describe(error)}`));
-		}
-
-		let next = redirectTarget(response, url);
-		if (!next) return success({ response, url });
-
-		if (response.body) release(response.body);
-
-		if (followed === limit) {
-			return failure(new FeedLimitError(`Failed to fetch ${input}: more than ${limit} redirects`));
-		}
-
-		url = next;
-	}
+	return success({ response: followed.data.response, url: followed.data.url.href });
 }
 
 /**
  * Reads a response body as text, stopping as soon as it grows past the cap.
  *
- * The count over the stream is what enforces the rule, so a body that arrives
- * in pieces and a body that lies about its length are refused by the same
- * bytes, before either is held whole.
+ * A declared length over the cap is refused before a byte is read, and the count
+ * over the stream refuses a body that arrives in pieces or lies about its length
+ * at the same byte, before either is held whole.
  *
  * @param retrieved - The response to read and the URL it came from
  * @param options - The caller's size cap
@@ -100,79 +84,39 @@ export async function readWithin(
 	retrieved: Retrieved,
 	options: Feed.FetchOptions,
 ): Promise<Result<string, FeedFetchError>> {
-	let { response, url } = retrieved;
 	let cap = options.maxBytes ?? MAX_BYTES;
+	let read = await readText(retrieved.response, { maxBytes: cap });
+	if (isFailure(read)) return failure(toReadError(read.error, retrieved.url, cap));
 
-	let declared = declaredLength(response);
-	if (declared !== undefined && declared > cap) {
-		return failure(
-			new FeedLimitError(
-				`Failed to fetch ${url}: the response declared ${declared} bytes, over the ${cap} byte cap`,
-			),
-		);
-	}
-
-	if (!response.body) return success("");
-
-	let reader = response.body.getReader();
-	let decoder = new TextDecoder();
-	let text = "";
-	let read = 0;
-
-	try {
-		for (;;) {
-			let { done, value } = await reader.read();
-			if (done || !value) break;
-
-			read += value.byteLength;
-			if (read > cap) {
-				release(reader);
-				return failure(
-					new FeedLimitError(`Failed to fetch ${url}: the response exceeded the ${cap} byte cap`),
-				);
-			}
-
-			text += decoder.decode(value, { stream: true });
-		}
-	} catch (error) {
-		return failure(new FeedFetchError(`Failed to fetch ${url}: ${describe(error)}`));
-	}
-
-	return success(text + decoder.decode());
+	return success(read.data.text);
 }
 
 /**
- * Lets go of a body this retrieval leaves unread, telling the origin it may stop
- * sending. The cancellation runs on its own, so the outcome is reported as soon
- * as it is decided and a stream that stalls costs one refusal and nothing more.
+ * Maps a failed walk to this package's errors: a chain past its limit is a
+ * `FeedLimitError`, and every refusal, deadline and transport failure is a
+ * `FeedFetchError` keeping the outbound message, which names the hop and the rule.
  */
-function release(source: { cancel(): Promise<void> }): void {
-	void source.cancel().catch(() => undefined);
+function toFeedError(error: OutboundError): FeedFetchError {
+	if (error.code === "too-many-redirects") {
+		return new FeedLimitError(error.message, { cause: error });
+	}
+
+	return new FeedFetchError(error.message, { cause: error });
 }
 
 /**
- * Names the URL a response sends the client on to, absent when it is an answer
- * rather than a redirect, or when it names somewhere that is not a URL and so
- * leaves the status itself as the outcome.
+ * Maps a failed body read to this package's errors, naming the URL the chain ended
+ * at, since a body carries no URL of its own: a body past the cap is a
+ * `FeedLimitError`, and a stalled or broken one is a `FeedFetchError`.
  */
-function redirectTarget(response: Response, from: string): string | undefined {
-	if (!REDIRECT_STATUSES.has(response.status)) return undefined;
-
-	let location = response.headers.get("location");
-	if (!location) return undefined;
-
-	try {
-		return new URL(location, from).toString();
-	} catch {
-		return undefined;
+function toReadError(error: OutboundError, url: string, cap: number): FeedFetchError {
+	if (error.code === "too-large") {
+		return new FeedLimitError(`Failed to fetch ${url}: the response exceeded the ${cap} byte cap`, {
+			cause: error,
+		});
 	}
-}
 
-/** Reads the length a response claims, for the refusal that costs no bytes at all. */
-function declaredLength(response: Response): number | undefined {
-	let header = response.headers.get("content-length");
-	if (!header) return undefined;
-
-	let length = Number(header);
-	return Number.isFinite(length) ? length : undefined;
+	let reason =
+		error.code === "timeout" ? "timed out reading the body" : describe(error.cause ?? error);
+	return new FeedFetchError(`Failed to fetch ${url}: ${reason}`, { cause: error });
 }

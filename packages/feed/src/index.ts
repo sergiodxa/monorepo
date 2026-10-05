@@ -147,6 +147,14 @@ export namespace Feed {
 		maxBytes?: number;
 		/** How many redirects to follow before refusing the chain; five by default. */
 		maxRedirects?: number;
+		/**
+		 * Which hosts the URL and every redirect may reach. `"public"` refuses private
+		 * addresses and reserved names such as `localhost`; `"any"` is for a caller that
+		 * fetches from its own network on purpose.
+		 *
+		 * @default "public"
+		 */
+		hosts?: "public" | "any";
 	}
 
 	/** What every retrieval reports regardless of whether the feed changed. */
@@ -380,8 +388,8 @@ export class Feed {
 	 * stores the validators pays almost nothing for an unchanged feed. Because a
 	 * 304 may legitimately omit them, the caller's own are carried forward.
 	 *
-	 * A URL comes from whoever pasted it, so the retrieval is bounded on both
-	 * sides: a body is read off the stream up to `maxBytes`, and a chain is
+	 * A URL comes from whoever pasted it, so every hop must reach a public host
+	 * unless `hosts` is `"any"`, a body is read up to `maxBytes`, and a chain is
 	 * followed up to `maxRedirects`. Either bound reports a {@link FeedLimitError}.
 	 *
 	 * @param input - The feed's URL

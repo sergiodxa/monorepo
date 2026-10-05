@@ -123,6 +123,10 @@ Retrieves and parses a feed, sending the stored validators as preconditions.
   default
 - `options.maxRedirects` — how many redirects to follow before refusing the chain; five by
   default
+- `options.hosts` — which hosts the URL and every redirect may reach. `"public"` (default)
+  refuses private and reserved addresses such as `127.0.0.1` or `169.254.169.254` and reserved
+  names such as `localhost` or `printer.local`; `"any"` is for a caller that fetches from its
+  own network on purpose
 
 Resolves to a `Feed.FetchResult`: `{ notModified: false, feed, url, status, etag?,
 lastModified?, links? }`, or `{ notModified: true, feed: undefined, url, status: 304, etag?,
@@ -160,8 +164,9 @@ if (subscription) {
 
 ### `Feed.discover(input: string | URL, options?: Feed.FetchOptions)`
 
-Finds the feeds a URL leads to. Resolves to `Feed.Discovery[]` in document order, since the
-first alternate link is conventionally the site's main feed. Each feed is reported at the URL
+Finds the feeds a URL leads to, taking the same request options as `Feed.fetch`. Resolves to
+`Feed.Discovery[]` in document order, since the first alternate link is conventionally the
+site's main feed. Each feed is reported at the URL
 its response finally came from, so a caller that keys a feed by address stores where the
 chain ended rather than where it started.
 
@@ -179,7 +184,8 @@ Feed's `feed_url` and `hubs` all arrive in the one shape. `feedUrl` keeps derivi
 
 `FeedParseError` reports text that is not XML, or XML that is not a feed. `FeedFormatError`
 reports a document in a format this package does not read, naming it. `FeedFetchError`
-reports a request that failed or answered with an error status. `FeedLimitError` extends it
+reports a request that failed, answered with an error status, or was refused because its
+URL or a redirect pointed at a host the `hosts` policy does not allow. `FeedLimitError` extends it
 and reports an origin that answered with more than the retrieval allows, so matching on
 `FeedFetchError` still catches it and matching on `FeedLimitError` tells a publisher this
 package refused from one it could not reach.
@@ -242,7 +248,13 @@ Cross-cutting rules:
    most `maxRedirects` hops. A `Content-Length` over the cap is refused before the body is
    read at all, and the count over the stream is what enforces the cap when a response
    declares no length or understates it. Both report a `FeedLimitError`.
-6. **Discovery accepts `application/rss+xml`, `application/atom+xml`, `application/feed+json`
+6. **Every hop reaches a public host.** The URL and each redirect are checked before they are
+   requested: only `http:` and `https:`, no credentials in the URL, and, under the default
+   `hosts: "public"`, no private or reserved address and no reserved name. A redirect can
+   therefore reach only somewhere the first URL could have. A refusal reports a
+   `FeedFetchError` naming the URL and the rule, and no request leaves for it. Pass
+   `hosts: "any"` to poll a feed on your own network.
+7. **Discovery accepts `application/rss+xml`, `application/atom+xml`, `application/feed+json`
    and `application/json`.** `text/xml` and `application/xml` are excluded deliberately: they
    appear on sitemaps and stylesheets, and accepting them would offer documents that are not
    feeds. Among the JSON candidates, `application/feed+json` wins outright, and

@@ -13,7 +13,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { Feed, FeedLimitError } from "./index.js";
+import { Feed, FeedFetchError, FeedLimitError } from "./index.js";
 
 let FEED_URL = "https://example.com/feed.xml";
 let JSON_URL = "https://example.com/feed.json";
@@ -510,7 +510,7 @@ describe("Feed.fetch", () => {
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) {
 			expect(result.error).toBeInstanceOf(FeedLimitError);
-			expect(result.error.message).toContain("declared 20000000 bytes");
+			expect(result.error.message).toContain("exceeded the 10485760 byte cap");
 		}
 	});
 
@@ -545,6 +545,54 @@ describe("Feed.fetch", () => {
 			expect(result.error).toBeInstanceOf(FeedLimitError);
 			expect(result.error.message).toContain("more than 3 redirects");
 		}
+	});
+
+	test("refuses a private first URL before any request leaves", async () => {
+		let result = await Feed.fetch("http://127.0.0.1/feed.xml");
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(FeedFetchError);
+			expect(result.error).not.toBeInstanceOf(FeedLimitError);
+			expect(result.error.message).toContain("127.0.0.1");
+		}
+	});
+
+	test("refuses a redirect into a private address", async () => {
+		let reached = false;
+		server.use(
+			http.get(FEED_URL, () => HttpResponse.redirect("http://127.0.0.1/", 302)),
+			http.get("http://127.0.0.1/", () => {
+				reached = true;
+				return HttpResponse.text(RSS_XML);
+			}),
+		);
+
+		let result = await Feed.fetch(FEED_URL);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) {
+			expect(result.error).toBeInstanceOf(FeedFetchError);
+			expect(result.error.message).toContain("127.0.0.1");
+		}
+		expect(reached).toBe(false);
+	});
+
+	test("refuses a reserved name such as localhost", async () => {
+		let result = await Feed.fetch("http://localhost:8080/feed.xml");
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error).toBeInstanceOf(FeedFetchError);
+	});
+
+	test("reaches a private address when the caller allows any host", async () => {
+		server.use(
+			http.get(FEED_URL, () => HttpResponse.redirect("http://127.0.0.1/feed.xml", 302)),
+			http.get("http://127.0.0.1/feed.xml", () => HttpResponse.text(RSS_XML)),
+		);
+
+		let result = await Feed.fetch(FEED_URL, { hosts: "any" });
+		if (!isSuccess(result) || result.data.notModified) throw new Error("expected a feed");
+
+		expect(result.data.url).toBe("http://127.0.0.1/feed.xml");
+		expect(result.data.feed.title).toBe("Example Feed");
 	});
 });
 
@@ -729,6 +777,25 @@ describe("Feed.discover", () => {
 		let result = await Feed.discover("https://example.com/hop/1");
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error).toBeInstanceOf(FeedLimitError);
+	});
+
+	test("refuses a redirect into a private address", async () => {
+		server.use(http.get(PAGE_URL, () => HttpResponse.redirect("http://192.168.1.1/", 302)));
+
+		let result = await Feed.discover(PAGE_URL);
+		expect(isFailure(result)).toBe(true);
+		if (isFailure(result)) expect(result.error.message).toContain("192.168.1.1");
+	});
+
+	test("reaches a private first URL when the caller allows any host", async () => {
+		server.use(http.get("http://127.0.0.1/feed.json", () => HttpResponse.text(JSON_FEED)));
+
+		let result = await Feed.discover("http://127.0.0.1/feed.json", { hosts: "any" });
+		if (!isSuccess(result)) throw result.error;
+
+		expect(result.data).toEqual([
+			{ url: "http://127.0.0.1/feed.json", type: "application/feed+json" },
+		]);
 	});
 
 	test("refuses a page that grows past the cap as it arrives", async () => {

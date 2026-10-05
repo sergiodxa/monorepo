@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@sdxc/atom": "workspace:*",
 		"@sdxc/json-feed": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/rss": "workspace:*",
 		"@sdxc/xml": "workspace:*"
