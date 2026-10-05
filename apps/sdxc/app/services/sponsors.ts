@@ -22,9 +22,6 @@ import * as s from "remix/data-schema";
 /** The GitHub account the sponsorships belong to. */
 export const SPONSORED_LOGIN = "sergiodxa";
 
-/** Where a reader sponsors this work, which is the one link the block carries. */
-export const SPONSOR_HREF = `https://github.com/sponsors/${SPONSORED_LOGIN}`;
-
 /** The entry the rendered list is read from, and the refresh writes. */
 export const SPONSORS_CACHE_KEY = "sponsors:public";
 

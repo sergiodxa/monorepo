@@ -99,6 +99,19 @@ describe("the sponsors block", () => {
 	});
 });
 
+describe("the author's credit under a documentation page", () => {
+	test("links the author, their X account and GitHub Sponsors", async () => {
+		for (let path of ["/docs", "/api", "/api/result"]) {
+			let body = await (await fetchApp(path)).text();
+			let note = body.slice(body.indexOf("Written by"), body.indexOf("</main>"));
+
+			expect(note, path).toContain('href="https://sergiodxa.com"');
+			expect(note, path).toContain('href="https://x.com/sergiodxa"');
+			expect(note, path).toContain('href="https://github.com/sponsors/sergiodxa"');
+		}
+	});
+});
+
 describe("the footer's author column", () => {
 	test("links the blog, X and GitHub Sponsors while no sponsor is known", async () => {
 		for (let path of ["/philosophy", "/showcase", "/"]) {

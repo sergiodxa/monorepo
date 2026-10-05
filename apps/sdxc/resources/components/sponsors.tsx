@@ -23,7 +23,7 @@ import { Avatar } from "@sdxc/ui";
 
 import type { Sponsor } from "~/app/services/sponsors";
 
-import { SPONSOR_HREF } from "~/app/services/sponsors";
+import { SPONSOR_URL } from "~/app/services/site";
 
 /** What the block is titled, everywhere it appears. */
 const HEADING = "People who fund this work";
@@ -68,7 +68,7 @@ export default function Sponsors(handle: Handle<Sponsors.Props>) {
 				</ul>
 
 				<a
-					href={SPONSOR_HREF}
+					href={SPONSOR_URL}
 					rel="noreferrer"
 					mix={[hstack({ gap: 2, align: "center" }), text("sm"), weight("medium"), fg("brand")]}
 				>

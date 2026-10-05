@@ -20,18 +20,12 @@ import { leading, text, tracking, weight } from "@sdxc/u/typography";
 
 import type { Sponsor } from "~/app/services/sponsors";
 
-import { SPONSOR_HREF } from "~/app/services/sponsors";
+import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL, SPONSOR_URL } from "~/app/services/site";
 import Sponsors from "~/resources/components/sponsors";
 import routes from "~/routes/web";
 
 /** Where the collection is read and its issues are filed. */
 const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
-
-/** The author's own site, which is where the writing about this work lives. */
-const AUTHOR_HREF = "https://sergiodxa.com";
-
-/** The author's account on X, where new releases and writing are announced. */
-const X_HREF = "https://x.com/sergiodxa";
 
 /** Where every package is published. */
 const NPM_HREF = "https://www.npmjs.com/org/sdxc";
@@ -110,8 +104,8 @@ export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
 						</p>
 						<p mix={[m(0), text("sm"), fg("neutral")]}>
 							MIT licensed, and written by{" "}
-							<a href={AUTHOR_HREF} mix={[fg("neutral.emphasis"), when("&:hover", fg("brand"))]}>
-								Sergio Xalambrí
+							<a href={AUTHOR_URL} mix={[fg("neutral.emphasis"), when("&:hover", fg("brand"))]}>
+								{AUTHOR_NAME}
 							</a>
 							.
 						</p>
@@ -160,9 +154,9 @@ export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
 					<Column
 						title="Author"
 						links={[
-							{ label: "Blog", href: AUTHOR_HREF },
-							{ label: "X", href: X_HREF },
-							{ label: "Sponsor", href: SPONSOR_HREF },
+							{ label: "Blog", href: AUTHOR_URL },
+							{ label: "X", href: AUTHOR_X_URL },
+							{ label: "Sponsor", href: SPONSOR_URL },
 						]}
 					/>
 				</div>

@@ -104,6 +104,16 @@ describe("GET /llms.txt", () => {
 			}
 		}
 	});
+
+	test("closes on the author: blog, X and GitHub Sponsors", async () => {
+		let body = await (await fetchApp("/llms.txt")).text();
+		let author = body.slice(body.indexOf("## Author"));
+
+		expect(author).toContain("Sergio Xalambrí");
+		expect(author).toContain("https://sergiodxa.com");
+		expect(author).toContain("https://x.com/sergiodxa");
+		expect(author).toContain("https://github.com/sponsors/sergiodxa");
+	});
 });
 
 describe("GET /search.json", () => {
@@ -146,6 +156,13 @@ describe("GET /rss.xml", () => {
 });
 
 describe("POST /mcp", () => {
+	test("names the author and the sponsor link in the server's instructions", async () => {
+		let { body } = await callMcp("server/discover");
+
+		expect(body.result.instructions).toContain("Sergio Xalambrí");
+		expect(body.result.instructions).toContain("https://github.com/sponsors/sergiodxa");
+	});
+
 	test("lists the four search and enumeration tools, all read-only", async () => {
 		let { response, body } = await callMcp("tools/list");
 

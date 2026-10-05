@@ -1,8 +1,9 @@
 /**
  * The shell every documentation page composes into: the tree on the left, a trail
- * across the top, the page in the middle, and — where a page has one — its own
- * headings on the right. Guides, the package reference and each catalogue draw their
- * own tree in it, so the shell around a page reads the same wherever the reader is.
+ * across the top, the page in the middle closed by its author's credit, and — where a
+ * page has one — its own headings on the right. Guides, the package reference and each
+ * catalogue draw their own tree in it, so the shell around a page reads the same
+ * wherever the reader is.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -36,6 +37,7 @@ import { Breadcrumbs, Button, Sidebar } from "@sdxc/ui";
 import type { NavTree } from "~/app/services/navigation-tree";
 
 import { findNeighbours } from "~/app/services/navigation-tree";
+import AuthorNote from "~/resources/components/author-note";
 import DocsNav from "~/resources/components/docs-nav";
 import DocsPager from "~/resources/components/docs-pager";
 import { DrawerDismiss } from "~/resources/components/drawer-dismiss";
@@ -222,6 +224,7 @@ export default function DocsLayout(handle: Handle<DocsLayout.Props>) {
 						<main mix={[is("100%"), maxIs("48rem")]}>
 							{children}
 							<DocsPager previous={previous} next={next} />
+							<AuthorNote />
 						</main>
 
 						{aside ? (
