@@ -13,6 +13,7 @@
 
 import type { Database } from "remix/data-table";
 
+import { createBackoff } from "@sdxc/backoff";
 import { Feed, FeedFetchError } from "@sdxc/feed";
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
@@ -44,6 +45,9 @@ const BASE_BACKOFF_MS = 5 * 60 * 1000;
  * for days is still retried daily, so it recovers on its own once the origin returns.
  */
 const MAX_BACKOFF_MS = 24 * 60 * 60 * 1000;
+
+/** How long a feed waits after its Nth consecutive failure: doubling from the base, up to a day. */
+const feedBackoff = createBackoff({ base: BASE_BACKOFF_MS, max: MAX_BACKOFF_MS });
 
 /** Bound parameters one SQL storage statement accepts, which is what chunks an insert. */
 const MAX_BOUND_PARAMETERS = 100;
@@ -416,16 +420,10 @@ async function recordFailure(
 			last_error: outcome.message,
 			posts_per_day: await measurePostsPerDay(db, now),
 			failure_count: failureCount,
-			next_attempt_at: now + backoffFor(failureCount),
+			next_attempt_at: feedBackoff.at(failureCount, now),
 			updated_at: now,
 		},
 	);
-}
-
-/** How long a feed waits after its `count`-th consecutive failure. */
-export function backoffFor(count: number): number {
-	let doublings = Math.min(count - 1, Math.ceil(Math.log2(MAX_BACKOFF_MS / BASE_BACKOFF_MS)));
-	return Math.min(BASE_BACKOFF_MS * 2 ** doublings, MAX_BACKOFF_MS);
 }
 
 /**

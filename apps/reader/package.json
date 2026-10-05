@@ -12,6 +12,7 @@
 	},
 	"dependencies": {
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/backoff": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
