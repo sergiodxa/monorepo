@@ -291,8 +291,8 @@ export const logger = createLogger({
 ```
 
 A field is read by its dotted path, so `team.id` matches what `ctx.log.set({ team: { id } })`
-recorded. The condition compiles once, the first time an event is checked against it, and
-one that does not compile keeps every event: a typo in the exemption costs volume, never the record you were
+recorded. The condition compiles once, when the logger is created, and one that does not
+compile keeps every event: a typo in the exemption costs volume, never the record you were
 looking for.
 
 ## Where to go next
