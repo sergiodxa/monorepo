@@ -7,8 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { OutboundError } from "@sdxc/outbound";
 import type { Result } from "@sdxc/result";
 
+import { checkUrl, follow, release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { DistillLimitError, DistillRefusedError } from "../index.js";
@@ -33,65 +35,29 @@ export const MAX_REDIRECTS = 5;
  */
 export const TIMEOUT_MS = 8_000;
 
-/** The statuses that answer with another URL to ask instead. */
-const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
-
 /** The statuses a publisher says no with, each of which is a refusal rather than a fault. */
 const REFUSING_STATUSES = new Set([401, 402, 403, 429, 451]);
 
-/** Hostnames naming the machine doing the asking, which no article is ever served from. */
-const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1"]);
-
 /** A response, beside the URL it finally came from. */
 export interface Retrieved {
+	/** Its body carries the retrieval's deadline, so reading it later still runs under it. */
 	response: Response;
 	/** Where the chain ended, which is what a relative URL in the body resolves against. */
 	url: string;
 }
 
 /**
- * Whether a host may be asked at all: a name the public DNS answers for, rather than
- * a literal address, the loopback name or a `.local` name. A Worker at the edge sits
- * inside nobody's private network, and the class of request is worth removing rather
- * than reasoning about.
- *
- * @param hostname - The host as the URL spells it.
- */
-export function isAddressableHost(hostname: string): boolean {
-	let host = hostname.toLowerCase();
-
-	if (LOOPBACK_HOSTS.has(host)) return false;
-	if (host.endsWith(".local") || host.endsWith(".localhost")) return false;
-	if (host.startsWith("[")) return false;
-	if (/^\d{1,3}(?:\.\d{1,3}){3}$/u.test(host)) return false;
-
-	return host.includes(".");
-}
-
-/**
- * Reads a URL as somewhere this package is willing to go, refusing a scheme other
- * than HTTP(S) and a host naming the asker's own network before any request is made.
+ * Reads a URL as somewhere this package is willing to go, before any request is made:
+ * HTTP(S) only, no credentials, and a public name rather than an address literal or a
+ * name reserved for a private network.
  *
  * @param input - The address to check, as the page that linked it spelled it.
  * @returns The parsed URL, or the refusal that spares the request.
  */
 export function addressable(input: string): Result<URL, DistillRefusedError> {
-	let url: URL;
-	try {
-		url = new URL(input);
-	} catch {
-		return failure(new DistillRefusedError(`Refused ${input}: it is not a URL`));
-	}
-
-	if (url.protocol !== "http:" && url.protocol !== "https:") {
-		return failure(new DistillRefusedError(`Refused ${input}: only HTTP(S) is fetched`));
-	}
-
-	if (!isAddressableHost(url.hostname)) {
-		return failure(new DistillRefusedError(`Refused ${input}: ${url.hostname} is not public`));
-	}
-
-	return success(url);
+	let checked = checkUrl(input, { literals: "refuse" });
+	if (isFailure(checked)) return failure(new DistillRefusedError(checked.error.message));
+	return checked;
 }
 
 /** What a retrieval is allowed to spend. */
@@ -99,70 +65,16 @@ export interface RetrieveOptions {
 	/** What the request names itself as, so a publisher can tell who is asking. */
 	userAgent: string;
 	maxRedirects?: number | undefined;
+	/** Runs alongside `signal`, so a caller's own abort never lifts the deadline. */
 	timeoutMs?: number | undefined;
 	signal?: AbortSignal | undefined;
 }
 
 /**
- * Requests a page, walking the redirect chain itself so the chain has a length it
- * can exceed and the final URL is a fact this package tracked. The final response
- * is answered whatever its status, for a caller that reads meaning into each one.
- *
- * The request carries nothing about whoever asked for it: the headers are built
- * here rather than inherited, and credentials are left out, so a page is fetched as
- * an anonymous visitor every time.
- *
- * @param input - The address to request.
- * @param options - The name to ask under, and what the retrieval may spend.
- * @returns The last response of the chain and where it came from, or why there is none.
- */
-export async function follow(
-	input: URL,
-	options: RetrieveOptions,
-): Promise<Result<Retrieved, DistillLimitError | DistillRefusedError>> {
-	let limit = options.maxRedirects ?? MAX_REDIRECTS;
-	let signal = options.signal ?? AbortSignal.timeout(options.timeoutMs ?? TIMEOUT_MS);
-
-	let headers = new Headers({
-		accept: "text/html,application/xhtml+xml",
-		"user-agent": options.userAgent,
-	});
-
-	let url = input;
-
-	for (let followed = 0; ; followed++) {
-		let response: Response;
-		try {
-			response = await fetch(url, {
-				headers,
-				signal,
-				redirect: "manual",
-				credentials: "omit",
-			});
-		} catch (error) {
-			return failure(new DistillLimitError(`Failed to read ${url.href}: ${describe(error)}`));
-		}
-
-		let next = redirectTarget(response, url);
-		if (!next) return success({ response, url: url.href });
-
-		release(response.body);
-
-		if (followed === limit) {
-			return failure(
-				new DistillLimitError(`Failed to read ${input.href}: more than ${limit} redirects`),
-			);
-		}
-
-		let checked = addressable(next);
-		if (isFailure(checked)) return checked;
-		url = checked.data;
-	}
-}
-
-/**
- * Requests a page and answers only a successful response: a status a publisher
- * says no with is a refusal, and any other failing status is a fault.
+ * Requests a page and answers only a successful response: every redirect hop passes
+ * `addressable`, a status a publisher says no with is a refusal, and any other
+ * failing status is a fault. The request carries no credentials and only the headers
+ * built here, so a page is fetched as an anonymous visitor every time.
  *
  * @param input - The address to retrieve.
  * @param options - The name to ask under, and what the retrieval may spend.
@@ -172,10 +84,17 @@ export async function retrieve(
 	input: URL,
 	options: RetrieveOptions,
 ): Promise<Result<Retrieved, DistillLimitError | DistillRefusedError>> {
-	let followed = await follow(input, options);
-	if (isFailure(followed)) return followed;
+	let followed = await follow(input, {
+		headers: { accept: "text/html,application/xhtml+xml", "user-agent": options.userAgent },
+		timeout: options.timeoutMs ?? TIMEOUT_MS,
+		maxRedirects: options.maxRedirects ?? MAX_REDIRECTS,
+		literals: "refuse",
+		...(options.signal ? { signal: options.signal } : {}),
+	});
+	if (isFailure(followed)) return failure(toDistillError(followed.error));
 
-	let { response, url } = followed.data;
+	let { response } = followed.data;
+	let url = followed.data.url.href;
 
 	if (REFUSING_STATUSES.has(response.status)) {
 		release(response.body);
@@ -189,104 +108,19 @@ export async function retrieve(
 		);
 	}
 
-	return followed;
-}
-
-/** A body read within its cap, and how many bytes came off the wire to produce it. */
-export interface Read {
-	text: string;
-	bytes: number;
+	return success({ response, url });
 }
 
 /**
- * Reads a response body as text, stopping as soon as it grows past the cap.
+ * Reads an outbound failure as the outcome a reader is shown: an address this package
+ * will not ask for is a refusal, and every bound that ran out, a failed connection
+ * included, is a limit.
  *
- * Counting over the stream is what enforces the rule, so a body arriving in pieces
- * and a body lying about its length are refused by the same bytes, before either is
- * held whole.
- *
- * @param retrieved - The response to read and the URL it came from.
- * @param cap - How many bytes the body may be.
- * @returns The body and its size, or why it was refused.
+ * @param error - Why the walk or the read stopped.
  */
-export async function readWithin(
-	retrieved: Retrieved,
-	cap: number = MAX_BYTES,
-): Promise<Result<Read, DistillLimitError>> {
-	let { response, url } = retrieved;
-
-	let declared = declaredLength(response);
-	if (declared !== undefined && declared > cap) {
-		release(response.body);
-		return failure(
-			new DistillLimitError(`Refused ${url}: it declared ${declared} bytes, over the cap`),
-		);
+export function toDistillError(error: OutboundError): DistillLimitError | DistillRefusedError {
+	if (error.code === "invalid-url" || error.code.startsWith("refused-")) {
+		return new DistillRefusedError(error.message);
 	}
-
-	if (!response.body) return success({ text: "", bytes: 0 });
-
-	let reader = response.body.getReader();
-	let decoder = new TextDecoder();
-	let text = "";
-	let read = 0;
-
-	try {
-		for (;;) {
-			let { done, value } = await reader.read();
-			if (done || !value) break;
-
-			read += value.byteLength;
-			if (read > cap) {
-				release(reader);
-				return failure(new DistillLimitError(`Refused ${url}: it exceeded the ${cap} byte cap`));
-			}
-
-			text += decoder.decode(value, { stream: true });
-		}
-	} catch (error) {
-		return failure(new DistillLimitError(`Failed to read ${url}: ${describe(error)}`));
-	}
-
-	return success({ text: text + decoder.decode(), bytes: read });
-}
-
-/**
- * Lets go of a body this retrieval leaves unread, telling the origin it may stop
- * sending. The cancellation runs on its own, so the outcome is reported as soon as
- * it is decided and a stream that stalls costs one refusal and nothing more.
- */
-export function release(source: { cancel(): Promise<void> } | null): void {
-	void source?.cancel().catch(() => undefined);
-}
-
-/**
- * Names the URL a response sends the client on to, absent when it is an answer
- * rather than a redirect, or when it names somewhere that is not a URL and so
- * leaves the status itself as the outcome.
- */
-function redirectTarget(response: Response, from: URL): string | undefined {
-	if (!REDIRECT_STATUSES.has(response.status)) return undefined;
-
-	let location = response.headers.get("location");
-	if (!location) return undefined;
-
-	try {
-		return new URL(location, from).toString();
-	} catch {
-		return undefined;
-	}
-}
-
-/** Reads the length a response claims, for the refusal that costs no bytes at all. */
-function declaredLength(response: Response): number | undefined {
-	let header = response.headers.get("content-length");
-	if (!header) return undefined;
-
-	let length = Number(header);
-	return Number.isFinite(length) ? length : undefined;
-}
-
-/** Reads a thrown value's message, so a rejection reports what went wrong either way. */
-function describe(error: unknown): string {
-	return error instanceof Error ? error.message : String(error);
+	return new DistillLimitError(error.message);
 }

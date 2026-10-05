@@ -77,39 +77,9 @@ markup resolves against, so it is the address the page was actually served from.
 
 ### `addressable(url)`
 
-Whether an address is somewhere this package is willing to go, before any request is made.
-
-### `@sdxc/distill/retrieve`
-
-The four bounds on their own, for any client fetching a URL somebody else chose (a
-Webmention source, a link preview, a feed):
-
-- `addressable(url)` and `isAddressableHost(hostname)`: the check made before every request.
-- `follow(url, options)`: walks the redirect chain under the bounds and answers the last
-  response whatever its status, as `{ response, url }` with the final URL.
-- `retrieve(url, options)`: the same, answering only a 2xx; a refusing status (401, 402,
-  403, 429, 451) is a `DistillRefusedError` and any other failure a `DistillLimitError`.
-- `readWithin(retrieved, cap?)`: reads the body as text within the byte cap, answering
-  `{ text, bytes }`.
-- `release(body)`: cancels a body left unread, so the origin stops sending.
-- `MAX_BYTES`, `MAX_REDIRECTS`, `TIMEOUT_MS`, `DistillLimitError` and `DistillRefusedError`.
-
-`options` is `{ userAgent, maxRedirects?, timeoutMs?, signal? }`; the deadline covers the whole
-chain and the body read that follows it.
-
-```typescript
-import { addressable, follow, readWithin } from "@sdxc/distill/retrieve";
-import { isFailure } from "@sdxc/result";
-
-let url = addressable(input);
-if (isFailure(url)) return url;
-
-let followed = await follow(url.data, { userAgent: "MyApp/1.0 (+https://myapp.example)" });
-if (isFailure(followed)) return followed;
-if (followed.data.response.status === 410) return gone();
-
-let body = await readWithin(followed.data, 1_048_576);
-```
+Whether an address is somewhere this package is willing to go, before any request is made,
+answering `Result<URL, DistillRefusedError>`. It applies the same host rule as every request
+and redirect hop `distill` makes, so a caller can refuse a link before queueing it.
 
 ### Outcomes
 
@@ -130,13 +100,15 @@ name for asking not to be kept.
 Exported as `MAX_BYTES`, `MAX_REDIRECTS` and `TIMEOUT_MS`, and moved per call through
 `options`.
 
-- **HTTP(S) only**, checked before the request, with it a refusal of any host that is a
-  literal IP address, a loopback name or a `.local` name.
+- **HTTP(S) only**, checked before the request and again on every redirect hop, refusing a
+  URL that carries credentials, any literal IP address, a single-label name, and a name under
+  a reserved suffix such as `localhost`, `local`, `internal` or `test`.
 - **Five redirects**, walked manually with `redirect: "manual"`, which is what gives the chain
   a length it can exceed and makes the final URL a fact this package tracked.
 - **Two megabytes**, counted off the stream and abandoned mid-body, so a response lying about
   its length is refused by the same bytes as one that is honest.
-- **Eight seconds**, because somebody is waiting on this one.
+- **Eight seconds** for the whole chain and the body read after it, because somebody is
+  waiting on this one. A `signal` the caller passes runs alongside the deadline.
 
 The request carries no cookies, no credentials and no header naming whoever asked for it.
 

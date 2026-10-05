@@ -5,14 +5,14 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts",
-		"./retrieve": "./src/retrieve.ts"
+		".": "./src/index.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@sdxc/html": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/robots": "workspace:*"
 	}

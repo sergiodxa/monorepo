@@ -12,11 +12,12 @@ import type { RobotsFetch } from "@sdxc/robots/fetch";
 
 import { HTML } from "@sdxc/html";
 import { parseDocument } from "@sdxc/html/document";
+import { readText, release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 import { directivesFor } from "@sdxc/robots/directives";
 import { isAllowedBy } from "@sdxc/robots/fetch";
 
-import { addressable, MAX_BYTES, readWithin, retrieve } from "./lib/limits.js";
+import { addressable, MAX_BYTES, retrieve, toDistillError } from "./lib/limits.js";
 import { bylineOf, canonicalOf, titleOf } from "./lib/metadata.js";
 import { articleOf } from "./lib/score.js";
 import { serialize } from "./lib/serialize.js";
@@ -198,12 +199,12 @@ export async function distill(
 	if (isFailure(retrieved)) return retrieved;
 
 	if (essenceOf(retrieved.data.response) !== "text/html") {
-		void retrieved.data.response.body?.cancel().catch(() => undefined);
+		release(retrieved.data.response.body);
 		return failure(new DistillEmptyError(`Nothing to read at ${input}: it is not a page`));
 	}
 
-	let read = await readWithin(retrieved.data, options.maxBytes ?? MAX_BYTES);
-	if (isFailure(read)) return read;
+	let read = await readText(retrieved.data.response, { maxBytes: options.maxBytes ?? MAX_BYTES });
+	if (isFailure(read)) return failure(toDistillError(read.error));
 
 	let article = distillFrom(read.data.text, retrieved.data.url);
 	if (isFailure(article)) return article;
