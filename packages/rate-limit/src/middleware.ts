@@ -84,7 +84,7 @@ export interface RateLimitMiddlewareOptions {
  * @example
  * router.use(rateLimit({ adapter, prefix: "token", key: (context) => context.get(ClientId) }));
  * @example
- * let key = (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown";
+ * let key = (context) => getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown";
  * router.use(rateLimit({ adapter, prefix: "public", key }));
  */
 export function rateLimit(options: RateLimitMiddlewareOptions): Middleware {

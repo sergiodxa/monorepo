@@ -66,20 +66,26 @@ Retry-After: 37
 because the wrong answer is expensive in both directions: too broad a key lets one caller
 spend another's budget, and a key the caller controls lets it mint fresh budgets. An identity
 the request already authenticated is the strongest choice — a token id, a client id, a tenant.
-An anonymous endpoint has the connecting address, which the platform reports in a header of
-its own:
+An anonymous endpoint has the connecting address, which Cloudflare reports in the
+`CF-Connecting-IP` header. Parse it with
+[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and key on the
+network the address sits in, since an IPv6 client holds a whole `/64` and rotates through it:
 
 ```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
+
 rateLimit({
 	adapter,
 	prefix: "public",
-	key: (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+	key: (context) =>
+		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
 });
 ```
 
 Return one shared bucket rather than skipping the limit for a request you cannot identify, so
-an unidentified caller still spends something. Callers sharing an egress address then share a
-budget, which is the cost of keying on an address at all.
+an unidentified caller, or one whose header is not an address, still spends something.
+Callers sharing an egress address then share a budget, which is the cost of keying on an
+address at all.
 
 ## API
 
@@ -224,6 +230,7 @@ Each constructor's options ship as a named type — `MemoryAdapterOptions`, `Clo
 Each limit is a registration, so the policy lives next to the routes it protects instead of inside them. Keys are prefixed per registration, so two limiters over one backend keep independent counters even when they derive the same key.
 
 ```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
@@ -236,7 +243,8 @@ let tokenLimiter = rateLimit({
 let loginLimiter = rateLimit({
 	adapter: new CloudflareAdapter(env.LOGIN_RATE_LIMITER, { limit: 10, window: "10 seconds" }),
 	prefix: "login",
-	key: (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+	key: (context) =>
+		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
 });
 ```
 
@@ -247,12 +255,14 @@ Pass an explicit `prefix` whenever the keys are persisted or inspected. The defa
 The default is fail open, so a storage outage cannot lock every client out. A surface where an uncounted request is worse than a refused one flips the policy per registration.
 
 ```typescript
+import { getClientIP } from "@sdxc/get-client-ip";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 rateLimit({
 	adapter,
 	prefix: "credentials",
-	key: (context) => context.request.headers.get("CF-Connecting-IP") ?? "unknown",
+	key: (context) =>
+		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
 	failurePolicy: "closed",
 });
 ```
