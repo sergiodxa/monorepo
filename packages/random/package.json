@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/random",
+	"version": "0.0.1",
+	"description": "Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0"
+	}
+}

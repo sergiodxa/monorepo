@@ -949,6 +949,13 @@
         "remix": "3.0.0",
       },
     },
+    "packages/random": {
+      "name": "@sdxc/random",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0",
+      },
+    },
     "packages/rate-limit": {
       "name": "@sdxc/rate-limit",
       "version": "0.0.1",
@@ -1943,6 +1950,8 @@
     "@sdxc/password-policy": ["@sdxc/password-policy@workspace:packages/password-policy"],
 
     "@sdxc/problem": ["@sdxc/problem@workspace:packages/problem"],
+
+    "@sdxc/random": ["@sdxc/random@workspace:packages/random"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
 
