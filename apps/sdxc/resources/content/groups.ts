@@ -27,6 +27,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"api-client",
 			"get-client-ip",
 			"ip",
+			"outbound",
 			"user-agent",
 			"structured-fields",
 			"server-timing",

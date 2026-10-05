@@ -45,8 +45,9 @@ now, and a link deleted before the queue gets to it ends the run early.
 
 ## Accept the link
 
-`addressable(url)` is the check the fetch itself makes before any request: HTTP(S) only, and no
-literal IP address, loopback name or `.local` host. Running it in the endpoint turns a link
+`addressable(url)` is the check the fetch itself makes before any request: HTTP(S) only, no
+credentials in the URL, no literal IP address, and no name that cannot be public, such as a
+single label, `localhost`, `.local`, `.internal` or `.test`. Running it in the endpoint turns a link
 the job would refuse into an immediate `422`, instead of a row that fails later:
 
 ```typescript {% title="app/http/controllers/links/create.ts" %}
@@ -195,12 +196,12 @@ the reader's address when it does; closing that takes an image proxy of your own
 ## Build a preview card from the head
 
 Not every link needs its article. A URL pasted into a comment only needs a card: a title, a
-line of description, an image. `@sdxc/distill/retrieve` exports the same bounded fetch on its
-own, and `@sdxc/html` reads the head of what it returns:
+line of description, an image. `@sdxc/outbound` is the bounded fetch `distill` runs on, and
+`@sdxc/html` reads the head of what it returns:
 
 ```typescript {% title="app/services/link-preview.ts" %}
-import { addressable, readWithin, retrieve } from "@sdxc/distill/retrieve";
 import { HTML } from "@sdxc/html";
+import { follow, readText, release } from "@sdxc/outbound";
 import { isFailure, isSuccess } from "@sdxc/result";
 
 const USER_AGENT = "Shelf/1.0 (+https://shelf.example/about/bot)";
@@ -213,16 +214,20 @@ export interface LinkPreview {
 }
 
 export async function previewOf(input: string): Promise<LinkPreview | null> {
-	let url = addressable(input);
-	if (isFailure(url)) return null;
-
-	let retrieved = await retrieve(url.data, {
-		userAgent: USER_AGENT,
-		timeoutMs: 3_000,
+	let followed = await follow(input, {
+		headers: { accept: "text/html", "user-agent": USER_AGENT },
+		timeout: "3 seconds",
+		literals: "refuse",
 	});
-	if (isFailure(retrieved)) return null;
+	if (isFailure(followed)) return null;
 
-	let body = await readWithin(retrieved.data);
+	let { response, url } = followed.data;
+	if (!response.ok) {
+		release(response.body);
+		return null;
+	}
+
+	let body = await readText(response, { maxBytes: 512 * 1024 });
 	let page = isSuccess(body) ? HTML.parse(body.data.text) : body;
 	if (isFailure(page)) return null;
 
@@ -232,21 +237,21 @@ export async function previewOf(input: string): Promise<LinkPreview | null> {
 	let image = doc.meta("og:image");
 
 	return {
-		url: retrieved.data.url,
+		url: url.href,
 		title: isSuccess(title) ? title.data : (doc.title ?? null),
 		description: isSuccess(description) ? description.data : null,
-		image: isSuccess(image)
-			? (URL.parse(image.data, retrieved.data.url)?.href ?? null)
-			: null,
+		image: isSuccess(image) ? (URL.parse(image.data, url)?.href ?? null) : null,
 	};
 }
 ```
 
-`retrieve` answers only a 2xx response, reporting a refusing status such as `403` or `429` as
-a failure. `retrieved.data.url` is where the redirect chain ended, which is the address to
-show and the base every relative URL in the page resolves against. `doc.meta` matches `name`
-or `property`, so Open Graph tags and plain `<meta name>` tags are one lookup, and each
-answers a `Result` because a page is free to leave any of them out.
+`follow` applies the same host rules as `addressable` to the first URL and to every redirect,
+and answers the final response whatever its status, so the card checks `response.ok` itself
+and lets go of a body it will not read. `url` is where the redirect chain ended, which is the
+address to show and the base every relative URL in the page resolves against. The timeout
+covers the chain and the body read after it. `doc.meta` matches `name` or `property`, so Open
+Graph tags and plain `<meta name>` tags are one lookup, and each answers a `Result` because a
+page is free to leave any of them out.
 
 A card is optional, so every failure here becomes `null` and the comment renders without one.
 The shorter deadline is for the same reason: a card that takes eight seconds is not worth
