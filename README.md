@@ -94,6 +94,7 @@ Run from the repository root:
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                                                       | ✅  |
 | [atom](packages/atom)                                           | Atom 1.0 feed parser and builder                                                                                  | ✅  |
 | [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`                          | ✅  |
+| [backoff](packages/backoff)                                     | Retry delay schedules with growth, a ceiling, free attempts and seedable jitter                                   | ✅  |
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint                                            | ✅  |
 | [bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema             | ✅  |
 | [cache](packages/cache)                                         | Cache contract with adapters for memory and Cloudflare KV                                                         | ✅  |

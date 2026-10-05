@@ -1,0 +1,17 @@
+{
+	"name": "@sdxc/backoff",
+	"version": "0.0.1",
+	"description": "Retry delay schedules with exponential, linear, constant or stepped growth, a ceiling, free attempts and seedable jitter",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/random": "workspace:*"
+	}
+}

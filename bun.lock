@@ -26,6 +26,7 @@
       "name": "@apps/auth-saas",
       "dependencies": {
         "@sdxc/auth": "workspace:*",
+        "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/cloudflare-pricing": "workspace:*",
@@ -89,6 +90,7 @@
       "dependencies": {
         "@sdxc/atom": "workspace:*",
         "@sdxc/auth": "workspace:*",
+        "@sdxc/backoff": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
@@ -246,6 +248,7 @@
       "name": "@apps/reader",
       "dependencies": {
         "@sdxc/auth": "workspace:*",
+        "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
@@ -427,6 +430,14 @@
       "optionalPeers": [
         "remix",
       ],
+    },
+    "packages/backoff": {
+      "name": "@sdxc/backoff",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/random": "workspace:*",
+      },
     },
     "packages/billing": {
       "name": "@sdxc/billing",
@@ -1883,6 +1894,8 @@
     "@sdxc/cache": ["@sdxc/cache@workspace:packages/cache"],
 
     "@sdxc/captcha": ["@sdxc/captcha@workspace:packages/captcha"],
+    "@sdxc/backoff": ["@sdxc/backoff@workspace:packages/backoff"],
+
 
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
 
