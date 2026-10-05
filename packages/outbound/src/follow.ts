@@ -17,7 +17,7 @@ import type { CheckOptions } from "./check.js";
 
 import { checkUrl } from "./check.js";
 import { failedWith, OutboundError } from "./error.js";
-import { release } from "./read.js";
+import { release, withBody } from "./read.js";
 import { resolveHost } from "./resolve.js";
 
 /** A moved page moves once or twice; five hops covers that with room to spare. */
@@ -136,7 +136,7 @@ function deadlineOf(options: FollowOptions): AbortSignal | undefined {
  */
 function bindBody(response: Response, signal: AbortSignal | undefined): Response {
 	if (signal === undefined || response.body === null) return response;
-	return new Response(response.body.pipeThrough(new TransformStream(), { signal }), response);
+	return withBody(response, response.body.pipeThrough(new TransformStream(), { signal }));
 }
 
 /**

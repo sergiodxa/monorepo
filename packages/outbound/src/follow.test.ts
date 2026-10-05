@@ -182,6 +182,7 @@ describe("follow", () => {
 		let read = await readText(followed.data.response, { maxBytes: 1024 });
 
 		expect(isFailure(read) && read.error.code).toBe("timeout");
+		expect(isFailure(read) && read.error.url).toBe("https://example.com/drip");
 		expect(Date.now() - started).toBeLessThan(1_000);
 	});
 

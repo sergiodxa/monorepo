@@ -132,6 +132,7 @@ describe("limitBody", () => {
 
 		expect(limited.status).toBe(203);
 		expect(limited.headers.get("content-type")).toBe("image/png");
+		expect(limited.url).toBe(response.url);
 		expect(await limited.text()).toBe("hello");
 	});
 

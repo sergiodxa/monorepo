@@ -114,7 +114,7 @@ export function limitBody(response: Response, options: ReadOptions): Response {
 		},
 	});
 
-	return new Response(response.body.pipeThrough(capped), response);
+	return withBody(response, response.body.pipeThrough(capped));
 }
 
 /**
@@ -126,6 +126,16 @@ export function limitBody(response: Response, options: ReadOptions): Response {
  */
 export function release(source: { cancel(): Promise<void> } | null): void {
 	void source?.cancel().catch(() => undefined);
+}
+
+/**
+ * The same response around a new body, keeping the URL it came from, so an error
+ * reading the new body still names where it was fetched.
+ */
+export function withBody(response: Response, body: ReadableStream<Uint8Array>): Response {
+	let replaced = new Response(body, response);
+	Object.defineProperty(replaced, "url", { value: response.url });
+	return replaced;
 }
 
 /** Reads the length a message claims, for the refusal that costs no bytes at all. */
