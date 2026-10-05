@@ -1,38 +1,57 @@
 /**
  * Checks the rules the media proxy stands on: that only an address this app signed is
  * retrieved, that the addresses it refuses are the ones that would reach somebody's own
- * network, that a redirect chain is bounded and re-checked at every hop, and that what
- * goes out carries nothing about the reader.
+ * network, that a redirect chain, the wait and the body are bounded, and that what goes
+ * out carries nothing about the reader.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { Base64Url } from "@sdxc/crypto";
-import { http, HttpResponse } from "msw";
+import { readBytes } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
+import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import {
 	hostOf,
-	isRetrievable,
 	MAX_IMAGE_BYTES,
 	mediaUrl,
 	proxyImages,
-	readWithin,
 	retrieveImage,
 	servedType,
 	verifiedSource,
 } from "~/app/lib/media";
 
 /** One image's address, which is what every signed pair in here is taken over. */
-const IMAGE = "https://cdn.example/photo.png";
+const IMAGE = "https://cdn.example.com/photo.png";
 
 let server = setupServer();
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+	server.resetHandlers();
+	vi.restoreAllMocks();
+});
 afterAll(() => server.close());
+
+/** A small PNG-typed answer, which is all a retrieval needs to see to call it an image. */
+function image(bytes = 4): Response {
+	return HttpResponse.arrayBuffer(new ArrayBuffer(bytes), {
+		headers: { "content-type": "image/png" },
+	});
+}
+
+/**
+ * Shortens the ten-second deadline to `ms` while recording what it was asked for, so a
+ * test both waits briefly and proves the deadline the proxy set.
+ */
+function shortenDeadline(ms: number) {
+	let timeout = AbortSignal.timeout.bind(AbortSignal);
+	return vi.spyOn(AbortSignal, "timeout").mockImplementation(() => timeout(ms));
+}
 
 /** The two segments a proxied address carries, read back off the path this app built. */
 function pairOf(path: string): { signature: string; source: string } {
@@ -83,28 +102,39 @@ describe("addresses this app will retrieve", () => {
 		["a Teredo address", "http://[2001::1]/a.png"],
 		["an IPv4-mapped private address", "http://[::ffff:10.0.0.1]/a.png"],
 		["a name resolving to this machine", "http://localhost/a.png"],
-		["a non-standard port", "https://cdn.example:8080/a.png"],
-		["a plaintext port on a secure scheme", "https://cdn.example:80/a.png"],
-	])("refuses %s", (_label, url) => {
-		expect(isRetrievable(new URL(url))).toBe(false);
+		["a single-label name", "http://intranet/a.png"],
+		["a name on the local network", "http://printer.local/a.png"],
+		["an internal name", "http://metadata.internal/a.png"],
+		["a URL carrying credentials", "https://user:pass@cdn.example.com/a.png"],
+		["a non-standard port", "https://cdn.example.com:8080/a.png"],
+		["a plaintext port on a secure scheme", "https://cdn.example.com:80/a.png"],
+		["the file scheme", "file:///etc/passwd"],
+		["the FTP scheme", "ftp://cdn.example.com/a.png"],
+		["a data URL", "data:image/png;base64,AA"],
+		["text that is no URL", "not a url"],
+	])("refuses %s without asking it", async (_label, url) => {
+		let asked = 0;
+		server.use(
+			http.all("*", () => {
+				asked += 1;
+				return image();
+			}),
+		);
+
+		expect(await retrieveImage(url)).toBeNull();
+		expect(asked).toBe(0);
 	});
 
-	test.each(["file:///etc/passwd", "ftp://cdn.example/a.png", "data:image/png;base64,AA"])(
-		"refuses the scheme in %s",
-		(url) => {
-			expect(isRetrievable(new URL(url))).toBe(false);
-		},
-	);
-
 	test.each([
-		"https://cdn.example/a.png",
-		"https://cdn.example:443/a.png",
-		"http://cdn.example:80/a.png",
+		"https://cdn.example.com/a.png",
+		"https://cdn.example.com:443/a.png",
+		"http://cdn.example.com:80/a.png",
 		"https://93.184.216.34/a.png",
 		"https://[2606:4700:4700::1111]/a.png",
-		"https://[::ffff:8.8.8.8]/a.png",
-	])("retrieves %s", (url) => {
-		expect(isRetrievable(new URL(url))).toBe(true);
+	])("retrieves %s", async (url) => {
+		server.use(http.get("*", () => image()));
+
+		expect((await retrieveImage(url))?.ok).toBe(true);
 	});
 });
 
@@ -115,9 +145,7 @@ describe("retrieving an image", () => {
 		server.use(
 			http.get(IMAGE, ({ request }) => {
 				seen = request.headers;
-				return HttpResponse.arrayBuffer(new ArrayBuffer(4), {
-					headers: { "content-type": "image/png" },
-				});
+				return image();
 			}),
 		);
 
@@ -131,12 +159,8 @@ describe("retrieving an image", () => {
 
 	test("follows a redirect and answers with what the last hop served", async () => {
 		server.use(
-			http.get(IMAGE, () => HttpResponse.redirect("https://cdn2.example/photo.png", 302)),
-			http.get("https://cdn2.example/photo.png", () =>
-				HttpResponse.arrayBuffer(new ArrayBuffer(4), {
-					headers: { "content-type": "image/png" },
-				}),
-			),
+			http.get(IMAGE, () => HttpResponse.redirect("https://cdn2.example.com/photo.png", 302)),
+			http.get("https://cdn2.example.com/photo.png", () => image()),
 		);
 
 		let response = await retrieveImage(IMAGE);
@@ -145,28 +169,109 @@ describe("retrieving an image", () => {
 		expect(servedType(response as Response)).toBe("image/png");
 	});
 
-	test("refuses a redirect aimed at a private address", async () => {
+	test.each([
+		["a private address", "http://169.254.169.254/latest/meta-data"],
+		["a name on the local network", "http://router.local/a.png"],
+		["a non-standard port", "https://cdn2.example.com:8443/a.png"],
+	])("refuses a redirect aimed at %s", async (_label, target) => {
+		let asked = 0;
 		server.use(
-			http.get(IMAGE, () => HttpResponse.redirect("http://169.254.169.254/latest/meta-data", 302)),
+			http.get(IMAGE, () => HttpResponse.redirect(target, 302)),
+			http.all("*", () => {
+				asked += 1;
+				return image();
+			}),
 		);
 
 		expect(await retrieveImage(IMAGE)).toBeNull();
+		expect(asked).toBe(0);
 	});
 
 	test("refuses a chain that runs past three hops", async () => {
 		for (let hop of [0, 1, 2, 3, 4]) {
 			server.use(
-				http.get(`https://cdn.example/hop-${hop}.png`, () =>
-					HttpResponse.redirect(`https://cdn.example/hop-${hop + 1}.png`, 302),
+				http.get(`https://cdn.example.com/hop-${hop}.png`, () =>
+					HttpResponse.redirect(`https://cdn.example.com/hop-${hop + 1}.png`, 302),
 				),
 			);
 		}
 
-		expect(await retrieveImage("https://cdn.example/hop-0.png")).toBeNull();
+		expect(await retrieveImage("https://cdn.example.com/hop-0.png")).toBeNull();
 	});
 
-	test("refuses to fetch an address it would not retrieve at all", async () => {
-		expect(await retrieveImage("file:///etc/passwd")).toBeNull();
+	test("waits ten seconds for an origin and answers null once they pass", async () => {
+		let deadline = shortenDeadline(50);
+		server.use(
+			http.get(IMAGE, async () => {
+				await delay(1_000);
+				return image();
+			}),
+		);
+
+		expect(await retrieveImage(IMAGE)).toBeNull();
+		expect(deadline).toHaveBeenCalledWith(10_000);
+	});
+
+	test("holds a body that is still arriving to the same deadline", async () => {
+		shortenDeadline(50);
+		server.use(
+			http.get(IMAGE, () => {
+				let stream = new ReadableStream<Uint8Array>({
+					async start(controller) {
+						controller.enqueue(new Uint8Array(4));
+						await delay(1_000);
+						controller.close();
+					},
+				});
+				return new HttpResponse(stream, { headers: { "content-type": "image/png" } });
+			}),
+		);
+
+		let response = await retrieveImage(IMAGE);
+		expect(response?.ok).toBe(true);
+
+		let read = await readBytes(response as Response, { maxBytes: MAX_IMAGE_BYTES });
+		expect(isFailure(read) && read.error.code).toBe("timeout");
+	});
+
+	test("errors a body that runs past the cap", async () => {
+		server.use(
+			http.get(IMAGE, () => {
+				let stream = new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(new Uint8Array(MAX_IMAGE_BYTES));
+						controller.enqueue(new Uint8Array(1));
+						controller.close();
+					},
+				});
+				return new HttpResponse(stream, { headers: { "content-type": "image/png" } });
+			}),
+		);
+
+		let response = await retrieveImage(IMAGE);
+
+		await expect((response as Response).arrayBuffer()).rejects.toMatchObject({
+			code: "too-large",
+		});
+	});
+
+	test("errors a body that declares a length past the cap before reading any of it", async () => {
+		server.use(
+			http.get(IMAGE, () =>
+				HttpResponse.arrayBuffer(new ArrayBuffer(8), {
+					headers: {
+						"content-type": "image/png",
+						"content-length": String(MAX_IMAGE_BYTES + 1),
+					},
+				}),
+			),
+		);
+
+		let response = await retrieveImage(IMAGE);
+
+		await expect((response as Response).arrayBuffer()).rejects.toMatchObject({
+			code: "too-large",
+		});
 	});
 });
 
@@ -189,14 +294,6 @@ describe("what is served back", () => {
 			expect(servedType(response)).toBe(type);
 		},
 	);
-
-	test("reads a body inside the cap and refuses one past it", async () => {
-		let inside = new Response(new Uint8Array(new ArrayBuffer(32)));
-		expect((await readWithin(inside.body))?.byteLength).toBe(32);
-
-		let past = new Response(new Uint8Array(new ArrayBuffer(MAX_IMAGE_BYTES + 1)));
-		expect(await readWithin(past.body)).toBeNull();
-	});
 });
 
 describe("rewriting a body", () => {

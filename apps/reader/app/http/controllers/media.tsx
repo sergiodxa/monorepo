@@ -5,8 +5,8 @@
  * The request that goes out carries no cookie, no referrer and a user agent naming this
  * product, so a publisher learns that one server asked for a picture and nothing about who
  * was reading. That substitution is the whole benefit here; every bound below — the
- * signature, the scheme, port and address checks on every hop, the size cap and the type
- * allow-list — is the cost of being allowed to make it.
+ * signature, the scheme, port and address checks on every hop, the deadline, the size cap
+ * and the type allow-list — is the cost of being allowed to make it.
  *
  * Answers are held at the edge and nowhere else. Keeping a copy of the internet's images in
  * a store of this app's own would cost a hundred times the fetch it saves, so a second
@@ -17,14 +17,16 @@
  */
 
 import { currentLog } from "@sdxc/logger";
+import { readBytes } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import {
 	hostOf,
 	MEDIA_CACHE,
+	MAX_IMAGE_BYTES,
 	MEDIA_CACHE_CONTROL,
-	readWithin,
 	retrieveImage,
 	servedType,
 	verifiedSource,
@@ -34,10 +36,16 @@ import routes from "~/routes/web";
 /** The signed pair the address carries, which is the whole of what this route reads. */
 const Params = s.object({ signature: s.string(), source: s.string() });
 
-/** The answer to an address this app did not mint, and to one it will not retrieve. */
+/**
+ * The answer to an address this app did not mint, to one it will not retrieve, and to an
+ * origin that gave no answer at all before the deadline.
+ */
 const REFUSED_STATUS = 403;
 
-/** The answer when the publisher's server produced no image this app is willing to serve. */
+/**
+ * The answer when the publisher's server produced no image this app is willing to serve:
+ * an error status, a type off the allow-list, or a body past the cap or the deadline.
+ */
 const UNAVAILABLE_STATUS = 502;
 
 /** What every answer from here carries, whatever it carries beside it. */
@@ -96,9 +104,9 @@ export default createAction(routes.media, {
 		}
 
 		let type = servedType(response);
-		let bytes = type === null ? null : await readWithin(response.body);
+		let body = type === null ? null : await readBytes(response, { maxBytes: MAX_IMAGE_BYTES });
 
-		if (type === null || bytes === null) {
+		if (type === null || body === null || isFailure(body)) {
 			log?.note("media.proxy", {
 				host,
 				status: response.status,
@@ -114,11 +122,11 @@ export default createAction(routes.media, {
 			host,
 			status: response.status,
 			cacheHit: false,
-			bytes: bytes.byteLength,
+			bytes: body.data.bytes,
 			durationMs: Date.now() - startedAt,
 		});
 
-		let answer = new Response(bytes, { headers: mediaHeaders(type) });
+		let answer = new Response(body.data.data, { headers: mediaHeaders(type) });
 
 		/**
 		 * Written to the edge before the reader is answered, so the second reader of the same

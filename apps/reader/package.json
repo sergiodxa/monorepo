@@ -36,6 +36,7 @@
 		"@sdxc/mail": "workspace:*",
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/opml": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",

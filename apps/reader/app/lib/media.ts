@@ -1,7 +1,7 @@
 /**
  * The media proxy's own rules: minting the signed address a remote image is reached
- * through, verifying one that comes back, deciding which addresses this app is willing to
- * retrieve, and rewriting a sanitized body so every image in it points here.
+ * through, verifying one that comes back, retrieving it within a deadline and a size cap,
+ * and rewriting a sanitized body so every image in it points here.
  *
  * A reader's browser talks to one origin while they read. The publisher learns that one
  * server fetched an image — a hit count — and nothing about who asked for it, which is the
@@ -12,8 +12,8 @@
  */
 
 import { Base64Url, hmac, timingSafeEqual } from "@sdxc/crypto";
-import { IP } from "@sdxc/ip";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { follow, limitBody } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import routes from "~/routes/web";
@@ -28,9 +28,6 @@ const SIGNATURE_BYTES = 16;
 /** The schemes an image may be retrieved over, which are the two a browser would have used. */
 const FETCHABLE_SCHEMES = new Set(["http:", "https:"]);
 
-/** The port each scheme may name, so a signed URL cannot reach a service on some other one. */
-const DEFAULT_PORTS: Record<string, string> = { "http:": "80", "https:": "443" };
-
 /** How many hops a redirect chain may take before it is treated as somewhere not to go. */
 export const MAX_REDIRECTS = 3;
 
@@ -39,6 +36,13 @@ export const MAX_REDIRECTS = 3;
  * a reading page, and reading it to the end would spend memory on a stranger's choice.
  */
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+/**
+ * How long one image may take, the redirect chain and its body together. An origin that
+ * answers slower than this is holding a reader's request open, and the page they are
+ * reading is better served by a missing image than by a stalled one.
+ */
+const IMAGE_TIMEOUT = "10 seconds";
 
 /**
  * The types this app re-serves, named rather than echoed: a `Content-Type` copied from a
@@ -123,28 +127,6 @@ export async function verifiedSource(signature: string, source: string): Promise
 	return new TextDecoder().decode(decoded.data);
 }
 
-/**
- * Whether this app is willing to retrieve an address: an ordinary web scheme, on that
- * scheme's own port, at a host that is not an address of ours written as a literal.
- *
- * Pinning what a name resolves to is not something a Worker can do, so this does not
- * defeat DNS rebinding on its own. What holds is architectural: this Worker reaches its
- * own storage through bindings rather than URLs, so a request that escapes here reaches
- * the public internet and nothing of this app's.
- *
- * @param url - The address about to be fetched, on the first hop or on any later one.
- */
-export function isRetrievable(url: URL): boolean {
-	if (!FETCHABLE_SCHEMES.has(url.protocol)) return false;
-	if (url.port !== "" && url.port !== DEFAULT_PORTS[url.protocol]) return false;
-
-	let ip = IP.parse(url.hostname);
-	if (isSuccess(ip)) return ip.data.isPublic;
-
-	let host = url.hostname.toLowerCase();
-	return host.length > 0 && host !== "localhost" && !host.endsWith(".localhost");
-}
-
 /** The host an event names, which is a CDN rather than the article an address would identify. */
 export function hostOf(url: string): string {
 	try {
@@ -208,48 +190,6 @@ export async function proxiedImage(url: string | null): Promise<string | null> {
 }
 
 /**
- * Reads a response body to the end, refusing one that passes {@link MAX_IMAGE_BYTES}
- * rather than holding it. A stream rather than `arrayBuffer()`, so a declared length of
- * one kilobyte followed by a gigabyte of bytes is refused at the cap rather than at the
- * end.
- *
- * @param body - The response's stream, which is cancelled when the cap is reached.
- * @returns The bytes, or `null` for a body that ran past the cap.
- */
-export async function readWithin(
-	body: ReadableStream<Uint8Array> | null,
-): Promise<Uint8Array<ArrayBuffer> | null> {
-	if (body === null) return null;
-
-	let reader = body.getReader();
-	let chunks: Uint8Array[] = [];
-	let total = 0;
-
-	while (true) {
-		let { done, value } = await reader.read();
-		if (done) break;
-		if (value === undefined) continue;
-
-		total += value.byteLength;
-		if (total > MAX_IMAGE_BYTES) {
-			await reader.cancel();
-			return null;
-		}
-
-		chunks.push(value);
-	}
-
-	let bytes = new Uint8Array(new ArrayBuffer(total));
-	let at = 0;
-	for (let chunk of chunks) {
-		bytes.set(chunk, at);
-		at += chunk.byteLength;
-	}
-
-	return bytes;
-}
-
-/**
  * The type this app will re-serve a response as, or `null` for a response that is not an
  * image it is willing to hand a reader. `image/svg+xml` is refused however it is declared:
  * an SVG is a script document a browser will run when it is named as an image.
@@ -267,37 +207,22 @@ export function servedType(response: Response): string | null {
 }
 
 /**
- * Retrieves an image, following redirects by hand so every hop is checked the way the
- * first one was, carrying no cookie, no referrer and a user agent naming this product.
+ * Retrieves an image as an anonymous visitor, from a public address on its scheme's own
+ * port, re-checking every redirect; the body carries the deadline and errors past the cap.
+ * A name that rebinds past the check still reaches nothing of this app's, held in bindings.
  *
  * @param url - The verified address the signature named.
- * @returns The final response, or `null` when a hop refused the checks or the chain ran on.
+ * @returns The final response whatever its status, or `null` when a hop was refused, the
+ * chain ran on, the deadline passed before an answer, or the origin could not be reached.
  */
 export async function retrieveImage(url: string): Promise<Response | null> {
-	let current: URL;
-	try {
-		current = new URL(url);
-	} catch {
-		return null;
-	}
+	let followed = await follow(url, {
+		headers: { accept: "image/*", "user-agent": MEDIA_USER_AGENT },
+		timeout: IMAGE_TIMEOUT,
+		ports: "default",
+		maxRedirects: MAX_REDIRECTS,
+	});
+	if (isFailure(followed)) return null;
 
-	for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-		if (!isRetrievable(current)) return null;
-
-		let response = await fetch(current, {
-			redirect: "manual",
-			headers: { accept: "image/*", "user-agent": MEDIA_USER_AGENT },
-		});
-
-		let location = response.headers.get("location");
-		if (response.status < 300 || response.status >= 400 || location === null) return response;
-
-		try {
-			current = new URL(location, current);
-		} catch {
-			return null;
-		}
-	}
-
-	return null;
+	return limitBody(followed.data.response, { maxBytes: MAX_IMAGE_BYTES });
 }
