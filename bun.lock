@@ -961,9 +961,15 @@
     "packages/random": {
       "name": "@sdxc/random",
       "version": "0.0.1",
-      "dependencies": {
+      "devDependencies": {
         "remix": "3.0.0",
       },
+      "peerDependencies": {
+        "remix": "3.0.0",
+      },
+      "optionalPeers": [
+        "remix",
+      ],
     },
     "packages/rate-limit": {
       "name": "@sdxc/rate-limit",

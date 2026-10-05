@@ -5,12 +5,21 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./schema": "./src/schema.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"remix": {
+			"optional": true
+		}
 	}
 }

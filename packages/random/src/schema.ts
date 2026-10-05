@@ -1,7 +1,7 @@
 /**
- * The parser for a `RandomState` read back from storage. A save file or a
- * fixture on disk is untrusted input, and a malformed snapshot would otherwise
- * resume a stream that silently draws different values.
+ * The parser for a `RandomState` read back from storage, on its own entry point
+ * so only a caller that parses snapshots installs `remix`. A save file is
+ * untrusted input, and a malformed snapshot would resume a different stream.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

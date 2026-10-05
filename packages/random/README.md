@@ -8,7 +8,7 @@ Seeded and system random streams with integer, float, pick and shuffle draws, an
 npm add @sdxc/random
 ```
 
-`RANDOM_STATE_SCHEMA` is a [`remix/data-schema`](https://www.npmjs.com/package/remix) schema, and `remix` installs alongside this package.
+The main entry point has no dependencies. `@sdxc/random/schema` exports `RANDOM_STATE_SCHEMA`, a [`remix/data-schema`](https://www.npmjs.com/package/remix) schema; install `remix` to use it.
 
 ## Usage
 
@@ -90,7 +90,7 @@ An unseeded stream drawing from `crypto.getRandomValues`, for jitter, sampling a
 
 A fresh 32-bit seed from `crypto.getRandomValues`. Log it, and the run replays by passing it back to `createRandom`.
 
-### `RANDOM_STATE_SCHEMA`
+### `RANDOM_STATE_SCHEMA` from `@sdxc/random/schema`
 
 A `remix/data-schema` schema for a `RandomState` read from storage. It checks the seed's type and that each of the four words is an unsigned 32-bit integer.
 
@@ -138,7 +138,8 @@ Store each stream's state next to the world it shaped, and validate it on load, 
 ```typescript
 import * as s from "remix/data-schema";
 
-import { RANDOM_STATE_SCHEMA, createRandom, restoreRandom } from "@sdxc/random";
+import { createRandom, restoreRandom } from "@sdxc/random";
+import { RANDOM_STATE_SCHEMA } from "@sdxc/random/schema";
 
 const SAVE_SCHEMA = s.object({ turn: s.number(), random: RANDOM_STATE_SCHEMA });
 
