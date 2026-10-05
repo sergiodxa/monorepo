@@ -144,6 +144,7 @@ Run from the repository root:
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
+| [outbound](packages/outbound)                                   | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies        | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    | ✅  |
 | [passkey](packages/passkey)                                     | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it                                | ✅  |
 | [password-policy](packages/password-policy)                     | Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse           | ✅  |

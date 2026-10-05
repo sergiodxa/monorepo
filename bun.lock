@@ -958,6 +958,16 @@
         "@sdxc/xml": "workspace:*",
       },
     },
+    "packages/outbound": {
+      "name": "@sdxc/outbound",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/doh": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/ip": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+    },
     "packages/pagination": {
       "name": "@sdxc/pagination",
       "version": "0.0.1",
@@ -2002,6 +2012,8 @@
     "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
 
     "@sdxc/opml": ["@sdxc/opml@workspace:packages/opml"],
+
+    "@sdxc/outbound": ["@sdxc/outbound@workspace:packages/outbound"],
 
     "@sdxc/pagination": ["@sdxc/pagination@workspace:packages/pagination"],
 

@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/outbound",
+	"version": "0.0.1",
+	"description": "Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/doh": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/ip": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	}
+}
