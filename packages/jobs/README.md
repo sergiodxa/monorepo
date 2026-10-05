@@ -543,7 +543,8 @@ Gives up on this delivery and asks for another. Throws `Retry`.
 
 **Parameters:**
 
-- `options.delay`: How long the platform holds the message, as a duration
+- `options.delay`: How long the platform holds the message, as a duration. On Cloudflare
+  Queues a delay past 12 hours holds it for 12 hours, the longest the platform allows
 - `options.cause`: What led here
 
 **Example:**

@@ -22,7 +22,7 @@ import { invalidMessage, JobQueueError } from "../queue.js";
 /** Most messages a single `sendBatch` accepts. */
 const BATCH_LIMIT = 100;
 
-/** Longest a message is held before its first delivery. */
+/** Longest the platform holds a message, before its first delivery or between retries. */
 const MAX_DELAY_SECONDS = 43_200;
 
 /** What {@link worker} needs of a dispatcher: the batch entry, and the tick. */
@@ -68,7 +68,9 @@ function deliveryOf(message: Message<unknown>): JobDelivery {
  * so a message that can never succeed would otherwise spend three deliveries to get there.
  *
  * The write is awaited before the ack, so a dead-letter queue that refuses it leaves the
- * message unacked and the batch is redelivered rather than the body being lost.
+ * message unacked and the batch is redelivered rather than the body being lost. A retry
+ * delay past what the platform holds waits the longest it allows, so a schedule with a long
+ * ceiling or a remote `Retry-After` still redelivers the message.
  *
  * @param message The delivery to settle.
  * @param settlement What the run ended as.
@@ -81,7 +83,8 @@ async function apply(
 ): Promise<void> {
 	if (settlement.type === "retry") {
 		let delay = settlement.delay;
-		message.retry(delay === undefined ? {} : { delaySeconds: toSeconds(delay) });
+		if (delay === undefined) return message.retry();
+		message.retry({ delaySeconds: Math.min(toSeconds(delay), MAX_DELAY_SECONDS) });
 		return;
 	}
 

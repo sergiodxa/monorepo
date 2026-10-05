@@ -1,8 +1,7 @@
 /**
- * Exercises the Cloudflare backend against the platform's own limits: the envelope and
- * content type it writes, the batch ceiling it chunks at, the delay it refuses rather than
- * shortens, the failure it reports when the binding will not take a write, and the
- * dead-letter queue its worker handlers write to and consume.
+ * Exercises the Cloudflare backend against the platform's own limits: the envelope, the batch
+ * ceiling, the send delay it refuses and the retry delay it clamps, the failure it reports
+ * when the binding will not take a write, and the dead-letter queue its handlers use.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -173,6 +172,28 @@ function deliver(
 }
 
 describe("worker()", () => {
+	test("holds a retry past the platform's limit for the longest it allows", async () => {
+		let retry = vi.fn();
+		let message = { id: "m1", attempts: 3, body: { job: "ping" }, timestamp: new Date(), retry };
+		let batch = { queue: "ping", messages: [message] } as unknown as MessageBatch<unknown>;
+		let { dispatcher } = target({ type: "retry", delay: "1 day" });
+
+		await worker(dispatcher).queue(batch);
+
+		expect(retry).toHaveBeenCalledWith({ delaySeconds: 43_200 });
+	});
+
+	test("carries a retry delay the platform can hold", async () => {
+		let retry = vi.fn();
+		let message = { id: "m1", attempts: 1, body: { job: "ping" }, timestamp: new Date(), retry };
+		let batch = { queue: "ping", messages: [message] } as unknown as MessageBatch<unknown>;
+		let { dispatcher } = target({ type: "retry", delay: "5 minutes" });
+
+		await worker(dispatcher).queue(batch);
+
+		expect(retry).toHaveBeenCalledWith({ delaySeconds: 300 });
+	});
+
 	test("writes a refused body to the dead-letter queue, wrapped, and acks it", async () => {
 		let binding = createQueue({ name: "ping" });
 		let dlq = createQueue({ name: "ping-dlq" });
