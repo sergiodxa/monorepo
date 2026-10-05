@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -106,7 +105,9 @@ export default createController(routes.encoreSupport, {
 				return renderForm(ctx, { state: "resubmit", values, issues: [] }, { status: 400 });
 			}
 
-			let admitted = await ctx.supportDesk.admit(getClientIP(ctx.request) ?? "unknown");
+			let admitted = await ctx.supportDesk.admit(
+				ctx.ip?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
+			);
 			if (!admitted) {
 				ctx.log.set({ support: { outcome: "rate_limited" } });
 				return renderForm(
@@ -127,7 +128,7 @@ export default createController(routes.encoreSupport, {
 			}
 
 			let assessment = await ctx.supportDesk.assess(parsed.data, {
-				ip: getClientIP(ctx.request) ?? undefined,
+				ip: ctx.ip?.toString(),
 				userAgent: ctx.request.headers.get("user-agent") ?? undefined,
 				renderedAt: trap.data.renderedAt,
 			});

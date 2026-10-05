@@ -80,7 +80,7 @@ export interface SupportDeskOptions {
 	transport: Transport | undefined;
 	/** The address requests are delivered to. */
 	inbox: string | undefined;
-	/** The per-address budget; absent in a local run without the binding, which admits all. */
+	/** The per-client budget; absent in a local run without the binding, which admits all. */
 	limiter: RateLimit | undefined;
 	/** Scores each valid request before delivery. */
 	spamFilter: SpamFilter;
@@ -112,7 +112,8 @@ export class SupportDesk {
 	 * script probing the validation spends the same budget as one sending mail. A limiter that
 	 * cannot answer admits the request, since the form is worth more than a perfect count.
 	 *
-	 * @param client The client address, or `unknown`, which then shares one budget.
+	 * @param client The client's network (an IPv4 address or an IPv6 /64), or `unknown`,
+	 *   which then shares one budget.
 	 * @returns Whether the request may proceed.
 	 */
 	async admit(client: string): Promise<boolean> {

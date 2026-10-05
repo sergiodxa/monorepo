@@ -16,6 +16,7 @@ import type { SpamFilter } from "@sdxc/spam";
 import type { ResolveFrameContext } from "remix/component/server";
 import type { Middleware, RequestContext } from "remix/router";
 
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
@@ -150,6 +151,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 	let globalMiddleware: Array<Middleware<any>> = [
 		headRequests(),
 		log(logger),
+		getClientIP(),
 		trace(),
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),

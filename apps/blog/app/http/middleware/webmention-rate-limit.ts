@@ -1,7 +1,7 @@
 /**
  * The caller budget for the Webmention endpoint, which is anonymous by definition:
- * one budget per client address and one per source host, so neither a single sender
- * nor a single site spraying mentions from many addresses can flood the verify queue.
+ * one budget per client network (an IPv4 address or an IPv6 /64) and one per source host,
+ * so neither a single sender nor a site spraying from many addresses floods the verify queue.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,6 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
@@ -56,7 +55,7 @@ export default function webmentionRateLimit(env: App.Env): Middleware[] {
 		rateLimit({
 			adapter,
 			prefix: "webmention:ip",
-			key: (ctx) => getClientIP(ctx.request) ?? UNKNOWN,
+			key: (ctx) => ctx.ip?.network({ v4: 32, v6: 64 }).toString() ?? UNKNOWN,
 		}),
 		rateLimit({ adapter, prefix: "webmention:source", key: sourceHost }),
 	];

@@ -10,7 +10,6 @@
 
 import type { Middleware } from "remix/router";
 
-import { getClientIP } from "@sdxc/get-client-ip";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
@@ -34,8 +33,8 @@ const UNKNOWN_CALLER = "unknown";
 /**
  * Creates middleware spending one caller's budget before the MCP handler runs.
  *
- * Keyed on the client address, all an anonymous endpoint has; shared egress means shared
- * buckets. A Cloudflare rate-limiter binding holds the count at no storage cost per call.
+ * Keyed on the client's network — the address for IPv4, its /64 for IPv6, since one host
+ * holds a whole /64 — all an anonymous endpoint has; shared egress means shared buckets.
  *
  * @param env Environment bindings, read for the rate limiter.
  * @returns Middleware that limits the request, or a pass-through that keeps serving when the
@@ -48,6 +47,6 @@ export default function mcpRateLimit(env: App.Env): Middleware {
 	return rateLimit({
 		adapter: new CloudflareAdapter(binding, { limit: MCP_RATE_LIMIT, window: WINDOW }),
 		prefix: PREFIX,
-		key: (ctx) => getClientIP(ctx.request) ?? UNKNOWN_CALLER,
+		key: (ctx) => ctx.ip?.network({ v4: 32, v6: 64 }).toString() ?? UNKNOWN_CALLER,
 	});
 }

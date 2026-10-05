@@ -384,6 +384,23 @@ describe("POST /apps/encore/support", () => {
 		expect(html).toContain("The timer stops when I reveal the second card.");
 	});
 
+	test("limits IPv6 clients per /64, so addresses in one network share a budget", async () => {
+		let transport = new MemoryTransport();
+		let words = Array.from(crypto.getRandomValues(new Uint16Array(2)), (word) => word.toString(16));
+		let network = `2001:db8:${words.join(":")}`;
+		for (let attempt = 0; attempt < SUPPORT_RATE_LIMIT; attempt++) {
+			await submit(await submission(), { transport, address: `${network}::${attempt + 1}` });
+		}
+
+		let response = await submit(await submission(), {
+			transport,
+			address: `${network}:ffff:ffff:ffff:ffff`,
+		});
+
+		expect(response.status).toBe(429);
+		expect(transport.messages).toHaveLength(SUPPORT_RATE_LIMIT);
+	});
+
 	test("refuses a cross-site post", async () => {
 		let transport = new MemoryTransport();
 		let response = await submit(await submission(), {

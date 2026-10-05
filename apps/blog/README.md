@@ -22,7 +22,7 @@ Production URL: https://sergiodxa.com
 | R2          | `BACKUPS`                                             | Database backup storage                     |
 | Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)   |
 | Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                  |
-| Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support form budget per address      |
+| Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64  |
 | Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
 | Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
