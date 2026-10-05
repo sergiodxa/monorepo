@@ -186,6 +186,22 @@ describe("captcha middleware", () => {
 		expect(provider.calls).toEqual([{ token: "token", remoteIp: "203.0.113.7" }]);
 	});
 
+	test("passes no address on when the header is not one", async () => {
+		let provider = new MemoryCaptcha();
+
+		await guarded(provider).fetch(post({ "captcha-response": "token" }, "unknown"));
+
+		expect(provider.last).toEqual({ token: "token" });
+	});
+
+	test("passes an IPv6 address on in canonical text", async () => {
+		let provider = new MemoryCaptcha();
+
+		await guarded(provider).fetch(post({ "captcha-response": "token" }, "2001:DB8:0::1"));
+
+		expect(provider.last).toEqual({ token: "token", remoteIp: "2001:db8::1" });
+	});
+
 	test("reads the address through a custom resolver", async () => {
 		let provider = new MemoryCaptcha();
 		let router = guarded(provider, { remoteIp: (request) => request.headers.get("X-Real-IP") });

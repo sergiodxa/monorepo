@@ -9,6 +9,7 @@
 import type { Result } from "@sdxc/result";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { getClientIP } from "@sdxc/get-client-ip";
 import { failure, isFailure } from "@sdxc/result";
 import { createContextKey } from "remix/router";
 
@@ -62,7 +63,7 @@ export interface CaptchaMiddlewareOptions {
 	/**
 	 * Resolves the visitor's address, passed to the provider as `remoteIp`.
 	 *
-	 * @default reads the `CF-Connecting-IP` header
+	 * @default the `CF-Connecting-IP` header, in canonical text, or none when it is not an address
 	 */
 	remoteIp?: (request: Request) => string | null | undefined;
 	/**
@@ -158,13 +159,14 @@ function checkExpectations(
 }
 
 /**
- * The address Cloudflare reports for the connecting visitor.
+ * The address Cloudflare reports for the connecting visitor, so a provider receives
+ * a parsed address or none at all.
  *
  * @param request - The incoming request
- * @returns The `CF-Connecting-IP` header, or `null`
+ * @returns The canonical address text, or `null` when the header is absent or malformed
  */
 function connectingIp(request: Request): string | null {
-	return request.headers.get("CF-Connecting-IP");
+	return getClientIP(request)?.toString() ?? null;
 }
 
 /**

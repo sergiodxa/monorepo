@@ -103,7 +103,7 @@ the body readable for the handler. A missing field or a non-form body is `missin
 - `action` / `hostname` — expected values; a verification reporting another one, or none, fails
   with `action-mismatch` / `hostname-mismatch`.
 - `remoteIp(request)` — resolves the visitor's address; defaults to the `CF-Connecting-IP`
-  header.
+  header in canonical text, passing none on when the header is not an address.
 - `onFailure(error, ctx)` — return a `Response` to refuse, or `null` to continue with the failure
   published. Defaults to a plain-text 403.
 
