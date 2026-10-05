@@ -7,17 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { ContextValue } from "@sdxc/expression";
 import type { EvaluationContext } from "@sdxc/flags";
 import type { Result } from "@sdxc/result";
 
+import { read } from "@sdxc/expression";
 import { failure, success } from "@sdxc/result";
 
 import type { Split } from "../definition.js";
 
-import type { ContextValue } from "./path.js";
-
 import { murmurHash3 } from "./hash.js";
-import { read } from "./path.js";
 
 /** Where a split reads its subject from when it names no field of its own. */
 const SUBJECT_FIELD = "targetingKey";

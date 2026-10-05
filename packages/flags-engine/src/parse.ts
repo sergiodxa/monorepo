@@ -11,7 +11,7 @@ import type { FlagValue } from "@sdxc/flags";
 import type { Result } from "@sdxc/result";
 import type { Schema } from "remix/data-schema";
 
-import { failure, isFailure, isSuccess, success, wrap } from "@sdxc/result";
+import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
 import type { Condition, Split } from "./definition.js";
@@ -24,6 +24,7 @@ import type {
 } from "./snapshot.js";
 import type { StoredFlagSet } from "./store/index.js";
 
+import { flagConditions } from "./conditions.js";
 import { CONDITION_SCHEMA, FLAG_DEFINITION_SCHEMA } from "./schema.js";
 
 /** Names the position an issue was raised at, whichever form the segment takes. */
@@ -58,96 +59,27 @@ function entriesOf(value: unknown): [string, unknown][] {
  * absent from the result, which reaches the flags referencing it as an unknown
  * name and leaves the rest of the set untouched.
  */
-function readSegments(segments: Record<string, unknown> | undefined): Map<string, Condition> {
-	let declared = new Map<string, Condition>();
+function readSegments(segments: Record<string, unknown> | undefined): Record<string, Condition> {
+	let declared: Record<string, Condition> = {};
 	for (let [name, value] of entriesOf(segments)) {
 		let parsed = parseInto(CONDITION_SCHEMA, value);
-		if (isSuccess(parsed)) declared.set(name, parsed.data);
+		if (isSuccess(parsed)) declared[name] = parsed.data;
 	}
 	return declared;
 }
 
 /**
- * Resolves one segment to the condition it stands for, memoizing it so twenty
- * flags naming it share one compiled tree. `visiting` holds the chain currently
- * being walked, which is what turns a cycle into a failure here rather than an
- * infinite walk on the first request that reaches it.
+ * Compiles every segment that resolves, by name. Compiling against the same
+ * `declared` object shares the resolutions with every flag compiled after, so
+ * twenty flags naming one segment share one compiled tree.
  */
-function resolveSegment(
-	name: string,
-	declared: ReadonlyMap<string, Condition>,
-	resolved: Map<string, CompiledCondition>,
-	visiting: Set<string>,
-): Result<CompiledCondition, Error> {
-	let already = resolved.get(name);
-	if (already !== undefined) return success(already);
-	if (visiting.has(name)) {
-		return failure(new Error(`Segment "${name}" takes part in a reference cycle`));
+function resolveSegments(declared: Record<string, Condition>): Map<string, CompiledCondition> {
+	let resolved = new Map<string, CompiledCondition>();
+	for (let name of Object.keys(declared)) {
+		let compiled = flagConditions.compile({ op: "segment", name }, { references: declared });
+		if (isSuccess(compiled) && compiled.data.op === "segment") resolved.set(name, compiled.data.of);
 	}
-
-	let condition = declared.get(name);
-	if (condition === undefined) return failure(new Error(`Unknown segment "${name}"`));
-
-	visiting.add(name);
-	let compiled = compileCondition(condition, declared, resolved, visiting);
-	visiting.delete(name);
-
-	if (isFailure(compiled)) return compiled;
-	resolved.set(name, compiled.data);
-	return compiled;
-}
-
-/**
- * Compiles the work evaluation would otherwise repeat: a pattern becomes an
- * expression the `v` flag accepts, and a segment carries the condition it
- * names. Every other operator is already in its evaluable form.
- */
-function compileCondition(
-	condition: Condition,
-	declared: ReadonlyMap<string, Condition>,
-	resolved: Map<string, CompiledCondition>,
-	visiting: Set<string>,
-): Result<CompiledCondition, Error> {
-	switch (condition.op) {
-		case "all":
-		case "any": {
-			let of: CompiledCondition[] = [];
-			for (let member of condition.of) {
-				let compiled = compileCondition(member, declared, resolved, visiting);
-				if (isFailure(compiled)) return compiled;
-				of.push(compiled.data);
-			}
-			if (condition.op === "all") return success({ op: "all", of });
-			return success({ op: "any", of });
-		}
-
-		case "not": {
-			let compiled = compileCondition(condition.of, declared, resolved, visiting);
-			if (isFailure(compiled)) return compiled;
-			return success({ op: "not", of: compiled.data });
-		}
-
-		case "matches": {
-			let pattern = wrap(() => new RegExp(condition.pattern, "v"));
-			if (isFailure(pattern)) {
-				return failure(
-					new Error(`Pattern ${JSON.stringify(condition.pattern)} does not compile`, {
-						cause: pattern.error,
-					}),
-				);
-			}
-			return success({ op: "matches", field: condition.field, pattern: pattern.data });
-		}
-
-		case "segment": {
-			let segment = resolveSegment(condition.name, declared, resolved, visiting);
-			if (isFailure(segment)) return segment;
-			return success({ op: "segment", name: condition.name, of: segment.data });
-		}
-
-		default:
-			return success(condition);
-	}
+	return resolved;
 }
 
 /**
@@ -180,8 +112,7 @@ function checkServe(
 function compileFlag(
 	key: string,
 	value: unknown,
-	declared: ReadonlyMap<string, Condition>,
-	resolved: Map<string, CompiledCondition>,
+	declared: Record<string, Condition>,
 ): Result<CompiledFlag, Error> {
 	let parsed = parseInto(FLAG_DEFINITION_SCHEMA, value);
 	if (isFailure(parsed)) return parsed;
@@ -196,7 +127,7 @@ function compileFlag(
 
 	let targeting: CompiledRule[] = [];
 	for (let rule of definition.targeting ?? []) {
-		let when = compileCondition(rule.when, declared, resolved, new Set());
+		let when = flagConditions.compile(rule.when, { references: declared });
 		if (isFailure(when)) return when;
 
 		let serve = checkServe(rule.serve, variants);
@@ -229,14 +160,13 @@ function compileFlag(
  */
 export function parseFlagSet(stored: StoredFlagSet): FlagSnapshot {
 	let declared = readSegments(stored.segments);
-	let resolved = new Map<string, CompiledCondition>();
-	for (let name of declared.keys()) resolveSegment(name, declared, resolved, new Set());
+	let resolved = resolveSegments(declared);
 
 	let flags = new Map<string, CompiledFlag>();
 	let failures = new Map<string, FlagParseFailure>();
 
 	for (let [key, value] of entriesOf(stored.flags)) {
-		let compiled = compileFlag(key, value, declared, resolved);
+		let compiled = compileFlag(key, value, declared);
 		if (isFailure(compiled)) failures.set(key, { key, message: compiled.error.message });
 		else flags.set(key, compiled.data);
 	}

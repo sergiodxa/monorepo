@@ -8,7 +8,8 @@
  */
 
 import type { FlagMetadata, FlagValue } from "@sdxc/flags";
-import type { JSONPrimitive } from "@sdxc/types";
+
+import type { flagConditions } from "./conditions.js";
 
 /**
  * How `semver` compares a version field against its value. `~` holds for a
@@ -27,22 +28,9 @@ export type FlagState = "enabled" | "disabled";
 /**
  * One test against the evaluation context. `field` is a dotted path, so
  * `plan.tier` reads a nested structure; a path that resolves to nothing makes
- * every operator except `exists` false, and each operator compares within one
- * type rather than coercing across them.
+ * every operator except `exists` false, and no operator coerces across types.
  */
-export type Condition =
-	| { op: "all"; of: Condition[] }
-	| { op: "any"; of: Condition[] }
-	| { op: "not"; of: Condition }
-	| { op: "eq" | "ne"; field: string; value: JSONPrimitive }
-	| { op: "in" | "notIn"; field: string; values: JSONPrimitive[] }
-	| { op: "lt" | "lte" | "gt" | "gte"; field: string; value: number }
-	| { op: "startsWith" | "endsWith" | "contains"; field: string; value: string }
-	| { op: "matches"; field: string; pattern: string }
-	| { op: "semver"; field: string; compare: SemVerComparison; value: string }
-	| { op: "exists"; field: string }
-	| { op: "segment"; name: string }
-	| { op: "always" };
+export type Condition = typeof flagConditions.Expression;
 
 /** How a rule spreads one condition's subjects across several variants. */
 export interface Split {

@@ -8,28 +8,16 @@
  */
 
 import type { FlagMetadata, FlagValue } from "@sdxc/flags";
-import type { JSONPrimitive } from "@sdxc/types";
 
-import type { FlagState, SemVerComparison, Split } from "./definition.js";
+import type { flagConditions } from "./conditions.js";
+import type { FlagState, Split } from "./definition.js";
 
 /**
  * A condition with the two parts evaluation cannot do cheaply already done: a
  * `matches` pattern is a compiled expression, and a `segment` carries the
  * condition it names, so no operator reaches back to the snapshot to resolve.
  */
-export type CompiledCondition =
-	| { op: "all"; of: CompiledCondition[] }
-	| { op: "any"; of: CompiledCondition[] }
-	| { op: "not"; of: CompiledCondition }
-	| { op: "eq" | "ne"; field: string; value: JSONPrimitive }
-	| { op: "in" | "notIn"; field: string; values: JSONPrimitive[] }
-	| { op: "lt" | "lte" | "gt" | "gte"; field: string; value: number }
-	| { op: "startsWith" | "endsWith" | "contains"; field: string; value: string }
-	| { op: "matches"; field: string; pattern: RegExp }
-	| { op: "semver"; field: string; compare: SemVerComparison; value: string }
-	| { op: "exists"; field: string }
-	| { op: "segment"; name: string; of: CompiledCondition }
-	| { op: "always" };
+export type CompiledCondition = typeof flagConditions.Compiled;
 
 /** One targeting row, whose `serve` is known to name variants the flag declares. */
 export interface CompiledRule {

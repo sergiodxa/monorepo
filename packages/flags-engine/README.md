@@ -177,8 +177,8 @@ interface TargetingRule {
 
 `serve` is a variant name or the weights the rule buckets its subjects among.
 
-Targeting is a typed union rather than an expression language, so an editor completes the
-operator and a definition narrows on `op`:
+A condition is written in the [`@sdxc/expression`](https://www.npmjs.com/package/@sdxc/expression)
+language as a typed union, so an editor completes the operator and a definition narrows on `op`:
 
 | Condition                                              | Holds when                                             |
 | ------------------------------------------------------ | ------------------------------------------------------ |
@@ -346,6 +346,13 @@ trigger — because a Worker has a timer only while a request is in flight.
 `segments`, the `version` the store called this revision, and the `createdAt` it was stamped at.
 `CompiledFlag`, `CompiledRule`, `CompiledCondition` and `CompiledSegments` are the forms inside
 it, and `FlagParseFailure` is a `{ key, message }` pair.
+
+### `flagConditions`
+
+The targeting dialect itself: every built-in condition, the `semver` operator and references
+spelled `segment`. `flagConditions.compile(condition, { references: segments })` validates and
+compiles one condition the way `parseFlagSet` does, and `flagConditions.evaluate(compiled,
+context)` answers whether it holds, which is what an editor uses to check a rule before saving it.
 
 ### Schemas
 

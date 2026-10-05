@@ -634,6 +634,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/duration": "workspace:*",
+        "@sdxc/expression": "workspace:*",
         "@sdxc/flags": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/semver": "workspace:*",

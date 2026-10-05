@@ -27,6 +27,7 @@ export type {
 	FlagSnapshot,
 } from "./snapshot.js";
 
+export { flagConditions } from "./conditions.js";
 export { createEngine } from "./engine.js";
 export { evaluate, evaluateAll } from "./evaluate.js";
 export { parseFlagSet } from "./parse.js";

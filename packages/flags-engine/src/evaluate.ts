@@ -22,7 +22,7 @@ import { isFailure } from "@sdxc/result";
 import type { Split } from "./definition.js";
 import type { CompiledFlag, FlagSnapshot } from "./snapshot.js";
 
-import { matchesCondition } from "./lib/condition.js";
+import { flagConditions } from "./conditions.js";
 import { selectVariant } from "./lib/split.js";
 
 /**
@@ -130,7 +130,7 @@ function served(flag: CompiledFlag, context: EvaluationContext): Selection {
 	if (flag.targeting.length === 0) return fallback(flag, "STATIC");
 
 	for (let rule of flag.targeting) {
-		if (matchesCondition(rule.when, context)) return matched(flag, rule.serve, context);
+		if (flagConditions.evaluate(rule.when, context)) return matched(flag, rule.serve, context);
 	}
 
 	return fallback(flag, "DEFAULT");
