@@ -102,6 +102,32 @@ describe("GET /api/:name", () => {
 	test("answers 404 for a directory that publishes nothing", async () => {
 		expect((await fetchApp("/api/blog-engine")).status).toBe(404);
 	});
+
+	test("indexes @sdxc/ui's subpaths beside its components", async () => {
+		let body = await (await fetchApp("/api/ui")).text();
+
+		expect(body).toContain('href="/api/ui/badge"');
+		expect(body).toContain('href="/api/ui/mixins/hotkey"');
+		expect(body).toContain('href="/api/ui/behaviors/toaster"');
+		expect(body).toContain('href="/api/ui/animations/fade"');
+		expect(body).toContain('href="/api/ui/styles/panel-chrome"');
+	});
+});
+
+describe("GET /api/ui/:subpath/:slug", () => {
+	test("renders an export with its signature and what it is used with", async () => {
+		let response = await fetchApp("/api/ui/mixins/copy-to-clipboard");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("@sdxc/ui/mixins");
+		expect(body).toContain('id="export-copyevent"');
+	});
+
+	test("answers 404 for a subpath or a slug the package does not publish", async () => {
+		expect((await fetchApp("/api/ui/widgets/hotkey")).status).toBe(404);
+		expect((await fetchApp("/api/ui/mixins/not-a-mixin")).status).toBe(404);
+	});
 });
 
 describe("sidebars", () => {
@@ -131,12 +157,14 @@ describe("sidebars", () => {
 	test("draws @sdxc/u's own tree beside a utility, and @sdxc/ui's beside a component", async () => {
 		let utility = sidebarHrefs(await (await fetchApp("/api/u/p")).text());
 		let component = sidebarHrefs(await (await fetchApp("/api/ui/theming")).text());
+		let mixin = sidebarHrefs(await (await fetchApp("/api/ui/mixins/hotkey")).text());
 
 		expect(utility.length).toBeGreaterThan(0);
 		for (let href of utility) expect(href).toMatch(/^\/api\/u(\/|$)/);
 
 		expect(component.length).toBeGreaterThan(0);
 		for (let href of component) expect(href).toMatch(/^\/api\/ui(\/|$)/);
+		expect(mixin).toEqual(component);
 	});
 });
 

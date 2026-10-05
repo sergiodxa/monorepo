@@ -43,6 +43,7 @@ import searchIndex from "~/app/http/controllers/search-index";
 import security from "~/app/http/controllers/security";
 import showcase from "~/app/http/controllers/showcase";
 import sitemap from "~/app/http/controllers/sitemap";
+import uiExportShow from "~/app/http/controllers/ui-export-show";
 import utilityShow from "~/app/http/controllers/utility-show";
 import { sponsors } from "~/app/http/middleware/sponsors";
 import routes from "~/routes/web";
@@ -83,6 +84,7 @@ export default function application() {
 	router.map(routes.api.index, packagesIndex);
 	router.map(routes.api.utility, utilityShow);
 	router.map(routes.api.component, componentShow);
+	router.map(routes.api.uiExport, uiExportShow);
 	router.map(routes.api.show, packagesShow);
 	router.map(routes.moved.packages, movedPackages);
 	router.map(routes.moved.package, movedPackage);

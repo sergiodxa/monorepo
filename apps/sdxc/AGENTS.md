@@ -43,6 +43,10 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   package but `u` and `ui`, and `/api/u` and `/api/ui` each hold their own catalogue. The
   builders are in `app/services/navigation.ts`; a page picks the one for the path it
   answers, and the pager steps only through that tree.
+- **A new `@sdxc/ui` mixin, behavior, animation or style needs no code.** The extractor
+  reads every module its subpath's barrel forwards, gives each export of that subpath's
+  kind a page, and files the events, constants and types beside it on that page. A
+  documented subpath is one entry in `app/services/ui-subpaths.ts`.
 - **A guide documents the packages and how they meet Remix, not Remix itself.** Show a
   Remix API only where a package step builds on it — the schema `@sdxc/validate` checks, the
   route a handler is mapped to — and leave a Remix feature a package does not touch (the
@@ -88,6 +92,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 | Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/middleware/sponsors.ts` |
 | The cache policy a documentation page carries         | `app/http/caching.ts`                                         |
 | The named option groups and their cookie              | `app/services/option-groups.ts`, `app/http/cookies.ts`        |
+| The `@sdxc/ui` subpath pages and how a module is read | `app/services/ui-exports.ts`, `scripts/ui-exports.ts`         |
 | The components per tag                                | `resources/components/`                                       |
 | The palette the theme reads                           | `resources/css/colors.css`                                    |
 | The site's one origin, and its head metadata          | `app/services/site.ts`                                        |

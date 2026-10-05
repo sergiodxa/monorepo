@@ -13,6 +13,8 @@ import type { NavEntry, NavGroup, NavTree } from "~/app/services/navigation-tree
 import { listComponents } from "~/app/services/components";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups } from "~/app/services/packages";
+import { listUiExports } from "~/app/services/ui-exports";
+import { UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import { listUtilityFamilies } from "~/app/services/utilities";
 import routes from "~/routes/web";
 
@@ -94,7 +96,10 @@ export async function buildUtilitiesNav(): Promise<NavTree> {
 	};
 }
 
-/** The `@sdxc/ui` catalogue, with the theme contract ahead of the components that read it. */
+/**
+ * The `@sdxc/ui` catalogue: the theme contract ahead of the components that read it,
+ * then each subpath the components are built from, under the name it is imported by.
+ */
 export async function buildComponentsNav(): Promise<NavTree> {
 	return {
 		label: "@sdxc/ui",
@@ -109,6 +114,7 @@ export async function buildComponentsNav(): Promise<NavTree> {
 				groups: [],
 			},
 			{ title: "Components", entries: await listComponentEntries(), groups: [] },
+			...(await listUiExportGroups()).map((group) => ({ ...group, groups: [] })),
 		],
 	};
 }
@@ -147,6 +153,19 @@ export async function listComponentEntries(): Promise<NavEntry[]> {
 		title: entry.name,
 		href: routes.api.component.href({ component: entry.slug }),
 	}));
+}
+
+/** Each `@sdxc/ui` subpath beside the components as one group, in the order they are taught. */
+export async function listUiExportGroups(): Promise<NavGroup[]> {
+	return await Promise.all(
+		UI_SUBPATHS.map(async (subpath) => ({
+			title: UI_SUBPATH_TITLES[subpath],
+			entries: (await listUiExports(subpath)).map((entry) => ({
+				title: entry.name,
+				href: routes.api.uiExport.href({ subpath, slug: entry.slug }),
+			})),
+		})),
+	);
 }
 
 export type { NavEntry, NavGroup, NavSection, NavTree } from "~/app/services/navigation-tree";

@@ -70,6 +70,23 @@ describe("buildComponentsNav", () => {
 		expect(flat.length).toBeGreaterThan(2);
 		for (let entry of flat.slice(1)) expect(entry.href).toMatch(/^\/api\/ui\//);
 	});
+
+	test("follows the components with each subpath they are built from", async () => {
+		let tree = await buildComponentsNav();
+
+		expect(tree.sections.map((section) => section.title)).toEqual([
+			"@sdxc/ui",
+			"Components",
+			"Mixins",
+			"Behaviors",
+			"Animations",
+			"Styles",
+		]);
+		expect(tree.sections.at(2)?.entries).toContainEqual({
+			title: "hotkey",
+			href: "/api/ui/mixins/hotkey",
+		});
+	});
 });
 
 describe("buildPackageNav", () => {

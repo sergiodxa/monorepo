@@ -40,6 +40,8 @@ export default route({
 		 */
 		utility: get("/api/u/:utility"),
 		component: get("/api/ui/:component"),
+		/** A mixin, behavior class, animation or style recipe, under the subpath it imports from. */
+		uiExport: get("/api/ui/:subpath/:slug"),
 		show: get("/api/:name"),
 	},
 

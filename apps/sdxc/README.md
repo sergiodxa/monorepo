@@ -72,6 +72,7 @@ Observability is enabled, with traces head-sampled at 10%.
 | `/api/:name`                    | One package's README, framed by its manifest's facts   |
 | `/api/u`, `/api/u/:utility`     | The `@sdxc/u` catalogue and one utility's reference    |
 | `/api/ui`, `/api/ui/:component` | The `@sdxc/ui` catalogue and one component's reference |
+| `/api/ui/:subpath/:slug`        | One mixin, behavior, animation or style recipe         |
 | `/docs/packages/*`              | Permanent redirects to the same path under `/api`      |
 
 Each part draws its own sidebar: the guides under `/docs`, every package but the two

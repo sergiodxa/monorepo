@@ -33,6 +33,7 @@ import {
 	buildPackageNav,
 	CATALOGUE_PACKAGES,
 	listComponentEntries,
+	listUiExportGroups,
 	listUtilityGroups,
 } from "~/app/services/navigation";
 import {
@@ -161,13 +162,20 @@ export default createAction(routes.api.show, async (ctx) => {
 
 /**
  * The index a catalogue package's page draws in place of its README: the utilities under
- * their families, or the theme contract ahead of the components that read it.
+ * their families, or the theme contract ahead of the components that read it and the
+ * subpaths the components are built from.
  */
 async function readCatalogue(name: string) {
 	if (name === "u") return await listUtilityGroups();
 	return [
-		{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
-		...(await listComponentEntries()),
+		{
+			title: "Components",
+			entries: [
+				{ title: "Theming", href: routes.api.component.href({ component: "theming" }) },
+				...(await listComponentEntries()),
+			],
+		},
+		...(await listUiExportGroups()),
 	];
 }
 

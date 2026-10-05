@@ -18,8 +18,10 @@ import type {
 	ComponentReference,
 } from "~/app/services/components";
 import type { ThemeReference } from "~/app/services/theming";
+import type { UiExportDocument, UiExportReference } from "~/app/services/ui-exports";
 import type { UtilityDocument, UtilityFamily, UtilityReference } from "~/app/services/utilities";
 
+import { UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import {
 	collectTheme,
 	collectUsage,
@@ -28,6 +30,7 @@ import {
 	readComponent,
 	readUtility,
 } from "~/scripts/catalogue";
+import { readUiModule } from "~/scripts/ui-exports";
 
 /** The app's own root, which every path below is resolved against. */
 const APP = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -57,6 +60,7 @@ function main(): void {
 	let utilities = buildUtilities();
 	let components = buildComponents();
 	let theme = buildTheme();
+	let exports = buildUiExports();
 
 	let utilityCount = Object.keys(utilities.references).length;
 	let componentCount = Object.keys(components.references).length;
@@ -64,6 +68,7 @@ function main(): void {
 	write("utilities.json", utilities);
 	write("components.json", components);
 	write("theme.json", theme);
+	write("ui-exports.json", exports);
 	write("counts.json", {
 		utilities: utilityCount,
 		components: componentCount,
@@ -72,6 +77,9 @@ function main(): void {
 
 	console.log(`@sdxc/u: ${utilityCount} utilities across ${utilities.families.length} families`);
 	console.log(`@sdxc/ui: ${componentCount} components, ${theme.light.length} theme variables`);
+	console.log(
+		`@sdxc/ui: ${UI_SUBPATHS.map((subpath) => `${exports.entries[subpath].length} ${subpath}`).join(", ")}`,
+	);
 }
 
 /** Every utility, under the family whose barrel publishes it. */
@@ -122,6 +130,46 @@ function buildComponents(): ComponentDocument {
 	}
 
 	return { entries: entries.sort((a, b) => a.name.localeCompare(b.name)), references };
+}
+
+/**
+ * Every page of the subpaths beside the components, each read from the modules its
+ * barrel forwards. Two exports of one subpath that would share a URL fail the run,
+ * since one of them would otherwise never be reachable.
+ */
+function buildUiExports(): UiExportDocument {
+	let shared = SHARED_TYPE_MODULES.flatMap((name) => {
+		let source = read(join(PACKAGES, "ui", "src", "utils", name));
+		return source === null ? [] : [source];
+	});
+
+	let document: UiExportDocument = {
+		entries: { mixins: [], behaviors: [], animations: [], styles: [] },
+		references: {},
+	};
+
+	for (let subpath of UI_SUBPATHS) {
+		let root = join(PACKAGES, "ui", "src", subpath);
+		let barrel = read(join(root, "index.ts")) ?? "";
+		let pages: UiExportReference[] = [];
+
+		for (let match of barrel.matchAll(/^export \* from "\.\/([^"]+)\.js";$/gm)) {
+			let file = `${match[1]}.ts`;
+			let source = read(join(root, file));
+			let modulePages = source === null ? null : readUiModule(source, subpath, shared);
+			if (modulePages === null) throw new Error(`@sdxc/ui: could not read ${subpath}/${file}`);
+			pages.push(...modulePages);
+		}
+
+		for (let page of pages.sort((a, b) => a.name.localeCompare(b.name))) {
+			let key = `${subpath}/${page.slug}`;
+			if (document.references[key]) throw new Error(`@sdxc/ui: two exports answer ${key}`);
+			document.references[key] = page;
+			document.entries[subpath].push({ name: page.name, subpath, slug: page.slug });
+		}
+	}
+
+	return document;
 }
 
 /** The theme contract, and which components read each of its variables. */

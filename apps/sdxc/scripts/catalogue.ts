@@ -456,7 +456,7 @@ function readProps(
  * is looked up among the shared modules, which is where the roles every component
  * colors itself with are declared.
  */
-function unionMembers(type: string | null, shared: string[]): string[] {
+export function unionMembers(type: string | null, shared: string[]): string[] {
 	if (!type) return [];
 
 	if (/^[A-Za-z][A-Za-z0-9]*$/.test(type)) {
