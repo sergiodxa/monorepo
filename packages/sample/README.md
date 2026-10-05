@@ -32,17 +32,20 @@ sample.helpers.multiple(() => sample.person.record(), { count: 50 });
 
 ### Fresh Values Each Run
 
-Draw a seed at start-up, log it, and accept it back to replay a failed run down
-to the last field:
+Draw a seed at start-up, put it where a failure shows it, and accept it back to
+replay a failed run down to the last field:
 
 ```typescript
 import { systemSeed } from "@sdxc/random";
 import { createSample } from "@sdxc/sample";
+import { describe } from "vitest";
 
-let seed = Number(process.env.SAMPLE_SEED) || systemSeed();
-console.log(`sample seed ${seed}`);
+const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
 
-let sample = createSample({ seed });
+describe(`checkout (SAMPLE_SEED=${SEED})`, () => {
+	let sample = createSample({ seed: SEED });
+	// …tests drawing from sample
+});
 ```
 
 ### A Fixed Reference Instant
@@ -258,21 +261,28 @@ street and company words, prose, colors, file extensions, and the rest. Spread
 
 ## Pattern: Reproducing A Failed Run
 
-Open the generator on a seed the run can print, and accept the same seed back:
+Open the generator on a seed the run reports, and accept the same seed back. In
+a test, the suite's name is where a failure reports it:
 
 ```typescript
 import { systemSeed } from "@sdxc/random";
 import { createSample } from "@sdxc/sample";
+import { describe, expect, test } from "vitest";
 
-let sample = createSample({ seed: Number(process.env.SAMPLE_SEED) || systemSeed() });
+const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
 
-process.on("exit", (code) => {
-	if (code !== 0) console.log(`replay with SAMPLE_SEED=${sample.seed}`);
+describe(`slugs (SAMPLE_SEED=${SEED})`, () => {
+	test("every generated title slugs to URL-safe text", () => {
+		let sample = createSample({ seed: SEED });
+		let titles = sample.helpers.multiple(() => sample.lorem.sentence(), { count: 100 });
+
+		for (let title of titles) expect(slugify(title)).toMatch(/^[a-z0-9-]*$/);
+	});
 });
 ```
 
-The failing run replays under the printed seed, identical down to the last
-field.
+`slugify` is the function under test. The failing run replays under the reported
+seed, identical down to the last field.
 
 ## Pattern: A Fixture That Keeps Growing
 
