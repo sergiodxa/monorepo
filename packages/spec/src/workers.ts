@@ -11,7 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-export type { Random, Seed } from "@sdxc/sample";
+export type { Random, Seed, SeededRandom } from "@sdxc/random";
 
 export type { ArtifactStore } from "./artifacts.js";
 export type * from "./ast.js";

@@ -9,7 +9,7 @@
 
 import { readFileSync } from "node:fs";
 
-import type { Seed } from "@sdxc/sample";
+import type { Seed } from "@sdxc/random";
 
 import type { Base } from "./bases.js";
 import type { Sink, SuiteResult, TestResult } from "./diagnostics.js";

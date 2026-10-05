@@ -16,8 +16,8 @@ import { join } from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import { createRandom } from "@sdxc/random";
 import { failure, isFailure, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
 import type { Base } from "../bases.js";

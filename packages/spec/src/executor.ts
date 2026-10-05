@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { SeededRandom } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
-import type { Random } from "@sdxc/sample";
 
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -63,7 +63,7 @@ export interface ExecutionContext {
 	/** The caller's grant set, handed to every tool call for scoped checks. */
 	permissions: PermissionSet;
 	/** The test's seeded stream, handed to every tool call that generates data. */
-	random: Random;
+	random: SeededRandom;
 	/** The instant the test started, frozen for the whole test. */
 	now: Date;
 	/** Namespaces imported by the test's file, in `use` order. */

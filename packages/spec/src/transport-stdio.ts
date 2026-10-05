@@ -19,8 +19,8 @@ import path from "node:path";
 
 import type { Result } from "@sdxc/result";
 
+import { createRandom } from "@sdxc/random";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 
 import type { Base, Connection } from "./bases.js";
 import type { DiagnosticCode } from "./errors.js";

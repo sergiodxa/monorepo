@@ -16,11 +16,11 @@
 
 import { relative, sep } from "node:path";
 
+import type { Seed, SeededRandom } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
-import type { Random, Seed } from "@sdxc/sample";
 
+import { createRandom, systemRandom } from "@sdxc/random";
 import { failure, isFailure, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 
 import type { ArtifactStore } from "./artifacts.js";
 import type { DefinitionNode, HookNode, SpecFileNode, TestNode } from "./ast.js";
@@ -122,7 +122,8 @@ const TEARDOWN_TITLE = "teardown";
  */
 export function createRunId(): string {
 	let stamp = Date.now().toString(36);
-	let noise = Math.floor(Math.random() * 36 ** 4)
+	let noise = systemRandom()
+		.int(0, 36 ** 4 - 1)
 		.toString(36)
 		.padStart(4, "0");
 	return `${stamp}${noise}`;
@@ -138,7 +139,7 @@ export function createRunId(): string {
  * one, so a suite generates the same data wherever it is checked out and
  * however the runner was pointed at it.
  */
-function streamFor(seed: Seed, file: string, title: string, root?: string): Random {
+function streamFor(seed: Seed, file: string, title: string, root?: string): SeededRandom {
 	let within = root === undefined ? file : relative(root, file);
 	return createRandom(`${seed} ${within.split(sep).join("/")}#${title}`);
 }

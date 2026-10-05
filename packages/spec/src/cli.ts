@@ -11,11 +11,11 @@
 
 import { readFile } from "node:fs/promises";
 
+import type { Seed } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
-import type { Seed } from "@sdxc/sample";
 
+import { systemSeed } from "@sdxc/random";
 import { failure, isFailure, success } from "@sdxc/result";
-import { systemSeed } from "@sdxc/sample";
 
 import type { Sink } from "./diagnostics.js";
 import type { PermissionKind } from "./permissions.js";

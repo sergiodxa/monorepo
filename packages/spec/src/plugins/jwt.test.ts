@@ -14,8 +14,8 @@ import { createServer } from "node:http";
 
 import type { Result } from "@sdxc/result";
 
+import { createRandom } from "@sdxc/random";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors.js";

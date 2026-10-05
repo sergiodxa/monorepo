@@ -13,8 +13,8 @@ import os from "node:os";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 
+import { createRandom } from "@sdxc/random";
 import { isFailure, isSuccess, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type { Grants } from "./permissions.js";

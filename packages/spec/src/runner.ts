@@ -10,8 +10,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Seed } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
-import type { Seed } from "@sdxc/sample";
 
 import { isFailure } from "@sdxc/result";
 

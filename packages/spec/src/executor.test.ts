@@ -10,8 +10,8 @@
 
 import type { Result } from "@sdxc/result";
 
+import { createRandom } from "@sdxc/random";
 import { failure, isFailure, isSuccess, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import type {

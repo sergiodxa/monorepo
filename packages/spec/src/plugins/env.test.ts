@@ -10,8 +10,8 @@
 
 import type { Result } from "@sdxc/result";
 
+import { createRandom } from "@sdxc/random";
 import { isFailure, success } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 import { afterEach, describe, expect, test } from "vitest";
 
 import type { SpecError } from "../errors.js";

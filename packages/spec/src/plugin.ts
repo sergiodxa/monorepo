@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { SeededRandom } from "@sdxc/random";
 import type { Result } from "@sdxc/result";
-import type { Random } from "@sdxc/sample";
 
 import type { ArtifactStore } from "./artifacts.js";
 import type { BaseSet, ConnectionSet } from "./bases.js";
@@ -82,7 +82,7 @@ export interface ToolContext {
 	 * identity. A plugin draws every random value from here, which is what makes
 	 * generated data reproduce regardless of how tests interleave.
 	 */
-	random: Random;
+	random: SeededRandom;
 	/**
 	 * The instant the test started, frozen for its whole run so a tool that
 	 * reports or generates a time answers consistently within one test.

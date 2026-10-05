@@ -8,8 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createRandom } from "@sdxc/random";
 import { failure } from "@sdxc/result";
-import { createRandom } from "@sdxc/sample";
 
 import type { ToolContext } from "./plugin.js";
 

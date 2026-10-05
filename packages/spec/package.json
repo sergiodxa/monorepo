@@ -18,6 +18,7 @@
 	"dependencies": {
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/html": "workspace:*",
+		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/sample": "workspace:*"
 	}
