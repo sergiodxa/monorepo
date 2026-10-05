@@ -1251,6 +1251,12 @@ a single interface — so your own is a first-class citizen. Write one in-proces
 for an embedder, as an external executable speaking a small NDJSON-over-stdio
 protocol in any language, or install someone else's and declare it.
 
+A tool generating values draws them from `context.random`, a `SeededRandom` from
+[`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random) opened on the run's
+seed and the test's identity, so its output replays under `--seed` however the
+tests interleave. A served plugin's stream opens on a fixed seed, so its values
+repeat from run to run.
+
 An external one is no lesser for being a process: every call carries the whole
 context over the wire — `workspaceRoot`, `now`, `run`, `bases`, `connections`,
 `grants`, and `artifactsDirectory` — so a served plugin resolves a base, selects
