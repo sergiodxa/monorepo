@@ -10,6 +10,7 @@
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { Turnstile } from "@sdxc/captcha/turnstile";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -138,6 +139,7 @@ let globalMiddleware: Middleware[] = [
 	headRequests(),
 	trailingSlash(),
 	log(logger) as Middleware,
+	getClientIP(),
 	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(PLATFORM_SECURITY_POLICY) as Middleware,

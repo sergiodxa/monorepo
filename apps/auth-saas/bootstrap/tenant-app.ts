@@ -13,6 +13,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { Turnstile } from "@sdxc/captcha/turnstile";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
@@ -103,6 +104,7 @@ let platformFrom = parseSenderAddress(env.EMAIL_FROM);
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
+	getClientIP(),
 	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(TENANT_SECURITY_POLICY) as Middleware,

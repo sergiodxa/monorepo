@@ -15,6 +15,7 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { openapiHandler } from "@sdxc/openapi/router";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -159,6 +160,7 @@ let issuer = `https://api.${env.PLATFORM_DOMAIN}`;
 let globalMiddleware: Middleware[] = [
 	trailingSlash(),
 	log(logger) as Middleware,
+	getClientIP(),
 	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(MANAGEMENT_SECURITY_POLICY) as Middleware,

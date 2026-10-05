@@ -182,7 +182,7 @@ describe("interactiveCredentialRateLimit", () => {
 
 		await router.fetch(formRequest("https://example.com/sign-in"));
 
-		expect(seen?.key).toBe("credential:203.0.113.7");
+		expect(seen?.key).toBe("credential:203.0.113.7/32");
 		expect(seen?.adapter).toBeDefined();
 	});
 });

@@ -11,7 +11,6 @@ import type { Captcha } from "@sdxc/captcha";
 import type { Middleware } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
-import { getClientIP } from "@sdxc/get-client-ip";
 
 /**
  * Every failure, `unavailable` included, continues to the handler, which re-renders its form
@@ -29,7 +28,6 @@ import { getClientIP } from "@sdxc/get-client-ip";
  */
 export function turnstileVerification(provider: Captcha): Middleware {
 	return captcha(provider, {
-		remoteIp: (request) => getClientIP(request),
 		onFailure: () => null,
 	}) as Middleware;
 }

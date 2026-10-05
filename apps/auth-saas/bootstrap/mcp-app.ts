@@ -11,6 +11,7 @@
 
 import type { Middleware } from "remix/router";
 
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { createHandler } from "@sdxc/mcp";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -56,6 +57,7 @@ for (let generated of GENERATED_TOOLS) {
 /** Kept as a non-tuple `Middleware[]` so the router context stays the base `RequestContext`. */
 let globalMiddleware: Middleware[] = [
 	log(logger) as Middleware,
+	getClientIP(),
 	trace() as Middleware,
 	asyncContext(),
 	securityHeaders(MANAGEMENT_SECURITY_POLICY) as Middleware,

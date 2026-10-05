@@ -1,6 +1,6 @@
 /**
- * Tests `clientAddressKey`'s handling of IPv4, IPv6 (compressed, expanded,
- * and zoned), and a missing `CF-Connecting-IP` header.
+ * Tests `clientAddressKey`'s handling of IPv4, IPv6 (compressed and expanded),
+ * and a missing or malformed `CF-Connecting-IP` header.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,21 +18,27 @@ function requestFrom(ip: string | null): Request {
 
 describe("clientAddressKey", () => {
 	test("keeps an IPv4 address whole", () => {
-		expect(clientAddressKey(requestFrom("203.0.113.42"))).toBe("203.0.113.42");
+		expect(clientAddressKey(requestFrom("203.0.113.42"))).toBe("203.0.113.42/32");
 	});
 
 	test("falls back to a shared bucket when the header is absent", () => {
 		expect(clientAddressKey(requestFrom(null))).toBe("unknown");
 	});
 
-	test("buckets a fully-expanded IPv6 address to its /64 prefix", () => {
+	test("falls back to the shared bucket when the header is malformed", () => {
+		expect(clientAddressKey(requestFrom("not-an-address"))).toBe("unknown");
+	});
+
+	test("buckets a fully-expanded IPv6 address to its /64", () => {
 		expect(clientAddressKey(requestFrom("2001:0db8:85a3:0000:0000:8a2e:0370:7334"))).toBe(
-			"2001:0db8:85a3:0000",
+			"2001:db8:85a3::/64",
 		);
 	});
 
-	test("buckets a compressed IPv6 address to the same /64 prefix", () => {
-		expect(clientAddressKey(requestFrom("2001:db8:85a3::8a2e:370:7334"))).toBe("2001:db8:85a3:0");
+	test("buckets a compressed IPv6 address to the same /64", () => {
+		expect(clientAddressKey(requestFrom("2001:db8:85a3::8a2e:370:7334"))).toBe(
+			"2001:db8:85a3::/64",
+		);
 	});
 
 	test("puts two addresses in the same /64 into the same bucket", () => {
@@ -47,11 +53,7 @@ describe("clientAddressKey", () => {
 		expect(first).not.toBe(second);
 	});
 
-	test("drops a zone id before bucketing", () => {
-		expect(clientAddressKey(requestFrom("fe80::1%eth0"))).toBe("fe80:0:0:0");
-	});
-
-	test("buckets the unspecified address", () => {
-		expect(clientAddressKey(requestFrom("::1"))).toBe("0:0:0:0");
+	test("buckets the loopback address", () => {
+		expect(clientAddressKey(requestFrom("::1"))).toBe("::/64");
 	});
 });

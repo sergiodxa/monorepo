@@ -11,6 +11,7 @@ import { getClientIP } from "@sdxc/get-client-ip";
 
 /** The origin fields every session-opening and session-resolving call accepts. */
 export interface RequestOrigin {
+	/** The canonical address text, `null` when `CF-Connecting-IP` is absent or malformed. */
 	ip: string | null;
 	userAgent: string | null;
 	country: string | null;
@@ -28,7 +29,7 @@ export function requestOrigin(request: Request): RequestOrigin {
 	let cf = request.cf as IncomingRequestCfProperties | undefined;
 
 	return {
-		ip: getClientIP(request),
+		ip: getClientIP(request)?.toString() ?? null,
 		userAgent: request.headers.get("User-Agent"),
 		country: cf?.country ?? null,
 		region: cf?.region ?? null,
