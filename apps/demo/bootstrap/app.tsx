@@ -13,6 +13,7 @@ import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
+import getClientIP from "@sdxc/get-client-ip/middleware";
 import i18n from "@sdxc/i18n/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { renderToStream } from "remix/component/server";
@@ -60,6 +61,7 @@ export default function application(
 	let globalMiddleware: Middleware[] = [
 		asyncContext(),
 		log(logger) as Middleware,
+		getClientIP(),
 		formData() as Middleware,
 		cop(),
 		i18n({
