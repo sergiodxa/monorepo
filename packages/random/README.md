@@ -115,21 +115,29 @@ A `Random` with `seed`, `derive(label)` and `state()`.
 
 ## Pattern: A Reproducible Fuzz Run
 
-Draw a fresh seed per run unless one is supplied, and print it, so a failing run replays from that number.
+Draw a fresh seed per run unless one is supplied, and name the suite after it, so a failure reports the number that replays it.
 
 ```typescript
 import { createRandom, systemSeed } from "@sdxc/random";
+import { describe, expect, test } from "vitest";
 
-let seed = Number(process.env.FUZZ_SEED) || systemSeed();
-console.info(`fuzz seed: ${seed}`);
+const SEED = Number(process.env.FUZZ_SEED) || systemSeed();
 
-let random = createRandom(seed);
-let cases = Array.from({ length: 1000 }, () => ({
-	minute: random.int(0, 59),
-	hour: random.int(0, 23),
-	weekday: random.pick(["MON", "TUE", "WED", "THU", "FRI"]),
-}));
+describe(`cron parsing (FUZZ_SEED=${SEED})`, () => {
+	test("every generated expression parses", () => {
+		let random = createRandom(SEED);
+
+		for (let index = 0; index < 1000; index++) {
+			let minute = random.int(0, 59);
+			let hour = random.int(0, 23);
+			let weekday = random.pick(["MON", "TUE", "WED", "THU", "FRI"]);
+			expect(parseCron(`${minute} ${hour} * * ${weekday}`).success).toBe(true);
+		}
+	});
+});
 ```
+
+`parseCron` is the function under test.
 
 ## Pattern: Persisting A Simulation
 
@@ -150,13 +158,17 @@ function save(): string {
 	return JSON.stringify({ turn, random: random.state() });
 }
 
-function load(text: string) {
+function load(text: string): boolean {
 	let parsed = s.parseSafe(SAVE_SCHEMA, JSON.parse(text));
-	if (!parsed.success) throw new Error("Corrupt save file");
+	if (!parsed.success) return false;
+
 	turn = parsed.value.turn;
 	random = restoreRandom(parsed.value.random);
+	return true;
 }
 ```
+
+A save that fails the schema leaves the running game as it was, and `load` answers `false` so the caller can say the file was unreadable.
 
 ## Versioning
 
