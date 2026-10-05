@@ -423,6 +423,24 @@ export function Badge(handle: unknown) {}`);
 		expect(child(badge!, "Variant")?.type).toBe('"solid" | "outline"');
 	});
 
+	test("keeps a class's generics and heritage when its namespace is declared first", () => {
+		let module = documented(`/** The queue's types. */
+export namespace Queue {
+	export interface Init {}
+}
+
+/** A queue of items. */
+export class Queue<Item = unknown> extends EventTarget implements Iterable<Item> {}`);
+
+		let queue = child(module, "Queue");
+
+		expect(queue?.kind).toBe("class");
+		expect(queue?.typeParameters.map((parameter) => parameter.name)).toEqual(["Item"]);
+		expect(queue?.extends).toEqual(["EventTarget"]);
+		expect(queue?.implements).toEqual(["Iterable<Item>"]);
+		expect(child(queue!, "Init")?.kind).toBe("interface");
+	});
+
 	test("keeps the namespace comment when the value it merges with carries none", () => {
 		let module = documented(`/** The prop types. */
 export namespace Badge {

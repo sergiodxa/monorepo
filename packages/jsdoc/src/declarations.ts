@@ -507,12 +507,15 @@ function mergeOverloads(nodes: DocNode[]): DocNode[] {
 		 * A namespace merges with the value of the same name, and the two halves
 		 * document different things: the namespace holds the types, the value is
 		 * what a caller reaches for. The value names the merged symbol and supplies
-		 * its comment, so the description and examples written above the function
-		 * survive rather than losing to the types declared beside it.
+		 * its comment, its generics and its heritage, so a class declared after its
+		 * namespace still reads as the class it is.
 		 */
 		if (existing.kind === "namespace" && node.kind !== "namespace") {
 			existing.kind = node.kind;
 			existing.type = node.type;
+			existing.typeParameters = node.typeParameters;
+			existing.extends = node.extends;
+			existing.implements = node.implements;
 			if (node.comment) existing.comment = node.comment;
 			continue;
 		}
