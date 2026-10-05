@@ -1,8 +1,9 @@
 /**
  * Retry helper for `Result`-returning async functions. It re-runs an operation
  * until it succeeds, its attempt budget is spent, or a predicate declines the
- * error, waiting a constant, linear, or exponential delay between attempts.
- * Delays are plain milliseconds so this module stays dependency-free.
+ * error, waiting a constant, linear, or exponential delay between attempts, or
+ * whatever a caller's schedule function answers. Delays are plain milliseconds
+ * so this module stays dependency-free.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -53,13 +54,13 @@ export namespace retry {
 		/** Maximum number of retry attempts */
 		times: number;
 		/**
-		 * Base delay between retries, in milliseconds. Milliseconds keep this
-		 * module free of a duration parser; name the unit at the call site with a
-		 * module-level constant (e.g. `5 * SECOND_MS`) when the number is large.
+		 * Base delay between retries in milliseconds, or a function answering the
+		 * milliseconds to wait after `attempt` failures, counting from 1, which
+		 * takes the place of `backoff` so a ceiling or jitter is the schedule's.
 		 */
-		delay: number;
+		delay: number | ((attempt: number) => number);
 		/**
-		 * Backoff strategy.
+		 * Backoff strategy applied to a numeric `delay`.
 		 * @default "exponential"
 		 */
 		backoff?: "constant" | "linear" | "exponential";
@@ -75,7 +76,7 @@ export namespace retry {
  * @param fn - Async function that returns a Result
  * @param options - Retry configuration
  * @param options.times - Maximum number of retry attempts
- * @param options.delay - Base delay between retries, in milliseconds
+ * @param options.delay - Base delay between retries in milliseconds, or a function of the attempt
  * @param options.backoff - Backoff strategy: "constant", "linear", or "exponential" (default: "exponential")
  * @param options.when - Optional predicate to decide if error should be retried
  * @returns The successful Result, or a Failure with RetryError after all attempts exhausted
@@ -107,8 +108,8 @@ export async function retry<T, E extends Error>(
 	options: retry.Options<E>,
 ): Promise<Result<T, E | RetryError>> {
 	if (options.times <= 0) throw new RangeError("Retry times must be greater than 0");
-	if (typeof options.delay !== "number") {
-		throw new TypeError("Delay must be a number of milliseconds");
+	if (typeof options.delay !== "number" && typeof options.delay !== "function") {
+		throw new TypeError("Delay must be a number of milliseconds or a function of the attempt");
 	}
 
 	let attempts = 0;
@@ -119,20 +120,24 @@ export async function retry<T, E extends Error>(
 		attempts++;
 		if (options.when && !options.when(result.error, attempts)) break;
 
-		let backoff = options.backoff ?? DEFAULT_BACKOFF;
-
-		/**
-		 * The constant strategy keeps this equal to the base delay; linear and
-		 * exponential scale it further below.
-		 */
-		let delay = options.delay;
-		if (backoff === "linear") delay = options.delay * attempts;
-		if (backoff === "exponential") {
-			delay = options.delay * EXPONENTIAL_BACKOFF_FACTOR ** (attempts - 1);
-		}
-
+		let delay = delayAfter(options, attempts);
 		await new Promise((resolve) => setTimeout(resolve, delay));
 	}
 
 	return failure(new RetryError(attempts));
+}
+
+/**
+ * Milliseconds to wait after `attempts` failures: a function `delay` answers
+ * for itself, and a numeric one is kept by the constant strategy and scaled by
+ * linear and exponential.
+ */
+function delayAfter<E extends Error>(options: retry.Options<E>, attempts: number): number {
+	if (typeof options.delay === "function") return options.delay(attempts);
+
+	let backoff = options.backoff ?? DEFAULT_BACKOFF;
+	if (backoff === "linear") return options.delay * attempts;
+	if (backoff === "exponential")
+		return options.delay * EXPONENTIAL_BACKOFF_FACTOR ** (attempts - 1);
+	return options.delay;
 }

@@ -239,7 +239,33 @@ describe(retry, () => {
 		expect(elapsed).toBeGreaterThanOrEqual(90);
 	});
 
-	test("rejects a delay that is not a number", async () => {
+	test("asks a function delay for each attempt, ignoring backoff", async () => {
+		let asked: number[] = [];
+		let timestamps: number[] = [];
+		await retry(
+			async () => {
+				timestamps.push(Date.now());
+				if (timestamps.length < 4) return failure(new Error("Fail"));
+				return success("done");
+			},
+			{
+				times: 5,
+				backoff: "exponential",
+				delay: (attempt) => {
+					asked.push(attempt);
+					return 30;
+				},
+			},
+		);
+
+		expect(asked).toEqual([1, 2, 3]);
+		for (let delay of deltas(timestamps)) {
+			expect(delay).toBeGreaterThanOrEqual(20);
+			expect(delay).toBeLessThan(70);
+		}
+	});
+
+	test("rejects a delay that is neither a number nor a function", async () => {
 		/**
 		 * Bypasses the compile-time type to simulate an untyped caller, verifying
 		 * the runtime guard rejects a non-numeric delay with a TypeError.

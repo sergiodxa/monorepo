@@ -233,8 +233,8 @@ try {
 Call `fn` until it returns a Success, waiting between attempts. Once the attempts run out, or `when` declines an error, the returned Failure holds a `RetryError`.
 
 - `times` — maximum number of attempts. Values of `0` or less throw a `RangeError`.
-- `delay` — base delay between attempts, in milliseconds.
-- `backoff` — `"constant"`, `"linear"`, or `"exponential"`. Defaults to `"exponential"`, which doubles the delay on every retry.
+- `delay` — base delay between attempts in milliseconds, or a function receiving the number of failures so far (from 1) and answering the milliseconds to wait.
+- `backoff` — `"constant"`, `"linear"`, or `"exponential"`, applied to a numeric `delay`. Defaults to `"exponential"`, which doubles the delay on every retry.
 - `when` — predicate receiving the error and the attempt number; return `true` to keep retrying.
 
 ```typescript
@@ -242,6 +242,19 @@ let result = await retry(() => fetchUser(id), {
 	times: 5,
 	delay: 1000,
 	when: (error) => error instanceof NetworkError,
+});
+```
+
+A function `delay` plugs in a schedule with a ceiling and jitter, such as one from [`@sdxc/backoff`](https://www.npmjs.com/package/@sdxc/backoff):
+
+```typescript
+import { createBackoff } from "@sdxc/backoff";
+
+let backoff = createBackoff({ base: "1 second", max: "30 seconds", jitter: 0.2 });
+
+let result = await retry(() => fetchUser(id), {
+	times: 6,
+	delay: (attempt) => backoff.delay(attempt),
 });
 ```
 
