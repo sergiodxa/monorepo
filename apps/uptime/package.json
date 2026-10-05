@@ -45,6 +45,7 @@
 		"@sdxc/openapi": "workspace:*",
 		"@sdxc/pagination": "workspace:*",
 		"@sdxc/problem": "workspace:*",
+		"@sdxc/random": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/security-headers": "workspace:*",

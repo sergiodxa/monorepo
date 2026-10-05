@@ -12,6 +12,7 @@
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { Database } from "remix/data-table";
 
+import { systemRandom } from "@sdxc/random";
 import { generateUUID, isUUID } from "@sdxc/uuid";
 import { inList } from "remix/data-table";
 
@@ -195,11 +196,20 @@ export default class Team {
 		return team;
 	}
 
-	/** Appends a short suffix to `slug` until it no longer collides with an existing team. */
+	/**
+	 * Appends a six-character base-36 suffix to `slug` until it no longer collides
+	 * with an existing team. The suffix is a tie-breaker, so it draws from a
+	 * well-spread source and carries no secrecy.
+	 */
 	static async uniqueSlug(db: Database, slug: string): Promise<string> {
+		let random = systemRandom();
 		let candidate = slug;
 		while (await db.findOne(teams, { where: { slug: candidate } })) {
-			candidate = `${slug}-${Math.random().toString(36).slice(2, 8)}`;
+			let suffix = random
+				.int(0, 36 ** 6 - 1)
+				.toString(36)
+				.padStart(6, "0");
+			candidate = `${slug}-${suffix}`;
 		}
 		return candidate;
 	}

@@ -528,7 +528,7 @@ describe("Team.uniqueSlug", () => {
 
 		let slug = await Team.uniqueSlug(db, "taken");
 		expect(slug).not.toBe("taken");
-		expect(slug.startsWith("taken-")).toBe(true);
+		expect(slug).toMatch(/^taken-[0-9a-z]{6}$/);
 		expect(await Team.findByIdOrSlug(db, slug)).toBeNull();
 	});
 });
