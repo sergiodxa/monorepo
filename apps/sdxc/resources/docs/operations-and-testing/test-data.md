@@ -21,7 +21,7 @@ change when your markup does. It assumes the test setup from
 [Test Workers apps](/docs/operations-and-testing/testing).
 
 ```bash
-npm add -D @sdxc/sample
+npm add -D @sdxc/sample @sdxc/random
 ```
 
 ## One generator per fixture
@@ -253,7 +253,8 @@ code that should hold for any input, draw a fresh seed each run and print it whe
 shows it:
 
 ```typescript {% title="app/data/invoice-totals.test.ts" %}
-import { createSample, systemSeed } from "@sdxc/sample";
+import { systemSeed } from "@sdxc/random";
+import { createSample } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
 import { totals } from "~/app/data/invoice-totals";
@@ -272,7 +273,7 @@ describe(`invoice totals (SAMPLE_SEED=${SEED})`, () => {
 });
 ```
 
-`totals` is your own function. `systemSeed()` draws a 32-bit seed from a strong random source.
+`totals` is your own function. `systemSeed()` from `@sdxc/random` draws a 32-bit seed from Web Crypto.
 Because the seed is in the suite's name, a failure prints it, and
 `SAMPLE_SEED=<seed> vp test run app/data` replays that exact run down to the last field.
 
