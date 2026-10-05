@@ -1,13 +1,14 @@
 # @sdxc/get-client-ip
 
-Read the client IP from a Cloudflare Workers request.
+Read the client IP from a Cloudflare Workers request, parsed into an address.
 
 A request that reaches a Worker has already crossed Cloudflare's network, and every proxy
 along the way is another hop that could have rewritten the source address. Cloudflare
 settles it by attaching
 [`CF-Connecting-IP`](https://developers.cloudflare.com/fundamentals/reference/http-headers/#cf-connecting-ip),
 a header carrying the address the connection actually came from. This package reads that
-header, so the one name worth remembering is the function rather than the header spelling.
+header and parses it into an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip),
+so a junk header can never become a rate limit key or a stored address.
 
 ## Installation
 
@@ -15,9 +16,8 @@ header, so the one name worth remembering is the function rather than the header
 npm add @sdxc/get-client-ip
 ```
 
-The rate-limit pattern below answers with a status helper from
-[`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response), which you install only if
-you want those helpers.
+`@sdxc/ip` and [`remix`](https://www.npmjs.com/package/remix), for the middleware, are
+installed with it.
 
 ## Usage
 
@@ -27,24 +27,34 @@ you want those helpers.
 import { getClientIP } from "@sdxc/get-client-ip";
 
 export function GET(request: Request) {
-	let ip = getClientIP(request);
-	return Response.json({ ip });
+	let ip = getClientIP(request); // IP | null
+	return Response.json({ ip }); // {"ip":"203.0.113.42"}, through IP#toJSON
 }
+```
+
+### Publish It On Every Request
+
+The middleware parses the header once per request and publishes it as `ctx.ip`:
+
+```typescript
+import getClientIP from "@sdxc/get-client-ip/middleware";
+import { createRouter } from "remix/router";
+
+let router = createRouter({ middleware: [getClientIP()] });
+
+router.get("/", (ctx) => {
+	return Response.json({ ip: ctx.ip?.toString() ?? null });
+});
 ```
 
 ### Handle A Request Without The Header
 
 The header arrives on every request Cloudflare routes, so it is absent exactly when
-something else served the request — a local dev server, a test, another host. Name the
-fallback and the rest of the handler stops caring:
+something else served the request — a local dev server, a test, another host. A header
+that is not an address answers `null` too, so one fallback covers both:
 
 ```typescript
-import { getClientIP } from "@sdxc/get-client-ip";
-
-export function GET(request: Request) {
-	let ip = getClientIP(request) ?? "unknown";
-	return Response.json({ ip });
-}
+let ip = getClientIP(request)?.toString() ?? "unknown";
 ```
 
 ### Pair It With Cloudflare's Geolocation
@@ -71,37 +81,41 @@ listed in the `types` of a Workers `tsconfig.json`.
 
 ## API
 
-### `getClientIP(request: Request): string | null`
+### `getClientIP(request: Request): IP | null`
 
-Returns the value of the request's `CF-Connecting-IP` header, or `null` when the header is
-absent. IPv4 and IPv6 both come back as the text Cloudflare sent, and a header repeated
-across several lines reads as one comma-joined string, the way `Headers.get` reports any
-repeated header.
+Parses the request's `CF-Connecting-IP` header into an `IP`, or answers `null` when the
+header is absent or is not one address — a header repeated across several lines reads as a
+comma-joined string, which is not.
 
 ```typescript
-getClientIP(request); // "203.0.113.42"
+getClientIP(request)?.toString(); // "203.0.113.42" or "2001:db8::1"
 ```
 
-Longhand, this is `request.headers.get("CF-Connecting-IP")` — the value of the export is
-that the header name is written once, in a place a typo shows up as a failing test rather
-than as a `null` at runtime.
+### `@sdxc/get-client-ip/middleware`
 
-## Pattern: Rate Limiting Per Client
+- Default export `getClientIP()` — a router middleware that sets `ctx.ip` to
+  `getClientIP(ctx.request)`. Importing the module types `ctx.ip` as `IP | null`.
+- `ClientIP` — the context key, for code that reads the value with `ctx.get(ClientIP)`. A
+  context the middleware never ran on reads `null`.
 
-The address is the bucket key, so a counter in a KV namespace gives one budget per caller
-per window:
+## Pattern: Rate Limiting Per Client Network
+
+An IPv6 client is normally assigned a whole `/64` and can send each request from a
+different address in it. Keying IPv6 on its `/64` and IPv4 on the full address gives one
+budget per client:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
 import { ok, tooManyRequests } from "@sdxc/response";
 
-/** How many requests one address may spend inside the window. */
+/** How many requests one client may spend inside the window. */
 const LIMIT = 100;
 const WINDOW_SECONDS = 60;
 
 export default {
 	async fetch(request: Request, env: { KV: KVNamespace }) {
-		let key = `rate-limit:${getClientIP(request) ?? "unknown"}`;
+		let client = getClientIP(request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown";
+		let key = `rate-limit:${client}`;
 		let spent = Number((await env.KV.get(key)) ?? "0");
 
 		if (spent >= LIMIT) return tooManyRequests({ error: "Rate limit exceeded" });
@@ -113,12 +127,13 @@ export default {
 };
 ```
 
-Every request that arrives without the header shares the `unknown` bucket, which keeps the
-budget finite for traffic that reached the Worker some other way.
+Every request that arrives without a usable header shares the `unknown` bucket, which keeps
+the budget finite for traffic that reached the Worker some other way. The status helpers
+come from [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response).
 
 ## Pattern: Attaching The Address To A Log Line
 
-Logging the address turns a stack trace into something you can correlate across requests:
+An `IP` serializes as its canonical text, so it goes into a structured log as is:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
@@ -126,11 +141,14 @@ import { getClientIP } from "@sdxc/get-client-ip";
 export async function GET(request: Request) {
 	let url = new URL(request.url);
 
-	console.log("request.received", {
-		ip: getClientIP(request),
-		path: url.pathname,
-		method: request.method,
-	});
+	console.log(
+		JSON.stringify({
+			event: "request.received",
+			ip: getClientIP(request),
+			path: url.pathname,
+			method: request.method,
+		}),
+	);
 
 	return new Response("OK");
 }

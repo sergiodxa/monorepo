@@ -5,9 +5,15 @@
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/ip": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0"
 	}
 }
