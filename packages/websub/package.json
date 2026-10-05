@@ -14,6 +14,7 @@
 	},
 	"dependencies": {
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*"
 	}
 }

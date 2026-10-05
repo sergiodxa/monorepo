@@ -9,10 +9,10 @@
 import type { Result } from "@sdxc/result";
 
 import { hmac } from "@sdxc/crypto";
+import { readBytes } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { linkTarget } from "./lib/link-header.js";
-import { readBytes } from "./lib/read-bytes.js";
 import { absoluteUrl, formRequest, send } from "./lib/send.js";
 
 import type { SignatureAlgorithm } from "./index.js";
@@ -347,14 +347,17 @@ export async function verifyDelivery(
 	}
 
 	let maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
-	let body = await readBytes(request, maxBytes);
-	if (body === "too-large") {
-		return failure(new WebSubSignatureError(`The delivery exceeds ${maxBytes} bytes`, "too-large"));
-	}
-	if (body === "unreadable") {
+	let read = await readBytes(request, { maxBytes });
+	if (isFailure(read)) {
+		if (read.error.code === "too-large") {
+			return failure(
+				new WebSubSignatureError(`The delivery exceeds ${maxBytes} bytes`, "too-large"),
+			);
+		}
 		return failure(new WebSubSignatureError("The delivery body could not be read", "mismatch"));
 	}
 
+	let body = read.data.data;
 	let verified = await hmac.verify(secret, body, signature, { hash: WEBCRYPTO_HASH[algorithm] });
 	if (isFailure(verified) || !verified.data) {
 		return failure(new WebSubSignatureError("The signature does not match the body", "mismatch"));

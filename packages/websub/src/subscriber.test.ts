@@ -443,6 +443,35 @@ describe(verifyDelivery, () => {
 		expect(isFailure(result) && result.error.reason).toBe("too-large");
 	});
 
+	test("refuses a body whose declared length passes maxBytes, whatever it streams", async () => {
+		let body = "x".repeat(16);
+		let request = delivery(body, {
+			"x-hub-signature": await sign(body),
+			"content-length": "4096",
+		});
+
+		let result = await verifyDelivery(request, SECRET, { maxBytes: 1_024 });
+		expect(isFailure(result) && result.error.reason).toBe("too-large");
+	});
+
+	test("refuses a body whose stream breaks off as a mismatch", async () => {
+		let stream = new ReadableStream<Uint8Array>({
+			start(controller) {
+				controller.enqueue(new TextEncoder().encode("x".repeat(100)));
+				controller.error(new Error("connection reset"));
+			},
+		});
+		let request = new Request(CALLBACK, {
+			method: "POST",
+			body: stream,
+			headers: { "x-hub-signature": await sign("x".repeat(100)) },
+			duplex: "half",
+		} as RequestInit);
+
+		let result = await verifyDelivery(request, SECRET);
+		expect(isFailure(result) && result.error.reason).toBe("mismatch");
+	});
+
 	test("accepts a body of exactly maxBytes", async () => {
 		let body = "x".repeat(1_024);
 		let request = delivery(body, { "x-hub-signature": await sign(body) });
