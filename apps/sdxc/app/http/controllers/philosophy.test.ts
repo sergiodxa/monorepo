@@ -99,6 +99,18 @@ describe("the sponsors block", () => {
 	});
 });
 
+describe("the footer's author column", () => {
+	test("links the blog, X and GitHub Sponsors while no sponsor is known", async () => {
+		for (let path of ["/philosophy", "/showcase", "/"]) {
+			let body = await (await fetchApp(path)).text();
+
+			expect(body).toContain('href="https://sergiodxa.com"');
+			expect(body).toContain('href="https://x.com/sergiodxa"');
+			expect(body).toContain('href="https://github.com/sponsors/sergiodxa"');
+		}
+	});
+});
+
 describe("a package's used-by line", () => {
 	test("names applications the showcase also lists", async () => {
 		let body = await (await fetchApp("/api/result")).text();

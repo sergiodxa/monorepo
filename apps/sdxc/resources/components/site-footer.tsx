@@ -1,7 +1,7 @@
 /**
  * The bar every page ends on: the collection's name, the places a reader reaches once —
  * the argument for the packages, the applications built on them, the policies, the
- * source — and who funds the work.
+ * source — and the author: where to follow them, and how to fund the work.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +20,7 @@ import { leading, text, tracking, weight } from "@sdxc/u/typography";
 
 import type { Sponsor } from "~/app/services/sponsors";
 
+import { SPONSOR_HREF } from "~/app/services/sponsors";
 import Sponsors from "~/resources/components/sponsors";
 import routes from "~/routes/web";
 
@@ -28,6 +29,9 @@ const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
 
 /** The author's own site, which is where the writing about this work lives. */
 const AUTHOR_HREF = "https://sergiodxa.com";
+
+/** The author's account on X, where new releases and writing are announced. */
+const X_HREF = "https://x.com/sergiodxa";
 
 /** Where every package is published. */
 const NPM_HREF = "https://www.npmjs.com/org/sdxc";
@@ -80,7 +84,7 @@ export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
 						gridTemplate({ columns: repeat(2, "minmax(0, 1fr)") }),
 						media(
 							"(min-width: 64rem)",
-							gridTemplate({ columns: "minmax(0, 2fr) repeat(4, minmax(0, 1fr))" }),
+							gridTemplate({ columns: "minmax(0, 2fr) repeat(5, minmax(0, 1fr))" }),
 						),
 					]}
 				>
@@ -150,6 +154,15 @@ export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
 							{ label: "npm", href: NPM_HREF },
 							{ label: "llms.txt", href: routes.llms.href(), file: true },
 							{ label: "RSS", href: routes.feed.href(), file: true },
+						]}
+					/>
+					{/* Present on every page, so a reader can fund the work before anyone else has. */}
+					<Column
+						title="Author"
+						links={[
+							{ label: "Blog", href: AUTHOR_HREF },
+							{ label: "X", href: X_HREF },
+							{ label: "Sponsor", href: SPONSOR_HREF },
 						]}
 					/>
 				</div>
