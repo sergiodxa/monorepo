@@ -122,16 +122,26 @@ export default {
 
 ## Pattern: Honoring Retry-After
 
-When a server says how long to wait, wait at least that long.
+When a server says how long to wait, wait at least that long. `Retry-After` is either a number of seconds or an HTTP date, so read both, and treat anything else as no answer.
 
 ```typescript
 import { createBackoff } from "@sdxc/backoff";
 
 let backoff = createBackoff({ base: "1 second", max: "5 minutes", jitter: "full" });
 
+function retryAfterMs(response: Response, now: number): number {
+	let header = response.headers.get("retry-after");
+	if (header === null) return 0;
+
+	let seconds = Number(header);
+	if (Number.isFinite(seconds)) return Math.max(seconds * 1000, 0);
+
+	let date = Date.parse(header);
+	return Number.isNaN(date) ? 0 : Math.max(date - now, 0);
+}
+
 function waitAfter(response: Response, attempt: number): number {
-	let retryAfterMs = Number(response.headers.get("retry-after") ?? 0) * 1000;
-	return Math.max(retryAfterMs, backoff.delay(attempt));
+	return Math.max(retryAfterMs(response, Date.now()), backoff.delay(attempt));
 }
 ```
 
