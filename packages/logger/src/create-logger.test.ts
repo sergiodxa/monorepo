@@ -45,4 +45,18 @@ describe(createLogger, () => {
 
 		expect(records).toHaveLength(1);
 	});
+
+	test("exempts the logs a keep condition holds for", () => {
+		let records: Record<string, unknown>[] = [];
+		let logger = createLogger({
+			service: "uptime",
+			sample: { rate: 0, keep: { op: "eq", field: "kind", value: "job" } },
+			sink: (record) => void records.push(record),
+		});
+
+		logger.open("request").emit();
+		logger.open("job").emit();
+
+		expect(records).toEqual([expect.objectContaining({ kind: "job" })]);
+	});
 });

@@ -10,6 +10,7 @@
 import type { Sample } from "./sample.js";
 
 import { Log } from "./log.js";
+import { exemption } from "./sample.js";
 
 export namespace Logger {
 	export interface Options {
@@ -39,12 +40,15 @@ export interface Logger {
 }
 
 /**
- * Builds the configuration a worker hands to `log()` and to its job dispatcher.
+ * Builds the configuration a worker hands to `log()` and to its job dispatcher. A `keep`
+ * condition compiles here, once, and every log this configuration opens shares the result.
  *
  * @param options What every log from this worker carries.
  * @example export const logger = createLogger({ service: "uptime", version: env.CF_VERSION_METADATA?.id });
  */
 export function createLogger(options: Logger.Options): Logger {
+	if (options.sample?.keep !== undefined) exemption(options.sample.keep);
+
 	return {
 		options,
 		open(kind, fields) {

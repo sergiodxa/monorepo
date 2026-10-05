@@ -9,7 +9,9 @@
 import { createRandom } from "@sdxc/random";
 import { describe, expect, test } from "vitest";
 
-import { shouldKeep } from "./sample.js";
+import type { Sample } from "./sample.js";
+
+import { exemption, shouldKeep } from "./sample.js";
 
 const NO_FIELDS = {};
 
@@ -55,5 +57,42 @@ describe(shouldKeep, () => {
 		let keep = (fields: Readonly<Record<string, unknown>>) => fields.kind !== "job";
 		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "request" }, 1)).toBe(true);
 		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "job" }, 1)).toBe(false);
+	});
+
+	test("keeps an ok log a keep condition holds for, written as data", () => {
+		let keep: Sample.Condition = {
+			op: "any",
+			of: [
+				{ op: "eq", field: "kind", value: "job" },
+				{ op: "gte", field: "status", value: 500 },
+			],
+		};
+
+		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "job" }, 1)).toBe(true);
+		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "request", status: 503 }, 1)).toBe(true);
+		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "request", status: 200 }, 1)).toBe(false);
+		expect(shouldKeep({ rate: 0, keep }, "ok", { kind: "request" }, 1)).toBe(false);
+	});
+
+	test("reads a flattened field through its dotted path", () => {
+		let keep: Sample.Condition = { op: "eq", field: "tenant.id", value: "acme" };
+
+		expect(shouldKeep({ rate: 0, keep }, "ok", { "tenant.id": "acme" }, 1)).toBe(true);
+		expect(shouldKeep({ rate: 0, keep }, "ok", { "tenant.id": "other" }, 1)).toBe(false);
+		expect(shouldKeep({ rate: 0, keep }, "ok", { tenant: "acme", "tenant.id": "acme" }, 1)).toBe(
+			false,
+		);
+	});
+
+	test("keeps every log when a keep condition does not compile", () => {
+		let keep: Sample.Condition = { op: "matches", field: "path", pattern: "(" };
+
+		expect(shouldKeep({ rate: 0, keep }, "ok", { path: "/" }, 1)).toBe(true);
+	});
+
+	test("compiles a keep condition once however many logs read it", () => {
+		let keep: Sample.Condition = { op: "eq", field: "kind", value: "job" };
+
+		expect(exemption(keep)).toBe(exemption(keep));
 	});
 });

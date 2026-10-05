@@ -177,14 +177,20 @@ namespace Sample {
 		rate?: number;
 		/** An `ok` log at least this slow is kept whatever the rate. */
 		slowerThanMs?: number;
-		/** An `ok` log is kept whatever the rate when this returns true. */
-		keep?: (fields: Readonly<Record<string, Log.Value>>) => boolean;
+		/** An `ok` log is kept whatever the rate when this holds. */
+		keep?: Predicate | Condition;
 	}
+	type Predicate = (fields: Readonly<Record<string, Log.Value>>) => boolean;
+	/** A condition in the JSON form of `@sdxc/expression`. */
+	type Condition = Expression;
 }
 ```
 
 A `degraded` or `error` log is always written; `rate` applies to `ok` logs only, and both
-exemptions win over it.
+exemptions win over it. A `keep` condition is written in the
+[`@sdxc/expression`](https://www.npmjs.com/package/@sdxc/expression) language, compiles once at
+`createLogger`, and reads a namespaced field by its dotted path, so `tenant.id` matches what
+`set({ tenant: { id } })` logged. A condition that does not compile keeps every log.
 
 ## Pattern: Shared Namespaces From Middleware
 
@@ -224,6 +230,25 @@ export const logger = createLogger({
 
 Every request is kept, every failed or retried job is kept, and one in twenty successful job
 runs is kept.
+
+The same exemption can live in configuration as a condition, so it changes without a deploy of
+new code:
+
+```typescript
+export const logger = createLogger({
+	service: "api",
+	sample: {
+		rate: 0.05,
+		keep: {
+			op: "any",
+			of: [
+				{ op: "ne", field: "kind", value: "job" },
+				{ op: "gte", field: "status", value: 500 },
+			],
+		},
+	},
+});
+```
 
 ## Versioning
 

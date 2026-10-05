@@ -12,7 +12,9 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@sdxc/random": "workspace:*"
+		"@sdxc/expression": "workspace:*",
+		"@sdxc/random": "workspace:*",
+		"@sdxc/result": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^5.20260901.1",
