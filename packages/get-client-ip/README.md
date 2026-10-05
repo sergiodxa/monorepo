@@ -133,26 +133,22 @@ come from [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response).
 
 ## Pattern: Attaching The Address To A Log Line
 
-An `IP` serializes as its canonical text, so it goes into a structured log as is:
+An `IP` serializes as its canonical text, so it goes onto the request's wide event from
+[`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger) as one field:
 
 ```typescript
-import { getClientIP } from "@sdxc/get-client-ip";
+import type { Middleware } from "remix/router";
 
-export async function GET(request: Request) {
-	let url = new URL(request.url);
-
-	console.log(
-		JSON.stringify({
-			event: "request.received",
-			ip: getClientIP(request),
-			path: url.pathname,
-			method: request.method,
-		}),
-	);
-
-	return new Response("OK");
+export function logClient(): Middleware {
+	return (ctx, next) => {
+		ctx.log.set({ client: { ip: ctx.ip?.toString() ?? null } });
+		return next();
+	};
 }
 ```
+
+Mount it after `log(logger)` and this package's middleware, so both `ctx.log` and `ctx.ip`
+are published when it runs.
 
 An IP address is personal data in many jurisdictions. Decide what retention applies before
 a log line like this outlives the request that produced it.
