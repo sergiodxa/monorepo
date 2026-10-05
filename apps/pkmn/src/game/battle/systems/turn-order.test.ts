@@ -22,6 +22,7 @@ import { GameData } from "~/game/data/game-data";
 import { DamageClass, type Move } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Effectiveness, Type } from "~/game/data/type";
+import { drawsFrom, scriptedRandom } from "~/game/test-support/scripted-random";
 import { Creature } from "~/game/world/creature";
 
 import {
@@ -67,12 +68,12 @@ test("equal-speed ties use one precomputed RNG roll per action", () => {
 		{
 			state,
 			gameData: createStubGameData(move),
-			random: () => {
+			random: drawsFrom(() => {
 				callCount += 1;
 				if (callCount === 1) return 0.1;
 				if (callCount === 2) return 0.9;
 				return 0.4;
-			},
+			}),
 			getActiveCombatant: (position) => actionsByKey.get(getPositionKey(position)) ?? null,
 			canCombatantLeaveBattle: () => true,
 			canSwitchCombatant: () => true,
@@ -112,11 +113,11 @@ test("Trick Room ties still use RNG after effective speed matches", () => {
 		{
 			state,
 			gameData: createStubGameData(move),
-			random: () => {
+			random: drawsFrom(() => {
 				callCount += 1;
 				if (callCount === 1) return 0.2;
 				return 0.8;
-			},
+			}),
 			getActiveCombatant: (position) => actionsByKey.get(getPositionKey(position)) ?? null,
 			canCombatantLeaveBattle: () => true,
 			canSwitchCombatant: () => true,
@@ -143,7 +144,7 @@ test("Battle uses its RNG tie-breaker for equal-speed actions under Trick Room",
 			{ teams: [[createPrimaryFixtureWithTrickRoomAndTackle()]] },
 			{ teams: [[createPrimaryFixtureWithGrowthAndTackle()]] },
 		],
-		random: createRandomSequence(0.9, 0.1, 0.2, 0.8, 1),
+		random: scriptedRandom(0.9, 0.1, 0.2, 0.8, 1),
 	});
 	let session = battle.start();
 
@@ -221,7 +222,7 @@ function resolveFallbackMove(): Move {
 		{
 			state,
 			gameData: createStubGameData(move),
-			random: () => 0.5,
+			random: scriptedRandom(0.5),
 			getActiveCombatant: () => slot,
 			canCombatantLeaveBattle: () => true,
 			canSwitchCombatant: () => true,
@@ -417,16 +418,6 @@ function collectTurnEvents(
 	}
 
 	return events;
-}
-
-/** Returns an RNG callback that reuses the last value once the sequence is exhausted. */
-function createRandomSequence(...values: number[]) {
-	let index = 0;
-	return () => {
-		let value = values[index] ?? values.at(-1) ?? 0;
-		index += 1;
-		return value;
-	};
 }
 
 /** Returns one authored species identifier that satisfies the provided predicate. */

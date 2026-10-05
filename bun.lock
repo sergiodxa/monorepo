@@ -198,6 +198,7 @@
     "apps/pkmn": {
       "name": "@apps/pkmn",
       "dependencies": {
+        "@sdxc/random": "workspace:*",
         "@sdxc/result": "workspace:*",
         "remix": "3.0.0",
       },
@@ -825,7 +826,9 @@
       "name": "@sdxc/logger",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/expression": "workspace:*",
         "@sdxc/random": "workspace:*",
+        "@sdxc/result": "workspace:*",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20260901.1",

@@ -17,6 +17,7 @@ import manifest from "~/content/manifest.json";
 import route1 from "~/content/maps/route-1.json";
 
 import type { Scene } from "./scene";
+import type { SessionRandom } from "./session-random";
 
 import { AssetStore, type AssetManifest } from "./assets";
 import { AudioManager } from "./audio";
@@ -29,6 +30,12 @@ import { SceneStack } from "./scene-stack";
 export class GameClient {
 	/** The engine the scenes drive; replaced when a new world is created or loaded. */
 	engine: Engine;
+
+	/**
+	 * The session's random streams, replaced together with the engine. Its
+	 * `seed` is what a bug report carries to replay the session.
+	 */
+	random: SessionRandom;
 
 	/** Static authored content, kept so scenes can rebuild an engine on New Game/Continue. */
 	readonly content: GameDataSource;
@@ -74,10 +81,12 @@ export class GameClient {
 	 * @param root - The element the canvas mounts into and scales to fill.
 	 * @param engine - The initial engine (a fresh new-game world).
 	 * @param content - Authored content used to rebuild the engine later.
+	 * @param random - The streams the initial engine draws from.
 	 */
-	constructor(root: HTMLElement, engine: Engine, content: GameDataSource) {
+	constructor(root: HTMLElement, engine: Engine, content: GameDataSource, random: SessionRandom) {
 		this.engine = engine;
 		this.content = content;
+		this.random = random;
 
 		this.canvas = globalThis.document.createElement("canvas");
 		this.canvas.width = SCREEN_WIDTH;

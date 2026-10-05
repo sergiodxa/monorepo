@@ -36,7 +36,12 @@ export class SaveScene implements Scene {
 			return;
 		}
 		if (game.input.isPressed(Button.A)) {
-			game.save.save(game.engine.snapshot(), this.presentation, new Date().toISOString());
+			game.save.save(
+				game.engine.snapshot(),
+				this.presentation,
+				new Date().toISOString(),
+				game.random,
+			);
 			this.saved = true;
 		} else if (game.input.isPressed(Button.B)) {
 			game.scenes.pop();

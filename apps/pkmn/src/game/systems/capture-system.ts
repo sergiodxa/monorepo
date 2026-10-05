@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "../data/game-data";
 import type { State } from "../data/status";
 import type { CreatureId, PlayerId } from "../world/ids";
@@ -43,7 +45,7 @@ export function computeCaptureAttempt(params: {
 	catchRate: number;
 	ballMultiplier: number;
 	statusBonus: number;
-	random: () => number;
+	random: Random;
 }): CaptureAttempt {
 	let { maxHP, currentHP, catchRate, ballMultiplier, statusBonus, random } = params;
 	let a =
@@ -57,7 +59,7 @@ export function computeCaptureAttempt(params: {
 	);
 	let shakes = 0;
 	for (let check = 0; check < 4; check += 1) {
-		if (Math.floor(random() * 65536) < b) shakes += 1;
+		if (random.int(0, 65535) < b) shakes += 1;
 		else break;
 	}
 	return { shakes: Math.min(shakes, 3), success: shakes === 4 };
@@ -73,7 +75,7 @@ export function captureCreature(
 	playerId: PlayerId,
 	creatureId: CreatureId,
 	gameData?: GameData,
-	random?: () => number,
+	random?: Random,
 ) {
 	let party = getPlayerParty(world);
 	world.ownership[creatureId] = { ownerId: playerId };

@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { AutonomousMovement, PageOptions } from "../render/map-schema";
 
 import { type Direction, directionDelta } from "../core/direction";
@@ -57,11 +59,11 @@ export function nextRandomStep(
 	x: number,
 	y: number,
 	isBlocked: BlockedTile,
-	random: () => number,
+	random: Random,
 ): Direction | null {
 	let start = Math.min(
 		RANDOM_STEP_DIRECTIONS.length - 1,
-		Math.floor(random() * RANDOM_STEP_DIRECTIONS.length),
+		random.int(0, RANDOM_STEP_DIRECTIONS.length - 1),
 	);
 	for (let offset = 0; offset < RANDOM_STEP_DIRECTIONS.length; offset++) {
 		let direction = RANDOM_STEP_DIRECTIONS[(start + offset) % RANDOM_STEP_DIRECTIONS.length]!;
@@ -95,7 +97,7 @@ export interface MovableActor {
  * @param options - The active page's options (`through`, `directionFix`).
  * @param dt - Milliseconds elapsed since the last tick.
  * @param isBlocked - Predicate marking a tile the actor cannot step onto.
- * @param random - RNG in `[0, 1)` used to pick a random step.
+ * @param random - The stream a `random` step picks its direction from.
  */
 export function tickEventMovement(
 	actor: MovableActor,
@@ -104,7 +106,7 @@ export function tickEventMovement(
 	options: PageOptions,
 	dt: number,
 	isBlocked: BlockedTile,
-	random: () => number,
+	random: Random,
 ) {
 	if (movement.type === "fixed") return;
 

@@ -13,6 +13,7 @@ import { expect, test } from "vitest";
 import type { Species } from "~/game/data/species";
 
 import { Gender } from "~/game/data/species";
+import { drawsFrom, scriptedRandom } from "~/game/test-support/scripted-random";
 
 import type { LegacyCreatureComponent } from "./components";
 
@@ -65,9 +66,9 @@ test("createCreatureInstance fills omitted fields from the default", () => {
 });
 
 test("rollGender always yields genderless for a species with no ratio", () => {
-	let random = () => {
+	let random = drawsFrom(() => {
 		throw new Error("random should not be called for a genderless species");
-	};
+	});
 	expect(rollGender(Gender.Genderless, random)).toBe(Gender.Genderless);
 });
 
@@ -77,21 +78,21 @@ test("rollGender always yields genderless for a species with no ratio", () => {
  * still resolves to male.
  */
 test("rollGender partitions the ratio deterministically against the RNG draw", () => {
-	expect(rollGender(EVEN_RATIO, () => 0.1)).toBe(Gender.Female);
-	expect(rollGender(EVEN_RATIO, () => 0.9)).toBe(Gender.Male);
-	expect(rollGender(COMMON_RATIO, () => 0.2)).toBe(Gender.Male);
-	expect(rollGender(COMMON_RATIO, () => 0.05)).toBe(Gender.Female);
+	expect(rollGender(EVEN_RATIO, scriptedRandom(0.1))).toBe(Gender.Female);
+	expect(rollGender(EVEN_RATIO, scriptedRandom(0.9))).toBe(Gender.Male);
+	expect(rollGender(COMMON_RATIO, scriptedRandom(0.2))).toBe(Gender.Male);
+	expect(rollGender(COMMON_RATIO, scriptedRandom(0.05))).toBe(Gender.Female);
 });
 
 test("rollGender is stable for the same seeded value", () => {
-	let seeded = () => 0.3;
+	let seeded = scriptedRandom(0.3);
 	expect(rollGender(EVEN_RATIO, seeded)).toBe(rollGender(EVEN_RATIO, seeded));
 });
 
 test("rollGender treats a single-sex ratio as that sex without drawing", () => {
-	let random = () => {
+	let random = drawsFrom(() => {
 		throw new Error("random should not be called for a single-sex ratio");
-	};
+	});
 	expect(rollGender({ [Gender.Female]: 100 }, random)).toBe(Gender.Female);
 	expect(rollGender({ [Gender.Male]: 100 }, random)).toBe(Gender.Male);
 });

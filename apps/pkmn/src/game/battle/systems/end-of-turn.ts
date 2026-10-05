@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { Move, MoveEffect } from "~/game/data/move";
 
@@ -22,7 +24,7 @@ import { getCreatureSpecies, getCreatureStat } from "../mechanics";
 export interface EndOfTurnContext {
 	state: BattleState;
 	gameData: GameData;
-	random(): number;
+	random: Random;
 	flattenEffects(effect: MoveEffect): MoveEffect[];
 	findEffect<TKind extends MoveEffect["kind"]>(
 		effects: MoveEffect[],

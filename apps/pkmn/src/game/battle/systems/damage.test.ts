@@ -26,6 +26,7 @@ import { GameData } from "~/game/data/game-data";
 import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Effectiveness } from "~/game/data/type";
+import { scriptedRandom } from "~/game/test-support/scripted-random";
 import { Creature, State } from "~/game/world/creature";
 
 import { getResolvedMoveDamage } from "./damage";
@@ -362,7 +363,7 @@ function resolveFlingDamage(
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: () => 0.9375,
+			random: scriptedRandom(0.9375),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -407,7 +408,7 @@ function resolveBoostDamage(scenario: ReturnType<typeof createDamageScenario>) {
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: () => 0.9375,
+			random: scriptedRandom(0.9375),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -463,7 +464,7 @@ function resolveCriticalDamage(scenario: ReturnType<typeof createDamageScenario>
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: createRandomSequence(0, 1),
+			random: scriptedRandom(0, 1),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -506,7 +507,7 @@ function resolveDamageWithEffectiveness(
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: createRandomSequence(0, 0.9375),
+			random: scriptedRandom(0, 0.9375),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -546,7 +547,7 @@ function resolveDirectDamage(scenario: ReturnType<typeof createDamageScenario>) 
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: () => 1,
+			random: scriptedRandom(1),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -595,7 +596,7 @@ function resolveFixedDamage(
 		{
 			state: scenario.state,
 			gameData: GAME_DATA,
-			random: () => 0,
+			random: scriptedRandom(0),
 			isGrounded: (combatant) => isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(
 				effects: MoveEffect[],
@@ -719,15 +720,6 @@ function isGrounded(combatant: CombatantState): boolean {
 	let species = GAME_DATA.species.get(combatant.creature.speciesId);
 	if (!species) throw new ReferenceError(`Species ${combatant.creature.speciesId} not found.`);
 	return species.types.includes("flying") === false;
-}
-
-function createRandomSequence(...values: number[]) {
-	let index = 0;
-	return () => {
-		let value = values[index] ?? values.at(-1) ?? 0;
-		index += 1;
-		return value;
-	};
 }
 
 function getSpeciesId(

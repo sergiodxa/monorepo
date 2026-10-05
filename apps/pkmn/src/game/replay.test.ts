@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createRandom } from "@sdxc/random";
 import { expect, test } from "vitest";
 
 import { ITEMS } from "~/content/items";
@@ -39,20 +40,12 @@ let ENEMY_CREATURE_ID = createCreatureId("enemy-1");
 let BATTLE_ID = createBattleId("battle-1");
 
 /**
- * Turns a numeric seed into a deterministic RNG source (mulberry32).
- *
- * The engine only accepts a `() => number` RNG, so the harness's numeric seed is expanded here into a
- * reproducible stream. This lives in the caller — the harness stays agnostic of how a seed becomes randomness.
+ * Opens the engine's streams from a numeric seed, one derived stream per
+ * subsystem, so the harness stays agnostic of how a seed becomes randomness.
  */
-function seededRandom(seed: number): () => number {
-	let state = seed >>> 0;
-	return () => {
-		state = (state + 0x6d2b79f5) >>> 0;
-		let value = state;
-		value = Math.imul(value ^ (value >>> 15), value | 1);
-		value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-		return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-	};
+function seededStreams(seed: number): Engine.Streams {
+	let session = createRandom(seed);
+	return { creatures: session.derive("creatures"), battle: session.derive("battle") };
 }
 
 /** Builds one bootstrap creature payload configured with a damaging move. */
@@ -100,7 +93,7 @@ function buildEngine(seed: number): Engine {
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random: seededRandom(seed),
+		random: seededStreams(seed),
 		world: migrateWorld({
 			entities: [PLAYER_ID, ENEMY_ID, ALLY_ID, ENEMY_CREATURE_ID],
 			playerId: PLAYER_ID,

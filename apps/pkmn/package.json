@@ -9,6 +9,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/random": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"remix": "3.0.0"
 	},

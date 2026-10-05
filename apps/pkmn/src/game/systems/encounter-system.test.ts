@@ -11,6 +11,8 @@ import { unwrap } from "@sdxc/result";
  */
 import { expect, test } from "vitest";
 
+import { drawsFrom, scriptedRandom } from "~/game/test-support/scripted-random";
+
 import { GameData, type GameDataSource } from "../data/game-data";
 import { GrowthRate } from "../data/growth-rate";
 import { DamageClass, type Move } from "../data/move";
@@ -111,7 +113,7 @@ test("spawnEncounter writes the full component set at an encounter location", ()
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		() => 0,
+		scriptedRandom(0),
 	);
 
 	expect(world.creatureIdentity[creatureId]).toEqual({ speciesId: SPECIES_ID });
@@ -136,13 +138,13 @@ test("spawnEncounter rolls a gender deterministically from the even ratio", () =
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		() => 0.1,
+		scriptedRandom(0.1),
 	);
 	let male = spawnEncounter(
 		createGameData(),
 		world,
 		{ encounterId: "route-2", speciesId: SPECIES_ID, level: 5 },
-		() => 0.9,
+		scriptedRandom(0.9),
 	);
 
 	expect(world.creatureInstance[female.creatureId]?.gender).toBe(Gender.Female);
@@ -187,7 +189,7 @@ test("spawnEncounter always yields genderless for a species with no ratio", () =
 		gameData,
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		() => 0.5,
+		scriptedRandom(0.5),
 	);
 
 	expect(world.creatureInstance[creatureId]?.gender).toBe(Gender.Genderless);
@@ -199,7 +201,7 @@ test("spawnEncounter leaves the creature unowned until a capture converts it", (
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		() => 0,
+		scriptedRandom(0),
 	);
 
 	expect(world.ownership[creatureId]).toBeUndefined();
@@ -212,7 +214,7 @@ test("spawnEncounter sets experience to the species curve total for the level", 
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 8 },
-		() => 0,
+		scriptedRandom(0),
 	);
 
 	expect(world.creatureProgress[creatureId]?.experience).toBe(512);
@@ -227,7 +229,7 @@ test("spawnEncounter rolls nature and IVs deterministically from a scripted RNG"
 	let { world } = createWorld();
 	let rolls = [0.6, 0, 0.5, 0.99, 0.25, 0.75, 0.1];
 	let index = 0;
-	let random = () => rolls[index++]!;
+	let random = drawsFrom(() => rolls[index++]!);
 
 	let { creatureId } = spawnEncounter(
 		createGameData(),
@@ -259,7 +261,7 @@ test("spawnEncounter derives the most recent level-up moves for the level", () =
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 5 },
-		() => 0,
+		scriptedRandom(0),
 	);
 
 	let moves = world.creatureMoves[creatureId]!;
@@ -273,7 +275,7 @@ test("spawnEncounter includes higher-level moves once the level qualifies", () =
 		createGameData(),
 		world,
 		{ encounterId: "route-1", speciesId: SPECIES_ID, level: 10 },
-		() => 0,
+		scriptedRandom(0),
 	);
 
 	expect(world.creatureMoves[creatureId]?.moveset).toEqual([TACKLE, GROWL, EMBER, null]);
@@ -282,9 +284,9 @@ test("spawnEncounter includes higher-level moves once the level qualifies", () =
 /** A throwing random function proves the overrides bypass every random roll. */
 test("spawnEncounter honors explicit nature, IV, and move overrides without the RNG", () => {
 	let { world } = createWorld();
-	let random = () => {
+	let random = drawsFrom(() => {
 		throw new Error("random should not be called when everything is overridden");
-	};
+	});
 
 	let { creatureId } = spawnEncounter(
 		createGameData(),
@@ -329,7 +331,7 @@ test("spawnEncounter rolls IVs for stats missing from a partial IV override", ()
 	let { world } = createWorld();
 	let rolls = [0, 0.5, 0.5, 0.5, 0.5, 0.5];
 	let index = 0;
-	let random = () => rolls[index++]!;
+	let random = drawsFrom(() => rolls[index++]!);
 
 	let { creatureId } = spawnEncounter(
 		createGameData(),
@@ -356,7 +358,7 @@ test("spawnEncounter throws for an unknown species", () => {
 			createGameData(),
 			world,
 			{ encounterId: "route-1", speciesId: "MISSING", level: 5 },
-			() => 0,
+			scriptedRandom(0),
 		),
 	).toThrow(ReferenceError);
 });

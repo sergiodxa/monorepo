@@ -2,12 +2,14 @@
  * Wild-encounter rolling for the overworld.
  *
  * Rolls against a tile's encounter rate using the Gen 3 style check
- * (`random() < rate / 255`), then picks a species and level from the
+ * (`random.bool(rate / 255)`), then picks a species and level from the
  * tile's encounter table or a content fallback.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { EncounterEntry } from "../render/tilemap";
 
 import type { GameMap } from "./map-loader";
@@ -19,9 +21,9 @@ export interface EncounterChoice {
 }
 
 /** Returns true when stepping onto `(x, y)` should start a wild battle. */
-export function rollEncounter(map: GameMap, x: number, y: number, random: () => number): boolean {
+export function rollEncounter(map: GameMap, x: number, y: number, random: Random): boolean {
 	if (!map.isEncounter(x, y)) return false;
-	return random() < map.encounterRate(x, y) / 255;
+	return random.bool(map.encounterRate(x, y) / 255);
 }
 
 /**
@@ -33,11 +35,11 @@ export function rollEncounter(map: GameMap, x: number, y: number, random: () => 
 export function chooseEncounter(
 	table: EncounterEntry[],
 	fallbackSpeciesIds: string[],
-	random: () => number,
+	random: Random,
 ): EncounterChoice | null {
 	if (table.length > 0) {
 		let total = table.reduce((sum, entry) => sum + entry.weight, 0);
-		let roll = random() * total;
+		let roll = random.float(0, total);
 		let accumulated = 0;
 		for (let entry of table) {
 			accumulated += entry.weight;
@@ -49,11 +51,11 @@ export function chooseEncounter(
 	}
 
 	if (fallbackSpeciesIds.length === 0) return null;
-	let speciesId = fallbackSpeciesIds[Math.floor(random() * fallbackSpeciesIds.length)]!;
-	return { speciesId, level: 2 + Math.floor(random() * 4) };
+	let speciesId = random.pick(fallbackSpeciesIds);
+	return { speciesId, level: random.int(2, 5) };
 }
 
 /** Rolls a level within an encounter entry's inclusive range. */
-function rollLevel(entry: EncounterEntry, random: () => number): number {
-	return entry.minLevel + Math.floor(random() * (entry.maxLevel - entry.minLevel + 1));
+function rollLevel(entry: EncounterEntry, random: Random): number {
+	return random.int(entry.minLevel, entry.maxLevel);
 }

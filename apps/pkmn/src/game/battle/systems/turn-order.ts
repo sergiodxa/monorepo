@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { Move } from "~/game/data/move";
 
@@ -56,7 +58,7 @@ export interface TurnAction {
 export interface TurnOrderingContext {
 	state: BattleState;
 	gameData: GameData;
-	random(): number;
+	random: Random;
 	getActiveCombatant(position: BattlePosition): BattleActiveSlotState | null;
 	canCombatantLeaveBattle(position: BattlePosition, combatant: CombatantState): boolean;
 	canSwitchCombatant(
@@ -96,7 +98,7 @@ export function getTurnActions(
 			if (context.canCombatantLeaveBattle(request, active.combatant) === false) continue;
 
 			actions.push({
-				turnOrderRoll: context.random(),
+				turnOrderRoll: context.random.next(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -111,7 +113,7 @@ export function getTurnActions(
 
 		if (command.type === "use-item") {
 			actions.push({
-				turnOrderRoll: context.random(),
+				turnOrderRoll: context.random.next(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -128,7 +130,7 @@ export function getTurnActions(
 			if (context.canSwitchCombatant(request, active, command.creature) === false) continue;
 
 			actions.push({
-				turnOrderRoll: context.random(),
+				turnOrderRoll: context.random.next(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -149,7 +151,7 @@ export function getTurnActions(
 			if (!move) throw new ReferenceError(`Move ${chargingMoveId} not found in game data.`);
 
 			actions.push({
-				turnOrderRoll: context.random(),
+				turnOrderRoll: context.random.next(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -169,7 +171,7 @@ export function getTurnActions(
 			if (hasCommittedRegularMove(active.combatant)) continue;
 
 			actions.push({
-				turnOrderRoll: context.random(),
+				turnOrderRoll: context.random.next(),
 				user: active.combatant,
 				userPosition: request,
 				command,
@@ -188,7 +190,7 @@ export function getTurnActions(
 		if (!move) throw new ReferenceError(`Move ${moveId} not found in game data.`);
 
 		actions.push({
-			turnOrderRoll: context.random(),
+			turnOrderRoll: context.random.next(),
 			user: active.combatant,
 			userPosition: request,
 			command,

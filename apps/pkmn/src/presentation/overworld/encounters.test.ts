@@ -10,20 +10,12 @@
  */
 import { expect, test } from "vitest";
 
+import { scriptedRandom } from "~/game/test-support/scripted-random";
+
 import type { EncounterEntry } from "../render/tilemap";
 
 import { chooseEncounter, rollEncounter } from "./encounters";
 import { createSampleMap, GameMap } from "./map-loader";
-
-/** Returns a `random` that yields the scripted values in order, then repeats the last. */
-function scriptedRandom(...values: number[]): () => number {
-	let index = 0;
-	return () => {
-		let value = values[Math.min(index, values.length - 1)]!;
-		index++;
-		return value;
-	};
-}
 
 /** The sample map has an encounter zone at rate 40 covering rows 3..7, cols 9..14. */
 let SAMPLE = new GameMap(createSampleMap());
@@ -31,15 +23,15 @@ let GRASS_TILE = { x: 9, y: 3 };
 let PLAIN_TILE = { x: 5, y: 5 };
 
 test("rollEncounter never triggers off a non-encounter tile", () => {
-	expect(rollEncounter(SAMPLE, PLAIN_TILE.x, PLAIN_TILE.y, () => 0)).toBe(false);
+	expect(rollEncounter(SAMPLE, PLAIN_TILE.x, PLAIN_TILE.y, scriptedRandom(0))).toBe(false);
 });
 
 test("rollEncounter triggers when random is below rate/255", () => {
-	expect(rollEncounter(SAMPLE, GRASS_TILE.x, GRASS_TILE.y, () => 0.1)).toBe(true);
+	expect(rollEncounter(SAMPLE, GRASS_TILE.x, GRASS_TILE.y, scriptedRandom(0.1))).toBe(true);
 });
 
 test("rollEncounter stays quiet when random is at or above rate/255", () => {
-	expect(rollEncounter(SAMPLE, GRASS_TILE.x, GRASS_TILE.y, () => 0.2)).toBe(false);
+	expect(rollEncounter(SAMPLE, GRASS_TILE.x, GRASS_TILE.y, scriptedRandom(0.2))).toBe(false);
 });
 
 let TABLE: EncounterEntry[] = [

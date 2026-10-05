@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { Move, MoveEffect } from "~/game/data/move";
 
 import { DamageClass } from "~/game/data/move";
@@ -19,7 +21,7 @@ import type { CombatantState } from "../combatant-state";
  * controller can supply its own implementation.
  */
 export interface MoveResolutionContext {
-	random(): number;
+	random: Random;
 	flattenEffects(effect: MoveEffect): MoveEffect[];
 	findEffect<TKind extends MoveEffect["kind"]>(
 		effects: MoveEffect[],

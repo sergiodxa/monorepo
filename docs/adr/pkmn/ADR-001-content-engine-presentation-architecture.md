@@ -489,7 +489,7 @@ class Engine {
 }
 ```
 
-`create` validates content (throwing on invalid cross-references) and migrates the given world. The engine owns its world exclusively — callers keep no references into it. **(planned)** `Engine.Options.random?: () => number` threads a seedable RNG into battles so whole sessions are reproducible.
+`create` validates content (throwing on invalid cross-references) and migrates the given world. The engine owns its world exclusively — callers keep no references into it. `Engine.Options.random` is an `Engine.Streams` — `{ creatures, battle }`, each a `Random` from `@sdxc/random` — so whole sessions are reproducible from one seed.
 
 ### 2.6 Commands
 
@@ -799,7 +799,7 @@ This is the step that closes the game loop: battles must have consequences in th
 
 #### 2.11.12 RNG and determinism
 
-All randomness flows through one injected `random(): number` (defaults to `Math.random`). With a seeded generator, a battle is fully reproducible from its inputs plus the command sequence — this is the testing and replay strategy. The engine never calls `Math.random` directly anywhere else.
+All randomness flows through injected `Random` streams from `@sdxc/random`. A session opens one seeded stream and derives `encounters`, `movement`, `creatures` and `battle` from it, so an extra draw in one subsystem never shifts another, and a save stores each stream's `state()` so a loaded game draws what the uninterrupted one would. A battle is fully reproducible from its inputs plus the command sequence — this is the testing and replay strategy. Nothing calls `Math.random`.
 
 ### 2.12 Extension model
 

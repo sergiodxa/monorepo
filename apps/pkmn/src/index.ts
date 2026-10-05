@@ -16,6 +16,7 @@ import { SPECIES } from "~/content/species";
 import { Engine } from "~/game/engine";
 import { GameClient } from "~/presentation/core/game-client";
 import { createNewGameWorld } from "~/presentation/core/new-game";
+import { openSessionRandom } from "~/presentation/core/session-random";
 import { BootScene } from "~/presentation/scenes/boot";
 
 let content: GameDataSource = {
@@ -29,6 +30,7 @@ let content: GameDataSource = {
 let root = globalThis.document.getElementById("app");
 if (root === null) throw new ReferenceError("Missing #app root element.");
 
-let engine = Engine.create({ content, world: createNewGameWorld(content) });
-let game = new GameClient(root, engine, content);
+let random = openSessionRandom();
+let engine = Engine.create({ content, world: createNewGameWorld(content), random });
+let game = new GameClient(root, engine, content, random);
 game.start(new BootScene());

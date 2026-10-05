@@ -1,4 +1,3 @@
-import { unwrap } from "@sdxc/result";
 /**
  * Exercises end-to-end turn resolution, action ordering, and combat-state
  * transitions through the public battle API. Assertions protect the
@@ -8,6 +7,9 @@ import { unwrap } from "@sdxc/result";
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
+import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import type { NatureId } from "~/game/data/nature";
@@ -21,6 +23,7 @@ import { SPECIES } from "~/content/species";
 import { GameData } from "~/game/data/game-data";
 import { DamageClass } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
+import { scriptedRandom } from "~/game/test-support/scripted-random";
 import { Creature, State } from "~/game/world/creature";
 
 import type { BattleEvent, BattlePosition } from "./battle";
@@ -53,7 +56,7 @@ test("the faster creature acts first when move priority matches", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[createPrimaryFixture()]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -85,7 +88,7 @@ test("Quick Attack acts before a faster creature using a normal-priority move", 
 			{ teams: [[createBravePrimaryFixtureWithQuickAttack()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -117,7 +120,7 @@ test("Extreme Speed acts before another positive-priority move", () => {
 			{ teams: [[createBravePrimaryFixtureWithExtremeSpeed()]] },
 			{ teams: [[createModestSecondaryFixtureWithQuickAttack()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -149,7 +152,7 @@ test("when both creatures use Quick Attack, the faster creature acts first", () 
 			{ teams: [[createBravePrimaryFixtureWithQuickAttack()]] },
 			{ teams: [[createModestSecondaryFixtureWithQuickAttack()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -180,7 +183,7 @@ test("a zero-PP move cannot be used while other moves remain", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -210,7 +213,7 @@ test("PP is spent when a move is committed even if the user faints before acting
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -235,7 +238,7 @@ test("the built-in fallback move is used when no regular move has PP", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -271,7 +274,7 @@ test("a fainted slot requests a replacement before the next turn", () => {
 		 * 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll
 		 * at its maximum, so the fainting-blow event stream stays deterministic.
 		 */
-		random: () => 0.94,
+		random: scriptedRandom(0.94),
 	});
 	let session = battle.start();
 	let events: BattleEvent[] = [];
@@ -359,7 +362,7 @@ test("a side loses when its only team has no replacement left", () => {
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
 		/** 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal. */
-		random: () => 0.94,
+		random: scriptedRandom(0.94),
 	});
 	let session = battle.start();
 	let lastEvent: BattleEvent | null = null;
@@ -398,7 +401,7 @@ test("a side can leave the battle instead of sending a replacement", () => {
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
 		/** 0.94 passes Razor Leaf's 95% accuracy while keeping the damage roll maximal. */
-		random: () => 0.94,
+		random: scriptedRandom(0.94),
 	});
 	let session = battle.start();
 	let lastEvent: BattleEvent | null = null;
@@ -446,7 +449,7 @@ test("a side can leave the battle during turn input when escape is allowed", () 
 			{ canLeaveBattle: true, teams: [[createFastPlayerFixtureWithTackle()]] },
 			{ teams: [[createSlowSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 	let lastEvent: BattleEvent | null = null;
@@ -486,7 +489,7 @@ test("escaping always succeeds when the escapee is at least as fast as the oppon
 			{ canLeaveBattle: true, teams: [[createFastPlayerFixtureWithTackle()]] },
 			{ teams: [[createSlowSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 0.99,
+		random: scriptedRandom(0.99),
 	});
 	let session = battle.start();
 
@@ -525,7 +528,7 @@ test("a slower escapee always succeeds once accumulated attempts push the thresh
 			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
 			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 0.99,
+		random: scriptedRandom(0.99),
 	});
 	battle.state.escapeAttempts = 7;
 
@@ -566,7 +569,7 @@ test("a slower escapee escapes when the random roll lands under the threshold", 
 			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
 			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0.5, 0.5, 0),
+		random: scriptedRandom(0.5, 0.5, 0),
 	});
 	let session = battle.start();
 
@@ -605,7 +608,7 @@ test("a failed escape emits escape-failed, lets the enemy act, and increments at
 			{ canLeaveBattle: true, teams: [[createSlowPlayerFixtureWithTackle()]] },
 			{ teams: [[createFastSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0.5, 0.5, 0.5),
+		random: scriptedRandom(0.5, 0.5, 0.5),
 	});
 	let session = battle.start();
 
@@ -638,7 +641,7 @@ test("a trapped or disallowed side cannot leave during turn input", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[createPrimaryFixture()]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let trappedCombatant = battle.state.sides[0].active[0]?.combatant;
 	if (!trappedCombatant) throw new TypeError("Expected an active combatant.");
@@ -675,7 +678,7 @@ test("Mean Look prevents leaving the battle on later turns", () => {
 			{ canLeaveBattle: true, teams: [[createPrimaryFixture()]] },
 			{ teams: [[createSecondaryFixtureWithMeanLook()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -733,7 +736,7 @@ test("a side can switch to a bench creature during turn input", () => {
 			{ teams: [[createPrimaryFixtureWithTackle(), createBackupPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -763,7 +766,7 @@ test("Growl lowers the target attack stage", () => {
 			{ teams: [[createPrimaryFixtureWithGrowl()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -794,7 +797,7 @@ test("Safeguard blocks major status on the protected side", () => {
 			{ teams: [[createPrimaryFixtureWithSafeguard()]] },
 			{ teams: [[createModestSecondaryFixtureWithSleepPowder()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -829,7 +832,7 @@ test("Electric Terrain blocks sleep for grounded targets", () => {
 			{ teams: [[createPrimaryFixtureWithElectricTerrain()]] },
 			{ teams: [[createModestSecondaryFixtureWithSleepPowder()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -864,7 +867,7 @@ test("Misty Terrain blocks grounded major status applications", () => {
 			{ teams: [[createPrimaryFixtureWithMistyTerrain()]] },
 			{ teams: [[createModestSecondaryFixtureWithSleepPowder()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -899,7 +902,7 @@ test("Mist blocks stat drops on the protected side", () => {
 			{ teams: [[createPrimaryFixtureWithMist()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -931,7 +934,7 @@ test("Growth raises the user's special attack stage", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[createPrimaryFixture()]] }, { teams: [[createModestSecondaryFixture()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -955,7 +958,7 @@ test("Agility sharply raises the user's speed", () => {
 			{ teams: [[createPrimaryFixtureWithAgility()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -985,7 +988,7 @@ test("Bulk Up raises the user's attack and defense", () => {
 			{ teams: [[createPrimaryFixtureWithBulkUp()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1023,7 +1026,7 @@ test("Tailwind doubles side speed and changes turn order", () => {
 			{ teams: [[createPrimaryFixtureWithTailwind()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1063,7 +1066,7 @@ test("Baby-Doll Eyes acts before a faster normal-priority move and lowers attack
 			{ teams: [[createPrimaryFixtureWithBabyDollEyes()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1116,7 +1119,7 @@ test("Reflect reduces physical damage on the protected side", () => {
 			{ teams: [[createPrimaryFixtureWithReflect()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = withReflectBattle.start();
 
@@ -1181,7 +1184,7 @@ test("Brick Break clears Reflect on the target side", () => {
 			{ teams: [[createPrimaryFixtureWithBrickBreak()]] },
 			{ teams: [[createModestSecondaryFixtureWithReflect()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1221,7 +1224,7 @@ test("Haze resets stat stages for both active combatants", () => {
 			{ teams: [[createPrimaryFixtureWithHaze()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1263,7 +1266,7 @@ test("Clear Smog resets the target stat stages after dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithClearSmog()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1307,7 +1310,7 @@ test("Defog clears hazards from both sides", () => {
 			{ teams: [[createPrimaryFixtureWithDefog()]] },
 			{ teams: [[createModestSecondaryFixtureWithSpikes()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1358,7 +1361,7 @@ test("Stealth Rock applies four-times weakness damage on switch-in", () => {
 			{ teams: [[createPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(), reserve]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	battle.state.sides[1].effects.stealthRock = true;
 	let session = battle.start();
@@ -1393,7 +1396,7 @@ test("Trick Room reverses speed order on the following turn", () => {
 			{ teams: [[createPrimaryFixtureWithTrickRoom()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1433,7 +1436,7 @@ test("Rain Dance applies rain to the shared field", () => {
 			{ teams: [[createPrimaryFixtureWithRainDance()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1458,7 +1461,7 @@ test("Grassy Terrain applies grassy terrain to the shared field", () => {
 			{ teams: [[createPrimaryFixtureWithGrassyTerrain()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1487,7 +1490,7 @@ test("Grassy Terrain heals grounded combatants at the end of the turn", () => {
 			{ teams: [[createDamagedPrimaryFixtureWithGrassyTerrain()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1516,7 +1519,7 @@ test("Gravity applies gravity turns to the shared field", () => {
 			{ teams: [[createPrimaryFixtureWithGravity()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1540,7 +1543,7 @@ test("Spikes damages a creature that switches in", () => {
 			{ teams: [[createPrimaryFixtureWithSpikes()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1579,7 +1582,7 @@ test("Toxic applies escalating poison and increases residual damage each turn", 
 			{ teams: [[createModestSecondaryFixtureWithTackle(HEAVY_SPECIES_ID)]] },
 		],
 		/** 0.89 passes Toxic's 90% accuracy so the poison lands. */
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -1634,7 +1637,7 @@ test("Two layers of Toxic Spikes apply escalating poison on switch-in", () => {
 				],
 			},
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1694,7 +1697,7 @@ test("Escalating poison resets to its opening stage after the combatant switches
 			},
 		],
 		/** 0.89 passes Toxic's 90% accuracy so the poison lands. */
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -1747,7 +1750,7 @@ test("Toxic Spikes respects misty terrain when a grounded target switches in", (
 			},
 			{ teams: [[createModestSecondaryFixtureWithToxicSpikes(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1789,7 +1792,7 @@ test("A grounded Poison-type absorbs Toxic Spikes on switch-in", () => {
 				],
 			},
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	battle.state.sides[1].effects.toxicSpikesLayers = 2;
 	let session = battle.start();
@@ -1826,7 +1829,7 @@ test("Gravity makes a flying switch-in trigger grounded hazards", () => {
 				],
 			},
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	battle.state.field.gravityTurns = 2;
 	battle.state.sides[1].effects.spikesLayers = 1;
@@ -1858,7 +1861,7 @@ test("Earlier switch-in hazards resolve before Toxic Spikes absorption", () => {
 			{ teams: [[createPrimaryFixtureWithTackle()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(HEAVY_SPECIES_ID), reserve]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	battle.state.sides[1].effects.stealthRock = true;
 	battle.state.sides[1].effects.toxicSpikesLayers = 2;
@@ -1892,7 +1895,7 @@ test("Protect prevents direct damage for the turn", () => {
 			{ teams: [[createPrimaryFixtureWithProtect()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1922,7 +1925,7 @@ test("Protect blocks targeted status effects for the turn", () => {
 			{ teams: [[createPrimaryFixtureWithProtect()]] },
 			{ teams: [[createModestSecondaryFixtureWithSleepPowder()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -1948,7 +1951,7 @@ test("Protect uses declining success on consecutive turns", () => {
 			{ teams: [[createPrimaryFixtureWithProtect()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0.75),
+		random: scriptedRandom(0.75),
 	});
 	let session = battle.start();
 
@@ -1989,7 +1992,7 @@ test("Protect resets its declining success after a different move", () => {
 			{ teams: [[createPrimaryFixtureWithProtect()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0.75),
+		random: scriptedRandom(0.75),
 	});
 	let session = battle.start();
 
@@ -2036,7 +2039,7 @@ test("Detect protects like Protect", () => {
 			{ teams: [[createPrimaryFixtureWithDetect()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2066,7 +2069,7 @@ test("Swift still respects Protect despite always-hit accuracy", () => {
 			{ teams: [[createPrimaryFixtureWithSwift()]] },
 			{ teams: [[createModestSecondaryFixtureWithDetect()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2097,7 +2100,7 @@ test("Endure leaves the user at 1 HP against lethal damage", () => {
 			{ teams: [[createLowHpPrimaryFixtureWithEndure()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2130,7 +2133,7 @@ test("Endure uses declining success on consecutive turns", () => {
 			{ teams: [[createLowHpPrimaryFixtureWithEndure()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0.75),
+		random: scriptedRandom(0.75),
 	});
 	let session = battle.start();
 
@@ -2166,7 +2169,7 @@ test("False Swipe cannot knock out the target", () => {
 			{ teams: [[createPrimaryFixtureWithFalseSwipe()]] },
 			{ teams: [[createLowHpSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2194,7 +2197,7 @@ test("Belly Drum costs half max HP and maximizes attack", () => {
 			{ teams: [[createPrimaryFixtureWithBellyDrum()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2228,7 +2231,7 @@ test("Belly Drum fails when the user is at or below half HP", () => {
 			{ teams: [[createHalfHpPrimaryFixtureWithBellyDrum()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2268,7 +2271,7 @@ test("Jump Kick crash damage is applied when the move misses", () => {
 			{ teams: [[createPrimaryFixtureWithJumpKick()]] },
 			{ teams: [[createModestSecondaryFixtureWithSandAttack()]] },
 		],
-		random: createRandomSequence(1, 1, 0.99),
+		random: scriptedRandom(1, 1, 0.99),
 	});
 	let session = battle.start();
 
@@ -2309,7 +2312,7 @@ test("Fake Out only works on the user's first action", () => {
 			{ teams: [[createPrimaryFixtureWithFakeOut()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2365,7 +2368,7 @@ test("duplicate side effects fail before applying again", () => {
 			{ teams: [[createPrimaryFixtureWithReflect()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2407,7 +2410,7 @@ test("duplicate non-room field effects fail before applying again", () => {
 			{ teams: [[createPrimaryFixtureWithRainDance()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2448,7 +2451,7 @@ test("reusing trick room clears the active room instead of failing", () => {
 			{ teams: [[createPrimaryFixtureWithTrickRoom()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2485,7 +2488,7 @@ test("Feint breaks protection and still deals damage", () => {
 			{ teams: [[createPrimaryFixtureWithFeint()]] },
 			{ teams: [[createModestSecondaryFixtureWithDetect()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2522,7 +2525,7 @@ test("Confuse Ray applies confusion to the target", () => {
 			{ teams: [[createPrimaryFixtureWithConfuseRay()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2555,7 +2558,7 @@ test("Fly spends one turn charging, avoids later attacks, then hits on the next 
 		 * damage maximal; the opponent's Tackle still misses the airborne
 		 * user via semi-invulnerability.
 		 */
-		random: () => 0.94,
+		random: scriptedRandom(0.94),
 	});
 	let session = battle.start();
 
@@ -2618,7 +2621,7 @@ test("Swift misses an invulnerable target despite always-hit accuracy", () => {
 			{ teams: [[createSlowPrimaryFixtureWithSwift()]] },
 			{ teams: [[createFastSecondaryFixtureWithFly()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2654,7 +2657,7 @@ test("confused combatants can lose their action and hurt themselves", () => {
 			{ teams: [[createPrimaryFixtureWithConfuseRay()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(1, 1, 0),
+		random: scriptedRandom(1, 1, 0),
 	});
 	let session = battle.start();
 
@@ -2695,7 +2698,7 @@ test("Light Screen reduces special damage on the protected side", () => {
 			{ teams: [[createPrimaryFixtureWithLightScreen()]] },
 			{ teams: [[createModestSecondaryFixtureWithEmber()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2733,7 +2736,7 @@ test("Dragon Rage deals fixed damage", () => {
 			{ teams: [[createPrimaryFixtureWithDragonRage()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2763,7 +2766,7 @@ test("Brine deals more damage to a target below half HP", () => {
 			{ teams: [[createPrimaryFixtureWithBrine()]] },
 			{ teams: [[createBelowHalfHpSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2792,7 +2795,7 @@ test("Hex deals more damage to a statused target", () => {
 			{ teams: [[createPrimaryFixtureWithHex()]] },
 			{ teams: [[createParalyzedSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2847,7 +2850,7 @@ test("Flail deals more damage at low HP", () => {
 			{ teams: [[createLowHpPrimaryFixtureWithFlail()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2872,7 +2875,7 @@ test("Endeavor deals damage equal to the HP gap between target and user", () => 
 			{ teams: [[createLowHpPrimaryFixtureWithEndeavor()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2906,7 +2909,7 @@ test("Endeavor fails when the target does not have more HP than the user", () =>
 			{ teams: [[createPrimaryFixtureWithEndeavor()]] },
 			{ teams: [[createLowHpSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -2950,7 +2953,7 @@ test("Follow Me redirects an attack from an ally to the user in doubles", () => 
 			{ teams: [[createModestSecondaryFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
 		slots: 2,
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3010,7 +3013,7 @@ test("Dragon Tail forces the target to switch after dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithDragonTail()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -3038,7 +3041,7 @@ test("Roar forces the target to switch without dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithRoar()]] },
 			{ teams: [[createSlowSecondaryFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -3069,7 +3072,7 @@ test("Baton Pass switches the user and preserves stat stages", () => {
 			{ teams: [[createPrimaryFixtureWithBatonPass(), createBackupPrimaryFixture()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3103,7 +3106,7 @@ test("Future Sight deals damage at the end of a later turn", () => {
 			{ teams: [[createPrimaryFixtureWithFutureSight()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3140,7 +3143,7 @@ test("Charge doubles the user's next Electric attack once", () => {
 			{ teams: [[createPrimaryFixtureWithChargeBeam()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		() => 0.89,
+		scriptedRandom(0.89),
 	);
 	let battle = new Battle({
 		gameData: GAME_DATA,
@@ -3148,7 +3151,7 @@ test("Charge doubles the user's next Electric attack once", () => {
 			{ teams: [[createPrimaryFixtureWithCharge()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -3185,7 +3188,7 @@ test("Focus Energy raises the user's critical-hit chance", () => {
 			{ teams: [[createPrimaryFixtureWithFocusEnergy()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 0.1,
+		random: scriptedRandom(0.1),
 	});
 	let session = battle.start();
 
@@ -3217,7 +3220,7 @@ test("High-crit moves raise the user's critical-hit chance", () => {
 			{ teams: [[createPrimaryFixtureWithRazorLeaf()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 0.1,
+		random: scriptedRandom(0.1),
 	});
 	let session = battle.start();
 
@@ -3240,7 +3243,7 @@ test("Critical-rate item stages raise the user's critical-hit chance once applie
 			{ teams: [[createPrimaryFixtureWithTackle()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 0.4,
+		random: scriptedRandom(0.4),
 	});
 	let session = battle.start();
 
@@ -3266,7 +3269,7 @@ test("Aqua Ring heals the user at the end of the turn", () => {
 			{ teams: [[createDamagedPrimaryFixtureWithAquaRing()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3301,7 +3304,7 @@ test("Healing Wish restores the next replacement", () => {
 			},
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	battle.state.sides[0]!.effects.stealthRock = true;
 	let session = battle.start();
@@ -3366,7 +3369,7 @@ test("Curse boosts Attack and Defense and lowers Speed for non-Ghost users", () 
 			{ teams: [[createPrimaryFixtureWithCurse()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3409,7 +3412,7 @@ test("Curse deals half the user's HP and curses the target for Ghost users", () 
 			{ teams: [[createSpectralFixtureWithCurse()]] },
 			{ teams: [[createModestSecondaryFixtureWithGrowl()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3453,7 +3456,7 @@ test("Assurance deals more damage after the target was already hit this turn", (
 			{ teams: [[createPrimaryFixtureWithAssurance()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3485,7 +3488,7 @@ test("Counter returns double the last physical damage taken", () => {
 			{ teams: [[createPrimaryFixtureWithCounter()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3518,7 +3521,7 @@ test("Destiny Bond makes the attacker faint after knocking out the user", () => 
 			{ teams: [[createLowHpPrimaryFixtureWithDestinyBond()]] },
 			{ teams: [[createLightFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3551,7 +3554,7 @@ test("a simultaneous elimination with no reserves finishes as a draw", () => {
 			{ teams: [[createLowHpPrimaryFixtureWithDestinyBond()]] },
 			{ teams: [[createLightFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3578,7 +3581,7 @@ test("a simultaneous elimination with reserves still requests replacements", () 
 			{ teams: [[createLowHpPrimaryFixtureWithDestinyBond(), createBackupPrimaryFixture()]] },
 			{ teams: [[createLightFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3611,7 +3614,7 @@ test("Fell Stinger sharply raises attack after a knockout", () => {
 			{ teams: [[createPrimaryFixtureWithFellStinger()]] },
 			{ teams: [[createLowHpSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3641,7 +3644,7 @@ test("Focus Punch fails if the user was damaged earlier in the turn", () => {
 			{ teams: [[createPrimaryFixtureWithFocusPunch()]] },
 			{ teams: [[createModestSecondaryFixtureWithQuickAttack()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3671,7 +3674,7 @@ test("Take Down deals recoil to the user", () => {
 			{ teams: [[createPrimaryFixtureWithTakeDown()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3696,7 +3699,7 @@ test("Sandstorm deals residual damage to non-immune combatants", () => {
 			{ teams: [[createPrimaryFixtureWithSandstorm()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3725,7 +3728,7 @@ test("Hyper Beam forces the user to recharge on the next turn", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.89 passes Hyper Beam's 90% accuracy so it connects and forces the recharge. */
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -3761,7 +3764,7 @@ test("Taunt prevents the target from using status moves", () => {
 			{ teams: [[createPrimaryFixtureWithTaunt()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3797,7 +3800,7 @@ test("Disable prevents using the disabled move slot", () => {
 			{ teams: [[createPrimaryFixtureWithDisable()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3833,7 +3836,7 @@ test("Encore locks the target into its last successful move slot", () => {
 			{ teams: [[createModestSecondaryFixtureWithEncore()]] },
 			{ teams: [[createPrimaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3880,7 +3883,7 @@ test("Identify lets Normal moves hit a Ghost target on later turns", () => {
 			{ teams: [[createPrimaryFixtureWithIdentify()]] },
 			{ teams: [[createSpectralFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3921,7 +3924,7 @@ test("Swift still respects type immunity despite always-hit accuracy", () => {
 			{ teams: [[createPrimaryFixtureWithSwift()]] },
 			{ teams: [[createSpectralFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3951,7 +3954,7 @@ test("Identify clears when the identified combatant switches out", () => {
 			{ teams: [[createPrimaryFixtureWithIdentify()]] },
 			{ teams: [[createSpectralFixtureWithTackle(), createBackupSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -3985,7 +3988,7 @@ test("Attract ends when the source switches out before the target acts", () => {
 			{ teams: [[createPrimaryFixtureWithAttract(), createBackupPrimaryFixture()]] },
 			{ teams: [[createSlowSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -4032,7 +4035,7 @@ test("Wrap traps and deals residual damage on later turns", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.89 passes Wrap's 90% accuracy so the trap and residual damage occur. */
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -4071,7 +4074,7 @@ test("Double Slap can hit multiple times in one move", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.84 passes Double Slap's 85% accuracy and yields the maximum hit count. */
-		random: () => 0.84,
+		random: scriptedRandom(0.84),
 	});
 	let session = battle.start();
 
@@ -4096,7 +4099,7 @@ test("Sleep Powder applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.74 passes Sleep Powder's 75% accuracy so the sleep lands. */
-		random: () => 0.74,
+		random: scriptedRandom(0.74),
 	});
 	let session = battle.start();
 
@@ -4137,7 +4140,7 @@ test("Hypnosis applies sleep and sleeping combatants cannot act", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.59 passes Hypnosis's 60% accuracy so the sleep lands. */
-		random: () => 0.59,
+		random: scriptedRandom(0.59),
 	});
 	let session = battle.start();
 
@@ -4177,7 +4180,7 @@ test("sleep tracks turns and clears when the combatant wakes up", () => {
 			{ teams: [[createPrimaryFixtureWithGrowl()]] },
 			{ teams: [[createSleepingSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(0, 1),
+		random: scriptedRandom(0, 1),
 	});
 	let session = battle.start();
 
@@ -4215,7 +4218,7 @@ test("frozen combatants can thaw on their turn and then act", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[createPrimaryFixtureWithGrowl()]] }, { teams: [[secondary]] }],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -4240,7 +4243,7 @@ test("frozen combatants can thaw by using a fire move", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[primary]] }, { teams: [[createModestSecondaryFixtureWithGrowl()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4269,7 +4272,7 @@ test("paralysis can prevent a combatant from acting", () => {
 			{ teams: [[createPrimaryFixtureWithGrowl()]] },
 			{ teams: [[createParalyzedSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -4292,7 +4295,7 @@ test("Absorb heals the user after dealing damage", () => {
 			{ teams: [[createDamagedPrimaryFixtureWithAbsorb()]] },
 			{ teams: [[createSleepingSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4325,7 +4328,7 @@ test("Dream Eater heals the user when the target is asleep", () => {
 			{ teams: [[createDamagedPrimaryFixtureWithDreamEater()]] },
 			{ teams: [[createSleepingSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4357,7 +4360,7 @@ test("accuracy drops can cause a move to miss", () => {
 			{ teams: [[createPrimaryFixtureWithSandAttack()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: createRandomSequence(1, 0.9),
+		random: scriptedRandom(1, 0.9),
 	});
 	let session = battle.start();
 
@@ -4399,7 +4402,7 @@ test("a sub-100 accuracy move can miss at neutral stages when the accuracy roll 
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
 		/** A high roll fails the 70% base-accuracy check (0.99 < 0.7 is false). */
-		random: () => 0.99,
+		random: scriptedRandom(0.99),
 	});
 	let session = battle.start();
 
@@ -4437,7 +4440,7 @@ test("a sub-100 accuracy move connects at neutral stages when the accuracy roll 
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
 		/** A low roll passes the 70% base-accuracy check (0 < 0.7 is true). */
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -4475,7 +4478,7 @@ test("electric terrain does not boost a combatant's effective speed", () => {
 			{ teams: [[createPrimaryFixtureWithElectricTerrain()]] },
 			{ teams: [[createModestSecondaryFixture()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4515,7 +4518,7 @@ test("Glare applies guaranteed paralysis", () => {
 			{ teams: [[createPrimaryFixtureWithGlare()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4542,7 +4545,7 @@ test("Glare does not paralyze Electric-type targets", () => {
 			{ teams: [[createPrimaryFixtureWithGlare()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle(ELECTRIC_SPECIES_ID)]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4568,7 +4571,7 @@ test("Dragon Breath can apply paralysis after dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithDragonBreath()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	let session = battle.start();
 
@@ -4599,7 +4602,7 @@ test("Metal Sound sharply lowers the target special defense", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.84 passes Metal Sound's 85% accuracy so the special-defense drop applies. */
-		random: () => 0.84,
+		random: scriptedRandom(0.84),
 	});
 	let session = battle.start();
 
@@ -4628,7 +4631,7 @@ test("Mud-Slap lowers the target accuracy after dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithMudSlap()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4661,7 +4664,7 @@ test("Icy Wind deals damage and lowers the target speed", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.94 passes Icy Wind's 95% accuracy while keeping damage maximal. */
-		random: () => 0.94,
+		random: scriptedRandom(0.94),
 	});
 	let session = battle.start();
 
@@ -4695,7 +4698,7 @@ test("Leaf Storm lowers the user's special attack after hitting", () => {
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
 		/** 0.89 passes Leaf Storm's 90% accuracy while keeping damage maximal. */
-		random: () => 0.89,
+		random: scriptedRandom(0.89),
 	});
 	let session = battle.start();
 
@@ -4728,7 +4731,7 @@ test("Close Combat lowers the user's defenses after hitting", () => {
 			{ teams: [[createPrimaryFixtureWithCloseCombat()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4766,7 +4769,7 @@ test("Self-Destruct knocks out the user after dealing damage", () => {
 			{ teams: [[createPrimaryFixtureWithSelfDestruct()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4793,7 +4796,7 @@ test("Final Gambit deals damage equal to the user's HP and knocks out the user",
 			{ teams: [[createPrimaryFixtureWithFinalGambit()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4827,7 +4830,7 @@ test("Thrash locks the user into repeated attacks and causes confusion after it 
 			{ teams: [[createPrimaryFixtureWithThrash()]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4866,7 +4869,7 @@ test("a stale single-target action emits an explicit invalid-target failure", ()
 			{ teams: [[createSlowPrimaryFixtureWithSwift()]] },
 			{ teams: [[createFastSecondaryFixtureWithSelfDestruct()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 
@@ -4897,6 +4900,7 @@ test("an invalid team count for the battle format throws", () => {
 			new Battle({
 				gameData: GAME_DATA,
 				slots: 3,
+				random: scriptedRandom(1),
 				sides: [
 					{ teams: [[createPrimaryFixture()], [createBackupPrimaryFixture()]] },
 					{ teams: [[createModestSecondaryFixture()]] },
@@ -4915,7 +4919,7 @@ test("using a heal item restores HP, emits an item-used event, and spends the tu
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[ally]] }, { teams: [[createModestSecondaryFixtureWithGrowl()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 	readEvent(session.next());
@@ -4949,7 +4953,7 @@ test("using a status-cure item clears the status without healing HP", () => {
 	let battle = new Battle({
 		gameData: GAME_DATA,
 		sides: [{ teams: [[ally]] }, { teams: [[createModestSecondaryFixtureWithTackle()]] }],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 	readEvent(session.next());
@@ -4986,7 +4990,7 @@ test("using a revive item on a fainted bench creature restores it to half HP", (
 			{ teams: [[active, benched]] },
 			{ teams: [[createModestSecondaryFixtureWithTackle()]] },
 		],
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	let session = battle.start();
 	readEvent(session.next());
@@ -7440,7 +7444,7 @@ function collectTurnEvents(
 }
 
 function getOpeningDamage(sides: ConstructorParameters<typeof Battle>[0]["sides"]) {
-	let battle = new Battle({ gameData: GAME_DATA, sides, random: () => 1 });
+	let battle = new Battle({ gameData: GAME_DATA, sides, random: scriptedRandom(1) });
 	let session = battle.start();
 
 	readEvent(session.next());
@@ -7459,7 +7463,7 @@ function getOpeningDamage(sides: ConstructorParameters<typeof Battle>[0]["sides"
 
 function getFirstDamageDealt(
 	sides: ConstructorParameters<typeof Battle>[0]["sides"],
-	random: () => number = () => 1,
+	random: Random = scriptedRandom(1),
 ) {
 	let battle = new Battle({ gameData: GAME_DATA, sides, random });
 	let session = battle.start();
@@ -7478,15 +7482,6 @@ function getFirstDamageDealt(
 	}
 
 	return damage.damage;
-}
-
-function createRandomSequence(...values: number[]) {
-	let index = 0;
-	return () => {
-		let value = values[index] ?? values.at(-1) ?? 0;
-		index += 1;
-		return value;
-	};
 }
 
 function getSpeciesId(

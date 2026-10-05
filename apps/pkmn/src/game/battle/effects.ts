@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { MoveEffect, StatusEffectType } from "~/game/data/move";
 
@@ -132,7 +134,7 @@ export class Effects {
 		effect: Extract<MoveEffect, { kind: "flinch" }>,
 		context: Effects.Context,
 	): BattleEvent[] {
-		if (effect.chance < 1 && context.random() >= effect.chance) return [];
+		if (effect.chance < 1 && !context.random.bool(effect.chance)) return [];
 		context.target.volatile.flinched = true;
 		return [{ type: "volatile-applied", target: context.targetPosition, effect: "flinch" }];
 	}
@@ -609,7 +611,7 @@ export class Effects {
 	): BattleEvent[] {
 		let status = Effects.getPersistentStatus(effect.status);
 		if (Effects.canApplyMajorStatus(status, context) === false) return [];
-		if (effect.chance < 1 && context.random() >= effect.chance) return [];
+		if (effect.chance < 1 && !context.random.bool(effect.chance)) return [];
 
 		Effects.setPersistentStatus(context.target, status, effect.poisonVariant);
 		return [{ type: "status-applied", target: context.targetPosition, status }];
@@ -1203,7 +1205,7 @@ export namespace Effects {
 	export interface Context extends StatusContext {
 		user: CombatantState;
 		userPosition: BattlePosition;
-		random(): number;
+		random: Random;
 	}
 }
 

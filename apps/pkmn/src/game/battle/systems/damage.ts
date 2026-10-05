@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { Move, MoveEffect } from "~/game/data/move";
 import type { Effectiveness } from "~/game/data/type";
@@ -23,7 +25,7 @@ import { getCreatureLevel, getCreatureSize, getCreatureStat } from "../mechanics
 export interface DamageSystemContext {
 	state: BattleState;
 	gameData: GameData;
-	random(): number;
+	random: Random;
 	isGrounded(combatant: CombatantState): boolean;
 	findEffect<TKind extends MoveEffect["kind"]>(
 		effects: MoveEffect[],
@@ -47,7 +49,7 @@ export function getMoveHitCount(context: DamageSystemContext, effects: MoveEffec
 	if (typeof multiHit.hits === "number") return multiHit.hits;
 
 	let [min, max] = multiHit.hits;
-	return min + Math.floor(context.random() * (max - min + 1));
+	return context.random.int(min, max);
 }
 
 /**
@@ -157,7 +159,7 @@ function calculateDamage(
 ): number {
 	let targetSide = context.getCombatantSide(target);
 	let criticalHit =
-		context.random() < context.getCriticalHitChance(user, move) &&
+		context.random.bool(context.getCriticalHitChance(user, move)) &&
 		context.state.sides[targetSide]!.effects.luckyChantTurns === 0;
 	let damage = getBaseDamage(context, user, target, move, criticalHit);
 	damage = Math.floor(damage * context.getStabModifier(user, move));
@@ -176,7 +178,7 @@ function calculateDamage(
 	damage = applyHeldItemTypeBoost(context, user, move, damage);
 	damage = applyMajorStatusDamageModifiers(user, move, damage);
 
-	return Math.floor(damage * ((85 + Math.floor(context.random() * 16)) / 100));
+	return Math.floor(damage * ((85 + context.random.int(0, 15)) / 100));
 }
 
 /**

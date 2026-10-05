@@ -10,6 +10,8 @@
  */
 import { expect, test } from "vitest";
 
+import { scriptedRandom } from "~/game/test-support/scripted-random";
+
 import type { AutonomousMovement, PageOptions } from "../render/map-schema";
 
 import {
@@ -58,20 +60,13 @@ const OPEN = () => false;
 test("nextRandomStep never returns a direction into a blocked tile", () => {
 	let isBlocked = (x: number, y: number) => !(x === 2 && y === 1);
 	for (let roll = 0; roll < 4; roll++) {
-		let direction = nextRandomStep(2, 2, isBlocked, () => roll / 4);
+		let direction = nextRandomStep(2, 2, isBlocked, scriptedRandom(roll / 4));
 		expect(direction).toBe("up");
 	}
 });
 
 test("nextRandomStep returns null when every neighbor is blocked", () => {
-	expect(
-		nextRandomStep(
-			2,
-			2,
-			() => true,
-			() => 0,
-		),
-	).toBeNull();
+	expect(nextRandomStep(2, 2, () => true, scriptedRandom(0))).toBeNull();
 });
 
 test("nextRouteStep loops the authored steps and wraps at the end", () => {
@@ -100,7 +95,7 @@ test("tickEventMovement leaves a fixed entity in place", () => {
 		NO_OPTIONS,
 		STEP_INTERVAL_MS * 5,
 		OPEN,
-		() => 0,
+		scriptedRandom(0),
 	);
 	expect(a).toMatchObject({ x: 2, y: 2 });
 });
@@ -110,10 +105,10 @@ test("tickEventMovement only steps once the cadence elapses", () => {
 	let state = createMovementState();
 	let route = movement({ type: "route", route: ["right"] });
 
-	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS - 1, OPEN, () => 0);
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS - 1, OPEN, scriptedRandom(0));
 	expect(a.x).toBe(2);
 
-	tickEventMovement(a, state, route, NO_OPTIONS, 1, OPEN, () => 0);
+	tickEventMovement(a, state, route, NO_OPTIONS, 1, OPEN, scriptedRandom(0));
 	expect(a.x).toBe(3);
 });
 
@@ -121,7 +116,8 @@ test("tickEventMovement walks a route in order and loops it", () => {
 	let a = actor(2, 2);
 	let state = createMovementState();
 	let route = movement({ type: "route", route: ["right", "down"] });
-	let step = () => tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, OPEN, () => 0);
+	let step = () =>
+		tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, OPEN, scriptedRandom(0));
 
 	step();
 	expect(a).toMatchObject({ x: 3, y: 2, facing: "right" });
@@ -137,10 +133,10 @@ test("tickEventMovement keeps the route cursor in phase when a step is blocked",
 	let route = movement({ type: "route", route: ["right", "down"] });
 	let isBlocked = (x: number, y: number) => x === 3 && y === 2;
 
-	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, () => 0);
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, scriptedRandom(0));
 	expect(a).toMatchObject({ x: 2, y: 2, facing: "right" });
 
-	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, () => 0);
+	tickEventMovement(a, state, route, NO_OPTIONS, STEP_INTERVAL_MS, isBlocked, scriptedRandom(0));
 	expect(a).toMatchObject({ x: 2, y: 3, facing: "down" });
 });
 
@@ -156,7 +152,7 @@ test("tickEventMovement blocks a random step against collision but still turns",
 		NO_OPTIONS,
 		STEP_INTERVAL_MS,
 		isBlocked,
-		() => 0,
+		scriptedRandom(0),
 	);
 	expect(a).toMatchObject({ x: 2, y: 1, facing: "up" });
 });
@@ -171,7 +167,7 @@ test("tickEventMovement leaves a boxed-in random entity put but does not crash",
 		NO_OPTIONS,
 		STEP_INTERVAL_MS,
 		() => true,
-		() => 0,
+		scriptedRandom(0),
 	);
 	expect(a).toMatchObject({ x: 2, y: 2 });
 });
@@ -187,7 +183,7 @@ test("tickEventMovement with through ignores collision and steps onto a blocked 
 		options({ through: true }),
 		STEP_INTERVAL_MS,
 		() => true,
-		() => 0,
+		scriptedRandom(0),
 	);
 	expect(a).toMatchObject({ x: 3, y: 2, facing: "right" });
 });
@@ -203,7 +199,7 @@ test("tickEventMovement with directionFix moves without turning the facing", () 
 		options({ directionFix: true }),
 		STEP_INTERVAL_MS,
 		OPEN,
-		() => 0,
+		scriptedRandom(0),
 	);
 	expect(a).toMatchObject({ x: 3, y: 2, facing: "down" });
 });

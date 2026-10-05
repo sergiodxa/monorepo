@@ -258,7 +258,7 @@ export class OverworldScene implements Scene {
 				page.options as PageOptions,
 				dt,
 				(x, y) => this.actorBlocked(entity, x, y),
-				Math.random,
+				game.random.movement,
 			);
 		}
 
@@ -682,7 +682,7 @@ export class OverworldScene implements Scene {
 	 */
 	private checkEncounter(game: GameClient) {
 		let { x, y } = this.player.tile;
-		if (!rollEncounter(this.map, x, y, Math.random)) return;
+		if (!rollEncounter(this.map, x, y, game.random.encounters)) return;
 
 		let playerParty = game.engine.selectParty(HERO_ID).creatures.map((creature) => creature.id);
 		if (playerParty.length === 0) return;
@@ -690,7 +690,7 @@ export class OverworldScene implements Scene {
 		let choice = chooseEncounter(
 			this.map.encounterTableAt(x, y),
 			Object.keys(game.content.species),
-			Math.random,
+			game.random.encounters,
 		);
 		if (!choice) return;
 

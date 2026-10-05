@@ -16,6 +16,7 @@ import { GameClient } from "../core/game-client";
 import { Button } from "../core/input";
 import { SCREEN_HEIGHT, SCREEN_WIDTH } from "../core/loop";
 import { createNewGameWorld } from "../core/new-game";
+import { openSessionRandom } from "../core/session-random";
 import { SAMPLE_SPAWN } from "../overworld/map-loader";
 import { OverworldScene, type Spawn } from "../overworld/overworld-scene";
 import { drawText } from "../render/text";
@@ -64,9 +65,11 @@ export class TitleScene implements Scene {
 	}
 
 	private startNewGame(game: GameClient) {
+		game.random = openSessionRandom();
 		game.engine = Engine.create({
 			content: game.content,
 			world: createNewGameWorld(game.content),
+			random: game.random,
 		});
 		game.scenes.replace(new OverworldScene(SAMPLE_SPAWN));
 	}
@@ -74,7 +77,8 @@ export class TitleScene implements Scene {
 	private continueGame(game: GameClient) {
 		let file = game.save.load();
 		if (!file) return;
-		game.engine = Engine.create({ content: game.content, world: file.world });
+		game.random = file.random;
+		game.engine = Engine.create({ content: game.content, world: file.world, random: file.random });
 		let spawn: Spawn = {
 			mapId: file.presentation.mapId,
 			x: file.presentation.x,

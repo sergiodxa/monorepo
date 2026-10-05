@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { MoveId } from "~/game/data/move";
 import type { NatureId } from "~/game/data/nature";
@@ -50,7 +52,7 @@ export function spawnEncounter(
 	gameData: GameData,
 	world: World,
 	args: SpawnEncounterArgs,
-	random: () => number,
+	random: Random,
 ): { creatureId: CreatureId } {
 	return spawnTransientCreature(
 		gameData,
@@ -71,7 +73,7 @@ export function spawnTrainerCreature(
 	gameData: GameData,
 	world: World,
 	args: SpawnTrainerCreatureArgs,
-	random: () => number,
+	random: Random,
 ): { creatureId: CreatureId } {
 	return spawnTransientCreature(
 		gameData,
@@ -90,7 +92,7 @@ function spawnTransientCreature(
 	creatureId: CreatureId,
 	args: SpawnCreatureArgs,
 	location: CreatureLocationComponent,
-	random: () => number,
+	random: Random,
 ): { creatureId: CreatureId } {
 	let species = gameData.species.get(args.speciesId);
 	if (!species) throw new ReferenceError(`Unknown species ${args.speciesId}.`);
@@ -102,7 +104,7 @@ function spawnTransientCreature(
 	setComponent(world, world.creatureProgress, creatureId, {
 		natureId,
 		experience: getExperienceForLevel(species.growthRate, args.level),
-		iv: statSet((stat) => args.iv?.[stat] ?? Math.floor(random() * 32)),
+		iv: statSet((stat) => args.iv?.[stat] ?? random.int(0, 31)),
 		ev: statSet(() => 0),
 	});
 	setComponent(world, world.creatureMoves, creatureId, {
@@ -128,10 +130,8 @@ function spawnTransientCreature(
 }
 
 /** Picks a random nature id from the loaded content. */
-function pickNature(gameData: GameData, random: () => number): NatureId {
-	let ids = [...gameData.natures.keys()];
-	if (ids.length === 0) throw new RangeError("Content has no natures to roll.");
-	return ids[Math.floor(random() * ids.length)]! as NatureId;
+function pickNature(gameData: GameData, random: Random): NatureId {
+	return random.pick([...gameData.natures.keys()]) as NatureId;
 }
 
 /** Resolves the moveset: explicit ids if given, else derived level-up moves. */

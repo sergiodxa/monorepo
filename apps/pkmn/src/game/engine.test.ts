@@ -6,6 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
+import { createRandom } from "@sdxc/random";
 import { expect, test } from "vitest";
 
 import { ITEMS } from "~/content/items";
@@ -13,6 +16,7 @@ import { TYPE_MATCHUPS } from "~/content/matchups";
 import { MOVES } from "~/content/moves";
 import { NATURES } from "~/content/natures";
 import { SPECIES } from "~/content/species";
+import { scriptedRandom, sharedStreams } from "~/game/test-support/scripted-random";
 
 import type { BattleSideState } from "./battle/battle";
 
@@ -176,6 +180,7 @@ function createEngine(playerId: string, enemyId: string, allyId: string, enemyCr
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
+		random: sharedStreams(createRandom("engine-test")),
 		world: migrateWorld({
 			entities: [playerId, enemyId, allyId, enemyCreatureId],
 			playerId,
@@ -248,7 +253,7 @@ test("Engine writes battle results back and keeps the battle out of snapshots", 
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5);
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, scriptedRandom(0.5));
 
 	engine.dispatch({
 		type: "start-battle",
@@ -294,7 +299,7 @@ test("starting a battle marks every enemy species as seen (wild or trainer)", ()
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5);
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, scriptedRandom(0.5));
 
 	expect(engine.selectPlayer(playerId).bestiary.entries).toEqual([]);
 
@@ -327,7 +332,15 @@ test("winning a battle awards experience to the party", () => {
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 0, 9999);
+	let engine = createBattleEngine(
+		playerId,
+		enemyId,
+		allyId,
+		enemyCreatureId,
+		scriptedRandom(0.5),
+		0,
+		9999,
+	);
 
 	let events = engine.dispatch({
 		type: "start-battle",
@@ -362,7 +375,7 @@ test("attempt-capture catches a wild creature and ends the battle", () => {
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0);
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, scriptedRandom(0));
 	let battleId = createBattleId("b1");
 
 	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
@@ -439,7 +452,7 @@ test("regression: attempt-capture catches the active single-team enemy at flat i
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0);
+	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, scriptedRandom(0));
 	let battleId = createBattleId("flat-1");
 
 	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
@@ -477,7 +490,7 @@ test("regression: reading the battle view after a wild battle ends does not cras
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let seedEnemy = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, () => 0.5);
+	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, scriptedRandom(0.5));
 	let battleId = createBattleId("wild-1");
 
 	let spawn = engine.dispatch({
@@ -527,7 +540,14 @@ test("heal-party fully restores a damaged party", () => {
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 5);
+	let engine = createBattleEngine(
+		playerId,
+		enemyId,
+		allyId,
+		enemyCreatureId,
+		scriptedRandom(0.5),
+		5,
+	);
 
 	let before = engine.selectCreatureSummary(allyId);
 	expect(before.currentHP).toBe(before.maxHP - 5);
@@ -553,7 +573,14 @@ test("using a medicine in battle decrements the bag, spends the turn, and heals"
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
+	let engine = createBattleEngine(
+		playerId,
+		enemyId,
+		allyId,
+		enemyCreatureId,
+		scriptedRandom(0.5),
+		10,
+	);
 	let battleId = createBattleId("b1");
 
 	engine.dispatch({ type: "add-inventory-item", playerId, itemId: HEAL_ITEM_ID, count: 2 });
@@ -605,7 +632,14 @@ test("using a medicine that is not in the bag consumes nothing and heals nothing
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let enemyCreatureId = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, enemyCreatureId, () => 0.5, 10);
+	let engine = createBattleEngine(
+		playerId,
+		enemyId,
+		allyId,
+		enemyCreatureId,
+		scriptedRandom(0.5),
+		10,
+	);
 	let battleId = createBattleId("b1");
 
 	engine.dispatch({
@@ -677,7 +711,7 @@ function createLevelUpEngine(
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random: () => 0.5,
+		random: sharedStreams(scriptedRandom(0.5)),
 		world: migrateWorld({
 			entities: [playerId, enemyId, allyId, enemyCreatureId],
 			playerId,
@@ -884,7 +918,7 @@ function createStoneEngine(playerId: string, creatureId: string) {
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random: () => 0.5,
+		random: sharedStreams(scriptedRandom(0.5)),
 		world: migrateWorld({
 			entities: [playerId, creatureId],
 			playerId,
@@ -984,7 +1018,7 @@ function createMedicineEngine(
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random: () => 0.5,
+		random: sharedStreams(scriptedRandom(0.5)),
 		world: migrateWorld({
 			entities: [playerId, creatureId],
 			playerId,
@@ -1114,7 +1148,7 @@ test("spawn-trainer-creature builds a non-persisted trainer creature that cannot
 	let enemyId = createPlayerId("rival");
 	let allyId = createCreatureId("ally-1");
 	let seedEnemy = createCreatureId("enemy-1");
-	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, () => 0);
+	let engine = createBattleEngine(playerId, enemyId, allyId, seedEnemy, scriptedRandom(0));
 	let battleId = createBattleId("tb-capture");
 
 	engine.dispatch({ type: "add-inventory-item", playerId, itemId: ballId!, count: 1 });
@@ -1338,7 +1372,7 @@ function createTrainerBattleEngine(
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random: () => 0.5,
+		random: sharedStreams(scriptedRandom(0.5)),
 		world: migrateWorld({
 			entities: [playerId, enemyId, allyId, enemyCreatureId],
 			playerId,
@@ -1365,7 +1399,7 @@ function createBattleEngine(
 	enemyId: string,
 	allyId: string,
 	enemyCreatureId: string,
-	random: () => number,
+	random: Random,
 	allyDamage = 0,
 	enemyDamage = 0,
 ) {
@@ -1391,7 +1425,7 @@ function createBattleEngine(
 			natures: NATURES,
 			typeChart: TYPE_MATCHUPS,
 		},
-		random,
+		random: sharedStreams(random),
 		world: migrateWorld({
 			entities: [playerId, enemyId, allyId, enemyCreatureId],
 			playerId,

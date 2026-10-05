@@ -11,6 +11,8 @@ import { unwrap } from "@sdxc/result";
  */
 import { expect, test } from "vitest";
 
+import { drawsFrom, scriptedRandom } from "~/game/test-support/scripted-random";
+
 import type { LegacyCreatureComponent } from "../world/components";
 
 import { GameData, type GameDataSource } from "../data/game-data";
@@ -79,7 +81,7 @@ test("captureStatusBonus is 1 with no status", () => {
 
 /**
  * A low-HP target with a strong ball pushes a to 506, past the guaranteed threshold, so
- * the RNG is never consulted (random() === 1 would fail every shake if it were).
+ * the RNG is never consulted (a raw draw of 1 would fail every shake if it were).
  */
 test("computeCaptureAttempt guarantees a catch when a >= 255", () => {
 	let result = computeCaptureAttempt({
@@ -88,7 +90,7 @@ test("computeCaptureAttempt guarantees a catch when a >= 255", () => {
 		catchRate: 255,
 		ballMultiplier: 2,
 		statusBonus: 1,
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	expect(result).toEqual({ shakes: 3, success: true });
 });
@@ -101,12 +103,12 @@ test("computeCaptureAttempt fails immediately when a is below 1", () => {
 		catchRate: 0,
 		ballMultiplier: 1,
 		statusBonus: 1,
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	expect(result).toEqual({ shakes: 0, success: false });
 });
 
-/** random() === 0 makes floor(0 * 65536) === 0 < b for all four checks. */
+/** A raw draw of 0 makes int(0, 65535) === 0 < b for all four checks. */
 test("computeCaptureAttempt catches when every shake check passes", () => {
 	let result = computeCaptureAttempt({
 		maxHP: 100,
@@ -114,13 +116,13 @@ test("computeCaptureAttempt catches when every shake check passes", () => {
 		catchRate: 100,
 		ballMultiplier: 1,
 		statusBonus: 1,
-		random: () => 0,
+		random: scriptedRandom(0),
 	});
 	expect(result).toEqual({ shakes: 3, success: true });
 });
 
 /**
- * random() === 1 makes floor(1 * 65536) === 65536, never less than b, so it breaks
+ * A raw draw of 1 makes int(0, 65535) === 65536, never less than b, so it breaks
  * immediately.
  */
 test("computeCaptureAttempt reports zero shakes when the first check fails", () => {
@@ -130,7 +132,7 @@ test("computeCaptureAttempt reports zero shakes when the first check fails", () 
 		catchRate: 100,
 		ballMultiplier: 1,
 		statusBonus: 1,
-		random: () => 1,
+		random: scriptedRandom(1),
 	});
 	expect(result).toEqual({ shakes: 0, success: false });
 });
@@ -148,7 +150,7 @@ test("computeCaptureAttempt reports a partial shake count from a scripted RNG", 
 		catchRate: 100,
 		ballMultiplier: 1,
 		statusBonus: 1,
-		random: () => rolls[index++]!,
+		random: drawsFrom(() => rolls[index++]!),
 	});
 	expect(result).toEqual({ shakes: 2, success: false });
 });
@@ -194,7 +196,7 @@ test("captureCreature rolls a gender when the instance state is missing", () => 
 	let { world, playerId } = createWorld([], wild);
 	delete world.creatureInstance[wild];
 
-	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
+	captureCreature(world, playerId, wild, createGameData(), scriptedRandom(0.5));
 
 	expect(world.creatureInstance[wild]?.gender).toBe(Gender.Female);
 });
@@ -204,7 +206,7 @@ test("captureCreature preserves an already-rolled gender instead of re-rolling",
 	let { world, playerId } = createWorld([], wild);
 	world.creatureInstance[wild] = { gender: Gender.Male, heldItemId: null, friendship: 0 };
 
-	captureCreature(world, playerId, wild, createGameData(), () => 0.5);
+	captureCreature(world, playerId, wild, createGameData(), scriptedRandom(0.5));
 
 	expect(world.creatureInstance[wild]?.gender).toBe(Gender.Male);
 });

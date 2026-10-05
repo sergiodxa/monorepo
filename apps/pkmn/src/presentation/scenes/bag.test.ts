@@ -23,6 +23,8 @@ import { Engine } from "~/game/engine";
 import { createCreatureId, createPlayerId } from "~/game/world/ids";
 import { migrateWorld } from "~/game/world/migrate";
 
+import { openSessionRandom } from "../core/session-random";
+
 import { bagItemAction, machineConsumedOnTeach, movesetFromSummary } from "./bag";
 
 /** Builds a minimal item with the given category and optional effect payload. */
@@ -117,6 +119,7 @@ function createTeachEngine(
 	let creatureId = createCreatureId("buddy");
 	let engine = Engine.create({
 		content: { species: SPECIES, moves: MOVES, items, natures: NATURES, typeChart: TYPE_MATCHUPS },
+		random: openSessionRandom("bag-test"),
 		world: migrateWorld({
 			entities: [playerId, creatureId],
 			playerId,

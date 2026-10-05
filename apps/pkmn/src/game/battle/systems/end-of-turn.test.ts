@@ -23,6 +23,7 @@ import { getCreatureStat } from "~/game/battle/mechanics";
 import { createFieldEffectState, createSideEffectState } from "~/game/battle/state";
 import { GameData } from "~/game/data/game-data";
 import { Stat } from "~/game/data/stat";
+import { scriptedRandom } from "~/game/test-support/scripted-random";
 import { Creature } from "~/game/world/creature";
 
 import type { BattleState } from "../battle";
@@ -133,7 +134,7 @@ function createEndOfTurnContext(state: BattleState): EndOfTurnContext {
 	return {
 		state,
 		gameData: GAME_DATA,
-		random: () => 0,
+		random: scriptedRandom(0),
 		flattenEffects: (effect) => [effect],
 		findEffect: () => null,
 		getActiveCombatant: (position) => state.sides[position.side]?.active[position.slot] ?? null,

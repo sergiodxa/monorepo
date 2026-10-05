@@ -17,6 +17,7 @@ import { GrowthRate } from "~/game/data/growth-rate";
 import { StatusEffectType } from "~/game/data/move";
 import { Stat } from "~/game/data/stat";
 import { Type } from "~/game/data/type";
+import { scriptedRandom } from "~/game/test-support/scripted-random";
 import { Creature, State } from "~/game/world/creature";
 
 import { CombatantState } from "./combatant-state";
@@ -697,7 +698,7 @@ function createContext(randomValue = 0.5, targetTypes: Type[] = [Type.GRASS]): E
 			],
 			field: createFieldEffectState(),
 		},
-		random: () => randomValue,
+		random: scriptedRandom(randomValue),
 	};
 }
 

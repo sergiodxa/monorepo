@@ -8,6 +8,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { ItemId } from "~/game/data/item";
 import type { NatureId } from "~/game/data/nature";
 import type { Species, SpeciesId } from "~/game/data/species";
@@ -89,10 +91,10 @@ export function createCreatureInstance(
 /**
  * Rolls a biological sex for one creature from its species' gender ratio.
  *
- * A single seeded `random()` draw against the female share keeps rolls
+ * A single seeded draw in `[0, 100)` against the female share keeps rolls
  * deterministic; either omitted share counts as zero.
  */
-export function rollGender(gender: Species["gender"], random: () => number): Gender {
+export function rollGender(gender: Species["gender"], random: Random): Gender {
 	if (gender === Gender.Genderless) return Gender.Genderless;
 
 	let femaleShare = gender[Gender.Female] ?? 0;
@@ -101,7 +103,7 @@ export function rollGender(gender: Species["gender"], random: () => number): Gen
 	if (maleShare <= 0) return Gender.Female;
 	if (femaleShare <= 0) return Gender.Male;
 
-	return random() * 100 < femaleShare ? Gender.Female : Gender.Male;
+	return random.float(0, 100) < femaleShare ? Gender.Female : Gender.Male;
 }
 
 /** Ownership metadata for one creature entity. */

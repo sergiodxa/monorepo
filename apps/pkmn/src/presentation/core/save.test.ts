@@ -2,7 +2,8 @@
  * Tests for the local save-slot store.
  *
  * Covers the `SaveStore` round-trip through a Map-backed `localStorage` stub,
- * including null results for a missing slot, bad JSON, and a wrong version.
+ * resuming the session's random streams, and null results for a missing slot,
+ * bad JSON, a wrong version, and a malformed stream state.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +13,7 @@ import { afterEach, beforeEach, expect, test } from "vitest";
 import type { PersistentWorld, PresentationSave } from "./save";
 
 import { SaveStore } from "./save";
+import { openSessionRandom, snapshotSessionRandom } from "./session-random";
 
 /** Installs a fresh Map-backed `localStorage` and returns its raw backing store. */
 function installLocalStorage() {
@@ -75,7 +77,7 @@ test("has is false and load is null for an empty slot", () => {
 
 test("save then load round-trips the presentation payload and metadata", () => {
 	let store = new SaveStore("slot-1");
-	store.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z");
+	store.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z", openSessionRandom("save-test"));
 
 	expect(store.has()).toBe(true);
 	let loaded = store.load();
@@ -89,7 +91,7 @@ test("save then load round-trips the presentation payload and metadata", () => {
 
 test("clear removes the saved slot", () => {
 	let store = new SaveStore("slot-1");
-	store.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z");
+	store.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z", openSessionRandom("save-test"));
 	expect(store.has()).toBe(true);
 	store.clear();
 	expect(store.has()).toBe(false);
@@ -116,7 +118,57 @@ test("load returns null for a wrong-version envelope", () => {
 test("each key backs an independent slot", () => {
 	let one = new SaveStore("slot-1");
 	let two = new SaveStore("slot-2");
-	one.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z");
+	one.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z", openSessionRandom("save-test"));
 	expect(one.has()).toBe(true);
 	expect(two.has()).toBe(false);
+});
+
+test("a loaded save draws what the uninterrupted session would have drawn", () => {
+	let store = new SaveStore("slot-1");
+	let played = openSessionRandom("resume");
+	played.encounters.next();
+	played.battle.int(1, 100);
+	played.battle.int(1, 100);
+	played.creatures.pick(["a", "b", "c"]);
+	store.save(WORLD, PRESENTATION, "2026-07-06T00:00:00.000Z", played);
+
+	let loaded = store.load();
+	expect(loaded).not.toBeNull();
+	expect(loaded!.random.seed).toBe("resume");
+	for (let stream of ["encounters", "movement", "creatures", "battle"] as const) {
+		expect(Array.from({ length: 5 }, () => loaded!.random[stream].next())).toEqual(
+			Array.from({ length: 5 }, () => played[stream].next()),
+		);
+	}
+});
+
+test("a save written before streams were stored loads with fresh streams", () => {
+	backing.set(
+		"slot-1",
+		JSON.stringify({ version: 1, savedAt: "x", world: WORLD, presentation: PRESENTATION }),
+	);
+	let loaded = new SaveStore("slot-1").load();
+
+	expect(loaded).not.toBeNull();
+	expect(loaded!.presentation).toEqual(PRESENTATION);
+	expect(loaded!.random.encounters.next()).toBeGreaterThanOrEqual(0);
+	expect(loaded!.random.battle.int(1, 6)).toBeLessThanOrEqual(6);
+});
+
+test("load returns null for a malformed stream state", () => {
+	let random = snapshotSessionRandom(openSessionRandom("broken"));
+	backing.set(
+		"slot-1",
+		JSON.stringify({
+			version: 1,
+			savedAt: "x",
+			world: WORLD,
+			presentation: PRESENTATION,
+			random: { ...random, battle: { seed: "broken battle", words: [1, 2, 3] } },
+		}),
+	);
+	let store = new SaveStore("slot-1");
+
+	expect(store.load()).toBeNull();
+	expect(store.has()).toBe(true);
 });

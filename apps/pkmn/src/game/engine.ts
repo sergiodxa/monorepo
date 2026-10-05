@@ -6,6 +6,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import { unwrap } from "@sdxc/result";
 
 import type { BattleEvent, ReplacementCommand, TurnCommand } from "./battle/battle";
@@ -69,8 +71,19 @@ export namespace Engine {
 		content: GameDataSource;
 		/** Initial world state used when the engine starts. */
 		world: World;
-		/** Seedable RNG threaded into battles so whole sessions are reproducible. */
-		random?: () => number;
+		/** The streams every roll draws from, so a session replays from its seed. */
+		random: Streams;
+	}
+
+	/**
+	 * One stream per kind of roll, so extra draws in a battle never shift which
+	 * IVs, nature or gender the next spawned creature rolls.
+	 */
+	export interface Streams {
+		/** Spawned and captured creatures' natures, IVs and genders. */
+		creatures: Random;
+		/** Every battle roll, capture shakes included. */
+		battle: Random;
 	}
 }
 
@@ -85,14 +98,13 @@ export class Engine {
 	/** Private transient bridge while the battle runtime is still generator-driven. */
 	private readonly battleRuntime = new Map<string, BattleRuntimeHandle>();
 
-	/** Seedable RNG passed into every battle for reproducible sessions. */
-	private readonly random: () => number;
+	private readonly random: Engine.Streams;
 
 	/** @param options - Static content and initial world state for this engine instance */
 	private constructor(options: Engine.Options) {
 		this.gameData = unwrap(GameData.create(options.content));
 		this.world = migrateWorld(structuredClone(options.world));
-		this.random = options.random ?? Math.random;
+		this.random = options.random;
 	}
 
 	/** Boots a new engine instance from static content and initial world state. */
@@ -150,7 +162,7 @@ export class Engine {
 					command.playerId,
 					command.creatureId,
 					this.gameData,
-					this.random,
+					this.random.creatures,
 				);
 				return [
 					{
@@ -260,7 +272,12 @@ export class Engine {
 				return [{ type: "flag-set", flag: command.flag, value }];
 			}
 			case "spawn-encounter": {
-				let { creatureId } = spawnEncounter(this.gameData, this.world, command, this.random);
+				let { creatureId } = spawnEncounter(
+					this.gameData,
+					this.world,
+					command,
+					this.random.creatures,
+				);
 				return [
 					{
 						type: "encounter-spawned",
@@ -272,7 +289,12 @@ export class Engine {
 				];
 			}
 			case "spawn-trainer-creature": {
-				let { creatureId } = spawnTrainerCreature(this.gameData, this.world, command, this.random);
+				let { creatureId } = spawnTrainerCreature(
+					this.gameData,
+					this.world,
+					command,
+					this.random.creatures,
+				);
 				return [
 					{
 						type: "trainer-creature-spawned",
@@ -425,7 +447,7 @@ export class Engine {
 				{ teams: [enemyCreatures] },
 			],
 			slots: command.slots,
-			random: this.random,
+			random: this.random.battle,
 		});
 		let session = battle.start();
 
@@ -475,7 +497,7 @@ export class Engine {
 			catchRate: species.catchRate,
 			ballMultiplier: item.effect.multiplier,
 			statusBonus: captureStatusBonus(creature.status.state),
-			random: this.random,
+			random: this.random.battle,
 		});
 
 		removeInventoryItem(this.world, command.playerId, command.itemId, 1);
@@ -494,7 +516,7 @@ export class Engine {
 			command.playerId,
 			creatureId,
 			this.gameData,
-			this.random,
+			this.random.creatures,
 		);
 		markSpeciesCaught(this.world, command.playerId, creature.speciesId);
 		events.push(

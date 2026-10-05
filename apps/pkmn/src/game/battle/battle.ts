@@ -7,6 +7,8 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { Random } from "@sdxc/random";
+
 import type { GameData } from "~/game/data/game-data";
 import type { ItemId, MedicineEffect } from "~/game/data/item";
 import type {
@@ -409,7 +411,7 @@ export namespace Battle {
 		gameData: GameData;
 		sides: [SideArguments, SideArguments];
 		slots?: 1 | 2 | 3;
-		random?: () => number;
+		random: Random;
 	}
 }
 
@@ -418,17 +420,17 @@ export class Battle {
 	readonly state: BattleState;
 
 	private readonly gameData: GameData;
-	private readonly random: () => number;
+	private readonly random: Random;
 	private pendingReplacementRequests: ReplacementSelection[] = [];
 
 	/**
-	 * @param args - Battle setup, loaded content, and optional RNG override
+	 * @param args - Battle setup, loaded content, and the stream every battle roll draws from
 	 */
 	constructor(args: Battle.Arguments) {
 		let slots = args.slots ?? 1;
 
 		this.gameData = args.gameData;
-		this.random = args.random ?? Math.random;
+		this.random = args.random;
 		this.state = {
 			turn: 0,
 			phase: "idle",
@@ -668,7 +670,7 @@ export class Battle {
 			{
 				state: this.state,
 				gameData: this.gameData,
-				random: () => this.random(),
+				random: this.random,
 				getActiveCombatant: (position) => this.getActiveCombatant(position),
 				canCombatantLeaveBattle: (position, combatant) =>
 					this.canCombatantLeaveBattle(position, combatant),
@@ -771,7 +773,7 @@ export class Battle {
 			target,
 			targetPosition,
 			state: this.state,
-			random: () => this.random(),
+			random: this.random,
 		})) {
 			if (event.type === "status-applied") {
 				this.initializeMajorStatusState(target, event.status);
@@ -796,7 +798,7 @@ export class Battle {
 	}
 
 	private getRandomUnit() {
-		return Math.min(this.random(), 0.9999999999999999);
+		return Math.min(this.random.next(), 0.9999999999999999);
 	}
 
 	private moveThawsUser(move: Move) {
@@ -816,7 +818,7 @@ export class Battle {
 
 	private resolveFreezeBeforeMove(user: CombatantState, move: Move) {
 		if (user.creature.status.state !== State.Frozen) return false;
-		if (this.moveThawsUser(move) || this.random() < 0.2) {
+		if (this.moveThawsUser(move) || this.random.bool(0.2)) {
 			this.clearMajorStatusState(user);
 			return false;
 		}
@@ -1322,7 +1324,7 @@ export class Battle {
 		if (user.volatile.attracted) {
 			if (this.hasActiveAttractionSource(user) === false) {
 				this.clearAttraction(user);
-			} else if (this.random() < 0.5) {
+			} else if (this.random.bool(0.5)) {
 				events.push({ type: "move-failed", user: userPosition, reason: "attract" });
 				return true;
 			}
@@ -1331,7 +1333,7 @@ export class Battle {
 		if (this.resolveSleepBeforeMove(user)) return true;
 		if (this.resolveFreezeBeforeMove(user, move)) return true;
 		if (user.volatile.flinched) return true;
-		if (user.creature.status.state === State.Paralyzed && this.random() < 0.25) return true;
+		if (user.creature.status.state === State.Paralyzed && this.random.bool(0.25)) return true;
 		return this.resolveConfusion(user, userPosition, events);
 	}
 
@@ -1346,7 +1348,7 @@ export class Battle {
 		if (this.state.field.gravityTurns > 0) chance *= 5 / 3;
 		if (this.state.field.weather === "fog") chance *= 0.6;
 		if (chance >= 1) return true;
-		return this.random() < Math.max(0, chance);
+		return this.random.bool(Math.max(0, chance));
 	}
 
 	private applyMoveDamage(
@@ -1534,7 +1536,7 @@ export class Battle {
 
 		let chance = 1 / 2 ** user.volatile.protectionSuccessStreak;
 		if (chance >= 1) return false;
-		return this.random() >= chance;
+		return !this.random.bool(chance);
 	}
 
 	private sideEffectAtCap(
@@ -1724,8 +1726,7 @@ export class Battle {
 		if (!active) return;
 		let choices = this.getAvailableReplacementChoices(targetPosition.side, active.teamIndex);
 		if (choices.length === 0) return;
-		let index = Math.floor(this.random() * choices.length);
-		let creature = choices[index]!;
+		let creature = this.random.pick(choices);
 		this.forceSwitchCombatant(targetPosition, active.teamIndex, creature, events);
 	}
 
@@ -2030,7 +2031,7 @@ export class Battle {
 		if (user.volatile.confusionTurns === 0) return false;
 
 		user.volatile.confusionTurns -= 1;
-		if (this.random() >= 0.5) return false;
+		if (!this.random.bool(0.5)) return false;
 
 		let hp = getCreatureStat(this.gameData, user.creature, Stat.HP);
 		let damage = Math.min(
@@ -2081,7 +2082,7 @@ export class Battle {
 		return {
 			state: this.state,
 			gameData: this.gameData,
-			random: () => this.random(),
+			random: this.random,
 			isGrounded: (combatant: CombatantState) => this.isGrounded(combatant),
 			findEffect: <TKind extends MoveEffect["kind"]>(effects: MoveEffect[], kind: TKind) =>
 				this.findEffect(effects, kind),
@@ -2103,7 +2104,7 @@ export class Battle {
 
 	private createMoveResolutionContext() {
 		return {
-			random: () => this.random(),
+			random: this.random,
 			flattenEffects: (effect: MoveEffect) => this.flattenEffects(effect),
 			findEffect: <TKind extends MoveEffect["kind"]>(effects: MoveEffect[], kind: TKind) =>
 				this.findEffect(effects, kind),
@@ -2242,7 +2243,7 @@ export class Battle {
 		return {
 			state: this.state,
 			gameData: this.gameData,
-			random: () => this.random(),
+			random: this.random,
 			flattenEffects: (effect: MoveEffect) => this.flattenEffects(effect),
 			findEffect: <TKind extends MoveEffect["kind"]>(effects: MoveEffect[], kind: TKind) =>
 				this.findEffect(effects, kind),
