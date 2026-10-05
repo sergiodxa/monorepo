@@ -77,6 +77,11 @@ describe("addresses this app will retrieve", () => {
 		["IPv6 loopback", "http://[::1]/a.png"],
 		["a unique-local address", "http://[fd00::1]/a.png"],
 		["an IPv6 link-local address", "http://[fe80::1]/a.png"],
+		["a documentation address", "http://203.0.113.10/a.png"],
+		["an IPv6 documentation address", "http://[2001:db8::1]/a.png"],
+		["a NAT64 address carrying a private one", "http://[64:ff9b::a00:1]/a.png"],
+		["a Teredo address", "http://[2001::1]/a.png"],
+		["an IPv4-mapped private address", "http://[::ffff:10.0.0.1]/a.png"],
 		["a name resolving to this machine", "http://localhost/a.png"],
 		["a non-standard port", "https://cdn.example:8080/a.png"],
 		["a plaintext port on a secure scheme", "https://cdn.example:80/a.png"],
@@ -95,7 +100,9 @@ describe("addresses this app will retrieve", () => {
 		"https://cdn.example/a.png",
 		"https://cdn.example:443/a.png",
 		"http://cdn.example:80/a.png",
-		"https://203.0.113.10/a.png",
+		"https://93.184.216.34/a.png",
+		"https://[2606:4700:4700::1111]/a.png",
+		"https://[::ffff:8.8.8.8]/a.png",
 	])("retrieves %s", (url) => {
 		expect(isRetrievable(new URL(url))).toBe(true);
 	});

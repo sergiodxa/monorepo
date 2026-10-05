@@ -12,7 +12,8 @@
  */
 
 import { Base64Url, hmac, timingSafeEqual } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { IP } from "@sdxc/ip";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import routes from "~/routes/web";
@@ -63,9 +64,6 @@ export const MEDIA_CACHE_CONTROL = "public, max-age=604800, immutable";
 
 /** What this app calls itself when it fetches an image, which names the product and nothing else. */
 export const MEDIA_USER_AGENT = "SergioReader/1.0 (+https://reader.sergiodxa.com)";
-
-/** An IPv4 address written out, which is the only form a host check can read a range off. */
-const IPV4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/u;
 
 /** The secret the signature is taken under, whose rotation is this route's revocation. */
 function secret(): string {
@@ -126,53 +124,6 @@ export async function verifiedSource(signature: string, source: string): Promise
 }
 
 /**
- * Reports whether an IPv4 literal names a range that belongs to whoever is asking rather
- * than to the internet: this Worker's own loopback, a private network, the link-local
- * block a cloud metadata service lives in, and the reserved ranges around them.
- */
-function isPrivateIpv4(host: string): boolean {
-	let match = IPV4.exec(host);
-	if (match === null) return false;
-
-	let parts = match.slice(1).map((part) => Number.parseInt(part, 10));
-	if (parts.some((part) => !Number.isFinite(part) || part > 255)) return true;
-
-	let [a = 0, b = 0] = parts;
-
-	if (a === 0 || a === 10 || a === 127) return true;
-	if (a === 169 && b === 254) return true;
-	if (a === 172 && b >= 16 && b <= 31) return true;
-	if (a === 192 && b === 168) return true;
-	if (a === 100 && b >= 64 && b <= 127) return true;
-	if (a === 192 && b === 0) return true;
-	if (a === 198 && (b === 18 || b === 19)) return true;
-	if (a >= 224) return true;
-
-	return false;
-}
-
-/**
- * Reports whether an IPv6 literal names loopback, a link-local address or a unique-local
- * one. A bracketed host is how a URL spells IPv6, and an embedded IPv4 address is read as
- * the IPv4 address it is.
- */
-function isPrivateIpv6(host: string): boolean {
-	if (!host.startsWith("[") || !host.endsWith("]")) return false;
-
-	let address = host.slice(1, -1).toLowerCase();
-	if (address === "::1" || address === "::") return true;
-
-	let embedded = address.split(":").at(-1) ?? "";
-	if (IPV4.test(embedded) && isPrivateIpv4(embedded)) return true;
-
-	let head = address.split(":").at(0) ?? "";
-	if (/^fe[89ab]/u.test(head)) return true;
-	if (/^f[cd]/u.test(head)) return true;
-
-	return address.startsWith("::ffff:");
-}
-
-/**
  * Whether this app is willing to retrieve an address: an ordinary web scheme, on that
  * scheme's own port, at a host that is not an address of ours written as a literal.
  *
@@ -187,12 +138,11 @@ export function isRetrievable(url: URL): boolean {
 	if (!FETCHABLE_SCHEMES.has(url.protocol)) return false;
 	if (url.port !== "" && url.port !== DEFAULT_PORTS[url.protocol]) return false;
 
-	let host = url.hostname.toLowerCase();
-	if (host.length === 0) return false;
-	if (isPrivateIpv4(host)) return false;
-	if (isPrivateIpv6(host)) return false;
+	let ip = IP.parse(url.hostname);
+	if (isSuccess(ip)) return ip.data.isPublic;
 
-	return host !== "localhost" && !host.endsWith(".localhost");
+	let host = url.hostname.toLowerCase();
+	return host.length > 0 && host !== "localhost" && !host.endsWith(".localhost");
 }
 
 /** The host an event names, which is a CDN rather than the article an address would identify. */
