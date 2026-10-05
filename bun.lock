@@ -349,6 +349,7 @@
         "@sdxc/icalendar": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/idempotency": "workspace:*",
+        "@sdxc/ip": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
@@ -757,6 +758,13 @@
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/data-table-sqlstorage": "workspace:*",
+      },
+    },
+    "packages/ip": {
+      "name": "@sdxc/ip",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
       },
     },
     "packages/jobs": {
@@ -1887,6 +1895,8 @@
 
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
 
+    "@sdxc/backoff": ["@sdxc/backoff@workspace:packages/backoff"],
+
     "@sdxc/billing": ["@sdxc/billing@workspace:packages/billing"],
 
     "@sdxc/bracket-params": ["@sdxc/bracket-params@workspace:packages/bracket-params"],
@@ -1894,8 +1904,6 @@
     "@sdxc/cache": ["@sdxc/cache@workspace:packages/cache"],
 
     "@sdxc/captcha": ["@sdxc/captcha@workspace:packages/captcha"],
-    "@sdxc/backoff": ["@sdxc/backoff@workspace:packages/backoff"],
-
 
     "@sdxc/catch-response-middleware": ["@sdxc/catch-response-middleware@workspace:packages/catch-response-middleware"],
 
@@ -1950,6 +1958,8 @@
     "@sdxc/icons": ["@sdxc/icons@workspace:packages/icons"],
 
     "@sdxc/idempotency": ["@sdxc/idempotency@workspace:packages/idempotency"],
+
+    "@sdxc/ip": ["@sdxc/ip@workspace:packages/ip"],
 
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
 

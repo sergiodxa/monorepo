@@ -126,6 +126,7 @@ Run from the repository root:
 | [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                                         | ✅  |
 | [idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                     | ✅  |
+| [ip](packages/ip)                                               | IPv4 and IPv6 addresses and ranges as value objects that classify against the IANA special-purpose registries     | ✅  |
 | [jobs](packages/jobs)                                           | Declared background jobs dispatched over a pluggable queue backend                                                | ✅  |
 | [jsdoc](packages/jsdoc)                                         | Read JSDoc out of source text into a JSON documentation model                                                     | ✅  |
 | [json-feed](packages/json-feed)                                 | JSON Feed 1.1 builder and parser                                                                                  | ✅  |

@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/ip",
+	"version": "0.0.1",
+	"description": "IPv4 and IPv6 addresses and ranges as value objects that classify against the IANA special-purpose registries",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	}
+}
