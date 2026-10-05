@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for identifiers and character runs: that a UUID carries the version and
  * variant bits its format requires, that a run holds only the characters of its
@@ -7,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import { createRandom } from "../random.js";
 
 import { createStringModule } from "./string.js";
 

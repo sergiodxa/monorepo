@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for the repeating helpers: that a pick stays inside the caller's list,
  * that distinct picks really are distinct, and that asking for more than the
@@ -7,8 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import { createRandom } from "../random.js";
 
 import { createHelpersModule } from "./helpers.js";
 

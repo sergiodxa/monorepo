@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for people: that a record's fields describe one person rather than
  * several, and that a phone number stays in the range reserved for fiction.
@@ -10,7 +11,6 @@ import { describe, expect, test } from "vitest";
 import type { Dataset } from "../dataset.js";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createInternetModule } from "./internet.js";
 import { createPersonModule } from "./person.js";

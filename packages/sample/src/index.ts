@@ -1,7 +1,7 @@
 /**
- * The package entrypoint: the generator, the stream it draws from, and the
- * types a dataset is written against. The English dataset is the default and is
- * also importable on its own for a caller that extends it.
+ * The package entrypoint: the generator and the types a dataset is written
+ * against. The English dataset is the default and is also importable on its
+ * own for a caller that extends it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -87,10 +87,6 @@ export type { PhoneModule, PhoneNumberOptions, PhoneStyle } from "./modules/phon
 export type { AlphaOptions, HexadecimalOptions, StringModule } from "./modules/string.js";
 
 export type { FileNameOptions, NetworkInterfaceOptions, SystemModule } from "./modules/system.js";
-
-export type { Random, Seed } from "./random.js";
-
-export { createRandom, systemSeed } from "./random.js";
 
 export type { Sample, SampleOptions } from "./sample.js";
 

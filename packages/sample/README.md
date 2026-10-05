@@ -11,6 +11,8 @@ the same sequence of calls produce the same values on any machine, on any day.
 npm add @sdxc/sample
 ```
 
+Seeds and streams come from [`@sdxc/random`](https://www.npmjs.com/package/@sdxc/random), which installs alongside this package.
+
 ## Usage
 
 ### Basic Example
@@ -34,7 +36,8 @@ Draw a seed at start-up, log it, and accept it back to replay a failed run down
 to the last field:
 
 ```typescript
-import { createSample, systemSeed } from "@sdxc/sample";
+import { systemSeed } from "@sdxc/random";
+import { createSample } from "@sdxc/sample";
 
 let seed = Number(process.env.SAMPLE_SEED) || systemSeed();
 console.log(`sample seed ${seed}`);
@@ -79,7 +82,7 @@ phone numbers come from the `555-01xx` range reserved for fiction.
 
 Builds a generator: one stream, one dataset, and the modules that read them.
 
-- `seed`: The stream to draw from — text, a number, or an open `Random`. Required.
+- `seed`: The stream to draw from — text, a number, or an open `SeededRandom` from `@sdxc/random`. Required.
 - `data`: The lists to draw from. Defaults to the English dataset.
 - `now`: The instant the `date` module measures from. Defaults to the current time.
 
@@ -87,16 +90,6 @@ Builds a generator: one stream, one dataset, and the modules that read them.
 let sample = createSample({ seed: 42 });
 sample.number.int({ min: 1, max: 6 }); // 6, every time
 ```
-
-### `createRandom(seed: Seed): Random`
-
-Opens the seeded stream on its own, for a caller that wants draws without the
-vocabulary: `createRandom("rollout").pick(["control", "variant"])`.
-
-### `systemSeed(): number`
-
-Draws a 32-bit seed from a cryptographically strong source. Log it and the run
-stays reproducible by passing it back.
 
 ### `Sample`
 
@@ -268,7 +261,8 @@ street and company words, prose, colors, file extensions, and the rest. Spread
 Open the generator on a seed the run can print, and accept the same seed back:
 
 ```typescript
-import { createSample, systemSeed } from "@sdxc/sample";
+import { systemSeed } from "@sdxc/random";
+import { createSample } from "@sdxc/sample";
 
 let sample = createSample({ seed: Number(process.env.SAMPLE_SEED) || systemSeed() });
 
@@ -331,19 +325,35 @@ let posts = users.flatMap((user) =>
 
 ## Pattern: A Weighted Field
 
-`maybe()` and `bool()` cover the fields that are usually, but not always,
+`maybe()` and `datatype.boolean()` cover the fields that are usually, but not always,
 filled:
 
 ```typescript
-import { createRandom, createSample } from "@sdxc/sample";
+import { createSample } from "@sdxc/sample";
 
 let sample = createSample({ seed: "local-dev" });
 
 let profile = {
 	name: sample.person.fullName(),
 	website: sample.helpers.maybe(() => sample.internet.url(), { chance: 0.3 }),
-	verified: createRandom("verification").bool(0.8),
+	verified: sample.datatype.boolean({ probability: 0.8 }),
 };
+```
+
+## Pattern: One Seed For Fake Data And Other Draws
+
+Pass an open stream as the seed, and fake data and the rest of a test draw from
+one seed while staying independent of each other:
+
+```typescript
+import { createRandom } from "@sdxc/random";
+import { createSample } from "@sdxc/sample";
+
+let random = createRandom("checkout-suite");
+let sample = createSample({ seed: random.derive("people") });
+
+let customer = sample.person.record();
+let cartSize = random.derive("cart").int(1, 5);
 ```
 
 ## Versioning

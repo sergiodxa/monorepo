@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Instants around a reference the caller supplies. The reference is passed in
  * rather than read from the clock, which is what keeps a seeded run producing
@@ -10,7 +12,6 @@ import { add, elapsed, subtract } from "@sdxc/dates";
 import { toMs } from "@sdxc/duration";
 
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /** Options for an instant measured in days from the reference. */
 export interface SpanOptions {

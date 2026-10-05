@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Places, from a country down to a unit number. A city can be asked for on its
  * own or from a named country, and the two stay consistent because the dataset
@@ -7,7 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /** How many of the eight compass points a direction is drawn from. */
 const CARDINAL_COUNT = 4;

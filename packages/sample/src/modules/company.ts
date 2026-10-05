@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Companies: a name, and the marketing language around it.
  *
@@ -5,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /** Company names and the phrases a company writes about itself. */
 export interface CompanyModule {

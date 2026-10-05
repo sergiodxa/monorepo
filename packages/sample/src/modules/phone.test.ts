@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for phone numbers: that every style stays in the range reserved for
  * fiction, and that an IMEI carries the check digit that makes it well-formed.
@@ -6,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import { createRandom } from "../random.js";
 
 import { createPhoneModule } from "./phone.js";
 

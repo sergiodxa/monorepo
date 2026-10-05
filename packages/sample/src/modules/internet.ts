@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Addresses, handles, links, and the protocol furniture around them. Every
  * generated address lands on a domain reserved for documentation, so a message
@@ -10,7 +12,6 @@ import { Base64Url } from "@sdxc/crypto";
 import * as Algorithm from "@sdxc/jwt/algorithm";
 
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /**
  * The domains generated addresses and links use, reserved by RFC 2606 for

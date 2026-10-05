@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for instants: that a window is measured from the reference the caller
  * supplied rather than the clock, that a range includes both of its ends, and
@@ -9,7 +10,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createDateModule } from "./date.js";
 

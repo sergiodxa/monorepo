@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for places: that a city asked for by country comes from that country,
  * and that a country the dataset does not carry is refused rather than quietly
@@ -11,7 +12,6 @@ import { describe, expect, test } from "vitest";
 import type { Dataset } from "../dataset.js";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createLocationModule } from "./location.js";
 

@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Colors, in the notations a stylesheet and a design token file use.
  *
@@ -5,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 const CSS_SPACES = [
 	"sRGB",

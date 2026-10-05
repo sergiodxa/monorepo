@@ -5,7 +5,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "../random.js";
+import type { Random } from "@sdxc/random";
 
 /**
  * The area code every style writes. 555 is not a dialable area code, so a

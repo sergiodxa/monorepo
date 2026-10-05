@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for the generator as a whole: that a seed reproduces a whole run rather
  * than a single value, that a derived generator holds still, and that the
@@ -11,7 +12,6 @@ import { describe, expect, test } from "vitest";
 import type { Dataset } from "./dataset.js";
 
 import { en } from "./data/en.js";
-import { createRandom } from "./random.js";
 import { createSample } from "./sample.js";
 
 const REFERENCE = new Date("2026-06-15T12:00:00.000Z");

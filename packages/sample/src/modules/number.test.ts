@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for numbers: the defaults a bare call falls back to, the bounds an
  * options object sets, and the rounding that keeps a float printable.
@@ -6,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import { createRandom } from "../random.js";
 
 import { createNumberModule } from "./number.js";
 

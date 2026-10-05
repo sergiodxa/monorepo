@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * People: the names a signup form receives, the job title an org chart shows,
  * and the whole person behind them. Phone numbers come from the range reserved
@@ -7,7 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 import type { InternetModule } from "./internet.js";
 import type { PhoneModule } from "./phone.js";

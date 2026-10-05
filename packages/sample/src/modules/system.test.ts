@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for files and paths: that names carry an extension from the list they
  * were promised, that a path is absolute, and that a cron expression has five
@@ -9,7 +10,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createSystemModule } from "./system.js";
 

@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for placeholder prose: that a count is honored exactly, that words come
  * from the dataset and nowhere else, and that a sentence reads as one.
@@ -10,7 +11,6 @@ import { describe, expect, test } from "vitest";
 import type { Dataset } from "../dataset.js";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createLoremModule } from "./lorem.js";
 

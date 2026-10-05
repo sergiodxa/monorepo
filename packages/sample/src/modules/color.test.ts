@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for colors: that each notation returns the channel count it should,
  * that every channel lands inside its own range, and that asking for CSS
@@ -9,7 +10,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createColorModule } from "./color.js";
 

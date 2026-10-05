@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Technical-sounding filler: the vocabulary a mock console or a joke ticket
  * needs when the words have to look like a system without meaning anything.
@@ -6,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /** Sentence shapes a phrase is built from, filled by the module below. */
 const PHRASES = [

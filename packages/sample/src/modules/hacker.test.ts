@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for the technical filler: that each word comes from its own list, and
  * that a phrase leaves no placeholder behind.
@@ -8,7 +9,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createHackerModule } from "./hacker.js";
 

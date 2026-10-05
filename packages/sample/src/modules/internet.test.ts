@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for addresses, handles, and links: that every generated address is
  * unroutable, that a handle survives an accented or punctuated name, and that a
@@ -9,7 +10,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createInternetModule } from "./internet.js";
 

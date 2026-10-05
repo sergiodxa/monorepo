@@ -585,6 +585,15 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/expression": {
+      "name": "@sdxc/expression",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/types": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
     "packages/feed": {
       "name": "@sdxc/feed",
       "version": "0.0.1",
@@ -1011,6 +1020,7 @@
         "@sdxc/dates": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/jwt": "workspace:*",
+        "@sdxc/random": "workspace:*",
       },
     },
     "packages/scim": {
@@ -1086,6 +1096,7 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/html": "workspace:*",
+        "@sdxc/random": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/sample": "workspace:*",
       },
@@ -1882,6 +1893,8 @@
     "@sdxc/duration": ["@sdxc/duration@workspace:packages/duration"],
 
     "@sdxc/email-address": ["@sdxc/email-address@workspace:packages/email-address"],
+
+    "@sdxc/expression": ["@sdxc/expression@workspace:packages/expression"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
 

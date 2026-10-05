@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for company names: that both halves come from the dataset, and that the
  * generated name varies rather than settling on one word.
@@ -10,7 +11,6 @@ import { describe, expect, test } from "vitest";
 import type { Dataset } from "../dataset.js";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createCompanyModule } from "./company.js";
 

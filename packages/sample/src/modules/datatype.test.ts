@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for the boolean: that a probability of zero and one are absolute, and
  * that the default lands near half.
@@ -6,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { describe, expect, test } from "vitest";
-
-import { createRandom } from "../random.js";
 
 import { createDatatypeModule } from "./datatype.js";
 

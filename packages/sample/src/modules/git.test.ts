@@ -1,3 +1,4 @@
+import { createRandom } from "@sdxc/random";
 /**
  * Tests for repository furniture: that a hash is hexadecimal at the length
  * asked for, that a branch reads as a branch, and that a log entry carries the
@@ -9,7 +10,6 @@
 import { describe, expect, test } from "vitest";
 
 import { en } from "../data/en.js";
-import { createRandom } from "../random.js";
 
 import { createDateModule } from "./date.js";
 import { createGitModule } from "./git.js";

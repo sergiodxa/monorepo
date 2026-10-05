@@ -4,7 +4,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Random } from "../random.js";
+import type { Random } from "@sdxc/random";
 
 /** Options for a generated boolean. */
 export interface BooleanOptions {

@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Placeholder prose, for filling a field whose content does not matter but
  * whose length does.
@@ -6,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 /** How many words a generated sentence runs to. */
 const SENTENCE_MIN_WORDS = 4;

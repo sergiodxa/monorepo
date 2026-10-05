@@ -1,3 +1,7 @@
+import type { Seed, SeededRandom } from "@sdxc/random";
+
+import { createRandom } from "@sdxc/random";
+
 /**
  * The generator a caller holds: every module drawing from one stream, so a
  * seed reproduces a whole run's worth of data rather than a single value.
@@ -21,7 +25,6 @@ import type { PersonModule } from "./modules/person.js";
 import type { PhoneModule } from "./modules/phone.js";
 import type { StringModule } from "./modules/string.js";
 import type { SystemModule } from "./modules/system.js";
-import type { Random, Seed } from "./random.js";
 
 import { en } from "./data/en.js";
 import { createColorModule } from "./modules/color.js";
@@ -39,7 +42,6 @@ import { createPersonModule } from "./modules/person.js";
 import { createPhoneModule } from "./modules/phone.js";
 import { createStringModule } from "./modules/string.js";
 import { createSystemModule } from "./modules/system.js";
-import { createRandom } from "./random.js";
 
 /** What a generator is built from. */
 export interface SampleOptions {
@@ -48,7 +50,7 @@ export interface SampleOptions {
 	 * Required, so a run's data is always replayable from something the caller
 	 * knows.
 	 */
-	seed: Seed | Random;
+	seed: Seed | SeededRandom;
 	/** The lists to draw from, English by default. */
 	data?: Dataset;
 	/** The instant the `date` module measures from, the current time by default. */
@@ -85,7 +87,7 @@ export interface Sample {
 /** The module names a `{{module.method}}` template may reach. */
 type ModuleName = Exclude<keyof Sample, "seed" | "derive">;
 
-function isRandom(seed: Seed | Random): seed is Random {
+function isRandom(seed: Seed | SeededRandom): seed is SeededRandom {
 	return typeof seed === "object";
 }
 

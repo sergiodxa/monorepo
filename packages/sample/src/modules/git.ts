@@ -1,3 +1,5 @@
+import type { Random } from "@sdxc/random";
+
 /**
  * Repository furniture: the branch names, hashes, and log entries a tool that
  * reads git has to be fed.
@@ -6,7 +8,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Dataset } from "../dataset.js";
-import type { Random } from "../random.js";
 
 import type { DateModule } from "./date.js";
 import type { InternetModule } from "./internet.js";

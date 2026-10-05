@@ -15,6 +15,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/duration": "workspace:*",
-		"@sdxc/jwt": "workspace:*"
+		"@sdxc/jwt": "workspace:*",
+		"@sdxc/random": "workspace:*"
 	}
 }
