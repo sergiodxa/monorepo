@@ -61,14 +61,21 @@ function serveEndpoint(status = 202) {
 }
 
 /** Runs the job the way the dispatcher would after its middleware. */
-async function run(removed = false) {
+async function run(removed = false, attempts = 1) {
 	let ctx = createJobContext(jobs.webmentions.deliver, {
 		id: "m",
-		attempts: 1,
+		attempts,
 		input: { postId, target: TARGET, removed },
 	});
 	ctx.set(Database, db, { property: "db" });
 	await handler(ctx);
+}
+
+/** The delay a failing delivery on its `attempts`-th try asks the queue for. */
+async function retryDelay(attempts: number) {
+	let error = await run(false, attempts).catch((caught: unknown) => caught);
+	expect(error).toBeInstanceOf(Job.Retry);
+	return error instanceof Job.Retry ? Number(error.delay) : Number.NaN;
 }
 
 describe("the deliver job", () => {
@@ -105,5 +112,17 @@ describe("the deliver job", () => {
 
 		await expect(run()).rejects.toBeInstanceOf(Job.Retry);
 		expect(await WebmentionSend.targetsFor(db, postId)).toEqual([]);
+	});
+
+	test("waits longer before each retry of a failing endpoint", async () => {
+		serveEndpoint(503);
+
+		let first = await retryDelay(1);
+		let fourth = await retryDelay(4);
+
+		expect(first).toBeGreaterThanOrEqual(4 * 60_000);
+		expect(first).toBeLessThanOrEqual(6 * 60_000);
+		expect(fourth).toBeGreaterThanOrEqual(32 * 60_000);
+		expect(fourth).toBeLessThanOrEqual(48 * 60_000);
 	});
 });

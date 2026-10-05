@@ -15,6 +15,7 @@
 	"dependencies": {
 		"@sdxc/atom": "workspace:*",
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/backoff": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",

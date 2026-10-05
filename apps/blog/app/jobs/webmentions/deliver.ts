@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 import { WebmentionFetchError } from "@sdxc/webmention";
@@ -15,6 +16,12 @@ import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
 import { WebmentionSend } from "~/app/repositories/webmention-send";
 import { permalink, USER_AGENT } from "~/app/services/webmention";
+
+/**
+ * The wait before redelivering after a transient failure: quick while a receiver
+ * may be briefly down, then doubling, so one that stays down is left alone.
+ */
+const retryBackoff = createBackoff({ base: "5 minutes", max: "6 hours", jitter: 0.2 });
 
 /**
  * A timeout, network failure, 5xx or 429 retries later; any other refusal is recorded
@@ -39,7 +46,7 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 			error instanceof WebmentionFetchError
 				? error.retryable
 				: error.status >= 500 || error.status === 429;
-		if (transient) return ctx.retry({ delay: "30 minutes", cause: error });
+		if (transient) return ctx.retry({ delay: retryBackoff.delay(ctx.attempts), cause: error });
 
 		if (removed) await WebmentionSend.forget(ctx.db, postId, target);
 		else {

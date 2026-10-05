@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 import { verify } from "@sdxc/webmention/receiver";
@@ -14,6 +15,12 @@ import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
 import { USER_AGENT } from "~/app/services/webmention";
+
+/**
+ * The wait before re-fetching a source after a transient failure: quick at first,
+ * then doubling, so a source that stays down is left alone.
+ */
+const retryBackoff = createBackoff({ base: "2 minutes", max: "1 hour", jitter: 0.2 });
 
 /**
  * A source that fails transiently (timeout, 5xx, 429) is retried later; one refused
@@ -35,7 +42,8 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 
 	let outcome = await verify(pair, { userAgent: USER_AGENT });
 	if (isFailure(outcome)) {
-		if (outcome.error.retryable) return ctx.retry({ delay: "10 minutes", cause: outcome.error });
+		if (outcome.error.retryable)
+			return ctx.retry({ delay: retryBackoff.delay(ctx.attempts), cause: outcome.error });
 		return ctx.ack(outcome.error.message);
 	}
 
