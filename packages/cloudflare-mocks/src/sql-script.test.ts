@@ -1,7 +1,7 @@
 /**
  * Tests for the SQL script splitter, which splits only on semicolons outside string
- * literals, quoted identifiers, and comments — the D1 mock uses it to decide what is
- * one statement.
+ * literals, quoted identifiers, comments and trigger bodies — the D1 mock uses it to
+ * decide what is one statement.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -47,5 +47,23 @@ describe("splitSqlStatements", () => {
 
 	test("returns nothing for an empty script", () => {
 		expect(splitSqlStatements("   \n  ")).toEqual([]);
+	});
+
+	test("keeps a trigger's body in one statement", () => {
+		let trigger = [
+			'CREATE TRIGGER "posts_fts_insert" AFTER INSERT ON "posts" BEGIN',
+			'\tINSERT INTO "posts_fts" ("rowid", "title") VALUES (new."id", new."title");',
+			'\tDELETE FROM "stale" WHERE "id" = new."id";',
+			"END",
+		].join("\n");
+
+		expect(splitSqlStatements(`${trigger};\nSELECT 1;`)).toEqual([trigger, "SELECT 1"]);
+	});
+
+	test("keeps a CASE inside a trigger's body from closing it", () => {
+		let trigger =
+			"CREATE TRIGGER t AFTER UPDATE ON a BEGIN UPDATE b SET x = CASE WHEN new.y THEN 1 ELSE 0 END; END";
+
+		expect(splitSqlStatements(`${trigger}; SELECT 2`)).toEqual([trigger, "SELECT 2"]);
 	});
 });
