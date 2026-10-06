@@ -65,6 +65,7 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.tutorials.href(), label: "Tutorials" },
 	{ href: routes.bookmarks.href(), label: "Bookmarks" },
 	{ href: routes.glossary.href(), label: "Glossary" },
+	{ href: routes.search.href(), label: "Search" },
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 ];
 

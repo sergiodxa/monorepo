@@ -70,6 +70,12 @@ export default route({
 	bookmarks: get("/bookmarks"),
 	glossary: get("/glossary"),
 
+	/**
+	 * Full-text search over published articles, tutorials and glossary entries. A plain
+	 * `GET` form submits `?q=`, so a results page is a URL a reader can share or bookmark.
+	 */
+	search: get("/search"),
+
 	post: get("/:postType/:postSlug(.:ext)"),
 	postRelated: get("/frames/posts/:postType/:postSlug/related"),
 

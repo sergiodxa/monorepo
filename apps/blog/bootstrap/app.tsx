@@ -259,6 +259,10 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		lazy(() => import("~/app/http/controllers/glossary")),
 	);
 	router.map(
+		routes.search,
+		lazy(() => import("~/app/http/controllers/search")),
+	);
+	router.map(
 		routes.post,
 		lazy(() => import("~/app/http/controllers/post")),
 	);

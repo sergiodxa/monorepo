@@ -43,6 +43,10 @@ Smart Placement and Observability are enabled.
 - Webmention sending: creating, updating or deleting an article or tutorial notifies every
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
+- Full-text search at `/search` and through the MCP `search_posts` tool: an FTS5 index over
+  each live post's title, tags and body, ranked title first, then tags, then body. Only posts
+  published by now appear, previews and deleted posts never. Results page ten at a time with
+  `Link` and `X-Total-Count` headers, and matched words are highlighted.
 - Encore support page (`/apps/encore/support`), the Support URL of the Encore App Store
   listings: a public form that mails each request to `SUPPORT_INBOX` from
   `encore@support.sergiodxa.com` with the visitor as Reply-To, behind same-origin checks,
@@ -61,6 +65,7 @@ Smart Placement and Observability are enabled.
 | `/tutorials`           | Tutorials listing                          |
 | `/tutorials/:slug`     | Tutorial detail page                       |
 | `/bookmarks`           | Saved bookmarks                            |
+| `/search`              | Full-text search over published posts      |
 | `/rss`                 | Main RSS feed                              |
 | `/atom.xml`            | Main feed as Atom                          |
 | `/feed.json`           | Main feed as JSON Feed                     |
@@ -86,6 +91,42 @@ Migrations live in `database/migrations/`.
 bun run db:local:migrate  # Apply migrations locally
 bun run db:remote:migrate # Apply migrations to production
 ```
+
+### Search index
+
+`post_search` is a search-only projection of each live article, tutorial and glossary entry
+(title, tags as a JSON array, and body or definition), written by the `Post` repository on
+every create, update and delete. `post_search_fts` is its FTS5 index, kept in step by three
+triggers. Publish state, kind and everything a result shows are read from `posts` and
+`post_meta`. See [ADR-004](../../docs/adr/blog/ADR-004-full-text-search.md).
+
+### Exporting the database
+
+`wrangler d1 export` refuses a database holding a virtual table, so an export drops the index
+first and rebuilds it after:
+
+1. Drop the triggers, then the index, in this order, since a trigger left behind fails every
+   write to `post_search`:
+
+   ```sql
+   DROP TRIGGER "post_search_fts_insert";
+   DROP TRIGGER "post_search_fts_update";
+   DROP TRIGGER "post_search_fts_delete";
+   DROP TABLE "post_search_fts";
+   ```
+
+2. Export with `bunx wrangler d1 export DB --remote --output <file>`.
+3. Recreate the index and the three triggers by running their statements from
+   `database/migrations/0006_PostSearch.sql` with `bunx wrangler d1 execute DB --remote`.
+4. Refill the index from `post_search`, which the drop left untouched:
+
+   ```sql
+   INSERT INTO "post_search_fts" ("rowid", "title", "tags", "content")
+   SELECT "id", "title", "tags", "content" FROM "post_search";
+   ```
+
+Searches return nothing between steps 1 and 4, and post writes keep `post_search` current
+throughout.
 
 ## Scripts
 
