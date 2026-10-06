@@ -9,8 +9,8 @@
 		"start": "vite preview",
 		"cf:deploy": "bunx wrangler deploy",
 		"cf:typegen": "bunx wrangler types",
-		"db:local:migrate": "bunx wrangler d1 migrations apply --local",
-		"db:remote:migrate": "bunx wrangler d1 migrations apply --remote"
+		"db:local:migrate": "bunx wrangler d1 migrations apply DB --local",
+		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote"
 	},
 	"dependencies": {
 		"@sdxc/atom": "workspace:*",
