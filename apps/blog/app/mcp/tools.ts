@@ -25,12 +25,12 @@ export default tools({
 	searchPosts: tool("search_posts", {
 		title: "Search posts",
 		description:
-			"Search this blog's published articles, tutorials and glossary entries by title, excerpt and tags. Use this first when looking for writing on a topic; it returns slugs that get_post reads in full.",
+			"Search this blog's published articles, tutorials and glossary entries by title, tags and full text. Use this first when looking for writing on a topic; it returns slugs that get_post reads in full.",
 		input: s.object({
-			query: s
-				.string()
-				.pipe(checks.minLength(1), checks.maxLength(200))
-				.meta({ description: "Words to look for. Matched against titles, excerpts and tags." }),
+			query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
+				description:
+					'Words to look for, each matched as a word prefix against titles, tags and post text; a post must match every word. Quote a phrase ("route pattern") to match it exactly, and prefix a word with - to exclude it. Results come best match first.',
+			}),
 			kind: s.optional(
 				s
 					.enum_(["article", "tutorial", "glossary"])

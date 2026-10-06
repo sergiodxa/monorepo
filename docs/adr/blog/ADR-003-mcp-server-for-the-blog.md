@@ -58,15 +58,13 @@ Every tool declares `readOnlyHint: true`, so a client can run one without stoppi
 
 Each tool answers with the post's canonical URL alongside its slug. An agent that quotes a post should be able to link it, and building that URL from a slug is knowledge the agent should not have to hold.
 
-### 3. Search Reads Per Type And Matches In Memory, Not FTS5
+### 3. Search Runs On An FTS5 Index
 
-`PostSearch.query()` reads each content type through its own repository — `ArticlePost.findAll`, `TutorialPost.findAll`, `GlossaryPost.findAll` — and matches in memory, the way `Feed.listActivity` already composes the activity list.
-
-This is a change from the `LIKE` predicate this ADR originally specified, for two reasons. `post_meta` is a key/value table, so a `LIKE` search means a joined predicate over a metadata key set, and the repository's own comment notes that plain predicates are what the app's D1 adapter executes reliably; this app has no database test harness, so a new query shape could not be verified before shipping. Meanwhile the per-type reads are paths every page already exercises. The cost is transferring every published post's metadata per search instead of only the matches — a few hundred rows, the same order the feed page already pays.
-
-The signature is the part meant to last. Replacing the internals with an FTS5 index changes `search.ts` and nothing that calls it, and that becomes worth doing once there is evidence about what the current matching misses.
-
-Matching covers title, excerpt and tags, and results are ranked: a title hit sorts above a tag hit, which sorts above an excerpt hit, and ties break newest-first. Post bodies stay out of the match — including them multiplies the work for recall that mostly surfaces passing mentions, and a post whose subject appears in none of those three is mis-titled.
+`PostSearch.query()` searches `post_search`, a search-only projection of each live post's title,
+tags and body behind an FTS5 index, ranked by `bm25()` with a title outweighing tags and tags
+outweighing the body. Publish state and kind are read from `posts` on every query, and each
+result is read back from `posts` and `post_meta`. [ADR-004](./ADR-004-full-text-search.md)
+records the design; the tool's arguments and output shape are unchanged.
 
 ### 4. Preview Posts Are Invisible
 
@@ -151,13 +149,10 @@ No `.well-known` document and no `<link rel>` in the document head. Neither is a
 ### Negative
 
 - A public endpoint that scans metadata per call is a new abuse surface, and the app gains its first rate-limiter binding to bound it.
-- `LIKE` search has no ranking. Results come back newest first, not best first, which for a query matching many posts is close to arbitrary.
-- Recall stops at titles, excerpts and tags. A post about a topic it never names in those three is unfindable, and nothing surfaces that to the agent — it sees an empty result, not a limited index.
 - The handlers have no test coverage in this app, because they need a database and the blog has no harness for one. Only the wiring — which tools and resources are served — is asserted.
 - The tool descriptions become part of how well this works, and they are prose that has to be revised by watching agents use it, not verified by a test.
 - MCP handlers read the database from request context, which the app's own guidance forbids for HTML controllers. The reason differs — a package-owned signature rather than a preference — but a reader now finds two patterns in one app.
-- Every search reads all published metadata. That is fine at this size and is the first thing to re-measure if the endpoint gets busy.
-- The publish rule is now applied in three places: the HTML route, `get_post`, and every resource `read`. Each is a separate chance to forget it, and only the first is covered by the existing tests.
+- The publish rule is now applied in four places: the HTML route, `get_post`, every resource `read`, and the search's `posts` predicate. Each is a separate chance to forget it, and only the first is covered by the existing tests.
 
 ### Neutral
 
@@ -245,7 +240,7 @@ Offer a single `fetch_page` tool taking a path.
 - `/mcp` now has two audiences behind one path, so the middleware chain differs by method. A middleware added to the global chain without thinking about `htmlOnly` will run for agents too.
 - The page's prose is written twice, once per language, and nothing but a test keeps the two saying the same thing. Adding a third language means a third file to keep in step.
 - Tool names now live in prose as well as in the declarations. The test catches a rename, but only because it looks for every mapped tool's name in both files.
-- Search transfers every published post's metadata per query. The cache absorbs the repeats within a conversation, so what remains is one such read per five minutes per distinct query — and the rate limit bounds how many distinct queries a caller can produce.
+- A search reads only matching rows through the FTS5 index ([ADR-004](./ADR-004-full-text-search.md)). The cache absorbs the repeats within a conversation, and the rate limit bounds how many distinct queries a caller can produce.
 - Tool descriptions are prompts. `search_posts` and `list_posts` overlap enough that a model will sometimes pick the wrong one; the fix is in the wording of both, and it is worth checking against a real agent rather than against a test.
 - The rate-limiter binding is new to this app. `namespace_id` is Worker-local and needs nothing provisioned, but `limit` and `period` live in `wrangler.jsonc` while the reasoning for the numbers belongs next to the route, the way `apps/uptime` keeps them.
 - Caching a tool result caches an answer about published content. A post published moments ago stays invisible for the TTL, which is fine here and would not be for a status tool on a different app.

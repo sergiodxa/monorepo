@@ -13,6 +13,7 @@ import { and, eq, inList, isNull, notNull } from "remix/data-table";
 
 import { PostMeta } from "~/app/repositories/post-meta";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { PostSearch } from "~/app/repositories/search";
 import * as schema from "~/database/schema";
 
 import { ArticlePost } from "./posts/article";
@@ -443,7 +444,8 @@ export class Post {
 	}
 
 	/**
-	 * Creates a post row and optional metadata rows in one transaction.
+	 * Creates a post row and optional metadata rows in one transaction, then writes the
+	 * post's search document so a search finds it from its publish date on.
 	 *
 	 * @param db Database handle used for writes.
 	 * @param input Raw create payload.
@@ -478,13 +480,16 @@ export class Post {
 			);
 		});
 
+		await PostSearch.index(db, id, input.type);
+
 		return this.findById(db, id);
 	}
 
 	/**
 	 * Updates a post row and upserts metadata entries by key.
 	 *
-	 * Existing metadata keys are updated in place; unseen keys are inserted.
+	 * Existing metadata keys are updated in place; unseen keys are inserted. The post's
+	 * search document is rewritten afterwards, so a search sees the edit.
 	 *
 	 * @param db Database handle used for writes.
 	 * @param id Post identifier.
@@ -506,10 +511,12 @@ export class Post {
 			}
 		}
 
+		let type = input.type ?? existing.type;
+
 		await db.transaction(async (tx) => {
 			await tx.update(this.table, id, {
 				author_id: input.author_id ?? existing.author_id,
-				type: input.type ?? existing.type,
+				type,
 				published_at: input.published_at ?? existing.published_at,
 				updated_at: input.updated_at ?? this.timestamp,
 			});
@@ -530,12 +537,15 @@ export class Post {
 			}
 		});
 
+		await PostSearch.index(db, id, type);
+
 		return this.findById(db, id);
 	}
 
 	/**
 	 * Deletes a post by leaving a tombstone: the row and its metadata stay, every read
 	 * skips it, and its URL answers 410 Gone so Webmention receivers learn it was withdrawn.
+	 * Its search document goes with it, so no search returns a deleted post.
 	 *
 	 * @param db Database handle used for writes.
 	 * @param id Post identifier.
@@ -547,6 +557,7 @@ export class Post {
 
 		let now = this.timestamp;
 		await db.update(this.table, id, { deleted_at: now, updated_at: now });
+		await PostSearch.remove(db, id);
 		return true;
 	}
 

@@ -60,8 +60,8 @@ Claude Desktop todavía no habla esta versión del protocolo, así que necesita 
 
 Tu agente las llama solo, cuando las necesita.
 
-- `search_posts` busca artículos, tutoriales y entradas del glosario por título, extracto y
-  etiquetas. Empezá por acá. Te da los slugs que las demás necesitan.
+- `search_posts` busca en el texto completo de artículos, tutoriales y entradas del glosario,
+  con lo más relevante primero. Empezá por acá. Te da los slugs que las demás necesitan.
 - `list_posts` lista artículos o tutoriales publicados, del más nuevo al más viejo. Sirve
   para ver qué hay, no para buscar un tema.
 - `get_post` lee un artículo o tutorial completo, en Markdown.

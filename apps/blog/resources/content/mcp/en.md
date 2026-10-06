@@ -60,8 +60,8 @@ Claude Desktop does not speak this version of the protocol yet, so it needs a br
 
 Your agent calls these on its own when it needs them.
 
-- `search_posts` searches articles, tutorials and glossary entries by title, excerpt and
-  tags. Start here. It gives you the slugs the other tools need.
+- `search_posts` searches the full text of articles, tutorials and glossary entries, best
+  match first. Start here. It gives you the slugs the other tools need.
 - `list_posts` lists published articles or tutorials, newest first. Use it to see what is
   there rather than to look for a topic.
 - `get_post` reads one article or tutorial in full, as Markdown.
