@@ -1,6 +1,6 @@
 /**
  * The search corpus: one entry per page, plus one per heading a reader can jump to,
- * across the guides and every package reference. It is read off the markdown sources
+ * across the guides, every package reference and every `@sdxc/ui` reference page. It is read off the markdown sources
  * already in the bundle by a line scan rather than a parse, because the corpus runs to
  * well over a megabyte and a full parse of all of it is work no request should pay for.
  *
@@ -18,6 +18,7 @@ import { BOILERPLATE_SECTIONS, slugify } from "~/app/services/article";
 import { listGuides, readGuide } from "~/app/services/docs";
 import { listPackageGroups, readPackageReadme } from "~/app/services/packages";
 import { includesWord, rankDocuments, tokenize } from "~/app/services/search-query";
+import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /** Heading depths the corpus carries, matching the depths a page's own nav offers. */
@@ -163,15 +164,19 @@ let corpus: SearchDocument[] | null = null;
 let packageCorpus: Array<PackageMatch & { haystack: string }> | null = null;
 
 /**
- * The two packages whose reference is a catalogue of its own rather than one page. Their
- * hundreds of entries would crowd out everything else a query could mean, and each tree
- * already has its own index and sidebar to walk, so search answers for the rest.
+ * The two packages whose page draws a catalogue index in place of its README, so none of
+ * the README's headings exists on the page to link to.
  */
 const CATALOGUE_DIRECTORIES = new Set(["u", "ui"]);
 
+/** How the `@sdxc/ui` reference pages are labelled when a result names its section. */
+const UI_SECTION_PREFIX = "@sdxc/ui";
+
 /**
- * The whole corpus, guides first and packages after, each page followed by its own
- * headings so a result for a page sits above the sections inside it.
+ * The whole corpus, guides first, packages after and the `@sdxc/ui` reference pages
+ * last, each page followed by its own headings so a result for a page sits above the
+ * sections inside it. The `@sdxc/u` utilities are walked from their own index, since
+ * three hundred one-property pages would crowd out everything else a query could mean.
  */
 export async function buildSearchIndex(): Promise<SearchDocument[]> {
 	if (corpus !== null) return corpus;
@@ -203,8 +208,6 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 		let section = `${PACKAGE_SECTION_PREFIX} · ${group.title}`;
 
 		for (let entry of group.packages) {
-			if (CATALOGUE_DIRECTORIES.has(entry.directory)) continue;
-
 			let href = routes.api.show.href({ name: entry.directory });
 
 			documents.push({
@@ -214,6 +217,8 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 				section,
 				summary: entry.description,
 			});
+
+			if (CATALOGUE_DIRECTORIES.has(entry.directory)) continue;
 
 			let source = await readPackageReadme(entry.directory);
 			if (source === null) continue;
@@ -229,12 +234,23 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 		}
 	}
 
+	for (let page of await listUiPages()) {
+		documents.push({
+			href: page.href,
+			title: page.title,
+			page: page.title,
+			section: `${UI_SECTION_PREFIX} · ${page.section}`,
+			summary: page.summary,
+		});
+	}
+
 	corpus = documents;
 	return documents;
 }
 
 /**
- * The best answers to a query across the guides and the package references.
+ * The best answers to a query across the guides, the package references and the
+ * `@sdxc/ui` reference pages.
  *
  * @param query - What was asked for, in a reader's or a model's own words.
  * @param limit - How many results to return.

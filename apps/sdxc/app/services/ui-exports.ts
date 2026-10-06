@@ -57,6 +57,8 @@ export interface UiExportReference {
 	name: string;
 	subpath: UiSubpath;
 	slug: string;
+	/** The file under the subpath that declares it, without its extension. */
+	module: string;
 	/**
 	 * What the export is, in one sentence: its module's opening when the module publishes
 	 * it alone, which states the pattern, or the export's own description otherwise.

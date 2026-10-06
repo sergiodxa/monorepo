@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { UiPage } from "~/app/services/ui-pages";
+
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups, readPackageFacts } from "~/app/services/packages";
 import {
@@ -20,6 +22,7 @@ import {
 	SITE_NAME,
 	SPONSOR_URL,
 } from "~/app/services/site";
+import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /**
@@ -61,6 +64,22 @@ export async function buildLlmsTxt(): Promise<string> {
 		for (let entry of group.packages) {
 			let href = absoluteUrl(routes.markdown.package.href({ name: entry.directory }));
 			lines.push(`- [${entry.name}](${href}): ${entry.description}`);
+		}
+
+		lines.push("");
+	}
+
+	let uiSections = new Map<string, UiPage[]>();
+	for (let page of await listUiPages()) {
+		uiSections.set(page.section, [...(uiSections.get(page.section) ?? []), page]);
+	}
+
+	for (let [section, pages] of uiSections) {
+		lines.push(`## @sdxc/ui — ${section}`);
+		lines.push("");
+
+		for (let page of pages) {
+			lines.push(`- [${page.title}](${absoluteUrl(page.markdownHref)}): ${page.summary}`);
 		}
 
 		lines.push("");

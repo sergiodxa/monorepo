@@ -63,17 +63,18 @@ Observability is enabled, with traces head-sampled at 10%.
 
 ## Routes
 
-| Route                           | Description                                            |
-| ------------------------------- | ------------------------------------------------------ |
-| `/`                             | The landing page                                       |
-| `/docs`                         | The guides hub, routing a reader by intent             |
-| `/docs/<slug>`                  | One handwritten guide from `resources/docs`            |
-| `/api`                          | Every published package, grouped and filterable        |
-| `/api/:name`                    | One package's README, framed by its manifest's facts   |
-| `/api/u`, `/api/u/:utility`     | The `@sdxc/u` catalogue and one utility's reference    |
-| `/api/ui`, `/api/ui/:component` | The `@sdxc/ui` catalogue and one component's reference |
-| `/api/ui/:subpath/:slug`        | One mixin, behavior, animation or style recipe         |
-| `/docs/packages/*`              | Permanent redirects to the same path under `/api`      |
+| Route                                                | Description                                            |
+| ---------------------------------------------------- | ------------------------------------------------------ |
+| `/`                                                  | The landing page                                       |
+| `/docs`                                              | The guides hub, routing a reader by intent             |
+| `/docs/<slug>`                                       | One handwritten guide from `resources/docs`            |
+| `/api`                                               | Every published package, grouped and filterable        |
+| `/api/:name`                                         | One package's README, framed by its manifest's facts   |
+| `/api/u`, `/api/u/:utility`                          | The `@sdxc/u` catalogue and one utility's reference    |
+| `/api/ui`, `/api/ui/:component`                      | The `@sdxc/ui` catalogue and one component's reference |
+| `/api/ui/:subpath/:slug`                             | One mixin, behavior, animation or style recipe         |
+| `/api/ui/:component.md`, `/api/ui/:subpath/:slug.md` | The markdown twin of any `@sdxc/ui` reference page     |
+| `/docs/packages/*`                                   | Permanent redirects to the same path under `/api`      |
 
 Each part draws its own sidebar: the guides under `/docs`, every package but the two
 catalogues under `/api`, and one each for `@sdxc/u` and `@sdxc/ui` under their own paths.

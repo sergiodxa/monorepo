@@ -63,6 +63,12 @@ export default route({
 	markdown: {
 		docs: get("/docs/*slug.md"),
 		package: get("/api/:name.md"),
+		/**
+		 * The catalogue's pages are generated rather than written, so their twins are
+		 * rendered from the same records the HTML pages draw.
+		 */
+		component: get("/api/ui/:component.md"),
+		uiExport: get("/api/ui/:subpath/:slug.md"),
 	},
 
 	/** Machine-readable surfaces, each one derived from what is already in the bundle. */

@@ -26,8 +26,11 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
+import { absoluteUrl } from "~/app/services/site";
 import { readUiExport } from "~/app/services/ui-exports";
+import { UI_SOURCE_BASE } from "~/app/services/ui-pages";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
+import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -58,6 +61,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 
 	let { symbol, companions } = reference;
 	let module = `@sdxc/ui/${reference.subpath}`;
+	let markdownHref = routes.markdown.uiExport.href({ subpath: reference.subpath, slug });
 	/** A description of one sentence is already the headline, so it is not printed twice. */
 	let usage =
 		symbol.description.replace(/\s+/g, " ") === reference.summary ? "" : symbol.description;
@@ -99,6 +103,11 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 						<PageTitle eyebrow={module} title={reference.name} mono>
 							<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
 						</PageTitle>
+						<PageActions
+							markdownHref={markdownHref}
+							markdownUrl={absoluteUrl(markdownHref)}
+							sourceUrl={`${UI_SOURCE_BASE}${reference.subpath}/${reference.module}.ts`}
+						/>
 						<Snippet code={`import { ${importedName(symbol)} } from "${module}";`} />
 					</header>
 

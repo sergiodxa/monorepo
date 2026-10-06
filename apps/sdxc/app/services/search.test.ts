@@ -22,18 +22,18 @@ describe("buildSearchIndex", () => {
 		let documents = await buildSearchIndex();
 		let pages = new Set(documents.filter((entry) => entry.summary).map((entry) => entry.href));
 
-		/* The two catalogues answer on their own trees, so search carries every other package. */
-		for (let entry of listPackages()) {
-			if (entry.directory === "u" || entry.directory === "ui") {
-				expect(pages).not.toContain(`/api/${entry.directory}`);
-				continue;
-			}
-
-			expect(pages).toContain(`/api/${entry.directory}`);
-		}
+		for (let entry of listPackages()) expect(pages).toContain(`/api/${entry.directory}`);
 
 		for (let section of await listGuides()) {
 			for (let guide of section.guides) expect(pages).toContain(`/docs/${guide.slug}`);
+		}
+	});
+
+	test("carries no README heading for a catalogue, whose page draws an index instead", async () => {
+		let documents = await buildSearchIndex();
+
+		for (let directory of ["u", "ui"]) {
+			expect(documents.some((entry) => entry.href.startsWith(`/api/${directory}#`))).toBe(false);
 		}
 	});
 

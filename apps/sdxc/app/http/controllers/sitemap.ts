@@ -19,10 +19,18 @@ import { withBundleCache } from "~/app/http/caching";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups } from "~/app/services/packages";
 import { absoluteUrl } from "~/app/services/site";
+import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /** How a landing page ranks against a reference page, which is what `priority` orders. */
-const PRIORITY = { home: 1, hub: 0.9, guide: 0.8, packageIndex: 0.9, package: 0.7 } as const;
+const PRIORITY = {
+	home: 1,
+	hub: 0.9,
+	guide: 0.8,
+	packageIndex: 0.9,
+	package: 0.7,
+	reference: 0.6,
+} as const;
 
 export default createAction(routes.sitemap, async (ctx) => {
 	let sitemap = new Sitemap();
@@ -59,6 +67,13 @@ export default createAction(routes.sitemap, async (ctx) => {
 				frequency: "weekly",
 			});
 		}
+	}
+
+	for (let page of await listUiPages()) {
+		sitemap.append(new URL(absoluteUrl(page.href)), {
+			priority: PRIORITY.reference,
+			frequency: "weekly",
+		});
 	}
 
 	return await withBundleCache(ctx.request, xml(sitemap.toString()));

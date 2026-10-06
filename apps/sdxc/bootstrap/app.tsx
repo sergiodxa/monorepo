@@ -33,7 +33,11 @@ import feed from "~/app/http/controllers/feed";
 import home from "~/app/http/controllers/home";
 import llms from "~/app/http/controllers/llms";
 import maintenance from "~/app/http/controllers/maintenance";
-import markdownTwin, { packageMarkdown } from "~/app/http/controllers/markdown-twin";
+import markdownTwin, {
+	componentMarkdownTwin,
+	packageMarkdown,
+	uiExportMarkdownTwin,
+} from "~/app/http/controllers/markdown-twin";
 import mcpPage, { mcpEndpoint } from "~/app/http/controllers/mcp";
 import { movedPackage, movedPackages } from "~/app/http/controllers/moved";
 import packagesIndex from "~/app/http/controllers/packages-index";
@@ -96,6 +100,8 @@ export default function application() {
 	/* The same pages as markdown, plus the surfaces derived from what is in the bundle. */
 	router.map(routes.markdown.docs, markdownTwin);
 	router.map(routes.markdown.package, packageMarkdown);
+	router.map(routes.markdown.component, componentMarkdownTwin);
+	router.map(routes.markdown.uiExport, uiExportMarkdownTwin);
 	router.map(routes.llms, llms);
 	router.map(routes.sitemap, sitemap);
 	router.map(routes.feed, feed);

@@ -14,6 +14,7 @@ import { describe, expect, test } from "vitest";
 import { fetchApp, ORIGIN } from "~/app/lib/test/router";
 import { listGuides } from "~/app/services/docs";
 import { listPackages, readPackageReadme } from "~/app/services/packages";
+import { listUiPages } from "~/app/services/ui-pages";
 
 /**
  * Posts one JSON-RPC message through the real router and reads the result back. A call
@@ -87,6 +88,40 @@ describe("GET /api/:name.md", () => {
 	});
 });
 
+describe("GET /api/ui/:component.md and /api/ui/:subpath/:slug.md", () => {
+	test("serves a component's reference as markdown", async () => {
+		let response = await fetchApp("/api/ui/badge.md");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/markdown");
+		expect(body.startsWith("# Badge\n")).toBe(true);
+		expect(body).toContain("## Props");
+	});
+
+	test("serves the theme contract, and an export with what it is used with", async () => {
+		let theming = await (await fetchApp("/api/ui/theming.md")).text();
+		let copy = await (await fetchApp("/api/ui/mixins/copy-to-clipboard.md")).text();
+
+		expect(theming).toContain("--ui-brand-bg-solid");
+		expect(copy).toContain('from "@sdxc/ui/mixins"');
+		expect(copy).toContain("### CopyEvent");
+	});
+
+	test("every @sdxc/ui reference page has one", async () => {
+		for (let page of await listUiPages()) {
+			let response = await fetchApp(page.markdownHref);
+			expect(response.status, page.markdownHref).toBe(200);
+		}
+	});
+
+	test("answers 404 for a page the catalogue does not publish", async () => {
+		expect((await fetchApp("/api/ui/not-a-component.md")).status).toBe(404);
+		expect((await fetchApp("/api/ui/widgets/hotkey.md")).status).toBe(404);
+		expect((await fetchApp("/api/ui/mixins/not-a-mixin.md")).status).toBe(404);
+	});
+});
+
 describe("GET /llms.txt", () => {
 	test("links every guide and every package by its markdown address", async () => {
 		let response = await fetchApp("/llms.txt");
@@ -103,6 +138,17 @@ describe("GET /llms.txt", () => {
 				expect(body).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
 			}
 		}
+	});
+
+	test("links every @sdxc/ui reference page under the band it is listed in", async () => {
+		let body = await (await fetchApp("/llms.txt")).text();
+
+		for (let page of await listUiPages()) {
+			expect(body).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
+		}
+
+		expect(body).toContain("## @sdxc/ui — Components");
+		expect(body).toContain("## @sdxc/ui — Mixins");
 	});
 
 	test("closes on the author: blog, X and GitHub Sponsors", async () => {
@@ -125,6 +171,17 @@ describe("GET /search.json", () => {
 		expect(body.documents.length).toBeGreaterThan(listPackages().length);
 		expect(body.documents.some((entry) => entry.href.includes("#"))).toBe(true);
 	});
+
+	test("carries the @sdxc/ui packages and every reference page of its catalogue", async () => {
+		let body = (await (await fetchApp("/search.json")).json()) as {
+			documents: Array<{ href: string }>;
+		};
+		let hrefs = new Set(body.documents.map((entry) => entry.href));
+
+		expect(hrefs).toContain("/api/ui");
+		for (let page of await listUiPages()) expect(hrefs).toContain(page.href);
+		expect([...hrefs].some((href) => href.startsWith("/api/ui#"))).toBe(false);
+	});
 });
 
 describe("GET /sitemap.xml", () => {
@@ -139,6 +196,10 @@ describe("GET /sitemap.xml", () => {
 
 		for (let entry of listPackages()) {
 			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}`);
+		}
+
+		for (let page of await listUiPages()) {
+			expect(body).toContain(`https://sdxc.sergiodxa.com${page.href}<`);
 		}
 	});
 });
@@ -226,6 +287,36 @@ describe("POST /mcp", () => {
 				expect(uris).toContain(`https://sdxc.sergiodxa.com/docs/${guide.slug}.md`);
 			}
 		}
+	});
+
+	test("every @sdxc/ui reference page appears in the resource picker", async () => {
+		let { body } = await callMcp("resources/list");
+
+		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
+
+		for (let page of await listUiPages()) {
+			expect(uris).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
+		}
+	});
+
+	test("reading an @sdxc/ui resource gives the same text its URL serves", async () => {
+		for (let path of ["/api/ui/badge.md", "/api/ui/behaviors/toaster.md"]) {
+			let { body } = await callMcp("resources/read", { uri: `https://sdxc.sergiodxa.com${path}` });
+			let contents = body.result.contents as Array<{ text: string }>;
+
+			expect(contents.at(0)?.text, path).toBe(await (await fetchApp(path)).text());
+		}
+	});
+
+	test("search_docs finds a component and a mixin by name", async () => {
+		let { body } = await callMcp("tools/call", {
+			name: "search_docs",
+			arguments: { query: "hotkey" },
+		});
+
+		expect(JSON.stringify(body.result)).toContain(
+			"https://sdxc.sergiodxa.com/api/ui/mixins/hotkey",
+		);
 	});
 
 	test("reading a resource gives the same text its URL serves", async () => {

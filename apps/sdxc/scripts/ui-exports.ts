@@ -56,15 +56,17 @@ interface Declared {
  *
  * @param source - The module's text.
  * @param subpath - The subpath whose barrel forwards it.
+ * @param module - Its file name under the subpath, without the extension.
  * @param shared - Text of the modules declaring the unions several modules share.
  * @returns One reference per page, or `null` when the module will not parse.
  */
 export function readUiModule(
 	source: string,
 	subpath: UiSubpath,
+	module: string,
 	shared: string[],
 ): UiExportReference[] | null {
-	let extracted = extract(source, { path: `${subpath}/module.ts` });
+	let extracted = extract(source, { path: `${subpath}/${module}.ts` });
 	if (isFailure(extracted)) return null;
 
 	let unions = [...shared, source];
@@ -96,6 +98,7 @@ export function readUiModule(
 			name: symbol.name,
 			subpath,
 			slug: toKebab(symbol.name),
+			module,
 			summary: toSummary(alone ? definition : symbol.description || definition),
 			symbol,
 			companions,

@@ -21,7 +21,11 @@ import type { ThemeDeclaration } from "~/app/services/theming";
 
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { absoluteUrl } from "~/app/services/site";
 import { readTheme } from "~/app/services/theming";
+import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/ui-markdown";
+import { THEMING_SLUG, UI_SOURCE_BASE } from "~/app/services/ui-pages";
+import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -30,9 +34,6 @@ import { TableOfContents } from "~/resources/components/table-of-contents";
 import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
-
-/** The one segment under the component tree that is a page rather than a component. */
-export const THEMING_SLUG = "theming";
 
 /**
  * Renders the theming page.
@@ -43,6 +44,7 @@ export const THEMING_SLUG = "theming";
  */
 export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 	let theme = await readTheme();
+	let markdownHref = routes.markdown.component.href({ component: THEMING_SLUG });
 
 	let anchors: Anchor[] = [
 		{ id: "roles", text: "Semantic roles", level: 2 },
@@ -53,8 +55,8 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 
 	let response = await ctx.render(
 		<DocumentLayout
-			title="Theming — @sdxc/ui"
-			description="Every theme variable the catalogue reads, and the two schemes that answer them."
+			title={`${THEMING_TITLE} — @sdxc/ui`}
+			description={THEMING_SUMMARY}
 			canonical={ctx.url.href}
 			sponsors={ctx.sponsors}
 		>
@@ -64,16 +66,21 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 				breadcrumbs={[
 					{ label: "API", href: routes.api.index.href() },
 					{ label: "@sdxc/ui", href: routes.api.show.href({ name: "ui" }) },
-					{ label: "Theming" },
+					{ label: THEMING_TITLE },
 				]}
 				aside={<TableOfContents anchors={anchors} />}
 			>
 				<article mix={[vstack({ gap: 10, align: "stretch" })]}>
 					<header mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<PageTitle eyebrow="@sdxc/ui" title="Theming">
+						<PageTitle eyebrow="@sdxc/ui" title={THEMING_TITLE}>
 							Every color a component draws comes from a variable, and every variable belongs to a
 							role. Redefine the variables and the whole catalogue moves with them.
 						</PageTitle>
+						<PageActions
+							markdownHref={markdownHref}
+							markdownUrl={absoluteUrl(markdownHref)}
+							sourceUrl={`${UI_SOURCE_BASE}theme.css`}
+						/>
 					</header>
 
 					<ReferenceSection

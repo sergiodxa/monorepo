@@ -69,11 +69,12 @@ export function zoom(options: Zoom.Options = {}): CSSMixinDescriptor {
 
 describe("readUiModule", () => {
 	test("gives a mixin its page and lists what it is used with beside it", () => {
-		let [page, ...rest] = readUiModule(MIXIN_MODULE, "mixins", []) ?? [];
+		let [page, ...rest] = readUiModule(MIXIN_MODULE, "mixins", "copy", []) ?? [];
 
 		expect(rest).toHaveLength(0);
 		expect(page?.slug).toBe("copy");
 		expect(page?.summary).toBe("Copies a target's text.");
+		expect(page?.module).toBe("copy");
 		expect(page?.symbol.signature).toBe(
 			"copy(options?: Copy.Options): MixinDescriptor<HTMLButtonElement>",
 		);
@@ -100,7 +101,7 @@ export const validate = createMixin<HTMLElement, [schema: Schema<unknown, unknow
 	(handle) => () => {},
 );
 `;
-		let [page] = readUiModule(source, "mixins", []) ?? [];
+		let [page] = readUiModule(source, "mixins", "validate", []) ?? [];
 
 		expect(page?.symbol.signature).toBe(
 			"validate(schema: Schema<unknown, unknown>): MixinDescriptor<HTMLElement>",
@@ -108,7 +109,7 @@ export const validate = createMixin<HTMLElement, [schema: Schema<unknown, unknow
 	});
 
 	test("files a namespace's types under the export it is named after", () => {
-		let pages = readUiModule(ANIMATION_MODULE, "animations", []) ?? [];
+		let pages = readUiModule(ANIMATION_MODULE, "animations", "transitions", []) ?? [];
 
 		expect(pages.map((page) => page.name)).toEqual(["fade", "zoom"]);
 		expect(pages.map((page) => page.summary)).toEqual(["Fades the host.", "Zooms the host."]);
@@ -125,7 +126,7 @@ export const easings = { standard: "ease" } as const;
 /** Named steps. */
 export const durations = { fast: 100 } as const;
 `;
-		let pages = readUiModule(source, "animations", []) ?? [];
+		let pages = readUiModule(source, "animations", "tokens", []) ?? [];
 
 		expect(pages.map((page) => page.name)).toEqual(["easings", "durations"]);
 		expect(pages[0]?.symbol.signature).toBe('const easings = { standard: "ease" } as const');
@@ -162,7 +163,7 @@ export class Queue<Item = unknown> extends EventTarget {
 	#drop(): void {}
 }
 `;
-		let [page] = readUiModule(source, "behaviors", []) ?? [];
+		let [page] = readUiModule(source, "behaviors", "queue", []) ?? [];
 
 		expect(page?.symbol.signature).toBe("new Queue<Item = unknown>(init?: Queue.Init)");
 		expect(page?.symbol.members.map((row) => row.name)).toEqual(["size"]);

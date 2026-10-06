@@ -156,7 +156,8 @@ function buildUiExports(): UiExportDocument {
 		for (let match of barrel.matchAll(/^export \* from "\.\/([^"]+)\.js";$/gm)) {
 			let file = `${match[1]}.ts`;
 			let source = read(join(root, file));
-			let modulePages = source === null ? null : readUiModule(source, subpath, shared);
+			let modulePages =
+				source === null ? null : readUiModule(source, subpath, match[1] as string, shared);
 			if (modulePages === null) throw new Error(`@sdxc/ui: could not read ${subpath}/${file}`);
 			pages.push(...modulePages);
 		}

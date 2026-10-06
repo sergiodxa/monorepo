@@ -21,13 +21,16 @@ import type { PropsTable } from "~/app/services/components";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import themingPage, { THEMING_SLUG } from "~/app/http/controllers/ui-theming";
+import themingPage from "~/app/http/controllers/ui-theming";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
+import { absoluteUrl } from "~/app/services/site";
+import { THEMING_SLUG, UI_SOURCE_BASE } from "~/app/services/ui-pages";
 import ComponentPreview from "~/resources/components/component-preview";
 import CompositionTree from "~/resources/components/composition-tree";
+import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import { findPreview } from "~/resources/components/preview-registry.server";
 import ReferenceProse from "~/resources/components/reference-prose";
@@ -54,6 +57,7 @@ export default createAction(routes.api.component, async (ctx) => {
 	let reference = await readComponent(component);
 	if (reference === null) return notFound(ctx, tree);
 
+	let markdownHref = routes.markdown.component.href({ component });
 	let preview = findPreview(component);
 	let examples = reference.examples.slice(preview === null ? 0 : 1);
 
@@ -88,6 +92,11 @@ export default createAction(routes.api.component, async (ctx) => {
 						<PageTitle eyebrow="@sdxc/ui" title={reference.name}>
 							<ReferenceProse>{toHeadline(reference.summary)}</ReferenceProse>
 						</PageTitle>
+						<PageActions
+							markdownHref={markdownHref}
+							markdownUrl={absoluteUrl(markdownHref)}
+							sourceUrl={`${UI_SOURCE_BASE}components/${component}.tsx`}
+						/>
 					</header>
 
 					{preview ? (

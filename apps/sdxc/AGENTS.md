@@ -63,9 +63,15 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   GitHub too, so what makes it read correctly here is the link handler in
   `app/services/article.ts`.
 - **Every page keeps its markdown twin.** `/docs/<slug>.md` and `/api/<name>.md`
-  serve the source file, and the `Open` menu, `/llms.txt`, the search index and the MCP
+  serve the source file; an `@sdxc/ui` page's twin (`/api/ui/<component>.md`,
+  `/api/ui/<subpath>/<slug>.md`) is written by `app/services/ui-markdown.ts` from the same
+  record its HTML page draws. The `Open` menu, `/llms.txt`, the search index and the MCP
   resources all address a page by that URL. A page whose twin stopped answering breaks all
   four at once.
+- **Enumerate the `@sdxc/ui` catalogue through `listUiPages`.** `app/services/ui-pages.ts`
+  is the one list of its theme, component and subpath pages that search, `/llms.txt`, the
+  sitemap and the MCP resources read, so a page added to the catalogue reaches all four.
+  The `@sdxc/u` utilities stay on their own index.
 - **One search index serves everything.** The palette, `/search.json` and the MCP
   `search_docs` tool read `app/services/search.ts` and rank through
   `app/services/search-query.ts`, so a reader and a model are answered in one order. The
