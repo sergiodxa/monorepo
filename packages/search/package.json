@@ -1,0 +1,27 @@
+{
+	"name": "@sdxc/search",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Full-text search over SQLite tables an app declares: query parsing, safe FTS5 and LIKE matching, field weights, highlighting and batched reindexing",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./query": "./src/query.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/pagination": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"remix": "3.0.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1",
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*"
+	}
+}

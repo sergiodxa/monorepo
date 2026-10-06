@@ -1089,6 +1089,22 @@
         "remix": "3.0.0",
       },
     },
+    "packages/search": {
+      "name": "@sdxc/search",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/pagination": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+        "@sdxc/cloudflare-mocks": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
+      },
+    },
     "packages/security-headers": {
       "name": "@sdxc/security-headers",
       "version": "0.0.1",
@@ -2045,6 +2061,8 @@
     "@sdxc/sample": ["@sdxc/sample@workspace:packages/sample"],
 
     "@sdxc/scim": ["@sdxc/scim@workspace:packages/scim"],
+
+    "@sdxc/search": ["@sdxc/search@workspace:packages/search"],
 
     "@sdxc/security-headers": ["@sdxc/security-headers@workspace:packages/security-headers"],
 
