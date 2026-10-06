@@ -41,6 +41,7 @@
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/robots": "workspace:*",
+		"@sdxc/search": "workspace:*",
 		"@sdxc/security-headers": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
 		"@sdxc/trace-context": "workspace:*",
