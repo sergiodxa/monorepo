@@ -26,16 +26,18 @@ import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { decodeCursor, encodeCursor, InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { DataTableAdapter } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
+import { defineSearch, parseQuery } from "@sdxc/search";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid";
 import { DurableObject, env } from "cloudflare:workers";
 import {
 	and,
 	Database,
-	getTableColumns,
+	gte,
 	inList,
 	isNull,
 	lt,
+	lte,
 	notNull,
 	rawSql,
 	sql,
@@ -188,17 +190,25 @@ const NEWEST_FIRST = [
 ] as const;
 
 /**
+ * What a search matches a post on: its title, its summary and its author, every one of them
+ * on the row the timeline walk already fetches. Weights are equal because a searched list
+ * keeps {@link NEWEST_FIRST}, so a match is a predicate and its score orders nothing.
+ */
+const itemSearch = defineSearch({
+	table: feedItems,
+	columns: [
+		{ name: "title", weight: 1 },
+		{ name: "summary", weight: 1 },
+		{ name: "author", weight: 1 },
+	],
+});
+
+/**
  * Feeds one on-demand run talks to at once. It paces a run by the slowest origin rather
  * than by the sum of them, while keeping a reader's object, which has one thread, from
  * opening a socket per feed — the same bound the scheduled refresh works under.
  */
 const ON_DEMAND_CONCURRENCY = 6;
-
-/**
- * The character that takes a wildcard's meaning away inside a `LIKE` pattern, so a reader
- * searching for a title holding `%` or `_` is looking for those characters.
- */
-const LIKE_ESCAPE = "\\";
 
 /** A day in milliseconds, which is what a search window and a search step are counted in. */
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -670,9 +680,10 @@ export namespace UserStore {
 		 */
 		readState?: ReadState;
 		/**
-		 * Words a post's title, summary or author has to contain, which narrow the page
-		 * alongside {@link readState}. Text holding nothing but space narrows nothing, so an
-		 * empty search box reads as the whole queue.
+		 * What the reader typed into the search box, which narrows the page alongside
+		 * {@link readState}: a post's title, summary or author has to contain every word,
+		 * a quoted phrase as written, and none of the words led by `-`. Text holding nothing
+		 * but space narrows nothing, so an empty search box reads as the whole queue.
 		 */
 		query?: string;
 		/** One subscription the page is narrowed to, or `null` for every followed feed. */
@@ -725,7 +736,10 @@ export namespace UserStore {
 	export type SavedSearchFailure =
 		/** The name was blank, or longer than a rail row can carry. */
 		| "invalid-name"
-		/** The query held nothing but space, which narrows nothing. */
+		/**
+		 * The query held nothing but space, which narrows nothing, or is one the queue
+		 * refuses: only excluded words, or more words or characters than a search takes.
+		 */
 		| "invalid-query"
 		/** Another saved search already answers to that name. */
 		| "duplicate-name"
@@ -764,7 +778,13 @@ export namespace UserStore {
 				 */
 				search: SearchSpan | null;
 		  }
-		| { ok: false; reason: "bad-cursor" };
+		| { ok: false; reason: "bad-cursor" }
+		/**
+		 * The search box held something no search can run: only words led by `-`, or more
+		 * words or characters than a search takes. The caller says so rather than showing a
+		 * list the words never narrowed.
+		 */
+		| { ok: false; reason: "bad-query" };
 
 	/** Why a URL somebody pasted did not become a subscription. */
 	export type FollowFailure =
@@ -1963,26 +1983,34 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let page = await userStore(viewer.id).readingQueue({ readState: "all" });
 	 * @example let found = await userStore(viewer.id).readingQueue({ query: "remix" });
 	 */
-	readingQueue(options: UserStore.ReadingQueueOptions = {}): Promise<UserStore.TimelineResult> {
+	async readingQueue(
+		options: UserStore.ReadingQueueOptions = {},
+	): Promise<UserStore.TimelineResult> {
 		let readState = options.readState ?? "unread";
-		let pattern = likePattern(options.query ?? "");
+		let parsed = parseQuery(options.query ?? "");
 		let feedId = options.feedId ?? null;
 		let folderId = options.folderId ?? null;
 
-		if (pattern !== null) {
+		if (isFailure(parsed)) return { ok: false, reason: "bad-query" };
+
+		let terms = parsed.data;
+		if (terms !== null) {
+			let bound = seekBound(options.cursor ?? null);
+
 			return this.#searchedPage(
 				{
-					query: (floor) =>
-						new SearchQuery(this.#db, {
-							pattern,
-							readState,
-							floor,
-							feedId,
-							folderId,
-							seek: [],
-							orderBy: [],
-							limit: null,
-						}),
+					query: (floor) => {
+						let found = itemSearch.query(this.#db, terms);
+
+						let narrowing = readStateWhere(readState);
+						if (narrowing !== null) found = found.where(narrowing);
+						if (floor !== null) found = found.where(gte("published_at", floor));
+						if (bound !== null) found = found.where(bound);
+						if (feedId !== null) found = found.where({ feed_id: feedId });
+						if (folderId !== null) found = found.where({ folder_id: folderId });
+
+						return found;
+					},
 					examined: (from, reachedAt) =>
 						this.#countBetween(reachedAt, from, { readState, feedId, folderId }),
 					scoped: feedId !== null || folderId !== null,
@@ -2394,17 +2422,19 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tagId - The label being read.
 	 * @param options - Where to page from, and how much of it.
 	 */
-	taggedQueue(
+	async taggedQueue(
 		tagId: string,
 		options: UserStore.ReadingQueueOptions = {},
 	): Promise<UserStore.TimelineResult> {
-		let pattern = likePattern(options.query ?? "");
+		let parsed = parseQuery(options.query ?? "");
+		if (isFailure(parsed)) return { ok: false, reason: "bad-query" };
 
-		if (pattern === null) {
+		let terms = parsed.data;
+		if (terms === null) {
 			return this.#page(
 				new TaggedQuery(this.#db, {
 					tagId,
-					pattern: null,
+					match: null,
 					floor: null,
 					seek: [],
 					orderBy: [],
@@ -2420,7 +2450,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				query: (floor) =>
 					new TaggedQuery(this.#db, {
 						tagId,
-						pattern,
+						match: itemSearch.predicate(terms, { alias: "i" }),
 						floor,
 						seek: [],
 						orderBy: [],
@@ -2577,8 +2607,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			return { ok: false, reason: "invalid-name" };
 		}
 
-		/** The same emptiness the queue reads as no narrowing at all, refused as a saved one. */
-		if (likePattern(draft.query) === null) return { ok: false, reason: "invalid-query" };
+		/**
+		 * The same parse the queue runs, so a query the queue reads as no narrowing at all, or
+		 * refuses outright, is refused here before it is kept.
+		 */
+		let parsed = parseQuery(draft.query);
+		if (isFailure(parsed) || parsed.data === null) return { ok: false, reason: "invalid-query" };
 
 		let taken = await this.#db.findOne(searches, { where: { name } });
 		if (taken !== null && taken.id !== excluding) return { ok: false, reason: "duplicate-name" };
@@ -4312,8 +4346,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param plan - How the narrowed list is read, and how far its walk is measured.
 	 * @param options - Where to page from, how much of it, and which posts.
 	 */
-	async #searchedPage(
-		plan: SearchPlan,
+	async #searchedPage<whereArg, columnArg>(
+		plan: SearchPlan<whereArg, columnArg>,
 		options: UserStore.ReadingQueueOptions,
 	): Promise<UserStore.TimelineResult> {
 		let started = Date.now();
@@ -4475,14 +4509,17 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 /**
  * How one searched list is read, which is everything a bounded search needs beyond the
  * ordering the list it narrows already owns.
+ *
+ * @template whereArg - What the list's query accepts as a predicate, which the pager seeks with.
+ * @template columnArg - What the list's query accepts as an ordering column.
  */
-interface SearchPlan {
+interface SearchPlan<whereArg, columnArg> {
 	/**
 	 * The page to read, bounded by the floor the step and the window decided between them.
 	 *
 	 * @param floor - Epoch milliseconds the walk stops at, or `null` to reach every post.
 	 */
-	query: (floor: number | null) => KeysetQuery<TimelineRow, Predicate, string>;
+	query: (floor: number | null) => KeysetQuery<TimelineRow, whereArg, columnArg>;
 	/**
 	 * How many posts the walk visited, counted off the same index range it walked. A post
 	 * published at either end counts, so a span whose ends fall on ties counts those ties.
@@ -4516,6 +4553,25 @@ function searchStartsAt(cursor: string | null, now: number): number | null {
 
 	let at = decoded.data.values[decoded.data.columns.indexOf("published_at")];
 	return typeof at === "number" ? at : now;
+}
+
+/**
+ * The moment a cursor carries, as the bound on `published_at` every row its seek reaches
+ * already meets. Beside the pager's `or` of two comparisons, a plain range on the leading
+ * column is what lets SQLite walk one range of a timeline index in order, sorting nothing.
+ *
+ * @param cursor - The cursor this page was asked for by, or `null` for the newest.
+ */
+function seekBound(cursor: string | null): Predicate<"published_at"> | null {
+	if (cursor === null) return null;
+
+	let decoded = decodeCursor(cursor);
+	if (isFailure(decoded)) return null;
+
+	let at = decoded.data.values[decoded.data.columns.indexOf("published_at")];
+	if (typeof at !== "number") return null;
+
+	return decoded.data.direction === "before" ? gte("published_at", at) : lte("published_at", at);
 }
 
 /**
@@ -4603,90 +4659,16 @@ function cursorAt(direction: "after" | "before", at: number): string | null {
 	return isFailure(cursor) ? null : cursor.data;
 }
 
-/** Everything one composed search statement is built from. */
-interface SearchState {
-	/** The `LIKE` pattern, already escaped, that all three searched columns are matched against. */
-	pattern: string;
-	/** Which posts the match is narrowed to, spelled beside it in the same statement. */
-	readState: UserStore.ReadState;
-	/**
-	 * Epoch milliseconds the walk stops at, or `null` for one that reaches every stored
-	 * post. It is a second comparison on the same leading column the seek uses, so it ends
-	 * the index range early rather than filtering rows out of it.
-	 */
-	floor: number | null;
-	/** One subscription the match is narrowed to, or `null` for every followed feed. */
-	feedId: string | null;
-	/**
-	 * One folder the match is narrowed to, or `null` for every feed. The folder is
-	 * denormalized onto the post, so this is one bound parameter rather than a list of the
-	 * folder's feeds.
-	 */
-	folderId: string | null;
-	/** Seek predicates the pager composed, which narrow the match to one page. */
-	seek: readonly Predicate[];
-	/** The ordering the pager owns, which is also what it mints cursors from. */
-	orderBy: readonly OrderByTuple[];
-	/** Posts the statement reads, or `null` before the pager has set one. */
-	limit: number | null;
-}
-
-/**
- * A post search, as a query {@link Pagination.byKeyset} can seek, order and limit.
- *
- * The match is a `LIKE` carrying an `ESCAPE` clause, which is what lets somebody search
- * for a post whose title holds `%` or `_` instead of having those characters read as
- * wildcards. The query builder's own operators emit no such clause, so the statement is
- * spelled out here and the pager's seek predicate is folded into it: one page, one read.
- *
- * It costs a scan of the reader's posts, bounded by {@link SearchState.floor}: a match
- * that may begin anywhere in the text is one no index answers, so the timeline index
- * serves the ordering and the floor decides how much of it a page walks.
- */
-class SearchQuery implements KeysetQuery<TimelineRow, Predicate, string> {
-	#db: Database;
-	#state: SearchState;
-
-	/**
-	 * @param db - The reader's database.
-	 * @param state - The pattern to match, and whatever the pager has composed so far.
-	 */
-	constructor(db: Database, state: SearchState) {
-		this.#db = db;
-		this.#state = state;
-	}
-
-	where(input: Predicate): SearchQuery {
-		return new SearchQuery(this.#db, { ...this.#state, seek: [...this.#state.seek, input] });
-	}
-
-	orderBy(column: string, direction: OrderDirection): SearchQuery {
-		return new SearchQuery(this.#db, {
-			...this.#state,
-			orderBy: [...this.#state.orderBy, [column, direction]],
-		});
-	}
-
-	limit(value: number): SearchQuery {
-		return new SearchQuery(this.#db, { ...this.#state, limit: value });
-	}
-
-	async all(): Promise<TimelineRow[]> {
-		let { rows = [] } = await this.#db.exec(searchStatement(this.#state));
-		return rows.map(toTimelineRow);
-	}
-}
-
 /** Everything one composed page of a label's posts is built from. */
 interface TaggedState {
 	/** The label whose posts the page holds, which is the equality the index opens with. */
 	tagId: string;
 	/**
-	 * The `LIKE` pattern a searched label's posts are matched against, or `null` for the
-	 * whole label. A search adopts this list's ordering and adds a predicate to it, so the
-	 * page still seeks and mints cursors on the join table's own copies of the keys.
+	 * The search a label's posts are matched against, qualified to the post's alias `i`, or
+	 * `null` for the whole label. A search adopts this list's ordering and adds a predicate
+	 * to it, so the page still seeks and mints cursors on the join table's own copies of the keys.
 	 */
-	pattern: string | null;
+	match: SqlStatement | null;
 	/** Epoch milliseconds the walk stops at, or `null` for one that reaches every post. */
 	floor: number | null;
 	/** Seek predicates the pager composed, which narrow the label's posts to one page. */
@@ -4757,18 +4739,15 @@ function quoteJoinColumn(column: string): string {
 	throw new Error("a label's page seeks on the two columns its index carries alone");
 }
 
-/** The statement one page of a label's posts runs as. */
+/**
+ * The statement one page of a label's posts runs as. The pager appends the ordering it owns
+ * before reading, and a statement built without one reads newest first, the way this list
+ * is defined to.
+ */
 function taggedStatement(state: TaggedState): SqlStatement {
 	let narrowed = sql`t."tag_id" = ${state.tagId}`;
 
-	if (state.pattern !== null) {
-		let pattern = state.pattern;
-
-		narrowed = sql`${narrowed} and (i."title" like ${pattern} escape ${LIKE_ESCAPE}
-			or i."summary" like ${pattern} escape ${LIKE_ESCAPE}
-			or i."author" like ${pattern} escape ${LIKE_ESCAPE})`;
-	}
-
+	if (state.match !== null) narrowed = sql`${narrowed} and ${state.match}`;
 	if (state.floor !== null) narrowed = sql`${narrowed} and t."published_at" >= ${state.floor}`;
 
 	let where = state.seek.reduce(
@@ -4776,8 +4755,6 @@ function taggedStatement(state: TaggedState): SqlStatement {
 		narrowed,
 	);
 
-	// The pager appends the ordering it owns before reading, and the fallback keeps a
-	// statement built without one reading the way this list is defined to.
 	let ordering = state.orderBy.length === 0 ? NEWEST_FIRST : state.orderBy;
 	let orderBy = ordering
 		.map(
@@ -4795,44 +4772,6 @@ function taggedStatement(state: TaggedState): SqlStatement {
 }
 
 /**
- * The statement one page of a search runs as.
- *
- * `author` joins the match because it is on the row the scan already fetches, so it costs
- * nothing, and somebody looking for a byline is looking for a post.
- */
-function searchStatement(state: SearchState): SqlStatement {
-	let pattern = state.pattern;
-
-	let match = sql`("title" like ${pattern} escape ${LIKE_ESCAPE}
-		or "summary" like ${pattern} escape ${LIKE_ESCAPE}
-		or "author" like ${pattern} escape ${LIKE_ESCAPE})`;
-
-	let matched = match;
-
-	let narrowed = readStateSql(state.readState);
-	if (narrowed !== null) matched = sql`${matched} and ${narrowed}`;
-
-	if (state.floor !== null) matched = sql`${matched} and "published_at" >= ${state.floor}`;
-	if (state.feedId !== null) matched = sql`${matched} and "feed_id" = ${state.feedId}`;
-	if (state.folderId !== null) matched = sql`${matched} and "folder_id" = ${state.folderId}`;
-
-	let where = state.seek.reduce((left, right) => sql`${left} and ${seekSql(right)}`, matched);
-
-	// The pager appends the ordering it owns before reading, and the fallback keeps a
-	// statement built without one reading the way a search is defined to.
-	let ordering = state.orderBy.length === 0 ? NEWEST_FIRST : state.orderBy;
-	let orderBy = ordering
-		.map(([column, direction]) => `${quoteColumn(column)} ${direction === "asc" ? "asc" : "desc"}`)
-		.join(", ");
-
-	return sql`select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at", "saved_at", "flagged_at"
-		from feed_items
-		where ${where}
-		order by ${rawSql(orderBy)}
-		limit ${state.limit ?? DEFAULT_PAGE_LIMIT}`;
-}
-
-/**
  * One seek predicate as SQL. `Pagination.byKeyset` builds these out of the ordering it was
  * given, so the comparisons and the `and`/`or` nesting below are the whole of what arrives.
  *
@@ -4840,10 +4779,7 @@ function searchStatement(state: SearchState): SqlStatement {
  * @param quote - How an ordering column is spelled in the statement being built, which a
  * page seeking a join table's own copies of those columns answers differently.
  */
-function seekSql(
-	predicate: Predicate,
-	quote: (column: string) => string = quoteColumn,
-): SqlStatement {
+function seekSql(predicate: Predicate, quote: (column: string) => string): SqlStatement {
 	if (predicate.type === "logical") {
 		let parts = predicate.predicates.map((nested) => seekSql(nested, quote));
 		let joiner = predicate.operator === "and" ? " and " : " or ";
@@ -4865,19 +4801,7 @@ function seekSql(
 	throw new Error("a composed page seeks on comparisons of its ordering columns alone");
 }
 
-/**
- * One column of `feed_items` as a SQL identifier. It accepts only a name the table
- * declares, so a statement written by hand cannot reach a column the schema has dropped.
- */
-function quoteColumn(column: string): string {
-	if (!(column in getTableColumns(feedItems))) {
-		throw new Error(`feed_items declares no column named "${column}"`);
-	}
-
-	return `"${column}"`;
-}
-
-/** One row of the search statement, read back into the shape a timeline page is built from. */
+/** One row of a label's page, read back into the shape a timeline page is built from. */
 function toTimelineRow(row: Record<string, unknown>): TimelineRow {
 	let { feed_id: feedId, published_at: publishedAt, read_at: readAt, saved_at: savedAt } = row;
 
@@ -4893,25 +4817,6 @@ function toTimelineRow(row: Record<string, unknown>): TimelineRow {
 		saved_at: typeof savedAt === "number" ? savedAt : null,
 		flagged_at: typeof row.flagged_at === "number" ? row.flagged_at : null,
 	};
-}
-
-/**
- * What somebody typed, as a `LIKE` pattern that looks for exactly that text. The escape
- * character is escaped first, so escaping a wildcard afterwards cannot be undone by it.
- *
- * @param query - The text somebody typed into the search box.
- * @returns The pattern to match, or `null` when the box held nothing but space.
- */
-function likePattern(query: string): string | null {
-	let trimmed = query.trim();
-	if (trimmed.length === 0) return null;
-
-	let escaped = trimmed
-		.replaceAll(LIKE_ESCAPE, LIKE_ESCAPE + LIKE_ESCAPE)
-		.replaceAll("%", `${LIKE_ESCAPE}%`)
-		.replaceAll("_", `${LIKE_ESCAPE}_`);
-
-	return `%${escaped}%`;
 }
 
 /**

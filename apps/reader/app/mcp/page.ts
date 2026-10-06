@@ -12,6 +12,7 @@
 
 import { currentLog } from "@sdxc/logger";
 import { ToolError } from "@sdxc/mcp";
+import { DEFAULT_MAX_QUERY_LENGTH, DEFAULT_MAX_QUERY_TERMS } from "@sdxc/search/query";
 
 import type { UserStore } from "~/database/user-do";
 
@@ -54,9 +55,16 @@ export function agentStore() {
  * silently restarting looks to an agent like a loop that never ends.
  *
  * @param result - The page the reader's own object answered with.
- * @throws ToolError When the cursor the model passed back no longer decodes.
+ * @throws ToolError When the cursor the model passed back no longer decodes, or the query
+ * it searched with holds nothing to find.
  */
 export function agentPage(result: UserStore.TimelineResult): AgentPage {
+	if (!result.ok && result.reason === "bad-query") {
+		throw new ToolError(
+			`That query has nothing to search for. Give at least one word to find, in at most ${DEFAULT_MAX_QUERY_TERMS} words and ${DEFAULT_MAX_QUERY_LENGTH} characters; a word led by - only leaves posts out.`,
+		);
+	}
+
 	if (!result.ok) {
 		throw new ToolError(
 			"That page reference has expired. Ask for the same list again without a cursor, then page forward from the reference that call returns.",

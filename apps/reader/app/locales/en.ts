@@ -243,6 +243,15 @@ export default {
 			},
 		},
 		/**
+		 * A search box holding nothing a search can run, which is said about the words, since
+		 * changing them is the only thing that makes the list answer.
+		 */
+		refused: {
+			title: "Nothing to search for",
+			description:
+				"Give at least one word to find, in up to {$terms} words and {$length} characters. A word led by - leaves out the posts holding it.",
+		},
+		/**
 		 * What a search page looked at, said under the list. A search that shows nothing has
 		 * to name the span it covered, because the confusing failure is the one where the
 		 * post exists and the search was never allowed to reach it.
@@ -276,7 +285,7 @@ export default {
 		forgotten: "Search forgotten.",
 		error: {
 			invalidName: "Give the search a name of up to {$length} characters.",
-			invalidQuery: "Type something to search for before saving it.",
+			invalidQuery: "Type at least one word to find before saving the search.",
 			duplicateName: "You already have a saved search by that name.",
 			notFound: "That saved search is no longer there.",
 			full: "You have {$limit} saved searches — forget one to make room.",

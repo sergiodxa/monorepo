@@ -488,6 +488,17 @@ describe("reading", () => {
 
 		expect(answer.posts).toHaveLength(1);
 	});
+
+	test("answers a query holding nothing to find with something the model can act on", async () => {
+		let token = await tokenFor(READER);
+		await seedFeed(READER, "mine");
+		await seedItems(READER, "mine", 3);
+
+		let { body } = await call("search_timeline", { query: "-post" }, token);
+
+		expect(body.result?.isError).toBe(true);
+		expect(body.result?.content?.[0]?.text).toMatch(/nothing to search for/i);
+	});
 });
 
 describe("writing", () => {

@@ -41,6 +41,7 @@ import { BookmarkIcon, CheckCheckIcon, RefreshCwIcon } from "@sdxc/icons";
 import { currentLog } from "@sdxc/logger";
 import { parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
+import { DEFAULT_MAX_QUERY_LENGTH, DEFAULT_MAX_QUERY_TERMS } from "@sdxc/search/query";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -101,6 +102,18 @@ const READ_STATES: UserStore.ReadState[] = ["all", "unread", "read"];
  * as they scroll — so a page is sized to arrive rather than to be complete.
  */
 const PAGE_SIZE = 25;
+
+/**
+ * The page a refused search is drawn with: no posts and nowhere to page to, since the words
+ * chose nothing.
+ */
+const REFUSED_PAGE: UserStore.TimelineResult = {
+	ok: true,
+	items: [],
+	feeds: [],
+	cursors: { next: null, prev: null },
+	search: null,
+};
 
 /** The `id` the mark-everything-read prompt answers to, which its trigger names in `commandfor`. */
 const MARK_ALL_PROMPT_ID = "mark-all-read";
@@ -189,6 +202,22 @@ function emptyCopy(intl: I18n, view: QueueView) {
 	return {
 		title: intl.t("reading.empty.all.title"),
 		description: intl.t("reading.empty.all.description"),
+	};
+}
+
+/**
+ * What a refused search has to say: the limits a search holds its words to, since the words
+ * are what the reader changes next.
+ *
+ * @param intl - The request's dictionary.
+ */
+function refusedCopy(intl: I18n) {
+	return {
+		title: intl.t("reading.refused.title"),
+		description: intl.t("reading.refused.description", {
+			terms: DEFAULT_MAX_QUERY_TERMS,
+			length: DEFAULT_MAX_QUERY_LENGTH,
+		}),
 	};
 }
 
@@ -415,8 +444,8 @@ export async function renderReadingQueue(
 	 * so the newest page is shown with a note saying where they landed. The second read is a
 	 * read alone: what is waiting was answered by the first, whichever page it came back with.
 	 */
-	let isStaleCursor = !page.ok;
-	if (!page.ok) {
+	let isStaleCursor = !page.ok && page.reason === "bad-cursor";
+	if (isStaleCursor) {
 		page = await store.readingQueue({
 			cursor: null,
 			readState: view.readState,
@@ -425,6 +454,14 @@ export async function renderReadingQueue(
 			limit: PAGE_SIZE,
 		});
 	}
+
+	/**
+	 * Words no search can run narrow the queue to nothing, so the page answers with an empty
+	 * list whose note says what a search takes, rather than with posts the words never chose.
+	 */
+	let isRefusedQuery = !page.ok && page.reason === "bad-query";
+	if (isRefusedQuery) page = REFUSED_PAGE;
+
 	if (!page.ok) throw new Error("The first page of a timeline decodes without a cursor");
 
 	/** The queue gathers every feed, so a row names the one its post came from. */
@@ -470,7 +507,7 @@ export async function renderReadingQueue(
 		? ctx.intl.t("reading.headingFor", { query: view.query })
 		: ctx.intl.t("reading.heading");
 
-	let empty = emptyCopy(ctx.intl, view);
+	let empty = isRefusedQuery ? refusedCopy(ctx.intl) : emptyCopy(ctx.intl, view);
 
 	/** The narrowing alone, which is where the newest page of it lives. */
 	let here = queueUrl(view);
@@ -676,6 +713,7 @@ export async function renderReadingQueue(
 					 * this same page and are said in the same line every other action is said in.
 					 */}
 					{hasQuery &&
+						!isRefusedQuery &&
 						(keptHere === null ? (
 							<form
 								method="post"

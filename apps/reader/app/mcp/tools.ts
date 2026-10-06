@@ -88,10 +88,11 @@ export default tools({
 		search: tool("search_timeline", {
 			title: "Search the reading queue",
 			description:
-				"Find posts in the reader's queue whose title, excerpt or author contains some words. Use this whenever looking for writing on a particular subject; use read_timeline when the question is what is new rather than what is about something.",
+				"Find posts in the reader's queue whose title, excerpt or author holds every word of a query. Use this whenever looking for writing on a particular subject; use read_timeline when the question is what is new rather than what is about something.",
 			input: s.object({
 				query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
-					description: "Words to look for, matched anywhere in a title, excerpt or author.",
+					description:
+						"Words to look for, each matched anywhere in a title, excerpt or author. Quote a phrase to match it as written; lead a word with - to leave out posts holding it.",
 				}),
 				readState: READ_STATE,
 				cursor: CURSOR,

@@ -891,6 +891,21 @@ describe("searching the queue", () => {
 		for (let body of [all, unread, read]) expect(body).not.toContain("Nothing here yet");
 	});
 
+	test("answers words no search can run with what a search takes, rather than an error", async () => {
+		store.countFeeds.mockResolvedValue(1);
+		store.readingQueue.mockResolvedValue({ ok: false, reason: "bad-query" });
+
+		let response = await get(`${routes.reading.index.href()}?q=${encodeURIComponent("-remix")}`);
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("Nothing to search for");
+		expect(readsAs(body)).toContain("Give at least one word to find, in up to 8 words");
+
+		/** Words that chose nothing are not offered as a search worth keeping. */
+		expect(body).not.toContain("Save this search");
+	});
+
 	test("puts the words back in the box, so refining a search edits them", async () => {
 		queued({ next: null, prev: null });
 

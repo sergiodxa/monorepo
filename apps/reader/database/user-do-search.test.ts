@@ -3,7 +3,8 @@
  * the bounded step a page of a search actually runs as.
  *
  * What is asserted here is that a search matches the three columns on the row and nothing
- * else, that the tier's window and the step's floor between them decide how far one page
+ * else, every word of it and none of the words it excludes, that its plan walks a timeline
+ * index without sorting, that the tier's window and the step's floor between them decide how far one page
  * walks, that a step filling no page still continues — through a cursor minted from the
  * floor rather than from a row — that the cursors a search mints and the ones the plain
  * timeline mints are the same object, that what stopped a page is reported as the step, the
@@ -239,6 +240,81 @@ describe("readingQueue, searched", () => {
 		expect(ids(await user.readingQueue({ readState: "all", query: "read_at" }))).toEqual([
 			"underscore",
 		]);
+	});
+
+	test("matches a post holding every word, in any of the three columns, not only the exact string", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "exact", publishedAt: NOW - DAY_MS, title: "The beacon light" },
+			{ id: "apart", publishedAt: NOW - 2 * DAY_MS, title: "A light on the beacon" },
+			{ id: "across", publishedAt: NOW - 3 * DAY_MS, title: "Beacon notes", author: "Ada Light" },
+			{ id: "one-word", publishedAt: NOW - 4 * DAY_MS, title: "Only a beacon" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: "beacon light" }))).toEqual([
+			"exact",
+			"apart",
+			"across",
+		]);
+	});
+
+	test("matches a quoted phrase as the exact string it holds", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "exact", publishedAt: NOW - DAY_MS, title: "The beacon light" },
+			{ id: "apart", publishedAt: NOW - 2 * DAY_MS, title: "A light on the beacon" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: '"beacon light"' }))).toEqual([
+			"exact",
+		]);
+	});
+
+	test("leaves out a post holding a word led by -", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "kept", publishedAt: NOW - DAY_MS, title: "Only a beacon" },
+			{ id: "by-title", publishedAt: NOW - 2 * DAY_MS, title: "The beacon light" },
+			{ id: "by-author", publishedAt: NOW - 3 * DAY_MS, title: "A beacon", author: "Ada Light" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: "beacon -light" }))).toEqual([
+			"kept",
+		]);
+	});
+
+	test("matches %, _ and \\ as those characters inside a query of several words", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "literal", publishedAt: NOW - DAY_MS, title: "50% off read_at at C:\\temp" },
+			{ id: "wild", publishedAt: NOW - 2 * DAY_MS, title: "50 percent off readXat at C:temp" },
+		]);
+
+		expect(
+			ids(await user.readingQueue({ readState: "all", query: "50% read_at C:\\temp" })),
+		).toEqual(["literal"]);
+	});
+
+	test("refuses words no search can run, rather than reading them as no search at all", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+		seedItems(state, [{ id: "one", publishedAt: NOW - DAY_MS, title: "beacon one" }]);
+
+		let refused = { ok: false, reason: "bad-query" };
+
+		expect(await user.readingQueue({ readState: "all", query: "-beacon" })).toEqual(refused);
+		expect(await user.readingQueue({ readState: "all", query: "beacon ".repeat(9) })).toEqual(
+			refused,
+		);
+		expect(await user.readingQueue({ readState: "all", query: "b".repeat(257) })).toEqual(refused);
 	});
 
 	test("excludes a post published below the floor, and searches everything on a null window", async () => {
@@ -517,6 +593,139 @@ describe("readingQueue, searched", () => {
 	});
 });
 
+describe("the statement a search runs as", () => {
+	/** One statement the object ran, with the values bound to it. */
+	interface Ran {
+		text: string;
+		values: unknown[];
+	}
+
+	/** The statements matching posts' text that one call ran, which is what a plan is read for. */
+	async function searchStatements(
+		state: DurableObjectStateMock,
+		run: () => Promise<unknown>,
+	): Promise<Ran[]> {
+		let exec = vi.spyOn(state.storage.sql, "exec");
+		await run();
+
+		let ran = exec.mock.calls
+			.filter(([text]) => text.includes(" like ? escape "))
+			.map(([text, ...values]) => ({ text, values }));
+
+		exec.mockRestore();
+		return ran;
+	}
+
+	/** Reads a statement's plan as one string, which is what the index assertions match on. */
+	function queryPlan(state: DurableObjectStateMock, statement: Ran): string {
+		return [
+			...state.storage.sql.exec<{ detail: string }>(
+				`EXPLAIN QUERY PLAN ${statement.text}`,
+				...statement.values,
+			),
+		]
+			.map((row) => row.detail)
+			.join(" | ");
+	}
+
+	/**
+	 * The floor is a second comparison on the leading column the seek uses, so a searched
+	 * page is a range of the read state's own timeline index, walked in its order.
+	 */
+	test("reads each read state from that state's timeline index and sorts nothing", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+		seedItems(state, [
+			{ id: "one", publishedAt: NOW - DAY_MS, title: "beacon one" },
+			{ id: "two", publishedAt: NOW - 2 * DAY_MS, title: "beacon two" },
+			{ id: "three", publishedAt: NOW - 3 * DAY_MS, title: "beacon three", readAt: NOW },
+			{ id: "four", publishedAt: NOW - 4 * DAY_MS, title: "beacon four", readAt: NOW },
+		]);
+
+		let indexes = {
+			all: "feed_items_timeline_idx",
+			unread: "feed_items_unread_timeline_idx",
+			read: "feed_items_read_timeline_idx",
+		} as const;
+
+		for (let [readState, index] of Object.entries(indexes)) {
+			let pages = await searchStatements(state, async () => {
+				let first = await user.readingQueue({
+					readState: readState as UserStore.ReadState,
+					query: "beacon -light",
+					limit: 1,
+				});
+
+				let second = await user.readingQueue({
+					readState: readState as UserStore.ReadState,
+					query: "beacon -light",
+					limit: 1,
+					cursor: cursorsOf(first).next,
+				});
+
+				return user.readingQueue({
+					readState: readState as UserStore.ReadState,
+					query: "beacon -light",
+					limit: 1,
+					cursor: cursorsOf(second).prev,
+				});
+			});
+
+			/**
+			 * The pages after the first seek from a cursor, forwards and then back, and the
+			 * seek's `or` is the clause that would otherwise have the plan merge and sort.
+			 */
+			expect(pages).toHaveLength(3);
+			expect(pages[1]?.text).toContain(`"feed_items"."id" < ?`);
+			expect(pages[2]?.text).toContain(`"feed_items"."id" > ?`);
+
+			for (let statement of pages) {
+				let plan = queryPlan(state, statement);
+				expect(plan).toContain(index);
+				expect(plan).not.toContain("TEMP B-TREE");
+			}
+		}
+	});
+
+	test("reads a feed or a folder from its own timeline index and sorts nothing", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		let [byFeed] = await searchStatements(state, () =>
+			user.readingQueue({ readState: "all", query: "beacon", feedId: FEED_ID }),
+		);
+		let [byFolder] = await searchStatements(state, () =>
+			user.readingQueue({ readState: "all", query: "beacon", folderId: "folder-1" }),
+		);
+
+		if (byFeed === undefined || byFolder === undefined) {
+			throw new Error("expected a search statement per scope");
+		}
+
+		expect(queryPlan(state, byFeed)).toContain("feed_items_feed_timeline_idx");
+		expect(queryPlan(state, byFolder)).toContain("feed_items_folder_timeline_idx");
+
+		for (let statement of [byFeed, byFolder]) {
+			expect(queryPlan(state, statement)).not.toContain("TEMP B-TREE");
+		}
+	});
+
+	test("reads a searched label from the join table's index and sorts nothing", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		let tag = await user.createTag("Reading");
+		if (!tag.ok) throw new Error("expected the label to be created");
+
+		let [statement] = await searchStatements(state, () =>
+			user.taggedQueue(tag.tag.id, { query: "beacon light" }),
+		);
+
+		if (statement === undefined) throw new Error("expected a search statement");
+		expect(queryPlan(state, statement)).not.toContain("TEMP B-TREE");
+	});
+});
+
 describe("taggedQueue, searched", () => {
 	test("pages a searched label on the label list's own keys", async () => {
 		let { state, user } = await createReader();
@@ -549,6 +758,31 @@ describe("taggedQueue, searched", () => {
 		});
 
 		expect(ids(second)).toEqual(["two"]);
+	});
+
+	test("matches a label's posts on every word, with % as itself, and refuses what no search runs", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+		seedItems(state, [
+			{ id: "both", publishedAt: NOW - DAY_MS, title: "50% beacon" },
+			{ id: "wild", publishedAt: NOW - 2 * DAY_MS, title: "50 beacon" },
+			{ id: "one-word", publishedAt: NOW - 3 * DAY_MS, title: "beacon alone" },
+		]);
+
+		let tag = await user.createTag("Reading");
+		if (!tag.ok) throw new Error("expected the label to be created");
+
+		for (let itemId of ["both", "wild", "one-word"]) {
+			let applied = await user.tagItem(itemId, { tagId: tag.tag.id });
+			if (!applied.ok) throw new Error(`expected ${itemId} to be labelled`);
+		}
+
+		expect(ids(await user.taggedQueue(tag.tag.id, { query: "beacon 50%" }))).toEqual(["both"]);
+		expect(ids(await user.taggedQueue(tag.tag.id, { query: "beacon -50" }))).toEqual(["one-word"]);
+		expect(await user.taggedQueue(tag.tag.id, { query: "-beacon" })).toEqual({
+			ok: false,
+			reason: "bad-query",
+		});
 	});
 });
 
@@ -613,6 +847,11 @@ describe("saved searches", () => {
 
 		expect(
 			await user.createSearch({ name: "Blank", query: "   ", readState: "all", feedId: null }),
+		).toEqual({ ok: false, reason: "invalid-query" });
+
+		/** Words the queue refuses are refused as a saved search too. */
+		expect(
+			await user.createSearch({ name: "Out", query: "-beacon", readState: "all", feedId: null }),
 		).toEqual({ ok: false, reason: "invalid-query" });
 	});
 

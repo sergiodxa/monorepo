@@ -233,22 +233,41 @@ reader whose archive is dense enough to make a step expensive can be given a sho
 without moving anybody else's.
 
 ```text
-select "id", "feed_id", "title", "url", "summary", "author", "published_at", "read_at", "saved_at"
-  from feed_items
+select "feed_items".*, -(…) as "rank"                             -- the match's score, unused
+  from "feed_items"
  where ("title" like ? escape '\' or "summary" like ? escape '\' or "author" like ? escape '\')
-   and "published_at" >= ?                                        -- the step's floor
+   and (… the same for every further word …)
+   and not (… the same for every excluded word …)
    and "read_at" is null                                          -- the read state, when chosen
+   and "published_at" >= ?                                        -- the step's floor
+   and "published_at" <= ?                                        -- the cursor's own moment
    and ("published_at" < ? or ("published_at" = ? and "id" < ?))   -- the pager's seek
  order by "published_at" desc, "id" desc
  limit 51
 ```
 
-The plan is unchanged from today's: `feed_items_unread_timeline_idx` for unread,
-`feed_items_read_timeline_idx` for read, `feed_items_timeline_idx` for every post. The floor
-is a second comparison on the same leading column as the seek, so it shortens the range the
-index is scanned over and introduces no sort and no new index. `author` joins the match
-because it is on the row the scan already fetches, so it is free, and a reader looking for a
-byline is looking for a post.
+The statement is built by `@sdxc/search` (ADR-109) from `itemSearch`, a definition over
+`feed_items`' `title`, `summary` and `author`, and every column in it is qualified with the
+table's name. The words come from `parseQuery`: whitespace separates them, a post has to hold
+every word in one of the three columns, a double-quoted phrase matches as the exact string it
+holds, and a word led by `-` leaves out the posts holding it. `%`, `_` and `\` are escaped,
+so each matches as itself. The score the package computes is never ordered by: the pager
+orders by the keyset, so search stays a predicate.
+
+The plan is the timeline's: `feed_items_unread_timeline_idx` for unread,
+`feed_items_read_timeline_idx` for read, `feed_items_timeline_idx` for every post, and the
+feed's or the folder's own timeline index for a scoped search. The floor is a second
+comparison on the same leading column as the seek, so it shortens the range the index is
+scanned over and introduces no sort and no new index. The cursor's moment rides beside the
+seek as a plain bound on that column for the same reason: with the floor and the seek's `or`
+alone, SQLite answers a bound statement by merging two index searches and sorting what they
+return, and with the bound it walks one range in order. `author` joins the match because it
+is on the row the scan already fetches, so it is free, and a reader looking for a byline is
+looking for a post.
+
+A search box holding no word to find — only excluded words — or more than eight words or
+256 characters is refused as `bad-query` rather than run, and the queue says what a search
+takes in place of a list. A saved search holding such words is refused as `invalid-query`.
 
 ### The cursor a search page mints
 
@@ -330,9 +349,10 @@ rather than guessed at now.
 ### What does not change
 
 The four `feed_items` indexes and the two timeline queries. The keyset, its shared
-`NEWEST_FIRST` ordering constant, and the rule that both ordering columns stay unqualified in
-the projection. `likePattern` and its escaping. The RPC boundary rules: never a `Result`,
-never a `Date`, a discriminated union instead of a throw. And the corpus, which is exactly
+`NEWEST_FIRST` ordering constant, and the rule that both ordering columns keep their names in
+the projection, so a searched page mints the cursor the timeline does. The `LIKE` escaping,
+which `@sdxc/search` now owns. The RPC boundary rules: never a `Result`, never a `Date`, a
+discriminated union instead of a throw. And the corpus, which is exactly
 the rows `feed_items` holds — saved posts from unfollowed feeds included, since that is the
 set the queue itself shows.
 
@@ -439,12 +459,16 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 | 15  | `user.search` records what was examined and whether the step was exhausted, and never the query |
 | 16  | A saved search stores its narrowing, and its link resolves to the same page typing it produces  |
 | 17  | The twenty-first saved search is refused, and no existing one is evicted                        |
+| 18  | Several words match a post holding every one of them, each in any of the three columns          |
+| 19  | A quoted phrase matches only the exact string it holds                                          |
+| 20  | A word led by `-` leaves out the posts holding it                                               |
+| 21  | Words no search can run are refused as `bad-query`, and as `invalid-query` when saved           |
 
 ## Implementation
 
 - [x] `SEARCH_WINDOW_DAYS` per tier, and the floor derived from it and `Date.now()`
 - [x] `reader-search-step-days` in the flag catalog, read through `flagsFor(subject)`
-- [x] The floor and the step in `searchStatement`, with `author` joining the match
+- [x] The floor and the step in the search statement, with `author` joining the match
 - [x] The boundary cursor, minted with `encodeCursor` from the step's floor
 - [x] `TimelineResult` carries the span a search covered and whether it stopped at the step,
       the window, or the end of the archive, the last read off the timeline index
@@ -456,6 +480,11 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 - [x] The tests above
 - [x] A `*.workers.test.ts` creating an FTS5 virtual table inside a Durable Object, so the
       option is known to work before anybody needs it
+- [x] The match built by `@sdxc/search` (ADR-109): `itemSearch` composes the floor, the read
+      state, the feed and the folder as `where` calls, and a label's page matches through
+      `itemSearch.predicate`
+- [x] Test 4 read off the statement each page actually runs, cursor pages included, with the
+      cursor's moment bounding the seek
 
 ## References
 
@@ -468,4 +497,5 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 - [ADR-013](./ADR-013-full-text-extraction.md) — article extraction, and why it is not a corpus
 - [ADR-015](./ADR-015-tags-pins-and-saved-organization.md) — the tag list a tagged search pages as
 - [ADR-029](../ADR-029-pagination-package.md) — the keyset pager a search page borrows its cursor grammar from
+- [ADR-109](../ADR-109-search-package.md) — the package that parses the words and builds the match
 - [ADR-033](../ADR-033-wide-events-as-the-logging-contract.md) — the logging contract `user.search` follows

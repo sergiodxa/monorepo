@@ -680,7 +680,7 @@ and render without building HTML from strings.
 ## Current Progress
 
 - [x] Phase 1: The package
-- [ ] Phase 2: The reader's `LIKE` search
+- [x] Phase 2: The reader's `LIKE` search
 - [ ] Phase 3: The blog's FTS5 search and search page
 - [ ] Phase 4: The reader's FTS5 index (conditional)
 
@@ -697,6 +697,10 @@ and render without building HTML from strings.
   compose it only through `search.query()`.
 - The FTS statement joins with `cross join`, which fixes the CTE as SQLite's outer loop
   whatever the planner estimates.
+- Over a plain index on the ordering columns, a floor beside the pager's `or`-shaped seek leads
+  SQLite to merge two index searches and sort their rows once parameters are bound; the reader
+  adds the cursor's own moment as a plain bound beside the seek, and its search tests read the
+  plan off the statement each page actually runs.
 - The D1 mock's script splitter now keeps a `CREATE TRIGGER` body in one statement, so the
   recommended triggers apply through `@sdxc/cloudflare-mocks` the way D1 applies them.
 - The verification in Context ran on SQLite 3.53 via `node:sqlite`, the same engine the

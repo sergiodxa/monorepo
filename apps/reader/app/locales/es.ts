@@ -331,6 +331,15 @@ export default {
 			},
 		},
 		/**
+		 * A search box holding nothing a search can run, which is said about the words, since
+		 * changing them is the only thing that makes the list answer.
+		 */
+		refused: {
+			title: "Nada que buscar",
+			description:
+				"Escribe al menos una palabra que encontrar, en hasta {$terms} palabras y {$length} caracteres. Una palabra precedida de - deja fuera las entradas que la contienen.",
+		},
+		/**
 		 * What a search page looked at, said under the list. A search that shows nothing has
 		 * to name the span it covered, because the confusing failure is the one where the
 		 * post exists and the search was never allowed to reach it.
@@ -364,7 +373,7 @@ export default {
 		forgotten: "Búsqueda olvidada.",
 		error: {
 			invalidName: "Ponle a la búsqueda un nombre de hasta {$length} caracteres.",
-			invalidQuery: "Escribe algo que buscar antes de guardarlo.",
+			invalidQuery: "Escribe al menos una palabra que encontrar antes de guardar la búsqueda.",
 			duplicateName: "Ya tienes una búsqueda guardada con ese nombre.",
 			notFound: "Esa búsqueda guardada ya no está ahí.",
 			full: "Tienes {$limit} búsquedas guardadas: olvida una para hacer sitio.",
