@@ -505,6 +505,38 @@ describe.each(ADAPTERS)("defineSearch over %s", (_name, open) => {
 			expect(isFailure(progress) && progress.error).toBeInstanceOf(SearchError);
 		});
 	});
+
+	describe("the recommended triggers", () => {
+		/** Runs `integrity-check`, which fails on a corrupted index. */
+		async function checkIntegrity(): Promise<void> {
+			await db.exec(
+				rawSql(`insert into "post_search_fts" ("post_search_fts") values ('integrity-check')`),
+			);
+		}
+
+		test("replace a row's terms when an upsert rewrites it", async () => {
+			await db.exec(
+				sql`insert into "post_search" ("post_id", "title", "tags", "excerpt")
+					values (${"post-1"}, ${"Streaming responses"}, ${""}, ${null})
+					on conflict ("post_id") do update set "title" = excluded."title", "tags" = excluded."tags", "excerpt" = excluded."excerpt"`,
+			);
+
+			expect(ids(await POST_SEARCH.query(db, q("patterns")).all())).toEqual([]);
+			expect(ids(await POST_SEARCH.query(db, q("streaming")).all())).toEqual([1]);
+			await checkIntegrity();
+		});
+
+		test("replace a row's terms when the source row is replaced", async () => {
+			await db.exec(
+				sql`insert or replace into "post_search" ("id", "post_id", "title", "tags", "excerpt")
+					values (${1}, ${"post-1"}, ${"Streaming responses"}, ${""}, ${null})`,
+			);
+
+			expect(ids(await POST_SEARCH.query(db, q("patterns")).all())).toEqual([]);
+			expect(ids(await POST_SEARCH.query(db, q("streaming")).all())).toEqual([1]);
+			await checkIntegrity();
+		});
+	});
 });
 
 describe("defineSearch with a trigram index", () => {

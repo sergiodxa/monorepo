@@ -81,6 +81,20 @@ describe("the recommended FTS5 schema on D1", () => {
 		expect((await POST_SEARCH.query(db, q("resume")).all()).map((row) => row.id)).toEqual([3]);
 	});
 
+	test("replaces a row's terms when an upsert rewrites it", async () => {
+		await db.exec(
+			sql`insert into "post_search" ("post_id", "title", "tags", "excerpt")
+				values (${"post-1"}, ${"Streaming responses"}, ${""}, ${null})
+				on conflict ("post_id") do update set "title" = excluded."title", "excerpt" = excluded."excerpt"`,
+		);
+
+		expect((await POST_SEARCH.query(db, q("patterns")).all()).map((row) => row.id)).toEqual([]);
+		expect((await POST_SEARCH.query(db, q("streaming")).all()).map((row) => row.id)).toEqual([1]);
+		await db.exec(
+			rawSql(`insert into "post_search_fts" ("post_search_fts") values ('integrity-check')`),
+		);
+	});
+
 	test("keeps the contentless-delete index correct through updates, deletes and reindexing", async () => {
 		await db.exec(sql`update "post_search" set "title" = ${"Renamed"} where "id" = ${1}`);
 		await db.exec(sql`delete from "post_search" where "id" = ${2}`);

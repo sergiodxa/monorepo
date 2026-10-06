@@ -23,11 +23,13 @@ export const POST_SEARCH_SCHEMA: readonly string[] = [
 	tokenize='unicode61 remove_diacritics 2'
 );`,
 	`CREATE TRIGGER "post_search_fts_insert" AFTER INSERT ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = new."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;`,
 	`CREATE TRIGGER "post_search_fts_update" AFTER UPDATE OF "title", "tags", "excerpt" ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;`,
 	`CREATE TRIGGER "post_search_fts_delete" AFTER DELETE ON "post_search" BEGIN

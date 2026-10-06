@@ -302,12 +302,14 @@ CREATE VIRTUAL TABLE "post_search_fts" USING fts5(
 );
 
 CREATE TRIGGER "post_search_fts_insert" AFTER INSERT ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = new."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;
 
 CREATE TRIGGER "post_search_fts_update" AFTER UPDATE OF "title", "tags", "excerpt" ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;
 
@@ -321,9 +323,13 @@ END;
   carries.
 - **Triggers** are the one write path, so no repository or deletion site can forget the index.
   A trigger commits inside the statement that fired it, on D1 and Durable Object SQLite alike.
-- **`INSERT OR REPLACE` and a `DELETE` by `rowid`** are idempotent, which is what makes the
-  triggers and a batched `reindex` safe to interleave. An external-content table's `'delete'`
-  command corrupts the index for a row it never held, so it is unsafe beside a backfill.
+- **A `DELETE` by `rowid`, then an `INSERT`** is idempotent, which is what makes the triggers
+  and a batched `reindex` safe to interleave. A trigger's statements take the conflict policy
+  of the statement that fired it, so an upsert (`ON CONFLICT … DO UPDATE`) or a plain
+  `INSERT` on the source turns a trigger's `INSERT OR REPLACE` into a plain insert, which
+  leaves the old terms indexed beside the new ones; the explicit `DELETE` holds under every
+  policy. An external-content table's `'delete'` command corrupts the index for a row it never
+  held, so it is unsafe beside a backfill.
 - **Quoting** is single quotes for option values and double quotes for identifiers, so the
   migration replays with double-quoted string literals disabled.
 - **`prefix='2 3'`** speeds prefix queries on a large index at the cost of a larger index.
