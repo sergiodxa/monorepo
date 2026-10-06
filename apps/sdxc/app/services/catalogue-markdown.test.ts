@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { UiExportReference } from "~/app/services/ui-exports";
 
-import { componentMarkdown, uiExportMarkdown } from "~/app/services/ui-markdown";
+import { componentMarkdown, uiExportMarkdown } from "~/app/services/catalogue-markdown";
 
 describe("componentMarkdown", () => {
 	test("keeps a union and a wrapped description inside their cells", () => {

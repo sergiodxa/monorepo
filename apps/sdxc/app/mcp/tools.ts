@@ -25,7 +25,7 @@ export default tools({
 	searchDocs: tool("search_docs", {
 		title: "Search the documentation",
 		description:
-			"Search every guide, package reference and @sdxc/ui reference page (components, mixins, behavior classes, animations, styles) on this site by page title, heading and summary. Returns the URL of each match, including the heading anchor, and every URL has a .md twin that serves the markdown source. Use this to find where something is explained.",
+			"Search every guide, package reference, @sdxc/u utility and @sdxc/ui reference page (components, mixins, behavior classes, animations, styles) on this site by page title, heading and summary. Returns the URL of each match, including the heading anchor, and every URL has a .md twin that serves the markdown source. Use this to find where something is explained.",
 		input: s.object({
 			query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
 				description: "Words to look for. Every word must match for a page to be returned.",

@@ -23,11 +23,11 @@ import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import themingPage from "~/app/http/controllers/ui-theming";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
-import { THEMING_SLUG, UI_SOURCE_BASE } from "~/app/services/ui-pages";
 import ComponentPreview from "~/resources/components/component-preview";
 import CompositionTree from "~/resources/components/composition-tree";
 import PageActions from "~/resources/components/page-actions";
@@ -95,7 +95,7 @@ export default createAction(routes.api.component, async (ctx) => {
 						<PageActions
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${UI_SOURCE_BASE}components/${component}.tsx`}
+							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/components/${component}.tsx`}
 						/>
 					</header>
 

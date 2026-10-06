@@ -3,7 +3,7 @@
  *
  * A resource is what a person attaches before they start, and `resources/list` is what
  * puts a corpus in their client's picker — so every declaration enumerates, and the package
- * references, every guide and every `@sdxc/ui` reference page show up there by name. The URIs are the `.md` twins
+ * references, every guide and every page of the two catalogues show up there by name. The URIs are the `.md` twins
  * a client can fetch for itself, so attaching one and fetching it give the same text.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -26,6 +26,14 @@ export default resources({
 		name: "guide",
 		title: "Guide",
 		description: "One handwritten guide about the collection, as Markdown.",
+		mimeType: "text/markdown",
+	}),
+
+	utility: resource(`${SITE_URL}/api/u/:utility.md`, {
+		name: "utility",
+		title: "@sdxc/u utility",
+		description:
+			"One @sdxc/u styling utility: the CSS each call emits, how to scope it to a state or a width, and the theme variables it reads, as Markdown.",
 		mimeType: "text/markdown",
 	}),
 

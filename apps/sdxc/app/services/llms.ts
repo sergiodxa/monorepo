@@ -9,8 +9,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { UiPage } from "~/app/services/ui-pages";
+import type { CataloguePage } from "~/app/services/catalogue-pages";
 
+import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups, readPackageFacts } from "~/app/services/packages";
 import {
@@ -22,7 +23,6 @@ import {
 	SITE_NAME,
 	SPONSOR_URL,
 } from "~/app/services/site";
-import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /**
@@ -69,13 +69,14 @@ export async function buildLlmsTxt(): Promise<string> {
 		lines.push("");
 	}
 
-	let uiSections = new Map<string, UiPage[]>();
-	for (let page of await listUiPages()) {
-		uiSections.set(page.section, [...(uiSections.get(page.section) ?? []), page]);
+	let catalogueSections = new Map<string, CataloguePage[]>();
+	for (let page of await listCataloguePages()) {
+		let heading = `${page.package} — ${page.section}`;
+		catalogueSections.set(heading, [...(catalogueSections.get(heading) ?? []), page]);
 	}
 
-	for (let [section, pages] of uiSections) {
-		lines.push(`## @sdxc/ui — ${section}`);
+	for (let [heading, pages] of catalogueSections) {
+		lines.push(`## ${heading}`);
 		lines.push("");
 
 		for (let page of pages) {

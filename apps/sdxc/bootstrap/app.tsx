@@ -37,6 +37,7 @@ import markdownTwin, {
 	componentMarkdownTwin,
 	packageMarkdown,
 	uiExportMarkdownTwin,
+	utilityMarkdownTwin,
 } from "~/app/http/controllers/markdown-twin";
 import mcpPage, { mcpEndpoint } from "~/app/http/controllers/mcp";
 import { movedPackage, movedPackages } from "~/app/http/controllers/moved";
@@ -100,6 +101,7 @@ export default function application() {
 	/* The same pages as markdown, plus the surfaces derived from what is in the bundle. */
 	router.map(routes.markdown.docs, markdownTwin);
 	router.map(routes.markdown.package, packageMarkdown);
+	router.map(routes.markdown.utility, utilityMarkdownTwin);
 	router.map(routes.markdown.component, componentMarkdownTwin);
 	router.map(routes.markdown.uiExport, uiExportMarkdownTwin);
 	router.map(routes.llms, llms);

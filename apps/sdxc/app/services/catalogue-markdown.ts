@@ -1,7 +1,7 @@
 /**
- * The `@sdxc/ui` reference pages written as markdown: a component, a subpath export, and
- * the theme contract. They are generated from the same records the HTML pages draw, so
- * what a model reads at a page's `.md` twin and what a person reads on the page agree.
+ * The catalogue pages written as markdown: a `@sdxc/u` utility, a `@sdxc/ui` component,
+ * subpath export or theme contract. Each is generated from the record its HTML page
+ * draws, so what a model reads at a page's `.md` twin and what a person reads agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,15 @@
 import type { ComponentReference, PropRow, PropsTable } from "~/app/services/components";
 import type { ThemeDeclaration, ThemeReference } from "~/app/services/theming";
 import type { UiExportReference, UiSymbol } from "~/app/services/ui-exports";
+import type { UtilityReference } from "~/app/services/utilities";
+
+import {
+	atWidth,
+	customValue,
+	onState,
+	RESPONSIVE_FAMILY,
+	STATE_FAMILY,
+} from "~/app/services/utility-calls";
 
 /** The theme page's heading and lead, which its HTML page states too. */
 export const THEMING_TITLE = "Theming";
@@ -17,6 +26,74 @@ export const THEMING_TITLE = "Theming";
 /** What the theme page is, in the one line a listing shows. */
 export const THEMING_SUMMARY =
 	"Every theme variable the catalogue reads, and the two schemes that answer them.";
+
+/**
+ * One utility's page, titled by the CSS property it sets the way the HTML page is.
+ *
+ * @param reference - The utility as the catalogue document holds it.
+ * @returns The page as markdown: every documented call beside the CSS it emits, the
+ * same call with a custom value, on a state and at a width, and the variables it reads.
+ */
+export function utilityMarkdown(reference: UtilityReference): string {
+	let paired = reference.examples.filter((example) => example.output !== null);
+	let snippets = reference.examples.filter((example) => example.output === null);
+	let blocks = [
+		`# ${reference.property}`,
+		`> ${oneLine(reference.summary)}`,
+		fence(`import { ${reference.name} } from "@sdxc/u/${reference.family}";`, "ts"),
+		reference.description,
+		reference.see.map((link) => `- [${link.label}](${link.href})`).join("\n"),
+	];
+
+	if (paired.length > 0) {
+		blocks.push(
+			"## Quick reference",
+			"Every documented call, beside the CSS it emits.",
+			table(
+				["Call", "CSS"],
+				paired.map((example) => [code(example.call), code(example.output ?? "")]),
+			),
+		);
+	}
+
+	if (snippets.length > 0) {
+		blocks.push("## Examples", ...snippets.map((example) => fence(example.call, "ts")));
+	}
+
+	blocks.push(
+		"## Using a custom value",
+		"Every scale argument also takes a raw CSS value, which passes through untouched.",
+		fence(customValue(reference), "ts"),
+	);
+
+	if (reference.family !== STATE_FAMILY) {
+		blocks.push(
+			"## Applying on a state",
+			"Wrap the call in a state utility to scope it to one selector.",
+			fence(onState(reference), "ts"),
+		);
+	}
+
+	if (reference.family !== RESPONSIVE_FAMILY) {
+		blocks.push(
+			"## Responsive design",
+			"Wrap the call in a container query to scope it to one width.",
+			fence(atWidth(reference), "ts"),
+		);
+	}
+
+	if (reference.tokens.length > 0) {
+		blocks.push(
+			"## Customizing the theme",
+			"The custom properties this utility reads, which a theme redefines.",
+			reference.tokens.map((token) => `- ${code(token)}`).join("\n"),
+		);
+	}
+
+	blocks.push("## Signature", fence(reference.signature, "ts"));
+
+	return join(blocks);
+}
 
 /**
  * One component's page.

@@ -67,6 +67,7 @@ export default route({
 		 * The catalogue's pages are generated rather than written, so their twins are
 		 * rendered from the same records the HTML pages draw.
 		 */
+		utility: get("/api/u/:utility.md"),
 		component: get("/api/ui/:component.md"),
 		uiExport: get("/api/ui/:subpath/:slug.md"),
 	},

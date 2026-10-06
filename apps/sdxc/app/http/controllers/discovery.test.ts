@@ -12,9 +12,9 @@ import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { describe, expect, test } from "vitest";
 
 import { fetchApp, ORIGIN } from "~/app/lib/test/router";
+import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackages, readPackageReadme } from "~/app/services/packages";
-import { listUiPages } from "~/app/services/ui-pages";
 
 /**
  * Posts one JSON-RPC message through the real router and reads the result back. A call
@@ -88,6 +88,24 @@ describe("GET /api/:name.md", () => {
 	});
 });
 
+describe("GET /api/u/:utility.md", () => {
+	test("serves a utility titled by the property it sets, with every call beside its CSS", async () => {
+		let response = await fetchApp("/api/u/p.md");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toContain("text/markdown");
+		expect(body.startsWith("# padding\n")).toBe(true);
+		expect(body).toContain('import { p } from "@sdxc/u/');
+		expect(body).toContain("## Quick reference");
+		expect(body).toContain("u.hover(");
+	});
+
+	test("answers 404 for a name the catalogue does not publish", async () => {
+		expect((await fetchApp("/api/u/not-a-utility.md")).status).toBe(404);
+	});
+});
+
 describe("GET /api/ui/:component.md and /api/ui/:subpath/:slug.md", () => {
 	test("serves a component's reference as markdown", async () => {
 		let response = await fetchApp("/api/ui/badge.md");
@@ -108,8 +126,8 @@ describe("GET /api/ui/:component.md and /api/ui/:subpath/:slug.md", () => {
 		expect(copy).toContain("### CopyEvent");
 	});
 
-	test("every @sdxc/ui reference page has one", async () => {
-		for (let page of await listUiPages()) {
+	test("every catalogue page has one", async () => {
+		for (let page of await listCataloguePages()) {
 			let response = await fetchApp(page.markdownHref);
 			expect(response.status, page.markdownHref).toBe(200);
 		}
@@ -140,15 +158,16 @@ describe("GET /llms.txt", () => {
 		}
 	});
 
-	test("links every @sdxc/ui reference page under the band it is listed in", async () => {
+	test("links every catalogue page under its package and the band it is listed in", async () => {
 		let body = await (await fetchApp("/llms.txt")).text();
 
-		for (let page of await listUiPages()) {
+		for (let page of await listCataloguePages()) {
 			expect(body).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
 		}
 
 		expect(body).toContain("## @sdxc/ui — Components");
 		expect(body).toContain("## @sdxc/ui — Mixins");
+		expect(body).toContain("## @sdxc/u — layout");
 	});
 
 	test("closes on the author: blog, X and GitHub Sponsors", async () => {
@@ -172,14 +191,15 @@ describe("GET /search.json", () => {
 		expect(body.documents.some((entry) => entry.href.includes("#"))).toBe(true);
 	});
 
-	test("carries the @sdxc/ui packages and every reference page of its catalogue", async () => {
+	test("carries both catalogue packages and every page of their catalogues", async () => {
 		let body = (await (await fetchApp("/search.json")).json()) as {
 			documents: Array<{ href: string }>;
 		};
 		let hrefs = new Set(body.documents.map((entry) => entry.href));
 
+		expect(hrefs).toContain("/api/u");
 		expect(hrefs).toContain("/api/ui");
-		for (let page of await listUiPages()) expect(hrefs).toContain(page.href);
+		for (let page of await listCataloguePages()) expect(hrefs).toContain(page.href);
 		expect([...hrefs].some((href) => href.startsWith("/api/ui#"))).toBe(false);
 	});
 });
@@ -198,7 +218,7 @@ describe("GET /sitemap.xml", () => {
 			expect(body).toContain(`https://sdxc.sergiodxa.com/api/${entry.directory}`);
 		}
 
-		for (let page of await listUiPages()) {
+		for (let page of await listCataloguePages()) {
 			expect(body).toContain(`https://sdxc.sergiodxa.com${page.href}<`);
 		}
 	});
@@ -289,18 +309,18 @@ describe("POST /mcp", () => {
 		}
 	});
 
-	test("every @sdxc/ui reference page appears in the resource picker", async () => {
+	test("every catalogue page appears in the resource picker", async () => {
 		let { body } = await callMcp("resources/list");
 
 		let uris = new Set((body.result.resources as Array<{ uri: string }>).map((entry) => entry.uri));
 
-		for (let page of await listUiPages()) {
+		for (let page of await listCataloguePages()) {
 			expect(uris).toContain(`https://sdxc.sergiodxa.com${page.markdownHref}`);
 		}
 	});
 
-	test("reading an @sdxc/ui resource gives the same text its URL serves", async () => {
-		for (let path of ["/api/ui/badge.md", "/api/ui/behaviors/toaster.md"]) {
+	test("reading a catalogue resource gives the same text its URL serves", async () => {
+		for (let path of ["/api/u/p.md", "/api/ui/badge.md", "/api/ui/behaviors/toaster.md"]) {
 			let { body } = await callMcp("resources/read", { uri: `https://sdxc.sergiodxa.com${path}` });
 			let contents = body.result.contents as Array<{ text: string }>;
 
@@ -308,15 +328,14 @@ describe("POST /mcp", () => {
 		}
 	});
 
-	test("search_docs finds a component and a mixin by name", async () => {
-		let { body } = await callMcp("tools/call", {
-			name: "search_docs",
-			arguments: { query: "hotkey" },
-		});
-
-		expect(JSON.stringify(body.result)).toContain(
-			"https://sdxc.sergiodxa.com/api/ui/mixins/hotkey",
-		);
+	test("search_docs finds a mixin by name and a utility by the property it sets", async () => {
+		for (let [query, url] of [
+			["hotkey", "https://sdxc.sergiodxa.com/api/ui/mixins/hotkey"],
+			["padding", "https://sdxc.sergiodxa.com/api/u/p"],
+		] as const) {
+			let { body } = await callMcp("tools/call", { name: "search_docs", arguments: { query } });
+			expect(JSON.stringify(body.result), query).toContain(url);
+		}
 	});
 
 	test("reading a resource gives the same text its URL serves", async () => {

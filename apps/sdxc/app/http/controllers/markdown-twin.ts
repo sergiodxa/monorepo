@@ -1,5 +1,5 @@
 /**
- * `GET /docs/*slug.md`, `GET /api/:name.md` and the `@sdxc/ui` pages' twins — the same
+ * `GET /docs/*slug.md`, `GET /api/:name.md` and the catalogue pages' twins — the same
  * pages as markdown. A guide or a package README is served as the file it already is; a
  * catalogue page is written from the records its HTML page draws, so the two agree.
  *
@@ -15,9 +15,13 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import {
+	readComponentMarkdown,
+	readUiExportMarkdown,
+	readUtilityMarkdown,
+} from "~/app/services/catalogue-pages";
 import { readGuide } from "~/app/services/docs";
 import { findPackage, readPackageReadme } from "~/app/services/packages";
-import { readComponentMarkdown, readUiExportMarkdown } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /** What a machine surface answers with when nothing is filed under the path asked for. */
@@ -43,6 +47,16 @@ export const packageMarkdown = createAction(routes.markdown.package, async (ctx)
 	if (findPackage(name) === null) return missing();
 
 	let source = await readPackageReadme(name);
+	if (source === null) return missing();
+
+	return await withBundleCache(ctx.request, markdown(source));
+});
+
+/** Serves one `@sdxc/u` utility as markdown. */
+export const utilityMarkdownTwin = createAction(routes.markdown.utility, async (ctx) => {
+	let { utility } = s.parse(s.object({ utility: s.string() }), ctx.params);
+
+	let source = await readUtilityMarkdown(utility);
 	if (source === null) return missing();
 
 	return await withBundleCache(ctx.request, markdown(source));

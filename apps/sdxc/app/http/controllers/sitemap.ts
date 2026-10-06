@@ -1,7 +1,8 @@
 /**
  * `GET /sitemap.xml` — every page a crawler should know about, listed by
- * `@sdxc/sitemap`. The list is derived from the guides and the manifests, so a package
- * published or a guide written is discoverable on the next deploy without an edit here.
+ * `@sdxc/sitemap`. The list is derived from the guides, the manifests and the two
+ * catalogues, so a package published, a guide written or a utility, component or mixin
+ * added is discoverable on the next deploy without an edit here.
  *
  * URLs are built on the site's own origin rather than on the host that served the
  * request, because a sitemap fetched from a preview deployment would otherwise invite a
@@ -16,10 +17,10 @@ import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackageGroups } from "~/app/services/packages";
 import { absoluteUrl } from "~/app/services/site";
-import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /** How a landing page ranks against a reference page, which is what `priority` orders. */
@@ -69,7 +70,7 @@ export default createAction(routes.sitemap, async (ctx) => {
 		}
 	}
 
-	for (let page of await listUiPages()) {
+	for (let page of await listCataloguePages()) {
 		sitemap.append(new URL(absoluteUrl(page.href)), {
 			priority: PRIORITY.reference,
 			frequency: "weekly",

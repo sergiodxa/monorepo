@@ -24,11 +24,11 @@ import type { UiSymbol } from "~/app/services/ui-exports";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
 import { readUiExport } from "~/app/services/ui-exports";
-import { UI_SOURCE_BASE } from "~/app/services/ui-pages";
 import { isUiSubpath } from "~/app/services/ui-subpaths";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -106,7 +106,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 						<PageActions
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${UI_SOURCE_BASE}${reference.subpath}/${reference.module}.ts`}
+							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/${reference.subpath}/${reference.module}.ts`}
 						/>
 						<Snippet code={`import { ${importedName(symbol)} } from "${module}";`} />
 					</header>

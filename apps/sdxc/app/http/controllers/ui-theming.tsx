@@ -21,10 +21,10 @@ import type { ThemeDeclaration } from "~/app/services/theming";
 
 import { withBundleCache } from "~/app/http/caching";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdown";
+import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/app/services/site";
 import { readTheme } from "~/app/services/theming";
-import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/ui-markdown";
-import { THEMING_SLUG, UI_SOURCE_BASE } from "~/app/services/ui-pages";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -79,7 +79,7 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 						<PageActions
 							markdownHref={markdownHref}
 							markdownUrl={absoluteUrl(markdownHref)}
-							sourceUrl={`${UI_SOURCE_BASE}theme.css`}
+							sourceUrl={`${CATALOGUE_SOURCE_BASE}ui/src/theme.css`}
 						/>
 					</header>
 

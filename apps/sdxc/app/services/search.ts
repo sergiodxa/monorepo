@@ -1,6 +1,6 @@
 /**
  * The search corpus: one entry per page, plus one per heading a reader can jump to,
- * across the guides, every package reference and every `@sdxc/ui` reference page. It is read off the markdown sources
+ * across the guides, every package reference and every page of the two catalogues. It is read off the markdown sources
  * already in the bundle by a line scan rather than a parse, because the corpus runs to
  * well over a megabyte and a full parse of all of it is work no request should pay for.
  *
@@ -15,10 +15,10 @@
 import type { SearchDocument } from "~/app/services/search-query";
 
 import { BOILERPLATE_SECTIONS, slugify } from "~/app/services/article";
+import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides, readGuide } from "~/app/services/docs";
 import { listPackageGroups, readPackageReadme } from "~/app/services/packages";
 import { includesWord, rankDocuments, tokenize } from "~/app/services/search-query";
-import { listUiPages } from "~/app/services/ui-pages";
 import routes from "~/routes/web";
 
 /** Heading depths the corpus carries, matching the depths a page's own nav offers. */
@@ -169,14 +169,11 @@ let packageCorpus: Array<PackageMatch & { haystack: string }> | null = null;
  */
 const CATALOGUE_DIRECTORIES = new Set(["u", "ui"]);
 
-/** How the `@sdxc/ui` reference pages are labelled when a result names its section. */
-const UI_SECTION_PREFIX = "@sdxc/ui";
-
 /**
- * The whole corpus, guides first, packages after and the `@sdxc/ui` reference pages
- * last, each page followed by its own headings so a result for a page sits above the
- * sections inside it. The `@sdxc/u` utilities are walked from their own index, since
- * three hundred one-property pages would crowd out everything else a query could mean.
+ * The whole corpus, guides first, packages after and the catalogue pages last, each page
+ * followed by its own headings so a result for a page sits above the sections inside it.
+ * A catalogue page is one entry, titled by what a reader searches for: the CSS property
+ * a utility sets, or a component's or an export's name.
  */
 export async function buildSearchIndex(): Promise<SearchDocument[]> {
 	if (corpus !== null) return corpus;
@@ -234,12 +231,12 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 		}
 	}
 
-	for (let page of await listUiPages()) {
+	for (let page of await listCataloguePages()) {
 		documents.push({
 			href: page.href,
 			title: page.title,
 			page: page.title,
-			section: `${UI_SECTION_PREFIX} · ${page.section}`,
+			section: `${page.package} · ${page.section}`,
 			summary: page.summary,
 		});
 	}
@@ -250,7 +247,7 @@ export async function buildSearchIndex(): Promise<SearchDocument[]> {
 
 /**
  * The best answers to a query across the guides, the package references and the
- * `@sdxc/ui` reference pages.
+ * catalogue pages.
  *
  * @param query - What was asked for, in a reader's or a model's own words.
  * @param limit - How many results to return.

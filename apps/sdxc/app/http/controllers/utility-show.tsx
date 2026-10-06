@@ -17,13 +17,22 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { Anchor } from "~/app/services/article";
-import type { UtilityReference } from "~/app/services/utilities";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { buildUtilitiesNav } from "~/app/services/navigation";
-import { readUtility } from "~/app/services/utilities";
+import { absoluteUrl } from "~/app/services/site";
+import { findUtility, readUtility } from "~/app/services/utilities";
+import {
+	atWidth,
+	customValue,
+	onState,
+	RESPONSIVE_FAMILY,
+	STATE_FAMILY,
+} from "~/app/services/utility-calls";
+import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
@@ -34,18 +43,15 @@ import DocsLayout from "~/resources/layouts/docs";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** The family whose utilities already are the state variants, so the page skips it. */
-const STATE_FAMILY = "state";
-
-/** The family whose utilities already are the responsive variants, likewise. */
-const RESPONSIVE_FAMILY = "responsive";
-
 export default createAction(routes.api.utility, async (ctx) => {
 	let { utility } = s.parse(s.object({ utility: s.string() }), ctx.params);
 	let tree = await buildUtilitiesNav();
 
 	let reference = await readUtility(utility);
-	if (reference === null) return notFound(ctx, tree);
+	let entry = await findUtility(utility);
+	if (reference === null || entry === null) return notFound(ctx, tree);
+
+	let markdownHref = routes.markdown.utility.href({ utility });
 
 	let table = reference.examples.filter((example) => example.output !== null);
 	let snippets = reference.examples.filter((example) => example.output === null);
@@ -91,6 +97,12 @@ export default createAction(routes.api.utility, async (ctx) => {
 								{link.label}
 							</a>
 						))}
+
+						<PageActions
+							markdownHref={markdownHref}
+							markdownUrl={absoluteUrl(markdownHref)}
+							sourceUrl={`${CATALOGUE_SOURCE_BASE}u/src/${entry.family}/${entry.module}.ts`}
+						/>
 
 						<Snippet code={`import { ${reference.name} } from "@sdxc/u/${reference.family}";`} />
 					</header>
@@ -184,25 +196,3 @@ export default createAction(routes.api.utility, async (ctx) => {
 
 	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
 });
-
-/** The first documented call, which every derived example is written around. */
-function firstCall(reference: UtilityReference): string {
-	return reference.examples[0]?.call ?? `u.${reference.name}()`;
-}
-
-/** The same call with a raw CSS length in place of a scale step. */
-function customValue(reference: UtilityReference): string {
-	let call = firstCall(reference);
-	let custom = call.replace(/\((\d+(\.\d+)?)\)/, '("2.75rem")');
-	return custom === call ? call : custom;
-}
-
-/** The same call, scoped to the pointer being over the element. */
-function onState(reference: UtilityReference): string {
-	return `u.hover(${firstCall(reference)})`;
-}
-
-/** The same call, scoped to a container at least `md` wide. */
-function atWidth(reference: UtilityReference): string {
-	return `u.at("md", ${firstCall(reference)})`;
-}
