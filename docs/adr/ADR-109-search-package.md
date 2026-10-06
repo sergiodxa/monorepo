@@ -456,12 +456,14 @@ CREATE VIRTUAL TABLE "post_search_fts" USING fts5(
 );
 
 CREATE TRIGGER "post_search_fts_insert" AFTER INSERT ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = new."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;
 
 CREATE TRIGGER "post_search_fts_update" AFTER UPDATE OF "title", "tags", "excerpt" ON "post_search" BEGIN
-	INSERT OR REPLACE INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
+	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
+	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
 	VALUES (new."id", new."title", new."tags", new."excerpt");
 END;
 
@@ -477,9 +479,12 @@ END;
 - **Triggers** are the one write path, so no repository, sweep or deletion site can forget the
   index, the failure the reader's ADR-016 named. They commit inside the statement that fired
   them on both platforms.
-- **`INSERT OR REPLACE` and a `DELETE` by `rowid`** are idempotent, which is what makes the
-  triggers and the batched reindex safe to interleave. An external-content table's `'delete'`
-  command needs the exact old values and corrupts the index when the row was never indexed.
+- **A `DELETE` by `rowid`, then an `INSERT`** is idempotent, which is what makes the triggers
+  and the batched reindex safe to interleave. A trigger's statements take the conflict policy
+  of the statement that fired it, so under an upsert on the source an `INSERT OR REPLACE` in
+  the trigger becomes a plain insert and leaves the old terms indexed; the explicit `DELETE`
+  holds under every policy. An external-content table's `'delete'` command needs the exact old
+  values and corrupts the index when the row was never indexed.
 - **Quoting** is single quotes for option values and double quotes for identifiers, so the
   migration replays in `test/migration-replay.test.ts` with double-quoted string literals off.
 - **Exporting a D1 database** means dropping the three triggers and the virtual table, exporting,
@@ -681,7 +686,7 @@ and render without building HTML from strings.
 
 - [x] Phase 1: The package
 - [x] Phase 2: The reader's `LIKE` search
-- [ ] Phase 3: The blog's FTS5 search and search page
+- [x] Phase 3: The blog's FTS5 search and search page (deploy pending)
 - [ ] Phase 4: The reader's FTS5 index (conditional)
 
 ## Notes
@@ -703,6 +708,10 @@ and render without building HTML from strings.
   plan off the statement each page actually runs.
 - The D1 mock's script splitter now keeps a `CREATE TRIGGER` body in one statement, so the
   recommended triggers apply through `@sdxc/cloudflare-mocks` the way D1 applies them.
+- The recommended triggers delete a `rowid` before inserting it: `INSERT OR REPLACE` inside a
+  trigger inherits the firing statement's conflict policy, which an upsert on the source sets.
+- The blog's `post_search` holds only the searchable text (title, tags, content) and the post
+  id; kind and publish state are read from `posts` at query time (blog ADR-004).
 - The verification in Context ran on SQLite 3.53 via `node:sqlite`, the same engine the
   migration replay and `@sdxc/cloudflare-mocks` use, and through `@sdxc/data-table-d1` over the
   mock D1; the reader's existing `user-do-search.workers.test.ts` covers FTS5 inside a Durable
