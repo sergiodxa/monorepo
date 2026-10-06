@@ -7,21 +7,20 @@
 ## Background
 
 `Pagination.byOffset` and `Pagination.byKeyset` take a query, run it, and answer a `Result`
-in one call. Building a page and running it are therefore one step, so nothing can sit
-between them: a function that takes a query and returns a paged one has nowhere to return
-to, and a test can only observe a page by executing it against a database.
+in one call. Building a page and running it are therefore one step, so paging can only ever be
+the last, awaited thing done to a query: a function that takes a query and returns a paged one
+has nothing to return.
 
-The question came up while designing `@sdxc/search` (ADR-109). The ergonomic shape wanted
-there is a chain of functions over one query — narrow it, search it, page it — and run it
-at the end:
+The question came up while designing `@sdxc/search` (ADR-109). The shape wanted there is a chain
+of functions from query to query — narrow it, search it, page it — with the result run like any
+query, by the query's own method:
 
 ```typescript
-let page = await Pagination.byOffset(search(baseQuery, parsed), { page, perPage }).run();
+let items = await Pagination.byOffset(search(baseQuery, parsed), pagination).all();
 ```
 
-`search(query, parsed)` itself waits on `remix/data-table` gaining raw predicates and
-computed columns ([proposal](../proposals/data-table-sql-expressions.md)). The paging half
-does not, and it is the half every list in the repo uses.
+`search(query, parsed)` itself waits on `remix/data-table` gaining raw predicates and computed
+columns ([proposal](../proposals/data-table-sql-expressions.md)). The paging half does not.
 
 ## Context
 
@@ -37,146 +36,163 @@ static async byKeyset<Row, WhereArg, ColumnArg>(
 ): Promise<Result<KeysetPage<Row>, PaginationError>>;
 ```
 
-Each call validates its options, composes the query (`limit`/`offset`, or the seek predicate
-and the ordering), executes it — two statements for offset paging, one for keyset — and
-wraps every failure in a `PaginationError`.
+Each call does three things:
 
-There are about 45 call sites across the apps, every one of them `await Pagination.byX(...)`
-followed by an `isFailure` check.
+| Step    | Offset                                        | Keyset                                                            |
+| ------- | --------------------------------------------- | ----------------------------------------------------------------- |
+| Before  | counts the rows, clamps the page against them | validates the ordering, decodes the cursor                        |
+| Compose | `limit` and `offset`                          | the seek predicate, the ordering (reversed backward), `limit + 1` |
+| After   | wraps rows and arithmetic in a `Page`         | drops the extra row, restores order, mints `next`/`prev` cursors  |
 
-### What a deferred page enables
+Only the middle step is "a query in, a query out". The other two are why the methods run the
+query themselves today.
 
-| Use                                   | Today                                         |
-| ------------------------------------- | --------------------------------------------- |
-| A helper returns a paged query        | It must take the options and return a promise |
-| Composing `page ∘ search ∘ narrow`    | Paging has to be the last, awaited, step      |
-| A route builds a page, a view runs it | The route awaits before handing anything over |
-| A test asserts the composed query     | Only by running it against a database         |
+There are about 45 call sites across the apps.
 
 ## Decision
 
-`Pagination.byOffset` and `Pagination.byKeyset` become synchronous and return a page query;
-`run()` executes it and answers the same `Result` they answer today.
+`Pagination.byOffset` and `Pagination.byKeyset` become synchronous and return the query they
+were given, with paging applied: the same type, run with its own `.all()`. What a page needs
+around the rows moves into the steps on either side.
+
+### Offset
+
+The `Pagination` value already holds the clamped page arithmetic, so the count comes first and
+the value is what `byOffset` applies:
 
 ```typescript
-let pager = Pagination.byOffset(db.query(articles).where({ status: "published" }), {
-	page: params.data.page,
-	perPage: params.data.perPage,
-});
+let query = db.query(articles).where({ status: "published" });
 
-let page = await pager.run(); // Result<Page<Row>, PaginationError>
+let pagination = new Pagination({ page, perPage, total: await query.count() });
+let items = await Pagination.byOffset(query, pagination).all();
+
+paginate(headers, { items, pagination }, { url });
 ```
 
-### The page query
+`byOffset(query, pagination)` is `query.limit(pagination.limit).offset(pagination.offset)`, and
+cannot fail.
+
+### Keyset
+
+`byKeyset` decodes the cursor and composes the seek, so it answers a `Result` for a cursor a
+client sent wrong; `Pagination.keysetPage` turns the rows that come back into a page:
 
 ```typescript
-interface OffsetPageQuery<Row> {
-	/** Counts, then reads the requested page; every failure is a `PaginationError`. */
-	run(): Promise<Result<Page<Row>, PaginationError>>;
-}
+let options = { orderBy: NEWEST_FIRST, cursor: params.data.cursor, limit: 50 };
 
-interface KeysetPageQuery<Row> {
-	/** Decodes the cursor, seeks and reads one page past it, and mints the cursors around it. */
-	run(): Promise<Result<KeysetPage<Row>, PaginationError>>;
-}
+let paged = Pagination.byKeyset(db.query(pings).where({ monitor_id }), options);
+if (isFailure(paged)) return badRequest(paged.error); // InvalidCursorError or InvalidOrderingError
+
+let page = Pagination.keysetPage(await paged.data.all(), options);
+if (isFailure(page)) return serverError(page.error); // UnencodableCursorValueError
 ```
 
-- **Construction is pure.** Building a page query reads nothing and validates nothing that
-  could fail; a bad ordering, a malformed cursor and a refused query all surface from `run()`,
-  so every failure keeps arriving through the one `Result` it arrives through today.
-- **A page query is a frozen value.** `run()` may be called more than once and executes again
-  each time, which is what a retry wants.
-- **The method is `run()`.** `all()` would read as the query builder's own method, which a
-  page query is not: it resolves a page and its arithmetic, never a bare row array.
-- **No inspection API in this ADR.** Tests keep observing pages through a database, as they
-  do now; exposing the composed queries is a separate decision if a test needs it.
+- `byKeyset(query, options)` answers `Result<Query, InvalidCursorError | InvalidOrderingError>`.
+  The query carries the seek predicate, the ordering (reversed for a backward page) and a limit
+  of `limit + 1`.
+- `keysetPage(rows, options)` drops the extra row, puts a backward page back in requested
+  order, and mints the cursors, answering `Result<KeysetPage<Row>, UnencodableCursorValueError>`.
+  It takes the same options, so the two halves cannot disagree about the ordering.
+
+### Typing
+
+Both methods are generic over the query, and return that same type:
+
+```typescript
+interface OffsetQuery {
+	limit(value: number): this;
+	offset(value: number): this;
+}
+
+static byOffset<Query extends OffsetQuery>(query: Query, pagination: Pagination): Query;
+```
+
+`remix/data-table`'s `Query` returns its own type from `limit`, `offset`, `where` and `orderBy`,
+so it satisfies `this`-returning contracts as it is, and `.all()` after paging is the builder's
+own, typed method. `SearchQuery` from `@sdxc/search` does the same.
+
+### Errors from the query
+
+Running the query is the caller's `.all()` and `.count()`, so a database failure rejects the way
+any data-table query rejects; `QueryFailedError` is removed. A route handles it as it handles
+every other query it runs.
 
 ### Migration
 
-The change is breaking and lands without a compatibility path: every call site becomes
-`await Pagination.byX(query, options).run()`. The compiler finds them all, because passing a
-page query where a `Result` is expected (`isFailure(page)`) is a type error.
-
-### Composition
-
-With paging deferred, the composition that motivated this is plain function application:
-
-```typescript
-let page = await Pagination.byOffset(search(narrow(db.query(articles)), parsed), options).run();
-```
-
-A right-to-left `compose(...).with(base)` helper over the same functions is a natural
-follow-up for a small functional-utilities package; it needs nothing from this one, so it is
-left to its own ADR.
+Breaking, with no compatibility path. Each call site changes from one awaited call to the steps
+above: two lines for offset, four for keyset. The compiler finds every site, because the old
+call's result was awaited as a `Result` and the new one is a query.
 
 ## Consequences
 
 ### Positive
 
-- **A paged query is a value.** Helpers return one, routes pass one, and the step that runs it
-  is wherever the code awaits.
-- **Paging composes with any query function.** Search, tenancy scoping or soft-delete filters
-  apply before paging without the helper knowing about pages.
-- **The error contract is unchanged.** `run()` answers the same `Result` and error classes, so
-  every `isFailure` branch and the `400`/`500` split stay as they are.
+- **Paging is query to query.** `Pagination.byOffset(search(narrow(base)), pagination)` is plain
+  function application, and a `compose(...)` helper over query functions works with paging in
+  the chain.
+- **A paged query runs like any query.** `.all()`, `.first()`, a relation load — whatever the
+  builder offers — with the builder's own types, and nothing new to learn.
+- **The count is visible.** A caller that already knows the total, or wants none, skips it by
+  not writing it, rather than through an option.
 
 ### Negative
 
-- **Every call site changes.** About 45 one-line edits across the apps, mechanical and
-  compiler-checked.
-- **One more name to learn.** A page query sits between a query and a page.
+- **More lines per call site.** Offset paging is two statements instead of one, keyset paging
+  four, and the 45 call sites grow accordingly.
+- **The order of steps is the caller's.** Counting before clamping, or passing different
+  options to `byKeyset` and `keysetPage`, are now mistakes a caller can make.
+- **Database failures leave the `Result`.** A failed page rejects, so a route that relied on the
+  `QueryFailedError` branch catches instead.
 
 ### Neutral
 
-- `paginate()`, `createPaging()` and `parsePageParams()` are unchanged; they work on the page a
-  run produces.
-- `@sdxc/search`'s `SearchQuery` already satisfies both query contracts, so search pages
-  through the new shape with no change of its own.
+- `paginate()`, `createPaging()` and `parsePageParams()` are unchanged; they work on the page the
+  steps produce.
+- A follow-up could fold the keyset steps into one helper that takes the query and runs it, for
+  routes that never compose; it would sit beside these, built from them.
 
 ## Implementation Plan
 
 ### Phase 1: The package
 
 **Priority:** Medium
-**Estimated Effort:** 2 hours
+**Estimated Effort:** 3 hours
 
-1. `byOffset` and `byKeyset` return frozen page query objects; the current bodies move into
-   their `run()` methods.
-2. Tests: construction never touches the query, `run()` answers what the eager call answered,
-   a second `run()` executes again, and validation failures arrive from `run()`.
-3. README and JSDoc describe the two-step shape.
+1. `byOffset(query, pagination)` and `byKeyset(query, options)` return the paged query;
+   `keysetPage(rows, options)` builds the keyset page; `QueryFailedError` is removed.
+2. Type tests: a `remix/data-table` query and a `SearchQuery` keep their own type through both.
+3. Tests: offset clamping through `new Pagination`, keyset forward and backward walks through
+   `byKeyset` + `keysetPage`, and the cursor and ordering failures from `byKeyset`.
+4. README and JSDoc describe the steps.
 
 ### Phase 2: Call sites
 
 **Priority:** Medium
-**Estimated Effort:** 2 hours
+**Estimated Effort:** 3 hours
 
-1. Append `.run()` at every call site, one commit per app.
+1. Rewrite every call site, one commit per app.
 2. `bun check` and every app's tests pass.
 
 ## Alternatives Considered
 
-### 1. Keep the eager methods and add lazy ones beside them
+### 1. A page query with its own `run()`
 
-`Pagination.offset(query, options)` returning a page query, with `byOffset` kept.
+`byOffset` and `byKeyset` return a pager object whose `run()` executes and answers today's
+`Result`.
 
-**Rejected because**: two ways to page the same query, and the eager pair would be a
-deprecated alias in all but name. Breaking changes land directly in this repo.
+**Rejected because**: it is a second kind of query beside the builder's. A pager composes with
+nothing that expects a query, and running it is a method only this package defines.
 
-### 2. Return a thenable
+### 2. Keep the eager methods and add query-returning ones beside them
 
-A page query with `then()`, so `await Pagination.byOffset(...)` keeps working unchanged.
+**Rejected because**: two ways to page the same query. Breaking changes land directly in this
+repo.
 
-**Rejected because**: a value that runs when awaited is a promise in disguise; it runs at
-every accidental `await`, and passing it through an `async` function's `return` executes it.
-The explicit `run()` is the point.
+### 3. Count inside `byOffset`
 
-### 3. Leave paging eager and compose before it
+`byOffset` returns a promise of the paged query, counting first so it can clamp.
 
-Every query function composes first, and paging stays the final, awaited call.
-
-**Rejected because**: it covers the composition but leaves a paged query unable to be
-returned, passed or deferred, which is half of what is wanted.
+**Rejected because**: the result is no longer a query, so it stops composing, which is the point.
 
 ## References
 
