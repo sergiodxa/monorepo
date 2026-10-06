@@ -188,7 +188,7 @@ interface Plan {
  * @throws RangeError for empty `columns`, a non-positive weight, a column the table lacks,
  * a table holding a column named `rank`, a key that is not one column, or a non-integer key with `fts`.
  * @example
- * let postSearch = defineSearch({ table: posts, columns: [{ name: "title", weight: 10 }], fts: { table: "posts_fts" } });
+ * let articleSearch = defineSearch({ table: articles, columns: [{ name: "title", weight: 10 }], fts: { table: "articles_fts" } });
  */
 export function defineSearch<Source extends AnyTable>(
 	options: DefineSearchOptions<Source>,

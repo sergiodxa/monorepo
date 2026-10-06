@@ -8,31 +8,31 @@
  */
 
 /** One statement per entry, each ending in `;`, exactly as the README's block lists them. */
-export const POST_SEARCH_SCHEMA: readonly string[] = [
-	`CREATE TABLE "post_search" (
+export const ARTICLES_SCHEMA: readonly string[] = [
+	`CREATE TABLE "articles" (
 	"id" INTEGER PRIMARY KEY,
-	"post_id" TEXT NOT NULL UNIQUE,
+	"slug" TEXT NOT NULL UNIQUE,
 	"title" TEXT NOT NULL,
 	"tags" TEXT NOT NULL DEFAULT '',
-	"excerpt" TEXT,
+	"summary" TEXT,
 	"published_at" INTEGER
 );`,
-	`CREATE VIRTUAL TABLE "post_search_fts" USING fts5(
-	"title", "tags", "excerpt",
+	`CREATE VIRTUAL TABLE "articles_fts" USING fts5(
+	"title", "tags", "summary",
 	content='', contentless_delete=1,
 	tokenize='unicode61 remove_diacritics 2'
 );`,
-	`CREATE TRIGGER "post_search_fts_insert" AFTER INSERT ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = new."id";
-	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
-	VALUES (new."id", new."title", new."tags", new."excerpt");
+	`CREATE TRIGGER "articles_fts_insert" AFTER INSERT ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = new."id";
+	INSERT INTO "articles_fts" ("rowid", "title", "tags", "summary")
+	VALUES (new."id", new."title", new."tags", new."summary");
 END;`,
-	`CREATE TRIGGER "post_search_fts_update" AFTER UPDATE OF "title", "tags", "excerpt" ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
-	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
-	VALUES (new."id", new."title", new."tags", new."excerpt");
+	`CREATE TRIGGER "articles_fts_update" AFTER UPDATE OF "title", "tags", "summary" ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = old."id";
+	INSERT INTO "articles_fts" ("rowid", "title", "tags", "summary")
+	VALUES (new."id", new."title", new."tags", new."summary");
 END;`,
-	`CREATE TRIGGER "post_search_fts_delete" AFTER DELETE ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
+	`CREATE TRIGGER "articles_fts_delete" AFTER DELETE ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = old."id";
 END;`,
 ];

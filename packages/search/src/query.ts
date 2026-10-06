@@ -247,7 +247,7 @@ export function highlight(
  * @param options Window size and match mode.
  * @returns The window's stretches and whether text was cut on either side.
  * @example
- * excerpt(post.body, parsed, { words: 24 }); // { segments, truncatedStart: true, truncatedEnd: false }
+ * excerpt(article.body, parsed, { words: 24 }); // { segments, truncatedStart: true, truncatedEnd: false }
  */
 export function excerpt(text: string, query: ParsedQuery, options: ExcerptOptions = {}): Excerpt {
 	let size = Math.max(1, Math.trunc(options.words ?? DEFAULT_EXCERPT_WORDS));

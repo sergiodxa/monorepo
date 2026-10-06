@@ -10,11 +10,11 @@ search. FTS5 reads `it's`, `c++`, `AND` and `a:b` as query syntax and fails; `LI
 and `_` as wildcards. This package parses the text into terms once, then compiles them so no
 user text reaches FTS5 as syntax or `LIKE` as a wildcard.
 
-The package owns logic, never storage. The app declares its source table with
-`remix/data-table`'s `table()`, writes the FTS5 table and its triggers into its own migrations
-(see [Storage](#storage)), and describes both to `defineSearch`. A search is a query that
-`Pagination.byOffset` and `Pagination.byKeyset` from `@sdxc/pagination` page like any other
-list, on D1 and on Durable Object SQLite alike.
+The package owns logic, never storage: point `defineSearch` at the table that already holds
+the text, declared with `remix/data-table`'s `table()`. With `LIKE` that is all, with no
+migration. FTS5 adds a virtual table and three triggers to the app's own migration (see
+[Storage](#storage)). A search is a query that `Pagination.byOffset` and `Pagination.byKeyset`
+from `@sdxc/pagination` page like any other list, on D1 and on Durable Object SQLite alike.
 
 Two entry points:
 
@@ -34,18 +34,17 @@ import { isFailure } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
 import { sql } from "remix/data-table";
 
-import { postSearch as postSearchTable } from "~/database/schema";
+import { articles } from "./schema";
 
-/** Published posts, ranked so a title hit outranks a tag, and a tag outranks the excerpt. */
-const POST_SEARCH = defineSearch({
-	table: postSearchTable,
-	key: "id",
+/** Articles, ranked so a title hit outranks a tag, and a tag outranks the summary. */
+const ARTICLE_SEARCH = defineSearch({
+	table: articles,
 	columns: [
 		{ name: "title", weight: 10 },
 		{ name: "tags", weight: 6 },
-		{ name: "excerpt", weight: 1 },
+		{ name: "summary", weight: 1 },
 	],
-	fts: { table: "post_search_fts" },
+	fts: { table: "articles_fts" },
 });
 
 const PAGING = createPaging({ perPage: 20, maxPerPage: 50 });
@@ -58,12 +57,24 @@ let params = PAGING.parse(url.searchParams);
 if (isFailure(params)) return redirectToFirstPage(url);
 
 let page = await Pagination.byOffset(
-	POST_SEARCH.query(ctx.db, parsed.data).where(sql`"published_at" <= ${Date.now()}`),
+	ARTICLE_SEARCH.query(ctx.db, parsed.data).where(sql`"published_at" <= ${Date.now()}`),
 	{ page: params.data.page, perPage: params.data.perPage },
 );
 if (isFailure(page)) return serverError(page.error);
 
-page.data.items; // posts, best match first, each with its `rank`
+page.data.items; // articles, best match first, each with its `rank`
+```
+
+Leave out `fts` and the same definition searches with `LIKE`, over the table exactly as it is:
+
+```typescript
+const ARTICLE_SEARCH = defineSearch({
+	table: articles,
+	columns: [
+		{ name: "title", weight: 10 },
+		{ name: "summary", weight: 1 },
+	],
+});
 ```
 
 `paginate()` from `@sdxc/pagination` carries every other query parameter into its `Link` URLs,
@@ -182,12 +193,12 @@ values before executing instead of letting the database fail mid-page.
 
 ```text
 with "search_hits" as (
-  select "rowid" as "search_key", bm25("post_search_fts", 10, 6, 1) as "search_rank"
-  from "post_search_fts" where "post_search_fts" match ?   -- '"remix"* "route pattern" NOT "legacy"*'
+  select "rowid" as "search_key", bm25("articles_fts", 10, 6, 1) as "search_rank"
+  from "articles_fts" where "articles_fts" match ?   -- '"remix"* "route pattern" NOT "legacy"*'
 )
-select "post_search".*, "search_hits"."search_rank" as "rank"
-from "search_hits" cross join "post_search" on "post_search"."id" = "search_hits"."search_key"
-where (<filters>) order by "search_hits"."search_rank" asc, "post_search"."id" asc limit ? offset ?
+select "articles".*, "search_hits"."search_rank" as "rank"
+from "search_hits" cross join "articles" on "articles"."id" = "search_hits"."search_key"
+where (<filters>) order by "search_hits"."search_rank" asc, "articles"."id" asc limit ? offset ?
 ```
 
 Every term is double-quoted with inner quotes doubled, so nothing is read as syntax. The whole
@@ -227,8 +238,8 @@ function Highlighted() {
 	);
 }
 
-<Highlighted segments={highlight(post.title, parsed)} />;
-<Highlighted segments={excerpt(post.excerpt, parsed, { words: 24 }).segments} />;
+<Highlighted segments={highlight(article.title, parsed)} />;
+<Highlighted segments={excerpt(article.summary, parsed, { words: 24 }).segments} />;
 ```
 
 ### Pattern: Search narrowing a list's own order
@@ -252,9 +263,10 @@ With FTS5, a stable order sorts the whole match set before the first row returns
 ### Pattern: Reindexing from a job
 
 ```typescript
-let progress = await POST_SEARCH.reindex(ctx.db, { after: job.data.after, limit: 500 });
+let progress = await ARTICLE_SEARCH.reindex(ctx.db, { after: job.data.after, limit: 500 });
 if (isFailure(progress)) return ctx.retry({ delay: "1 minute", cause: progress.error });
-if (progress.data.next !== null) await ctx.enqueue("reindex-posts", { after: progress.data.next });
+if (progress.data.next !== null)
+	await ctx.enqueue("reindex-articles", { after: progress.data.next });
 ```
 
 Batches keep every statement far from D1's 30-second limit and its per-invocation query budget,
@@ -279,42 +291,53 @@ survives the cursor's JSON exactly. A cursor carries no query, so replaying it a
 
 ## Storage
 
-Guidance an app copies into its own migration and adapts; the package creates nothing.
+`LIKE` needs nothing: it searches the table as it is. FTS5 needs two things of the table a
+search is defined on, and guidance below an app copies into its own migration and adapts; the
+package creates nothing.
 
-Index a table with an `INTEGER PRIMARY KEY`. When the searchable thing has a text id, give it
-a search document table of its own, `("id" INTEGER PRIMARY KEY, "post_id" TEXT NOT NULL UNIQUE,
-…)`. Never the implicit `rowid`: `VACUUM` may renumber it, and so may an export.
+- **The searched columns are columns of that table**, so each row is one document whose
+  columns `bm25()` weighs together.
+- **Its `key` is an integer** the FTS5 table's `rowid` mirrors. An `INTEGER PRIMARY KEY` is the
+  natural one; never the implicit `rowid` of a table keyed otherwise, which `VACUUM` and an
+  export may renumber.
+
+A table like this one meets both, so the migration indexes it directly:
 
 ```sql
-CREATE TABLE "post_search" (
+CREATE TABLE "articles" (
 	"id" INTEGER PRIMARY KEY,
-	"post_id" TEXT NOT NULL UNIQUE,
+	"slug" TEXT NOT NULL UNIQUE,
 	"title" TEXT NOT NULL,
 	"tags" TEXT NOT NULL DEFAULT '',
-	"excerpt" TEXT,
+	"summary" TEXT,
 	"published_at" INTEGER
 );
+```
 
-CREATE VIRTUAL TABLE "post_search_fts" USING fts5(
-	"title", "tags", "excerpt",
+The FTS5 table declares the searched columns in the order `columns` lists them, and the
+triggers copy every write into it:
+
+```sql
+CREATE VIRTUAL TABLE "articles_fts" USING fts5(
+	"title", "tags", "summary",
 	content='', contentless_delete=1,
 	tokenize='unicode61 remove_diacritics 2'
 );
 
-CREATE TRIGGER "post_search_fts_insert" AFTER INSERT ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = new."id";
-	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
-	VALUES (new."id", new."title", new."tags", new."excerpt");
+CREATE TRIGGER "articles_fts_insert" AFTER INSERT ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = new."id";
+	INSERT INTO "articles_fts" ("rowid", "title", "tags", "summary")
+	VALUES (new."id", new."title", new."tags", new."summary");
 END;
 
-CREATE TRIGGER "post_search_fts_update" AFTER UPDATE OF "title", "tags", "excerpt" ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
-	INSERT INTO "post_search_fts" ("rowid", "title", "tags", "excerpt")
-	VALUES (new."id", new."title", new."tags", new."excerpt");
+CREATE TRIGGER "articles_fts_update" AFTER UPDATE OF "title", "tags", "summary" ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = old."id";
+	INSERT INTO "articles_fts" ("rowid", "title", "tags", "summary")
+	VALUES (new."id", new."title", new."tags", new."summary");
 END;
 
-CREATE TRIGGER "post_search_fts_delete" AFTER DELETE ON "post_search" BEGIN
-	DELETE FROM "post_search_fts" WHERE "rowid" = old."id";
+CREATE TRIGGER "articles_fts_delete" AFTER DELETE ON "articles" BEGIN
+	DELETE FROM "articles_fts" WHERE "rowid" = old."id";
 END;
 ```
 
@@ -334,6 +357,15 @@ END;
   migration replays with double-quoted string literals disabled.
 - **`prefix='2 3'`** speeds prefix queries on a large index at the cost of a larger index.
 
+### A table that does not fit
+
+When the text is spread across rows (a key/value attribute table, say) or the key is a UUID,
+give the table an integer column of its own (`"search_id" INTEGER NOT NULL UNIQUE`) and use it as
+`key`, or, when the text is not on one row at all, keep a search document table: one row per
+searchable thing with an `INTEGER PRIMARY KEY`, the source's id as a `UNIQUE` column and the
+searched text as columns, written with one upsert wherever the source is written. Define the
+search on that table, and filter or join back to the source by its id.
+
 ### Exporting a D1 database
 
 `wrangler d1 export` refuses a database holding a virtual table. Drop the triggers first, since
@@ -341,10 +373,10 @@ a trigger left behind fails every write to the source, then the index; export; r
 from the migration; and run `reindex` from the start.
 
 ```text
-DROP TRIGGER "post_search_fts_insert";
-DROP TRIGGER "post_search_fts_update";
-DROP TRIGGER "post_search_fts_delete";
-DROP TABLE "post_search_fts";
+DROP TRIGGER "articles_fts_insert";
+DROP TRIGGER "articles_fts_update";
+DROP TRIGGER "articles_fts_delete";
+DROP TABLE "articles_fts";
 ```
 
 ### Multi-tenancy
