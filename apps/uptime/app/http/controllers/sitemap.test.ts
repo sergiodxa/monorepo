@@ -30,7 +30,7 @@ describe("GET /sitemap.xml", () => {
 		let response = await getSitemap();
 
 		expect(response.status).toBe(200);
-		expect(response.headers.get("Content-Type")).toBe("text/xml");
+		expect(response.headers.get("Content-Type")).toBe("text/xml; charset=utf-8");
 	});
 
 	test("includes the homepage", async () => {
