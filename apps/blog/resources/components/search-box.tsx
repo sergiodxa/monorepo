@@ -9,26 +9,13 @@
 
 import type { Handle } from "remix/component";
 
-import { SearchIcon } from "@sdxc/icons";
-import { bg, border, fg, outlineStyle } from "@sdxc/u/color";
-import { opacity } from "@sdxc/u/effects";
-import {
-	appearance,
-	gap,
-	grid,
-	gridTemplate,
-	hidden,
-	inlineFlex,
-	items,
-	shrink,
-} from "@sdxc/u/layout";
-import { media } from "@sdxc/u/responsive";
-import { bs, is, m, minIs, p, pi } from "@sdxc/u/size";
-import { when } from "@sdxc/u/state";
-import { text } from "@sdxc/u/typography";
-import { Button, Spinner } from "@sdxc/ui";
+import { pi } from "@sdxc/u/size";
+import { Spinner } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
 import { clientEntry, on } from "remix/component";
+
+import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
+import { watchSearchDialog } from "~/resources/components/search-keys";
 
 /** How long typing must pause before the results follow it. */
 export const SEARCH_DEBOUNCE_MS = 200;
@@ -72,7 +59,7 @@ type SearchBoxProps = {
 	query: string;
 	/** The frame endpoint without a query, so the route owns its own address. */
 	frameSrc: string;
-	/** The dialog the Cancel button closes, and whose closing resets the box. */
+	/** The dialog whose closing resets the box. */
 	dialogId: string;
 	/** How many result rows the frame rendered under the box. */
 	optionCount: number;
@@ -113,9 +100,9 @@ function resize(dialog: HTMLDialogElement | null, from: number): void {
 }
 
 /**
- * The dialog's box, a combobox over the result rows. Typing reloads the frame once it pauses
- * (the runtime aborts a reload a newer one replaces); arrows choose a row with focus kept in
- * the box; closing the dialog returns box and frame to how the page rendered them.
+ * The dialog's box, a combobox over the result rows; typing reloads the frame once it pauses,
+ * arrows choose a row with focus kept in the box, and closing the dialog restores the page's
+ * own state. Being the island every page hydrates, it also attaches the dialog's page keys.
  */
 export const SearchBox = clientEntry(
 	"/resources/components/search-box.tsx#SearchBox",
@@ -139,6 +126,7 @@ export const SearchBox = clientEntry(
 		});
 
 		handle.queueTask(() => {
+			watchSearchDialog(handle.signal);
 			document
 				.getElementById(handle.props.dialogId)
 				?.addEventListener("close", reset, { signal: handle.signal });
@@ -225,25 +213,15 @@ export const SearchBox = clientEntry(
 		}
 
 		return () => (
-			<div
-				mix={[
-					grid(),
-					gridTemplate({ columns: "auto minmax(0, 1fr) auto" }),
-					items("center"),
-					gap(3),
-					pi(4),
-					fg("neutral.muted"),
-					text("xl"),
-				]}
-			>
-				<span mix={[inlineFlex(), items("center"), is(6), bs(6)]}>
-					{spinning ? (
+			<QuietSearchRow
+				mix={[pi(4)]}
+				lead={
+					spinning ? (
 						<Spinner size="sm" color="neutral" aria-label="Searching" mix={[spin()]} />
-					) : (
-						<SearchIcon size="1em" mix={[shrink(0)]} />
-					)}
-				</span>
-				<input
+					) : undefined
+				}
+			>
+				<QuietSearchInput
 					type="search"
 					id={handle.props.id}
 					name="q"
@@ -261,18 +239,6 @@ export const SearchBox = clientEntry(
 					enterkeyhint="search"
 					autofocus
 					mix={[
-						minIs(0),
-						bs(14),
-						m(0),
-						p(0),
-						border("none"),
-						bg("transparent"),
-						fg("neutral.emphasis"),
-						text("xl"),
-						outlineStyle("none"),
-						appearance("none"),
-						when("&::placeholder", fg("neutral.muted")),
-						when("&::-webkit-search-decoration", [appearance("none"), hidden()]),
 						on<HTMLInputElement, "keydown">("keydown", navigate),
 						on<HTMLInputElement, "input">("input", (event) => {
 							let box = event.currentTarget;
@@ -291,24 +257,7 @@ export const SearchBox = clientEntry(
 						}),
 					]}
 				/>
-				<Button
-					type="button"
-					variant="ghost"
-					color="brand"
-					size="sm"
-					commandfor={handle.props.dialogId}
-					command="close"
-					mix={[
-						hidden(),
-						media("(hover: none), (max-width: 40rem)", inlineFlex()),
-						text("base"),
-						/** A press dims the label in place, as a text button does on a phone. */
-						when("&:active", [bg("transparent"), opacity(60)]),
-					]}
-				>
-					Cancel
-				</Button>
-			</div>
+			</QuietSearchRow>
 		);
 	},
 );

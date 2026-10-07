@@ -182,7 +182,9 @@ describe("every public page", () => {
 			let html = await (await get(path)).text();
 			let dialog = html.slice(html.indexOf("<dialog"), html.indexOf("</dialog>"));
 
-			expect(html).toMatch(/<button[^>]*commandfor="site-search" command="show-modal"/);
+			let trigger = html.match(/<a [^>]*data-search-trigger[^>]*>/)?.[0] ?? "";
+			expect(trigger).toContain('href="/search"');
+			expect(trigger).toContain('aria-label="Search"');
 			expect(html).toContain('aria-keyshortcuts="Meta+K Control+K /"');
 			expect(dialog).toContain('id="site-search"');
 			expect(dialog).toContain('aria-label="Search"');
@@ -207,6 +209,14 @@ describe("every public page", () => {
 		expect(count(html, 'id="search-q"')).toBe(1);
 		expect(count(html, 'id="site-search-q"')).toBe(1);
 		expect(count(html, "autofocus")).toBe(1);
+	});
+
+	test("the search page focuses its own box only when it holds no query", async () => {
+		let blank = await (await get("/search")).text();
+		let searched = await (await get(`/search?q=${TOKEN}`)).text();
+
+		expect(blank).toMatch(/<input[^>]*id="search-q"[^>]*autofocus/);
+		expect(searched).not.toMatch(/<input[^>]*id="search-q"[^>]*autofocus/);
 	});
 
 	test("the search page opens its dialog on the same query, results already rendered", async () => {

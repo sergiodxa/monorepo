@@ -54,8 +54,10 @@ Smart Placement and Observability are enabled.
   `es-AR`, and `spanish`/`español`/`english` work too). An article's language is its `locale`;
   tutorials and glossary entries are English. A search of filters alone lists newest first.
   `/search` explains the syntax under its form.
-- Search from any page: the navigation's search pill, ⌘K / Ctrl+K, or `/` (outside a
-  field) opens a panel near the top of the screen with a large search box; as you type, the
+- Search from any page: on a screen at least 40rem wide, the navigation's "Search ⌘K" pill,
+  ⌘K / Ctrl+K, or `/` (outside a field) opens a panel near the top of the screen with a large
+  search box; on a narrower screen the round magnifier beside the site name goes to `/search`
+  instead (the shortcuts still open the panel). As you type, the
   top six matches appear under it, each with its matched words highlighted and a line of the
   post around the first match, plus a link to every result on `/search`. Enter goes to
   `/search` (or straight to the result when there is only one), ArrowDown/ArrowUp choose a
@@ -106,10 +108,12 @@ hydrates only the components marked with `clientEntry()` and keeps every link an
 document navigation. An island lives in `resources/components/`, one per file, declaring its
 own module path (`/resources/components/<file>.tsx#<Export>`):
 
-| Island          | Does                                                                                    |
-| --------------- | --------------------------------------------------------------------------------------- |
-| `SearchTrigger` | The navigation's search pill, and ⌘K / Ctrl+K, `/`, Escape and backdrop clicks          |
-| `SearchBox`     | The dialog's box, reloading its frame as you type, with a busy state while results load |
+| Island      | Does                                                                                                                                                        |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SearchBox` | The dialog's box, reloading its frame as you type; also the trigger clicks on wide screens, ⌘K / Ctrl+K, `/`, Escape and backdrop clicks (`search-keys.ts`) |
+
+The search trigger itself is a static link to `/search` (`SearchTrigger`, a `NavPill` like the
+navigation's), so it works before any script loads.
 
 Server components shared across pages sit beside them: `ActivityRow` draws a post as a row
 (emoji per kind, title link, optional description, date) on the home page, `/search` and the

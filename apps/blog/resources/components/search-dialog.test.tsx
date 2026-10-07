@@ -15,12 +15,14 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
+import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
 	SEARCH_DEBOUNCE_MS,
 	SEARCH_RESULTS_ID,
 	SPINNER_DELAY_MS,
 } from "~/resources/components/search-box";
-import { SEARCH_DIALOG_ID, searchShortcut } from "~/resources/components/search-trigger";
+import { searchShortcut } from "~/resources/components/search-keys";
+import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import { BlogLayout } from "~/resources/layouts/blog";
 import { SEARCH_DIALOG_INPUT_ID, SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
@@ -29,7 +31,6 @@ import { createHtmlRenderer } from "../../bootstrap/app";
 
 /** The modules the runtime is asked for while the page hydrates. */
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
-	"/resources/components/search-trigger.tsx": () => import("~/resources/components/search-trigger"),
 	"/resources/components/search-box.tsx": () => import("~/resources/components/search-box"),
 };
 
@@ -183,15 +184,45 @@ function click(target: Element): void {
 	target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 }
 
-/** The links a result row's Enter followed, captured before the document would navigate. */
+/** The links a click would have navigated to, captured before the document navigates. */
 let followed: Array<string> = [];
 
-/** Records a click on any link and keeps the document where it is. */
+/**
+ * Records a link click the page left to the browser, and keeps the document where it is.
+ * Listening on `window` runs it after every listener on the document, as navigation would.
+ */
 function captureLinks(event: MouseEvent): void {
 	let link = event.target instanceof Element ? event.target.closest("a[href]") : null;
-	if (link === null) return;
+	if (link === null || event.defaultPrevented) return;
 	event.preventDefault();
 	followed.push(link.getAttribute("href") ?? "");
+}
+
+/** Makes the screen match {@link WIDE_SCREEN}, or not, for the rest of the test. */
+function screen(wide: boolean): void {
+	vi.spyOn(window, "matchMedia").mockImplementation(
+		(query: string) =>
+			({
+				matches: wide && query === WIDE_SCREEN,
+				media: query,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+			}) as unknown as MediaQueryList,
+	);
+}
+
+/** The navigation's search trigger. */
+function trigger(): HTMLAnchorElement {
+	let link = document.querySelector("a[data-search-trigger]");
+	if (!(link instanceof HTMLAnchorElement)) throw new Error("The page has no search trigger");
+	return link;
+}
+
+/** Clicks `target` with the given mouse details, answering whether the page claimed it. */
+function clickWith(target: Element, init: MouseEventInit = {}): boolean {
+	let event = new MouseEvent("click", { bubbles: true, cancelable: true, button: 0, ...init });
+	target.dispatchEvent(event);
+	return event.defaultPrevented;
 }
 
 /** Presses a key `times` times in the box, as a person holding focus there would. */
@@ -229,11 +260,12 @@ beforeAll(() => {
 
 beforeEach(() => {
 	followed = [];
-	document.addEventListener("click", captureLinks);
+	window.addEventListener("click", captureLinks);
 });
 
 afterEach(() => {
-	document.removeEventListener("click", captureLinks);
+	window.removeEventListener("click", captureLinks);
+	vi.mocked(window.matchMedia).mockRestore?.();
 	runtime?.dispose();
 	runtime = undefined;
 	requests = [];
@@ -254,9 +286,49 @@ describe("the search dialog", () => {
 		expect(form?.getAttribute("method")).toBe("get");
 		expect(form?.getAttribute("action")).toBe(routes.search.href());
 		expect(input().name).toBe("q");
-		expect(
-			document.querySelector(`button[commandfor="${SEARCH_DIALOG_ID}"][command="show-modal"]`),
-		).not.toBeNull();
+		expect(trigger().getAttribute("href")).toBe(routes.search.href());
+		expect(trigger().getAttribute("aria-label")).toBe("Search");
+		expect(document.getElementById("rmx-data")?.textContent).not.toContain("SearchTrigger");
+	});
+
+	test("opens from a plain click on the trigger on a wide screen, in place of /search", async () => {
+		screen(true);
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		expect(clickWith(trigger())).toBe(true);
+		expect(dialog.open).toBe(true);
+		expect(followed).toEqual([]);
+	});
+
+	test("leaves the trigger a link to /search on a narrow screen", async () => {
+		screen(false);
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		clickWith(trigger());
+		expect(dialog.open).toBe(false);
+		expect(followed).toEqual(["/search"]);
+
+		press(document.body, { key: "k", metaKey: true });
+		expect(dialog.open).toBe(true);
+	});
+
+	test("leaves a modified or middle click on the trigger to the browser", async () => {
+		screen(true);
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		clickWith(trigger(), { metaKey: true });
+		clickWith(trigger(), { button: 1 });
+		expect(dialog.open).toBe(false);
+		expect(followed).toEqual(["/search", "/search"]);
 	});
 
 	test("loads the results for what was typed into its own frame, keeping the box as it is", async () => {

@@ -9,98 +9,122 @@
 
 import type { Handle } from "remix/component";
 
-import { fg } from "@sdxc/u/color";
-import { listStyle } from "@sdxc/u/general";
-import { contents, flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
-import { m, maxIs, mbs, p } from "@sdxc/u/size";
-import { tabularNums, text } from "@sdxc/u/typography";
-import { Button, Disclosure, FieldError, Heading, Label, Pagination, SearchField } from "@sdxc/ui";
+import { bg, border, fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { cursor, listStyle, raw } from "@sdxc/u/general";
+import { flexWrap, gap, grid, gridTemplate, hstack, inlineFlex, repeat } from "@sdxc/u/layout";
+import { m, mbs, p, pi } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
+import { nowrap, tabularNums, text } from "@sdxc/u/typography";
+import { FieldError, Heading, Pagination } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
+import { QuietSearchInput, QuietSearchRow } from "~/resources/components/quiet-search-input";
 import { SearchResult } from "~/resources/components/search-result";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**
- * The search box. The browser submits it as `?q=` with no paging parameter, so a new query
- * always starts on its first page; an invalid query is marked on the field with its reason.
+ * The search box, in the same quiet field the search panel uses, on a bordered surface
+ * whose border turns brand while the field has focus. Enter submits it, with or without
+ * script, as `?q=` with no paging parameter, so a new query starts on its first page; the
+ * field carries no visible label, since the page heading names it, and an invalid query is
+ * marked on the surface with its reason underneath.
  */
 function SearchForm(handle: Handle<{ query: string; message?: string }>) {
 	return () => {
 		let { query, message } = handle.props;
 
 		return (
-			<form method="get" action={routes.search.href()}>
-				<SearchField>
-					<Label htmlFor="search-q">Search articles, tutorials and the glossary</Label>
-					<div mix={[grid(), gridTemplate({ columns: "1fr auto" }), gap(2), items("center")]}>
-						<SearchField.Input
+			<search>
+				<form method="get" action={routes.search.href()}>
+					<QuietSearchRow
+						mix={[
+							pi(4),
+							rounded("lg"),
+							border({ width: 1, color: message ? "danger" : "neutral" }),
+							bg("neutral.tint"),
+							when("&:focus-within", border(message ? "danger" : "brand")),
+						]}
+					>
+						<QuietSearchInput
+							type="search"
 							id="search-q"
 							name="q"
 							defaultValue={query}
-							placeholder="Remix, SQLite, OAuth…"
-							color={message ? "danger" : undefined}
+							aria-label="Search articles, tutorials and the glossary"
+							placeholder="Search articles, tutorials and the glossary"
+							enterkeyhint="search"
+							autofocus={query === ""}
 							aria-invalid={message ? "true" : undefined}
 							aria-describedby={message ? "search-q-error" : undefined}
 						/>
-						<Button type="submit" color="brand">
-							Search
-						</Button>
-					</div>
-					{message ? <FieldError id="search-q-error">{message}</FieldError> : null}
-				</SearchField>
-			</form>
+					</QuietSearchRow>
+					{message ? (
+						<FieldError id="search-q-error" mix={[mbs(2)]}>
+							{message}
+						</FieldError>
+					) : null}
+				</form>
+			</search>
 		);
 	};
 }
 
-/** What each piece of the search syntax does, as the disclosure lists it. */
+/** What each piece of the search syntax does, as the tips list it. */
 const SYNTAX: ReadonlyArray<{ example: string; meaning: string }> = [
-	{ example: "remix router", meaning: "Posts holding both words" },
-	{ example: '"route pattern"', meaning: "The exact phrase" },
-	{ example: "-legacy", meaning: "Leave out posts holding the word" },
-	{ example: "remix OR react", meaning: "Either word; OR in capitals" },
-	{ example: "title:forms", meaning: "The word in the title" },
-	{ example: 'tag:"react router"', meaning: "Tutorials with that tag" },
-	{ example: "kind:tutorial", meaning: "Only articles, tutorials or glossary entries" },
-	{ example: "lang:es", meaning: "Posts in a language, such as en or es" },
+	{ example: "remix router", meaning: "both words" },
+	{ example: '"route pattern"', meaning: "the exact phrase" },
+	{ example: "-legacy", meaning: "leave a word out" },
+	{ example: "remix OR react", meaning: "either word" },
+	{ example: "title:forms", meaning: "a word in the title" },
+	{ example: 'tag:"react router"', meaning: "tutorials with a tag" },
+	{ example: "kind:tutorial", meaning: "article, tutorial or glossary" },
+	{ example: "lang:es", meaning: "posts in a language" },
 ];
 
 /**
- * The search syntax, folded under the form so it is there for whoever wants more than a few
- * words. A search made of filters alone lists newest first.
+ * The search syntax, collapsed under the field behind a small muted summary: each piece as
+ * a chip the size of the text beside its meaning, in as many columns as the width holds.
  */
 function SyntaxHelp() {
 	return () => (
-		<Disclosure>
-			<Disclosure.Trigger>Search tips</Disclosure.Trigger>
-			<Disclosure.Panel>
-				<dl
-					mix={[
-						m(0),
-						grid(),
-						gridTemplate({ columns: "max-content 1fr" }),
-						gap(2),
-						text("sm"),
-						fg("neutral"),
-					]}
-				>
-					{SYNTAX.map((row) => (
-						<div key={row.example} mix={[contents()]}>
-							<dt>
-								<code>{row.example}</code>
-							</dt>
-							<dd mix={[m(0)]}>{row.meaning}</dd>
-						</div>
-					))}
-				</dl>
-				<p mix={[m(0), mbs(3), text("sm"), fg("neutral")]}>
-					Combine them freely; a search of filters alone, like <code>tag:remix</code>, lists the
-					newest posts first.
-				</p>
-			</Disclosure.Panel>
-		</Disclosure>
+		<details mix={[text("sm"), fg("neutral.muted")]}>
+			<summary mix={[inlineFlex(), cursor("pointer"), hover(fg("neutral.emphasis"))]}>
+				Search tips
+			</summary>
+			<dl
+				mix={[
+					m(0),
+					mbs(3),
+					grid(),
+					gridTemplate({ columns: repeat("auto-fill", "minmax(15rem, 1fr)") }),
+					raw({ columnGap: "1.5rem", rowGap: "0.5rem" }),
+				]}
+			>
+				{SYNTAX.map((row) => (
+					<div key={row.example} mix={[hstack({ gap: 2, align: "baseline" })]}>
+						<dt>
+							<code
+								mix={[
+									pi(1.5),
+									rounded("sm"),
+									bg("neutral.bg-tint-hover"),
+									fg("neutral.emphasis"),
+									nowrap(),
+									raw({ fontSize: "inherit" }),
+								]}
+							>
+								{row.example}
+							</code>
+						</dt>
+						<dd mix={[m(0)]}>{row.meaning}</dd>
+					</div>
+				))}
+			</dl>
+			<p mix={[m(0), mbs(3)]}>Filters alone, like tag:remix, list the newest posts first.</p>
+		</details>
 	);
 }
 
@@ -168,16 +192,13 @@ export function SearchView() {
 				<Heading level={1} mix={[text("3xl")]}>
 					Search
 				</Heading>
-				<SearchForm
-					query={model.query}
-					message={model.state === "invalid" ? model.message : undefined}
-				/>
-				{model.state === "blank" ? (
-					<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>
-						Type a few words to find posts by their title, tags or text.
-					</p>
-				) : null}
-				<SyntaxHelp />
+				<div mix={[grid(), gap(3)]}>
+					<SearchForm
+						query={model.query}
+						message={model.state === "invalid" ? model.message : undefined}
+					/>
+					<SyntaxHelp />
+				</div>
 				{model.state === "results" && model.items.length === 0 ? (
 					<p mix={[m(0), text("lg"), fg("neutral")]}>No posts match “{model.query}”.</p>
 				) : null}

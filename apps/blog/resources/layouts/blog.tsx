@@ -11,18 +11,18 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
-import { bg, border, fg, radialGradient } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { bg, fg, radialGradient } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
-import { flexWrap, gap, hstack, inlineFlex, items } from "@sdxc/u/layout";
+import { flexWrap, gap, grid, gridArea, gridTemplate, hstack, items, self } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { bs, is, m, maxBs, maxIs, mbe, mbs, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
+import { is, m, maxBs, maxIs, mbe, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
-import { Modal, NavLink } from "@sdxc/ui";
+import { Modal } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
+import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
 import { PillLabel } from "~/resources/components/pill-label";
 import { searchFrameSrc } from "~/resources/components/search-box";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
@@ -126,9 +126,22 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				]}
 			>
 				<div mix={[maxIs("85ch"), mi("auto"), pbs(8), pi(4), pbe(12)]}>
-					<header mix={[mbe(8)]}>
+					<header
+						mix={[
+							mbe(8),
+							grid(),
+							gridTemplate({
+								columns: "minmax(0, 1fr) auto",
+								areas: '"name search" "nav nav"',
+							}),
+							items("center"),
+							raw({ columnGap: "0.5rem", rowGap: "0.75rem" }),
+							media(WIDE_SCREEN, gridTemplate({ areas: '"name name" "nav search"' })),
+						]}
+					>
 						<p
 							mix={[
+								gridArea("name"),
 								mf("h-card"),
 								m(0),
 								text("xs"),
@@ -146,34 +159,18 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							<data mix={[mf("u-photo")]} value={PROFILE.github.avatar} />
 							<data mix={[mf("p-note")]} value={PROFILE.summary} />
 						</p>
-						<nav aria-label="Main" mix={[hstack({ gap: 2 }), flexWrap("wrap"), mbs(3)]}>
+						<nav aria-label="Main" mix={[gridArea("nav"), hstack({ gap: 2 }), flexWrap("wrap")]}>
 							{navigationItems.map((item) => {
 								let isActive = activePath === item.href;
 
 								return (
-									<NavLink
-										key={item.href}
-										href={item.href}
-										color={isActive ? "brand" : "neutral"}
-										hasBackground
-										aria-current={isActive ? "page" : undefined}
-										mix={[
-											inlineFlex(),
-											items("center"),
-											bs(7),
-											text("sm"),
-											pi(3),
-											rounded("full"),
-											border({ width: 1, color: isActive ? "brand" : "neutral" }),
-											bg(isActive ? "brand.tint" : "neutral.bg-tint-hover"),
-										]}
-									>
+									<NavPill key={item.href} href={item.href} active={isActive}>
 										<PillLabel>{item.label}</PillLabel>
-									</NavLink>
+									</NavPill>
 								);
 							})}
-							<SearchTrigger />
 						</nav>
+						<SearchTrigger mix={[gridArea("search"), media(WIDE_SCREEN, self("start"))]} />
 						<Modal
 							id={SEARCH_DIALOG_ID}
 							aria-label="Search"
@@ -185,11 +182,6 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 								maxIs("none"),
 								maxBs("calc(100dvh - 2 * min(12vh, 6rem))"),
 								raw({ marginBlock: "min(12vh, 6rem) auto" }),
-								media("(max-width: 40rem)", [
-									is("calc(100% - 1rem)"),
-									maxBs("calc(100dvh - 1rem)"),
-									raw({ marginBlock: "0.5rem auto" }),
-								]),
 							]}
 						>
 							<Frame

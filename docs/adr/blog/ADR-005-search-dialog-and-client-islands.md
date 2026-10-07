@@ -42,12 +42,17 @@ up in the bundle's glob map.
 
 ### 2. The search dialog is a frame
 
-The blog layout renders a search pill (`commandfor` + `command="show-modal"`) at the end of the
-navigation and a native `<dialog>` whose body is `<Frame name="search" src="/frames/search">`.
+The blog layout renders the search trigger as a static link to `/search`, one of the header's
+pills, and a native `<dialog>` whose body is `<Frame name="search" src="/frames/search">`. On a
+screen at least 40rem wide the trigger shows "Search ⌘K" at the end of the navigation and a
+plain click on it opens the dialog. On a narrower screen it is a round magnifier beside the site
+name that goes to the `/search` page: one search page that works on a phone, in place of a
+dialog fighting the on-screen keyboard and the mobile viewport. Without script, or before it
+loads, the trigger is a working link everywhere, and nothing hydrates for it.
 The dialog is a single panel in the manner of a system search: anchored near the top of the
 viewport at a fixed width, so it grows downward only, with a large box on top and the results
 under a hairline. It carries no heading, visible label or close button; Escape and a click
-outside close it, and narrow or touch screens add a Cancel button. On `/search?q=…` the frame
+outside close it. On `/search?q=…` the frame
 starts from `/frames/search?q=…`, so the dialog opens on that query with its results rendered.
 
 `/frames/search` renders a `GET` form to `/search` around the box, a `role="status"` line that
@@ -70,11 +75,17 @@ other key types. The choice resets when new results land. Closing the dialog abo
 pending and returns the box and the frame to how the page rendered them: blank, or on
 `/search?q=…` that page's query.
 
-The `SearchTrigger` island adds the keys: ⌘K or Ctrl+K toggles the dialog, `/` opens it from
-outside a field, and Escape closes it even from a search box that would spend Escape clearing
-itself. It closes the dialog on a click that starts and ends on the backdrop, where
-`closedby="any"` is unsupported, and on `pagehide`, so a page restored from the back/forward
-cache comes back closed.
+Being the island every page hydrates, `SearchBox` also attaches the dialog's page-wide
+behaviour (`resources/components/search-keys.ts`), ended with its own signal: a plain click on
+the trigger on a wide screen opens the dialog, while a modified or middle click goes to
+`/search`; ⌘K or Ctrl+K toggles the dialog and `/` opens it from outside a field, at any width;
+Escape closes it even from a search box that would spend Escape clearing itself; a click that
+starts and ends on the backdrop closes it where `closedby="any"` is unsupported; `pagehide`
+closes it, so a page restored from the back/forward cache comes back closed. It also reprints
+the trigger's ⌘K hint as Ctrl K on other keyboards.
+
+`/search` itself uses the same quiet field as the panel and focuses it only when it arrives
+without a query.
 
 ### 3. Server frames resolve in process
 
