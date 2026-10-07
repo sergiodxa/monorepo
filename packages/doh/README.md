@@ -150,6 +150,88 @@ Types only: `RecordType`, `Resolver`, `ResolveOptions`, `Answer<Type>`, `RecordF
 `RecordData<Type>`, `RecordBase`, the nine record interfaces (`ARecord` through `SOARecord`), and
 `UnknownRecord`.
 
+### `@sdxc/doh/caa`
+
+The WebPKI reading of CAA records (RFC 8659, RFC 8657): what a record asks of a certificate
+authority, which RRset applies to a name, and whether a CA may issue for it.
+
+#### `parseCaaProperty(record): CAA.Property`
+
+Reads one CAA record's meaning:
+
+- `issue` / `issuewild` - `{ kind, critical, issuer, malformed, parameters }`. The value follows RFC
+  8659's grammar, whitespace around `;` and `=` included. `issuer` is lowercased without a trailing
+  dot, and `null` when the value names none (`";"`), which forbids issuance. A value that fails the
+  grammar reads as `issuer: null, malformed: true`, forbidding issuance the same way. Parameters keep
+  their published order and spelling.
+- `iodef` - `{ kind, critical, url }`, `url` being `null` unless the value is a `mailto:`, `http:` or
+  `https:` URL.
+- Any other tag - `{ kind: "unknown", critical, tag, value }`; critical, it forbids issuance.
+
+```typescript
+import { parseCaaProperty } from "@sdxc/doh/caa";
+
+parseCaaProperty({
+	type: "CAA",
+	flags: 0,
+	critical: false,
+	tag: "issue",
+	value: "digicert.com; cansignhttpexchanges=yes",
+});
+// { kind: "issue", critical: false, issuer: "digicert.com", malformed: false,
+//   parameters: [{ key: "cansignhttpexchanges", value: "yes" }] }
+```
+
+#### `findRelevantCaa(domain, options?): Promise<Result<CAA.RelevantSet, DoHError>>`
+
+RFC 8659's climb: one `CAA` query for the domain, then for each ancestor up to the TLD, stopping at
+the first answer with records. A leading `*.` and a trailing dot are dropped and the name is
+lowercased. NODATA and NXDOMAIN move the climb on; any other failure ends it as a failure. Records
+reached through a CNAME or DNAME are the target's, with the aliases in `chain`, and when the target
+publishes none the climb continues at the alias's parent.
+
+The set holds `name` (where the records were found, `null` when nowhere), `records`, `unparsed`,
+`chain`, `queried` (every name asked, nearest first) and `authenticated`: whether every answer in
+the climb, denials of existence included, carried the AD flag.
+
+#### `evaluateCaa(records, request): CAA.Decision`
+
+Decides a request against one RRset with no I/O, so records from a zone file decide as records from
+DNS do. `request` is `{ domain, issuer, accountUri?, validationMethod? }`: `domain` starting with
+`*.` asks about a wildcard certificate, and `issuer` is the CA's CAA identifier or a list of them.
+In order:
+
+| Reason                                            | `allowed` | When                                                                                               |
+| ------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| `no-policy`                                       | `true`    | No records                                                                                         |
+| `critical-tag`                                    | `false`   | A critical property of a tag this package does not interpret                                       |
+| `unrestricted`                                    | `true`    | No property applies: only `iodef`, non-critical unknown tags, or `issuewild` on a plain name       |
+| `authorized`                                      | `true`    | An applicable property names one of the issuers and its parameters are satisfied                   |
+| `account-mismatch` / `validation-method-mismatch` | `false`   | Properties name the issuer, and RFC 8657's `accounturi` or `validationmethods` exclude the request |
+| `not-authorized`                                  | `false`   | Applicable properties name other issuers, listed in `issuers`                                      |
+| `forbidden`                                       | `false`   | Every applicable property names no issuer                                                          |
+
+For a wildcard domain, any `issuewild` property replaces every `issue`. Authorizations add up, so
+`issue ";"` beside `issue "ca.example"` still authorizes `ca.example`. Issuers match exactly and
+case-insensitively. Two `accounturi` parameters, or a repeated, empty or malformed
+`validationmethods`, are never satisfied; an omitted `accountUri` or `validationMethod` passes that
+check, and the `authorized` decision carries the property whose parameters show what went unchecked.
+
+#### `mayIssue(request, options?): Promise<CAA.Verdict>`
+
+`findRelevantCaa`, then `evaluateCaa`, with the RRset in `relevant`. Two more refusals:
+`unreadable` when the set holds a record that does not parse, and `lookup-failed` when a query in
+the climb fails, with the failing `name`, `queried` and the `DoHError`. `options` reach every
+query, so `resolver: GOOGLE` confirms a verdict through a second resolver.
+
+The verdict predicts what a CA's own lookup finds when the zone serves it what the resolver saw.
+
+#### `CAA` namespace
+
+Types only: `Record`, `Parameter`, `Property` (`IssueProperty`, `IodefProperty`, `UnknownProperty`),
+`RelevantSet`, `Request`, `Decision`, `Verdict` and one interface per reason. Every one but
+`LookupFailed` is plain data, ready for a log line or storage.
+
 ## Pattern: Tell A Vanished Name From A Failing Resolver
 
 Keep NXDOMAIN and NODATA apart, and treat `TransportError` and `ServerFailureError` as unknown
@@ -183,6 +265,25 @@ let answer = await resolve("example.com", "CAA");
 if (isSuccess(published) && isSuccess(answer)) {
 	let live = new Set(answer.data.records.map(formatRecordData));
 	let missing = !live.has(formatRecordData(published.data));
+}
+```
+
+## Pattern: A Lookup Failure Is A Refusal
+
+A CA refuses to issue when its CAA lookup fails, so `mayIssue` answers `allowed: false` for a
+failing lookup too. Checking `allowed` alone treats a SERVFAIL the way a CA does; narrow on
+`reason` to retry first.
+
+```typescript
+import { GOOGLE } from "@sdxc/doh";
+import { mayIssue } from "@sdxc/doh/caa";
+
+let request = { domain: "*.example.com", issuer: "letsencrypt.org" };
+let verdict = await mayIssue(request);
+if (verdict.reason === "lookup-failed") verdict = await mayIssue(request, { resolver: GOOGLE });
+
+if (!verdict.allowed && verdict.reason !== "lookup-failed") {
+	verdict.relevant.name; // "example.com": where the blocking policy lives
 }
 ```
 
