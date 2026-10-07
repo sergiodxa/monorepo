@@ -61,7 +61,14 @@ the magnifier once a search outlasts 350 ms, and each 200 ms pause in typing poi
 frame's `src` at `/frames/search?q=…` and reloads it. The runtime aborts a reload still in
 flight when the next one starts, and the signal reaches `fetch()`, so only the newest answer
 lands; the panel then animates from its old height to its new one. Submitting the form is a
-document navigation to `/search`.
+document navigation to `/search`, except that Enter follows the only result when one shows.
+
+The box is a WAI-ARIA combobox over the result rows (`role="listbox"`, each row an `option`):
+ArrowDown chooses the next row and wraps from the last to the first, ArrowUp returns from the
+first row to the box, Enter follows the chosen row, and focus never leaves the box, so every
+other key types. The choice resets when new results land. Closing the dialog aborts what is
+pending and returns the box and the frame to how the page rendered them: blank, or on
+`/search?q=…` that page's query.
 
 The `SearchTrigger` island adds the keys: ⌘K or Ctrl+K toggles the dialog, `/` opens it from
 outside a field, and Escape closes it even from a search box that would spend Escape clearing

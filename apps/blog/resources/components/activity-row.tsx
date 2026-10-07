@@ -46,6 +46,12 @@ export namespace ActivityRow {
 		size?: "sm" | "lg";
 		/** Extra mixins on the `<li>`, such as microformat classes. */
 		mix?: TagProps<"li">["mix"];
+		/** The `<li>`'s id, for a list that refers to its rows. */
+		id?: string;
+		/** `"option"` makes the row a choice of the `listbox` it sits in. */
+		role?: "option";
+		/** Whether an `option` row is the chosen one. */
+		"aria-selected"?: "true" | "false";
 		/** Extra mixins on the title link. */
 		linkMix?: TagProps<"a">["mix"];
 		/** Extra mixins on the `<time>`. */
@@ -98,11 +104,15 @@ export function ActivityRow(handle: Handle<ActivityRow.Props>) {
 	return () => {
 		let { badge, children, date, dateMix, description, href, kind, kindLabel, linkMix, mix } =
 			handle.props;
+		let { id, role, "aria-selected": selected } = handle.props;
 		let compact = handle.props.size === "sm";
 		let icon = KIND_ICONS[kind];
 
 		return (
 			<li
+				id={id}
+				role={role}
+				aria-selected={selected}
 				mix={[
 					grid(),
 					gridTemplate({ columns: `${spacing(compact ? 6 : 7)} minmax(0, 1fr) auto` }),

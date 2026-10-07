@@ -58,8 +58,10 @@ Smart Placement and Observability are enabled.
   field) opens a panel near the top of the screen with a large search box; as you type, the
   top six matches appear under it, each with its matched words highlighted and a line of the
   post around the first match, plus a link to every result on `/search`. Enter goes to
-  `/search`, Escape or a click outside closes it, and on `/search` it opens on that page's
-  query. Without JavaScript the panel is a plain search form.
+  `/search` (or straight to the result when there is only one), ArrowDown/ArrowUp choose a
+  result while typing stays in the box, Escape or a click outside closes it, and it reopens
+  blank (on `/search`, on that page's query). Without JavaScript the panel is a plain search
+  form.
 - Encore support page (`/apps/encore/support`), the Support URL of the Encore App Store
   listings: a public form that mails each request to `SUPPORT_INBOX` from
   `encore@support.sergiodxa.com` with the visitor as Reply-To, behind same-origin checks,

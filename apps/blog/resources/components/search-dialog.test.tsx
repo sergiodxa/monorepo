@@ -11,7 +11,7 @@
 
 import { run } from "remix/component";
 import { createRouter } from "remix/router";
-import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
@@ -49,28 +49,31 @@ let requests: Array<FrameRequest> = [];
 /** Queries whose answer waits until the test releases it, keyed by the query text. */
 let held = new Map<string, ReturnType<typeof Promise.withResolvers<void>>>();
 
-/** The dialog model for a query: one match titled after the text, so a test can tell answers apart. */
+/** One match linking to `href`, titled after it. */
+function match(href: string, title: string): SearchViewModel.Item {
+	return {
+		href,
+		kind: "article",
+		kindLabel: "Article",
+		title: [
+			{ text: title, match: true },
+			{ text: " notes", match: false },
+		],
+		excerpt: null,
+		publishedAt: null,
+	};
+}
+
+/**
+ * The dialog model for a query, titled after the text so a test can tell answers apart: ten
+ * matches for text starting with `ten`, one for anything else.
+ */
 function suggestionsFor(query: string): SearchViewModel.Suggestions {
 	if (query === "") return { state: "blank", query: "" };
-	return {
-		state: "results",
-		query,
-		total: 9,
-		items: [
-			{
-				href: `/articles/${query}`,
-				kind: "article",
-				kindLabel: "Article",
-				title: [
-					{ text: query, match: true },
-					{ text: " notes", match: false },
-				],
-				excerpt: null,
-				publishedAt: null,
-			},
-		],
-		seeAll: `/search?q=${query}`,
-	};
+	let items = query.startsWith("ten")
+		? Array.from({ length: 10 }, (_, index) => match(`/articles/ten-${index + 1}`, query))
+		: [match(`/articles/${query}`, query)];
+	return { state: "results", query, total: 9, items, seeAll: `/search?q=${query}` };
 }
 
 /** A page wearing the blog layout, with the dialog's frame served by the same router. */
@@ -180,6 +183,36 @@ function click(target: Element): void {
 	target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 }
 
+/** The links a result row's Enter followed, captured before the document would navigate. */
+let followed: Array<string> = [];
+
+/** Records a click on any link and keeps the document where it is. */
+function captureLinks(event: MouseEvent): void {
+	let link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+	if (link === null) return;
+	event.preventDefault();
+	followed.push(link.getAttribute("href") ?? "");
+}
+
+/** Presses a key `times` times in the box, as a person holding focus there would. */
+function pressInBox(key: string, times = 1): Array<boolean> {
+	return Array.from({ length: times }, () => press(input(), { key }));
+}
+
+/** The row `aria-activedescendant` names, by the link it holds, or `null` for none. */
+function chosen(): string | null {
+	let id = input().getAttribute("aria-activedescendant");
+	if (id === null) return null;
+	return document.getElementById(id)?.querySelector("a")?.getAttribute("href") ?? null;
+}
+
+/** The links of the rows marked `aria-selected="true"`. */
+function selectedRows(): Array<string> {
+	return Array.from(document.querySelectorAll('[role="option"][aria-selected="true"] a')).map(
+		(link) => link.getAttribute("href") ?? "",
+	);
+}
+
 /** Waits out the debounce, and a moment more for the reload it started to land. */
 async function settle(): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50));
@@ -194,7 +227,13 @@ beforeAll(() => {
 	vi.spyOn(CSSStyleSheet.prototype, "insertRule").mockImplementation(() => 0);
 });
 
+beforeEach(() => {
+	followed = [];
+	document.addEventListener("click", captureLinks);
+});
+
 afterEach(() => {
+	document.removeEventListener("click", captureLinks);
 	runtime?.dispose();
 	runtime = undefined;
 	requests = [];
@@ -345,7 +384,51 @@ describe("the search dialog", () => {
 
 		expect(press(input(), { key: "Escape" })).toBe(true);
 		expect(dialog.open).toBe(false);
+	});
+
+	test("reopens blank, with no results and nothing still on its way", async () => {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		dialog.showModal();
+		type("remix");
+		await settle();
+		await vi.waitFor(() => expect(status()).toBe("Top 1 of 9 results"));
+
+		type("slow");
+		dialog.close();
+		await settle();
+
+		dialog.showModal();
+		expect(input().value).toBe("");
+		await vi.waitFor(() => expect(status()).toBe(""));
+		expect(document.querySelector(`#${SEARCH_RESULTS_ID} ol`)).toBeNull();
+		expect(requests.map((request) => request.src)).toEqual([
+			"/frames/search?q=remix",
+			"/frames/search",
+		]);
+	});
+
+	test("reopens on the search page's own query, whatever was typed and abandoned", async () => {
+		let router = application();
+		await loadPage(router, "/search?q=remix");
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		dialog.showModal();
+		type("other");
+		await settle();
+		dialog.close();
+		await settle();
+
 		expect(input().value).toBe("remix");
+		await vi.waitFor(() =>
+			expect(
+				document.querySelector(`#${SEARCH_DIALOG_ID} a[href="/articles/remix"]`),
+			).not.toBeNull(),
+		);
 	});
 
 	test("closes on a click on the backdrop, and stays open for a click inside the panel", async () => {
@@ -392,6 +475,95 @@ describe("the search dialog", () => {
 		expect(input().value).toBe("remix");
 		expect(status()).toBe("Top 1 of 9 results");
 		expect(document.querySelector(`#${SEARCH_DIALOG_ID} a[href="/articles/remix"]`)).not.toBeNull();
+	});
+});
+
+describe("the search dialog's keyboard", () => {
+	/** Hydrates a page and types `text`, waiting for its results to land. */
+	async function searchFor(text: string): Promise<void> {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+		type(text);
+		await settle();
+		await vi.waitFor(() => expect(input().getAttribute("aria-expanded")).toBe("true"));
+	}
+
+	test("is a combobox over the result rows, the See all link outside them", async () => {
+		await searchFor("ten");
+
+		let listbox = document.getElementById(input().getAttribute("aria-controls") ?? "");
+		expect(input().getAttribute("role")).toBe("combobox");
+		expect(listbox?.getAttribute("role")).toBe("listbox");
+		expect(listbox?.querySelectorAll('[role="option"]')).toHaveLength(10);
+		expect(listbox?.querySelector('a[href="/search?q=ten"]')).toBeNull();
+	});
+
+	test("Enter follows the only result when nothing is chosen", async () => {
+		await searchFor("remix");
+
+		expect(pressInBox("Enter")).toEqual([true]);
+		expect(followed).toEqual(["/articles/remix"]);
+	});
+
+	test("Enter submits to /search when several results show and none is chosen", async () => {
+		await searchFor("ten");
+
+		expect(pressInBox("Enter")).toEqual([false]);
+		expect(followed).toEqual([]);
+	});
+
+	test("ArrowDown three times then Enter follows the third result", async () => {
+		await searchFor("ten");
+
+		pressInBox("ArrowDown", 3);
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/ten-3"));
+		expect(selectedRows()).toEqual(["/articles/ten-3"]);
+		expect(document.activeElement).toBe(input());
+
+		pressInBox("Enter");
+		expect(followed).toEqual(["/articles/ten-3"]);
+	});
+
+	test("ArrowDown past the last result wraps to the first, never reaching See all", async () => {
+		await searchFor("ten");
+
+		pressInBox("ArrowDown", 10);
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/ten-10"));
+
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/ten-1"));
+		expect(selectedRows()).toEqual(["/articles/ten-1"]);
+	});
+
+	test("ArrowUp on the first result returns to the box, and does nothing from the box", async () => {
+		await searchFor("ten");
+
+		expect(pressInBox("ArrowUp")).toEqual([false]);
+		expect(chosen()).toBeNull();
+
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/ten-1"));
+
+		expect(pressInBox("ArrowUp")).toEqual([true]);
+		await vi.waitFor(() => expect(chosen()).toBeNull());
+		expect(selectedRows()).toEqual([]);
+	});
+
+	test("typing after choosing a row keeps typing into the box, and the new results clear the choice", async () => {
+		await searchFor("ten");
+
+		pressInBox("ArrowDown", 5);
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/ten-5"));
+
+		type(`${input().value} react router`);
+		expect(input().value).toBe("ten react router");
+		expect(input().selectionStart).toBe("ten react router".length);
+
+		await settle();
+		await vi.waitFor(() => expect(requests.at(-1)?.src).toBe("/frames/search?q=ten+react+router"));
+		await vi.waitFor(() => expect(chosen()).toBeNull());
+		expect(selectedRows()).toEqual([]);
 	});
 });
 

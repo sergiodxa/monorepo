@@ -45,6 +45,25 @@ const RESIZE_MS = 160;
 /** The results region the box marks busy while newer results are on their way. */
 export const SEARCH_RESULTS_ID = "site-search-results";
 
+/** The listbox of result rows the box's combobox controls. */
+export const SEARCH_LISTBOX_ID = "site-search-options";
+
+/** The id of the result row at `index`, which `aria-activedescendant` names. */
+export function searchOptionId(index: number): string {
+	return `${SEARCH_LISTBOX_ID}-${index}`;
+}
+
+/** Every result row on screen, in order. */
+function options(): Array<HTMLElement> {
+	let listbox = document.getElementById(SEARCH_LISTBOX_ID);
+	return listbox ? Array.from(listbox.querySelectorAll<HTMLElement>('[role="option"]')) : [];
+}
+
+/** Follows the link a result row holds, as a click on it would. */
+function follow(option: HTMLElement | undefined): void {
+	option?.querySelector<HTMLAnchorElement>("a[href]")?.click();
+}
+
 /** Props must be a `type` rather than an `interface` to satisfy `SerializableProps`. */
 type SearchBoxProps = {
 	/** The input's id. */
@@ -53,8 +72,10 @@ type SearchBoxProps = {
 	query: string;
 	/** The frame endpoint without a query, so the route owns its own address. */
 	frameSrc: string;
-	/** The dialog the Cancel button closes. */
+	/** The dialog the Cancel button closes, and whose closing resets the box. */
 	dialogId: string;
+	/** How many result rows the frame rendered under the box. */
+	optionCount: number;
 };
 
 /**
@@ -92,12 +113,9 @@ function resize(dialog: HTMLDialogElement | null, from: number): void {
 }
 
 /**
- * The dialog's box. A keystroke marks the results busy and, once typing pauses, reloads the
- * enclosing frame from the URL for the text; the runtime aborts a reload still in flight
- * when the next one starts, so only the newest text's results land, and a failed request
- * leaves the previous ones showing. The box keeps its element across reloads, so focus,
- * caret and typed text survive each one. A spinner replaces the magnifier while a search
- * outlasts {@link SPINNER_DELAY_MS}.
+ * The dialog's box, a combobox over the result rows. Typing reloads the frame once it pauses
+ * (the runtime aborts a reload a newer one replaces); arrows choose a row with focus kept in
+ * the box; closing the dialog returns box and frame to how the page rendered them.
  */
 export const SearchBox = clientEntry(
 	"/resources/components/search-box.tsx#SearchBox",
@@ -105,16 +123,30 @@ export const SearchBox = clientEntry(
 		let debounce: ReturnType<typeof setTimeout> | undefined;
 		let spinnerDelay: ReturnType<typeof setTimeout> | undefined;
 		let spinning = false;
+		/** Whether typing has moved past the results on screen. */
+		let pending = false;
+		/** The chosen row's index, or `-1` while the box itself is the choice. */
+		let selected = -1;
 		/** Counts keystrokes, so a reload only settles the state when no newer one is pending. */
 		let latest = 0;
+		/** What the page rendered the box with, which closing the dialog returns it to. */
+		let initialQuery = handle.props.query;
+		let initialSrc = searchFrameSrc(handle.props.frameSrc, initialQuery);
 
 		handle.signal.addEventListener("abort", () => {
 			clearTimeout(debounce);
 			clearTimeout(spinnerDelay);
 		});
 
+		handle.queueTask(() => {
+			document
+				.getElementById(handle.props.dialogId)
+				?.addEventListener("close", reset, { signal: handle.signal });
+		});
+
 		/** Marks a search pending: busy at once, and the spinner after its delay. */
 		function begin(): void {
+			pending = true;
 			markBusy(true);
 			clearTimeout(spinnerDelay);
 			spinnerDelay = setTimeout(() => {
@@ -125,6 +157,7 @@ export const SearchBox = clientEntry(
 
 		/** Clears the pending marks once the newest results are showing. */
 		function settle(): void {
+			pending = false;
 			markBusy(false);
 			clearTimeout(spinnerDelay);
 			if (!spinning) return;
@@ -132,19 +165,63 @@ export const SearchBox = clientEntry(
 			void handle.update();
 		}
 
-		/** Points the frame at the text's results, unless it already shows them. */
-		async function follow(box: HTMLInputElement, text: string, keystroke: number) {
-			let src = searchFrameSrc(handle.props.frameSrc, text);
+		/** Chooses the row at `index`, or the box itself for `-1`, keeping focus in the box. */
+		function choose(index: number): void {
+			selected = index;
+			let rows = options();
+			rows.forEach((row, at) => row.setAttribute("aria-selected", at === index ? "true" : "false"));
+			rows[index]?.scrollIntoView?.({ block: "nearest" });
+			void handle.update();
+		}
+
+		/** Points the frame at `src` and reloads it, unless it already shows it. */
+		async function load(src: string, dialog: HTMLDialogElement | null, keystroke: number) {
 			if (src === handle.frame.src) return settle();
 
-			let dialog = box.closest("dialog");
 			let from = dialog?.offsetHeight ?? 0;
 			handle.frame.src = src;
 			await handle.frame.reload().catch(() => undefined);
 
 			if (keystroke !== latest) return markBusy(true);
 			settle();
+			choose(-1);
 			resize(dialog, from);
+		}
+
+		/**
+		 * Returns the box and the frame to how the page rendered them, so the dialog reopens on
+		 * the page's own query (blank on every page but `/search`) with nothing pending.
+		 */
+		function reset(): void {
+			clearTimeout(debounce);
+			let keystroke = ++latest;
+			let box = document.getElementById(handle.props.id);
+			if (box instanceof HTMLInputElement) box.value = initialQuery;
+			choose(-1);
+			void load(initialSrc, null, keystroke);
+		}
+
+		/**
+		 * Moves the choice through the rows: down from the box to the first row and around from
+		 * the last, up from the first back to the box. Enter follows the chosen row, or the only
+		 * row when nothing is chosen; otherwise it submits the form to `/search`.
+		 */
+		function navigate(event: KeyboardEvent): void {
+			let rows = options();
+
+			if (event.key === "ArrowDown" && rows.length > 0) {
+				event.preventDefault();
+				choose(selected + 1 >= rows.length ? 0 : selected + 1);
+			} else if (event.key === "ArrowUp" && selected >= 0) {
+				event.preventDefault();
+				choose(selected - 1);
+			} else if (event.key === "Enter" && selected >= 0 && rows[selected]) {
+				event.preventDefault();
+				follow(rows[selected]);
+			} else if (event.key === "Enter" && !pending && rows.length === 1) {
+				event.preventDefault();
+				follow(rows[0]);
+			}
 		}
 
 		return () => (
@@ -171,6 +248,13 @@ export const SearchBox = clientEntry(
 					id={handle.props.id}
 					name="q"
 					defaultValue={handle.props.query}
+					// oxlint-disable-next-line jsx-a11y/no-redundant-roles -- A search input's implicit role is searchbox; the combobox role is what lets aria-activedescendant point into the result rows.
+					role="combobox"
+					list={undefined}
+					aria-autocomplete="list"
+					aria-controls={SEARCH_LISTBOX_ID}
+					aria-expanded={handle.props.optionCount > 0 ? "true" : "false"}
+					aria-activedescendant={selected >= 0 ? searchOptionId(selected) : undefined}
 					aria-label="Search articles, tutorials and the glossary"
 					placeholder="Search articles, tutorials and the glossary"
 					autocomplete="off"
@@ -189,6 +273,7 @@ export const SearchBox = clientEntry(
 						appearance("none"),
 						when("&::placeholder", fg("neutral.muted")),
 						when("&::-webkit-search-decoration", [appearance("none"), hidden()]),
+						on<HTMLInputElement, "keydown">("keydown", navigate),
 						on<HTMLInputElement, "input">("input", (event) => {
 							let box = event.currentTarget;
 							let text = box.value;
@@ -196,7 +281,13 @@ export const SearchBox = clientEntry(
 
 							clearTimeout(debounce);
 							begin();
-							debounce = setTimeout(() => void follow(box, text, keystroke), SEARCH_DEBOUNCE_MS);
+							debounce = setTimeout(() => {
+								void load(
+									searchFrameSrc(handle.props.frameSrc, text),
+									box.closest("dialog"),
+									keystroke,
+								);
+							}, SEARCH_DEBOUNCE_MS);
 						}),
 					]}
 				/>

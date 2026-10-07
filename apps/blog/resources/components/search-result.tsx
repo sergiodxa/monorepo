@@ -9,16 +9,31 @@
 
 import type { Handle } from "remix/component";
 
+import { bg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
+import { p } from "@sdxc/u/size";
+import { hover, when } from "@sdxc/u/state";
 import { Highlight } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
 import { ActivityRow } from "~/resources/components/activity-row";
 
+/** What a result row is given: the match, its size, and its option id inside a listbox. */
+interface SearchResultProps {
+	item: SearchViewModel.Item;
+	size?: "sm" | "lg";
+	/**
+	 * Makes the row an `option` with this id, tinted while hovered or chosen, so a combobox
+	 * can point `aria-activedescendant` at it.
+	 */
+	optionId?: string;
+}
+
 /** Renders a result row; the emoji is named for assistive technology, since the kind is news here. */
-export function SearchResult(handle: Handle<{ item: SearchViewModel.Item; size?: "sm" | "lg" }>) {
+export function SearchResult(handle: Handle<SearchResultProps>) {
 	return () => {
-		let { item, size } = handle.props;
+		let { item, optionId, size } = handle.props;
 
 		return (
 			<ActivityRow
@@ -27,6 +42,19 @@ export function SearchResult(handle: Handle<{ item: SearchViewModel.Item; size?:
 				href={item.href}
 				date={item.publishedAt}
 				size={size}
+				id={optionId}
+				role={optionId ? "option" : undefined}
+				aria-selected={optionId ? "false" : undefined}
+				mix={
+					optionId
+						? [
+								p(2),
+								rounded("md"),
+								hover(bg("neutral.bg-tint-hover")),
+								when('&[aria-selected="true"]', bg("neutral.bg-tint-hover")),
+							]
+						: undefined
+				}
 				description={
 					item.excerpt ? (
 						<>
