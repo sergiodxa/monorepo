@@ -12,7 +12,8 @@ import { isFailure } from "@sdxc/result";
 import jobs from "~/app/jobs";
 import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
-import { captureStatus, closestCapture, requestCapture, waybackKeys } from "~/app/services/wayback";
+import { captureStatus, closestCapture, requestCapture } from "~/app/services/wayback";
+import { waybackKeys } from "~/app/services/wayback-keys";
 
 /** How old a bookmark is before an existing capture counts as its archive. */
 const BACKFILL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
@@ -34,7 +35,7 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 	if (!record) return ctx.ack("The bookmark has no record yet");
 
 	if (record.archive_job) {
-		let keys = waybackKeys();
+		let keys = await waybackKeys();
 		if (!keys) return ctx.exit("The worker has no Wayback Machine keys");
 
 		let status = await captureStatus(record.archive_job, keys);
@@ -68,7 +69,7 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 		}
 	}
 
-	let keys = waybackKeys();
+	let keys = await waybackKeys();
 	if (!keys) return ctx.exit("The worker has no Wayback Machine keys");
 
 	let job = await requestCapture(url, keys);

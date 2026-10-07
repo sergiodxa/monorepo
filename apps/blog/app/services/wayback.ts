@@ -10,7 +10,6 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, success } from "@sdxc/result";
-import { env } from "cloudflare:workers";
 import { boolean, object, optional, parseSafe, string } from "remix/data-schema";
 
 /** Save Page Now's capture endpoint. */
@@ -78,17 +77,6 @@ export class WaybackError extends Error {
 	) {
 		super(message, options);
 	}
-}
-
-/**
- * The archive.org account keys from the worker's `WAYBACK_ACCESS_KEY` and
- * `WAYBACK_SECRET_KEY` secrets, or `null` while either is unset, which pauses archiving.
- */
-export function waybackKeys(): Wayback.Keys | null {
-	let access = env.WAYBACK_ACCESS_KEY;
-	let secret = env.WAYBACK_SECRET_KEY;
-	if (!access || !secret) return null;
-	return { access, secret };
 }
 
 /**

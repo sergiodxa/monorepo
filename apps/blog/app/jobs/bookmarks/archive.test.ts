@@ -12,7 +12,7 @@ import type { Database as DataTable } from "remix/data-table";
 import { createJobContext, Job } from "@sdxc/jobs";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
@@ -21,7 +21,11 @@ import { LikePost } from "~/app/repositories/posts/like";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 
-import archive from "./archive";
+vi.doMock("~/app/services/wayback-keys", () => ({
+	waybackKeys: async () => ({ access: "access-key", secret: "secret-key" }),
+}));
+
+let archive = (await import("./archive")).default;
 
 /** The bookmarked page every test archives. */
 const PAGE_URL = "https://example.com/post";
@@ -75,7 +79,7 @@ describe("the archive job", () => {
 		await expect(run(id)).rejects.toBeInstanceOf(Job.Retry);
 		expect((await Bookmark.findByPostId(db, id))?.archive_job).toBe("spn2-1");
 		expect(saved).toBe(PAGE_URL);
-		expect(authorization).toBe("LOW test-WAYBACK_ACCESS_KEY:test-WAYBACK_SECRET_KEY");
+		expect(authorization).toBe("LOW access-key:secret-key");
 
 		server.use(
 			http.get("https://web.archive.org/save/status/spn2-1", () =>

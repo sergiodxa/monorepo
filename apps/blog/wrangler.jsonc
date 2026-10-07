@@ -47,6 +47,17 @@
 			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
 			"secret_name": "COOKIE_SESSION_SECRET",
 		},
+		// The archive.org account keys `bookmarks.archive` captures bookmarks under.
+		{
+			"binding": "WAYBACK_ACCESS_KEY",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "BLOG_WAYBACK_ACCESS_KEY",
+		},
+		{
+			"binding": "WAYBACK_SECRET_KEY",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "BLOG_WAYBACK_SECRET_KEY",
+		},
 	],
 	"kv_namespaces": [
 		{

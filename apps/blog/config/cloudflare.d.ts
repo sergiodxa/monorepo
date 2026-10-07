@@ -64,17 +64,12 @@ declare global {
 			 * public sponsor roster, and unset keeps the stored roster unrefreshed.
 			 */
 			GITHUB_TOKEN?: string;
-			/**
-			 * Set with `bunx wrangler secret put WAYBACK_ACCESS_KEY`, beside `WAYBACK_SECRET_KEY`:
-			 * the archive.org account keys Save Page Now captures bookmarks under. Unset pauses
-			 * archiving, and each bookmark is archived once both are set.
-			 */
-			WAYBACK_ACCESS_KEY?: string;
-			/** Set with `bunx wrangler secret put WAYBACK_SECRET_KEY`; see `WAYBACK_ACCESS_KEY`. */
-			WAYBACK_SECRET_KEY?: string;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
 			COOKIE_SESSION_SECRET: SecretsStoreSecret;
+			/** The archive.org account keys bookmarks are captured under, from the Secrets Store. */
+			WAYBACK_ACCESS_KEY: SecretsStoreSecret;
+			WAYBACK_SECRET_KEY: SecretsStoreSecret;
 		}
 	}
 
