@@ -52,6 +52,9 @@ export const TAGS = {
 
 	copyable: { content: "inline" },
 
+	/** A small line under a row of actions, for the secondary ways to do the same thing. */
+	"fine-print": { content: "inline" },
+
 	/** The npm form is what an author writes; the other managers are derived from it. */
 	"install-command": { content: "none", attributes: s.object({ command: s.string() }) },
 

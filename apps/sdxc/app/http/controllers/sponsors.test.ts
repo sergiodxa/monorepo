@@ -46,6 +46,9 @@ describe("GET /sponsors", () => {
 		expect(response.status).toBe(200);
 		expect(body).toContain("Fund the work behind sdxc");
 		expect(body).toContain('href="https://github.com/sponsors/sergiodxa"');
+		expect(body).toContain('href="https://www.paypal.com/paypalme/sergiodxa/10USD"');
+		expect(body).toContain('href="https://ko-fi.com/sergiodxa"');
+		expect(body).not.toContain("<fine-print");
 		expect(body).not.toContain("Current sponsors");
 		expect(body).not.toContain("Past sponsors");
 	});

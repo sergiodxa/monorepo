@@ -9,6 +9,8 @@ package maintained.
 
 <actions cta-href="https://github.com/sponsors/sergiodxa" cta-label="Sponsor on GitHub" alt-href="/philosophy" alt-label="Read the philosophy" />
 
+<fine-print>One-off instead? Send [$5](https://www.paypal.com/paypalme/sergiodxa/5USD), [$10](https://www.paypal.com/paypalme/sergiodxa/10USD) or [$20](https://www.paypal.com/paypalme/sergiodxa/20USD) through PayPal, or any amount on [Ko-fi](https://ko-fi.com/sergiodxa).</fine-print>
+
 </split-copy>
 </hero>
 

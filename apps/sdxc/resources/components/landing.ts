@@ -16,6 +16,7 @@ import Copyable from "~/resources/components/copyable";
 import Feature from "~/resources/components/feature";
 import FeatureGrid from "~/resources/components/feature-grid";
 import Files, { File, Folder } from "~/resources/components/files";
+import FinePrint from "~/resources/components/fine-print";
 import Hero from "~/resources/components/hero";
 import InstallCommand from "~/resources/components/install-command";
 import Note from "~/resources/components/note";
@@ -34,6 +35,7 @@ export const LANDING_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	stats: Stats,
 	stat: Stat,
 	copyable: Copyable,
+	"fine-print": FinePrint,
 	"section-block": SectionBlock,
 	"feature-grid": FeatureGrid,
 	feature: Feature,
