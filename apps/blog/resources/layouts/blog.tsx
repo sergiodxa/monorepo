@@ -14,15 +14,16 @@ import { mf } from "@sdxc/microformats/ui";
 import { bg, border, fg, radialGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
-import { flexWrap, gap, hstack } from "@sdxc/u/layout";
+import { flexWrap, gap, hstack, inlineFlex, items } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { is, m, maxBs, maxIs, mbe, mbs, mi, minBs, p, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { bs, is, m, maxBs, maxIs, mbe, mbs, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
 import { Modal, NavLink } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
+import { PillLabel } from "~/resources/components/pill-label";
 import { searchFrameSrc } from "~/resources/components/search-box";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import DocumentLayout from "~/resources/layouts/document";
@@ -157,15 +158,17 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 										hasBackground
 										aria-current={isActive ? "page" : undefined}
 										mix={[
+											inlineFlex(),
+											items("center"),
+											bs(7),
 											text("sm"),
 											pi(3),
-											pb(1),
 											rounded("full"),
 											border({ width: 1, color: isActive ? "brand" : "neutral" }),
 											bg(isActive ? "brand.tint" : "neutral.bg-tint-hover"),
 										]}
 									>
-										{item.label}
+										<PillLabel>{item.label}</PillLabel>
 									</NavLink>
 								);
 							})}

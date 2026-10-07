@@ -14,11 +14,13 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
 import { hidden, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
-import { mis, pb, pi } from "@sdxc/u/size";
+import { bs, mis, pb, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { font, text } from "@sdxc/u/typography";
 import { Button, Keyboard } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
+
+import { PillLabel } from "~/resources/components/pill-label";
 
 /** The dialog the trigger and every key open, which the layout renders with this id. */
 export const SEARCH_DIALOG_ID = "site-search";
@@ -148,8 +150,9 @@ export const SearchTrigger = clientEntry(
 				aria-keyshortcuts="Meta+K Control+K /"
 				mix={[
 					mis("auto"),
+					bs(7),
 					pi(3),
-					pb(1),
+					pb(0),
 					rounded("full"),
 					border({ width: 1, color: "neutral" }),
 					bg("neutral.bg-tint-hover"),
@@ -167,7 +170,7 @@ export const SearchTrigger = clientEntry(
 				]}
 			>
 				<SearchIcon size="1em" mix={[shrink(0)]} />
-				<span mix={[media("(max-width: 40rem)", hidden())]}>Search</span>
+				<PillLabel mix={[media("(max-width: 40rem)", hidden())]}>Search</PillLabel>
 				<Keyboard
 					aria-hidden="true"
 					mix={[
