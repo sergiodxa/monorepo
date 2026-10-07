@@ -1,6 +1,7 @@
 /**
  * Response builders that pair a body with its matching Content-Type
- * header, covering the common content kinds a server returns.
+ * header, covering the common content kinds a server returns. A text kind
+ * declares `charset=utf-8`, the encoding a string body is always sent in.
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
@@ -36,7 +37,7 @@ export function json<T>(body: T, init?: ResponseInit): Response {
  */
 export function text(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.Text);
+	headers.set("Content-Type", `${ContentType.Text}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 
@@ -52,7 +53,7 @@ export function text(body: string, init?: ResponseInit): Response {
  */
 export function html(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.HTML);
+	headers.set("Content-Type", `${ContentType.HTML}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 
@@ -68,7 +69,7 @@ export function html(body: string, init?: ResponseInit): Response {
  */
 export function css(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.CSS);
+	headers.set("Content-Type", `${ContentType.CSS}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 
@@ -84,7 +85,7 @@ export function css(body: string, init?: ResponseInit): Response {
  */
 export function javascript(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.JavaScript);
+	headers.set("Content-Type", `${ContentType.JavaScript}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 
@@ -100,7 +101,7 @@ export function javascript(body: string, init?: ResponseInit): Response {
  */
 export function xml(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.XML);
+	headers.set("Content-Type", `${ContentType.XML}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 
@@ -134,7 +135,7 @@ export function csv(body: string | ReadableStream<Uint8Array>, init?: ResponseIn
  */
 export function markdown(body: string, init?: ResponseInit): Response {
 	let headers = new Headers(init?.headers);
-	headers.set("Content-Type", ContentType.Markdown);
+	headers.set("Content-Type", `${ContentType.Markdown}; charset=utf-8`);
 	return new Response(body, { ...init, headers });
 }
 

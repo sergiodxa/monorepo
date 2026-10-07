@@ -37,37 +37,37 @@ import {
 describe("content-type", () => {
 	test("ok sets HTML content-type", () => {
 		let res = ok("<h1>Hello</h1>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("created sets HTML content-type", () => {
 		let res = created("<p>Created</p>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("accepted sets HTML content-type", () => {
 		let res = accepted("<p>Accepted</p>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("badRequest sets HTML content-type", () => {
 		let res = badRequest("<p>Bad Request</p>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("unauthorized sets HTML content-type", () => {
 		let res = unauthorized("<p>Unauthorized</p>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("notFound sets HTML content-type", () => {
 		let res = notFound("<h1>Not Found</h1>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("internalServerError sets HTML content-type", () => {
 		let res = internalServerError("<h1>Server Error</h1>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 });
 
@@ -213,7 +213,7 @@ describe("custom headers", () => {
 	test("ok accepts custom headers", () => {
 		let res = ok("<p>Test</p>", { headers: { "X-Custom": "value" } });
 		expect(res.headers.get("X-Custom")).toBe("value");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("created accepts custom headers", () => {

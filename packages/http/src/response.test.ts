@@ -42,7 +42,7 @@ describe(json, () => {
 describe(text, () => {
 	test("sets text/plain content-type", () => {
 		let res = text("Hello, World!");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.Text);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.Text}; charset=utf-8`);
 	});
 
 	test("returns text body", async () => {
@@ -60,7 +60,7 @@ describe(text, () => {
 describe(html, () => {
 	test("sets HTML content-type", () => {
 		let res = html("<h1>Hello</h1>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.HTML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.HTML}; charset=utf-8`);
 	});
 
 	test("returns HTML body", async () => {
@@ -78,7 +78,7 @@ describe(html, () => {
 describe(css, () => {
 	test("sets CSS content-type", () => {
 		let res = css("body { color: red; }");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.CSS);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.CSS}; charset=utf-8`);
 	});
 
 	test("returns CSS body", async () => {
@@ -98,7 +98,7 @@ describe(css, () => {
 describe(javascript, () => {
 	test("sets JavaScript content-type", () => {
 		let res = javascript("console.log('Hello');");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.JavaScript);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.JavaScript}; charset=utf-8`);
 	});
 
 	test("returns JavaScript body", async () => {
@@ -118,7 +118,7 @@ describe(javascript, () => {
 describe(xml, () => {
 	test("sets XML content-type", () => {
 		let res = xml("<root><item>Hello</item></root>");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.XML);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.XML}; charset=utf-8`);
 	});
 
 	test("returns XML body", async () => {
@@ -235,7 +235,7 @@ describe(attachment, () => {
 describe(markdown, () => {
 	test("sets Markdown content-type", () => {
 		let res = markdown("# Hello World");
-		expect(res.headers.get("Content-Type")).toBe(ContentType.Markdown);
+		expect(res.headers.get("Content-Type")).toBe(`${ContentType.Markdown}; charset=utf-8`);
 	});
 
 	test("returns Markdown body", async () => {
