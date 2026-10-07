@@ -1,8 +1,8 @@
 /**
  * `POST /billing/tenants/:tenantId/checkout` — opens a hosted checkout for one of
- * this tenant's plans or add-ons (ADR-018). A backend endpoint: there is no
- * dashboard app in this ADR series, so a future UI posts here and is redirected
- * to Polar's hosted page.
+ * this tenant's plans or add-ons (ADR-018), for the tenant's owner alone, since a
+ * checkout bills the owning customer. A future dashboard UI posts here and is
+ * redirected to Polar's hosted page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,7 @@ import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import { dashboardRole } from "~/app/http/middleware/dashboard-role";
 import { polar } from "~/app/lib/billing";
 import { openCheckout } from "~/app/services/billing-checkout";
 import routes from "~/routes/web";
@@ -44,28 +45,32 @@ function checkoutReturnUrl(requestUrl: string): string {
 /**
  * Opens a hosted checkout for a tenant's base plan or an add-on.
  *
- * @returns A `303` redirect to the hosted checkout, `404` when the tenant does
- * not exist, or `502` when the platform could not open a session.
+ * @returns A `303` redirect to the hosted checkout, `401` with no dashboard
+ * session, `403` for anyone but the tenant's owner, or `502` when the platform
+ * could not open a session.
  * @example
  * router.map(routes.billing.checkout, checkout);
  */
-export default createAction(routes.billing.checkout, async (ctx) => {
-	let { tenantId } = s.parse(Params, ctx.params);
-	let submitted = s.parse(CheckoutForm, ctx.formData);
+export default createAction(routes.billing.checkout, {
+	middleware: [dashboardRole("owner")],
+	handler: async (ctx) => {
+		let { tenantId } = s.parse(Params, ctx.params);
+		let submitted = s.parse(CheckoutForm, ctx.formData);
 
-	let opened = await openCheckout(ctx.db, polar, {
-		tenantId,
-		email: submitted.email,
-		name: submitted.name === "" ? undefined : submitted.name,
-		product: submitted.product,
-		kind: submitted.kind,
-		returnTo: checkoutReturnUrl(ctx.request.url),
-	});
+		let opened = await openCheckout(ctx.db, polar, {
+			tenantId,
+			email: submitted.email,
+			name: submitted.name === "" ? undefined : submitted.name,
+			product: submitted.product,
+			kind: submitted.kind,
+			returnTo: checkoutReturnUrl(ctx.request.url),
+		});
 
-	if (!opened.ok) {
-		if (opened.reason === "tenant_not_found") return notFound({ error: "tenant_not_found" });
-		return badGateway({ error: opened.reason, message: opened.error.message });
-	}
+		if (!opened.ok) {
+			if (opened.reason === "tenant_not_found") return notFound({ error: "tenant_not_found" });
+			return badGateway({ error: opened.reason, message: opened.error.message });
+		}
 
-	return redirect(opened.url, { status: redirect.Status.SeeOther });
+		return redirect(opened.url, { status: redirect.Status.SeeOther });
+	},
 });

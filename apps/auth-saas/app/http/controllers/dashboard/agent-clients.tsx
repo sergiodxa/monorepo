@@ -16,21 +16,22 @@
 
 import type { RequestContext } from "remix/router";
 
+import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
+import type { DashboardTenantMember } from "~/app/http/middleware/dashboard-session";
 import type { MembershipRole } from "~/app/models/membership";
 
 import {
+	DashboardSignInRequiredError,
 	dashboardSignInUrl,
-	resolveDashboardSession,
+	resolveTenantMember,
 } from "~/app/http/middleware/dashboard-session";
 import { callManagementApi } from "~/app/lib/management-client";
 import AgentClientBinding from "~/app/models/agent-client-binding";
-import Membership from "~/app/models/membership";
-import Tenant from "~/app/models/tenant";
 import {
 	MANAGEMENT_SCOPES,
 	MANAGEMENT_SCOPE_DESCRIPTIONS,
@@ -52,39 +53,25 @@ function redirect(location: string): Response {
 }
 
 /**
- * Resolves the signed-in dashboard session and confirms it holds a membership on
- * `:tenantId`, and that the tenant still exists. Returns the redirect a caller
- * should answer with when either check fails.
+ * Resolves the signed-in dashboard session's membership of `:tenantId`, answering
+ * the redirect a caller should send instead: to sign-in when there is no session,
+ * and back to the dashboard for a tenant the subject does not administer.
  *
  * @param ctx - The request context (provides `request` and `db`).
  * @param tenantId - The tenant id the matched route's own `:tenantId` segment named.
- * @returns The session, membership and tenant on success, or the redirect to answer.
+ * @returns The session's membership on success, or the redirect to answer.
  */
 async function requireTenantMembership(
 	ctx: RequestContext,
 	tenantId: string,
-): Promise<
-	| {
-			subjectId: string;
-			role: MembershipRole;
-			tenant: { id: string; name: string };
-	  }
-	| { redirect: Response }
-> {
-	let session = await resolveDashboardSession(ctx);
-	if (!session) {
+): Promise<DashboardTenantMember | { redirect: Response }> {
+	let member = await resolveTenantMember(ctx, tenantId);
+	if (isSuccess(member)) return member.data;
+
+	if (member.error instanceof DashboardSignInRequiredError) {
 		return { redirect: redirect(dashboardSignInUrl(ctx.url.pathname)) };
 	}
-
-	let membership = await Membership.findByTenantAndSubject(ctx.db, tenantId, session.subjectId);
-	if (!membership) return { redirect: redirect(routes.dashboard.show.href()) };
-
-	let tenant = await Tenant.findById(ctx.db, tenantId);
-	if (!tenant || tenant.status === "deleted") {
-		return { redirect: redirect(routes.dashboard.show.href()) };
-	}
-
-	return { subjectId: session.subjectId, role: membership.role, tenant };
+	return { redirect: redirect(routes.dashboard.show.href()) };
 }
 
 /**

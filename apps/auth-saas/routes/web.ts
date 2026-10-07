@@ -22,9 +22,9 @@ export default route({
 	cspReports: post("/reports/csp"),
 
 	/**
-	 * Per-tenant subscriptions (ADR-018). Backend endpoints only — there is no
-	 * dashboard app in this ADR series, so a future UI posts to `checkout` and
-	 * `portal` and is redirected through `checkoutReturn`.
+	 * Per-tenant subscriptions (ADR-018). `checkout` and `portal` answer the
+	 * tenant owner's dashboard session alone; a UI posts to them and is
+	 * redirected through `checkoutReturn`.
 	 */
 	billing: {
 		checkout: post("/billing/tenants/:tenantId/checkout"),
