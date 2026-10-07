@@ -32,6 +32,9 @@ Production URL: https://sergiodxa.com
 
 Smart Placement and Observability are enabled.
 
+`COOKIE_SESSION_SECRET` signs the session cookie, so a page request arriving without it, or
+with it empty, is answered with a 500.
+
 ## Features
 
 - Server-rendered public articles, tutorials, bookmarks, feeds, and sitemap.

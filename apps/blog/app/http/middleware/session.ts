@@ -7,9 +7,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { Middleware } from "remix/router";
 
+import { text } from "@sdxc/http/response";
+import { currentLog } from "@sdxc/logger";
+import { isFailure, wrap } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createCookie } from "remix/cookie";
+import * as s from "remix/data-schema";
+import { minLength } from "remix/data-schema/checks";
 import { session } from "remix/middleware/session";
 
 import { getEnv } from "~/app/http/middleware/env";
@@ -31,34 +38,62 @@ const SESSION_COOKIE_NAME = "r3:session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 365;
 const SESSION_PREFIX = "session:";
 
-let cachedSessionMiddleware: ReturnType<typeof createSessionMiddleware> | null = null;
+/** A key the session cookie can be signed with: any string with at least one character. */
+const SESSION_SECRET = s.string().pipe(minLength(1));
+
+/** Recorded when a request arrives with no usable `COOKIE_SESSION_SECRET`. */
+const SECRET_MISSING_EVENT = "session.secret_missing";
+
+let cachedSessionMiddleware: {
+	secret: string;
+	middleware: ReturnType<typeof createSessionMiddleware>;
+} | null = null;
 
 /**
- * Attaches session handling to every request. The underlying middleware is
- * built on first use because its cookie secret comes from request-scoped env
- * bindings, then reused by later requests.
+ * Attaches session handling to every request, signing the cookie with
+ * `COOKIE_SESSION_SECRET`. A request arriving without that secret is answered with a
+ * 500, so no cookie is ever signed or trusted under a key anyone could know. The
+ * middleware is rebuilt whenever the secret changes and reused while it holds.
  */
-let sessionMiddleware: Middleware = (ctx, next) => {
-	let sessionMiddleware = cachedSessionMiddleware;
+let sessionMiddleware: Middleware = async (ctx, next) => {
+	let secret = await readSecret();
 
-	if (!sessionMiddleware) {
-		sessionMiddleware = createSessionMiddleware();
-		cachedSessionMiddleware = sessionMiddleware;
+	if (isFailure(secret)) {
+		currentLog()?.warn(SECRET_MISSING_EVENT, { error: secret.error.message });
+		return text("Internal Server Error", { status: 500 });
 	}
 
-	return sessionMiddleware(ctx, next);
+	let cached = cachedSessionMiddleware;
+
+	if (cached?.secret !== secret.data) {
+		cached = { secret: secret.data, middleware: createSessionMiddleware(secret.data) };
+		cachedSessionMiddleware = cached;
+	}
+
+	return cached.middleware(ctx, next);
 };
 
 export default sessionMiddleware;
 
-function createSessionMiddleware() {
+/**
+ * Reads the cookie signing secret from the request's bindings.
+ *
+ * @returns The secret, or why the bindings hold no usable one: unset or empty.
+ */
+async function readSecret(): Promise<Result<string, Error>> {
+	let secret = wrap(() => getEnv("COOKIE_SESSION_SECRET"));
+	if (isFailure(secret)) return secret;
+	return validate(secret.data, SESSION_SECRET);
+}
+
+function createSessionMiddleware(secret: string) {
 	let sessionCookie = createCookie(SESSION_COOKIE_NAME, {
 		path: "/",
 		maxAge: SESSION_TTL_SECONDS,
 		httpOnly: true,
 		sameSite: "Lax",
 		secure: getEnv("IS_PROD"),
-		secrets: [getEnv("COOKIE_SESSION_SECRET", "s3cr3t")],
+		secrets: [secret],
 	});
 
 	return session(
