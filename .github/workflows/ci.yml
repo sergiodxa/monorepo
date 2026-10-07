@@ -29,32 +29,25 @@ concurrency:
 
 jobs:
   check:
-    name: ${{ matrix.name }}
+    name: Check
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - name: Check
-            command: bun run check
-            typegen: true
-          - name: Test
-            command: bun run test
-            typegen: true
 
     steps:
-      - name: Checkout
+      - &checkout
+        name: Checkout
         uses: actions/checkout@v7
 
-      - name: Setup Bun
+      - &setup-bun
+        name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
       # Vitest runs on Node, and the runner's default Node still flags node:sqlite (behind the
       # in-memory test databases) as experimental, printing a warning from every worker.
-      - name: Setup Node
+      - &setup-node
+        name: Setup Node
         uses: actions/setup-node@v7
         with:
           node-version: 24
@@ -67,22 +60,83 @@ jobs:
       # version Socket knows to be malware, which a lockfile cannot do on its own: a version
       # is often flagged days after it was published and pinned. A block surfaces as a
       # resolution failure from bun, and the firewall step logs the package and the reason.
-      - name: Setup Socket Firewall
+      - &setup-socket-firewall
+        name: Setup Socket Firewall
         uses: socketdev/action@ba6de6cc0565af1f42295590380973573297e31f # v1.3.2
         with:
           mode: firewall-free
 
-      - name: Install dependencies
+      - &install-dependencies
+        name: Install dependencies
         run: sfw bun install --frozen-lockfile
 
-      - name: Generate framework types
-        if: matrix.typegen
+      # Typegen reads each app's secrets from `.dev.vars` to type them, and the Workers test
+      # pool loads them from there as the Worker's environment.
+      - &example-secrets
+        name: Use example secrets
         run: |
           for file in apps/*/.env.example; do
             cp "$file" "${file%/.env.example}/.dev.vars"
           done
 
-          bun --filter '*' cf:typegen
+      - name: Generate framework types
+        run: bun --filter '*' cf:typegen
 
-      - name: Run ${{ matrix.name }}
-        run: ${{ matrix.command }}
+      - name: Run Check
+        run: bun run check
+
+  workspaces:
+    name: List test workspaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      workspaces: ${{ steps.list.outputs.workspaces }}
+
+    steps:
+      - *checkout
+
+      # Every app and package holding a test file becomes one Test job, and the repo-level
+      # `test/` and `scripts/` suites become the `root` job, so a new workspace is picked up
+      # without editing this file.
+      - name: List workspaces with tests
+        id: list
+        run: |
+          workspaces=$(
+            git ls-files -- '*.test.ts' '*.test.tsx' \
+              | awk -F/ '$1 == "apps" || $1 == "packages" { print $1 "/" $2; next } { print "root" }' \
+              | sort -u \
+              | jq --raw-input --null-input --compact-output '[inputs]'
+          )
+          echo "workspaces=$workspaces" >> "$GITHUB_OUTPUT"
+
+  test:
+    name: Test (${{ matrix.workspace }})
+    needs: workspaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: ${{ fromJSON(needs.workspaces.outputs.workspaces) }}
+
+    steps:
+      - *checkout
+      - *setup-bun
+      - *setup-node
+      - *setup-socket-firewall
+      - *install-dependencies
+      - *example-secrets
+
+      # Vitest matches a relative filter as a substring of each project's own paths, so
+      # `packages/u` would also run `ui`, `uuid` and `user-agent`. An absolute path ending in
+      # a slash matches as a prefix instead: exactly this workspace, across every project that
+      # collects from it (an app's threads project and its Workers project alike).
+      - name: Run tests
+        env:
+          WORKSPACE: ${{ matrix.workspace }}
+        run: |
+          if [ "$WORKSPACE" = root ]; then
+            bun run test --project root
+          else
+            bun run test "$PWD/$WORKSPACE/"
+          fi

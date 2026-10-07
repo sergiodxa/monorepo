@@ -22,8 +22,11 @@ bun lint                        # Check linting only (oxlint)
 bun lint:fix                    # Fix linting issues
 bun typecheck                   # Type check only, via the Oxlint type-aware path (tsgolint)
 bun run test                    # Run every test, all of them under Vitest (`vp test run`).
-                                 # CI runs exactly this.
-vp test run <path>              # Scope Vitest to a path while iterating
+                                 # CI runs it once per app and package, as
+                                 # `bun run test "$PWD/<workspace>/"`, plus `--project root`.
+vp test run <path>              # Scope Vitest to a path while iterating. A relative path
+                                 # matches as a substring (`packages/u` also runs `ui`,
+                                 # `uuid`…); `"$PWD/packages/u/"` runs exactly that workspace
 vp test watch                   # Watch mode
 vp lint <path>                  # Scope a static check to one workspace while iterating
 ```
