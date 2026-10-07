@@ -5,7 +5,9 @@
 # (which self-bootstraps the auth server's own client row via
 # `Client.ensureAuthServerClient`, so a freshly migrated database works with no
 # prior visit), then navigates to a hand-built `prompt=create` request naming that
-# client, which is what makes the four credential fields appear.
+# client, which is what makes the four credential fields appear. It asks for
+# `openid offline_access`, the scope the server's own sign-in asks for: only
+# `offline_access` earns the refresh token `/auth/callback` needs to open a session.
 #
 # Submitting the form is register-or-sign-in in one POST: an unknown email is
 # registered with a verified password and signed in; a known email is signed in
@@ -13,14 +15,17 @@
 # the account already exists — which is what makes a fixed email idempotent across
 # runs (first run registers, later runs sign in). `username` must be present and
 # unique, so it reuses the (unique) email.
+#
+# The password input is addressed by its `name` attribute: `<input type="password">`
+# exposes no ARIA role, so it is never a `textbox`, while the other three fields are.
 command login(email, password) {
 	let creds = { email: email, password: password }
 	browser.open "http://localhost:3002/"
-	browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=d12d3901-3cbe-468b-adf5-ac3d3e015728&redirect_uri=http://localhost:3002/auth/callback&state=spec-login&prompt=create"
+	browser.navigate "http://localhost:3002/authorize?response_type=code&client_id=d12d3901-3cbe-468b-adf5-ac3d3e015728&redirect_uri=http://localhost:3002/auth/callback&state=spec-login&scope=openid+offline_access&prompt=create"
 	browser.fill textbox "Display name" with "Spec User"
 	browser.fill textbox "Username" with creds.email
 	browser.fill textbox "Email" with creds.email
-	browser.fill textbox "Password" with creds.password
+	browser.fill field "password" with creds.password
 	browser.click button "Login"
 	# The POST answers with a redirect chain (…/auth/callback sets the session
 	# cookie, then → /account/sessions). agent-browser returns from the click before
