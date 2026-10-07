@@ -34,6 +34,7 @@ dispatcher.map(jobs.webmentions.send, () => import("~/app/jobs/webmentions/send"
 dispatcher.map(jobs.webmentions.deliver, () => import("~/app/jobs/webmentions/deliver"));
 dispatcher.map(jobs.webmentions.scheduled, () => import("~/app/jobs/webmentions/scheduled"));
 dispatcher.map(jobs.bookmarks.inspect, () => import("~/app/jobs/bookmarks/inspect"));
+dispatcher.map(jobs.bookmarks.archive, () => import("~/app/jobs/bookmarks/archive"));
 dispatcher.map(jobs.bookmarks.sweep, () => import("~/app/jobs/bookmarks/sweep"));
 dispatcher.map(jobs.bookmarks.digest, () => import("~/app/jobs/bookmarks/digest"));
 dispatcher.map(jobs.sponsors.refresh, () => import("~/app/jobs/sponsors/refresh"));

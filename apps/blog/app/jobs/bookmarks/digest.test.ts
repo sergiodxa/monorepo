@@ -1,7 +1,7 @@
 /**
  * Runs the digest and the weekly sweep against a migrated database, a recording mail
  * transport and a stand-in queue, so an open flag is mailed exactly once, a reviewed one
- * never, and the sweep queues an inspection for every bookmark on another site.
+ * never, and the sweep queues every inspection and each archive that is due.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -101,7 +101,7 @@ describe("the digest job", () => {
 });
 
 describe("the sweep job", () => {
-	test("queues an inspection for every bookmark on another site", async () => {
+	test("queues an inspection for every bookmark on another site, and an archive for each unarchived one", async () => {
 		let external = await bookmark("https://example.com/post");
 		let created = await LikePost.create(db, {
 			author_id: author,
@@ -113,6 +113,20 @@ describe("the sweep job", () => {
 		await sweep(ctx);
 
 		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.inspect, [{ postId: external }]);
+		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.archive, [{ postId: external }]);
 		expect(created).not.toBeNull();
+	});
+
+	test("leaves out an archived bookmark and one whose archive was attempted this month", async () => {
+		let archived = await bookmark("https://example.com/archived");
+		await LikePost.update(db, archived, { meta: { archived_at: "2026-10-01T00:00:00.000Z" } });
+		let attempted = await bookmark("https://example.com/attempted");
+		await Bookmark.archived(db, attempted);
+
+		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
+		ctx.set(Database, db, { property: "db" });
+		await sweep(ctx);
+
+		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.archive, []);
 	});
 });

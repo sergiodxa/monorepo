@@ -33,14 +33,17 @@ export namespace LikePost {
 		url: string;
 		/** The page's own summary or its opening; empty until one is typed or read. */
 		description: string;
+		/** The Wayback Machine capture's instant (ISO 8601); empty until one is recorded. */
+		archived_at: string;
 	}
 
 	/**
 	 * Base post fields plus `Meta` values under `meta`, accepted by `create`; a bookmark
-	 * created without a description starts with an empty one.
+	 * created without a description or an archive starts with each empty.
 	 */
 	export interface CreateInput extends Omit<Post.TypedCreateInput<Meta>, "meta"> {
-		meta: Omit<Meta, "description"> & Partial<Pick<Meta, "description">>;
+		meta: Omit<Meta, "description" | "archived_at"> &
+			Partial<Pick<Meta, "description" | "archived_at">>;
 	}
 
 	/**
@@ -90,6 +93,9 @@ let likeMetaCodec: Post.MetaCodec<LikePost.Meta> = {
 		if (typeof meta.description !== "undefined") {
 			rows.push({ key: "description", value: meta.description });
 		}
+		if (typeof meta.archived_at !== "undefined") {
+			rows.push({ key: "archived_at", value: meta.archived_at });
+		}
 		return rows;
 	},
 	deserialize(rows) {
@@ -97,6 +103,7 @@ let likeMetaCodec: Post.MetaCodec<LikePost.Meta> = {
 			title: likeMetaValue(rows, "title") ?? "",
 			url: likeMetaValue(rows, "url") ?? "",
 			description: likeMetaValue(rows, "description") ?? "",
+			archived_at: likeMetaValue(rows, "archived_at") ?? "",
 		};
 	},
 };
@@ -150,7 +157,11 @@ export class LikePost {
 	 * @returns The created post record as returned by the base repository.
 	 */
 	static create(db: Database, input: LikePost.CreateInput) {
-		let meta = { ...input.meta, description: input.meta.description ?? "" };
+		let meta = {
+			...input.meta,
+			description: input.meta.description ?? "",
+			archived_at: input.meta.archived_at ?? "",
+		};
 		return Post.createForType<"like", LikePost.Meta>(
 			db,
 			this.postType,
@@ -250,24 +261,19 @@ export class LikePost {
 	}
 
 	/**
-	 * Builds a Wayback Machine snapshot URL, using `created_at` as the archive
-	 * capture key.
+	 * Builds a Wayback Machine snapshot URL for a moment: the recorded capture's instant when
+	 * there is one, the bookmark's creation otherwise. The archive answers with the capture
+	 * closest to that moment, so an exact capture instant opens exactly that capture.
 	 *
 	 * @param url Original target URL to archive.
-	 * @param created_at Post creation timestamp.
+	 * @param at The capture's or the bookmark's instant.
 	 * @returns Snapshot URL for `web.archive.org`, or `null` if invalid date.
 	 */
-	static waybackSnapshotUrl(url: string, created_at: string) {
-		let created = new Date(created_at);
-		if (Number.isNaN(created.getTime())) return null;
+	static waybackSnapshotUrl(url: string, at: string) {
+		let instant = new Date(at);
+		if (Number.isNaN(instant.getTime())) return null;
 
-		let date = created
-			.toISOString()
-			.replaceAll("-", "")
-			.replaceAll(":", "")
-			.replaceAll(".", "")
-			.replace("T", "");
-
-		return `https://web.archive.org/web/${date}/${url}`;
+		let timestamp = instant.toISOString().replaceAll(/\D/g, "").slice(0, 14);
+		return `https://web.archive.org/web/${timestamp}/${url}`;
 	}
 }

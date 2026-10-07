@@ -250,6 +250,45 @@ export class Bookmark {
 	}
 
 	/**
+	 * Every record, keyed by bookmark, for the weekly check to decide what is due.
+	 *
+	 * @param db Database handle used for the lookup.
+	 */
+	static async findAll(db: Database): Promise<Map<string, schema.SelectBookmark>> {
+		let rows = await db.findMany(this.table);
+		return new Map(rows.map((row) => [row.post_id, row]));
+	}
+
+	/**
+	 * Holds the Wayback Machine capture being taken, so the next run of the archive job reads
+	 * its progress instead of asking for another.
+	 *
+	 * @param db Database handle used for the write.
+	 * @param postId The bookmark being archived.
+	 * @param jobId The capture job Save Page Now answered.
+	 */
+	static async archiving(db: Database, postId: string, jobId: string): Promise<void> {
+		await db.update(this.table, postId, {
+			archive_job: jobId,
+			archive_attempted_at: new Date().toISOString(),
+		});
+	}
+
+	/**
+	 * Ends an archive attempt, captured or not: the capture job is released and the attempt
+	 * dated, which is what spaces a failed bookmark's next attempt.
+	 *
+	 * @param db Database handle used for the write.
+	 * @param postId The bookmark that was archived.
+	 */
+	static async archived(db: Database, postId: string): Promise<void> {
+		await db.update(this.table, postId, {
+			archive_job: null,
+			archive_attempted_at: new Date().toISOString(),
+		});
+	}
+
+	/**
 	 * Releases a deleted bookmark's address.
 	 *
 	 * @param db Database handle used for the write.

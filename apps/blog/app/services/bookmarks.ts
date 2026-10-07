@@ -108,7 +108,8 @@ export async function createBookmark(
 
 /**
  * Saves an edit. Saving reviews the bookmark, closing any flag raised before it; a URL that
- * changed address moves the bookmark's record to it, unless another bookmark holds it.
+ * changed address moves the bookmark's record to it, unless another bookmark holds it, and
+ * drops the old URL's archive, since that capture shows another page.
  *
  * @param db Database handle used for reads and writes.
  * @param id The bookmark being edited.
@@ -138,6 +139,7 @@ export async function updateBookmark(
 			url,
 			title: fields.title?.trim() ?? "",
 			description: fields.description?.trim() ?? "",
+			...(moved ? { archived_at: "" } : {}),
 		},
 	});
 

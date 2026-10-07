@@ -13,21 +13,22 @@ Production URL: https://sergiodxa.com
 
 ## Cloudflare Services
 
-| Service     | Binding                                               | Purpose                                     |
-| ----------- | ----------------------------------------------------- | ------------------------------------------- |
-| D1 Database | `DB`                                                  | Blog content and CMS data                   |
-| KV          | `CACHE`                                               | Response, data and sponsor roster caching   |
-| KV          | `AUTH`                                                | Authentication/session state                |
-| KV          | `REDIRECTS`                                           | URL redirect mappings                       |
-| R2          | `BACKUPS`                                             | Database backup storage                     |
-| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)   |
-| Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                  |
-| Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64  |
-| Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
-| Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
-| Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster     |
-| Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
-| Assets      | N/A                                                   | Static assets served from `build/client`    |
+| Service     | Binding                                               | Purpose                                       |
+| ----------- | ----------------------------------------------------- | --------------------------------------------- |
+| D1 Database | `DB`                                                  | Blog content and CMS data                     |
+| KV          | `CACHE`                                               | Response, data and sponsor roster caching     |
+| KV          | `AUTH`                                                | Authentication/session state                  |
+| KV          | `REDIRECTS`                                           | URL redirect mappings                         |
+| R2          | `BACKUPS`                                             | Database backup storage                       |
+| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)     |
+| Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                    |
+| Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64    |
+| Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests              |
+| Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to           |
+| Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster       |
+| Secret      | `WAYBACK_ACCESS_KEY`, `WAYBACK_SECRET_KEY`            | archive.org keys bookmarks are captured under |
+| Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store   |
+| Assets      | N/A                                                   | Static assets served from `build/client`      |
 
 Smart Placement and Observability are enabled.
 
@@ -93,6 +94,12 @@ Smart Placement and Observability are enabled.
   address), and saving the bookmark reviews it. A daily digest at 14:00 UTC mails new flags
   to hello@sergiodxa.com from `bookmarks@support.sergiodxa.com`. The same read fills a title
   or description the bookmark is missing.
+- Bookmark archiving: saving a bookmark (or changing its URL) asks the Wayback Machine's Save
+  Page Now for a capture, and the 🏛️ link on `/bookmarks` opens that capture. A bookmark saved
+  more than a week ago takes the closest capture the archive already holds, else asks for
+  one; the weekly check backfills every bookmark without one, retrying a refused capture after
+  thirty days. Needs the `WAYBACK_ACCESS_KEY` and `WAYBACK_SECRET_KEY` secrets (keys from
+  `archive.org/account/s3.php`); unset, archiving waits.
 - Sponsors page (`/sponsors`): why sponsoring helps, GitHub Sponsors, one-off PayPal ($5,
   $10, $20) and Ko-fi tips, then current sponsors named with large avatars and past ones as
   a wall of small avatars. A job every six hours stores GitHub's public roster in `CACHE`

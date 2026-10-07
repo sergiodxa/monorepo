@@ -64,6 +64,7 @@ describe("createBookmark", () => {
 			url: "https://example.com/post",
 			title: "The Headline",
 			description: "What the page is about.",
+			archived_at: "",
 		});
 
 		let record = await Bookmark.findByPostId(db, id);
@@ -128,8 +129,9 @@ describe("updateBookmark", () => {
 		expect((await LikePost.findById(db, second))?.meta.url).toBe("https://example.com/other");
 	});
 
-	test("moves the record to a new URL and forgets what was read from the old one", async () => {
+	test("moves the record to a new URL and forgets what was read and archived from the old one", async () => {
 		let id = await created({ url: "https://example.com/post" });
+		await LikePost.update(db, id, { meta: { archived_at: "2026-10-01T00:00:00.000Z" } });
 
 		let result = await updateBookmark(db, id, author, {
 			url: "https://example.org/new",
@@ -140,6 +142,7 @@ describe("updateBookmark", () => {
 		expect(result).toEqual({ outcome: "updated", moved: true });
 		let record = await Bookmark.findByPostId(db, id);
 		expect(record).toMatchObject({ address: "example.org/new", status: null, checked_at: null });
+		expect((await LikePost.findById(db, id))?.meta.archived_at).toBe("");
 		expect(record?.reviewed_at).not.toBeNull();
 	});
 

@@ -48,6 +48,15 @@ describe("LikePost.address", () => {
 	});
 });
 
+describe("LikePost.waybackSnapshotUrl", () => {
+	test("names the moment with the archive's fourteen-digit timestamp", () => {
+		expect(LikePost.waybackSnapshotUrl("https://example.com/a", "2026-10-07T15:30:45.123Z")).toBe(
+			"https://web.archive.org/web/20261007153045/https://example.com/a",
+		);
+		expect(LikePost.waybackSnapshotUrl("https://example.com/a", "not a date")).toBeNull();
+	});
+});
+
 describe("LikePost.clean", () => {
 	test("removes tracking parameters and keeps the rest of the query", () => {
 		expect(

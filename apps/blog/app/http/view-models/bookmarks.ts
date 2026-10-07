@@ -68,7 +68,8 @@ export namespace BookmarksViewModel {
 export class BookmarksViewModel {
 	/**
 	 * Ordered by activity time: published date when available, otherwise creation
-	 * date. Wayback metadata is attached for absolute HTTP(S) URLs.
+	 * date. Wayback metadata is attached for absolute HTTP(S) URLs, opening the recorded
+	 * capture when there is one and the capture closest to the bookmark's date otherwise.
 	 *
 	 * @param bookmarks Raw liked-post records returned by the bookmarks repository.
 	 * @returns Bookmarks page payload sorted by most recent activity first.
@@ -86,7 +87,10 @@ export class BookmarksViewModel {
 				let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
 				let createdAt = this.createdAt(bookmark);
 				let suffixHref = normalizedHref.startsWith("http")
-					? LikePostRepository.waybackSnapshotUrl(normalizedHref, createdAt)
+					? LikePostRepository.waybackSnapshotUrl(
+							normalizedHref,
+							bookmark.meta.archived_at || createdAt,
+						)
 					: null;
 
 				return {

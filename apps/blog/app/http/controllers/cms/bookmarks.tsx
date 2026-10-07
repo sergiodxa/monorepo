@@ -112,8 +112,8 @@ export default createController(routes.cms.bookmarks, {
 
 		/**
 		 * Saves the full form or the quick add's URL alone. A URL already bookmarked lands on
-		 * that bookmark's edit page instead of creating a second one; a page that could not be
-		 * read while saving is read again in the background.
+		 * that bookmark's edit page instead of creating a second one. A new bookmark is archived
+		 * in the background, and a page that could not be read while saving is read again.
 		 * @param ctx Controller context with form data and DB access.
 		 * @returns See Other redirect to login, or to the saved or existing bookmark's edit page.
 		 */
@@ -135,6 +135,7 @@ export default createController(routes.cms.bookmarks, {
 				return redirect(duplicateHref(saved.data.id), { status: redirect.Status.SeeOther });
 			}
 
+			await ctx.jobs.enqueue(jobs.bookmarks.archive, { postId: saved.data.id });
 			if (!saved.data.read) {
 				await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: saved.data.id });
 			}
@@ -231,7 +232,7 @@ export default createController(routes.cms.bookmarks, {
 		/**
 		 * Saves an edit, which also marks the bookmark reviewed. A URL another bookmark already
 		 * holds is refused with the form shown again, linking to that bookmark; a new URL is
-		 * read in the background.
+		 * read and archived in the background.
 		 * @param ctx Controller context with params, form data, and DB access.
 		 * @returns See Other redirect to the edit page, the form again with a 409 on a taken URL,
 		 * or a 404 form view when the target is missing.
@@ -270,7 +271,10 @@ export default createController(routes.cms.bookmarks, {
 				return ctx.render(CMSBookmarksActionView, model, { status: 409 });
 			}
 
-			if (updated.moved) await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: id });
+			if (updated.moved) {
+				await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: id });
+				await ctx.jobs.enqueue(jobs.bookmarks.archive, { postId: id });
+			}
 
 			return redirect(routes.cms.bookmarks.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},

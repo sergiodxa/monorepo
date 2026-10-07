@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-07
+**Accepted** - 2026-10-07 (implemented; deploy pending)
 
 ## Background
 
@@ -169,8 +169,10 @@ sweep. The mail transport reaches the job through middleware, so a test installs
 ### Archiving
 
 `bookmarks.archive` asks the Wayback Machine for a capture through Save Page Now 2,
-authenticated with the `BLOG_WAYBACK_ACCESS_KEY` and `BLOG_WAYBACK_SECRET_KEY` secrets, and
-stores the capture's instant as `archived_at`. Between polls the job stores the capture job's
+authenticated with the `WAYBACK_ACCESS_KEY` and `WAYBACK_SECRET_KEY` Worker secrets, and
+stores the capture's instant as `archived_at`. Both are optional: while either is unset the
+job ends without archiving, so a deploy never depends on them. A URL change clears
+`archived_at`, since the old capture shows another page. Between polls the job stores the capture job's
 id in `archive_job` and retries itself after a minute; a `429` retries after five. The Wayback
 link uses `archived_at` when it is set and falls back to `created_at`.
 
@@ -216,7 +218,7 @@ than thirty days old, which backfills the existing bookmarks on its first run.
 - **A slower create** - the create action waits on the bookmarked page, up to five seconds
 - **Blind spots** - sites that block automated requests read as `blocked` and are never
   flagged, and a parked domain or a soft 404 answering `200` reads as `ok`
-- **Two new secrets** - archiving needs archive.org keys in the secrets store before deploy
+- **Two new secrets** - archiving waits until the archive.org keys are set as Worker secrets
 - **A large first digest** - the first sweep checks bookmarks saved as far back as 2020
 
 ### Neutral
@@ -258,7 +260,8 @@ than thirty days old, which backfills the existing bookmarks on its first run.
 **Priority:** Medium
 
 1. `bookmarks.archive` over Save Page Now 2 and the Availability API
-2. Secrets in `wrangler.jsonc`, and the Wayback link reading `archived_at`
+2. Optional Worker secrets typed in `config/cloudflare.d.ts`, and the Wayback link reading
+   `archived_at`
 
 ## Alternatives Considered
 
@@ -304,11 +307,12 @@ follow-up if opening Safari becomes the bottleneck.
 - [x] Phase 1: `@sdxc/distill` excerpt (also `summaryFrom` for pages without an article)
 - [x] Phase 2: Titles, descriptions and quick add
 - [x] Phase 3: Link checks and digest
-- [ ] Phase 4: Wayback archiving
+- [x] Phase 4: Wayback archiving
 
 ## Notes
 
 - archive.org keys come from an account's S3 key page (`archive.org/account/s3.php`) and are
-  stored with `bunx wrangler secrets-store secret create <store-id> --name <NAME> --scopes workers --remote`
+  stored with `bunx wrangler secret put WAYBACK_ACCESS_KEY` and `bunx wrangler secret put WAYBACK_SECRET_KEY`
+  from `apps/blog`
 - Save Page Now allows 12 concurrent captures per authenticated account; the archive job
   retries a `429`, so the backfill drains at the pace the archive accepts

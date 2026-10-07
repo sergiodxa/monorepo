@@ -35,7 +35,12 @@ export default jobs({
 		 * fills a title or description the bookmark is missing.
 		 */
 		inspect: job({ input: s.object({ postId: s.string() }) }),
-		/** Queues an inspection of every bookmark, Mondays at 06:00 UTC. */
+		/**
+		 * Takes a bookmark's Wayback Machine capture, or for an old bookmark finds the closest
+		 * existing one, and records its instant as `archived_at`.
+		 */
+		archive: job({ input: s.object({ postId: s.string() }) }),
+		/** Queues an inspection of every bookmark, and an archive of each one due, Mondays at 06:00 UTC. */
 		sweep: job({ cron: "0 6 * * 1" }),
 		/** Mails the flags raised since the last digest; sends nothing when there are none. */
 		digest: job({ cron: "0 14 * * *" }),
