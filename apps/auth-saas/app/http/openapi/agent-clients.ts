@@ -42,6 +42,7 @@ export const AGENT_CLIENTS_REGISTER = defineOperation(
 			...AUTH_PROBLEMS,
 			...IDEMPOTENCY_PROBLEMS,
 			"validationFailed",
+			"scopeNotHeld",
 			"entitlementRequired",
 		],
 		security: requires("clients:write"),

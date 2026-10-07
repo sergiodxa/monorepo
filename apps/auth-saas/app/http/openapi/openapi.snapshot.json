@@ -2047,7 +2047,7 @@
             }
           },
           "400": {
-            "description": "This API version is not published; The Idempotency-Key header is not valid; The request did not pass validation",
+            "description": "This API version is not published; The Idempotency-Key header is not valid; The request did not pass validation; The issuing subject does not hold one of the requested scopes",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2060,6 +2060,9 @@
                     },
                     {
                       "$ref": "#/components/schemas/ValidationFailedProblem"
+                    },
+                    {
+                      "$ref": "#/components/schemas/ScopeNotHeldProblem"
                     }
                   ]
                 }

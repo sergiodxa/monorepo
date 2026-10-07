@@ -1,7 +1,8 @@
 /**
  * `POST /tenants/:tenantId/agent-clients` — registers a machine credential: an
  * OAuth client of the platform tenant, granted only the client_credentials
- * grant, bound at registration to the one tenant it may reach.
+ * grant, bound at registration to the one tenant it may reach, and holding
+ * only scopes its registering caller holds there itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +20,7 @@ import {
 	clientRecordValidationFailure,
 } from "~/app/http/controllers/management/clients/shared";
 import { operationInputProblem } from "~/app/http/lib/parse-body";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementIdempotency } from "~/app/http/middleware/management-idempotency";
@@ -33,6 +35,15 @@ import routes from "~/routes/management";
 function registerAgentClientFailure(result: Exclude<RegisterClientResult, { ok: true }>): Response {
 	if (result.reason === "entitlement-required") return clientEntitlementRequired();
 	return clientRecordValidationFailure(result);
+}
+
+/**
+ * Finds the first requested scope the caller does not hold, so a machine
+ * credential never outranks whoever minted it: an `admin`, who holds neither
+ * `members:write` nor `tenant:write`, can mint a credential carrying neither.
+ */
+function firstScopeNotHeld(requested: string[], held: string[]): string | undefined {
+	return requested.find((scope) => !held.includes(scope));
 }
 
 /**
@@ -60,6 +71,13 @@ export function createAgentClientsRegisterAction(options: ManagementControllerOp
 
 			let input = await AGENT_CLIENTS_REGISTER.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
+
+			let notHeld = firstScopeNotHeld(input.data.body.scopes, ctx.managementCaller.scopes);
+			if (notHeld !== undefined) {
+				return managementProblem("scopeNotHeld", {
+					detail: `"${notHeld}" is not a scope this caller holds.`,
+				});
+			}
 
 			let platform = platformTenantStub();
 
