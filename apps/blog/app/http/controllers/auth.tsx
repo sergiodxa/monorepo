@@ -10,12 +10,12 @@
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
 import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
-import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
 import { createAction, createController, type Middleware } from "remix/router";
 
 import { relyingParty } from "~/app/auth/relying-party";
 import { isAuthenticated, login, logout } from "~/app/http/middleware/auth";
+import { parseReturnPath, requestedReturnPath } from "~/app/http/return-path";
 import { User } from "~/app/repositories/user";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
@@ -59,11 +59,15 @@ function describeFailure(error: Error): string {
 	return FAILURE_MESSAGES[error.code] ?? GENERIC_FAILURE;
 }
 
-/** Sends visitors that already have a session to the dashboard. */
+/**
+ * Sends a visitor who already has a session where the login URL's `next` points, or to the
+ * dashboard, since the login they came for is already done.
+ */
 let guestOnlyMiddleware: Middleware[] = [
-	async (_ctx, next) => {
+	async (ctx, next) => {
 		if (isAuthenticated()) {
-			return redirect(routes.cms.dashboard.href(), { status: redirect.Status.SeeOther });
+			let destination = (await requestedReturnPath(ctx.url)) ?? routes.cms.dashboard.href();
+			return redirect(destination, { status: redirect.Status.SeeOther });
 		}
 
 		return next();
@@ -74,21 +78,24 @@ let guestOnlyMiddleware: Middleware[] = [
 export let loginController = createController(routes.auth.login, {
 	middleware: guestOnlyMiddleware,
 	actions: {
-		/** Renders the login screen where visitors start external authentication. */
+		/**
+		 * Renders the login screen where visitors start external authentication, its form
+		 * carrying the page the screen's `next` names, so a visitor holds no session until
+		 * they actually sign in.
+		 */
 		async index(ctx) {
-			return ctx.render(LoginView, {});
+			return ctx.render(LoginView, { next: await requestedReturnPath(ctx.url) });
 		},
 
 		/**
-		 * Starts an authorization transaction, carrying the `next` query param through as
-		 * the post-login destination; a destination naming another origin is dropped for
+		 * Starts an authorization transaction returning to the action URL's `next`. The
+		 * provider round trip carries it in the transaction; without one, the login lands on
 		 * the dashboard.
 		 * @returns Redirect to the provider authorization endpoint.
 		 */
 		async action(ctx) {
-			return relyingParty(ctx.url).authorize(contextOf(ctx), {
-				returnTo: ctx.url.searchParams.get("next"),
-			});
+			let returnTo = await requestedReturnPath(ctx.url);
+			return relyingParty(ctx.url).authorize(contextOf(ctx), { returnTo });
 		},
 	},
 });
@@ -163,7 +170,8 @@ export let callbackAction = createAction(routes.auth.callback, {
 	 * Correlates the provider's answer with the login that asked for it and verifies the
 	 * ID token before any claim is believed, then reconciles the subject with the local
 	 * account so the session names a row of this app's own.
-	 * @returns The login view carrying an error, or a 303 redirect once signed in.
+	 * @returns The login view carrying an error, or a 303 redirect to the page the login
+	 *   was started for, the dashboard when it named none.
 	 */
 	handler: async (ctx) => {
 		let result = await wrap(() => relyingParty(ctx.url).callback(contextOf(ctx)));
@@ -186,9 +194,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 		login(user);
 		ctx.log.set({ user: { id: user.id, username: user.username } }).note("auth.callback_completed");
 
-		let returnTo = Location.safe(grant.returnTo, {
-			fallback: routes.cms.dashboard.href(),
-		});
+		let returnTo = parseReturnPath(grant.returnTo) ?? routes.cms.dashboard.href();
 		return redirect(returnTo, { status: redirect.Status.SeeOther });
 	},
 });

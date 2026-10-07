@@ -34,7 +34,10 @@ Smart Placement and Observability are enabled.
 ## Features
 
 - Server-rendered public articles, tutorials, bookmarks, feeds, and sitemap.
-- CMS layout and authenticated routes for content management.
+- CMS layout and authenticated routes for content management. Opening a CMS page without a
+  session sends you to `/login?next=<path and query>`, and signing in lands back on that page,
+  so a link such as `/cms/bookmarks/new?url=…` survives an expired session. `next` accepts
+  only a path on this site; anything else lands on the dashboard.
 - Markdown processing through shared markdown utilities.
 - Request-scoped services published onto the request context by middleware.
 - Microformats2 markup (`h-entry`, `h-card`, `h-feed`, `rel="me"`) on public pages.

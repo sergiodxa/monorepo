@@ -26,6 +26,8 @@ export namespace LoginView {
 	 */
 	export interface Model {
 		error?: string;
+		/** The page the login returns to, carried on the form's action as `next`. */
+		next?: string | null;
 	}
 }
 
@@ -59,7 +61,9 @@ export function LoginView() {
 				)}
 
 				<Form
-					action={routes.auth.login.action.href()}
+					action={routes.auth.login.action.href(null, {
+						searchParams: { next: model.next ?? null },
+					})}
 					method={routes.auth.login.action.method}
 					mix={[contents()]}
 				>

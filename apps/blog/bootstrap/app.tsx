@@ -55,6 +55,7 @@ import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import supportDesk from "~/app/http/middleware/support-desk";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
+import { loginFor } from "~/app/http/return-path";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { jobQueue } from "~/app/jobs/queue";
 import mcpRateLimit from "~/app/mcp/rate-limit";
@@ -96,10 +97,13 @@ function htmlOnly(middleware: Middleware<any>): Middleware<any> {
 	};
 }
 
-/** Redirects anonymous CMS requests to login, preserving the request context typing. */
-let requireCMSAuth: Middleware = (_ctx, next) => {
+/**
+ * Redirects anonymous CMS requests to login, carrying the page's path and query as `next`,
+ * so a link opened with an expired session lands on that page once signed in.
+ */
+let requireCMSAuth: Middleware = (ctx, next) => {
 	if (isAuthenticated()) return next();
-	return redirect(routes.auth.login.index.href(), { status: redirect.Status.SeeOther });
+	return redirect(loginFor(ctx), { status: redirect.Status.SeeOther });
 };
 
 /**

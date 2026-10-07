@@ -64,21 +64,38 @@ describe("the blog router", () => {
 		expect(response.status).toBe(404);
 	});
 
-	test("sends an anonymous visitor away from the CMS dashboard", async () => {
+	test("sends an anonymous visitor from the CMS dashboard to login, naming it as `next`", async () => {
 		let response = await fetchPath("/cms");
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.auth.login.index.href());
+		expect(response.headers.get("location")).toBe(`${routes.auth.login.index.href()}?next=%2Fcms`);
 	});
 
-	test("sends an anonymous visitor away from a CMS resource route", async () => {
+	test("sends an anonymous visitor from a CMS resource route to login, naming it as `next`", async () => {
 		let response = await fetchPath("/cms/articles");
 
 		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe(routes.auth.login.index.href());
+		expect(response.headers.get("location")).toBe(
+			`${routes.auth.login.index.href()}?next=%2Fcms%2Farticles`,
+		);
 	});
 
-	test("sends an anonymous visitor away from a CMS write", async () => {
+	/**
+	 * The share sheet opens this page with an expired session, and the login has to bring
+	 * the editor back to it with the shared URL still in the query.
+	 */
+	test("carries a CMS page's query along to login", async () => {
+		let response = await fetchPath("/cms/bookmarks/new?url=https://example.com/post?id=7");
+		let location = new URL(response.headers.get("location") ?? "", "https://blog.test");
+
+		expect(response.status).toBe(303);
+		expect(location.pathname).toBe(routes.auth.login.index.href());
+		expect(location.searchParams.get("next")).toBe(
+			"/cms/bookmarks/new?url=https%3A%2F%2Fexample.com%2Fpost%3Fid%3D7",
+		);
+	});
+
+	test("sends an anonymous visitor away from a CMS write to the login page alone", async () => {
 		let response = await fetchPath("/cms/cache/purge", { method: "POST" });
 
 		expect(response.status).toBe(303);
