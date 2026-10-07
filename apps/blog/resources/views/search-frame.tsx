@@ -1,34 +1,36 @@
 /**
- * View for the search dialog's frame: a `GET` form to `/search` around the live search box,
- * a one-line status the dialog announces politely, and the top matches with their matched
- * words marked. Rendered as a fragment, inside whichever page's dialog requested it.
+ * View for the search dialog's frame, laid out as one panel: the live search box on top,
+ * then, under a hairline, the top matches drawn as activity rows with their matched words
+ * marked. Rendered as a fragment, inside whichever page's dialog requested it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
-
-import { fg } from "@sdxc/u/color";
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { borderEdge, fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, hstack, items } from "@sdxc/u/layout";
-import { m, p, pb } from "@sdxc/u/size";
-import { tabularNums, text, truncate, weight } from "@sdxc/u/typography";
-import { Badge, Button, Label, Link, SearchField } from "@sdxc/ui";
+import { gap, grid } from "@sdxc/u/layout";
+import { m, p, pb, pi } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
+import { Link } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
-import { Highlighted } from "~/resources/components/highlighted";
-import { SearchInput } from "~/resources/components/search-input";
+import { SEARCH_RESULTS_ID, SearchBox } from "~/resources/components/search-box";
+import { SearchResult } from "~/resources/components/search-result";
+import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import routes from "~/routes/web";
 
 /** The dialog's search box id, apart from the `/search` page's own box. */
 export const SEARCH_DIALOG_INPUT_ID = "site-search-q";
 
-/** The status line for each state: a hint, the reason text cannot run, or the count. */
+/**
+ * What the status line says. Blank text says nothing; a count is announced but not shown,
+ * since the rows and the "See all" link already show it; a message is shown as well.
+ */
 function statusOf(model: SearchViewModel.Suggestions): string {
-	if (model.state === "blank")
-		return "Quote a phrase to match it exactly; a minus leaves a word out.";
+	if (model.state === "blank") return "";
 	if (model.state === "invalid") return model.message;
 	if (model.total === 0) return `No posts match “${model.query}”.`;
 	if (model.total === 1) return "1 result";
@@ -36,78 +38,72 @@ function statusOf(model: SearchViewModel.Suggestions): string {
 	return `Top ${model.items.length} of ${model.total} results`;
 }
 
-/** One match: its type, then its highlighted title linking to it, then one line of excerpt. */
-function SuggestionRow(handle: Handle<{ item: SearchViewModel.Item }>) {
-	return () => {
-		let { item } = handle.props;
-
-		return (
-			<li mix={[grid(), gap(1), pb(2)]}>
-				<div mix={[hstack({ gap: 2, align: "center" }), text("sm")]}>
-					<Badge color="neutral" variant="secondary">
-						{item.kind}
-					</Badge>
-					<Link href={item.href} mix={[weight("bold"), truncate()]}>
-						<Highlighted segments={item.title} />
-					</Link>
-				</div>
-				{item.excerpt ? (
-					<p mix={[m(0), text("sm"), fg("neutral.muted"), truncate()]}>
-						{item.excerpt.truncatedStart ? "… " : null}
-						<Highlighted segments={item.excerpt.segments} />
-						{item.excerpt.truncatedEnd ? " …" : null}
-					</p>
-				) : null}
-			</li>
-		);
-	};
-}
-
 /**
  * Creates the dialog body renderer. Submitting the form is a plain `GET` to `/search`, so
- * Enter lands on the full results page with or without script, while the box inside reloads
- * only this frame as the visitor types. The status line is the one live region, so a screen
- * reader hears the count change rather than every result.
+ * Enter lands on the full results page with or without script, while the box reloads only
+ * this frame as the visitor types. The status line is the one live region, present in every
+ * state so a change in it is announced, and blank text leaves the panel at its box alone.
  *
  * @returns A view function that renders from a dialog model.
  */
 export function SearchFrameView() {
-	return ({ model }: { model: SearchViewModel.Suggestions }) => (
-		<div mix={[grid(), gap(4)]}>
-			<form method="get" action={routes.search.href()}>
-				<SearchField>
-					<Label htmlFor={SEARCH_DIALOG_INPUT_ID}>
-						Search articles, tutorials and the glossary
-					</Label>
-					<div mix={[grid(), gridTemplate({ columns: "1fr auto" }), gap(2), items("center")]}>
-						<SearchInput
+	return ({ model }: { model: SearchViewModel.Suggestions }) => {
+		let hasRows = model.state === "results" && model.items.length > 0;
+		let status = statusOf(model);
+
+		return (
+			<>
+				<search>
+					<form method="get" action={routes.search.href()}>
+						<SearchBox
 							id={SEARCH_DIALOG_INPUT_ID}
 							query={model.query}
 							frameSrc={routes.searchFrame.href()}
+							dialogId={SEARCH_DIALOG_ID}
 						/>
-						<Button type="submit" color="brand">
-							Search
-						</Button>
-					</div>
-				</SearchField>
-			</form>
-			<p role="status" mix={[m(0), text("sm"), fg("neutral.muted"), tabularNums()]}>
-				{statusOf(model)}
-			</p>
-			{model.state === "results" && model.items.length > 0 ? (
-				<>
-					<ol aria-label="Top matches" mix={[m(0), p(0), listStyle("none"), grid(), gap(2)]}>
-						{model.items.map((item) => (
-							<SuggestionRow key={item.href} item={item} />
-						))}
-					</ol>
-					<p mix={[m(0), text("sm")]}>
-						<Link href={model.seeAll}>
-							See all {model.total === 1 ? "1 result" : `${model.total} results`} →
-						</Link>
+					</form>
+				</search>
+				<div id={SEARCH_RESULTS_ID}>
+					<p
+						role="status"
+						mix={
+							hasRows || status === ""
+								? [visuallyHidden()]
+								: [
+										m(0),
+										pi(4),
+										pb(4),
+										borderEdge("block-start", { color: "neutral", width: 1 }),
+										text("sm"),
+										fg("neutral.muted"),
+									]
+						}
+					>
+						{status}
 					</p>
-				</>
-			) : null}
-		</div>
-	);
+					{model.state === "results" && model.items.length > 0 ? (
+						<div
+							mix={[
+								grid(),
+								gap(3),
+								p(4),
+								borderEdge("block-start", { color: "neutral", width: 1 }),
+							]}
+						>
+							<ol aria-label="Top matches" mix={[m(0), p(0), listStyle("none"), grid(), gap(3)]}>
+								{model.items.map((item) => (
+									<SearchResult key={item.href} item={item} size="sm" />
+								))}
+							</ol>
+							<p mix={[m(0), text("sm")]}>
+								<Link href={model.seeAll}>
+									See all {model.total === 1 ? "1 result" : `${model.total} results`} →
+								</Link>
+							</p>
+						</div>
+					) : null}
+				</div>
+			</>
+		);
+	};
 }

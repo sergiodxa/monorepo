@@ -108,8 +108,9 @@ to the full `/search` page. See [ADR-005](./ADR-005-search-dialog-and-client-isl
 
 ### Neutral
 
-- A body-only hit shows the post's summary unhighlighted, since the body is Markdown and its
-  syntax would show in a raw window.
+- A result whose summary holds no match shows the body around its first match instead, read
+  as plain text through `@sdxc/markdown/plain` so no Markdown syntax shows; one with no
+  summary always shows its body. Glossary entries show their definition.
 - Glossary results link to their anchor on `/glossary`; the MCP tool keeps returning
   `/glossary/:slug`.
 

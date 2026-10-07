@@ -11,6 +11,9 @@ import type { Page } from "@sdxc/pagination";
 import type { Excerpt, HighlightSegment, ParsedQuery } from "@sdxc/search/query";
 import type { ValidationError } from "@sdxc/validate";
 
+import { Markdown } from "@sdxc/markdown";
+import { toPlainText } from "@sdxc/markdown/plain";
+import { isFailure } from "@sdxc/result";
 import { excerpt, highlight } from "@sdxc/search/query";
 
 import type { PostSearch } from "~/app/repositories/search";
@@ -26,12 +29,14 @@ export namespace SearchViewModel {
 	export interface Item {
 		/** App-relative link to the post; a glossary entry links to its anchor on `/glossary`. */
 		href: string;
-		/** Human label for the result's content type. */
-		kind: string;
+		kind: PostSearch.Kind;
+		/** Human label for the result's content type, which names its icon. */
+		kindLabel: string;
 		title: Array<HighlightSegment>;
 		/**
-		 * The post's summary from the source tables, windowed around its first match; a post
-		 * matched only in its body shows the summary's opening words. `null` without a summary.
+		 * A window of the post's text around its first match: the summary when it holds one,
+		 * otherwise the body as plain text. A glossary entry always shows its definition, and
+		 * text holding no match shows its opening words. `null` when the post has no text.
 		 */
 		excerpt: Excerpt | null;
 		/** ISO 8601 instant the post was published, or `null` when it has none to show. */
@@ -125,7 +130,7 @@ export class SearchViewModel {
 	static results(input: {
 		query: string;
 		parsed: ParsedQuery;
-		page: Page<PostSearch.Result>;
+		page: Page<PostSearch.Hit>;
 		url: URL;
 	}): SearchViewModel.Model {
 		let { pagination } = input.page;
@@ -150,7 +155,7 @@ export class SearchViewModel {
 	static suggestions(input: {
 		query: string;
 		parsed: ParsedQuery;
-		page: Page<PostSearch.Result>;
+		page: Page<PostSearch.Hit>;
 	}): SearchViewModel.Suggestions {
 		let seeAll = `${routes.search.href()}?${new URLSearchParams({ q: input.query })}`;
 
@@ -164,23 +169,40 @@ export class SearchViewModel {
 	}
 
 	/** Highlights one result's title and excerpt against the query it was found with. */
-	private static item(result: PostSearch.Result, parsed: ParsedQuery): SearchViewModel.Item {
-		let text = result.excerpt?.trim() ?? "";
-
+	private static item(hit: PostSearch.Hit, parsed: ParsedQuery): SearchViewModel.Item {
 		return {
 			href:
-				result.kind === "glossary"
-					? `${routes.glossary.href()}#${encodeURIComponent(result.slug)}`
-					: result.url,
-			kind: KIND_LABELS[result.kind],
-			title: highlight(result.title, parsed),
-			excerpt: text === "" ? null : excerpt(text, parsed, { words: EXCERPT_WORDS }),
-			publishedAt: result.publishedAt,
+				hit.kind === "glossary"
+					? `${routes.glossary.href()}#${encodeURIComponent(hit.slug)}`
+					: hit.url,
+			kind: hit.kind,
+			kindLabel: KIND_LABELS[hit.kind],
+			title: highlight(hit.title, parsed),
+			excerpt: this.excerpt(hit, parsed),
+			publishedAt: hit.publishedAt,
 		};
 	}
 
+	/**
+	 * Picks the text a result shows. The summary wins when it holds a match, the body when
+	 * only the body does, and with no match in either the summary's (or body's) opening
+	 * words stand in. The body is read as plain text, so no Markdown syntax shows.
+	 */
+	private static excerpt(hit: PostSearch.Hit, parsed: ParsedQuery): Excerpt | null {
+		let window = (text: string) => excerpt(text, parsed, { words: EXCERPT_WORDS });
+		let summary = hit.kind === "glossary" ? plainText(hit.body) : (hit.excerpt?.trim() ?? "");
+
+		let fromSummary = summary === "" ? null : window(summary);
+		if (hit.kind === "glossary" || (fromSummary && hasMatch(fromSummary))) return fromSummary;
+
+		let body = plainText(hit.body);
+		let fromBody = body === "" ? null : window(body);
+		if (fromBody && hasMatch(fromBody)) return fromBody;
+		return fromSummary ?? fromBody;
+	}
+
 	/** The numbered pager, every link the current URL with only its `page` replaced. */
-	private static pager(page: Page<PostSearch.Result>, url: URL): SearchViewModel.Pager {
+	private static pager(page: Page<PostSearch.Hit>, url: URL): SearchViewModel.Pager {
 		let { pagination } = page;
 		let href = (number: number) => {
 			let target = new URL(url);
@@ -200,4 +222,19 @@ export class SearchViewModel {
 				),
 		};
 	}
+}
+
+/** Whether a window of text shows any of the words the query matched. */
+function hasMatch(window: Excerpt): boolean {
+	return window.segments.some((segment) => segment.match);
+}
+
+/**
+ * Markdown read as the prose a reader sees, whitespace collapsed to single spaces so a
+ * window reads as one line. Text that will not parse is shown as written.
+ */
+function plainText(markdown: string): string {
+	let parsed = Markdown.parse(markdown);
+	let text = isFailure(parsed) ? markdown : toPlainText(parsed.data.document);
+	return text.replace(/\s+/g, " ").trim();
 }

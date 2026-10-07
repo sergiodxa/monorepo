@@ -3,7 +3,7 @@
 /**
  * The search dialog hydrated in a real document: a page rendered through the app's own
  * renderer, its dialog frame resolved through the router the way the Worker resolves it,
- * then the two islands brought up by the client runtime and typed into.
+ * then the two islands brought up by the client runtime, typed into, and dismissed.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,11 @@ import { afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
-import { SEARCH_DEBOUNCE_MS } from "~/resources/components/search-input";
+import {
+	SEARCH_DEBOUNCE_MS,
+	SEARCH_RESULTS_ID,
+	SPINNER_DELAY_MS,
+} from "~/resources/components/search-box";
 import { SEARCH_DIALOG_ID, searchShortcut } from "~/resources/components/search-trigger";
 import { BlogLayout } from "~/resources/layouts/blog";
 import { SEARCH_DIALOG_INPUT_ID, SearchFrameView } from "~/resources/views/search-frame";
@@ -26,7 +30,7 @@ import { createHtmlRenderer } from "../../bootstrap/app";
 /** The modules the runtime is asked for while the page hydrates. */
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
 	"/resources/components/search-trigger.tsx": () => import("~/resources/components/search-trigger"),
-	"/resources/components/search-input.tsx": () => import("~/resources/components/search-input"),
+	"/resources/components/search-box.tsx": () => import("~/resources/components/search-box"),
 };
 
 /** One request the runtime sent for frame content, with the signal it was sent under. */
@@ -35,6 +39,9 @@ interface FrameRequest {
 	target: string | undefined;
 	signal: AbortSignal | undefined;
 }
+
+/** The client runtime the current test hydrated, disposed after it so no listener outlives it. */
+let runtime: ReturnType<typeof run> | undefined;
 
 /** Every frame request the runtime made, oldest first. */
 let requests: Array<FrameRequest> = [];
@@ -52,7 +59,8 @@ function suggestionsFor(query: string): SearchViewModel.Suggestions {
 		items: [
 			{
 				href: `/articles/${query}`,
-				kind: "Article",
+				kind: "article",
+				kindLabel: "Article",
 				title: [
 					{ text: query, match: true },
 					{ text: " notes", match: false },
@@ -80,6 +88,21 @@ function application() {
 		),
 	);
 
+	router.get(routes.search.href(), (ctx) =>
+		createHtmlRenderer(ctx)(
+			() => () => (
+				<BlogLayout
+					title="Search"
+					description="Search"
+					searchQuery={ctx.url.searchParams.get("q") ?? ""}
+				>
+					<main id="page">Results</main>
+				</BlogLayout>
+			),
+			null,
+		),
+	);
+
 	router.get(routes.searchFrame.href(), async (ctx) => {
 		let query = ctx.url.searchParams.get("q") ?? "";
 		await held.get(query)?.promise;
@@ -90,8 +113,8 @@ function application() {
 }
 
 /** Renders the page the way the Worker answers it and loads its body into this document. */
-async function loadPage(router: ReturnType<typeof application>): Promise<void> {
-	let html = await (await router.fetch(new Request("https://blog.test/"))).text();
+async function loadPage(router: ReturnType<typeof application>, path = "/"): Promise<void> {
+	let html = await (await router.fetch(new Request(new URL(path, "https://blog.test")))).text();
 	let body = html.slice(html.indexOf("<body"), html.lastIndexOf("</body>"));
 	document.body.innerHTML = body
 		.slice(body.indexOf(">") + 1)
@@ -100,7 +123,7 @@ async function loadPage(router: ReturnType<typeof application>): Promise<void> {
 
 /** Brings the page's islands up, resolving frames through the router as the browser would over the network. */
 async function hydrate(router: ReturnType<typeof application>): Promise<void> {
-	let runtime = run({
+	runtime = run({
 		async loadModule(moduleUrl, exportName) {
 			let load = CLIENT_MODULES[new URL(moduleUrl, "https://blog.test").pathname];
 			if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
@@ -151,6 +174,12 @@ function press(target: EventTarget, init: KeyboardEventInit): boolean {
 	return event.defaultPrevented;
 }
 
+/** Clicks `target` the way a pointer does: pressed and released on it. */
+function click(target: Element): void {
+	target.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true }));
+	target.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+}
+
 /** Waits out the debounce, and a moment more for the reload it started to land. */
 async function settle(): Promise<void> {
 	await new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS + 50));
@@ -166,6 +195,8 @@ beforeAll(() => {
 });
 
 afterEach(() => {
+	runtime?.dispose();
+	runtime = undefined;
 	requests = [];
 	held.clear();
 	document.body.innerHTML = "";
@@ -179,9 +210,8 @@ describe("the search dialog", () => {
 		let form = input().form;
 
 		expect(dialog?.tagName).toBe("DIALOG");
-		expect(
-			document.getElementById(dialog?.getAttribute("aria-labelledby") ?? "")?.textContent,
-		).toBe("Search the blog");
+		expect(dialog?.getAttribute("aria-label")).toBe("Search");
+		expect(input().getAttribute("aria-label")).toBe("Search articles, tutorials and the glossary");
 		expect(form?.getAttribute("method")).toBe("get");
 		expect(form?.getAttribute("action")).toBe(routes.search.href());
 		expect(input().name).toBe("q");
@@ -257,7 +287,7 @@ describe("the search dialog", () => {
 		expect(input().value).toBe("fast");
 	});
 
-	test("returns to the bare frame and its hint when the box is cleared", async () => {
+	test("returns to the bare frame, with nothing under the box, when the box is cleared", async () => {
 		let router = application();
 		await loadPage(router);
 		await hydrate(router);
@@ -271,7 +301,8 @@ describe("the search dialog", () => {
 			"/frames/search?q=remix",
 			"/frames/search",
 		]);
-		await vi.waitFor(() => expect(status()).toContain("Quote a phrase"));
+		await vi.waitFor(() => expect(status()).toBe(""));
+		expect(document.querySelector(`#${SEARCH_RESULTS_ID} ol`)).toBeNull();
 	});
 
 	test("opens on ⌘K or Ctrl+K from anywhere, and the same keys close it", async () => {
@@ -302,23 +333,94 @@ describe("the search dialog", () => {
 		expect(press(document.body, { key: "/" })).toBe(true);
 		expect(dialog.open).toBe(true);
 	});
+
+	test("closes on Escape while the box still holds text", async () => {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		dialog.showModal();
+		type("remix");
+
+		expect(press(input(), { key: "Escape" })).toBe(true);
+		expect(dialog.open).toBe(false);
+		expect(input().value).toBe("remix");
+	});
+
+	test("closes on a click on the backdrop, and stays open for a click inside the panel", async () => {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let dialog = document.getElementById(SEARCH_DIALOG_ID) as HTMLDialogElement;
+		dialog.showModal();
+
+		click(input());
+		expect(dialog.open).toBe(true);
+
+		click(dialog);
+		expect(dialog.open).toBe(false);
+	});
+
+	test("marks the results busy from the keystroke until they land, and spins only when slow", async () => {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+
+		let slow = Promise.withResolvers<void>();
+		held.set("slow", slow);
+		let results = () => document.getElementById(SEARCH_RESULTS_ID);
+		let spinner = () => document.querySelector(`#${SEARCH_DIALOG_ID} [role="progressbar"]`);
+
+		type("slow");
+		expect(results()?.getAttribute("aria-busy")).toBe("true");
+		expect(spinner()).toBeNull();
+
+		await new Promise((resolve) => setTimeout(resolve, SPINNER_DELAY_MS + 50));
+		expect(spinner()).not.toBeNull();
+
+		slow.resolve();
+		await vi.waitFor(() => expect(status()).toBe("Top 1 of 9 results"));
+		await vi.waitFor(() => expect(results()?.hasAttribute("aria-busy")).toBe(false));
+		expect(spinner()).toBeNull();
+	});
+
+	test("opens holding the search page's own query, its results already there", async () => {
+		await loadPage(application(), "/search?q=remix");
+
+		expect(input().value).toBe("remix");
+		expect(status()).toBe("Top 1 of 9 results");
+		expect(document.querySelector(`#${SEARCH_DIALOG_ID} a[href="/articles/remix"]`)).not.toBeNull();
+	});
 });
 
 describe("searchShortcut", () => {
 	test("reads ⌘K and Ctrl+K as a toggle, and nothing else held with K", () => {
-		expect(searchShortcut(new KeyboardEvent("keydown", { key: "k", metaKey: true }))).toBe(
+		expect(searchShortcut(new KeyboardEvent("keydown", { key: "k", metaKey: true }), false)).toBe(
 			"toggle",
 		);
-		expect(searchShortcut(new KeyboardEvent("keydown", { key: "K", ctrlKey: true }))).toBe(
+		expect(searchShortcut(new KeyboardEvent("keydown", { key: "K", ctrlKey: true }), false)).toBe(
 			"toggle",
 		);
-		expect(searchShortcut(new KeyboardEvent("keydown", { key: "k" }))).toBeNull();
+		expect(searchShortcut(new KeyboardEvent("keydown", { key: "k" }), false)).toBeNull();
 		expect(
-			searchShortcut(new KeyboardEvent("keydown", { key: "k", metaKey: true, shiftKey: true })),
+			searchShortcut(
+				new KeyboardEvent("keydown", { key: "k", metaKey: true, shiftKey: true }),
+				false,
+			),
 		).toBeNull();
 		expect(
-			searchShortcut(new KeyboardEvent("keydown", { key: "k", metaKey: true, repeat: true })),
+			searchShortcut(
+				new KeyboardEvent("keydown", { key: "k", metaKey: true, repeat: true }),
+				false,
+			),
 		).toBeNull();
+	});
+
+	test("reads Escape as close only while the dialog is open", () => {
+		expect(searchShortcut(new KeyboardEvent("keydown", { key: "Escape" }), true)).toBe("close");
+		expect(searchShortcut(new KeyboardEvent("keydown", { key: "Escape" }), false)).toBeNull();
 	});
 
 	test("reads / as open only away from editable elements", () => {
@@ -332,8 +434,11 @@ describe("searchShortcut", () => {
 		let fromPage = new KeyboardEvent("keydown", { key: "/", bubbles: true });
 		document.body.dispatchEvent(fromPage);
 
-		expect(searchShortcut(fromEditable)).toBeNull();
-		expect(searchShortcut(fromPage)).toBe("open");
-		expect(searchShortcut(new KeyboardEvent("keydown", { key: "/", metaKey: true }))).toBeNull();
+		expect(searchShortcut(fromEditable, false)).toBeNull();
+		expect(searchShortcut(fromPage, false)).toBe("open");
+		expect(searchShortcut(fromPage, true)).toBeNull();
+		expect(
+			searchShortcut(new KeyboardEvent("keydown", { key: "/", metaKey: true }), false),
+		).toBeNull();
 	});
 });

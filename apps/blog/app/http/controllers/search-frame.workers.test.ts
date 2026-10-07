@@ -23,6 +23,9 @@ const TOKEN = `zf${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
 
 const PAST = "2026-03-01T12:00:00.000Z";
 
+/** A word only the articles without a matching summary carry, in their bodies alone. */
+const BODY_WORD = `zb${crypto.randomUUID().replaceAll("-", "").slice(0, 10)}`;
+
 /** How many articles match {@link TOKEN}, more than the dialog lists. */
 const ARTICLE_COUNT = 8;
 
@@ -68,6 +71,29 @@ beforeAll(async () => {
 			},
 		});
 	}
+
+	await ArticlePost.create(db, {
+		author_id: author,
+		published_at: PAST,
+		meta: {
+			slug: `${BODY_WORD}-unsummarized`,
+			title: "An article with no summary",
+			locale: "en",
+			content: `# Setup\n\nFirst install **the tools**, then read [the ${BODY_WORD} guide](https://example.com).`,
+		},
+	});
+
+	await ArticlePost.create(db, {
+		author_id: author,
+		published_at: PAST,
+		meta: {
+			slug: `${BODY_WORD}-summarized`,
+			title: "An article whose summary misses",
+			locale: "en",
+			excerpt: "A summary about something else.",
+			content: `Long before the point, the body finally says ${BODY_WORD} near the end.`,
+		},
+	});
 });
 
 describe("GET /frames/search", () => {
@@ -90,18 +116,30 @@ describe("GET /frames/search", () => {
 		expect(html).toMatch(
 			new RegExp(`<input type="search" id="site-search-q" name="q"[^>]*value="${TOKEN}"`),
 		);
-		expect(html).toContain('"moduleUrl":"/resources/components/search-input.tsx"');
+		expect(html).toContain('"moduleUrl":"/resources/components/search-box.tsx"');
 	});
 
-	test("renders the box and a hint for a blank query, with no results", async () => {
+	test("renders the box alone for a blank query, its status empty", async () => {
 		let response = await get("/frames/search");
 		let html = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(html).toContain('name="q"');
-		expect(html).toContain('role="status"');
-		expect(html).toContain("Quote a phrase");
+		expect(html).toMatch(/<p role="status"[^>]*><\/p>/);
+		expect(html).not.toContain("<ol");
 		expect(html).not.toContain("See all");
+	});
+
+	test("describes a match from its body as plain text when its summary does not hold it", async () => {
+		let html = await (await get(`/frames/search?q=${BODY_WORD}`)).text();
+		let rows = html.slice(html.indexOf("<ol"), html.indexOf("</ol>"));
+
+		expect(count(rows, "<li")).toBe(2);
+		expect(count(rows, `<mark>${BODY_WORD}</mark>`)).toBe(2);
+		expect(rows).toContain("the tools");
+		expect(rows).not.toContain("**");
+		expect(rows).not.toContain("](");
+		expect(rows).not.toContain("A summary about something else.");
 	});
 
 	test("answers 200 with the reason for text that cannot run, never an error page", async () => {
@@ -147,8 +185,8 @@ describe("every public page", () => {
 			expect(html).toMatch(/<button[^>]*commandfor="site-search" command="show-modal"/);
 			expect(html).toContain('aria-keyshortcuts="Meta+K Control+K /"');
 			expect(dialog).toContain('id="site-search"');
-			expect(dialog).toContain('aria-labelledby="site-search-title"');
-			expect(dialog).toMatch(/<h2[^>]*id="site-search-title"[^>]*>Search the blog<\/h2>/);
+			expect(dialog).toContain('aria-label="Search"');
+			expect(dialog).toContain('closedby="any"');
 			expect(dialog).toContain('<form method="get" action="/search"');
 			expect(dialog).toContain('id="site-search-q"');
 			expect(html).not.toMatch(/<a[^>]*href="\/search"[^>]*>Search<\/a>/);
@@ -169,5 +207,21 @@ describe("every public page", () => {
 		expect(count(html, 'id="search-q"')).toBe(1);
 		expect(count(html, 'id="site-search-q"')).toBe(1);
 		expect(count(html, "autofocus")).toBe(1);
+	});
+
+	test("the search page opens its dialog on the same query, results already rendered", async () => {
+		let html = await (await get(`/search?q=${TOKEN}`)).text();
+		let dialog = html.slice(html.indexOf("<dialog"), html.indexOf("</dialog>"));
+
+		expect(dialog).toMatch(new RegExp(`id="site-search-q"[^>]*value="${TOKEN}"`));
+		expect(dialog).toContain(`Top 6 of ${ARTICLE_COUNT} results`);
+		expect(html).toContain(`"src":"/frames/search?q=${TOKEN}"`);
+	});
+
+	test("every other page opens its dialog blank", async () => {
+		let html = await (await get("/articles")).text();
+
+		expect(html).toContain('"src":"/frames/search"');
+		expect(html).toMatch(/id="site-search-q"[^>]*value=""/);
 	});
 });

@@ -9,41 +9,18 @@
 
 import type { Handle } from "remix/component";
 
-import { formatParts, parseDate } from "@sdxc/dates";
-import { isFailure } from "@sdxc/result";
-import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, hstack, items } from "@sdxc/u/layout";
+import { flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
 import { m, maxIs, mbs, p } from "@sdxc/u/size";
-import { nowrap, tabularNums, text, weight } from "@sdxc/u/typography";
-import { Badge, Button, FieldError, Heading, Label, Link, Pagination, SearchField } from "@sdxc/ui";
+import { tabularNums, text } from "@sdxc/u/typography";
+import { Button, FieldError, Heading, Label, Pagination, SearchField } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
-import { Highlighted } from "~/resources/components/highlighted";
+import { SearchResult } from "~/resources/components/search-result";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
-
-/**
- * Formats a publish instant for a result row, read on the UTC calendar so the day shown is
- * the same wherever the page renders.
- *
- * @returns A short English date, or an empty string when the value cannot be read.
- */
-function formatDate(value: string) {
-	let parsed = parseDate(value);
-	if (isFailure(parsed)) return "";
-	return formatParts(parsed.data, {
-		locale: "en",
-		timeZone: "UTC",
-		month: "short",
-		day: "2-digit",
-		year: "numeric",
-	})
-		.map((part) => part.value)
-		.join("");
-}
 
 /**
  * The search box. The browser submits it as `?q=` with no paging parameter, so a new query
@@ -123,49 +100,6 @@ function ResultsPager(handle: Handle<{ pager: SearchViewModel.Pager }>) {
 	};
 }
 
-/** One result: its type and date, the highlighted title linking to it, and the excerpt. */
-function ResultRow(handle: Handle<{ item: SearchViewModel.Item }>) {
-	return () => {
-		let { item } = handle.props;
-
-		return (
-			<li
-				mix={[
-					grid(),
-					gap(2),
-					p(4),
-					rounded("lg"),
-					bg("neutral.tint"),
-					border({ width: 1, color: "neutral" }),
-				]}
-			>
-				<div mix={[hstack({ gap: 2, align: "center" }), text("sm"), fg("neutral.muted")]}>
-					<Badge color="neutral" variant="secondary">
-						{item.kind}
-					</Badge>
-					{item.publishedAt ? (
-						<time datetime={item.publishedAt} mix={[nowrap(), tabularNums()]}>
-							{formatDate(item.publishedAt)}
-						</time>
-					) : null}
-				</div>
-				<p mix={[m(0), text("xl"), weight("bold"), fg("neutral.emphasis")]}>
-					<Link href={item.href}>
-						<Highlighted segments={item.title} />
-					</Link>
-				</p>
-				{item.excerpt ? (
-					<p mix={[m(0), text("base"), fg("neutral")]}>
-						{item.excerpt.truncatedStart ? "… " : null}
-						<Highlighted segments={item.excerpt.segments} />
-						{item.excerpt.truncatedEnd ? " …" : null}
-					</p>
-				) : null}
-			</li>
-		);
-	};
-}
-
 /**
  * Creates the search page renderer. A query page carries `noindex`: result pages are a view
  * of the posts the sitemap already lists, one per query anybody types.
@@ -178,6 +112,7 @@ export function SearchView() {
 			title={model.state === "blank" ? "Search" : `Search: ${model.query}`}
 			description="Search the articles, tutorials and glossary entries I have published."
 			activePath={routes.search.href()}
+			searchQuery={model.query}
 			meta={model.state === "blank" ? [] : [{ name: "robots", content: "noindex" }]}
 		>
 			<main mix={[grid(), gap(4)]}>
@@ -204,9 +139,9 @@ export function SearchView() {
 								? "1 result"
 								: `${model.from}–${model.to} of ${model.total} results`}
 						</p>
-						<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(3)]}>
+						<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(4)]}>
 							{model.items.map((item) => (
-								<ResultRow key={item.href} item={item} />
+								<SearchResult key={item.href} item={item} />
 							))}
 						</ol>
 						{model.pager ? <ResultsPager pager={model.pager} /> : null}

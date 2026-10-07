@@ -23,7 +23,8 @@ link into an in-place navigation that Safari repainted unstyled.
 | A `<Frame>` reloads from its `src` through `resolveFrame`   | Server-rendered HTML can update one region of a page with no client rendering |
 | A client entry keeps its DOM when its frame reloads         | A box inside a frame keeps focus, caret and typed text across reloads         |
 | The page renderer resolved frames with a network `fetch()`  | A tutorial page's related tutorials rendered empty in production              |
-| `<dialog>`, Invoker Commands and `autofocus` are native     | Opening, closing and focusing the dialog need no script                       |
+| `<dialog>`, Invoker Commands and `autofocus` are native     | Opening and focusing the dialog need no script                                |
+| A search box may spend Escape clearing itself               | Closing on Escape needs a key listener ahead of the box                       |
 
 ## Decision
 
@@ -41,19 +42,32 @@ up in the bundle's glob map.
 
 ### 2. The search dialog is a frame
 
-The blog layout renders a Search button (`commandfor` + `command="show-modal"`) and a native
-`<dialog>`, named by its heading, whose body is `<Frame name="search" src="/frames/search">`. That endpoint renders a
-`GET` form to `/search` around the search box, a `role="status"` line, and the top six matches
-for `?q=` with `<mark>` highlighting, plus a link to all of them on `/search`.
+The blog layout renders a search pill (`commandfor` + `command="show-modal"`) at the end of the
+navigation and a native `<dialog>` whose body is `<Frame name="search" src="/frames/search">`.
+The dialog is a single panel in the manner of a system search: anchored near the top of the
+viewport at a fixed width, so it grows downward only, with a large box on top and the results
+under a hairline. It carries no heading, visible label or close button; Escape and a click
+outside close it, and narrow or touch screens add a Cancel button. On `/search?q=…` the frame
+starts from `/frames/search?q=…`, so the dialog opens on that query with its results rendered.
 
-The box is the `SearchInput` island. Each pause in typing (200 ms) points its own frame's `src`
-at `/frames/search?q=…` and reloads it. The runtime aborts a reload still in flight when the
-next one starts, and the signal reaches `fetch()`, so only the newest answer lands. Submitting
-the form is a document navigation to `/search`.
+`/frames/search` renders a `GET` form to `/search` around the box, a `role="status"` line that
+announces the count (shown only for a message such as "No posts match"), and the top six
+matches as activity rows: the kind's emoji, the title with matches marked by `@sdxc/ui`'s
+`Highlight`, a line of the post around the first match, and the date. That line is the summary
+when it holds a match, otherwise the body as plain text.
 
-The `SearchTrigger` island adds the shortcuts: ⌘K or Ctrl+K toggles the dialog, `/` opens it
-from outside a field. It also closes the dialog on `pagehide`, so a page restored from the
-back/forward cache comes back closed.
+The box is the `SearchBox` island. A keystroke marks the results `aria-busy`, a spinner replaces
+the magnifier once a search outlasts 350 ms, and each 200 ms pause in typing points its own
+frame's `src` at `/frames/search?q=…` and reloads it. The runtime aborts a reload still in
+flight when the next one starts, and the signal reaches `fetch()`, so only the newest answer
+lands; the panel then animates from its old height to its new one. Submitting the form is a
+document navigation to `/search`.
+
+The `SearchTrigger` island adds the keys: ⌘K or Ctrl+K toggles the dialog, `/` opens it from
+outside a field, and Escape closes it even from a search box that would spend Escape clearing
+itself. It closes the dialog on a click that starts and ends on the backdrop, where
+`closedby="any"` is unsupported, and on `pagehide`, so a page restored from the back/forward
+cache comes back closed.
 
 ### 3. Server frames resolve in process
 

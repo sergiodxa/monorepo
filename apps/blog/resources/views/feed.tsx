@@ -1,26 +1,22 @@
 /**
  * View for the site home/feed page. Renders the author intro, an RSS link, and
  * a chronological "Activity" timeline of posts as an `h-feed` of `h-entry` rows, each
- * with an icon, label, date, and optional preview badge. Exists as the landing page
- * of the public blog.
+ * an activity row with an optional preview badge. Exists as the landing page of the
+ * public blog.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ColorValue } from "@sdxc/u";
-
-import { formatParts, parseDate } from "@sdxc/dates";
 import { mf } from "@sdxc/microformats/ui";
-import { isFailure } from "@sdxc/result";
 import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
-import { gap, grid, gridTemplate, inlineFlex, items, justify } from "@sdxc/u/layout";
-import { bs, is, m, maxIs, mbs, mis, p } from "@sdxc/u/size";
-import { spacing } from "@sdxc/u/tokens";
-import { nowrap, text } from "@sdxc/u/typography";
+import { gap, grid } from "@sdxc/u/layout";
+import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
+import { text } from "@sdxc/u/typography";
 import { Badge, Heading, Link } from "@sdxc/ui";
 
+import { ActivityRow } from "~/resources/components/activity-row";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -36,11 +32,8 @@ export namespace FeedView {
 		label: string;
 		date: string;
 		preview: boolean;
-		/** Whether `href` is a saved external page, marked up as `u-bookmark-of`. */
-		bookmark: boolean;
-		icon: string;
-		/** Semantic tone the icon is tinted with, resolved through `fg()` at render. */
-		iconTint: ColorValue;
+		/** Which emoji the row leads with; a bookmark's `href` is marked up as `u-bookmark-of`. */
+		kind: ActivityRow.Kind;
 	}
 
 	/**
@@ -52,38 +45,8 @@ export namespace FeedView {
 }
 
 /**
- * Formats an activity date for the timeline on the UTC calendar, so the day shown
- * is the same wherever the page renders; an unparseable value yields an
- * empty string so the row still renders.
- */
-function formatDate(value: string) {
-	let parsed = parseDate(value);
-	if (isFailure(parsed)) return "";
-	return formatParts(parsed.data, {
-		locale: "en",
-		timeZone: "UTC",
-		month: "short",
-		day: "2-digit",
-		year: "2-digit",
-	})
-		.map((part) => part.value)
-		.join("");
-}
-
-/**
- * The machine-readable instant for `<time datetime>`, which carries the `dt-published`
- * a microformats parser reads; `undefined` for an unparseable value, omitting it.
- */
-function isoDate(value: string) {
-	let parsed = parseDate(value);
-	if (isFailure(parsed)) return undefined;
-	return parsed.data.toISOString();
-}
-
-/**
- * Builds the feed page renderer used by the feed route response. A fixed icon
- * column keeps every row's label at the same inline offset whatever the
- * emoji's intrinsic width.
+ * Builds the feed page renderer used by the feed route response: the intro, the
+ * subscription links, and the activity timeline as an `h-feed` of `h-entry` rows.
  */
 export function FeedView() {
 	return ({ model }: { model: FeedView.Model }) => (
@@ -109,50 +72,24 @@ export function FeedView() {
 
 				<ol mix={[m(0), p(0), listStyle("none"), grid(), gap(4)]}>
 					{model.activity.map((item, index) => (
-						<li
+						<ActivityRow
 							key={item.href + String(index)}
-							mix={[
-								mf("h-entry"),
-								grid(),
-								gridTemplate({ columns: `${spacing(7)} 1fr auto` }),
-								gap(3),
-								items("start"),
-							]}
-						>
-							<span
-								aria-hidden="true"
-								mix={[
-									inlineFlex(),
-									justify("center"),
-									items("center"),
-									is(7),
-									bs(7),
-									text("xl"),
-									fg(item.iconTint),
-								]}
-							>
-								{item.icon}
-							</span>
-							<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-								<Link
-									href={item.href}
-									mix={[mf(item.bookmark ? "u-bookmark-of" : "u-url", "p-name")]}
-								>
-									{item.label}
-								</Link>
-								{item.preview && (
+							kind={item.kind}
+							href={item.href}
+							date={item.date}
+							mix={[mf("h-entry")]}
+							linkMix={[mf(item.kind === "bookmark" ? "u-bookmark-of" : "u-url", "p-name")]}
+							dateMix={[mf("dt-published")]}
+							badge={
+								item.preview ? (
 									<Badge color="warning" variant="secondary" mix={[mis(2)]}>
 										Preview
 									</Badge>
-								)}
-							</p>
-							<time
-								datetime={isoDate(item.date)}
-								mix={[mf("dt-published"), fg("neutral.muted"), text("sm"), nowrap(), mbs(1)]}
-							>
-								{formatDate(item.date)}
-							</time>
-						</li>
+								) : undefined
+							}
+						>
+							{item.label}
+						</ActivityRow>
 					))}
 				</ol>
 			</main>

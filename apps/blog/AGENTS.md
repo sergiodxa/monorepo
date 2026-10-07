@@ -105,7 +105,7 @@ This document defines app-specific rules for `apps/blog`.
 - Client islands
   - `bootstrap/browser.ts`
   - `resources/components/search-trigger.tsx`
-  - `resources/components/search-input.tsx`
+  - `resources/components/search-box.tsx`
 - Styling system
   - `resources/css/colors.css`
   - `resources/css/highlight.css`

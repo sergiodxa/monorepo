@@ -69,6 +69,15 @@ export namespace PostSearch {
 		/** Publication instant as ISO 8601 when the post has one, or `null` otherwise. */
 		publishedAt: string | null;
 	}
+
+	/**
+	 * A result on a page a person reads, with the text it was found in, so a reader can be
+	 * shown where a match sits in a post whose summary does not hold it.
+	 */
+	export interface Hit extends Result {
+		/** The post's searchable body: Markdown for a post, a glossary entry's definition. */
+		body: string;
+	}
 }
 
 /** Every kind a search reaches. */
@@ -156,7 +165,8 @@ export class PostSearch {
 		if (limit <= 0) return [];
 
 		let rows = await this.matching(db, parsed.data, options).limit(limit).all();
-		return this.results(db, rows);
+		let hits = await this.hits(db, rows);
+		return hits.map(({ body: _body, ...result }) => result);
 	}
 
 	/**
@@ -165,12 +175,13 @@ export class PostSearch {
 	 *
 	 * @param db Database connection holding `post_search` and the posts it projects.
 	 * @param options The parsed query, the page wanted, and any narrowing.
-	 * @returns The page with its total, or a `PaginationError` when the database refuses.
+	 * @returns The page with its total, each hit carrying the body it was found in, or a
+	 * `PaginationError` when the database refuses.
 	 */
 	static async page(
 		db: Database,
 		options: PostSearch.PageOptions,
-	): Promise<Result<Page<PostSearch.Result>, PaginationError>> {
+	): Promise<Result<Page<PostSearch.Hit>, PaginationError>> {
 		let page = await Pagination.byOffset(this.matching(db, options.query, options), {
 			page: options.page,
 			perPage: options.perPage,
@@ -178,7 +189,7 @@ export class PostSearch {
 		if (isFailure(page)) return page;
 
 		return success({
-			items: await this.results(db, page.data.items),
+			items: await this.hits(db, page.data.items),
 			pagination: page.data.pagination,
 		});
 	}
@@ -252,10 +263,10 @@ export class PostSearch {
 	 * Reads each hit's post back from the source tables in two batched queries, keeping the
 	 * search's order. A post deleted between the search and this read is left out.
 	 */
-	private static async results(
+	private static async hits(
 		db: Database,
 		rows: ReadonlyArray<schema.SelectPostSearch>,
-	): Promise<Array<PostSearch.Result>> {
+	): Promise<Array<PostSearch.Hit>> {
 		if (rows.length === 0) return [];
 
 		let ids = rows.map((row) => row.post_id);
@@ -277,7 +288,8 @@ export class PostSearch {
 		return rows.flatMap((row) => {
 			let post = postsById.get(row.post_id);
 			if (!post || post.deleted_at !== null || !isKind(post.type)) return [];
-			return [this.result(post.type, post, metaByPost.get(post.id) ?? [], row.tags)];
+			let result = this.result(post.type, post, metaByPost.get(post.id) ?? [], row.tags);
+			return [{ ...result, body: row.content }];
 		});
 	}
 

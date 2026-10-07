@@ -47,10 +47,12 @@ Smart Placement and Observability are enabled.
   each live post's title, tags and body, ranked title first, then tags, then body. Only posts
   published by now appear, previews and deleted posts never. Results page ten at a time with
   `Link` and `X-Total-Count` headers, and matched words are highlighted.
-- Search from any page: the navigation's Search button, ⌘K / Ctrl+K, or `/` (outside a
-  field) opens a dialog listing the top six matches as you type, each highlighted, with a
-  link to every result on `/search`. Enter goes to `/search`; without JavaScript the dialog
-  is a plain search form.
+- Search from any page: the navigation's search pill, ⌘K / Ctrl+K, or `/` (outside a
+  field) opens a panel near the top of the screen with a large search box; as you type, the
+  top six matches appear under it, each with its matched words highlighted and a line of the
+  post around the first match, plus a link to every result on `/search`. Enter goes to
+  `/search`, Escape or a click outside closes it, and on `/search` it opens on that page's
+  query. Without JavaScript the panel is a plain search form.
 - Encore support page (`/apps/encore/support`), the Support URL of the Encore App Store
   listings: a public form that mails each request to `SUPPORT_INBOX` from
   `encore@support.sergiodxa.com` with the visitor as Reply-To, behind same-origin checks,
@@ -92,13 +94,17 @@ Smart Placement and Observability are enabled.
 
 Pages are server-rendered documents. The document shell loads `bootstrap/browser.ts`, which
 hydrates only the components marked with `clientEntry()` and keeps every link and form a full
-document navigation. Hydrated components live in `resources/components/`, one per file, each
-declaring its own module path (`/resources/components/<file>.tsx#<Export>`):
+document navigation. An island lives in `resources/components/`, one per file, declaring its
+own module path (`/resources/components/<file>.tsx#<Export>`):
 
-| Island          | Does                                                                 |
-| --------------- | -------------------------------------------------------------------- |
-| `SearchTrigger` | The navigation's Search button and the ⌘K / Ctrl+K and `/` shortcuts |
-| `SearchInput`   | The dialog's box, reloading its frame with the results as you type   |
+| Island          | Does                                                                                    |
+| --------------- | --------------------------------------------------------------------------------------- |
+| `SearchTrigger` | The navigation's search pill, and ⌘K / Ctrl+K, `/`, Escape and backdrop clicks          |
+| `SearchBox`     | The dialog's box, reloading its frame as you type, with a busy state while results load |
+
+Server components shared across pages sit beside them: `ActivityRow` draws a post as a row
+(emoji per kind, title link, optional description, date) on the home page, `/search` and the
+search dialog alike.
 
 A page's `<Frame>` is rendered by the server through the app's own router, so frame content is
 in the HTML a reader first receives. See

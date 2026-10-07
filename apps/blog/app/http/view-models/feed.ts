@@ -1,14 +1,12 @@
 /**
  * View model for the activity feed page. Maps repository feed records into render-ready
- * timeline rows, selecting per-kind copy, routes, and icon metadata for articles,
+ * timeline rows, selecting per-kind copy and routes for articles,
  * tutorials, bookmarks, and glossary entries, and dropping entries missing required
  * routing data. It centralizes feed presentation so controllers remain thin.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import type { ColorValue } from "@sdxc/u";
 
 import type { Feed } from "~/app/repositories/feed";
 
@@ -32,18 +30,10 @@ export namespace FeedViewModel {
 		/** Whether the activity points to preview-only content. */
 		preview: boolean;
 		/**
-		 * `true` when `href` is someone else's page the author saved, which the view marks
-		 * up as the entry's `bookmark-of` rather than its own permalink.
+		 * What the activity is, which picks the row's emoji. A `bookmark`'s `href` is someone
+		 * else's page the author saved, marked up as the entry's `bookmark-of`.
 		 */
-		bookmark: boolean;
-		/** Emoji icon standing in for the activity type. */
-		icon: string;
-		/**
-		 * Semantic tone the icon is tinted with, named in the design system's own
-		 * vocabulary (`"brand.emphasis"`, `"neutral"`, ...). The view resolves it
-		 * through the color utilities, so the theme owns the resulting color.
-		 */
-		iconTint: ColorValue;
+		kind: "article" | "tutorial" | "bookmark" | "glossary";
 	}
 
 	/**
@@ -59,8 +49,8 @@ export namespace FeedViewModel {
 /**
  * Maps repository feed records into feed-page presentation data.
  *
- * This class centralizes copy, route selection, and icon metadata per feed
- * kind so controllers stay thin.
+ * This class centralizes copy and route selection per feed kind so controllers
+ * stay thin.
  */
 export class FeedViewModel {
 	/**
@@ -72,7 +62,7 @@ export class FeedViewModel {
 	 */
 	static index(activity: Array<Feed.ActivityItem>): FeedViewModel.Page {
 		let items = activity
-			.map((item) => {
+			.map((item): FeedViewModel.ActivityItem | null => {
 				if (item.kind === "article") {
 					if (!item.slug) return null;
 
@@ -81,9 +71,7 @@ export class FeedViewModel {
 						label: `I wrote about ${item.title}`,
 						date: item.date,
 						preview: item.preview,
-						bookmark: false,
-						icon: "📝",
-						iconTint: "brand.emphasis",
+						kind: "article",
 					};
 				}
 
@@ -95,9 +83,7 @@ export class FeedViewModel {
 						label: `I published how to ${item.title}`,
 						date: item.date,
 						preview: item.preview,
-						bookmark: false,
-						icon: "🛠️",
-						iconTint: "brand",
+						kind: "tutorial",
 					};
 				}
 
@@ -109,9 +95,7 @@ export class FeedViewModel {
 						label: `I saved ${item.title}`,
 						date: item.date,
 						preview: item.preview,
-						bookmark: true,
-						icon: "🔖",
-						iconTint: "neutral.emphasis",
+						kind: "bookmark",
 					};
 				}
 
@@ -122,9 +106,7 @@ export class FeedViewModel {
 					label: `I added the definition of ${item.title}`,
 					date: item.date,
 					preview: item.preview,
-					bookmark: false,
-					icon: "📘",
-					iconTint: "neutral",
+					kind: "glossary",
 				};
 			})
 			.filter(this.isActivityItem);
@@ -141,15 +123,7 @@ export class FeedViewModel {
 	 */
 	static isActivityItem(
 		this: void,
-		item: {
-			href: string;
-			label: string;
-			date: string;
-			preview: boolean;
-			bookmark: boolean;
-			icon: string;
-			iconTint: string;
-		} | null,
+		item: FeedViewModel.ActivityItem | null,
 	): item is FeedViewModel.ActivityItem {
 		return item !== null;
 	}

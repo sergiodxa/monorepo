@@ -13,14 +13,17 @@ import type { Handle, RemixNode } from "remix/component";
 import { mf } from "@sdxc/microformats/ui";
 import { bg, border, fg, radialGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { flexWrap, hstack } from "@sdxc/u/layout";
-import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@sdxc/u/size";
+import { raw } from "@sdxc/u/general";
+import { flexWrap, gap, hstack } from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
+import { is, m, maxBs, maxIs, mbe, mbs, mi, minBs, p, pb, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
-import { HeadingScope, Modal, NavLink } from "@sdxc/ui";
+import { Modal, NavLink } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
+import { searchFrameSrc } from "~/resources/components/search-box";
 import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -49,6 +52,11 @@ export namespace BlogLayout {
 		activePath?: string;
 		canonical?: string;
 		meta?: Array<MetaTag>;
+		/**
+		 * Text the search dialog opens holding, with its results already rendered; the
+		 * `/search` page passes its own query so the dialog continues that search.
+		 */
+		searchQuery?: string;
 		children: RemixNode;
 	}
 
@@ -60,9 +68,6 @@ export namespace BlogLayout {
 		label: string;
 	}
 }
-
-/** The search dialog's heading, which names the dialog for assistive technology. */
-const SEARCH_DIALOG_TITLE_ID = "site-search-title";
 
 let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.feed.href(), label: "Home" },
@@ -82,7 +87,16 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
  */
 export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 	return () => {
-		let { activePath, canonical, children, description, locale, meta = [], title } = handle.props;
+		let {
+			activePath,
+			canonical,
+			children,
+			description,
+			locale,
+			meta = [],
+			searchQuery,
+			title,
+		} = handle.props;
 
 		return (
 			<DocumentLayout
@@ -157,14 +171,28 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							})}
 							<SearchTrigger />
 						</nav>
-						<Modal id={SEARCH_DIALOG_ID} aria-labelledby={SEARCH_DIALOG_TITLE_ID} closedby="any">
-							<HeadingScope level={2}>
-								<Modal.Header>
-									<Modal.Title id={SEARCH_DIALOG_TITLE_ID}>Search the blog</Modal.Title>
-								</Modal.Header>
-							</HeadingScope>
-							<Modal.Close commandfor={SEARCH_DIALOG_ID} aria-label="Close search" />
-							<Frame name="search" src={routes.searchFrame.href()} />
+						<Modal
+							id={SEARCH_DIALOG_ID}
+							aria-label="Search"
+							closedby="any"
+							mix={[
+								p(0),
+								gap(0),
+								is("min(40rem, 100% - 2rem)"),
+								maxIs("none"),
+								maxBs("calc(100dvh - 2 * min(12vh, 6rem))"),
+								raw({ marginBlock: "min(12vh, 6rem) auto" }),
+								media("(max-width: 40rem)", [
+									is("calc(100% - 1rem)"),
+									maxBs("calc(100dvh - 1rem)"),
+									raw({ marginBlock: "0.5rem auto" }),
+								]),
+							]}
+						>
+							<Frame
+								name="search"
+								src={searchFrameSrc(routes.searchFrame.href(), searchQuery ?? "")}
+							/>
 						</Modal>
 					</header>
 					{children}
