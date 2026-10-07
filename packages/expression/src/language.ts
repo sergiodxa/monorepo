@@ -26,7 +26,7 @@ import { BUILTIN_NAMES } from "./builtins.js";
 import { compile } from "./compile.js";
 import { evaluate } from "./evaluate.js";
 import { createGrammar } from "./grammar.js";
-import { parse } from "./parse.js";
+import { KEYWORDS, parse } from "./parse.js";
 import { stringify } from "./stringify.js";
 
 /**
@@ -87,7 +87,7 @@ export interface Language<E, C> {
 	 * Reads the text form into the JSON form, validated against the schema. A
 	 * failure carries the `line` and `column` the text broke at.
 	 *
-	 * @param text Like `plan.tier == "pro" and (country in ["AR"] or exists(beta))`.
+	 * @param text Like `ctx.plan.tier == "pro" and (ctx.country in ["AR"] or exists(ctx.beta))`.
 	 */
 	parse(text: string): Result<E, ExpressionError>;
 	/**
@@ -104,6 +104,9 @@ export interface Language<E, C> {
  * has no references.
  *
  * @param options The built-ins kept, the operators added, and the reference spelling.
+ * @throws {TypeError} When an added operator or the reference is named like a
+ * keyword of the text form (`ctx`, `and`, `or`, `not`, `in`, `true`, `false`,
+ * `null`), which no text could call.
  * @example let conditions = createLanguage({ reference: "segment" });
  */
 export function createLanguage<
@@ -115,6 +118,15 @@ export function createLanguage<
 ): Language<ExpressionOf<B, R, NodeOf<O[number]>>, CompiledOf<B, R, CompiledNodeOf<O[number]>>> {
 	type E = ExpressionOf<B, R, NodeOf<O[number]>>;
 	type C = CompiledOf<B, R, CompiledNodeOf<O[number]>>;
+
+	for (let name of [
+		...(options.operators ?? []).map((operator) => operator.op),
+		options.reference,
+	]) {
+		if (name !== undefined && KEYWORDS.has(name)) {
+			throw new TypeError(`"${name}" is a keyword of the text form and cannot name an operator`);
+		}
+	}
 
 	let grammar = createGrammar(
 		options.builtins ?? BUILTIN_NAMES,

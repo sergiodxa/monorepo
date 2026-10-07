@@ -41,7 +41,7 @@ export interface Operator<Node extends AnyFieldNode, Compiled extends AnyFieldNo
 	readonly op: Node["op"];
 	/**
 	 * The node's fields in the order the text form's call syntax takes them,
-	 * starting with `field`, so `semver(appVersion, ">=", "2.0.0")` fills
+	 * starting with `field`, so `semver(ctx.appVersion, ">=", "2.0.0")` fills
 	 * `field`, `compare` and `value`.
 	 */
 	readonly args: readonly string[];

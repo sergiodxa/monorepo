@@ -9,8 +9,14 @@
 
 import type { Grammar, Node } from "./grammar.js";
 
-import { COMPARISONS, KEYWORDS } from "./parse.js";
-import { WORD } from "./tokenize.js";
+import { BUILTINS, comparedPath } from "./builtins.js";
+import { COMPARISONS } from "./parse.js";
+import { BARE_SEGMENT } from "./tokenize.js";
+
+/** A call argument printed as a context path, which a literal object can never be mistaken for. */
+class ContextPath {
+	constructor(readonly field: string) {}
+}
 
 /** The infix spelling of each comparison operator. */
 const INFIX: Readonly<Record<string, string>> = {
@@ -43,15 +49,23 @@ export function stringify(grammar: Grammar, node: Node): string {
 
 	if (node.op === grammar.reference) return `${node.op}(${literal(node.name)})`;
 
+	let operator = grammar.fields.get(node.op);
 	let field = path(node.field as string);
+	let right = comparedPath(operator, node);
 	let infix = INFIX[node.op];
 	if (infix !== undefined) {
-		return `${field} ${infix} ${literal(node.op === "in" || node.op === "notIn" ? node.values : node.value)}`;
+		let value = node.op === "in" || node.op === "notIn" ? node.values : node.value;
+		return `${field} ${infix} ${right === undefined ? literal(value) : path(right)}`;
 	}
 
-	let names = [...(grammar.fields.get(node.op)?.args.slice(1) ?? [])];
-	while (names.length > 0 && node[names[names.length - 1] ?? ""] === undefined) names.pop();
-	let args = [field, ...names.map((name) => literal(node[name]))];
+	let written: Record<string, unknown> = { ...node };
+	if (right !== undefined && operator !== undefined) {
+		written[BUILTINS.get(operator)?.key ?? "value"] = new ContextPath(right);
+	}
+
+	let names = [...(operator?.args.slice(1) ?? [])];
+	while (names.length > 0 && written[names[names.length - 1] ?? ""] === undefined) names.pop();
+	let args = [field, ...names.map((name) => argument(written[name]))];
 	return `${node.op}(${args.join(", ")})`;
 }
 
@@ -68,12 +82,22 @@ function operand(grammar: Grammar, node: Node, tight: boolean): string {
 	return text;
 }
 
-/** Prints a field bare when the text form can read it back that way, backtick-quoted otherwise. */
+/**
+ * Prints a context path under `ctx.`, each segment bare when the text form can
+ * read it back that way and backtick-quoted otherwise.
+ */
 function path(field: string): string {
-	WORD.lastIndex = 0;
-	let bare = WORD.exec(field);
-	if (bare?.[0] === field && !KEYWORDS.has(field)) return field;
-	return `\`${field.replaceAll(/[`\\]/g, "\\$&")}\``;
+	let segments = field.split(".").map((segment) => {
+		if (BARE_SEGMENT.test(segment)) return segment;
+		return `\`${segment.replaceAll(/[`\\]/g, "\\$&")}\``;
+	});
+	return `ctx.${segments.join(".")}`;
+}
+
+/** Prints a call argument: a context path the caller marked as `{ path }`, or a literal. */
+function argument(value: unknown): string {
+	if (value instanceof ContextPath) return path(value.field);
+	return literal(value);
 }
 
 /** Prints a JSON literal, with a space after each comma and colon. */

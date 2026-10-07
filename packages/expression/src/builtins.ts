@@ -378,3 +378,16 @@ function negate(compare: Compare): Compare {
 		return answer === undefined ? undefined : !answer;
 	};
 }
+
+/**
+ * The context path a built-in comparison reads its right-hand side from, when
+ * it reads one. An extension operator's own field named `path` stays its own,
+ * so this answers `undefined` for every extension.
+ */
+export function comparedPath(
+	operator: Operator<any, any> | undefined,
+	node: Readonly<Record<string, unknown>>,
+): string | undefined {
+	if (operator === undefined || BUILTINS.get(operator)?.paths !== true) return undefined;
+	return typeof node.path === "string" ? node.path : undefined;
+}

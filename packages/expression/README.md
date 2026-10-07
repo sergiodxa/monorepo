@@ -42,17 +42,31 @@ Compile once, when the condition is loaded, and evaluate as often as you like: e
 let conditions = createLanguage({ reference: "segment" });
 
 let parsed = conditions.parse(
-	`plan.tier == "pro" and (country in ["AR", "UY"] or segment("internal"))`,
+	`ctx.plan.tier == "pro" and (ctx.country in ["AR", "UY"] or segment("internal"))`,
 );
 // Success: the same JSON form compile() takes
 
-conditions.parse(`plan.tier == "pro" and`);
-// Failure: ExpressionError { line: 1, column: 23, message: "Expected a condition after 'and'" }
+conditions.parse(`ctx.plan.tier == "pro" and`);
+// Failure: ExpressionError { line: 1, column: 27, message: "Expected a condition after 'and'" }
 
-conditions.stringify({ op: "not", of: { op: "exists", field: "beta" } }); // "not exists(beta)"
+conditions.stringify({ op: "not", of: { op: "exists", field: "beta" } }); // "not exists(ctx.beta)"
 ```
 
-The JSON form stays the one to store; the text form is for people typing a rule into a form, a config file or an environment variable.
+Every path in the text form starts with `ctx.`, and everything else is a JSON literal. The JSON form stays the one to store, with `field: "plan.tier"` and no root; the text form is for people typing a rule into a form, a config file or an environment variable.
+
+### Comparing two facts
+
+```typescript
+let rules = createLanguage();
+
+let parsed = rules.parse(`ctx.article.authorId == ctx.actor.id`);
+// Success: { op: "eq", field: "article.authorId", path: "actor.id" }
+
+rules.parse(`intersects(ctx.article.teamIds, ctx.actor.teamIds)`);
+// Success: { op: "intersects", field: "article.teamIds", path: "actor.teamIds" }
+```
+
+A rule that compares two values the caller supplies stays one document for every caller, instead of a copy per caller with its values written in.
 
 ### Sharing conditions by name
 
@@ -151,18 +165,19 @@ Every operator from `eq` to `subsetOf` also takes its right-hand side from the c
 
 ### Text form
 
-| Text                                     | JSON form                                                |
-| ---------------------------------------- | -------------------------------------------------------- |
-| `a and b`, `a or b`, `not a`             | `all`, `any`, `not`; `not` binds over `and` over `or`    |
-| `(a or b)`                               | grouping, kept as its own node                           |
-| `true`                                   | `always`                                                 |
-| `field == v`, `!=`, `<`, `<=`, `>`, `>=` | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`                     |
-| `field in [...]`, `field not in [...]`   | `in`, `notIn`                                            |
-| `op(field, ...args)`                     | any other operator, arguments in the order of its `args` |
-| `segment("internal")`                    | a reference, under the dialect's spelling                |
-| `all(...)`, `any(...)`                   | a chain of fewer than two members                        |
+| Text                                         | JSON form                                                |
+| -------------------------------------------- | -------------------------------------------------------- |
+| `a and b`, `a or b`, `not a`                 | `all`, `any`, `not`; `not` binds over `and` over `or`    |
+| `(a or b)`                                   | grouping, kept as its own node                           |
+| `true`                                       | `always`                                                 |
+| `ctx.field == v`, `!=`, `<`, `<=`, `>`, `>=` | `eq`, `ne`, `lt`, `lte`, `gt`, `gte`                     |
+| `ctx.field in [...]`, `not in [...]`         | `in`, `notIn`                                            |
+| `ctx.field == ctx.other`, `in ctx.list`      | the same operators, with `path` in place of the literal  |
+| `op(ctx.field, ...args)`                     | any other operator, arguments in the order of its `args` |
+| `segment("internal")`                        | a reference, under the dialect's spelling                |
+| `all(...)`, `any(...)`                       | a chain of fewer than two members                        |
 
-Values are JSON literals, written exactly as they are stored. A field is a bare dotted path such as `plan.tier` or `roles.0`; one a bare path cannot spell, such as `user-agent` or a keyword like `in`, is quoted in backticks: `` `user-agent` == "bot" ``.
+Values are JSON literals, written exactly as they are stored. A path is `ctx` followed by one or more segments, such as `ctx.plan.tier` or `ctx.roles.0`; a segment a bare word cannot spell, such as `user-agent`, is quoted in backticks: ``ctx.headers.`user-agent` == "bot"``. The left of a comparison is always a path. Its right is a literal or, for the operators from `eq` to `subsetOf`, a path, as in `includes(ctx.list, ctx.x)`; a path anywhere else fails naming the operator. `ctx` and the other keywords (`and`, `or`, `not`, `in`, `true`, `false`, `null`) cannot name an operator or a reference, and `createLanguage` throws a `TypeError` for one that does.
 
 ### `defineOperator(definition)`
 
@@ -184,7 +199,7 @@ import { isSuccess } from "@sdxc/result";
 
 let conditions = createLanguage();
 
-// KEEP_WHEN = `kind == "job" or status >= 500 or exists(error)`
+// KEEP_WHEN = `ctx.kind == "job" or ctx.status >= 500 or exists(ctx.error)`
 let parsed = conditions.parse(process.env.KEEP_WHEN ?? "true");
 let compiled = isSuccess(parsed) ? conditions.compile(parsed.data) : parsed;
 

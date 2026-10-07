@@ -1,7 +1,7 @@
 /**
  * Reads the text form into the JSON form of the same language. `not` binds
- * over `and` over `or`, comparisons are infix and every other operator is a
- * call, so `plan.tier == "pro" and exists(beta)` reads as a person writes it.
+ * over `and` over `or`, comparisons are infix, every other operator is a call,
+ * and every path starts with `ctx.`, so `ctx.plan.tier == "pro"` reads as written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,6 +17,7 @@ import type { ExpressionError } from "./expression-error.js";
 import type { Grammar, Node } from "./grammar.js";
 import type { Token } from "./tokenize.js";
 
+import { BUILTINS } from "./builtins.js";
 import { syntaxError, tokenize } from "./tokenize.js";
 
 /** The infix comparisons, by the built-in operator each one writes. */
@@ -29,8 +30,9 @@ export const COMPARISONS: Readonly<Record<string, string>> = {
 	">=": "gte",
 };
 
-/** Words the text form reserves; a field spelled like one is written backtick-quoted. */
+/** Words the text form reserves, which no operator or reference may be named. */
 export const KEYWORDS: ReadonlySet<string> = new Set([
+	"ctx",
 	"and",
 	"or",
 	"not",
@@ -177,14 +179,20 @@ class Parser {
 			return this.at({ op: "always" }, token);
 		}
 
-		if (!isPath(token)) return this.fail(this.expectedCondition(), token);
+		if (token.kind === "path") {
+			this.next();
+			return this.comparison(token);
+		}
 
-		this.next();
-		if (token.kind === "word" && this.isSymbol(this.peek(), "(")) return this.call(token);
-		return this.comparison(token);
+		if (token.kind === "word" && !KEYWORDS.has(token.text)) {
+			this.next();
+			if (this.isSymbol(this.peek(), "(")) return this.call(token);
+		}
+
+		return this.fail(misplaced(token) ?? this.expectedCondition(), token);
 	}
 
-	/** `field == value`, `field in [...]` or `field not in [...]`. */
+	/** `ctx.field == value`, `ctx.field in [...]` or `ctx.field not in [...]`; the value may be a path. */
 	comparison(field: Token): Step<Node> {
 		let token = this.next();
 		let op: string | undefined;
@@ -202,13 +210,13 @@ class Parser {
 			return this.fail(`"${written}" is not an operator of this language`, token);
 		}
 
+		let key = op === "in" || op === "notIn" ? "values" : "value";
 		let valueToken = this.peek();
-		let value = this.literal();
+		let value = this.operand(op, key);
 		if (isFailure(value)) return value;
 
-		let key = op === "in" || op === "notIn" ? "values" : "value";
-		let node: Node = { op, field: pathOf(field), [key]: value.data };
-		this.positions.fields.set(node, { field: field.offset, [key]: valueToken.offset });
+		let node: Node = { op, field: String(field.value), ...value.data };
+		this.positions.fields.set(node, { field: field.offset, ...offsetsOf(value.data, valueToken) });
 		return this.at(node, field);
 	}
 
@@ -255,19 +263,21 @@ class Parser {
 		}
 
 		let field = this.next();
-		if (!isPath(field)) {
-			return this.fail(`Expected a field path as the first argument of "${op}"`, field);
+		if (field.kind !== "path") {
+			let message = `Expected a path starting with 'ctx.' as the first argument of "${op}"`;
+			return this.fail(misplaced(field) ?? message, field);
 		}
 
-		let node: Node = { op, field: pathOf(field) };
+		let node: Node = { op, field: String(field.value) };
 		let offsets: Record<string, number> = { field: field.offset };
 		for (let key of operator.args.slice(1)) {
 			if (!this.isSymbol(this.peek(), ",")) break;
 			this.next();
-			offsets[key] = this.peek().offset;
-			let value = this.literal();
+			let token = this.peek();
+			let value = this.operand(op, key);
 			if (isFailure(value)) return value;
-			node[key] = value.data;
+			Object.assign(node, value.data);
+			Object.assign(offsets, offsetsOf(value.data, token));
 		}
 		this.positions.fields.set(node, offsets);
 
@@ -278,6 +288,26 @@ class Parser {
 		let closed = this.expect(")");
 		if (isFailure(closed)) return closed;
 		return this.at(node, name);
+	}
+
+	/**
+	 * The argument `key` of `op`: a literal, or a context path for the
+	 * right-hand side of a built-in comparison, which then fills `path`.
+	 */
+	operand(op: string, key: string): Step<Record<string, unknown>> {
+		let token = this.peek();
+		if (token.kind !== "path") {
+			let value = this.literal();
+			return isFailure(value) ? value : success({ [key]: value.data });
+		}
+
+		let operator = this.grammar.fields.get(op);
+		let builtin = operator === undefined ? undefined : BUILTINS.get(operator);
+		if (builtin?.paths !== true || builtin.key !== key) {
+			return this.fail(`"${op}" takes a literal as "${key}", where a path was written`, token);
+		}
+		this.next();
+		return success({ path: token.value });
 	}
 
 	/** A JSON literal: a string, number, `true`, `false`, `null`, array or object. */
@@ -295,7 +325,8 @@ class Parser {
 			return success(Object.fromEntries(entries.data));
 		}
 
-		return this.fail(`Expected a value after '${this.previous(token).text}'`, token);
+		let message = misplaced(token) ?? `Expected a value after '${this.previous(token).text}'`;
+		return this.fail(message, token);
 	}
 
 	/** One `"key": value` pair of an object literal. */
@@ -386,12 +417,20 @@ class Parser {
 	}
 }
 
-/** Holds for a token that names a field: a backtick-quoted path, or a bare one that is no keyword. */
-function isPath(token: Token): boolean {
-	return token.kind === "path" || (token.kind === "word" && !KEYWORDS.has(token.text));
+/**
+ * The message for a path written without its `ctx.` root, or for `ctx` alone,
+ * which names the spelling that parses; `undefined` for any other token.
+ */
+function misplaced(token: Token): string | undefined {
+	if (token.kind === "word" && token.text === "ctx") return "Expected '.' and a field after 'ctx'";
+	let bare = token.kind === "word" && !KEYWORDS.has(token.text);
+	if (bare || token.kind === "quoted") {
+		return `Paths start with 'ctx.': write 'ctx.${token.text}'`;
+	}
+	return undefined;
 }
 
-/** The field a path token names, decoded when it was backtick-quoted. */
-function pathOf(token: Token): string {
-	return token.kind === "path" ? String(token.value) : token.text;
+/** Where each field an operand filled was written, for a later schema failure to point at. */
+function offsetsOf(filled: Record<string, unknown>, token: Token): Record<string, number> {
+	return Object.fromEntries(Object.keys(filled).map((key) => [key, token.offset]));
 }
