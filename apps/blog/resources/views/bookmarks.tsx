@@ -1,7 +1,8 @@
 /**
  * View for the public bookmarks list page: an intro, an RSS subscribe link, and an
  * `h-feed` of dated bookmark rows, each an `h-entry` whose `u-bookmark-of` is the saved
- * page, with an optional archive-snapshot link. Publishes links the author liked.
+ * page and whose `p-summary` is its description, with an optional archive-snapshot link.
+ * Publishes links the author liked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,8 +15,15 @@ import { bg, border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid, gridTemplate, hstack, items } from "@sdxc/u/layout";
-import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
-import { leading, nowrap, tabularNums, text, textDecoration } from "@sdxc/u/typography";
+import { m, maxIs, mbs, minIs, mis, p } from "@sdxc/u/size";
+import {
+	leading,
+	nowrap,
+	overflowWrap,
+	tabularNums,
+	text,
+	textDecoration,
+} from "@sdxc/u/typography";
 import { Badge, Heading, Link } from "@sdxc/ui";
 
 import { BlogLayout } from "~/resources/layouts/blog";
@@ -31,6 +39,8 @@ export namespace BookmarksView {
 	export interface Item {
 		href: string;
 		label: string;
+		/** A line under the label, left out when empty. */
+		description: string;
 		date: string;
 		preview?: boolean;
 		suffixHref?: string;
@@ -133,19 +143,26 @@ export function BookmarksView() {
 									border({ width: 1, color: "neutral" }),
 								]}
 							>
-								<p mix={[m(0), text("lg"), fg("neutral.emphasis")]}>
-									<Link
-										href={normalizeBookmarkHref(item.href)}
-										mix={[mf("u-bookmark-of", "p-name")]}
-									>
-										{item.label}
-									</Link>
-									{item.preview && (
-										<Badge color="warning" variant="secondary" mix={[mis(2)]}>
-											Preview
-										</Badge>
-									)}
-								</p>
+								<div mix={[grid(), gap(1), minIs(0)]}>
+									<p mix={[m(0), text("lg"), fg("neutral.emphasis"), overflowWrap("anywhere")]}>
+										<Link
+											href={normalizeBookmarkHref(item.href)}
+											mix={[mf("u-bookmark-of", "p-name")]}
+										>
+											{item.label}
+										</Link>
+										{item.preview && (
+											<Badge color="warning" variant="secondary" mix={[mis(2)]}>
+												Preview
+											</Badge>
+										)}
+									</p>
+									{item.description ? (
+										<p mix={[mf("p-summary"), m(0), text("base"), fg("neutral")]}>
+											{item.description}
+										</p>
+									) : null}
+								</div>
 								<div mix={[hstack({ gap: 2, align: "center" }), nowrap()]}>
 									<time
 										datetime={isoDate(item.date)}

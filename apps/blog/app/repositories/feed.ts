@@ -27,6 +27,7 @@ export namespace Feed {
 	 */
 	export interface ActivityItem {
 		kind: "article" | "tutorial" | "bookmark" | "glossary";
+		/** A bookmark without a title is named by its address, as `/bookmarks` names it. */
 		title: string;
 		slug?: string;
 		url?: string;
@@ -132,7 +133,7 @@ export class Feed {
 
 				return {
 					kind: "bookmark" as const,
-					title: bookmark.meta.title,
+					title: LikePost.label(bookmark.meta),
 					url: bookmark.meta.url,
 					date: activityDate,
 					preview: this.isPreview(bookmark),

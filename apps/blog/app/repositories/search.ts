@@ -66,7 +66,7 @@ export namespace PostSearch {
 		url: string;
 		/**
 		 * The post's summary: an article's or tutorial's excerpt, a glossary entry's definition,
-		 * a bookmark's address without its scheme.
+		 * a bookmark's description, or its address without its scheme while it has none.
 		 */
 		excerpt: string | undefined;
 		tags: Array<string>;
@@ -81,7 +81,7 @@ export namespace PostSearch {
 	export interface Hit extends Result {
 		/**
 		 * The post's searchable body: Markdown for a post, a glossary entry's definition, a
-		 * bookmark's address without its scheme.
+		 * bookmark's address without its scheme, then its description on the next line if any.
 		 */
 		body: string;
 	}
@@ -106,7 +106,7 @@ const KIND_PATHS: Record<Exclude<PostSearch.Kind, "bookmark">, string> = {
 };
 
 /** The `post_meta` keys a result is read from. */
-const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition", "url"];
+const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition", "url", "description"];
 
 /**
  * A `posts` date column as epoch milliseconds, read the way `Post.isPublishedAt` reads it: a
@@ -360,7 +360,7 @@ export class PostSearch {
 	/**
 	 * Reads each hit's post back from the source tables in two batched queries, keeping the
 	 * search's order. A post deleted between the search and this read is left out, and so is
-	 * one with none of the metadata a result shows, which no listing page shows either.
+	 * one whose metadata a result shows is all blank, which no listing page shows either.
 	 */
 	private static async hits(
 		db: Database,
@@ -388,16 +388,16 @@ export class PostSearch {
 			let post = postsById.get(row.post_id);
 			let kind = post && post.deleted_at === null ? kindOf(post.type) : null;
 			let postMeta = post ? metaByPost.get(post.id) : undefined;
-			if (!post || kind === null || postMeta === undefined) return [];
+			if (!post || kind === null || postMeta === undefined || isBlankMeta(postMeta)) return [];
 			let result = this.result(kind, post, postMeta, row.tags);
 			return [{ ...result, body: row.content }];
 		});
 	}
 
 	/**
-	 * Projects one post into the result shape callers and the MCP tool read: a glossary
-	 * entry is titled by its alias or else its term and summarized by its definition, a
-	 * bookmark links to the page it saved and has no slug, and tags come from the projection.
+	 * Projects one post into the result shape callers and the MCP tool read: a glossary entry is
+	 * titled by its alias or else its term and summarized by its definition, a bookmark is named
+	 * as `/bookmarks` names it, has no slug and links out, and tags come from the projection.
 	 */
 	private static result(
 		kind: PostSearch.Kind,
@@ -418,8 +418,11 @@ export class PostSearch {
 
 		let url = kind === "bookmark" ? "" : `${KIND_PATHS[kind]}/${slug}`;
 		if (kind === "bookmark") {
-			url = LikePost.normalizeUrl(value("url") ?? "");
-			excerpt = addressOf(value("url") ?? "");
+			let bookmark = { title, url: value("url") ?? "" };
+			let description = value("description")?.trim() ?? "";
+			title = LikePost.label(bookmark);
+			url = LikePost.normalizeUrl(bookmark.url);
+			excerpt = description === "" ? addressOf(bookmark.url) : description;
 		}
 
 		return {
@@ -437,7 +440,7 @@ export class PostSearch {
 	 * Reads a post through its own type's repository, so the projection carries exactly the
 	 * metadata the post's pages show. A glossary entry's title holds its term and its alias,
 	 * so either one finds it, and its definition is its content; a bookmark's content is its
-	 * address, so a site's name finds what was saved from it.
+	 * address, so a site's name finds what was saved from it, then its description.
 	 *
 	 * @returns The projection, or `null` when the post is deleted or of a kind search skips.
 	 */
@@ -465,7 +468,8 @@ export class PostSearch {
 		if (type === "like") {
 			let bookmark = await LikePost.findById(db, id);
 			if (!bookmark) return null;
-			return { title: bookmark.meta.title, tags: [], content: addressOf(bookmark.meta.url) };
+			let content = [addressOf(bookmark.meta.url), bookmark.meta.description.trim()];
+			return { title: bookmark.meta.title, tags: [], content: content.filter(Boolean).join("\n") };
 		}
 
 		if (type === "glossary") {
@@ -499,6 +503,14 @@ function latestValue(rows: ReadonlyArray<schema.SelectPostMeta>, key: string): s
 		}
 	}
 	return latest?.value;
+}
+
+/**
+ * Whether every key a result shows is blank at its latest value, as for a bookmark created
+ * with no metadata, which still stores the empty description every bookmark starts with.
+ */
+function isBlankMeta(rows: ReadonlyArray<schema.SelectPostMeta>): boolean {
+	return RESULT_META_KEYS.every((key) => (latestValue(rows, key) ?? "").trim() === "");
 }
 
 /** Reads a projected JSON tag array back, keeping only strings; anything else reads as none. */

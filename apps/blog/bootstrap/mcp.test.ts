@@ -33,12 +33,25 @@ const EXPECTED_TOOLS = [
 	"list_bookmarks",
 ];
 
+/** The parts of a published JSON Schema these tests read. */
+interface JSONSchema {
+	type?: string | Array<string>;
+	required?: Array<string>;
+	properties?: Record<string, JSONSchema>;
+	items?: JSONSchema;
+}
+
 /** Fields these tests read off a response body. */
 interface Body {
 	result?: {
 		capabilities?: Record<string, unknown>;
 		instructions?: string;
-		tools?: Array<{ name: string; description: string; annotations?: Record<string, unknown> }>;
+		tools?: Array<{
+			name: string;
+			description: string;
+			annotations?: Record<string, unknown>;
+			outputSchema?: { properties?: Record<string, JSONSchema> };
+		}>;
 		resourceTemplates?: Array<{ uriTemplate: string; name: string; mimeType?: string }>;
 		ttlMs?: number;
 		cacheScope?: string;
@@ -110,6 +123,15 @@ describe("tools/list", () => {
 		for (let each of body.result?.tools ?? []) {
 			expect(each.description.length).toBeGreaterThan(40);
 		}
+	});
+
+	test("promises list_bookmarks callers a description string on every bookmark", async () => {
+		let body = await call("tools/list");
+		let listBookmarks = body.result?.tools?.find((each) => each.name === "list_bookmarks");
+		let bookmark = listBookmarks?.outputSchema?.properties?.bookmarks?.items;
+
+		expect(bookmark?.required).toEqual(["title", "url", "description", "bookmarkedAt"]);
+		expect(bookmark?.properties?.description?.type).toBe("string");
 	});
 
 	test("advertises the list as publicly cacheable, since no tool is conditional", async () => {

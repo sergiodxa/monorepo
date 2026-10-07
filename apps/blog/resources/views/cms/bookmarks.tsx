@@ -1,8 +1,7 @@
 /**
- * Views for managing bookmarks in the CMS. `CMSBookmarksIndexView` renders a
- * table of bookmarks with normalized URL links and edit plus modal-confirmed
- * delete actions, and `CMSBookmarksActionView` renders the create/edit form.
- * Includes a URL-normalizing helper. Exist to power the admin CRUD for bookmarks.
+ * Views for managing bookmarks in the CMS: the list with its quick add, edit and
+ * modal-confirmed delete actions, the create/edit form, and the quick add form itself,
+ * which the dashboard shows too so a URL can be saved from the first page of the CMS.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +11,7 @@ import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
-import { truncate } from "@sdxc/u/typography";
+import { truncate, weight } from "@sdxc/u/typography";
 import {
 	Button,
 	Card,
@@ -24,6 +23,7 @@ import {
 	LinkButton,
 	Modal,
 	Table,
+	TextArea,
 } from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
@@ -75,11 +75,19 @@ function normalizeBookmarkHref(rawHref: string) {
  */
 export namespace CMSBookmarksActionView {
 	/**
-	 * Form field values used to prefill bookmark inputs.
+	 * Form field values used to prefill bookmark inputs; an empty title or description is
+	 * read from the page when the form is saved.
 	 */
 	export interface FormValues {
 		title: string;
 		url: string;
+		description: string;
+	}
+
+	/** Another bookmark already holding the URL the form tried to save. */
+	export interface Conflict {
+		label: string;
+		href: string;
 	}
 
 	/**
@@ -93,7 +101,39 @@ export namespace CMSBookmarksActionView {
 		submitLabel: string;
 		deleteAction?: string;
 		values: FormValues;
+		/** Shown above the form, such as why a save landed on an existing bookmark. */
+		notice?: string;
+		/** Set when a save was refused because another bookmark holds the URL. */
+		conflict?: Conflict;
 	}
+}
+
+/**
+ * Saves a bookmark from a URL alone: the title and description are read from the page,
+ * and a URL already saved opens the existing bookmark instead.
+ */
+export function QuickBookmarkForm() {
+	return () => (
+		<Form method="post" action={routes.cms.bookmarks.index.href()}>
+			<div mix={[grid(), gap(1)]}>
+				<Label htmlFor="quick-bookmark-url">Quick add</Label>
+				<div mix={[hstack({ gap: 2, align: "center" }), flexWrap("wrap")]}>
+					<Input
+						id="quick-bookmark-url"
+						name="url"
+						type="text"
+						inputMode="url"
+						autoComplete="off"
+						placeholder="https://"
+						required
+					/>
+					<Button type="submit" color="brand">
+						Bookmark
+					</Button>
+				</div>
+			</div>
+		</Form>
+	);
 }
 
 /**
@@ -108,13 +148,14 @@ export function CMSBookmarksIndexView() {
 		return (
 			<CMSLayout title="Bookmarks" activePath={routes.cms.bookmarks.index.href()}>
 				<main mix={[grid(), gap(4)]}>
-					<Card mix={[p(4)]}>
+					<Card mix={[p(4), grid(), gap(3)]}>
 						<div mix={[hstack({ gap: 3, align: "center", justify: "between" }), flexWrap("wrap")]}>
 							<Heading level={2}>Bookmarks</Heading>
 							<LinkButton href={routes.cms.bookmarks.new.href()} color="brand" size="sm">
 								New Bookmark
 							</LinkButton>
 						</div>
+						<QuickBookmarkForm />
 					</Card>
 					<Card mix={[p(4)]}>
 						{items.length === 0 ? (
@@ -207,7 +248,7 @@ export function CMSBookmarksIndexView() {
  */
 export function CMSBookmarksActionView() {
 	return ({ model }: { model: CMSBookmarksActionView.Props }) => {
-		let { action, description, mode, submitLabel, title, values } = model;
+		let { action, conflict, description, mode, notice, submitLabel, title, values } = model;
 
 		return (
 			<CMSLayout title={title} activePath={routes.cms.bookmarks.index.href()}>
@@ -216,17 +257,40 @@ export function CMSBookmarksActionView() {
 						<Heading level={2}>{title}</Heading>
 						<p mix={[m(0), fg("neutral")]}>{description}</p>
 
+						{notice ? (
+							<p role="status" mix={[m(0), fg("warning"), weight("medium")]}>
+								{notice}
+							</p>
+						) : null}
+
+						{conflict ? (
+							<p role="alert" mix={[m(0), fg("danger"), weight("medium")]}>
+								This URL is already bookmarked as <Link href={conflict.href}>{conflict.label}</Link>
+								.
+							</p>
+						) : null}
+
 						<Form method="post" action={action}>
 							{mode === "edit" ? <input type="hidden" name="_method" value="PUT" /> : null}
 
 							<Label mix={[grid(), gap(1)]}>
-								Title
-								<Input name="title" value={values.title} required />
+								URL
+								<Input name="url" type="text" inputMode="url" value={values.url} required />
 							</Label>
 
 							<Label mix={[grid(), gap(1)]}>
-								URL
-								<Input name="url" value={values.url} required />
+								Title
+								<Input name="title" value={values.title} placeholder="Read from the page" />
+							</Label>
+
+							<Label mix={[grid(), gap(1)]}>
+								Description
+								<TextArea
+									name="description"
+									rows={3}
+									defaultValue={values.description}
+									placeholder="Read from the page"
+								/>
 							</Label>
 
 							<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>

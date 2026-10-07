@@ -40,6 +40,9 @@ const POSTS = {
 	olderBookmark: `https://${TOKEN}.example/older`,
 };
 
+/** A bookmark found only by a word in its description. */
+const DESCRIBED_BOOKMARK = "https://described.example/page";
+
 /** A full `App.Env` over the real bindings, with the secrets a local run cannot read. */
 function environment(): App.Env {
 	return {
@@ -189,6 +192,17 @@ beforeAll(async () => {
 		published_at: "2026-04-01T12:00:00.000Z",
 		meta: { title: "Remix routing, saved", url: POSTS.newerBookmark },
 	});
+
+	/** Found by its description alone; its link sits outside what `found()` collects. */
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: "2026-05-01T12:00:00.000Z",
+		meta: {
+			title: "A described page",
+			url: DESCRIBED_BOOKMARK,
+			description: `A page about ${TOKEN} and wombats.`,
+		},
+	});
 });
 
 describe("bookmarks", () => {
@@ -231,6 +245,24 @@ describe("bookmarks", () => {
 				kind: "bookmark",
 				url: POSTS.newerBookmark,
 				title: "Remix routing, saved",
+			}),
+		]);
+	});
+
+	test("show their description in the search panel, and the tool answers it as the excerpt", async () => {
+		let response = await createApplication(environment()).fetch(
+			new Request(new URL(`/frames/search?${new URLSearchParams({ q: "wombats" })}`, ORIGIN)),
+		);
+		let html = await response.text();
+		expect(html).toContain(`href="${DESCRIBED_BOOKMARK}"`);
+		expect(html).toContain(`A page about ${TOKEN} and <mark>wombats</mark>.`);
+
+		expect(await searchResults("wombats")).toEqual([
+			expect.objectContaining({
+				kind: "bookmark",
+				url: DESCRIBED_BOOKMARK,
+				title: "A described page",
+				excerpt: `A page about ${TOKEN} and wombats.`,
 			}),
 		]);
 	});

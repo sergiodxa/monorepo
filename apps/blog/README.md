@@ -48,8 +48,9 @@ Smart Placement and Observability are enabled.
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
 - Full-text search at `/search` and through the MCP `search_posts` tool: an FTS5 index over
-  each live post's title, tags and body (a bookmark's title and its address without the
-  scheme, so a site's name finds it; a bookmark result links to the saved page), ranked title first, then tags, then body. Only posts
+  each live post's title, tags and body (a bookmark's title, its address without the
+  scheme so a site's name finds it, and its description, which its result shows as the
+  excerpt; a bookmark result links to the saved page), ranked title first, then tags, then body. Only posts
   published by now appear, previews and deleted posts never. Results page ten at a time with
   `Link` and `X-Total-Count` headers, and matched words are highlighted.
 - Search syntax, shared by `/search`, the search panel and `search_posts`: `"phrases"`,
@@ -76,6 +77,13 @@ Smart Placement and Observability are enabled.
   disposable-email check, and StopForumSpam's free lookup). A request scored as spam is
   discarded as if sent; an uncertain one arrives tagged `[Possible spam]` with its signals.
   An unset inbox makes the form report a failure.
+- Bookmarks saved from a URL alone: the quick add on `/cms` and `/cms/bookmarks`, or
+  `/cms/bookmarks/new?url=…`, reads the page while saving and fills the title (its
+  `og:title`, then `<title>`, then first heading) and description (its `og:description` or
+  `description`, else its opening paragraph) the form left empty; a typed value always wins.
+  A URL already bookmarked opens that bookmark instead, ignoring `http`/`https`, `www.`, a
+  trailing `/` and tracking parameters (`utm_*`, `fbclid`, `gclid`, `mc_cid`, `mc_eid`,
+  which are also removed from the saved URL).
 - Sponsors page (`/sponsors`): why sponsoring helps, GitHub Sponsors, one-off PayPal ($5,
   $10, $20) and Ko-fi tips, then current sponsors named with large avatars and past ones as
   a wall of small avatars. A job every six hours stores GitHub's public roster in `CACHE`
@@ -150,6 +158,15 @@ every create, update and delete. `post_search_fts` is its FTS5 index, kept in st
 triggers. Publish state, kind and everything a result shows are read from `posts` and
 `post_meta`. See [ADR-004](../../docs/adr/blog/ADR-004-full-text-search.md).
 
+### Bookmarks
+
+A bookmark is a `like` post whose title, URL and description live in `post_meta`. The
+`bookmarks` table holds one row per live bookmark, written by the system: the address that
+judges duplicates (unique, so a double submit cannot save a URL twice), the latest read of
+the page, and the review and archive state. Deleting a bookmark removes its row, so its URL
+can be bookmarked again. See
+[ADR-006](../../docs/adr/blog/ADR-006-bookmark-metadata-link-checks-and-archiving.md).
+
 ### Exporting the database
 
 `wrangler d1 export` refuses a database holding a virtual table, so an export drops the index
@@ -177,6 +194,21 @@ first and rebuilds it after:
 
 Searches return nothing between steps 1 and 4, and post writes keep `post_search` current
 throughout.
+
+## Bookmarking From The iOS Share Sheet
+
+A Shortcut opens the CMS form with the shared URL filled in; no app is involved.
+
+1. In Shortcuts, create a shortcut named "Bookmark", open its details and turn on
+   **Show in Share Sheet**, accepting **URLs**.
+2. Add **URL Encode** on the **Shortcut Input**.
+3. Add **Text** with `https://sergiodxa.com/cms/bookmarks/new?url=` followed by the
+   **URL Encoded Text** variable.
+4. Add **Open URLs** with that **Text**.
+
+Sharing a page to "Bookmark" opens the form in Safari; **Create Bookmark** saves it with the
+page's title and description. A URL already bookmarked opens that bookmark instead, and an
+expired session signs in first and comes back to the form.
 
 ## Scripts
 

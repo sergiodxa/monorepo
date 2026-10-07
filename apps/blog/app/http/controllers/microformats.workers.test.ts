@@ -27,6 +27,7 @@ const ORIGIN = "https://blog.test";
 const SLUG = `microformats-${crypto.randomUUID().slice(0, 8)}`;
 const PUBLISHED_AT = "2026-09-01T12:00:00.000Z";
 const BOOKMARK_URL = `https://example.com/saved-${SLUG}`;
+const UNTITLED_URL = `https://example.com/untitled-${SLUG}`;
 
 /** The value of a result the test expects to have succeeded, failing the test otherwise. */
 function ok<T, E extends Error>(result: Result<T, E>): T {
@@ -73,7 +74,16 @@ beforeAll(async () => {
 	await LikePost.create(db, {
 		author_id: author,
 		published_at: PUBLISHED_AT,
-		meta: { url: BOOKMARK_URL, title: "A saved page" },
+		meta: {
+			url: BOOKMARK_URL,
+			title: "A saved page",
+			description: "What the page says about itself.",
+		},
+	});
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: PUBLISHED_AT,
+		meta: { url: UNTITLED_URL, title: "" },
 	});
 });
 
@@ -130,6 +140,16 @@ describe("the listings", () => {
 		let entry = feed.entries.find((it) => it.bookmarkOf[0]?.url === BOOKMARK_URL);
 
 		expect(entry?.name).toBe("A saved page");
+		expect(entry?.summary).toBe("What the page says about itself.");
 		expect(entry?.published?.instant?.toISOString()).toBe(PUBLISHED_AT);
+	});
+
+	test("the bookmarks page names an untitled bookmark by its address and gives it no summary", async () => {
+		let document = await parsePage("/bookmarks");
+		let feed = ok(readFeed(findItem(document, "h-feed")!));
+		let entry = feed.entries.find((it) => it.bookmarkOf[0]?.url === UNTITLED_URL);
+
+		expect(entry?.name).toBe(`example.com/untitled-${SLUG}`);
+		expect(entry?.summary).toBeNull();
 	});
 });

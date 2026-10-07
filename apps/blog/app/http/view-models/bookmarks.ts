@@ -25,7 +25,10 @@ export namespace BookmarksViewModel {
 		 * Original bookmark URL used by the primary anchor.
 		 */
 		href: string;
+		/** The bookmark's title, or its address without the scheme while it has none. */
 		label: string;
+		/** The page's summary shown under the label; empty when the bookmark has none. */
+		description: string;
 		/**
 		 * Effective display date for the bookmark row.
 		 *
@@ -77,7 +80,7 @@ export class BookmarksViewModel {
 			.sort((a, b) => this.activityTimestamp(b) - this.activityTimestamp(a))
 			.map((bookmark) => {
 				let href = bookmark.meta.url;
-				let label = bookmark.meta.title;
+				let label = LikePostRepository.label(bookmark.meta);
 				let normalizedHref = LikePostRepository.normalizeUrl(href);
 				let publishedAt = this.publishedAt(bookmark);
 				let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
@@ -89,6 +92,7 @@ export class BookmarksViewModel {
 				return {
 					href,
 					label,
+					description: bookmark.meta.description.trim(),
 					date: publishedAt ?? createdAt,
 					preview: !isPublished,
 					suffixHref: suffixHref ?? undefined,

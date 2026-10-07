@@ -1,23 +1,47 @@
 /**
- * CMS controller for bookmark CRUD. It renders index and edit/new HTML views and handles
- * create, update, and destroy actions against the like-post repository, validating form
- * data with the bookmark schema and using See Other redirects. It exists to manage
- * bookmarks from the admin dashboard, returning in-context 404 views for missing records.
+ * CMS controller for bookmarks: the list with its quick add, the create and edit forms, and
+ * delete. Saving goes through the bookmark service, which reads the page to fill what the
+ * form left empty and answers the existing bookmark when a URL was saved before.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { redirect } from "@sdxc/http/response";
-import { succeeded } from "@sdxc/result";
+import { isFailure, succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
-import { BookmarkSchema } from "~/app/schemas/cms/bookmark";
+import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/schemas/cms/bookmark";
+import { createBookmark, updateBookmark } from "~/app/services/bookmarks";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";
+
+/** How a bookmark's save date reads in the notice of a repeated save. */
+const SAVED_ON = new Intl.DateTimeFormat("en", { dateStyle: "long", timeZone: "UTC" });
+
+/** The empty form, for a new bookmark and for the 404 of one that disappeared. */
+const EMPTY_VALUES: CMSBookmarksActionView.FormValues = { title: "", url: "", description: "" };
+
+/** The edit page of a bookmark, opened with the notice that a save found it already saved. */
+function duplicateHref(id: string) {
+	return `${routes.cms.bookmarks.edit.href({ id })}?duplicate=1`;
+}
+
+/** The form page shown in place of an edit whose bookmark no longer exists. */
+function notFoundModel(id: string | undefined): CMSBookmarksActionView.Props {
+	return {
+		title: "Bookmark Not Found",
+		description: `Bookmark ${id ?? ""} was not found.`,
+		mode: "new",
+		action: routes.cms.bookmarks.index.href(),
+		submitLabel: "Create Bookmark",
+		values: EMPTY_VALUES,
+	};
+}
 
 /**
  * CMS bookmark CRUD. Missing auth or ids answer with redirects, while an edit or update
@@ -32,7 +56,8 @@ export default createController(routes.cms.bookmarks, {
 
 	actions: {
 		/**
-		 * Renders the bookmarks index with edit and delete affordances.
+		 * Renders the bookmarks list, titled by each bookmark's label so one saved without a
+		 * title still reads as its address.
 		 * @param ctx Controller context that provides DB bindings.
 		 * @returns HTML view model for the CMS bookmarks listing page.
 		 */
@@ -40,7 +65,7 @@ export default createController(routes.cms.bookmarks, {
 			let bookmarks = await LikePost.findAll(ctx.db);
 			let items = bookmarks.map((bookmark) => ({
 				id: bookmark.id,
-				title: bookmark.meta.title,
+				title: LikePost.label(bookmark.meta),
 				url: bookmark.meta.url,
 				href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
 				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
@@ -50,10 +75,10 @@ export default createController(routes.cms.bookmarks, {
 		},
 
 		/**
-		 * Validation failures abort the action through `succeeded(...)`, so persistence runs only
-		 * against a well-formed payload.
+		 * Saves the full form or the quick add's URL alone. A URL already bookmarked lands on
+		 * that bookmark's edit page instead of creating a second one.
 		 * @param ctx Controller context with form data and DB access.
-		 * @returns See Other redirect to login, edit page for the created record, or index fallback.
+		 * @returns See Other redirect to login, or to the saved or existing bookmark's edit page.
 		 */
 		create: async (ctx) => {
 			let user = getAuthUser();
@@ -63,18 +88,17 @@ export default createController(routes.cms.bookmarks, {
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let created = await LikePost.create(ctx.db, {
-				author_id: user.id,
-				meta: {
-					title: result.data.title,
-					url: result.data.url,
-				},
-			});
-
-			if (!created)
+			let saved = await createBookmark(ctx.db, user.id, result.data);
+			if (isFailure(saved)) {
+				ctx.log.warn("bookmark.save_failed", { message: saved.error.message });
 				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
+			}
 
-			return redirect(routes.cms.bookmarks.edit.href({ id: created.id }), {
+			if (saved.data.outcome === "duplicate") {
+				return redirect(duplicateHref(saved.data.id), { status: redirect.Status.SeeOther });
+			}
+
+			return redirect(routes.cms.bookmarks.edit.href({ id: saved.data.id }), {
 				status: redirect.Status.SeeOther,
 			});
 		},
@@ -95,68 +119,78 @@ export default createController(routes.cms.bookmarks, {
 
 		/**
 		 * The 404 branch reuses the action view so CMS users stay in context when a bookmark has
-		 * disappeared.
+		 * disappeared. `?duplicate=1` explains that a save landed here because the URL was saved
+		 * before, and `?url=` prefills a new address, such as where a moved page now lives.
 		 * @param ctx Controller context with route params and DB access.
 		 * @returns Bookmark edit view, or a 404 form view when the record is missing.
 		 */
 		edit: async (ctx) => {
 			let id = ctx.params.id;
 			let bookmark = id ? await LikePost.findById(ctx.db, id) : null;
+			if (!bookmark) return ctx.render(CMSBookmarksActionView, notFoundModel(id), { status: 404 });
 
-			if (!bookmark) {
-				let model = {
-					title: "Bookmark Not Found",
-					description: `Bookmark ${id} was not found.`,
-					mode: "new",
-					action: routes.cms.bookmarks.index.href(),
-					submitLabel: "Create Bookmark",
-					values: { title: "", url: "" },
-				} satisfies CMSBookmarksActionView.Props;
-
-				return ctx.render(CMSBookmarksActionView, model, { status: 404 });
-			}
+			let query = await validate(ctx.url.searchParams, BookmarkPrefillSchema);
+			let prefill = isFailure(query) ? { url: "", duplicate: "" } : query.data;
 
 			let model = {
-				title: `Edit Bookmark ${bookmark.meta.title}`,
+				title: `Edit Bookmark ${LikePost.label(bookmark.meta)}`,
 				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
 				mode: "edit",
 				action: routes.cms.bookmarks.update.href({ id: bookmark.id }),
 				submitLabel: "Save Bookmark",
 				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
 				values: {
-					title: bookmark.meta.title ?? "",
-					url: bookmark.meta.url ?? "",
+					title: bookmark.meta.title,
+					url: prefill.url.trim() || bookmark.meta.url,
+					description: bookmark.meta.description,
 				},
+				...(prefill.duplicate
+					? {
+							notice: `Already bookmarked on ${SAVED_ON.format(new Date(bookmark.created_at))}.`,
+						}
+					: {}),
 			} satisfies CMSBookmarksActionView.Props;
 
 			return ctx.render(CMSBookmarksActionView, model);
 		},
 
 		/**
-		 * The description carries the current bookmark total to give operators lightweight CMS
-		 * context while creating a record.
-		 * @param ctx Controller context with DB bindings.
-		 * @returns New-mode action view prefilled with empty bookmark values.
+		 * The form for a new bookmark. `?url=` prefills it, which is what a share-sheet shortcut
+		 * opens; a URL already bookmarked opens that bookmark instead.
+		 * @param ctx Controller context with the query and DB bindings.
+		 * @returns New-mode form view, or a redirect to the bookmark already holding the URL.
 		 */
 		new: async (ctx) => {
-			let total = (await LikePost.findAll(ctx.db)).length;
+			let query = await validate(ctx.url.searchParams, BookmarkPrefillSchema);
+			let shared = isFailure(query) ? "" : query.data.url.trim();
+			let url = shared === "" ? "" : LikePost.clean(shared);
+
+			if (url !== "") {
+				let holder = await Bookmark.findByAddress(ctx.db, LikePost.address(url));
+				if (holder) {
+					return redirect(duplicateHref(holder.post_id), { status: redirect.Status.SeeOther });
+				}
+			}
+
 			let model = {
 				title: "New Bookmark",
-				description: `New Bookmark form loaded. Current bookmarks count: ${total}.`,
+				description:
+					"Paste a URL; a title or description left empty is read from the page when you save.",
 				mode: "new",
 				action: routes.cms.bookmarks.index.href(),
 				submitLabel: "Create Bookmark",
-				values: { title: "", url: "" },
+				values: { ...EMPTY_VALUES, url },
 			} satisfies CMSBookmarksActionView.Props;
 
 			return ctx.render(CMSBookmarksActionView, model);
 		},
 
 		/**
-		 * Requires an authenticated user and a route id; either one missing sends the editor back
-		 * to the index.
+		 * Saves an edit, which also marks the bookmark reviewed. A URL another bookmark already
+		 * holds is refused with the form shown again, linking to that bookmark.
 		 * @param ctx Controller context with params, form data, and DB access.
-		 * @returns See Other redirect to index/edit, or a 404 form view when target is missing.
+		 * @returns See Other redirect to the edit page, the form again with a 409 on a taken URL,
+		 * or a 404 form view when the target is missing.
 		 */
 		update: async (ctx) => {
 			let user = getAuthUser();
@@ -167,25 +201,29 @@ export default createController(routes.cms.bookmarks, {
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let updated = await LikePost.update(ctx.db, id, {
-				author_id: user.id,
-				meta: {
-					title: result.data.title,
-					url: result.data.url,
-				},
-			});
+			let updated = await updateBookmark(ctx.db, id, user.id, result.data);
 
-			if (!updated) {
-				let viewModel = {
-					title: "Bookmark Not Found",
-					description: `Bookmark ${id} was not found.`,
-					mode: "new",
-					action: routes.cms.bookmarks.index.href(),
-					submitLabel: "Create Bookmark",
-					values: { title: "", url: "" },
+			if (updated.outcome === "missing") {
+				return ctx.render(CMSBookmarksActionView, notFoundModel(id), { status: 404 });
+			}
+
+			if (updated.outcome === "duplicate") {
+				let holder = await LikePost.findById(ctx.db, updated.id);
+				let model = {
+					title: "Edit Bookmark",
+					description: "Another bookmark already holds this URL.",
+					mode: "edit",
+					action: routes.cms.bookmarks.update.href({ id }),
+					submitLabel: "Save Bookmark",
+					deleteAction: routes.cms.bookmarks.destroy.href({ id }),
+					values: result.data,
+					conflict: {
+						label: holder ? LikePost.label(holder.meta) : result.data.url,
+						href: routes.cms.bookmarks.edit.href({ id: updated.id }),
+					},
 				} satisfies CMSBookmarksActionView.Props;
 
-				return ctx.render(CMSBookmarksActionView, viewModel, { status: 404 });
+				return ctx.render(CMSBookmarksActionView, model, { status: 409 });
 			}
 
 			return redirect(routes.cms.bookmarks.edit.href({ id }), { status: redirect.Status.SeeOther });

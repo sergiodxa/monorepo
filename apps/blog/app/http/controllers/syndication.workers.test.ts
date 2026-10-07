@@ -1,5 +1,5 @@
 /**
- * Reads the Atom and JSON Feed documents back through the parsers that read everybody
+ * Reads the RSS, Atom and JSON Feed documents back through the parsers that read everybody
  * else's feeds, so the served content type, WebSub advertisement, item links, and each
  * stream's content are checked by what a feed reader actually sees.
  *
@@ -12,6 +12,7 @@ import type { Result } from "@sdxc/result";
 import { Atom } from "@sdxc/atom";
 import { JSONFeed } from "@sdxc/json-feed";
 import { succeeded } from "@sdxc/result";
+import { RSS } from "@sdxc/rss";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
@@ -26,6 +27,8 @@ const ORIGIN = "https://blog.test";
 const SLUG = `syndication-${crypto.randomUUID().slice(0, 8)}`;
 const ARTICLE_URL = `${ORIGIN}/articles/${SLUG}`;
 const BOOKMARK_URL = `https://example.com/saved-${SLUG}`;
+const BOOKMARK_DESCRIPTION = "What the page says about itself.";
+const UNTITLED_URL = `https://example.com/untitled-${SLUG}`;
 const FUTURE_SLUG = `${SLUG}-future`;
 
 /** The value of a result the test expects to have succeeded, failing the test otherwise. */
@@ -75,7 +78,12 @@ beforeAll(async () => {
 	await LikePost.create(db, {
 		author_id: author,
 		published_at: "2026-09-02T12:00:00.000Z",
-		meta: { url: BOOKMARK_URL, title: "A saved page" },
+		meta: { url: BOOKMARK_URL, title: "A saved page", description: BOOKMARK_DESCRIPTION },
+	});
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: "2026-09-02T12:00:00.000Z",
+		meta: { url: UNTITLED_URL, title: "" },
 	});
 });
 
@@ -133,6 +141,52 @@ describe("the JSON Feed", () => {
 	});
 });
 
+describe("a bookmark item", () => {
+	/** The bookmark item each format serves for `url`, as its reader parses it. */
+	async function items(url: string) {
+		let json = ok(JSONFeed.parse(await (await fetchPath("/bookmarks.json")).text()));
+		let atom = ok(Atom.parse(await (await fetchPath("/bookmarks.atom")).text()));
+		let rss = RSS.parse(await (await fetchPath("/bookmarks.rss")).text());
+
+		return {
+			json: json.items.find((item) => item.url === url),
+			atom: atom.entries.find((entry) =>
+				[entry.link ?? []].flat().some((link) => link.href === url),
+			),
+			rss: rss.items.find((item) => item.link === url),
+		};
+	}
+
+	/** An Atom text construct's text, whichever form it was parsed in. */
+	function text(construct: Atom.TextInput | undefined) {
+		return typeof construct === "string" ? construct : construct?.value;
+	}
+
+	test("is summarized by its description, then its URL after a blank line", async () => {
+		let summary = `${BOOKMARK_DESCRIPTION}\n\n${BOOKMARK_URL}`;
+		let { atom, json, rss } = await items(BOOKMARK_URL);
+
+		expect(json?.title).toBe("A saved page");
+		expect(json?.contentText).toBe(summary);
+		expect(text(atom?.title)).toBe("A saved page");
+		expect(text(atom?.summary)).toBe(summary);
+		expect(rss?.title).toBe("A saved page");
+		expect(rss?.description).toBe(summary);
+	});
+
+	test("without a description is summarized by its URL, and without a title named by its address", async () => {
+		let address = `example.com/untitled-${SLUG}`;
+		let { atom, json, rss } = await items(UNTITLED_URL);
+
+		expect(json?.title).toBe(address);
+		expect(json?.contentText).toBe(UNTITLED_URL);
+		expect(text(atom?.title)).toBe(address);
+		expect(text(atom?.summary)).toBe(UNTITLED_URL);
+		expect(rss?.title).toBe(address);
+		expect(rss?.description).toBe(UNTITLED_URL);
+	});
+});
+
 describe("the per-type feeds", () => {
 	test("the articles feeds carry articles and leave bookmarks out", async () => {
 		let atom = ok(Atom.parse(await (await fetchPath("/articles.atom")).text()));
@@ -155,7 +209,9 @@ describe("the per-type feeds", () => {
 		expect(hrefs).not.toContain(ARTICLE_URL);
 
 		let feed = ok(JSONFeed.parse(await (await fetchPath("/bookmarks.json")).text()));
-		expect(feed.items.map((item) => item.url)).toEqual([BOOKMARK_URL]);
+		let urls = feed.items.map((item) => item.url);
+		expect(urls).toHaveLength(2);
+		expect(urls).toEqual(expect.arrayContaining([BOOKMARK_URL, UNTITLED_URL]));
 	});
 
 	test("the tutorials feeds answer in every format", async () => {

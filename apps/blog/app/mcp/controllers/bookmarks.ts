@@ -1,8 +1,8 @@
 /**
  * MCP tool answering `list_bookmarks`.
  *
- * A bookmark is only a title and somebody else's URL, so a single tool response holds it
- * in full.
+ * A bookmark is a title, somebody else's URL and that page's short description, so a single
+ * tool response holds it in full.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,9 +15,9 @@ import { Post } from "~/app/repositories/post";
 import { LikePost } from "~/app/repositories/posts/like";
 
 /**
- * Lists bookmarked links, newest first, paged.
- *
- * A row with an unparseable date sorts last, so every bookmark still appears in the page.
+ * Lists bookmarked links, newest first, paged, each named as `/bookmarks` names it and with
+ * its description always present, an empty string when it has none. A row with an
+ * unparseable date sorts last, so every bookmark still appears in the page.
  */
 export default createTool(toolset.bookmarks, async (ctx) => {
 	let bookmarks = await LikePost.findAll(ctx.db);
@@ -28,8 +28,9 @@ export default createTool(toolset.bookmarks, async (ctx) => {
 			let timestamp = Post.timestampFromPublishedOrCreated(bookmark);
 
 			return {
-				title: bookmark.meta.title,
+				title: LikePost.label(bookmark.meta),
 				url: bookmark.meta.url,
+				description: bookmark.meta.description.trim(),
 				timestamp: Number.isNaN(timestamp) ? 0 : timestamp,
 			};
 		})
@@ -43,6 +44,7 @@ export default createTool(toolset.bookmarks, async (ctx) => {
 		bookmarks: page.map((bookmark) => ({
 			title: bookmark.title,
 			url: bookmark.url,
+			description: bookmark.description,
 			bookmarkedAt: bookmark.timestamp === 0 ? null : new Date(bookmark.timestamp).toISOString(),
 		})),
 	};

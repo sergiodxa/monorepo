@@ -38,7 +38,9 @@ export namespace Syndication {
 	export interface Entry {
 		/** The post id, stable across edits, which readers deduplicate by. */
 		id: string;
+		/** A bookmark without a title is named by its address, so no item reads blank. */
 		title: string;
+		/** A bookmark's is its URL, preceded by its description and a blank line when it has one. */
 		summary: string;
 		url: string;
 		/** ISO-8601; `published_at` when set, `created_at` for posts published immediately. */
@@ -128,8 +130,8 @@ export async function syndicationEntries(
 	for (let like of likes) {
 		entries.push({
 			id: like.id,
-			title: like.meta.title,
-			summary: like.meta.url,
+			title: LikePost.label(like.meta),
+			summary: bookmarkSummary(like.meta),
 			url: like.meta.url,
 			published: iso(like.created_at),
 			updated: iso(like.updated_at),
@@ -148,6 +150,16 @@ export async function syndicationEntries(
 	}
 
 	return entries.sort((a, b) => Date.parse(b.published) - Date.parse(a.published));
+}
+
+/**
+ * A bookmark's description, then its URL on a line of its own, so a reader shows what the page
+ * is about before the link; the URL alone while the bookmark has no description.
+ */
+function bookmarkSummary(meta: LikePost.Meta): string {
+	let description = meta.description.trim();
+	if (description === "") return meta.url;
+	return `${description}\n\n${meta.url}`;
 }
 
 /** Normalizes a stored timestamp to the RFC 3339 form Atom and JSON Feed both require. */

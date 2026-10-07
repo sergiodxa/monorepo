@@ -187,18 +187,16 @@ export class SearchViewModel {
 	/**
 	 * Picks the text a result shows. The summary wins when it holds a match, the body when
 	 * only the body does, and with no match in either the summary's (or body's) opening
-	 * words stand in. The body is read as plain text, so no Markdown syntax shows. A bookmark
-	 * shows its address.
+	 * words stand in. A post's body is read as plain text, so no Markdown syntax shows.
 	 */
 	private static excerpt(hit: PostSearch.Hit, parsed: ParsedQuery): Excerpt | null {
 		let window = (text: string) => excerpt(text, parsed, { words: EXCERPT_WORDS });
-		if (hit.kind === "bookmark") return hit.body === "" ? null : window(hit.body);
 		let summary = hit.kind === "glossary" ? plainText(hit.body) : (hit.excerpt?.trim() ?? "");
 
 		let fromSummary = summary === "" ? null : window(summary);
 		if (hit.kind === "glossary" || (fromSummary && hasMatch(fromSummary))) return fromSummary;
 
-		let body = plainText(hit.body);
+		let body = hit.kind === "bookmark" ? oneLine(hit.body) : plainText(hit.body);
 		let fromBody = body === "" ? null : window(body);
 		if (fromBody && hasMatch(fromBody)) return fromBody;
 		return fromSummary ?? fromBody;
@@ -233,11 +231,18 @@ function hasMatch(window: Excerpt): boolean {
 }
 
 /**
- * Markdown read as the prose a reader sees, whitespace collapsed to single spaces so a
- * window reads as one line. Text that will not parse is shown as written.
+ * Markdown read as the prose a reader sees, as one line. Text that will not parse is shown
+ * as written.
  */
 function plainText(markdown: string): string {
 	let parsed = Markdown.parse(markdown);
-	let text = isFailure(parsed) ? markdown : toPlainText(parsed.data.document);
+	return oneLine(isFailure(parsed) ? markdown : toPlainText(parsed.data.document));
+}
+
+/**
+ * Text with its whitespace collapsed to single spaces, so a window reads as one line; a
+ * bookmark's address and description are read this way, since both are plain text.
+ */
+function oneLine(text: string): string {
 	return text.replace(/\s+/g, " ").trim();
 }

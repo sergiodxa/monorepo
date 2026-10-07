@@ -1,8 +1,8 @@
 /**
- * View for the CMS dashboard. Renders a grid of stat cards summarizing counts of
- * articles, likes, tutorials, and glossary terms, each linking to its management
- * section, inside the CMSLayout shell. Exists as the landing page of the admin
- * area with at-a-glance content totals.
+ * View for the CMS dashboard: the bookmark quick add, then a grid of stat cards summarizing
+ * counts of articles, likes, tutorials, and glossary terms, each linking to its management
+ * section, inside the CMSLayout shell. The landing page of the admin area, so saving a URL
+ * takes one field from the first page.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,6 +19,7 @@ import { text, weight } from "@sdxc/u/typography";
 import { Button, Card, Heading, Link, Modal } from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
+import { QuickBookmarkForm } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";
 
 /**
@@ -100,6 +101,11 @@ export function CMSDashboardView() {
 		return (
 			<CMSLayout title="Dashboard" activePath={routes.cms.dashboard.href()}>
 				<main mix={[grid(), gap(4)]}>
+					<Card mix={[p(4), grid(), gap(3)]}>
+						<Heading level={2}>Bookmark a page</Heading>
+						<QuickBookmarkForm />
+					</Card>
+
 					<Heading level={2} mix={[visuallyHidden()]}>
 						Post Stats
 					</Heading>

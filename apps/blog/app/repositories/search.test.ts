@@ -309,6 +309,43 @@ describe("keeping post_search current", () => {
 		expect(await projections(db)).toEqual([]);
 	});
 
+	test("a bookmark's description is searched beside its address once filled, and becomes its excerpt", async () => {
+		let created = await LikePost.create(db, {
+			author_id: author,
+			published_at: PAST,
+			meta: { title: "", url: "https://remix.run/blog/remix-v3" },
+		});
+		let id = created!.id;
+		let address = "remix.run/blog/remix-v3";
+
+		expect(await PostSearch.query(db, { query: "remix" })).toEqual([
+			expect.objectContaining({ title: address, excerpt: address }),
+		]);
+		expect(await PostSearch.query(db, { query: "framework" })).toEqual([]);
+
+		await LikePost.update(db, id, { meta: { description: "The next version of the framework" } });
+
+		expect(await projections(db)).toEqual([
+			{
+				post_id: id,
+				title: "",
+				tags: "[]",
+				content: `${address}\nThe next version of the framework`,
+			},
+		]);
+		expect(await PostSearch.query(db, { query: "framework" })).toEqual([
+			{
+				kind: "bookmark",
+				title: address,
+				slug: "",
+				url: "https://remix.run/blog/remix-v3",
+				excerpt: "The next version of the framework",
+				tags: [],
+				publishedAt: PAST,
+			},
+		]);
+	});
+
 	test("a created post is searchable, an edit replaces what it matches, and a delete removes it", async () => {
 		let created = await article({ slug: "first", title: "Caching at the edge" });
 		let id = created!.id;

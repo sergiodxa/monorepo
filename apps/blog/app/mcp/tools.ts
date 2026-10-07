@@ -119,7 +119,7 @@ export default tools({
 	bookmarks: tool("list_bookmarks", {
 		title: "List bookmarks",
 		description:
-			"List the external links this blog's author has bookmarked, newest first. Each is a title and somebody else's URL, so there is nothing here to read in full.",
+			"List the external links this blog's author has bookmarked, newest first. Each is a title, somebody else's URL and that page's own short description, so there is nothing here to read in full.",
 		input: s.object({
 			limit: s.defaulted(
 				s
@@ -134,6 +134,24 @@ export default tools({
 					.pipe(checks.min(0))
 					.meta({ description: "How many bookmarks to skip, for paging through the list." }),
 				0,
+			),
+		}),
+		output: s.object({
+			total: s.integer().meta({ description: "How many bookmarks there are in all." }),
+			offset: s.integer().meta({ description: "How many bookmarks this page skipped." }),
+			bookmarks: s.array(
+				s.object({
+					title: s.string().meta({
+						description: "The page's title, or its address without the scheme when it has none.",
+					}),
+					url: s.string().meta({ description: "The bookmarked page." }),
+					description: s.string().meta({
+						description: "The page's own summary or its opening; an empty string when it has none.",
+					}),
+					bookmarkedAt: s.nullable(s.string()).meta({
+						description: "When it was bookmarked, as ISO 8601, or null when the date is unknown.",
+					}),
+				}),
 			),
 		}),
 		annotations: READ_ONLY,
