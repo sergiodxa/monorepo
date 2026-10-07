@@ -1,5 +1,5 @@
 /**
- * Public surface of the user agent package: the reading function and the shapes
+ * Public surface of the user agent package: the reading function, the bot check and the shapes
  * it answers with, including the closed sets of browser, engine, system, device
  * and vendor names a caller can switch over.
  *
@@ -20,4 +20,5 @@ export type {
 	UserAgent,
 } from "./types.js";
 
+export { isBot } from "./bot.js";
 export { parse } from "./parse.js";

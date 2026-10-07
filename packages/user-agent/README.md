@@ -114,6 +114,19 @@ Reads a user agent string into the browser, engine, operating system and device 
 describes. It answers for the parts it recognizes and leaves the rest `null`, so it never
 throws and never rejects a string.
 
+### `isBot(header: string): boolean`
+
+Whether the header names automated software: a search crawler, a link-preview fetcher such
+as `facebookexternalhit`, `Slackbot` or `WhatsApp`, an uptime monitor, a headless browser or
+an HTTP library such as `curl`. An empty header counts as a bot, since every browser sends
+one. A crawler parses as all-`null`, so this is the question `parse` leaves open.
+
+```typescript
+import { isBot } from "@sdxc/user-agent";
+
+if (!isBot(request.headers.get("user-agent") ?? "")) session.set("visited", true);
+```
+
 ### `userAgent(): Middleware`
 
 From `@sdxc/user-agent/middleware`. Reads the request's `User-Agent` header and exposes it
