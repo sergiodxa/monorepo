@@ -382,6 +382,8 @@ describe("OAuth2Provider", () => {
 			let result = (await provider.token({
 				type: "refresh_token",
 				refreshToken: testSession.id,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			expect(result.access_token).toBeDefined();
@@ -397,6 +399,8 @@ describe("OAuth2Provider", () => {
 			let result = (await provider.token({
 				type: "refresh_token",
 				refreshToken: testSession.id,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
 			})) as OIDCTokenResponse;
 
 			let decoded = AccessToken.decode(result.access_token);
@@ -415,8 +419,72 @@ describe("OAuth2Provider", () => {
 				provider.token({
 					type: "refresh_token",
 					refreshToken: "invalid-token",
+					clientId: testClient.id,
+					clientSecret: testClient.secret,
 				}),
 			).rejects.toThrow(OIDC.InvalidGrantError);
+		});
+
+		/**
+		 * RFC 6749 §6: a confidential client authenticates on refresh, so a refresh token
+		 * on its own — read off a page, a log, or a device — mints nothing.
+		 */
+		test("rejects a refresh with no client secret", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			await expect(
+				provider.token({
+					type: "refresh_token",
+					refreshToken: testSession.id,
+					clientId: testClient.id,
+					clientSecret: "",
+				}),
+			).rejects.toThrow(OIDC.InvalidClientError);
+			expect(repo.touchSession).not.toHaveBeenCalled();
+		});
+
+		test("rejects a refresh with a wrong client secret", async () => {
+			let repo = createMockRepository();
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			await expect(
+				provider.token({
+					type: "refresh_token",
+					refreshToken: testSession.id,
+					clientId: testClient.id,
+					clientSecret: "wrong-secret",
+				}),
+			).rejects.toThrow(OIDC.InvalidClientError);
+			expect(repo.touchSession).not.toHaveBeenCalled();
+		});
+
+		/**
+		 * The token is bound to the client it was issued to, and a mismatch reads exactly like
+		 * an unknown token, so a client learns nothing about tokens that are not its own.
+		 */
+		test("rejects a refresh token issued to a different client", async () => {
+			let otherClient = { ...testClient, id: "client-456", secret: "other-secret" };
+			let repo = createMockRepository();
+			repo.findClientById = vi.fn(async (id: string) => {
+				if (id === testClient.id) return testClient;
+				if (id === otherClient.id) return otherClient;
+				return null;
+			});
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			let refusal = provider.token({
+				type: "refresh_token",
+				refreshToken: testSession.id,
+				clientId: otherClient.id,
+				clientSecret: otherClient.secret,
+			});
+
+			await expect(refusal).rejects.toThrow(OIDC.InvalidGrantError);
+			await expect(refusal).rejects.toMatchObject({
+				description: "Invalid or expired refresh token",
+			});
+			expect(repo.touchSession).not.toHaveBeenCalled();
 		});
 	});
 

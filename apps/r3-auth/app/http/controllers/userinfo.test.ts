@@ -44,13 +44,21 @@ async function tokenWithScope(scope: string): Promise<string> {
 	return tokens.access_token;
 }
 
-/** Redeems a refresh token at the token endpoint, returning the access token it mints. */
+/**
+ * Redeems a refresh token at the token endpoint as the client it was issued to, returning
+ * the access token it mints.
+ */
 async function tokenFromRefresh(refreshToken: string): Promise<string> {
 	let response = await app.fetch(
 		new Request(`${ORIGIN}${routes.oauth.token.href()}`, {
 			method: "POST",
 			headers: { "content-type": "application/x-www-form-urlencoded" },
-			body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: refreshToken }),
+			body: new URLSearchParams({
+				grant_type: "refresh_token",
+				refresh_token: refreshToken,
+				client_id: fixtures.clientId,
+				client_secret: fixtures.clientSecret,
+			}),
 		}),
 	);
 	let tokens = (await response.json()) as { access_token: string };

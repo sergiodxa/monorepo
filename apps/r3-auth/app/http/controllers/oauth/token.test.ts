@@ -92,6 +92,8 @@ describe("the refresh_token grant", () => {
 		let response = await post({
 			grant_type: "refresh_token",
 			refresh_token: tokens.refresh_token,
+			client_id: fixtures.clientId,
+			client_secret: fixtures.clientSecret,
 		});
 
 		expect(response.status).toBe(200);
@@ -101,6 +103,18 @@ describe("the refresh_token grant", () => {
 		expect(typeof refreshed.id_token).toBe("string");
 		expect(refreshed.access_token).not.toBe(tokens.access_token);
 		expect(refreshed.refresh_token).toBe(tokens.refresh_token);
+	});
+
+	test("accepts the client's credentials in the Authorization header", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+
+		let response = await post(
+			{ grant_type: "refresh_token", refresh_token: tokens.refresh_token },
+			{ Authorization: basic() },
+		);
+
+		expect(response.status).toBe(200);
 	});
 
 	test("a refresh token whose session was revoked is invalid_grant", async () => {
@@ -113,6 +127,8 @@ describe("the refresh_token grant", () => {
 		let response = await post({
 			grant_type: "refresh_token",
 			refresh_token: tokens.refresh_token,
+			client_id: fixtures.clientId,
+			client_secret: fixtures.clientSecret,
 		});
 
 		expect(response.status).toBe(400);
@@ -120,10 +136,74 @@ describe("the refresh_token grant", () => {
 	});
 
 	test("an unknown refresh token is invalid_grant", async () => {
-		let response = await post({ grant_type: "refresh_token", refresh_token: "not-a-token" });
+		let response = await post(
+			{ grant_type: "refresh_token", refresh_token: "not-a-token" },
+			{ Authorization: basic() },
+		);
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_grant" });
+	});
+
+	/**
+	 * RFC 6749 §6: the refresh token alone is not enough — the client it was issued to has to
+	 * authenticate, so a token lifted from a page or a log mints nothing on its own.
+	 */
+	test("a refresh with no client credentials is invalid_client", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+
+		let response = await post({
+			grant_type: "refresh_token",
+			refresh_token: tokens.refresh_token,
+		});
+
+		expect(response.status).toBe(401);
+		expect(response.headers.get("www-authenticate")).toBe("Basic");
+		expect(await response.json()).toEqual({
+			error: "invalid_client",
+			error_description: "Missing or invalid client credentials",
+		});
+	});
+
+	test("a refresh with the wrong client secret is invalid_client", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+
+		let response = await post(
+			{ grant_type: "refresh_token", refresh_token: tokens.refresh_token },
+			{ Authorization: basic(fixtures.clientId, "wrong-secret") },
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toMatchObject({ error: "invalid_client" });
+	});
+
+	/**
+	 * Another registered client authenticates successfully, and is still refused: the token
+	 * is bound to the client it was issued to, and the refusal matches an unknown token's.
+	 */
+	test("a refresh token presented by a different client is invalid_grant", async () => {
+		let tokens = await signIn(app, fixtures);
+		app.resetCookies();
+
+		let { default: Client } = await import("~/app/data/client");
+		let other = await Client.create(app.db, {
+			name: "Other App",
+			redirect_uri: "https://other.example.com/callback",
+			logout_uri: "https://other.example.com/logout",
+		});
+
+		let response = await post(
+			{ grant_type: "refresh_token", refresh_token: tokens.refresh_token },
+			{ Authorization: basic(other.id, other.secret) },
+		);
+
+		expect(response.status).toBe(400);
+		expect(await response.json()).toEqual({
+			error: "invalid_grant",
+			error_description: "Invalid or expired refresh token",
+		});
 	});
 });
 

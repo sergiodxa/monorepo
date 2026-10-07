@@ -521,6 +521,8 @@ export class OIDC {
 			| {
 					type: "refresh_token";
 					refreshToken: string;
+					clientId: string;
+					clientSecret: string;
 			  }
 			| {
 					type: "client_credentials";
@@ -1335,22 +1337,36 @@ export class OIDC {
 	}
 
 	/**
-	 * Reissues access and id tokens with the scope the session was originally granted,
-	 * so a refresh does not drop the claims sensitive to `scope` (e.g. `picture`, `name`)
-	 * that the client got at sign-in.
+	 * Reissues access and id tokens with the scope the session was originally granted, keeping
+	 * the scope-gated claims (`picture`, `name`) the client got at sign-in. Only the client the
+	 * token was issued to may redeem it, and only once it authenticates (RFC 6749 §6).
+	 *
+	 * @throws {InvalidClientError} When the client credentials do not check out.
+	 * @throws {InvalidGrantError} When the token is unknown, expired, or issued to another
+	 *   client — another client's token answering exactly like an unknown one.
 	 */
-	private async refreshTokenGrant(args: { refreshToken: string }) {
+	private async refreshTokenGrant(args: {
+		refreshToken: string;
+		clientId: string;
+		clientSecret: string;
+	}) {
+		let client = await this.repository.findClientById(args.clientId);
+		if (
+			!client?.secret ||
+			!args.clientSecret ||
+			!timingSafeEqual(client.secret, args.clientSecret)
+		) {
+			throw new InvalidClientError("Invalid client credentials");
+		}
+
 		let session = await this.repository.findSessionById(args.refreshToken);
-		if (!session) {
+		if (!session || session.clientId !== client.id) {
 			throw new InvalidGrantError("Invalid or expired refresh token");
 		}
 
 		if (elapsed(session.expiresAt) > 0) {
 			throw new InvalidGrantError("Session has expired");
 		}
-
-		let client = await this.repository.findClientById(session.clientId);
-		if (!client) throw new InvalidClientError("Client is not registered");
 
 		await this.repository.touchSession(session.id);
 

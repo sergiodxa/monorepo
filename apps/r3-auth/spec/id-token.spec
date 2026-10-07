@@ -1,7 +1,7 @@
-# The OIDC id_token, proven end to end against the live server. The `refresh_token`
-# grant needs no client credentials, so a seeded session (its id IS the refresh token)
-# redeems at POST /oauth/token for a real token set — an access token and an id_token
-# the server signs with its ES256 key. This is the flow the runtime CAN express fully:
+# The OIDC id_token, proven end to end against the live server. The seeded client
+# authenticates with its secret and redeems a seeded session (its id IS the refresh token)
+# at POST /oauth/token for a real token set — an access token and an id_token the server
+# signs with its ES256 key. This is the flow the runtime CAN express fully:
 # no authorization `code` has to be lifted out of a browser redirect.
 #
 # `jwt.verify` fetches the server's own JWKS at /.well-known/jwks.json and checks the
@@ -20,7 +20,7 @@ test "the refresh_token grant returns a genuinely ES256-signed id_token" {
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
 			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-		}
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		# Verifies the signature against the live JWKS; returns the payload only if it is
 		# genuinely signed by this server's key.
 		let claims = jwt.verify tokens.json.id_token "http://localhost:3002/.well-known/jwks.json"
@@ -45,7 +45,7 @@ test "jwt.decode reads the id_token header and claims without verifying" {
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
 			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-		}
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		let decoded = jwt.decode tokens.json.id_token
 	}
 	then {

@@ -127,6 +127,10 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   minutes, session/refresh token 30 days (`app/config.ts`, `database/schema.ts`).
 - MUST treat an authorization code as single-use: consuming it deletes it, and a replay MUST
   fail.
+- MUST bind a refresh token to the client it was issued to: the refresh grant authenticates
+  the client first and refuses another client's token with the same `invalid_grant` an
+  unknown token gets. The account area refreshes as `AUTH_SERVER_CLIENT_ID`, the client its
+  own sign-in issues the session to.
 - MUST delete the session row on logout, so the refresh token dies with it, and MUST send
   back-channel logout tokens to every other client with a registered URI.
 - MUST compare secrets and hashes with a timing-safe comparison (`timingSafeEqual` from

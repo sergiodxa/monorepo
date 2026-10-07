@@ -17,7 +17,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { openSelfSession, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
 
 /**
@@ -88,14 +88,30 @@ describe("requireSubject", () => {
 	});
 
 	test("signs the session out when the refresh token no longer resolves", async () => {
-		let tokens = await signIn(app, fixtures);
+		let refreshToken = await openSelfSession(app, fixtures);
 
 		/**
 		 * An access token already past its refresh threshold, paired with a session row
 		 * that has been revoked, drives the guard through refresh, failure, and sign-out.
 		 */
 		let { default: Session } = await import("~/app/data/session");
-		await Session.deleteById(app.db, tokens.refresh_token);
+		await Session.deleteById(app.db, refreshToken);
+		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
+
+		let response = await app.fetch(
+			new Request(`${ORIGIN}${guarded.subject.href()}`, { redirect: "manual" }),
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
+	});
+
+	/**
+	 * The guard refreshes as this server's own client, so a refresh token issued to a
+	 * relying party is refused like any token presented by a client it was not issued to.
+	 */
+	test("signs the session out when its refresh token belongs to another client", async () => {
+		let tokens = await signIn(app, fixtures);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
 
 		let response = await app.fetch(
@@ -107,8 +123,8 @@ describe("requireSubject", () => {
 	});
 
 	test("refreshes an expiring access token and carries on", async () => {
-		let tokens = await signIn(app, fixtures);
-		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
+		let refreshToken = await openSelfSession(app, fixtures);
+		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
 
 		let response = await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`));
 
@@ -117,8 +133,8 @@ describe("requireSubject", () => {
 	});
 
 	test("the refresh writes a usable access token back, so the next request needs none", async () => {
-		let tokens = await signIn(app, fixtures);
-		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
+		let refreshToken = await openSelfSession(app, fixtures);
+		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
 
 		/**
 		 * The refreshed token must persist to the session: the row is revoked between
@@ -128,7 +144,7 @@ describe("requireSubject", () => {
 		expect((await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`))).status).toBe(200);
 
 		let { default: Session } = await import("~/app/data/session");
-		await Session.deleteById(app.db, tokens.refresh_token);
+		await Session.deleteById(app.db, refreshToken);
 
 		let second = await app.fetch(
 			new Request(`${ORIGIN}${guarded.subject.href()}`, { redirect: "manual" }),
@@ -138,11 +154,11 @@ describe("requireSubject", () => {
 	});
 
 	test("the refresh keeps the same refresh token, since it is the session row's id", async () => {
-		let tokens = await signIn(app, fixtures);
-		await app.signIn(expiredAccessToken(fixtures.subjectId), tokens.refresh_token);
+		let refreshToken = await openSelfSession(app, fixtures);
+		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
 
 		let { default: Session } = await import("~/app/data/session");
-		let before = await Session.findById(app.db, tokens.refresh_token);
+		let before = await Session.findById(app.db, refreshToken);
 
 		await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`));
 
@@ -151,7 +167,7 @@ describe("requireSubject", () => {
 		 * updates, since replacing it with a new id would silently break every client
 		 * holding this refresh token.
 		 */
-		let after = await Session.findById(app.db, tokens.refresh_token);
+		let after = await Session.findById(app.db, refreshToken);
 		expect(after).not.toBeNull();
 		expect(after?.updated_at).toBeGreaterThanOrEqual(before?.updated_at ?? 0);
 		expect(await Session.findBySubjectId(app.db, fixtures.subjectId)).toHaveLength(1);

@@ -99,7 +99,8 @@ written inside the shared card in `app/emails/layout.tsx`.
   `/.well-known/jwks.json`.
 - **Single sign-on and session management**: `sessions.id` is the refresh token, the
   account area lists and revokes sessions, and the `op_browser_state` cookie plus
-  `/oidc/check-session` implement OIDC Session Management 1.0.
+  `/oidc/check-session` implement OIDC Session Management 1.0. A refresh token redeems only
+  for the client it was issued to, and only once that client authenticates.
 - **RP-initiated, back-channel and front-channel logout** (OIDC Logout 1.0): logout tokens
   are dispatched to every other client with a back-channel URI, and front-channel URIs are
   rendered as hidden iframes.

@@ -11,8 +11,10 @@ import { password } from "@sdxc/crypto";
 
 import type { TestApp } from "~/app/lib/test/http";
 
+import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
 import Client from "~/app/data/client";
 import Credential from "~/app/data/credential";
+import Session from "~/app/data/session";
 import Subject from "~/app/data/subject";
 import routes from "~/routes/web";
 
@@ -145,6 +147,28 @@ export interface TokenSet {
 	id_token: string;
 	expires_in: number;
 	token_type: "Bearer";
+}
+
+/**
+ * Opens a session on this server's own client for the seeded subject, the row the account
+ * area's sign-in leaves behind, so a test can drive the guard's silent refresh with a
+ * refresh token it is entitled to redeem.
+ *
+ * @returns The session id, which is the refresh token the guard presents.
+ */
+export async function openSelfSession(app: TestApp, fixtures: Fixtures): Promise<string> {
+	await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
+
+	let session = await Session.create(
+		app.db,
+		fixtures.subjectId,
+		AUTH_SERVER_CLIENT_ID,
+		null,
+		null,
+		SIGN_IN_SCOPE.split(" "),
+	);
+
+	return session.id;
 }
 
 /**

@@ -66,9 +66,9 @@ function tokenError(error: unknown): Response {
 }
 
 /**
- * POST /oauth/token — runs one of the three supported grants. Client-credentials
- * callers are server-to-server, so their budget is spent per client; browser-driven
- * grants are budgeted per address, all an unauthenticated code exchange offers.
+ * POST /oauth/token — runs one of the three supported grants, answering a refresh or
+ * client-credentials request that presents no client credentials `401`. Client-credentials
+ * budgets are spent per client, the rest per address, all a code exchange is sure to offer.
  */
 export default createAction(routes.oauth.token, async (ctx) => {
 	let result = await validate(ctx.formData, TokenRequestSchema);
@@ -110,16 +110,6 @@ export default createAction(routes.oauth.token, async (ctx) => {
 			return ok(tokens, { headers: NO_STORE_HEADERS });
 		}
 
-		if (body.grant_type === "refresh_token") {
-			let tokens = await oidc.token({
-				type: "refresh_token",
-				refreshToken: body.refresh_token,
-			});
-
-			ctx.log.note("oidc.token.issued");
-			return ok(tokens, { headers: NO_STORE_HEADERS });
-		}
-
 		if (!credentials) {
 			ctx.log.set({ oidc: { error: "invalid_client" } });
 			return unauthorized(
@@ -129,6 +119,18 @@ export default createAction(routes.oauth.token, async (ctx) => {
 				},
 				{ headers: { ...NO_STORE_HEADERS, "WWW-Authenticate": "Basic" } },
 			);
+		}
+
+		if (body.grant_type === "refresh_token") {
+			let tokens = await oidc.token({
+				type: "refresh_token",
+				refreshToken: body.refresh_token,
+				...credentials,
+			});
+
+			ctx.log.set({ client: { id: credentials.clientId } });
+			ctx.log.note("oidc.token.issued");
+			return ok(tokens, { headers: NO_STORE_HEADERS });
 		}
 
 		let tokens = await oidc.token({

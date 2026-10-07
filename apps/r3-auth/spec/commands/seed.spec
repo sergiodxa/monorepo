@@ -26,8 +26,8 @@ command seed_code_client() {
 
 # A subject and one of its live sessions, so the machine endpoints have real state to
 # act on. A session id IS the refresh token clients send to POST /oauth/token, so
-# seeding this fixed session lets a spec redeem the `refresh_token` grant — which needs
-# no client credentials — for a genuine access token and a signed id_token, without the
+# seeding this fixed session lets a spec redeem the `refresh_token` grant — as the seeded
+# client, with its secret — for a genuine access token and a signed id_token, without the
 # browser code-extraction the runtime cannot express (see authorize-code.spec). The
 # same subject row is what GET /api/subjects/:id and GET /userinfo answer with.
 #

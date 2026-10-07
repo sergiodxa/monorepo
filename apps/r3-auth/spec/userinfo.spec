@@ -6,12 +6,13 @@
 # or forged token so the endpoint is not an oracle.
 #
 # The claims (200) path rides the `refresh_token` grant: a seeded session (its id IS the
-# refresh token) redeems at POST /oauth/token for an access token the grant now stamps with
-# the `openid` scope /userinfo requires, so the bearer can be lifted straight from that
-# response — no authorization `code` has to be extracted from a browser redirect. `sub` is
-# the seeded subject, read out of the 200 body; it is not trivially true, since a token
-# without `openid` (a `client_credentials` token) is refused here instead, which api.spec
-# shows the other side of against GET /api/subjects/:id.
+# refresh token) redeems at POST /oauth/token, presented by the client it was issued to,
+# for an access token the grant now stamps with the `openid` scope /userinfo requires, so
+# the bearer can be lifted straight from that response — no authorization `code` has to
+# be extracted from a browser redirect. `sub` is the seeded subject, read out of the 200
+# body; it is not trivially true, since a token without `openid` (a `client_credentials`
+# token) is refused here instead, which api.spec shows the other side of against
+# GET /api/subjects/:id.
 
 test "GET /userinfo answers a refresh-minted bearer token with the subject's claims" {
 	given {
@@ -22,7 +23,7 @@ test "GET /userinfo answers a refresh-minted bearer token with the subject's cla
 		let tokens = http.post "http://localhost:3002/oauth/token" form {
 			grant_type: "refresh_token"
 			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
-		}
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "spec-secret"
 		# The refresh grant stamps `openid`, so this token is one /userinfo will serve; the
 		# bearer is lifted straight from the token response.
 		let result = http.get "http://localhost:3002/userinfo" bearer tokens.json.access_token

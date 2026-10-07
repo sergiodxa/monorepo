@@ -43,6 +43,46 @@ test "POST /oauth/token rejects a client-credentials request with a wrong secret
 	}
 }
 
+# POST /oauth/token, the `refresh_token` grant with no client credentials. RFC 6749 §6 has
+# a confidential client authenticate on refresh, so a refresh token on its own — a seeded,
+# live session id — is refused as `invalid_client` before the token is ever looked up.
+test "POST /oauth/token refuses a refresh token presented with no client credentials" {
+	given {
+		seed_code_client
+		seed_refresh_session
+	}
+	when {
+		let result = http.post "http://localhost:3002/oauth/token" form {
+			grant_type: "refresh_token"
+			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+		}
+	}
+	then {
+		expect result.status 401
+		expect result.json.error "invalid_client"
+		expect result.json.error_description "Missing or invalid client credentials"
+	}
+}
+
+# The same grant with the right client id and a wrong secret. Client authentication fails,
+# so the live refresh token mints nothing.
+test "POST /oauth/token refuses a refresh token presented with a wrong client secret" {
+	given {
+		seed_code_client
+		seed_refresh_session
+	}
+	when {
+		let result = http.post "http://localhost:3002/oauth/token" form {
+			grant_type: "refresh_token"
+			refresh_token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+		} basic "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" "wrong-secret"
+	}
+	then {
+		expect result.status 400
+		expect result.json.error "invalid_client"
+	}
+}
+
 # POST /oauth/token with no body. The grant validator runs first and rejects an empty
 # request body as `invalid_request` — before any client authentication or rate limiting.
 test "POST /oauth/token rejects an empty request body as invalid_request" {

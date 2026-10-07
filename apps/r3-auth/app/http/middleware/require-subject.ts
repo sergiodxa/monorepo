@@ -15,6 +15,8 @@ import { redirect } from "@sdxc/http/response";
 import type { SelectSubject } from "~/database/schema";
 
 import { createOidcProvider } from "~/app/auth/repository";
+import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import Client from "~/app/data/client";
 import Subject from "~/app/data/subject";
 import {
 	getAccessToken,
@@ -36,9 +38,9 @@ declare module "remix/router" {
 }
 
 /**
- * Requires a signed-in subject, refreshing the access token when needed. Both tokens are
- * written back together, since the refresh token is the session row's id — a stale one
- * would prevent the session from ever refreshing again.
+ * Requires a signed-in subject, refreshing the access token as this server's own client,
+ * the one its sign-in issued the session to. Both tokens are written back together, since
+ * the refresh token is the session row's id and a stale one could never refresh again.
  */
 export const requireSubject: Middleware = async (ctx, next) => {
 	let accessToken = getAccessToken();
@@ -51,9 +53,14 @@ export const requireSubject: Middleware = async (ctx, next) => {
 
 	if (isAccessTokenExpiringSoon(accessToken)) {
 		try {
+			let client = await Client.findById(ctx.db, AUTH_SERVER_CLIENT_ID);
+			if (!client) throw new Error("Auth server client not found");
+
 			let tokens = await createOidcProvider(ctx.db).token({
 				type: "refresh_token",
 				refreshToken,
+				clientId: client.id,
+				clientSecret: client.secret,
 			});
 
 			/**
