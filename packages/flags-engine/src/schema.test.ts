@@ -70,6 +70,10 @@ describe("CONDITION_SCHEMA", () => {
 			condition: { op: "semver", field: "v", compare: "≈", value: "1.0.0" },
 		},
 		{ name: "a branch holding no condition", condition: { op: "all", of: [{ op: "nope" }] } },
+		{
+			name: "a list operator the condition language keeps for other dialects",
+			condition: { op: "includes", field: "features", value: "reports" },
+		},
 	];
 
 	for (let { name, condition } of refused) {

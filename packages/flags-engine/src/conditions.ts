@@ -1,7 +1,7 @@
 /**
- * The dialect a targeting rule is written in: every built-in condition, a
- * `semver` comparison for app versions, and references spelled `segment`, so a
- * stored flag set reads exactly as it always has.
+ * The dialect a targeting rule is written in: a fixed list of built-in
+ * conditions, a `semver` comparison for app versions, and references spelled
+ * `segment`, so a stored flag set reads exactly as it always has.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,9 +26,37 @@ const SEMVER = defineOperator({
 });
 
 /**
+ * The built-in operators a targeting rule may use, named one by one so the
+ * published condition schema grows only when this list does.
+ */
+const BUILTINS = [
+	"all",
+	"any",
+	"not",
+	"eq",
+	"ne",
+	"in",
+	"notIn",
+	"lt",
+	"lte",
+	"gt",
+	"gte",
+	"startsWith",
+	"endsWith",
+	"contains",
+	"matches",
+	"exists",
+	"always",
+] as const;
+
+/**
  * Validates, compiles and evaluates targeting conditions, and turns them to
  * and from text for an editor. A reference names a segment of the same set.
  *
  * @example flagConditions.compile(rule.when, { references: segments })
  */
-export const flagConditions = createLanguage({ reference: "segment", operators: [SEMVER] });
+export const flagConditions = createLanguage({
+	builtins: BUILTINS,
+	reference: "segment",
+	operators: [SEMVER],
+});
