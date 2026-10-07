@@ -1,6 +1,6 @@
 # @sdxc/well-known
 
-Typed documents for well-known URIs: security.txt, WebFinger, OAuth and OIDC metadata, JWKS and more.
+Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more.
 
 ## Installation
 
@@ -204,6 +204,25 @@ discovery document calls the subpath's `parse` with the identifier it expected.
 `PasskeyEndpoints` has `enroll`, `manage` and `prfUsageDetails`, each `URL | null`; an empty
 object is a valid document. `passkeyEndpoints` is the descriptor.
 
+### `@sdxc/well-known/nodeinfo` (NodeInfo 2.0 and 2.1)
+
+- `NodeInfoLinks` is the `/.well-known/nodeinfo` document, `{ links }`, each `NodeInfoLink`
+  a `rel` (the schema URI, `NODEINFO_2_0` or `NODEINFO_2_1`) and an absolute `href`.
+  `parseLinks(text)` and `stringifyLinks(document)` read and write it; `nodeInfoLinks` is its
+  descriptor, served as `application/json` with `cors: true`.
+- `NodeInfo` has `version`, `software` (`name`, `version`, and 2.1's `repository` and
+  `homepage`, `null` when absent), `protocols`, `services` (`inbound`, `outbound`),
+  `openRegistrations`, `usage` (`users` with `total`, `activeMonth`, `activeHalfyear`, plus
+  `localPosts` and `localComments`, each `number | null`) and `metadata`.
+- `parse(text)` reads 2.0 and 2.1 and checks the schema: `software.name` uses lowercase
+  letters, digits and hyphens, at least one protocol, every protocol and service a non-empty
+  string, and non-negative integer counts. Names outside the schema's registry, such as
+  `atproto`, are kept; the types autocomplete the registered ones. A 2.0 document reads with `repository` and `homepage`
+  `null`.
+- `stringify(document)` writes 2.1 whatever `version` says, leaving out `null` members.
+- `nodeInfo` is the descriptor for the document itself, served at the path the links
+  document names with `DOCUMENT_MEDIA_TYPE`, the 2.1 profile.
+
 ### `@sdxc/well-known/response`
 
 #### `respond(format, document, options?)`
@@ -248,6 +267,41 @@ let middleware = wellKnown({
 });
 
 let challenge = `Bearer resource_metadata="${metadataUrl(API_METADATA.resource)}"`;
+```
+
+## Pattern: Advertising A Server Through NodeInfo
+
+```typescript
+import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { NODEINFO_2_1, nodeInfo, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
+import { respond } from "@sdxc/well-known/response";
+import { createAction } from "remix/router";
+
+let middleware = wellKnown({
+	nodeinfo: serve(nodeInfoLinks, () => ({
+		links: [{ rel: NODEINFO_2_1, href: "https://example.com/nodeinfo/2.1" }],
+	})),
+});
+
+export default createAction(routes.nodeInfo, (ctx) =>
+	respond(
+		nodeInfo,
+		{
+			version: "2.1",
+			software: { name: "example", version: "1.0.0", repository: null, homepage: null },
+			protocols: ["activitypub"],
+			services: { inbound: [], outbound: ["rss2.0"] },
+			openRegistrations: false,
+			usage: {
+				users: { total: 1, activeMonth: 1, activeHalfyear: 1 },
+				localPosts: 42,
+				localComments: null,
+			},
+			metadata: {},
+		},
+		{ request: ctx.request },
+	),
+);
 ```
 
 ## Pattern: A Change-Password Redirect Beside Documents

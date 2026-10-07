@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/well-known",
 	"version": "0.0.1",
-	"description": "Typed well-known URI documents: security.txt, WebFinger, OIDC metadata, JWKS",
+	"description": "Typed documents for well-known URIs: security.txt, WebFinger, NodeInfo, OAuth and OIDC metadata, JWKS and more",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -14,6 +14,7 @@
 		"./jwks": "./src/jwks.ts",
 		"./change-password": "./src/change-password.ts",
 		"./passkey-endpoints": "./src/passkey-endpoints.ts",
+		"./nodeinfo": "./src/nodeinfo.ts",
 		"./response": "./src/response.ts",
 		"./middleware": "./src/middleware.ts"
 	},
