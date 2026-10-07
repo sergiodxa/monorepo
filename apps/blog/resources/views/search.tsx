@@ -11,7 +11,7 @@ import type { Handle } from "remix/component";
 
 import { ChevronRightIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
-import { rounded, transition } from "@sdxc/u/effects";
+import { rounded, shadow, transition } from "@sdxc/u/effects";
 import { cursor, listStyle, raw } from "@sdxc/u/general";
 import {
 	contents,
@@ -39,11 +39,9 @@ import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
 /**
- * The search box, in the same quiet field the search panel uses, on a bordered surface
- * whose border turns brand while the field has focus. Enter submits it, with or without
- * script, as `?q=` with no paging parameter, so a new query starts on its first page; the
- * field carries no visible label, since the page heading names it, and an invalid query is
- * marked on the surface with its reason underneath.
+ * The search box: the panel's quiet field, unlabelled since the heading names the page, on a
+ * surface that darkens its border and lifts while focused. Enter submits `?q=` with no paging
+ * parameter, so a new query starts on its first page; an invalid one turns the border red.
  */
 function SearchForm(handle: Handle<{ query: string; message?: string }>) {
 	return () => {
@@ -58,7 +56,8 @@ function SearchForm(handle: Handle<{ query: string; message?: string }>) {
 							rounded("lg"),
 							border({ width: 1, color: message ? "danger" : "neutral" }),
 							bg("neutral.tint"),
-							when("&:focus-within", border(message ? "danger" : "brand")),
+							transition("border-color, box-shadow"),
+							when("&:focus-within", [border(message ? "danger" : "neutral.strong"), shadow("sm")]),
 						]}
 					>
 						<QuietSearchInput
