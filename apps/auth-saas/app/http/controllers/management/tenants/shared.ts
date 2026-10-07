@@ -142,11 +142,11 @@ export function domainKindNotAttachable(): Response {
 	});
 }
 
-/** A caller attaching a custom domain on a plan that does not include one. */
+/** A tenant holding no `custom_domain` entitlement: its plan never included one, or its subscription lapsed. */
 export function customDomainNotAllowed(): Response {
 	return managementProblem("entitlementRequired", {
 		detail:
-			"This tenant is not entitled to a custom domain. Attaching a custom domain is not included on this tenant's plan.",
+			"This tenant is not entitled to a custom domain. Attaching a custom domain needs an active plan that includes one.",
 	});
 }
 

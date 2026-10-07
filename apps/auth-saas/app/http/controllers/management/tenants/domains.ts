@@ -1,7 +1,8 @@
 /**
  * The domain sub-resource under a tenant: `GET .../domains` lists them, `POST
- * .../domains` attaches a custom domain — registering it with Cloudflare and
- * recording the DV verification record it answers with — `GET
+ * .../domains` attaches a custom domain for a tenant holding the `custom_domain`
+ * entitlement — registering it with Cloudflare and recording the DV
+ * verification record it answers with — `GET
  * .../domains/:domainId/verification` reads one domain's verification and
  * activation state, and `DELETE .../domains/:domainId` removes one,
  * deregistering it from Cloudflare too.
@@ -32,13 +33,10 @@ import {
 } from "~/app/http/controllers/management/tenants/shared";
 import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
+import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
 import { TENANT_DOMAINS_ATTACH } from "~/app/http/openapi/tenants";
 import Domain from "~/app/models/domain";
-import {
-	attachCustomDomain,
-	CustomDomainNotAllowedError,
-	removeDomain,
-} from "~/app/services/domain";
+import { attachCustomDomain, removeDomain } from "~/app/services/domain";
 import routes from "~/routes/management";
 
 /** Finds a domain by id, scoped to the caller's own tenant — a domain id alone names no tenant of its own. */
@@ -86,7 +84,10 @@ export function createTenantDomainsListAction(options: ManagementControllerOptio
  */
 export function createTenantDomainsAttachAction(options: ManagementControllerOptions) {
 	return createAction(routes.tenantDomainsAttach, {
-		middleware: mountedMiddleware(options, "write"),
+		middleware: [
+			...mountedMiddleware(options, "write"),
+			...managementEntitlement("custom_domain", customDomainNotAllowed),
+		],
 		handler: async (ctx) => {
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
@@ -105,7 +106,6 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 				);
 				return json(serializeDomain(domain), { status: 201 });
 			} catch (error) {
-				if (error instanceof CustomDomainNotAllowedError) return customDomainNotAllowed();
 				if (error instanceof HostnameApiError) return hostnameRegistrationFailed(error.message);
 				throw error;
 			}

@@ -1,7 +1,7 @@
 /**
  * Drives every domain route through the management router: `GET
  * /tenants/:tenantId/domains` lists them, `POST .../domains` attaches a
- * custom domain, `GET .../domains/:domainId/verification` reads one's
+ * custom domain for a tenant holding the `custom_domain` entitlement, `GET .../domains/:domainId/verification` reads one's
  * verification and activation state, and `DELETE .../domains/:domainId`
  * removes one. An attach or remove call reaches Cloudflare's custom-hostname
  * API for real, through the `HostnameClient` the harness points at this
@@ -32,6 +32,7 @@ let { buildTenantsHarness, HOSTNAME_ZONE_ID } =
 	await import("~/app/http/controllers/management/tenants/test-harness");
 let Domain = (await import("~/app/models/domain")).default;
 let Tenant = (await import("~/app/models/tenant")).default;
+let TenantEntitlement = (await import("~/app/models/tenant-entitlement")).default;
 
 /** The Cloudflare custom-hostnames collection the test zone's handlers answer for. */
 const API_URL = `https://api.cloudflare.com/client/v4/zones/${HOSTNAME_ZONE_ID}/custom_hostnames`;
@@ -42,9 +43,14 @@ beforeEach(() => hostnamesKv.reset());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-/** Upgrades the harness's own tenant off the free plan, so attaching a custom domain is allowed. */
+/** Puts the harness's own tenant on an active Pro subscription, whose projection grants `custom_domain`. */
 async function upgradeTenant(harness: TenantsHarness): Promise<void> {
 	await Tenant.update(harness.db, harness.tenantId, { planSlug: "pro" });
+	await TenantEntitlement.upsert(harness.db, harness.tenantId, {
+		products: ["pro"],
+		features: { custom_domain: true },
+		readAt: Date.now(),
+	});
 }
 
 describe("GET /tenants/:tenantId/domains", () => {
@@ -155,6 +161,33 @@ describe("POST /tenants/:tenantId/domains", () => {
 		);
 
 		expect(response.status).toBe(403);
+	});
+
+	test("refuses a lapsed tenant that still records its former paid tier", async () => {
+		let harness = await buildTenantsHarness();
+		await Tenant.update(harness.db, harness.tenantId, {
+			planSlug: "pro",
+			subscriptionStatus: "revoked",
+			lapsedAt: Date.now(),
+		});
+		await TenantEntitlement.upsert(harness.db, harness.tenantId, {
+			products: [],
+			features: {},
+			readAt: Date.now(),
+		});
+		let token = await harness.signToken();
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/domains`, token, {
+				method: "POST",
+				body: JSON.stringify({ hostname: "auth.acme.com", kind: "custom" }),
+			}),
+		);
+
+		expect(response.status).toBe(403);
+		let body = (await response.json()) as { type: string };
+		expect(body.type).toBe("https://docs.example.com/errors/entitlement-required");
+		expect(await Domain.findByHostname(harness.db, "auth.acme.com")).toBeNull();
 	});
 });
 

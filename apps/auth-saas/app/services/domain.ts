@@ -23,30 +23,18 @@ import Tenant from "~/app/models/tenant";
 /** How long a domain may sit `pending` before it is marked `failed`. */
 const PENDING_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** Thrown when a tenant on a plan without custom-domain access tries to attach one. */
-export class CustomDomainNotAllowedError extends Error {
-	override name = "CustomDomainNotAllowedError";
-
-	/**
-	 * @param tenantId - The tenant that attempted to attach a custom domain.
-	 */
-	constructor(public readonly tenantId: string) {
-		super(`Tenant ${tenantId} is on the free plan and cannot attach a custom domain`);
-	}
-}
-
 /**
  * Attaches a custom domain to a tenant: registers a Cloudflare for SaaS custom
  * hostname asking for a DV certificate validated over TXT, and records the domain
- * `pending` with the TXT record the customer has to publish. Gated on the tenant
- * being above the free plan, per ADR-005 — attaching a custom domain is Pro and above.
+ * `pending` with the TXT record the customer has to publish. Whether the tenant may
+ * attach one is the attach route's `custom_domain` entitlement gate.
  *
  * @param db - Database connection.
  * @param hostnameClient - Client for the Cloudflare zone the hostname is registered on.
  * @param tenantId - The tenant the domain is attached to.
  * @param hostname - The customer's own hostname (e.g. `auth.customer.example`).
  * @returns A promise resolving to the newly-created, `pending` domain row.
- * @throws {CustomDomainNotAllowedError} When the tenant is on the free plan.
+ * @throws {RecordNotFoundError} When no tenant exists for the given id.
  * @example
  * let domain = await attachCustomDomain(db, hostnameClient, tenant.id, "auth.acme.com");
  */
@@ -58,7 +46,6 @@ export async function attachCustomDomain(
 ): Promise<DomainRow> {
 	let tenant = await Tenant.findById(db, tenantId);
 	if (!tenant) throw new RecordNotFoundError(Tenant.table, { id: tenantId });
-	if (tenant.plan_slug === "free") throw new CustomDomainNotAllowedError(tenantId);
 
 	let result = await hostnameClient.create(hostname, tenantId, tenant.region);
 	let domain = await Domain.create(db, { tenantId, hostname, kind: "custom" });

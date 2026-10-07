@@ -1,7 +1,6 @@
 /**
- * Unit tests for the domain lifecycle service (ADR-005): the free-plan gate on
- * attaching a custom domain, writing the row `pending` with its TXT verification
- * fields, promoting a domain to `active` once Cloudflare reports it and its
+ * Unit tests for the domain lifecycle service (ADR-005): attaching a custom domain,
+ * writing the row `pending` with its TXT verification fields, promoting a domain to `active` once Cloudflare reports it and its
  * certificate active, failing a domain still pending past seven days, and removing a
  * domain while treating an already-gone Cloudflare hostname as success. The
  * Cloudflare API is stubbed with MSW against a real `HostnameClient`, and
@@ -31,8 +30,7 @@ let { createTestDatabase } = await import("~/app/test/db");
 let Customer = (await import("~/app/models/customer")).default;
 let Domain = (await import("~/app/models/domain")).default;
 let Tenant = (await import("~/app/models/tenant")).default;
-let { attachCustomDomain, CustomDomainNotAllowedError, refreshDomainStatus, removeDomain } =
-	await import("./domain");
+let { attachCustomDomain, refreshDomainStatus, removeDomain } = await import("./domain");
 
 /** The Cloudflare custom-hostnames collection the test client is pointed at. */
 let API_URL = "https://api.cloudflare.com/client/v4/zones/zone-1/custom_hostnames";
@@ -58,33 +56,19 @@ beforeEach(async () => {
 	db = await createTestDatabase();
 });
 
-/** Creates a tenant on the given plan, defaulting to `pro` so domain attachment is allowed. */
-async function makeTenant(plan: "free" | "pro" | "premium" = "pro") {
+/** Creates a tenant for a domain to belong to. */
+async function makeTenant() {
 	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
+	return await Tenant.create(db, {
 		customerId: customer.id,
 		name: "Acme, Inc.",
 		slug: "acme",
 		issuer: "https://acme.auth.example.com",
 		region: "wnam",
 	});
-	if (plan !== "free") {
-		tenant = await db.update(Tenant.table, { id: tenant.id }, { plan_slug: plan });
-	}
-	return tenant;
 }
 
 describe("attachCustomDomain", () => {
-	test("refuses a tenant on the free plan", async () => {
-		let tenant = await makeTenant("free");
-
-		await expect(
-			attachCustomDomain(db, makeClient(), tenant.id, "auth.acme.com"),
-		).rejects.toBeInstanceOf(CustomDomainNotAllowedError);
-
-		expect(await Domain.findByHostname(db, "auth.acme.com")).toBeNull();
-	});
-
 	test("rejects an unknown tenant id", async () => {
 		await expect(
 			attachCustomDomain(db, makeClient(), "ten_missing", "auth.acme.com"),
@@ -92,7 +76,7 @@ describe("attachCustomDomain", () => {
 	});
 
 	test("registers the hostname with Cloudflare and writes a pending domain with its TXT record", async () => {
-		let tenant = await makeTenant("pro");
+		let tenant = await makeTenant();
 
 		server.use(
 			http.post(API_URL, () =>
