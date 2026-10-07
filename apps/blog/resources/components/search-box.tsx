@@ -9,9 +9,19 @@
 
 import type { Handle } from "remix/component";
 
+import { SearchIcon } from "@sdxc/icons";
 import { bg, border, fg, outlineStyle } from "@sdxc/u/color";
 import { opacity } from "@sdxc/u/effects";
-import { appearance, gap, grid, gridTemplate, hidden, inlineFlex, items } from "@sdxc/u/layout";
+import {
+	appearance,
+	gap,
+	grid,
+	gridTemplate,
+	hidden,
+	inlineFlex,
+	items,
+	shrink,
+} from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { bs, is, m, minIs, p, pi } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
@@ -19,8 +29,6 @@ import { text } from "@sdxc/u/typography";
 import { Button, Spinner } from "@sdxc/ui";
 import { spin } from "@sdxc/ui/animations";
 import { clientEntry, on } from "remix/component";
-
-import { SearchGlyph } from "~/resources/components/search-glyph";
 
 /** How long typing must pause before the results follow it. */
 export const SEARCH_DEBOUNCE_MS = 200;
@@ -155,7 +163,7 @@ export const SearchBox = clientEntry(
 					{spinning ? (
 						<Spinner size="sm" color="neutral" aria-label="Searching" mix={[spin()]} />
 					) : (
-						<SearchGlyph />
+						<SearchIcon size="1em" mix={[shrink(0)]} />
 					)}
 				</span>
 				<input

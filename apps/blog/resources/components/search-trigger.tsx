@@ -9,17 +9,16 @@
 
 import type { Handle } from "remix/component";
 
+import { SearchIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
 import { opacity, rounded } from "@sdxc/u/effects";
-import { hidden } from "@sdxc/u/layout";
+import { hidden, shrink } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
 import { mis, pb, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { font, text } from "@sdxc/u/typography";
 import { Button, Keyboard } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
-
-import { SearchGlyph } from "~/resources/components/search-glyph";
 
 /** The dialog the trigger and every key open, which the layout renders with this id. */
 export const SEARCH_DIALOG_ID = "site-search";
@@ -167,7 +166,7 @@ export const SearchTrigger = clientEntry(
 					}),
 				]}
 			>
-				<SearchGlyph />
+				<SearchIcon size="1em" mix={[shrink(0)]} />
 				<span mix={[media("(max-width: 40rem)", hidden())]}>Search</span>
 				<Keyboard
 					aria-hidden="true"
