@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Page, PaginationError } from "@sdxc/pagination";
+import type { OffsetQuery, Page, PaginationError } from "@sdxc/pagination";
 import type { Result } from "@sdxc/result";
-import type { ParsedQuery, SearchQuery } from "@sdxc/search";
+import type { ParsedQuery, SearchFilter } from "@sdxc/search";
 import type { ValidationError } from "@sdxc/validate";
 import type { Database, SqlStatement } from "remix/data-table";
 
@@ -94,17 +94,65 @@ const KIND_PATHS: Record<PostSearch.Kind, string> = {
 const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition"];
 
 /**
- * `posts.published_at` as epoch milliseconds, read the way `Post.isPublishedAt` reads it: a
+ * A `posts` date column as epoch milliseconds, read the way `Post.isPublishedAt` reads it: a
  * run of digits is seconds (or milliseconds past 10^12), anything else a date SQLite parses.
  * Text SQLite cannot parse comes out `NULL`, which never compares as published.
+ *
+ * @param column The column expression, already quoted.
  */
-const PUBLISHED_MS = `case
-	when "posts"."published_at" glob '[0-9]*' and "posts"."published_at" not glob '*[^0-9]*' then
-		case when cast("posts"."published_at" as integer) > 1000000000000
-			then cast("posts"."published_at" as integer)
-			else cast("posts"."published_at" as integer) * 1000 end
-	else cast(round((julianday("posts"."published_at") - 2440587.5) * 86400000) as integer)
+function epochMs(column: string): string {
+	return `case
+	when ${column} glob '[0-9]*' and ${column} not glob '*[^0-9]*' then
+		case when cast(${column} as integer) > 1000000000000
+			then cast(${column} as integer)
+			else cast(${column} as integer) * 1000 end
+	else cast(round((julianday(${column}) - 2440587.5) * 86400000) as integer)
 end`;
+}
+
+/** `posts.published_at` as epoch milliseconds. */
+const PUBLISHED_MS = epochMs(`"posts"."published_at"`);
+
+/** When a post went out: its publish date, or its creation for one published on creation. */
+const PUBLICATION_MS = epochMs(`coalesce("posts"."published_at", "posts"."created_at")`);
+
+/** The filter names a query reads, each mapped to the filter it applies; `lang` has aliases. */
+const FILTER_NAMES: Record<string, "tag" | "kind" | "lang"> = {
+	tag: "tag",
+	kind: "kind",
+	lang: "lang",
+	locale: "lang",
+	language: "lang",
+};
+
+/** The singular and plural spellings `kind:` accepts. */
+const KIND_NAMES: Record<string, PostSearch.Kind> = {
+	article: "article",
+	articles: "article",
+	tutorial: "tutorial",
+	tutorials: "tutorial",
+	glossary: "glossary",
+	glossaries: "glossary",
+};
+
+/** Language names `lang:` accepts beside a language tag, read as that tag. */
+const LANGUAGE_NAMES: Record<string, string> = {
+	english: "en",
+	inglés: "en",
+	ingles: "en",
+	spanish: "es",
+	español: "es",
+	espanol: "es",
+};
+
+/** The language of a post stored without one: the site's own. */
+const DEFAULT_LANGUAGE = "en";
+
+/**
+ * A projected post's language in lowercase with `-` between subtags: an article's latest
+ * `locale`, or the site's language for a post that stores none.
+ */
+const POST_LANGUAGE = `lower(replace(coalesce((select "post_meta"."value" from "post_meta" where "post_meta"."post_id" = "post_search"."post_id" and "post_meta"."key" = 'locale' order by "post_meta"."updated_at" desc, "post_meta"."created_at" desc limit 1), '${DEFAULT_LANGUAGE}'), '_', '-'))`;
 
 /** Whether a stored type is one search reaches. */
 function isKind(value: string): value is PostSearch.Kind {
@@ -114,12 +162,13 @@ function isKind(value: string): value is PostSearch.Kind {
 /**
  * The search over `post_search`: a title hit outranks a tag hit, which outranks a hit in the
  * body, weighted inside `bm25()` so a body dense with a term can still beat a passing title.
+ * `title:` scopes a term to the title.
  */
-const postSearch = defineSearch({
+const POST_SEARCH = defineSearch({
 	table: schema.postSearch,
 	key: "id",
 	columns: [
-		{ name: "title", weight: 10 },
+		{ name: "title", weight: 10, field: "title" },
 		{ name: "tags", weight: 6 },
 		{ name: "content", weight: 1 },
 	],
@@ -144,7 +193,7 @@ export class PostSearch {
 	 * to find, too many terms, or too many characters.
 	 */
 	static parse(text: string): Result<ParsedQuery | null, ValidationError> {
-		return parseQuery(text);
+		return parseQuery(text, { fields: POST_SEARCH.fields, filters: Object.keys(FILTER_NAMES) });
 	}
 
 	/**
@@ -231,27 +280,48 @@ export class PostSearch {
 	/**
 	 * Every match for `query` whose post is live, of a searchable kind (or the one asked for)
 	 * and published by now, read from `posts` on every query so no projection can drift from
-	 * it. A tag narrows on the projected tags.
+	 * it, and narrowed by the query's filters and the caller's. A query of filters alone has
+	 * no relevance to rank by, so it lists newest first.
 	 */
 	private static matching(
 		db: Database,
 		query: ParsedQuery,
 		filters: PostSearch.Filters,
-	): SearchQuery<typeof schema.postSearch> {
-		let kinds = filters.kind === undefined ? KINDS : [filters.kind];
-		let found = postSearch.query(db, query).where(this.published(kinds, Date.now()));
-
-		if (filters.tag !== undefined) {
-			found = found.where(
-				sql`exists (select 1 from json_each("post_search"."tags") where lower("value") = lower(${filters.tag.trim()}))`,
-			);
+	): OffsetQuery<MatchedRow> {
+		let conditions = this.conditions(query, filters);
+		if (!query.clauses.some((clause) => !clause.exclude)) {
+			return new NewestFirst(db, [POST_SEARCH.predicate(query), ...conditions]);
 		}
 
+		let found = POST_SEARCH.query(db, query);
+		for (let condition of conditions) found = found.where(condition);
 		return found;
+	}
+
+	/**
+	 * What a row must meet beyond the text: published and of a reachable kind, then every
+	 * filter. Values of one filter are alternatives; separate filters must all hold.
+	 */
+	private static conditions(query: ParsedQuery, filters: PostSearch.Filters): Array<SqlStatement> {
+		let kinds = new Set<PostSearch.Kind>(filters.kind === undefined ? KINDS : [filters.kind]);
+		let conditions: Array<SqlStatement> = [];
+
+		if (filters.tag !== undefined) conditions.push(hasTag([filters.tag], false));
+
+		for (let filter of query.filters) {
+			let name = FILTER_NAMES[filter.name];
+			if (name === "tag") conditions.push(hasTag(filter.values, filter.exclude));
+			if (name === "lang") conditions.push(inLanguage(filter.values, filter.exclude));
+			if (name === "kind") kinds = narrowKinds(kinds, filter);
+		}
+
+		conditions.unshift(this.published([...kinds], Date.now()));
+		return conditions;
 	}
 
 	/** The source-table condition a projected row must meet to be returned. */
 	private static published(kinds: ReadonlyArray<PostSearch.Kind>, now: number): SqlStatement {
+		if (kinds.length === 0) return rawSql("0 = 1");
 		let placeholders = kinds.map(() => "?").join(", ");
 		return rawSql(
 			`exists (select 1 from "posts" where "posts"."id" = "post_search"."post_id" and "posts"."deleted_at" is null and "posts"."type" in (${placeholders}) and ("posts"."published_at" is null or (${PUBLISHED_MS}) <= ?))`,
@@ -265,7 +335,7 @@ export class PostSearch {
 	 */
 	private static async hits(
 		db: Database,
-		rows: ReadonlyArray<schema.SelectPostSearch>,
+		rows: ReadonlyArray<MatchedRow>,
 	): Promise<Array<PostSearch.Hit>> {
 		if (rows.length === 0) return [];
 
@@ -395,5 +465,117 @@ function tagsOf(stored: string): Array<string> {
 		return parsed.filter((tag): tag is string => typeof tag === "string");
 	} catch {
 		return [];
+	}
+}
+
+/** The columns of a matched `post_search` row a result is read back from. */
+type MatchedRow = Pick<schema.SelectPostSearch, "id" | "post_id" | "tags" | "content">;
+
+/** `lower(?)` placeholders for each value, for an `in` list compared without case. */
+function lowered(values: ReadonlyArray<string>): string {
+	return values.map(() => "lower(?)").join(", ");
+}
+
+/** Whether the post's projected tags hold any of `values`, compared without case. */
+function hasTag(values: ReadonlyArray<string>, exclude: boolean): SqlStatement {
+	let tags = values.map((value) => value.trim());
+	return rawSql(
+		`${exclude ? "not " : ""}exists (select 1 from json_each("post_search"."tags") where lower("value") in (${lowered(tags)}))`,
+		tags,
+	);
+}
+
+/**
+ * Whether the post is in any of the languages named, matched on whole subtags: `es` matches
+ * `es` and `es-AR`, `es-AR` only `es-AR`. A language's name (`spanish`, `español`) reads as
+ * its tag.
+ */
+function inLanguage(values: ReadonlyArray<string>, exclude: boolean): SqlStatement {
+	let tags = values.map((value) => {
+		let tag = value.trim().toLowerCase().replaceAll("_", "-");
+		return LANGUAGE_NAMES[tag] ?? tag;
+	});
+	let tests = tags.map(() => `(${POST_LANGUAGE} = ? or ${POST_LANGUAGE} like ? || '-%')`);
+	let match = `(${tests.join(" or ")})`;
+	return rawSql(
+		exclude ? `not ${match}` : match,
+		tags.flatMap((tag) => [tag, tag]),
+	);
+}
+
+/**
+ * Narrows the kinds a search reaches by one `kind:` filter: a positive one keeps the kinds it
+ * names, an exclusion drops them. A name that is no kind reaches nothing.
+ */
+function narrowKinds(kinds: Set<PostSearch.Kind>, filter: SearchFilter): Set<PostSearch.Kind> {
+	let named = new Set(
+		filter.values.flatMap((value) => {
+			let kind = KIND_NAMES[value.trim().toLowerCase()];
+			return kind === undefined ? [] : [kind];
+		}),
+	);
+	return new Set([...kinds].filter((kind) => named.has(kind) !== filter.exclude));
+}
+
+/**
+ * The rows matching a query of filters alone, newest publication first, as a page reads
+ * them. A query of filters has no relevance to rank by, and the date lives in `posts`, so
+ * the statement joins it; ties fall back to the projection's id.
+ */
+class NewestFirst implements OffsetQuery<MatchedRow> {
+	#db: Database;
+	#conditions: ReadonlyArray<SqlStatement>;
+	#limit: number | null;
+	#offset: number;
+
+	constructor(
+		db: Database,
+		conditions: ReadonlyArray<SqlStatement>,
+		limit: number | null = null,
+		offset = 0,
+	) {
+		this.#db = db;
+		this.#conditions = conditions;
+		this.#limit = limit;
+		this.#offset = offset;
+	}
+
+	limit(value: number): NewestFirst {
+		return new NewestFirst(this.#db, this.#conditions, value, this.#offset);
+	}
+
+	offset(value: number): NewestFirst {
+		return new NewestFirst(this.#db, this.#conditions, this.#limit, value);
+	}
+
+	async count(): Promise<number> {
+		let where = this.#where();
+		let result = await this.#db.exec(
+			rawSql(`select count(*) as "count" from "post_search" where ${where.text}`, where.values),
+		);
+		return Number(result.rows?.[0]?.count ?? 0);
+	}
+
+	async all(): Promise<Array<MatchedRow>> {
+		let where = this.#where();
+		let window =
+			this.#limit === null
+				? ""
+				: ` limit ${Math.max(0, Math.trunc(this.#limit))} offset ${Math.max(0, Math.trunc(this.#offset))}`;
+		let result = await this.#db.exec(
+			rawSql(
+				`select "post_search"."id", "post_search"."post_id", "post_search"."tags", "post_search"."content" from "post_search" join "posts" on "posts"."id" = "post_search"."post_id" where ${where.text} order by (${PUBLICATION_MS}) desc, "post_search"."id" desc${window}`,
+				where.values,
+			),
+		);
+		return (result.rows ?? []) as Array<MatchedRow>;
+	}
+
+	/** Every condition joined with `and`, each in parentheses. */
+	#where(): SqlStatement {
+		return rawSql(
+			this.#conditions.map((condition) => `(${condition.text})`).join(" and "),
+			this.#conditions.flatMap((condition) => [...condition.values]),
+		);
 	}
 }

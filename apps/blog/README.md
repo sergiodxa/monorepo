@@ -47,6 +47,13 @@ Smart Placement and Observability are enabled.
   each live post's title, tags and body, ranked title first, then tags, then body. Only posts
   published by now appear, previews and deleted posts never. Results page ten at a time with
   `Link` and `X-Total-Count` headers, and matched words are highlighted.
+- Search syntax, shared by `/search`, the search panel and `search_posts`: `"phrases"`,
+  `-exclusions`, `OR` in capitals, `title:` for a word in the title, and the filters
+  `tag:"react router"` (a tutorial tag, any case), `kind:tutorial` (`article`, `tutorial`,
+  `glossary`, plural accepted) and `lang:es` (also `locale:` and `language:`; `es` matches
+  `es-AR`, and `spanish`/`español`/`english` work too). An article's language is its `locale`;
+  tutorials and glossary entries are English. A search of filters alone lists newest first.
+  `/search` explains the syntax under its form.
 - Search from any page: the navigation's search pill, ⌘K / Ctrl+K, or `/` (outside a
   field) opens a panel near the top of the screen with a large search box; as you type, the
   top six matches appear under it, each with its matched words highlighted and a line of the

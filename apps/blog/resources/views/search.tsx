@@ -11,10 +11,10 @@ import type { Handle } from "remix/component";
 
 import { fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
+import { contents, flexWrap, gap, grid, gridTemplate, items } from "@sdxc/u/layout";
 import { m, maxIs, mbs, p } from "@sdxc/u/size";
 import { tabularNums, text } from "@sdxc/u/typography";
-import { Button, FieldError, Heading, Label, Pagination, SearchField } from "@sdxc/ui";
+import { Button, Disclosure, FieldError, Heading, Label, Pagination, SearchField } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
@@ -53,6 +53,55 @@ function SearchForm(handle: Handle<{ query: string; message?: string }>) {
 			</form>
 		);
 	};
+}
+
+/** What each piece of the search syntax does, as the disclosure lists it. */
+const SYNTAX: ReadonlyArray<{ example: string; meaning: string }> = [
+	{ example: "remix router", meaning: "Posts holding both words" },
+	{ example: '"route pattern"', meaning: "The exact phrase" },
+	{ example: "-legacy", meaning: "Leave out posts holding the word" },
+	{ example: "remix OR react", meaning: "Either word; OR in capitals" },
+	{ example: "title:forms", meaning: "The word in the title" },
+	{ example: 'tag:"react router"', meaning: "Tutorials with that tag" },
+	{ example: "kind:tutorial", meaning: "Only articles, tutorials or glossary entries" },
+	{ example: "lang:es", meaning: "Posts in a language, such as en or es" },
+];
+
+/**
+ * The search syntax, folded under the form so it is there for whoever wants more than a few
+ * words. A search made of filters alone lists newest first.
+ */
+function SyntaxHelp() {
+	return () => (
+		<Disclosure>
+			<Disclosure.Trigger>Search tips</Disclosure.Trigger>
+			<Disclosure.Panel>
+				<dl
+					mix={[
+						m(0),
+						grid(),
+						gridTemplate({ columns: "max-content 1fr" }),
+						gap(2),
+						text("sm"),
+						fg("neutral"),
+					]}
+				>
+					{SYNTAX.map((row) => (
+						<div key={row.example} mix={[contents()]}>
+							<dt>
+								<code>{row.example}</code>
+							</dt>
+							<dd mix={[m(0)]}>{row.meaning}</dd>
+						</div>
+					))}
+				</dl>
+				<p mix={[m(0), mbs(3), text("sm"), fg("neutral")]}>
+					Combine them freely; a search of filters alone, like <code>tag:remix</code>, lists the
+					newest posts first.
+				</p>
+			</Disclosure.Panel>
+		</Disclosure>
+	);
 }
 
 /** The numbered pager under a results page, with the current page marked for assistive tech. */
@@ -125,10 +174,10 @@ export function SearchView() {
 				/>
 				{model.state === "blank" ? (
 					<p mix={[m(0), maxIs("52ch"), text("lg"), fg("neutral")]}>
-						Type a few words to find posts by their title, tags or text. Quote a phrase to match it
-						exactly, and put a minus before a word to leave it out.
+						Type a few words to find posts by their title, tags or text.
 					</p>
 				) : null}
+				<SyntaxHelp />
 				{model.state === "results" && model.items.length === 0 ? (
 					<p mix={[m(0), text("lg"), fg("neutral")]}>No posts match “{model.query}”.</p>
 				) : null}

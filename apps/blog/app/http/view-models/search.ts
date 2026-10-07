@@ -177,7 +177,7 @@ export class SearchViewModel {
 					: hit.url,
 			kind: hit.kind,
 			kindLabel: KIND_LABELS[hit.kind],
-			title: highlight(hit.title, parsed),
+			title: highlight(hit.title, parsed, { field: "title" }),
 			excerpt: this.excerpt(hit, parsed),
 			publishedAt: hit.publishedAt,
 		};

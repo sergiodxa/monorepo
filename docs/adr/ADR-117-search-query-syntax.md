@@ -151,7 +151,8 @@ since parsing and the definition disagree, which is a programming error.
 
 - `title` is a field. `tag` filters tutorials whose tag list holds the value, compared
   case-insensitively; `kind` accepts `article`, `tutorial` and `glossary` (plural tolerated),
-  and an unknown kind matches nothing.
+  and an unknown kind matches nothing. `lang` (with `locale` and `language` as aliases) matches
+  a post's language by whole subtags, an article's `locale` or English for the rest.
 - A filter-only search orders by publish date, newest first.
 - The `/search` page explains the syntax in a `<details>` disclosure under the form; the
   Spotlight panel stays bare.
@@ -250,4 +251,4 @@ both strategies directly.
 
 - [x] Phase 1: The package
 - [x] Phase 2: The reader
-- [ ] Phase 3: The blog
+- [x] Phase 3: The blog

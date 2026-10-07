@@ -82,6 +82,13 @@ or a glossary entry's definition) are highlighted with `highlight` and `excerpt`
 query with nothing to search for, or over 8 terms or 256 characters, answers 400 with the
 reason beside the field. The MCP tool answers that case as a tool error naming the reason.
 
+The box reads the syntax of [ADR-117](../ADR-117-search-query-syntax.md): `title:` scopes a word
+to the title, and the filters `tag:`, `kind:` and `lang:` (with `locale:` and `language:`) become
+conditions on the source tables. An article's language is its latest `locale` meta, and a post
+without one is English; `es` matches `es-AR`. A search of filters alone has no relevance to rank,
+so it lists newest first, read through a join on `posts`. A disclosure under the form explains
+the syntax.
+
 ### Search from any page
 
 Every public page carries a search dialog whose body is the `/frames/search` frame: the same
