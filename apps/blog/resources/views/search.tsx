@@ -133,6 +133,7 @@ function SyntaxHelp() {
 					gap(1),
 					cursor("pointer"),
 					listStyle("none"),
+					rounded("sm"),
 					when("&::-webkit-details-marker", hidden()),
 					hover(fg("neutral.emphasis")),
 				]}
