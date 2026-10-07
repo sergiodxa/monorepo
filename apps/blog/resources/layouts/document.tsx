@@ -1,8 +1,8 @@
 /**
  * Root HTML document shell for the blog app: the html/head/body frame with
- * charset, viewport, title, SEO tags and every stylesheet the app ships. Each
- * server-rendered page composes into it, so the page shells vary only in their
- * own chrome while the document itself is assembled one way.
+ * charset, viewport, title, SEO tags, every stylesheet the app ships and the client
+ * entry that hydrates its islands. Each page composes into it, so the page shells
+ * vary only in their own chrome while the document itself is assembled one way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +12,8 @@ import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { colorScheme } from "@sdxc/u/color";
+import { overflow } from "@sdxc/u/overflow";
+import { when } from "@sdxc/u/state";
 import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
 
@@ -25,6 +27,12 @@ import routes from "~/routes/web";
  * (or a profile page linking back) verifies the identity across sites.
  */
 const REL_ME = [PROFILE.github.profile, PROFILE.x.profile, PROFILE.youtube.profile];
+
+/**
+ * The dev server serves the entry from source; the built client writes it to a stable
+ * name, so the tag can name the file rather than resolve it through a manifest.
+ */
+const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
 
 namespace DocumentLayout {
 	/**
@@ -80,7 +88,15 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		} = handle.props;
 
 		return (
-			<html lang={locale} class="system" mix={[colorScheme("light dark")]}>
+			<html
+				lang={locale}
+				class="system"
+				mix={[
+					colorScheme("light dark"),
+					/** A modal holds the reader's attention, so the page behind it stays where it was left. */
+					when("&:has(dialog:modal)", overflow("hidden")),
+				]}
+			>
 				<head>
 					<meta charSet="utf-8" data-rmx-key="charset" />
 					<meta
@@ -100,6 +116,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						content="oklch(0.16 0.006 250)"
 						data-rmx-key="theme-color-dark"
 					/>
+					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} data-rmx-key="client-entry" />
 					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
 					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
 					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
@@ -128,7 +145,10 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						);
 					})}
 				</head>
-				<body mix={bodyMix}>{children}</body>
+				<body mix={bodyMix}>
+					{children}
+					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+				</body>
 			</html>
 		);
 	};

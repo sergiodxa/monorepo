@@ -1,7 +1,7 @@
 /**
- * View model for the `/search` page. Turns a page of search results into rows whose title
- * and excerpt are already split into highlighted segments, and the page's pagination into
- * pager links that keep the query, so the template renders `<mark>` with no matching logic.
+ * View model for the `/search` page and the search dialog. Turns search results into rows
+ * whose title and excerpt are already split into highlighted segments, and pagination into
+ * links that keep the query, so the templates render `<mark>` with no matching logic.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,6 +67,22 @@ export namespace SearchViewModel {
 				/** `null` when every match fits on one page. */
 				pager: Pager | null;
 		  };
+
+	/**
+	 * What the search dialog's frame renders under its box: nothing yet, why the text cannot
+	 * run, or the top matches with the total and a link to every one of them on `/search`.
+	 */
+	export type Suggestions =
+		| { state: "blank"; query: "" }
+		| { state: "invalid"; query: string; message: string }
+		| {
+				state: "results";
+				query: string;
+				total: number;
+				items: Array<Item>;
+				/** The `/search` page for the same text, where every match is paged. */
+				seeAll: string;
+		  };
 }
 
 /** Labels for each kind a result can be. */
@@ -79,10 +95,10 @@ const KIND_LABELS: Record<PostSearch.Kind, string> = {
 /** Words of excerpt each result shows around its first match. */
 const EXCERPT_WORDS = 28;
 
-/** Builds the search page's three states from what the controller resolved. */
+/** Builds the search page's and the search dialog's states from what a controller resolved. */
 export class SearchViewModel {
-	/** The page before anybody typed: the box and nothing else. */
-	static blank(): SearchViewModel.Model {
+	/** The box before anybody typed, on the page and in the dialog alike. */
+	static blank(): Extract<SearchViewModel.Model, { state: "blank" }> {
 		return { state: "blank", query: "" };
 	}
 
@@ -92,7 +108,10 @@ export class SearchViewModel {
 	 * @param query The text as typed.
 	 * @param error Why it cannot run; its first issue is the message shown.
 	 */
-	static invalid(query: string, error: ValidationError): SearchViewModel.Model {
+	static invalid(
+		query: string,
+		error: ValidationError,
+	): Extract<SearchViewModel.Model, { state: "invalid" }> {
 		let message = error.issues[0]?.message ?? "This search cannot run.";
 		return { state: "invalid", query, message };
 	}
@@ -119,6 +138,28 @@ export class SearchViewModel {
 			to: pagination.to,
 			items: input.page.items.map((result) => this.item(result, input.parsed)),
 			pager: pagination.pages > 1 ? this.pager(input.page, input.url) : null,
+		};
+	}
+
+	/**
+	 * The search dialog's state for a query. Its blank and invalid states mirror the page's,
+	 * so the box answers the same way in both places.
+	 *
+	 * @param input The typed text, its parsed query, and the first page of matches.
+	 */
+	static suggestions(input: {
+		query: string;
+		parsed: ParsedQuery;
+		page: Page<PostSearch.Result>;
+	}): SearchViewModel.Suggestions {
+		let seeAll = `${routes.search.href()}?${new URLSearchParams({ q: input.query })}`;
+
+		return {
+			state: "results",
+			query: input.query,
+			total: input.page.pagination.total,
+			items: input.page.items.map((result) => this.item(result, input.parsed)),
+			seeAll,
 		};
 	}
 

@@ -21,7 +21,9 @@ This document defines app-specific rules for `apps/blog`.
 - MUST reach for a `@sdxc/ui` component before hand-styling markup that the catalog already covers (`Button`, `LinkButton`, `Input`, `Select`, `TextArea`, `Label`, `Form`, `Card`, `Badge`, `Heading`, `Link`, `NavLink`, `Table`, `Modal`, `Typeset`, …), and MUST render every one as JSX, never call it as a plain function.
 - MUST keep `resources/css/colors.css` limited to the raw `--ui-color-{tone}-{50..950}` palette scales and the `--ui-font-*` overrides; the semantic `--ui-{tone}-*` layer comes from `@sdxc/ui/theme.css` and MUST NOT be redeclared here.
 - MUST assemble the `<html>`/`<head>`/`<body>` shell only in `resources/layouts/document.tsx`; page shells (`blog.tsx`, `cms.tsx`) compose it and contribute their own chrome. The stylesheet order (reset, app palette, theme, then page stylesheets), the `<title>`/meta tags, and the client entry script live there and nowhere else, so a change lands once.
-- MUST NOT load the `bootstrap/browser.ts` client entry from the document shell without re-testing navigation on Safari. Loading it buys SPA-style navigation, and on Safari it also made navigating out of a post flash unstyled: the runtime keeps every generated atomic rule in one constructed `adoptedStyleSheets` entry and releases the rules the incoming page doesn't use (57 of 145 leaving a post), which Safari repaints during. Keying the head children, serving every stylesheet on every page, and wrapping the swap in a view transition all failed to fix it. If it is re-enabled, `<script type="module" async>` plus a matching `modulepreload` is the right shape — `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
+- MUST keep every link and form a full document navigation: `bootstrap/browser.ts` stops the runtime's `navigate` listener before `run()`, and that listener MUST NOT be re-enabled without re-testing navigation on Safari. Soft navigation made navigating out of a post flash unstyled there: the runtime keeps every generated atomic rule in one constructed `adoptedStyleSheets` entry and releases the rules the incoming page doesn't use (57 of 145 leaving a post), which Safari repaints during. Keying the head children, serving every stylesheet on every page, and wrapping the swap in a view transition all failed to fix it. The document shell loads the entry as `<script type="module" async>` plus a matching `modulepreload` — `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
+- MUST put every hydrated component (`clientEntry()`) in its own file under `resources/components/`, declaring its module path as `/resources/components/<file>.tsx#<Export>` (the key `loadModule` looks up), with `type` props since they are serialized. A public page MUST work without it: the island adds behavior to server-rendered markup that already does the job (the search dialog is a plain `GET` form before its islands load).
+- MUST resolve a server-rendered `<Frame>` through `ctx.router.fetch()` (as `createHtmlRenderer` does), never a network `fetch()` of the page's own URL, which leaves the frame empty in production.
 - SHOULD keep the build and document setup conventional: the `vite.config.ts` shape, the `resources/layouts/document.tsx` role, and the `CLIENT_ENTRY_SRC` constant are the shared vocabulary every Remix v3 app in this repo uses, so a change here should be expressible the same way anywhere else.
 - MUST keep code-block syntax colors in `resources/css/highlight.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales. The file declares the `--highlight-*` properties that `@sdxc/highlight/styles.css` paints each token type from; the selectors themselves belong to the package.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
@@ -56,7 +58,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
 
 - SHOULD NOT add component-specific color tokens when an existing semantic token can represent the same purpose.
-- SHOULD NOT introduce client hydration requirements for public pages.
+- SHOULD NOT introduce client hydration requirements for public pages; an island enhances markup that already works.
 - SHOULD NOT duplicate schema/table definitions that already exist in `database/schema`.
 
 - MAY NOT change established URL structures (`/articles/:slug`, `/tutorials/:slug`, `/bookmarks`, `/colors`) without explicit request.
@@ -100,6 +102,10 @@ This document defines app-specific rules for `apps/blog`.
   - `resources/layouts/document.tsx`
   - `resources/layouts/blog.tsx`
   - `resources/layouts/cms.tsx`
+- Client islands
+  - `bootstrap/browser.ts`
+  - `resources/components/search-trigger.tsx`
+  - `resources/components/search-input.tsx`
 - Styling system
   - `resources/css/colors.css`
   - `resources/css/highlight.css`

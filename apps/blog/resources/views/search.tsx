@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { HighlightSegment } from "@sdxc/search/query";
 import type { Handle } from "remix/component";
 
 import { formatParts, parseDate } from "@sdxc/dates";
@@ -22,6 +21,7 @@ import { Badge, Button, FieldError, Heading, Label, Link, Pagination, SearchFiel
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
+import { Highlighted } from "~/resources/components/highlighted";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 
@@ -43,24 +43,6 @@ function formatDate(value: string) {
 	})
 		.map((part) => part.value)
 		.join("");
-}
-
-/**
- * Renders text split into highlight segments, each match as `<mark>`, so the text stays
- * escaped by construction and the reader sees which words the query matched.
- */
-function Highlighted(handle: Handle<{ segments: Array<HighlightSegment> }>) {
-	return () => (
-		<>
-			{handle.props.segments.map((part) =>
-				part.match ? (
-					<mark mix={[bg("brand.tint"), fg("brand.emphasis"), rounded("sm")]}>{part.text}</mark>
-				) : (
-					part.text
-				),
-			)}
-		</>
-	);
 }
 
 /**

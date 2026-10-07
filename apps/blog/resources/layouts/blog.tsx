@@ -1,8 +1,8 @@
 /**
  * Layout component for public blog pages. Composes the shared document shell,
  * forwarding the page's title, description, canonical and social tags, and draws
- * the silvered body, the site's `h-card` and the main navigation bar before the page
- * children, giving every public page a shared shell and identity.
+ * the silvered body, the site's `h-card`, the main navigation bar and the search
+ * dialog it opens before the page children, giving every public page one shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,9 +17,11 @@ import { flexWrap, hstack } from "@sdxc/u/layout";
 import { m, maxIs, mbe, mbs, mi, minBs, pb, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
 import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typography";
-import { NavLink } from "@sdxc/ui";
+import { HeadingScope, Modal, NavLink } from "@sdxc/ui";
+import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
+import { SEARCH_DIALOG_ID, SearchTrigger } from "~/resources/components/search-trigger";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -59,13 +61,15 @@ export namespace BlogLayout {
 	}
 }
 
+/** The search dialog's heading, which names the dialog for assistive technology. */
+const SEARCH_DIALOG_TITLE_ID = "site-search-title";
+
 let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.feed.href(), label: "Home" },
 	{ href: routes.articles.href(), label: "Articles" },
 	{ href: routes.tutorials.href(), label: "Tutorials" },
 	{ href: routes.bookmarks.href(), label: "Bookmarks" },
 	{ href: routes.glossary.href(), label: "Glossary" },
-	{ href: routes.search.href(), label: "Search" },
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 ];
 
@@ -74,7 +78,7 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
  * its base color repeats the gradient's outer stop so wide viewports stay seamless,
  * and the wash spans the two neutral steps brand 600 link text clears AA against.
  *
- * @returns A renderer that wraps page content with head metadata and navigation.
+ * @returns A renderer that wraps page content with head metadata, navigation and search.
  */
 export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 	return () => {
@@ -151,7 +155,17 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 									</NavLink>
 								);
 							})}
+							<SearchTrigger />
 						</nav>
+						<Modal id={SEARCH_DIALOG_ID} aria-labelledby={SEARCH_DIALOG_TITLE_ID} closedby="any">
+							<HeadingScope level={2}>
+								<Modal.Header>
+									<Modal.Title id={SEARCH_DIALOG_TITLE_ID}>Search the blog</Modal.Title>
+								</Modal.Header>
+							</HeadingScope>
+							<Modal.Close commandfor={SEARCH_DIALOG_ID} aria-label="Close search" />
+							<Frame name="search" src={routes.searchFrame.href()} />
+						</Modal>
 					</header>
 					{children}
 				</div>

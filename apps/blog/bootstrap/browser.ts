@@ -1,9 +1,8 @@
 /**
- * Client-side entrypoint for the blog browser bundle. Boots the Remix UI
- * runtime, lazily resolving client modules from resources and routes via a glob
- * map, and fetches SSR frames over the network for progressive hydration. It
- * also flags pending navigations for the document's progress indicator, since
- * intercepting navigations costs us the browser's own loading feedback.
+ * Client-side entrypoint for the blog browser bundle. Boots the Remix UI runtime,
+ * lazily resolving client modules from resources and routes via a glob map, and fetches
+ * frames over the network as islands reload them. Pages stay server-rendered documents:
+ * only the components marked with `clientEntry()` hydrate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,46 +11,17 @@
 import { run } from "remix/component";
 
 /**
- * Set on `<html>` while a client-side navigation is in flight, read by
- * `NavigationIndicator`'s styling.
+ * Keeps every link and form a full document navigation: the runtime soft-navigates them
+ * otherwise, and swapping a page in place makes Safari repaint it unstyled. Registered
+ * before `run()`, so the runtime's own `navigate` listener never sees an event, while
+ * explicit frame reloads, which bypass the Navigation API, keep working.
  */
-const NAVIGATING_ATTRIBUTE = "data-navigating";
-
-/**
- * How long a navigation must stay pending before the indicator appears. Most
- * navigations resolve well inside this window, and a bar that flashes for 40ms
- * reads as a glitch, so the indicator is reserved for the slow ones.
- */
-const INDICATOR_DELAY_MS = 150;
-
-/**
- * Mirrors pending-navigation state onto `<html>` so the server-rendered
- * indicator covers navigations the runtime intercepts. Registered before
- * `run()`, whose setup throws on browsers lacking the Navigation API.
- */
-function trackPendingNavigations() {
+function keepDocumentNavigations() {
 	if (!("navigation" in window)) return;
-
-	let root = document.documentElement;
-	let timer: ReturnType<typeof setTimeout> | undefined;
-
-	function clear() {
-		if (timer !== undefined) clearTimeout(timer);
-		timer = undefined;
-		root.removeAttribute(NAVIGATING_ATTRIBUTE);
-	}
-
-	window.navigation.addEventListener("navigate", (event) => {
-		if (!event.canIntercept || event.hashChange) return;
-		if (timer !== undefined) clearTimeout(timer);
-		timer = setTimeout(() => root.setAttribute(NAVIGATING_ATTRIBUTE, ""), INDICATOR_DELAY_MS);
-	});
-
-	window.navigation.addEventListener("navigatesuccess", clear);
-	window.navigation.addEventListener("navigateerror", clear);
+	window.navigation.addEventListener("navigate", (event) => event.stopImmediatePropagation());
 }
 
-trackPendingNavigations();
+keepDocumentNavigations();
 
 /**
  * Modules the runtime may hydrate. Tests sit next to the views they cover and reach for

@@ -82,6 +82,12 @@ or a glossary entry's definition) are highlighted with `highlight` and `excerpt`
 query with nothing to search for, or over 8 terms or 256 characters, answers 400 with the
 reason beside the field. The MCP tool answers that case as a tool error naming the reason.
 
+### Search from any page
+
+Every public page carries a search dialog whose body is the `/frames/search` frame: the same
+form, plus the top six matches for what is being typed, highlighted the same way and linking
+to the full `/search` page. See [ADR-005](./ADR-005-search-dialog-and-client-islands.md).
+
 ## Consequences
 
 ### Positive
@@ -127,3 +133,4 @@ need a cron to project it and would appear up to one cron interval late.
 
 - [ADR-003: MCP Server For The Blog](./ADR-003-mcp-server-for-the-blog.md)
 - [ADR-109: Search Package](../ADR-109-search-package.md)
+- [ADR-005: Search Dialog And Client Islands](./ADR-005-search-dialog-and-client-islands.md)

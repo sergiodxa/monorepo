@@ -76,6 +76,12 @@ export default route({
 	 */
 	search: get("/search"),
 
+	/**
+	 * The search dialog's body, loaded into the `<Frame>` every public page carries: the
+	 * search box and the top matches for `?q=`, re-requested as the visitor types.
+	 */
+	searchFrame: get("/frames/search"),
+
 	post: get("/:postType/:postSlug(.:ext)"),
 	postRelated: get("/frames/posts/:postType/:postSlug/related"),
 
