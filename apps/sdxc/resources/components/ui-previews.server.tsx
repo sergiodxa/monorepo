@@ -75,6 +75,7 @@ import {
 	Header,
 	Heading,
 	HeadingScope,
+	Highlight,
 	HoverCard,
 	ImagePlaceholder,
 	Input,
@@ -838,6 +839,31 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 					<Heading>Section title</Heading>
 				</HeadingScope>
 			</HeadingScope>
+		),
+	},
+
+	highlight: {
+		code: `<Link href="/guides/routing">
+	<Highlight
+		segments={[
+			{ text: "Typed ", match: false },
+			{ text: "routes", match: true },
+			{ text: " for every ", match: false },
+			{ text: "route", match: true },
+		]}
+	/>
+</Link>`,
+		render: () => (
+			<Link href="/guides/routing">
+				<Highlight
+					segments={[
+						{ text: "Typed ", match: false },
+						{ text: "routes", match: true },
+						{ text: " for every ", match: false },
+						{ text: "route", match: true },
+					]}
+				/>
+			</Link>
 		),
 	},
 
