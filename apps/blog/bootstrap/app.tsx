@@ -382,8 +382,8 @@ export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 		let renderView = ViewComponent();
 		let stream = renderToStream(renderView({ model: viewModel }), {
 			frameSrc: ctx.request.url,
-			resolveFrame(src, _target, context) {
-				return resolveSsrFrame(ctx.request, src, context);
+			resolveFrame(src, target, context) {
+				return resolveSsrFrame(ctx, src, target, context);
 			},
 		});
 		let headers = new Headers(options?.headers);
@@ -396,12 +396,27 @@ export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 	};
 }
 
-async function resolveSsrFrame(request: Request, src: string, context?: ResolveFrameContext) {
-	let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url);
-	let headers = new Headers(request.headers);
+/**
+ * Renders a page's `<Frame>` by dispatching its source through this same router, with the
+ * page request's headers (cookies included) so the frame sees the same visitor. In process,
+ * a frame resolves wherever the page renders, at no subrequest; a non-2xx renders nothing.
+ */
+async function resolveSsrFrame(
+	ctx: RequestContext,
+	src: string,
+	target: string | undefined,
+	context?: ResolveFrameContext,
+) {
+	let frameUrl = new URL(src, context?.currentFrameSrc ?? ctx.request.url);
+	let headers = new Headers(ctx.request.headers);
 	headers.set("accept", "text/html");
+	headers.delete("x-remix-target");
+	if (target) headers.set("x-remix-target", target);
 
-	let response = await fetch(frameUrl, { headers });
+	let response = await ctx.router.fetch(
+		new Request(frameUrl, { method: "GET", headers, signal: ctx.request.signal }),
+	);
 	if (response.ok) return response.body ?? (await response.text());
+	await response.body?.cancel();
 	return "";
 }
