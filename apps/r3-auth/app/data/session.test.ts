@@ -109,6 +109,22 @@ describe("Session revocation", () => {
 		expect(await Session.findById(db, second.id)).not.toBeNull();
 	});
 
+	test("deleteBySubjectAndId revokes the session only for the subject it belongs to", async () => {
+		let other = await Subject.create(db, {
+			email_address: "john@example.com",
+			display_name: "John Doe",
+			username: "john",
+			avatar: "https://example.com/john.png",
+		});
+		let session = await Session.create(db, subjectId, clientId, null, null);
+
+		expect(await Session.deleteBySubjectAndId(db, other.id, session.id)).toBe(0);
+		expect(await Session.findById(db, session.id)).not.toBeNull();
+
+		expect(await Session.deleteBySubjectAndId(db, subjectId, session.id)).toBe(1);
+		expect(await Session.findById(db, session.id)).toBeNull();
+	});
+
 	test("deleteBySubjectId revokes every session the subject has", async () => {
 		await Session.create(db, subjectId, clientId, null, null);
 		await Session.create(db, subjectId, clientId, null, null);

@@ -78,6 +78,18 @@ export default class Session {
 		return await db.delete(sessions, id);
 	}
 
+	/**
+	 * Revokes one session only when it belongs to the named subject, in a single statement,
+	 * so a session id submitted against the wrong account matches nothing.
+	 *
+	 * @returns How many sessions were removed: `1`, or `0` when the id names no session of
+	 *   that subject.
+	 */
+	static async deleteBySubjectAndId(db: Database, subjectId: string, id: string): Promise<number> {
+		let result = await db.deleteMany(sessions, { where: { id, subject_id: subjectId } });
+		return result.affectedRows ?? 0;
+	}
+
 	/** Records that a session was just used, so the device list reflects real activity. */
 	static async touch(db: Database, id: string): Promise<SelectSession> {
 		return await db.update(sessions, id, {}, { touch: true });

@@ -2,7 +2,7 @@
  * GET/POST /admin/subjects/:subjectId — one account with its live sessions and provider
  * links, plus the three intents that act on it: delete the account, revoke one session,
  * or revoke them all. Every session id handled here is that session's refresh token, so
- * it travels from the form straight into the delete while the logs record only counts.
+ * it travels from the form into a delete scoped to this subject while logs record counts.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -154,9 +154,9 @@ export default createController(routes.admin.subject, {
 			let here = routes.admin.subject.index.href({ subjectId });
 
 			if (intent.intent === "revoke-session") {
-				await Session.deleteById(ctx.db, intent.sessionId);
-				ctx.log.set({ sessions: { revoked: 1 } });
-				ctx.log.note("admin.subject.session_revoked");
+				let revoked = await Session.deleteBySubjectAndId(ctx.db, subjectId, intent.sessionId);
+				ctx.log.set({ sessions: { revoked } });
+				ctx.log.note(revoked ? "admin.subject.session_revoked" : "admin.subject.session_not_found");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 

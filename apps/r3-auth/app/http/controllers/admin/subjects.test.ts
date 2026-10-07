@@ -215,6 +215,27 @@ describe("POST /admin/subjects/:subjectId", () => {
 		expect(await Session.findById(app.db, kept.id)).not.toBeNull();
 	});
 
+	/**
+	 * The page a revoke is posted to names the subject being administered, so a session id
+	 * belonging to anyone else — a stale form, or one edited by hand — leaves that row alone.
+	 */
+	test("intent=revoke-session leaves a session belonging to another subject alone", async () => {
+		let other = await createOtherSubject();
+		let bystander = await createOtherSubject("2");
+		let foreign = await Session.create(app.db, bystander, fixtures.clientId, null, DESKTOP_AGENT);
+
+		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
+			intent: "revoke-session",
+			sessionId: foreign.id,
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(
+			routes.admin.subject.index.href({ subjectId: other }),
+		);
+		expect(await Session.findById(app.db, foreign.id)).not.toBeNull();
+	});
+
 	test("intent=revoke-all-sessions clears every session for that subject only", async () => {
 		let other = await createOtherSubject();
 		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
