@@ -16,7 +16,7 @@ import { listStyle, raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, gridTemplate, hstack, vstack } from "@sdxc/u/layout";
 import { is, m, p } from "@sdxc/u/size";
 import { textAlign, text, weight } from "@sdxc/u/typography";
-import { Avatar, Badge } from "@sdxc/ui";
+import { Avatar } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { Sponsor } from "~/app/services/sponsors";
@@ -55,7 +55,6 @@ export default createAction(routes.sponsors, async (ctx) => {
 
 				{roster.current.length > 0 ? (
 					<SectionBlock id="current" eyebrow="Thank you" title="Current sponsors" tone="tinted">
-						<Count value={roster.current.length} />
 						<ul
 							mix={[
 								grid(),
@@ -90,7 +89,6 @@ export default createAction(routes.sponsors, async (ctx) => {
 
 				{roster.past.length > 0 ? (
 					<SectionBlock id="past" eyebrow="Thank you too" title="Past sponsors">
-						<Count value={roster.past.length} />
 						<ul
 							mix={[hstack({ gap: 2, align: "center" }), flexWrap(), m(0), p(0), listStyle("none")]}
 						>
@@ -115,21 +113,6 @@ export default createAction(routes.sponsors, async (ctx) => {
 
 	return await withBundleCache(ctx.request, response, sponsorsTag(roster));
 });
-
-namespace Count {
-	export interface Props {
-		value: number;
-	}
-}
-
-/** Renders how many people a list names, which a wall of faces makes hard to count. */
-function Count(handle: Handle<Count.Props>) {
-	return () => (
-		<p mix={[m(0)]}>
-			<Badge>{`${handle.props.value} ${handle.props.value === 1 ? "sponsor" : "sponsors"}`}</Badge>
-		</p>
-	);
-}
 
 namespace SponsorAvatar {
 	export interface Props {

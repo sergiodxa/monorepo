@@ -60,10 +60,8 @@ describe("GET /sponsors", () => {
 		let current = body.slice(body.indexOf("Current sponsors"), body.indexOf("Past sponsors"));
 		let past = body.slice(body.indexOf("Past sponsors"));
 
-		expect(current).toContain("2 sponsors");
 		expect(current).toContain("ada the sponsor");
 		expect(current).toContain('href="https://github.com/alan"');
-		expect(past).toContain("1 sponsor");
 		expect(past).toContain('aria-label="grace the sponsor"');
 		expect(past).toContain("https://avatars.example.test/grace");
 	});
