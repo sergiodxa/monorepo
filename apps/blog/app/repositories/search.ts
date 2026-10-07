@@ -272,8 +272,8 @@ export class PostSearch {
 
 	/**
 	 * Writes a post's searchable text as the post now stands, in one upsert, or removes it
-	 * when the post is deleted or of a kind search skips. Previews are projected too: a
-	 * search reads publish state from `posts`, so a scheduled post appears on its date.
+	 * when the post is deleted, of a kind search skips, or has no title and no content.
+	 * Previews are projected too: a search reads publish state from `posts` at query time.
 	 *
 	 * @param db Database connection used for the read and the write.
 	 * @param id The post just created or updated.
@@ -281,7 +281,7 @@ export class PostSearch {
 	 */
 	static async index(db: Database, id: string, type: Post.Type): Promise<void> {
 		let projection = await this.projectionOf(db, id, type);
-		if (projection === null) return this.remove(db, id);
+		if (projection === null || isBlank(projection)) return this.remove(db, id);
 
 		await db.exec(sql`
 			insert into "post_search" ("post_id", "title", "tags", "content")
@@ -359,7 +359,8 @@ export class PostSearch {
 
 	/**
 	 * Reads each hit's post back from the source tables in two batched queries, keeping the
-	 * search's order. A post deleted between the search and this read is left out.
+	 * search's order. A post deleted between the search and this read is left out, and so is
+	 * one with none of the metadata a result shows, which no listing page shows either.
 	 */
 	private static async hits(
 		db: Database,
@@ -386,8 +387,9 @@ export class PostSearch {
 		return rows.flatMap((row) => {
 			let post = postsById.get(row.post_id);
 			let kind = post && post.deleted_at === null ? kindOf(post.type) : null;
-			if (!post || kind === null) return [];
-			let result = this.result(kind, post, metaByPost.get(post.id) ?? [], row.tags);
+			let postMeta = post ? metaByPost.get(post.id) : undefined;
+			if (!post || kind === null || postMeta === undefined) return [];
+			let result = this.result(kind, post, postMeta, row.tags);
 			return [{ ...result, body: row.content }];
 		});
 	}
@@ -620,4 +622,12 @@ class NewestFirst implements OffsetQuery<MatchedRow> {
 			this.#conditions.flatMap((condition) => [...condition.values]),
 		);
 	}
+}
+
+/**
+ * Whether a projection holds nothing to find or show: no title and no content, as for a post
+ * whose metadata was never saved. Such a post stays out of search, as it stays off its listing.
+ */
+function isBlank(projection: Projection): boolean {
+	return projection.title.trim() === "" && projection.content.trim() === "";
 }

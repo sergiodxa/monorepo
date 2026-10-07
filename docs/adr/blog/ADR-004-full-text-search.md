@@ -45,6 +45,10 @@ post_search_fts USING fts5(title, tags, content, content='', contentless_delete=
 | Glossary | Term, then alias when set | `[]`                 | Definition                 |
 | Bookmark | Title                     | `[]`                 | Address without its scheme |
 
+A post with no title and no content, such as one whose metadata was never saved, is never
+projected, and a result whose post has none of the metadata a result shows is skipped;
+`0008_DropBlankSearchRows.sql` removed the rows the backfills had written for such posts.
+
 Bookmarks (posts of type `like`) were added by `0007_BookmarkSearch.sql`, which backfills them.
 A bookmark result links to the page it saved and shows its address as its description; its
 kind is `bookmark` in results, in `kind:` and in the MCP tool's `kind` argument.

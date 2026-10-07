@@ -170,6 +170,13 @@ beforeAll(async () => {
 		meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
 	});
 
+	/** A bookmark whose metadata was never saved, which no page lists. */
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: "2026-08-06T12:00:00.000Z",
+		meta: {} as LikePost.Meta,
+	});
+
 	/** Saved before the newer one, so their ids run opposite to their dates. */
 	await LikePost.create(db, {
 		author_id: author,
@@ -201,6 +208,11 @@ describe("bookmarks", () => {
 		expect(listed.indexOf(POSTS.newerBookmark)).toBeLessThan(listed.indexOf(POSTS.olderBookmark));
 		expect(await found(`${TOKEN} kind:like`)).toHaveLength(2);
 		expect(await found(`${TOKEN} -kind:bookmark`)).not.toContain(POSTS.newerBookmark);
+	});
+
+	test("leave out a bookmark with no metadata, which /bookmarks does not list either", async () => {
+		let listed = await searchResults("kind:bookmarks", { limit: 50 });
+		expect(listed.every((result) => result.title !== "" && result.url !== "")).toBe(true);
 	});
 
 	test("show their address in the search panel, and the tool answers their URL", async () => {

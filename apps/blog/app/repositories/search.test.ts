@@ -28,6 +28,9 @@ const SEARCH_MIGRATION = "0006_PostSearch.sql";
 /** The migration that adds bookmarks to the search projection. */
 const BOOKMARK_MIGRATION = "0007_BookmarkSearch.sql";
 
+/** The migration that drops search rows with nothing to find. */
+const BLANK_MIGRATION = "0008_DropBlankSearchRows.sql";
+
 /** A publish date safely in the past. */
 const PAST = "2026-01-15T10:00:00.000Z";
 
@@ -214,7 +217,71 @@ describe("the 0007 migration", () => {
 	});
 });
 
+describe("the 0008 migration", () => {
+	test("drops the rows of posts with no metadata or no text, keeping every real one", async () => {
+		let binding = createD1Database();
+		await applyMigrations(binding, (file) => file < BLANK_MIGRATION);
+		let legacy = new Database(createD1DatabaseAdapter(binding));
+		let user = await seedAuthor(legacy);
+		let real = await LikePost.create(legacy, {
+			author_id: user,
+			meta: { title: "A real bookmark", url: "https://example.com" },
+		});
+
+		await binding
+			.prepare(
+				`INSERT INTO posts (id, type, author_id, published_at, created_at, updated_at, deleted_at) VALUES
+				('orphan', 'like', '${user}', NULL, '2026-08-06T00:00:00.000Z', '2026-08-06T00:00:00.000Z', NULL),
+				('blank', 'article', '${user}', NULL, '2026-08-06T00:00:00.000Z', '2026-08-06T00:00:00.000Z', NULL)`,
+			)
+			.run();
+		await binding
+			.prepare(
+				`INSERT INTO post_meta (id, post_id, key, value, created_at, updated_at) VALUES
+				('bm', 'blank', 'slug', 'blank', '2026-08-06', '2026-08-06')`,
+			)
+			.run();
+		await binding
+			.prepare(
+				`INSERT INTO post_search (post_id, title, tags, content) VALUES
+				('orphan', '', '[]', ''), ('blank', '  ', '[]', ' ')`,
+			)
+			.run();
+
+		await applyMigrations(binding, (file) => file === BLANK_MIGRATION);
+
+		expect((await projections(legacy)).map((row) => row.post_id)).toEqual([real!.id]);
+		expect(await PostSearch.query(legacy, { query: "kind:bookmarks" })).toHaveLength(1);
+	});
+});
+
 describe("keeping post_search current", () => {
+	test("never indexes a post with no title and no content, such as one whose metadata was never saved", async () => {
+		let created = await LikePost.create(db, { author_id: author, meta: { title: "", url: "" } });
+		expect(await projections(db)).toEqual([]);
+
+		await LikePost.update(db, created!.id, { meta: { title: "Now it has a title" } });
+		expect((await projections(db)).map((row) => row.post_id)).toEqual([created!.id]);
+
+		await LikePost.update(db, created!.id, { meta: { title: "  " } });
+		expect(await projections(db)).toEqual([]);
+	});
+
+	test("an orphan bookmark with no metadata never shows up as a result, even with a stale row", async () => {
+		let orphan = await LikePost.create(db, { author_id: author, meta: {} as LikePost.Meta });
+		await db.exec(
+			sql`insert into "post_search" ("post_id", "title", "tags", "content") values (${orphan!.id}, '', '[]', '') on conflict ("post_id") do nothing`,
+		);
+		let real = await LikePost.create(db, {
+			author_id: author,
+			meta: { title: "Render JSX to images", url: "https://example.com/jsx" },
+		});
+
+		let results = await PostSearch.query(db, { query: "kind:bookmarks" });
+		expect(results.map((result) => result.url)).toEqual(["https://example.com/jsx"]);
+		expect(real).not.toBeNull();
+	});
+
 	test("a bookmark is searchable by its title and its site, follows edits and leaves on delete", async () => {
 		let created = await LikePost.create(db, {
 			author_id: author,
