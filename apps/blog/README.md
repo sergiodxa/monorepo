@@ -84,6 +84,15 @@ Smart Placement and Observability are enabled.
   A URL already bookmarked opens that bookmark instead, ignoring `http`/`https`, `www.`, a
   trailing `/` and tracking parameters (`utm_*`, `fbclid`, `gclid`, `mc_cid`, `mc_eid`,
   which are also removed from the saved URL).
+- Weekly bookmark check: Mondays at 06:00 UTC every bookmark's page is read once, as
+  `sergiodxa.com bookmarks`, honoring `robots.txt`. A page that moved to another host (or to
+  its site's front page) or is gone (404, 410, a redirect loop, a host that no longer resolves)
+  is read again twelve hours later and flagged only when the second read agrees; a refusal,
+  a bot challenge, a server error or a timeout never flags. Flagged bookmarks are marked in
+  `/cms/bookmarks`, the edit page says what the check found (offering a moved page's new
+  address), and saving the bookmark reviews it. A daily digest at 14:00 UTC mails new flags
+  to hello@sergiodxa.com from `bookmarks@support.sergiodxa.com`. The same read fills a title
+  or description the bookmark is missing.
 - Sponsors page (`/sponsors`): why sponsoring helps, GitHub Sponsors, one-off PayPal ($5,
   $10, $20) and Ko-fi tips, then current sponsors named with large avatars and past ones as
   a wall of small avatars. A job every six hours stores GitHub's public roster in `CACHE`

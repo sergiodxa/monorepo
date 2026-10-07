@@ -7,10 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/component";
+
 import { fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
-import { is, m, p } from "@sdxc/u/size";
+import { is, m, mis, p } from "@sdxc/u/size";
 import { truncate, weight } from "@sdxc/u/typography";
 import {
 	Button,
@@ -24,6 +26,7 @@ import {
 	Modal,
 	Table,
 	TextArea,
+	Badge,
 } from "@sdxc/ui";
 
 import { CMSLayout } from "~/resources/layouts/cms";
@@ -42,6 +45,8 @@ export namespace CMSBookmarksIndexView {
 		url: string;
 		href: string;
 		deleteAction: string;
+		/** The open flag the weekly check raised, until a save reviews it. */
+		flag?: "moved" | "gone";
 	}
 
 	/**
@@ -84,6 +89,19 @@ export namespace CMSBookmarksActionView {
 		description: string;
 	}
 
+	/** The latest read of the bookmarked page, as the edit page reports it. */
+	export interface Check {
+		status: "ok" | "moved" | "gone" | "blocked" | "flaky";
+		httpStatus: number | null;
+		/** When the page was read, already formatted for reading. */
+		checkedOn: string;
+		finalUrl: string | null;
+		/** Whether the read raised a flag that no save has reviewed yet. */
+		open: boolean;
+		/** The edit page with the moved page's new address filled in. */
+		useFinalHref?: string;
+	}
+
 	/** Another bookmark already holding the URL the form tried to save. */
 	export interface Conflict {
 		label: string;
@@ -105,6 +123,8 @@ export namespace CMSBookmarksActionView {
 		notice?: string;
 		/** Set when a save was refused because another bookmark holds the URL. */
 		conflict?: Conflict;
+		/** The latest read of the page, absent until it was read. */
+		check?: Check | undefined;
 	}
 }
 
@@ -177,7 +197,18 @@ export function CMSBookmarksIndexView() {
 											let dialogId = `delete-bookmark-${String(index)}`;
 											return (
 												<Table.Row key={item.id}>
-													<Table.Cell>{item.title}</Table.Cell>
+													<Table.Cell>
+														{item.title}
+														{item.flag ? (
+															<Badge
+																color={item.flag === "gone" ? "danger" : "warning"}
+																variant="secondary"
+																mix={[mis(2)]}
+															>
+																{item.flag === "gone" ? "Gone" : "Moved"}
+															</Badge>
+														) : null}
+													</Table.Cell>
 													<Table.Cell mix={[fg("neutral"), truncate()]}>
 														<Link href={normalizeBookmarkHref(item.url)}>
 															{normalizeBookmarkHref(item.url)}
@@ -243,12 +274,61 @@ export function CMSBookmarksIndexView() {
 	};
 }
 
+/** How each outcome reads on the edit page. */
+const CHECK_SUMMARIES: Record<CMSBookmarksActionView.Check["status"], string> = {
+	ok: "The page answered",
+	moved: "The page redirects elsewhere",
+	gone: "The page is gone",
+	blocked: "The site refused the check, so it could not tell",
+	flaky: "The site did not answer, so it could not tell",
+};
+
+/**
+ * What the latest read of the page found. An open flag reads as an alert, with what saving
+ * the form does about it, and a moved page offers its new address for the form.
+ */
+function CheckReport(handle: Handle<{ check: CMSBookmarksActionView.Check }>) {
+	return () => {
+		let { check } = handle.props;
+		let status = check.httpStatus === null ? "" : ` (${String(check.httpStatus)})`;
+
+		return (
+			<div mix={[grid(), gap(2)]}>
+				<p
+					role={check.open ? "alert" : "status"}
+					mix={[
+						m(0),
+						fg(check.open ? (check.status === "gone" ? "danger" : "warning") : "neutral"),
+						weight(check.open ? "medium" : "normal"),
+					]}
+				>
+					{CHECK_SUMMARIES[check.status]}
+					{status} when checked on {check.checkedOn}.
+					{check.open ? " Saving this bookmark marks it reviewed." : null}
+				</p>
+				{check.status === "moved" && check.finalUrl ? (
+					<p mix={[m(0), fg("neutral"), truncate()]}>
+						Now at <Link href={check.finalUrl}>{check.finalUrl}</Link>
+					</p>
+				) : null}
+				{check.useFinalHref ? (
+					<div>
+						<LinkButton href={check.useFinalHref} color="warning" variant="outline" size="sm">
+							Use the new address
+						</LinkButton>
+					</div>
+				) : null}
+			</div>
+		);
+	};
+}
+
 /**
  * Builds the CMS page used to create or edit a bookmark.
  */
 export function CMSBookmarksActionView() {
 	return ({ model }: { model: CMSBookmarksActionView.Props }) => {
-		let { action, conflict, description, mode, notice, submitLabel, title, values } = model;
+		let { action, check, conflict, description, mode, notice, submitLabel, title, values } = model;
 
 		return (
 			<CMSLayout title={title} activePath={routes.cms.bookmarks.index.href()}>
@@ -262,6 +342,8 @@ export function CMSBookmarksActionView() {
 								{notice}
 							</p>
 						) : null}
+
+						{check ? <CheckReport check={check} /> : null}
 
 						{conflict ? (
 							<p role="alert" mix={[m(0), fg("danger"), weight("medium")]}>

@@ -96,7 +96,8 @@
 	// value written here. A local run only logs the message it would have sent.
 	"send_email": [{ "name": "EMAIL" }],
 
-	// Background jobs (`app/jobs/dispatcher.ts`): Webmention verification and sending.
+	// Background jobs (`app/jobs/dispatcher.ts`): Webmention verification and sending, and
+	// the bookmark checks.
 	// One message per invocation keeps a slow source or endpoint from holding up others.
 	"queues": {
 		"consumers": [{ "queue": "blog-jobs", "max_batch_size": 1, "max_retries": 5 }],
@@ -104,9 +105,10 @@
 	},
 	// Every quarter hour, the job map's `webmentions.scheduled` sends the Webmentions of
 	// posts whose scheduled publish date has arrived, and every six hours `sponsors.refresh`
-	// stores the sponsor roster. Kept equal to the jobs' `cron`, which
-	// `app/jobs/dispatcher.test.ts` checks.
-	"triggers": { "crons": ["*/15 * * * *", "0 */6 * * *"] },
+	// stores the sponsor roster. Mondays at 06:00 UTC `bookmarks.sweep` checks every
+	// bookmarked page, and daily at 14:00 UTC `bookmarks.digest` mails what it flagged.
+	// Kept equal to the jobs' `cron`, which `app/jobs/dispatcher.test.ts` checks.
+	"triggers": { "crons": ["*/15 * * * *", "0 */6 * * *", "0 6 * * 1", "0 14 * * *"] },
 
 	"d1_databases": [
 		{

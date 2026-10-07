@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { sql } from "remix/data-table";
+import { notNull, sql } from "remix/data-table";
 
 import * as schema from "~/database/schema";
 
@@ -19,7 +19,10 @@ export namespace Bookmark {
 	 * What reading a page came to. Only `moved` and `gone` raise a flag; `blocked` and
 	 * `flaky` mean the read could not tell.
 	 */
-	export type Status = NonNullable<schema.SelectBookmark["status"]>;
+	export type Status = "ok" | "moved" | "gone" | "blocked" | "flaky";
+
+	/** The outcomes that raise a flag for review. */
+	export type Flag = "moved" | "gone";
 
 	/** One read of a bookmarked page, as the record stores it. */
 	export interface Reading {
@@ -30,6 +33,9 @@ export namespace Bookmark {
 		finalUrl: string | null;
 	}
 }
+
+/** Every outcome a read can record, in the order the CMS explains them. */
+const STATUSES: ReadonlyArray<Bookmark.Status> = ["ok", "moved", "gone", "blocked", "flaky"];
 
 /** Reads and writes the `bookmarks` table. */
 export class Bookmark {
@@ -120,6 +126,127 @@ export class Bookmark {
 		await db.exec(sql`
 			update "bookmarks" set "reviewed_at" = ${new Date().toISOString()} where "post_id" = ${postId}
 		`);
+	}
+
+	/**
+	 * A record's latest outcome, or `null` while the page was never read.
+	 *
+	 * @param record A bookmark's record.
+	 */
+	static statusOf(record: schema.SelectBookmark): Bookmark.Status | null {
+		return STATUSES.find((status) => status === record.status) ?? null;
+	}
+
+	/**
+	 * A record's raised flag, or `null` while none is raised.
+	 *
+	 * @param record A bookmark's record.
+	 */
+	static flagOf(record: schema.SelectBookmark): Bookmark.Flag | null {
+		return record.flag === "moved" || record.flag === "gone" ? record.flag : null;
+	}
+
+	/**
+	 * Whether a reading would raise a flag the bookmark does not hold yet, which is the
+	 * reading worth confirming before it is recorded.
+	 *
+	 * @param record The bookmark's record, or `null` while it has none.
+	 * @param reading What the page came to now.
+	 */
+	static raises(record: schema.SelectBookmark | null, reading: Bookmark.Reading): boolean {
+		let flagged = reading.status === "moved" || reading.status === "gone";
+		return flagged && record?.flag !== reading.status;
+	}
+
+	/**
+	 * Records a read of the page and moves the flag with it: `ok` clears it, a `moved` or
+	 * `gone` the flag does not already say raises it anew, and `blocked` or `flaky` leave it
+	 * as it was, since they say nothing about the page itself.
+	 *
+	 * @param db Database handle used for the write.
+	 * @param postId The bookmark that was read.
+	 * @param reading What the page came to.
+	 */
+	static async record(db: Database, postId: string, reading: Bookmark.Reading): Promise<void> {
+		let now = new Date().toISOString();
+		let raised = reading.status === "moved" || reading.status === "gone" ? reading.status : null;
+		await db.exec(sql`
+			update "bookmarks" set
+				"status" = ${reading.status},
+				"http_status" = ${reading.httpStatus},
+				"final_url" = ${reading.finalUrl},
+				"checked_at" = ${now},
+				"flag" = case
+					when ${reading.status} = 'ok' then null
+					when ${raised} is not null then ${raised}
+					else "flag"
+				end,
+				"flagged_at" = case
+					when ${reading.status} = 'ok' then null
+					when ${raised} is not null and ("flag" is null or "flag" <> ${raised}) then ${now}
+					else "flagged_at"
+				end
+			where "post_id" = ${postId}
+		`);
+	}
+
+	/**
+	 * Stamps the attempt to fill a bookmark's title and description from its page, made or
+	 * not, so the record says when the page last had a chance to describe it.
+	 *
+	 * @param db Database handle used for the write.
+	 * @param postId The bookmark that was described.
+	 */
+	static async described(db: Database, postId: string): Promise<void> {
+		await db.exec(sql`
+			update "bookmarks" set "described_at" = ${new Date().toISOString()} where "post_id" = ${postId}
+		`);
+	}
+
+	/**
+	 * Whether a record's flag is open: raised, and raised after the last CMS save.
+	 *
+	 * @param record A bookmark's record.
+	 */
+	static isOpen(record: schema.SelectBookmark): boolean {
+		if (record.flag === null || record.flagged_at === null) return false;
+		return record.reviewed_at === null || record.reviewed_at < record.flagged_at;
+	}
+
+	/**
+	 * Every open flag the digest has not reported, oldest first, so a flag reaches the inbox
+	 * once and a flag raised again after a review reaches it again.
+	 *
+	 * @param db Database handle used for the lookup.
+	 */
+	static async findUnreported(db: Database): Promise<schema.SelectBookmark[]> {
+		let rows = await db.findMany(this.table, { where: notNull("flag") });
+		return rows
+			.filter((row) => this.isOpen(row))
+			.filter((row) => row.notified_at === null || row.notified_at < (row.flagged_at ?? ""))
+			.sort((a, b) => (a.flagged_at ?? "").localeCompare(b.flagged_at ?? ""));
+	}
+
+	/**
+	 * Every open flag, for the CMS list to mark.
+	 *
+	 * @param db Database handle used for the lookup.
+	 * @returns The open records keyed by bookmark.
+	 */
+	static async findOpen(db: Database): Promise<Map<string, schema.SelectBookmark>> {
+		let rows = await db.findMany(this.table, { where: notNull("flag") });
+		return new Map(rows.filter((row) => this.isOpen(row)).map((row) => [row.post_id, row]));
+	}
+
+	/**
+	 * Stamps the flags a digest reported.
+	 *
+	 * @param db Database handle used for the write.
+	 * @param postIds The bookmarks the digest listed.
+	 * @param at When the digest was sent.
+	 */
+	static async reported(db: Database, postIds: string[], at: string): Promise<void> {
+		for (let postId of postIds) await db.update(this.table, postId, { notified_at: at });
 	}
 
 	/**

@@ -125,9 +125,10 @@ read or typed.
 
 Quick add is a URL field on `/cms` and `/cms/bookmarks`. `/cms/bookmarks/new?url=…` opens the
 form with the URL filled in, which is what an iOS Shortcut bound to the share sheet opens
-(three actions: receive URLs, build the address, open it; the recipe lives in the app README).
-CMS sign-in returns to the page that sent the visitor to it, so the shortcut still lands on the
-form after the session expired.
+(receive URLs, encode the shared one, build the address, open it; the steps live in the app
+README).
+CMS sign-in returns to the page that sent the visitor to it, carried as `next` on the login
+URL and the login form, so the shortcut still lands on the form after the session expired.
 
 ### Link Checks
 
@@ -154,8 +155,8 @@ resets the row and enqueues an inspection and an archive. A dead bookmark kept a
 stays quiet until its outcome changes.
 
 When the response is a healthy page and the bookmark still lacks a title or description, the
-same inspection fills them and stamps `described_at`; a page that yields nothing is tried
-again only after thirty days.
+same inspection fills them from the response it already holds and stamps `described_at`, so
+an emptied field is filled again on the next weekly read at no extra request.
 
 ### Digest
 
@@ -300,9 +301,9 @@ follow-up if opening Safari becomes the bottleneck.
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/distill` excerpt
-- [ ] Phase 2: Titles, descriptions and quick add
-- [ ] Phase 3: Link checks and digest
+- [x] Phase 1: `@sdxc/distill` excerpt (also `summaryFrom` for pages without an article)
+- [x] Phase 2: Titles, descriptions and quick add
+- [x] Phase 3: Link checks and digest
 - [ ] Phase 4: Wayback archiving
 
 ## Notes

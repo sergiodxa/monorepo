@@ -13,6 +13,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import jobs from "~/app/jobs";
 import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/schemas/cms/bookmark";
@@ -29,6 +30,32 @@ const EMPTY_VALUES: CMSBookmarksActionView.FormValues = { title: "", url: "", de
 /** The edit page of a bookmark, opened with the notice that a save found it already saved. */
 function duplicateHref(id: string) {
 	return `${routes.cms.bookmarks.edit.href({ id })}?duplicate=1`;
+}
+
+/**
+ * What the edit page says about the latest read of the page: nothing until it was read, and
+ * for a page that moved, the edit page again with the new address filled in.
+ */
+function checkOf(
+	record: NonNullable<Awaited<ReturnType<typeof Bookmark.findByPostId>>>,
+	id: string,
+): CMSBookmarksActionView.Check | undefined {
+	let status = Bookmark.statusOf(record);
+	if (status === null || record.checked_at === null) return undefined;
+
+	let moved = status === "moved" && record.final_url !== null;
+	return {
+		status,
+		httpStatus: record.http_status,
+		checkedOn: SAVED_ON.format(new Date(record.checked_at)),
+		finalUrl: record.final_url,
+		open: Bookmark.isOpen(record),
+		...(moved && record.final_url
+			? {
+					useFinalHref: `${routes.cms.bookmarks.edit.href({ id })}?${new URLSearchParams({ url: record.final_url })}`,
+				}
+			: {}),
+	};
 }
 
 /** The form page shown in place of an edit whose bookmark no longer exists. */
@@ -57,26 +84,36 @@ export default createController(routes.cms.bookmarks, {
 	actions: {
 		/**
 		 * Renders the bookmarks list, titled by each bookmark's label so one saved without a
-		 * title still reads as its address.
+		 * title still reads as its address, and marking every bookmark whose open flag awaits
+		 * review.
 		 * @param ctx Controller context that provides DB bindings.
 		 * @returns HTML view model for the CMS bookmarks listing page.
 		 */
 		index: async (ctx) => {
-			let bookmarks = await LikePost.findAll(ctx.db);
-			let items = bookmarks.map((bookmark) => ({
-				id: bookmark.id,
-				title: LikePost.label(bookmark.meta),
-				url: bookmark.meta.url,
-				href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
-				deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
-			}));
+			let [bookmarks, open] = await Promise.all([
+				LikePost.findAll(ctx.db),
+				Bookmark.findOpen(ctx.db),
+			]);
+			let items = bookmarks.map((bookmark) => {
+				let record = open.get(bookmark.id);
+				let flag = record ? Bookmark.flagOf(record) : null;
+				return {
+					id: bookmark.id,
+					title: LikePost.label(bookmark.meta),
+					url: bookmark.meta.url,
+					href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
+					deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
+					...(flag ? { flag } : {}),
+				};
+			});
 
 			return ctx.render(CMSBookmarksIndexView, { items });
 		},
 
 		/**
 		 * Saves the full form or the quick add's URL alone. A URL already bookmarked lands on
-		 * that bookmark's edit page instead of creating a second one.
+		 * that bookmark's edit page instead of creating a second one; a page that could not be
+		 * read while saving is read again in the background.
 		 * @param ctx Controller context with form data and DB access.
 		 * @returns See Other redirect to login, or to the saved or existing bookmark's edit page.
 		 */
@@ -96,6 +133,10 @@ export default createController(routes.cms.bookmarks, {
 
 			if (saved.data.outcome === "duplicate") {
 				return redirect(duplicateHref(saved.data.id), { status: redirect.Status.SeeOther });
+			}
+
+			if (!saved.data.read) {
+				await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: saved.data.id });
 			}
 
 			return redirect(routes.cms.bookmarks.edit.href({ id: saved.data.id }), {
@@ -129,6 +170,7 @@ export default createController(routes.cms.bookmarks, {
 			let bookmark = id ? await LikePost.findById(ctx.db, id) : null;
 			if (!bookmark) return ctx.render(CMSBookmarksActionView, notFoundModel(id), { status: 404 });
 
+			let record = await Bookmark.findByPostId(ctx.db, bookmark.id);
 			let query = await validate(ctx.url.searchParams, BookmarkPrefillSchema);
 			let prefill = isFailure(query) ? { url: "", duplicate: "" } : query.data;
 
@@ -149,6 +191,7 @@ export default createController(routes.cms.bookmarks, {
 							notice: `Already bookmarked on ${SAVED_ON.format(new Date(bookmark.created_at))}.`,
 						}
 					: {}),
+				...(record ? { check: checkOf(record, bookmark.id) } : {}),
 			} satisfies CMSBookmarksActionView.Props;
 
 			return ctx.render(CMSBookmarksActionView, model);
@@ -187,7 +230,8 @@ export default createController(routes.cms.bookmarks, {
 
 		/**
 		 * Saves an edit, which also marks the bookmark reviewed. A URL another bookmark already
-		 * holds is refused with the form shown again, linking to that bookmark.
+		 * holds is refused with the form shown again, linking to that bookmark; a new URL is
+		 * read in the background.
 		 * @param ctx Controller context with params, form data, and DB access.
 		 * @returns See Other redirect to the edit page, the form again with a 409 on a taken URL,
 		 * or a 404 form view when the target is missing.
@@ -225,6 +269,8 @@ export default createController(routes.cms.bookmarks, {
 
 				return ctx.render(CMSBookmarksActionView, model, { status: 409 });
 			}
+
+			if (updated.moved) await ctx.jobs.enqueue(jobs.bookmarks.inspect, { postId: id });
 
 			return redirect(routes.cms.bookmarks.edit.href({ id }), { status: redirect.Status.SeeOther });
 		},

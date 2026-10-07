@@ -29,6 +29,17 @@ export default jobs({
 		/** Sends for posts whose scheduled publish date has arrived since the last run. */
 		scheduled: job({ cron: "*/15 * * * *" }),
 	},
+	bookmarks: {
+		/**
+		 * Reads one bookmark's page: records what it came to, raises or clears its flag, and
+		 * fills a title or description the bookmark is missing.
+		 */
+		inspect: job({ input: s.object({ postId: s.string() }) }),
+		/** Queues an inspection of every bookmark, Mondays at 06:00 UTC. */
+		sweep: job({ cron: "0 6 * * 1" }),
+		/** Mails the flags raised since the last digest; sends nothing when there are none. */
+		digest: job({ cron: "0 14 * * *" }),
+	},
 	sponsors: {
 		/** Stores the public sponsor roster `/sponsors` renders, four times a day. */
 		refresh: job({ cron: "0 */6 * * *" }),
