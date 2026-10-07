@@ -515,7 +515,15 @@ test "beta three fails" {
 		let binDir = resolve(packageDir, "..", "..", "node_modules", ".bin");
 		let child = spawn(
 			join(binDir, "spec"),
-			["run", "spec", "--allow-run=spec,echo", "--allow-env=SPEC_ENV_FIXTURE", "--concurrency=8"],
+			[
+				"run",
+				"spec",
+				"--allow-run=spec,echo,sh",
+				/** `spec/cli.spec` runs a program inside the suite's own directory. */
+				"--allow-host-fs=spec",
+				"--allow-env=SPEC_ENV_FIXTURE",
+				"--concurrency=8",
+			],
 			{
 				cwd: packageDir,
 				env: {
