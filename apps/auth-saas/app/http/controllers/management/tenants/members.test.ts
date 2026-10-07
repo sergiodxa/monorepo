@@ -2,7 +2,8 @@
  * Drives every member route through the management router: `GET
  * /tenants/:tenantId/members` lists them, `POST .../members` grants a
  * subject access at a role, `PUT .../members/:membershipId` changes one's
- * role, and `DELETE .../members/:membershipId` revokes one.
+ * role, and `DELETE .../members/:membershipId` revokes one — neither ever
+ * leaving the tenant without an owner.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -120,6 +121,62 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 
 		expect(response.status).toBe(404);
 	});
+
+	test("refuses to demote the tenant's last owner, leaving the role unchanged", async () => {
+		let harness = await buildTenantsHarness();
+		let token = await harness.signToken();
+
+		let owner = await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_1",
+			role: "owner",
+		});
+		await Membership.create(harness.db, {
+			tenantId: harness.otherTenantId,
+			subjectId: "sub_2",
+			role: "owner",
+		});
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
+				method: "PUT",
+				body: JSON.stringify({ role: "admin" }),
+			}),
+		);
+
+		expect(response.status).toBe(409);
+		let body = (await response.json()) as { type: string };
+		expect(body.type).toBe("https://docs.example.com/errors/last-owner");
+		expect(
+			await Membership.findByTenantAndSubject(harness.db, harness.tenantId, "sub_1"),
+		).toMatchObject({ role: "owner" });
+	});
+
+	test("demotes an owner while another owner remains", async () => {
+		let harness = await buildTenantsHarness();
+		let token = await harness.signToken();
+
+		let owner = await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_1",
+			role: "owner",
+		});
+		await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_2",
+			role: "owner",
+		});
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
+				method: "PUT",
+				body: JSON.stringify({ role: "admin" }),
+			}),
+		);
+
+		expect(response.status).toBe(200);
+		expect(await response.json()).toMatchObject({ id: owner.id, role: "admin" });
+	});
 });
 
 describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
@@ -163,5 +220,59 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 
 		expect(response.status).toBe(404);
 		expect(await Membership.listByTenant(harness.db, harness.otherTenantId)).toHaveLength(1);
+	});
+
+	test("refuses to remove the tenant's last owner, keeping the membership", async () => {
+		let harness = await buildTenantsHarness();
+		let token = await harness.signToken();
+
+		let owner = await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_1",
+			role: "owner",
+		});
+		await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_2",
+			role: "admin",
+		});
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
+				method: "DELETE",
+			}),
+		);
+
+		expect(response.status).toBe(409);
+		let body = (await response.json()) as { type: string };
+		expect(body.type).toBe("https://docs.example.com/errors/last-owner");
+		expect(await Membership.listByTenant(harness.db, harness.tenantId)).toHaveLength(2);
+	});
+
+	test("removes an owner while another owner remains", async () => {
+		let harness = await buildTenantsHarness();
+		let token = await harness.signToken();
+
+		let owner = await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_1",
+			role: "owner",
+		});
+		await Membership.create(harness.db, {
+			tenantId: harness.tenantId,
+			subjectId: "sub_2",
+			role: "owner",
+		});
+
+		let response = await harness.router.fetch(
+			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
+				method: "DELETE",
+			}),
+		);
+
+		expect(response.status).toBe(204);
+		expect(await Membership.listByTenant(harness.db, harness.tenantId)).toMatchObject([
+			{ subject_id: "sub_2" },
+		]);
 	});
 });

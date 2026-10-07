@@ -7018,6 +7018,9 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "409": {
+            "$ref": "#/components/responses/LastOwner"
+          },
           "429": {
             "$ref": "#/components/responses/RateLimited"
           }
@@ -7069,6 +7072,9 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/LastOwner"
           },
           "429": {
             "$ref": "#/components/responses/RateLimited"

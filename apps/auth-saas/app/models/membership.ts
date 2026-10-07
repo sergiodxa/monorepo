@@ -9,11 +9,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { Database, TableRow } from "remix/data-table";
 
+import { failure, success } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { generateUUIDv7 } from "@sdxc/uuid";
-import { column as c, inList, table } from "remix/data-table";
+import { column as c, inList, sql, table } from "remix/data-table";
+
+import { RecordNotFoundError } from "~/app/lib/db-errors";
 
 import type { TenantRow } from "./tenant";
 
@@ -32,6 +36,21 @@ export type MembershipRow = TableRow<typeof Membership.table>;
 export interface AdministeredTenant {
 	tenant: TenantRow;
 	role: MembershipRole;
+}
+
+/**
+ * Refuses a write that would leave a tenant with no owner: only an owner holds
+ * `members:write`, so a tenant without one has nobody left able to appoint one.
+ */
+export class LastOwnerError extends Error {
+	override name = "LastOwnerError";
+
+	/**
+	 * @param membershipId - The tenant's last owner membership the write named.
+	 */
+	constructor(public readonly membershipId: string) {
+		super(`Membership ${membershipId} is its tenant's last owner`);
+	}
 }
 
 /**
@@ -109,27 +128,58 @@ export default class Membership {
 	}
 
 	/**
-	 * Changes a membership's role.
+	 * Changes a membership's role, refusing to demote the tenant's last owner. The
+	 * owner count is checked inside the one `UPDATE`, so two concurrent demotions
+	 * of a tenant's last two owners leave exactly one of them standing.
 	 *
 	 * @param db - Database connection.
 	 * @param id - The membership id.
 	 * @param role - The role to assign.
-	 * @returns A promise resolving to the updated membership row.
-	 * @throws When no membership exists for the given id.
+	 * @returns The updated membership row, or why it was left unchanged.
 	 */
-	static update(db: Database, id: string, role: MembershipRole): Promise<MembershipRow> {
-		return db.update(Membership.table, { id }, { role }, { touch: true });
+	static async update(
+		db: Database,
+		id: string,
+		role: MembershipRole,
+	): Promise<Result<MembershipRow, LastOwnerError | RecordNotFoundError<typeof Membership.table>>> {
+		await db.exec(sql`
+			UPDATE memberships SET role = ${role}, updated_at = ${Date.now()}
+			WHERE id = ${id} AND (role != 'owner' OR ${role} = 'owner' OR EXISTS (
+				SELECT 1 FROM memberships AS other
+				WHERE other.tenant_id = memberships.tenant_id
+					AND other.role = 'owner'
+					AND other.id != memberships.id
+			))
+		`);
+
+		let row = await db.find(Membership.table, { id });
+		if (!row) return failure(new RecordNotFoundError(Membership.table, { id }));
+		if (row.role !== role) return failure(new LastOwnerError(id));
+		return success(row);
 	}
 
 	/**
-	 * Revokes a subject's access to a tenant.
+	 * Revokes a subject's access to a tenant, refusing to remove its last owner. The
+	 * owner count is checked inside the one `DELETE`, so two concurrent removals of
+	 * a tenant's last two owners leave exactly one of them standing.
 	 *
 	 * @param db - Database connection.
 	 * @param id - The membership id.
-	 * @returns A promise resolving to whether a row was deleted.
+	 * @returns Whether a row was deleted, or that it is the tenant's last owner.
 	 */
-	static delete(db: Database, id: string): Promise<boolean> {
-		return db.delete(Membership.table, { id });
+	static async delete(db: Database, id: string): Promise<Result<boolean, LastOwnerError>> {
+		let deleted = await db.exec(sql`
+			DELETE FROM memberships
+			WHERE id = ${id} AND (role != 'owner' OR EXISTS (
+				SELECT 1 FROM memberships AS other
+				WHERE other.tenant_id = memberships.tenant_id
+					AND other.role = 'owner'
+					AND other.id != memberships.id
+			))
+		`);
+
+		if (await db.find(Membership.table, { id })) return failure(new LastOwnerError(id));
+		return success(deleted.affectedRows === 1);
 	}
 
 	/**

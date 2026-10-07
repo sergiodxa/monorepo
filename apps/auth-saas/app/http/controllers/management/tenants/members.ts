@@ -3,7 +3,8 @@
  * .../members` grants a subject access at a role — a direct grant rather than
  * an email invitation, since no separate invitation mechanism exists in this
  * codebase today — `PUT .../members/:membershipId` changes a membership's
- * role, and `DELETE .../members/:membershipId` revokes one.
+ * role, and `DELETE .../members/:membershipId` revokes one, each refusing to
+ * leave the tenant without an owner.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -25,8 +26,10 @@ import {
 	serializeMembership,
 } from "~/app/http/controllers/management/tenants/shared";
 import { operationInputProblem } from "~/app/http/lib/parse-body";
+import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { TENANT_MEMBERS_CREATE, TENANT_MEMBERS_UPDATE_ROLE } from "~/app/http/openapi/tenants";
+import { RecordNotFoundError } from "~/app/lib/db-errors";
 import Membership from "~/app/models/membership";
 import routes from "~/routes/management";
 
@@ -42,6 +45,13 @@ async function findOwnMembership(
 ): Promise<MembershipRow | null> {
 	let memberships = await Membership.listByTenant(db, tenantId);
 	return memberships.find((membership) => membership.id === membershipId) ?? null;
+}
+
+/** The refusal for a write that would leave the tenant without an owner. */
+function lastOwner(): Response {
+	return managementProblem("lastOwner", {
+		detail: "A tenant keeps at least one owner; appoint another owner first.",
+	});
 }
 
 /**
@@ -123,8 +133,12 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
 			if (!existing) return membershipNotFound();
 
 			let updated = await Membership.update(ctx.db, membershipId, input.data.body.role);
+			if (isFailure(updated)) {
+				if (updated.error instanceof RecordNotFoundError) return membershipNotFound();
+				return lastOwner();
+			}
 
-			return json(serializeMembership(updated), { status: 200 });
+			return json(serializeMembership(updated.data), { status: 200 });
 		},
 	});
 }
@@ -150,7 +164,8 @@ export function createTenantMembersRemoveAction(options: ManagementControllerOpt
 			let existing = await findOwnMembership(ctx.db, ctx.managementCaller.tenantId, membershipId);
 			if (!existing) return membershipNotFound();
 
-			await Membership.delete(ctx.db, membershipId);
+			let deleted = await Membership.delete(ctx.db, membershipId);
+			if (isFailure(deleted)) return lastOwner();
 
 			return new Response(null, { status: 204 });
 		},

@@ -208,7 +208,7 @@ export const TENANT_MEMBERS_UPDATE_ROLE = defineOperation(
 		params: MEMBERSHIP_PARAMS,
 		body: s.object({ role: MEMBER_ROLE }),
 		responses: { 200: { description: "The updated membership", body: MEMBERSHIP } },
-		problems: [...AUTH_PROBLEMS, "validationFailed", "notFound"],
+		problems: [...AUTH_PROBLEMS, "validationFailed", "notFound", "lastOwner"],
 		security: requires("members:write"),
 	},
 );
@@ -222,7 +222,7 @@ export const TENANT_MEMBERS_REMOVE = defineOperation(
 		tags: ["Members"],
 		params: MEMBERSHIP_PARAMS,
 		responses: { 204: { description: "The membership was revoked" } },
-		problems: [...AUTH_PROBLEMS, "notFound"],
+		problems: [...AUTH_PROBLEMS, "notFound", "lastOwner"],
 		security: requires("members:write"),
 	},
 );
