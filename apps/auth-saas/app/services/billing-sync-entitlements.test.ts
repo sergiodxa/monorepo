@@ -1,8 +1,8 @@
 /**
  * Exercises `reprojectTenant`'s push of `applyEntitlements` onto the tenant's
- * own Durable Object: the right plan's cap and retention reach the object,
- * and a stub the projection cannot reach never aborts the write that already
- * landed. `cloudflare:workers` is mocked with a `TENANT` namespace routing to
+ * own Durable Object: the tier its base subscription names is recorded as its
+ * plan, that plan's cap and retention reach the object, and a stub the
+ * projection cannot reach never aborts the write that already landed. `cloudflare:workers` is mocked with a `TENANT` namespace routing to
  * a recording stub, the way `tenant-provisioning.test.ts` mocks it, since
  * `billing-sync.ts` reads `env` at call time.
  *
@@ -10,25 +10,34 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { EntitlementState } from "@sdxc/billing";
+import type { EntitlementState, EntitlementSubscription } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createDurableObjectNamespace, createEnv } from "@sdxc/cloudflare-mocks";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-/** A snapshot naming no subscriptions, so `reprojectTenant` writes an empty feature map. */
-function emptySnapshot(): EntitlementState {
+/** A snapshot naming only `subscriptions`; with none, `reprojectTenant` writes an empty feature map. */
+function emptySnapshot(subscriptions: EntitlementSubscription[] = []): EntitlementState {
 	return {
 		customerId: null,
 		externalId: null,
 		products: [],
 		features: {},
 		meters: [],
-		subscriptions: [],
+		subscriptions,
 		readAt: new Date(),
 		providerData: {},
 	};
+}
+
+/** A snapshot subscription for `productSlug`, in the given status. */
+function subscription(
+	subscriptionId: string,
+	productSlug: string,
+	status: EntitlementSubscription["status"],
+): EntitlementSubscription {
+	return { subscriptionId, productSlug, status, currentPeriodEnd: null, cancelAtPeriodEnd: false };
 }
 
 /** Every `applyEntitlements` call the stubbed tenant Durable Object namespace has received. */
@@ -113,6 +122,75 @@ describe("reprojectTenant", () => {
 				}),
 			}),
 		]);
+	});
+
+	test("records the tier the tenant's base subscription names as its plan", async () => {
+		let customer = await Customer.create(db, { name: "Acme, Inc." });
+		let tenant = await Tenant.create(db, {
+			customerId: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.example.com",
+		});
+		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base" });
+
+		await reprojectTenant(
+			db,
+			billing,
+			tenant.id,
+			emptySnapshot([subscription("sub_base", "premium", "active")]),
+		);
+
+		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("premium");
+		expect(applyEntitlementsCalls).toEqual([
+			expect.objectContaining({
+				input: expect.objectContaining({
+					plan: "premium",
+					dauCap: PLANS.premium.dauCap,
+					auditRetentionDays: PLANS.premium.auditRetentionDays,
+				}),
+			}),
+		]);
+	});
+
+	test("keeps a lapsed tenant on its former tier", async () => {
+		let customer = await Customer.create(db, { name: "Acme, Inc." });
+		let tenant = await Tenant.create(db, {
+			customerId: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.example.com",
+		});
+		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base", planSlug: "pro" });
+
+		await reprojectTenant(
+			db,
+			billing,
+			tenant.id,
+			emptySnapshot([subscription("sub_base", "pro", "revoked")]),
+		);
+
+		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("pro");
+	});
+
+	test("never records an add-on the tenant holds as its plan", async () => {
+		let customer = await Customer.create(db, { name: "Acme, Inc." });
+		let tenant = await Tenant.create(db, {
+			customerId: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.example.com",
+		});
+		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base" });
+
+		await reprojectTenant(
+			db,
+			billing,
+			tenant.id,
+			emptySnapshot([subscription("sub_base", "sso_connections", "active")]),
+		);
+
+		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("free");
 	});
 
 	test("a stub the object cannot be reached through never aborts the projection write", async () => {

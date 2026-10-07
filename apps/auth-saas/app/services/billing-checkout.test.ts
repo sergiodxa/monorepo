@@ -94,6 +94,7 @@ describe("finishCheckout", () => {
 		if (!first.ok) throw new Error("unreachable");
 		expect(first.tenant?.id).toBe(tenant.id);
 		expect(first.tenant?.subscription_id).not.toBeNull();
+		expect(first.tenant?.plan_slug).toBe("pro");
 
 		let second = await finishCheckout(db, billing, checkoutId);
 		expect(second.ok).toBe(true);

@@ -95,10 +95,26 @@ export async function attachCheckoutSubscription(
 }
 
 /**
- * Rewrites a tenant's entitlement projection from an entitlement snapshot: only
- * the subscriptions the tenant itself holds — its base plan plus its add-ons —
- * are kept, since the snapshot's own `features` map is the union across every
- * tenant the customer owns and cannot gate this one on its own.
+ * The base tier a snapshot says the tenant's own base subscription is for, read
+ * whatever that subscription's status: a lapsed tenant keeps its former tier's
+ * cap and retention. `null` when the snapshot names no such subscription.
+ *
+ * @param tenant - The tenant whose base subscription to look for.
+ * @param snapshot - The entitlement snapshot for the tenant's customer.
+ * @returns The tier's slug, or `null` to leave the recorded tier as it is.
+ */
+function basePlanSlug(tenant: TenantRow, snapshot: EntitlementState): keyof typeof PLANS | null {
+	let base = snapshot.subscriptions.find(
+		(subscription) => subscription.subscriptionId === tenant.subscription_id,
+	);
+	if (!base?.productSlug || !Object.hasOwn(PLANS, base.productSlug)) return null;
+	return base.productSlug as keyof typeof PLANS;
+}
+
+/**
+ * Rewrites a tenant's entitlement projection and `plan_slug` from a snapshot, keeping
+ * only the subscriptions the tenant itself holds — base plan plus add-ons — since the
+ * snapshot's own `features` map is the union across every tenant the customer owns.
  *
  * @param db - Database connection.
  * @param billing - The configured billing platform, for reading each held
@@ -150,6 +166,11 @@ export async function reprojectTenant(
 		features,
 		readAt: snapshot.readAt.getTime(),
 	});
+
+	let planSlug = basePlanSlug(tenant, snapshot);
+	if (planSlug !== null && planSlug !== tenant.plan_slug) {
+		tenant = await Tenant.update(db, tenant.id, { planSlug });
+	}
 
 	let plan = PLANS[tenant.plan_slug as keyof typeof PLANS] ?? PLANS.free;
 
