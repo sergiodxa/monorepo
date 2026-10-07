@@ -108,7 +108,8 @@ written inside the shared card in `app/emails/layout.tsx`.
   rendered as hidden iframes.
 - **Admin area** for clients and subjects, with a one-time reveal of a newly generated
   client secret.
-- **Machine-to-machine API**: `client_credentials` token plus `GET /api/subjects/:id`.
+- **Machine-to-machine API**: `client_credentials` token plus `GET /api/subjects/:id`,
+  answering a client about the subjects who authorized it.
 - **New-sign-in notice**: every authentication that opens a session mails the subject the
   browser, system, device class and address it came from, with a link to the device list.
   It is queued rather than awaited, so a failed send cannot fail a sign-in, and it carries
@@ -198,7 +199,7 @@ Every route requires the `admin` role; anyone else is redirected to `/account/se
 | -------------------------- | ------- | ------------------------------------------------------------------------- |
 | `/`                        | GET     | Redirects to `/authorize`                                                 |
 | `/healthcheck`             | GET     | `OK`, or a 500 naming the failed dependency (D1 or KV)                    |
-| `/api/subjects/:subjectId` | GET     | `{ subject }` for a `client_credentials` bearer token; `Server-Timing` on |
+| `/api/subjects/:subjectId` | GET     | `{ subject }` of a subject who authorized the `client_credentials` caller |
 
 Anything unmatched renders the localized 404 page.
 

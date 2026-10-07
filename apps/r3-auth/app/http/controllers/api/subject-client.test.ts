@@ -22,6 +22,7 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { ISSUER } from "~/app/config";
+import Grant from "~/app/data/grant";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -85,9 +86,14 @@ beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
+/**
+ * The seeded subject starts out having authorized the seeded client, the consent every
+ * real sign-in records, since that is what entitles the client to look them up.
+ */
 beforeEach(async () => {
 	app = await createTestApp();
 	fixtures = await seed(app);
+	await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
 });
 
 describe("the client library", () => {

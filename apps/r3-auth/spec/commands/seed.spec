@@ -53,3 +53,12 @@ command seed_refresh_session() {
 	db.query "INSERT INTO subjects (id, created_at, updated_at, email_verified_at, display_name, avatar, role, username, email_address) VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 1786300000000, 1786300000000, 1786300000000, 'Spec Refresh User', 'https://example.test/avatar.png', 'user', 'spec-refresh', 'spec-refresh@spec.test')"
 	db.query "INSERT INTO sessions (id, created_at, updated_at, expires_at, subject_id, client_id, user_agent, ip_address) VALUES ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 1786300000000, 1786300000000, 4102444800000, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', NULL, NULL)"
 }
+
+# The seeded subject's consent for the seeded client, the row every real authorization
+# records and the one GET /api/subjects/:id requires before it answers that client about
+# that subject. Deleted and re-inserted by fixed id; `seed_code_client` and
+# `seed_refresh_session` both delete rows it references, so a `given` calls it after them.
+command seed_subject_grant() {
+	db.query "DELETE FROM grants WHERE id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'"
+	db.query "INSERT INTO grants (id, created_at, updated_at, subject_id, client_id) VALUES ('eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', 1786300000000, 1786300000000, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')"
+}

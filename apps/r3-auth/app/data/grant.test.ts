@@ -65,6 +65,19 @@ describe("Grant.findOrCreate", () => {
 	});
 });
 
+describe("Grant.exists", () => {
+	test("answers for one subject and one client, until consent is withdrawn", async () => {
+		await Grant.findOrCreate(db, subjectId, clientId);
+
+		expect(await Grant.exists(db, subjectId, clientId)).toBe(true);
+		expect(await Grant.exists(db, subjectId, otherClientId)).toBe(false);
+
+		await Grant.deleteBySubjectAndClient(db, subjectId, clientId);
+
+		expect(await Grant.exists(db, subjectId, clientId)).toBe(false);
+	});
+});
+
 describe("Grant.findBySubjectId", () => {
 	test("lists the subject's grants with their clients, oldest consent first", async () => {
 		let first = await Grant.findOrCreate(db, subjectId, clientId);

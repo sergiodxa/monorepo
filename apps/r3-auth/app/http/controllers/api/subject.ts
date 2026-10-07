@@ -1,8 +1,8 @@
 /**
  * The subject-lookup endpoint (`GET /api/subjects/:subjectId`). Answers an authenticated
- * client with one subject's profile, reading a per-client cache first and falling back to
- * the database while repopulating it. Exists so a relying party's server can resolve the
- * people it already knows by id without holding a copy of this server's database.
+ * client with the profile of a subject who authorized it, reading a per-client cache before
+ * the database. Exists so a relying party's server can resolve the people who signed in to
+ * it by id without holding a copy of this server's database.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,6 +12,7 @@ import { notFound, ok } from "@sdxc/http/response/json";
 import { env, waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
+import Grant from "~/app/data/grant";
 import Subject from "~/app/data/subject";
 import { requireApiClient } from "~/app/http/middleware/require-api-client";
 import { parseCachedSubject, toApiSubject } from "~/app/http/view-models/api-subject";
@@ -30,9 +31,9 @@ function subjectCacheKey(clientId: string, subjectId: string): string {
 }
 
 /**
- * GET /api/subjects/:subjectId — returns `{ subject }` for a client-credentials caller.
- * The envelope, the payload's field names and its ISO-8601 timestamps are a frozen
- * contract that clients parse directly; a missing subject is a `404` with `{ error }`.
+ * GET /api/subjects/:subjectId — returns `{ subject }` for a client-credentials caller the
+ * subject has authorized, checked ahead of the cache so withdrawn consent applies at once.
+ * The envelope is a frozen contract; a missing or unauthorized subject is `404 { error }`.
  */
 export default createAction(routes.api.subject, {
 	middleware: [requireApiClient()],
@@ -42,6 +43,15 @@ export default createAction(routes.api.subject, {
 		let cacheKey = subjectCacheKey(ctx.apiClient.id, subjectId);
 
 		ctx.log.set({ subject: { id: subjectId } });
+
+		let authorized = await collector.measure("db", "findGrant", async () => {
+			return await Grant.exists(ctx.db, subjectId, ctx.apiClient.id);
+		});
+
+		if (!authorized) {
+			ctx.log.note("api.subject.not_authorized");
+			return notFound({ error: "Subject not found" });
+		}
 
 		let cached = await collector.measure("cache", "cacheLookup", async () => {
 			return parseCachedSubject(await env.KV.get(cacheKey, "json"));

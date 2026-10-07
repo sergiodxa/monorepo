@@ -45,6 +45,17 @@ export default class Grant {
 		);
 	}
 
+	/**
+	 * Whether the subject has authorized the client and not withdrawn it since, which is what
+	 * entitles that client to read the subject's profile outside a sign-in.
+	 */
+	static async exists(db: Database, subjectId: string, clientId: string): Promise<boolean> {
+		let grant = await db.findOne(grants, {
+			where: { subject_id: subjectId, client_id: clientId },
+		});
+		return grant !== null;
+	}
+
 	/** Lists a subject's grants with their clients, oldest consent first. */
 	static async findBySubjectId(db: Database, subjectId: string): Promise<GrantWithClient[]> {
 		return await db.findMany(grants, {

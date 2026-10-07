@@ -1,8 +1,8 @@
 /**
  * Router-level tests of the subject-lookup API. It is a frozen contract with software
  * that is already deployed, so these assert the exact envelope, the exact payload field
- * names and formats, the exact KV key the cache lives under, and that a token issued for
- * anything other than this server is refused.
+ * names and formats, the exact KV key the cache lives under, that a token issued for
+ * anything other than this server is refused, and that a client reads only its own users.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
+import Grant from "~/app/data/grant";
 import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
@@ -87,9 +88,14 @@ async function fetchSubject(subjectId: string, token?: string): Promise<Response
 	);
 }
 
+/**
+ * The seeded subject starts out having authorized the seeded client, the consent every
+ * real sign-in records, since that is what entitles the client to look them up.
+ */
 beforeEach(async () => {
 	app = await createTestApp();
 	fixtures = await seed(app);
+	await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
 });
 
 describe("GET /api/subjects/:subjectId", () => {
@@ -149,7 +155,7 @@ describe("GET /api/subjects/:subjectId", () => {
 		});
 	});
 
-	test("serves a cached payload without reading the database", async () => {
+	test("serves a cached payload instead of re-reading the subject", async () => {
 		let token = await clientCredentialsToken();
 		let key = `clients:${fixtures.clientId}:subjects:${fixtures.subjectId}`;
 
@@ -168,7 +174,7 @@ describe("GET /api/subjects/:subjectId", () => {
 			}),
 		);
 
-		await Subject.delete(app.db, fixtures.subjectId);
+		await Subject.update(app.db, fixtures.subjectId, { display_name: "Stored Name" });
 
 		let response = await fetchSubject(fixtures.subjectId, token);
 		expect(response.status).toBe(200);
@@ -211,6 +217,40 @@ describe("GET /api/subjects/:subjectId", () => {
 
 		let body = (await (await fetchSubject(fixtures.subjectId, token)).json()) as SubjectEnvelope;
 		expect(body.subject.displayName).toBe("Jane Doe");
+	});
+
+	/**
+	 * A client looks up the people who signed in to it. Anyone else answers exactly like a
+	 * subject that does not exist, so a client cannot even confirm an id belongs to someone.
+	 */
+	test("answers 404 for a subject who never authorized the calling client", async () => {
+		let stranger = await Subject.create(app.db, {
+			email_address: "stranger@example.com",
+			display_name: "Stranger",
+			username: "stranger",
+			avatar: "https://example.com/stranger.png",
+		});
+		let token = await clientCredentialsToken();
+
+		let response = await fetchSubject(stranger.id, token);
+		expect(response.status).toBe(404);
+		expect(await response.json()).toEqual({ error: "Subject not found" });
+	});
+
+	/**
+	 * The account area promises that revoking an app's access cuts it off, so withdrawn
+	 * consent is honored on the next request, ahead of a copy this client already cached.
+	 */
+	test("answers 404 once the subject revokes the client's access, cached copy or not", async () => {
+		let token = await clientCredentialsToken();
+		expect((await fetchSubject(fixtures.subjectId, token)).status).toBe(200);
+		await new Promise((resolve) => setTimeout(resolve, 0));
+
+		await Grant.deleteBySubjectAndClient(app.db, fixtures.subjectId, fixtures.clientId);
+
+		let response = await fetchSubject(fixtures.subjectId, token);
+		expect(response.status).toBe(404);
+		expect(await response.json()).toEqual({ error: "Subject not found" });
 	});
 
 	test("answers 404 for an unknown subject", async () => {

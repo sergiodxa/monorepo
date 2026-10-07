@@ -41,7 +41,10 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   `post_logout_redirect_uri`, including back-channel logout tokens to every other client
   and front-channel URI collection.
 - MUST keep `grant_type=client_credentials` plus `GET /api/subjects/:subjectId` answering
-  the `{ subject }` envelope, with its field names and ISO-8601 timestamps.
+  the `{ subject }` envelope, with its field names and ISO-8601 timestamps, to a client the
+  subject holds a `grants` row for. Without one the answer is the missing-subject `404`,
+  checked ahead of the KV cache so revoking an app's access in the account area applies
+  on the next request.
 - MUST NOT change the refresh-token semantics: **`sessions.id` IS the refresh token**.
   Rotation, revocation and the account area's session list all follow from that.
 - MUST keep the D1 schema frozen — the database is shared with the worker serving
@@ -186,7 +189,8 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - `bun run db:local:migrate` writes to `.cloudflare/state`, the directory `bun dev` reads,
   so a local reset is `rm -rf .cloudflare/state`.
 - The API caches a resolved client in KV for 7 days, so a deleted client or a rotated secret
-  keeps authenticating against `/api/*` until the `clients:<clientId>` key expires.
+  keeps authenticating against `/api/*` until the `clients:<clientId>` key expires. A deleted
+  client's grants cascade away with it, so it reads no subject in that window.
 - The session cookie is `auth:session` — deliberately not the name the previous server used,
   so a rollback finds its own untouched cookie instead of one it cannot parse.
 - MUST NOT reach into another app's source. Copy and adapt instead.
