@@ -165,6 +165,12 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		database(createDatabase),
 		jobEnqueuer(jobQueue),
 		workersCache({ cache: () => platformCache }),
+		/**
+		 * Refuses an unsafe request a browser sent from another origin before any session is
+		 * read, so a page elsewhere can never write to the CMS with an editor's cookie. The
+		 * machine paths take cross-origin callers by design and read no cookie.
+		 */
+		cop({ insecureBypassPatterns: [...MACHINE_PATHS] }),
 		htmlOnly(session),
 		formData(),
 		methodOverride(),
@@ -223,18 +229,15 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		lazy(() => import("~/app/http/controllers/webmention"), webmentionRateLimit(env)),
 	);
 	/**
-	 * The Encore support form takes anonymous submissions, so it answers only same-origin
-	 * browser posts, carries honeypot fields, and reaches the support desk the controller
-	 * rate-limits and mails through. The honeypot's key derives from the session secret under a
-	 * `honeypot:` label, so no second secret is provisioned; a refused submission reaches the
-	 * controller, which answers a filled trap like a success and asks a person to send again.
+	 * Anonymous submissions, behind honeypot fields and the rate-limited support desk. The
+	 * honeypot keys off the session secret under a `honeypot:` label, so it needs no secret of
+	 * its own; a refused submission reaches the controller, which answers a trap like a success.
 	 */
 	router.map(
 		routes.encoreSupport,
 		lazy(
 			() => import("~/app/http/controllers/encore-support"),
 			[
-				cop(),
 				honeypot(new Honeypot({ secret: `honeypot:${env.COOKIE_SESSION_SECRET}` }), {
 					onFailure: () => null,
 				}),

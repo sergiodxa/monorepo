@@ -1,8 +1,8 @@
 /**
  * Drives the composition root's router end to end, inside workerd against the real
  * bindings. Every route is mapped behind a loader, so the assertions here are that a
- * request still reaches the module it names, and that the CMS guards still answer
- * before the module they protect is ever loaded.
+ * request still reaches the module it names, that the CMS guards still answer before the
+ * module they protect is ever loaded, and that no other origin can write to the CMS.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,8 +11,10 @@
 import { isFailure } from "@sdxc/result";
 import { parse } from "@sdxc/well-known/security-txt";
 import { env } from "cloudflare:test";
-import { describe, expect, test, vi } from "vitest";
+import { beforeAll, describe, expect, test, vi } from "vitest";
 
+import { migratedDatabase } from "~/app/test/d1";
+import { seedAdmin, signedInCookie } from "~/app/test/session";
 import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
 
@@ -159,4 +161,60 @@ describe("the blog router", () => {
 			}),
 		);
 	});
+});
+
+describe("cross-origin protection", () => {
+	let cookie = "";
+
+	beforeAll(async () => {
+		let adminId = await seedAdmin(await migratedDatabase());
+		cookie = await signedInCookie(adminId, environment().COOKIE_SESSION_SECRET);
+	});
+
+	/** Empties the edge cache from the dashboard as the signed-in admin's browser. */
+	function purgeCache(headers: Record<string, string>) {
+		return fetchPath(routes.cms.purgeCache.href(), {
+			method: routes.cms.purgeCache.method,
+			headers: { cookie, ...headers },
+		});
+	}
+
+	test("lets the signed-in admin write to the CMS from the CMS itself", async () => {
+		let response = await purgeCache({ "sec-fetch-site": "same-origin" });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toMatch(/^\/cms\?purge=/);
+	});
+
+	test.each([
+		["another site", { "sec-fetch-site": "cross-site" }],
+		[
+			"a sibling subdomain, which the cookie's SameSite=Lax lets through",
+			{ "sec-fetch-site": "same-site" },
+		],
+		[
+			"another origin, named by a browser sending no Sec-Fetch-Site",
+			{ origin: "https://evil.com" },
+		],
+	])("refuses a CMS write the signed-in admin's browser sends from %s", async (_, headers) => {
+		let response = await purgeCache(headers);
+
+		expect(response.status).toBe(403);
+	});
+
+	/** Each answers an empty body with its own refusal, which shows the handler was reached. */
+	test.each([
+		[routes.mcp.index.href(), 415],
+		[routes.webmention.href(), 400],
+	])(
+		"hands a cross-origin POST at the cookieless machine path %s to its handler",
+		async (path, status) => {
+			let response = await fetchPath(path, {
+				method: "POST",
+				headers: { "sec-fetch-site": "cross-site" },
+			});
+
+			expect(response.status).toBe(status);
+		},
+	);
 });

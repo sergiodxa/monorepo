@@ -61,8 +61,8 @@ async function renderForm(
 }
 
 /**
- * The Encore support page. Public and anonymous; `cop()` and the support desk middleware
- * run ahead of it from the route map.
+ * The Encore support page. Public and anonymous; the app's cross-origin guard and the
+ * support desk middleware run ahead of it.
  */
 export default createController(routes.encoreSupport, {
 	actions: {

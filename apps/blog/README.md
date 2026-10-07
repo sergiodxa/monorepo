@@ -43,7 +43,10 @@ with it empty, is answered with a 500.
   so a link such as `/cms/bookmarks/new?url=…` survives an expired session. `next` accepts
   only a path on this site; anything else lands on the dashboard. A first sign-in claims the
   existing account holding its email only when the identity provider has verified that
-  address; an unverified one is sent back to the login screen to verify it first.
+  address; an unverified one is sent back to the login screen to verify it first. CMS writes,
+  like every form post on the site, are accepted only from the blog's own pages: a browser
+  submitting one from another origin, a `*.sergiodxa.com` sibling included, gets a 403.
+  `POST /mcp` and `POST /webmention` take any origin, since they read no cookie.
 - Markdown processing through shared markdown utilities.
 - Request-scoped services published onto the request context by middleware.
 - Microformats2 markup (`h-entry`, `h-card`, `h-feed`, `rel="me"`) on public pages.
