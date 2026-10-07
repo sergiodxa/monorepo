@@ -116,6 +116,26 @@ test "POST /oauth/introspect reports a live token as active" {
 	}
 }
 
+# POST /oauth/introspect as a different registered client. It authenticates successfully
+# and still learns nothing: a live refresh token issued to another client reads exactly
+# like one never issued, so introspection cannot be used to scan for other clients' tokens.
+test "POST /oauth/introspect reports another client's live token as inactive" {
+	given {
+		seed_code_client
+		seed_other_client
+		seed_refresh_session
+	}
+	when {
+		let result = http.post "http://localhost:3002/oauth/introspect" basic "dddddddd-dddd-4ddd-8ddd-dddddddddddd" "other-secret" form {
+			token: "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+		}
+	}
+	then {
+		expect result.status 200
+		expect result.json.active false
+	}
+}
+
 # A token the server cannot resolve collapses to `{ active: false }` rather than an
 # error, so introspection never becomes an oracle for which tokens are live.
 test "POST /oauth/introspect reports an unknown token as inactive" {

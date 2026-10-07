@@ -582,9 +582,9 @@ export class OIDC {
 	}
 
 	/**
-	 * Reports whether a token is currently usable, and its claims when it is (RFC 7662).
-	 * A token that fails to resolve is reported inactive, so introspection stays silent
-	 * about the reason; a key store that cannot answer is reported as this server failing.
+	 * Reports whether a token is currently usable, and its claims when it is (RFC 7662), to the
+	 * client it was issued to or one its audience names. Any other token reads inactive, staying
+	 * silent about why; a key store that cannot answer is reported as this server failing.
 	 *
 	 * @returns The token's claims, with an identifier a token predates — such as the
 	 * `client_id` claim — reported as absent, which keeps that token usable for the rest
@@ -619,6 +619,8 @@ export class OIDC {
 		if (args.tokenTypeHint !== "access_token") {
 			let session = await this.repository.findSessionById(args.token);
 			if (session && session.expiresAt > new Date()) {
+				if (session.clientId !== args.clientId) return { active: false };
+
 				return {
 					active: true,
 					sub: session.subjectId,
@@ -651,6 +653,7 @@ export class OIDC {
 		);
 
 		if (isFailure(accessToken)) return { active: false };
+		if (!isIssuedToOrFor(accessToken.data, args.clientId)) return { active: false };
 
 		return {
 			active: true,
@@ -1520,4 +1523,16 @@ function endpointHost(uri: string): string | null {
 	let url = wrap(() => new URL(uri));
 
 	return isFailure(url) ? null : url.data.host;
+}
+
+/**
+ * Whether a client may learn about an access token (RFC 7662 §4): the client it was issued
+ * to, or a recipient its audience names. A token minted before the `client_id` claim still
+ * answers its client, whose id is that token's audience.
+ */
+function isIssuedToOrFor(token: AccessToken, clientId: string): boolean {
+	if (token.clientId === clientId) return true;
+
+	let audience = token.audience;
+	return Array.isArray(audience) ? audience.includes(clientId) : audience === clientId;
 }

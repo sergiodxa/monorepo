@@ -24,6 +24,16 @@ command seed_code_client() {
 	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 1786300000000, 1786300000000, 'Spec Code Client', 'spec-secret', 'http://localhost:3002/healthcheck', 'http://localhost:3002/healthcheck')"
 }
 
+# A second relying party, registered beside `seed_code_client`'s, that holds no token of
+# its own: the client a spec authenticates as to show a machine endpoint refusing to
+# answer about tokens or subjects that belong to somebody else. Deleted and re-inserted
+# by fixed id so the suite stays repeatable; its redirect URI is distinct because the
+# column is unique.
+command seed_other_client() {
+	db.query "DELETE FROM clients WHERE id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'"
+	db.query "INSERT INTO clients (id, created_at, updated_at, name, secret, redirect_uri, logout_uri) VALUES ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1786300000000, 1786300000000, 'Spec Other Client', 'other-secret', 'http://localhost:3002/healthcheck?other', 'http://localhost:3002/healthcheck?other')"
+}
+
 # A subject and one of its live sessions, so the machine endpoints have real state to
 # act on. A session id IS the refresh token clients send to POST /oauth/token, so
 # seeding this fixed session lets a spec redeem the `refresh_token` grant — as the seeded

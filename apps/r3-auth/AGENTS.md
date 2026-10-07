@@ -150,6 +150,8 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   ADR and a migration.
 - MUST authenticate confidential clients on every token, revocation and introspection call,
   accepting HTTP Basic and body credentials on `/oauth/token`.
+- MUST answer introspection only about a token issued to the calling client or naming it in
+  `aud`; any other token reads `{ active: false }`, the same as one never issued.
 
 ### Cross-origin protection
 

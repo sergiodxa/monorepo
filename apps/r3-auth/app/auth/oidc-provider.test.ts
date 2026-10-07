@@ -95,6 +95,22 @@ function createMockRepository(): MockRepository {
 	} as unknown as MockRepository;
 }
 
+/** A second registered client, holding no tokens of its own, to ask about another's. */
+const SECOND_CLIENT = { ...testClient, id: "client-456", secret: "second-secret" };
+
+/**
+ * Registers {@link SECOND_CLIENT} beside the default one, so a test can authenticate as a
+ * client other than the one the fixtures' tokens were issued to.
+ */
+function withSecondClient(repo: MockRepository): MockRepository {
+	repo.findClientById = vi.fn(async (id: string) => {
+		if (id === testClient.id) return testClient;
+		if (id === SECOND_CLIENT.id) return SECOND_CLIENT;
+		return null;
+	});
+	return repo;
+}
+
 /**
  * Log double for the engine, recording every reported failure so a test can assert a
  * recovery the engine made on its own was surfaced rather than swallowed.
@@ -706,6 +722,67 @@ describe("OAuth2Provider", () => {
 
 			expect(result.active).toBe(true);
 			if (result.active) expect(result.client_id).toBeUndefined();
+		});
+
+		/**
+		 * RFC 7662 §4 leaves it to the server which callers may learn about a token, and a
+		 * client that is neither the token's own nor named in its audience is told nothing.
+		 */
+		test("reports another client's refresh token as inactive", async () => {
+			let repo = withSecondClient(createMockRepository());
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			let result = await provider.introspect({
+				clientId: SECOND_CLIENT.id,
+				clientSecret: SECOND_CLIENT.secret,
+				token: testSession.id,
+			});
+
+			expect(result).toEqual({ active: false });
+		});
+
+		test("reports another client's access token as inactive", async () => {
+			let repo = withSecondClient(createMockRepository());
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			let tokenResult = await provider.token({
+				type: "authorization_code",
+				code: "valid-code",
+				redirectUri: testClient.redirectUri,
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+			});
+
+			let result = await provider.introspect({
+				clientId: SECOND_CLIENT.id,
+				clientSecret: SECOND_CLIENT.secret,
+				token: tokenResult.access_token,
+				tokenTypeHint: "access_token",
+			});
+
+			expect(result).toEqual({ active: false });
+		});
+
+		test("answers a client its audience names, which is where the token was sent", async () => {
+			let repo = withSecondClient(createMockRepository());
+			let provider = new OIDC(ISSUER, repo, createMockLog());
+
+			let tokenResult = await provider.token({
+				type: "client_credentials",
+				clientId: testClient.id,
+				clientSecret: testClient.secret,
+				resource: [SECOND_CLIENT.id],
+			});
+
+			let result = await provider.introspect({
+				clientId: SECOND_CLIENT.id,
+				clientSecret: SECOND_CLIENT.secret,
+				token: tokenResult.access_token,
+				tokenTypeHint: "access_token",
+			});
+
+			expect(result.active).toBe(true);
+			if (result.active) expect(result.client_id).toBe(testClient.id);
 		});
 
 		test("returns inactive for expired/invalid token", async () => {

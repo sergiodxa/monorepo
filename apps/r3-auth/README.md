@@ -84,7 +84,9 @@ written inside the shared card in `app/emails/layout.tsx`.
 ## Features
 
 - **OAuth 2.0 Authorization Server** (RFC 6749): `authorization_code`, `refresh_token` and
-  `client_credentials` grants, plus revocation (RFC 7009) and introspection (RFC 7662).
+  `client_credentials` grants, plus revocation (RFC 7009) and introspection (RFC 7662). A
+  client introspects the tokens issued to it or naming it as audience; any other reads
+  inactive.
 - **OpenID Connect Provider** (Core 1.0): ID tokens, UserInfo, discovery, and the
   `query`, `fragment` and `form_post` response modes.
 - **Two authentication methods, and only two:** a GitHub account (`remix/auth`'s GitHub
