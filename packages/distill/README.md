@@ -54,6 +54,16 @@ import { distillFrom } from "@sdxc/distill";
 let article = distillFrom(source, "https://example.com/post");
 ```
 
+Showing a link to any page — an article, a landing page, a video — with its headline and a
+line of text:
+
+```typescript
+import { summaryFrom } from "@sdxc/distill";
+
+let summary = summaryFrom(source, "https://example.com/watch?v=1");
+// success({ title: "A Video", excerpt: "Five minutes on harbours.", url: "…" })
+```
+
 ## API
 
 ### `distill(url, options)`
@@ -74,6 +84,17 @@ and `signal` move the four bounds below.
 The same scoring, sanitization and metadata over markup in hand, answering
 `Result<Distill.Article, DistillEmptyError>`. `url` is what every relative URL in the
 markup resolves against, so it is the address the page was actually served from.
+
+Every article carries an `excerpt`: the summary the page shares links under
+(`og:description`, then `description`, then `twitter:description`), else its first paragraph
+of prose, cut at the last whole word within `EXCERPT_LENGTH` (300) characters.
+
+### `summaryFrom(source, url)`
+
+What any page says about itself, answering `Result<Distill.Summary, DistillEmptyError>` with
+its `title`, `excerpt` and canonical `url`, each read as `distillFrom` reads it. A page with
+no article still answers its declared headline and summary, and fails only when the source
+carries no markup at all.
 
 ### `addressable(url)`
 

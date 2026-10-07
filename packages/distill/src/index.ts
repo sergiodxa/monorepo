@@ -18,11 +18,12 @@ import { directivesFor } from "@sdxc/robots/directives";
 import { isAllowedBy } from "@sdxc/robots/fetch";
 
 import { addressable, MAX_BYTES, retrieve, toDistillError } from "./lib/limits.js";
-import { bylineOf, canonicalOf, titleOf } from "./lib/metadata.js";
+import { bylineOf, canonicalOf, excerptOf, titleOf } from "./lib/metadata.js";
 import { articleOf } from "./lib/score.js";
 import { serialize } from "./lib/serialize.js";
 
 export { addressable, MAX_BYTES, MAX_REDIRECTS, TIMEOUT_MS } from "./lib/limits.js";
+export { EXCERPT_LENGTH } from "./lib/metadata.js";
 
 /**
  * Signals that the site said no: a status refusing the request, a `robots.txt`
@@ -66,12 +67,29 @@ export namespace Distill {
 		html: string;
 		title: string | null;
 		byline: string | null;
+		/**
+		 * A couple of sentences on what the page is about, in its publisher's words: the
+		 * summary it shares links under, else the article's opening paragraph.
+		 */
+		excerpt: string | null;
 		/** The address the article calls its own, which two paths onto it both reduce to. */
 		url: string;
 		/** Characters of readable text, which is what tells an article from a teaser. */
 		chars: number;
 		/** What sanitizing the body took out, which is the shape of the page in five numbers. */
 		sanitized: HTML.SanitizeReport;
+	}
+
+	/**
+	 * What any page says about itself, an article or not: enough to show a link to it
+	 * with a headline and a line of text.
+	 */
+	export interface Summary {
+		title: string | null;
+		/** Within {@link EXCERPT_LENGTH} characters, so a list of links stays a list. */
+		excerpt: string | null;
+		/** The address the page calls its own. */
+		url: string;
 	}
 
 	/** An article, beside what retrieving it cost and what the response permits. */
@@ -162,9 +180,36 @@ export function distillFrom(
 		html: cleaned.data,
 		title: titleOf(document.data),
 		byline: bylineOf(document.data),
+		excerpt: excerptOf(document.data, body),
 		url: canonical,
 		chars,
 		sanitized: sanitized ?? EMPTY_REPORT,
+	});
+}
+
+/**
+ * Reads what a page says about itself, which a landing page or a video page answers as
+ * well as an article does: the excerpt falls back to the article's opening paragraph
+ * only when the page declares no summary and carries an article to take one from.
+ *
+ * @param source - The page as it was served.
+ * @param url - Where it came from, which a relative canonical address resolves against.
+ * @returns The page's headline, excerpt and address, or why the source carried no markup.
+ * @example let summary = summaryFrom(text, followed.url.href);
+ */
+export function summaryFrom(
+	source: string,
+	url: string,
+): Result<Distill.Summary, DistillEmptyError> {
+	let document = parseDocument(source);
+	if (isFailure(document)) {
+		return failure(new DistillEmptyError(`Nothing to read at ${url}: it carried no markup`));
+	}
+
+	return success({
+		title: titleOf(document.data),
+		excerpt: excerptOf(document.data, articleOf(document.data)),
+		url: canonicalOf(document.data, url),
 	});
 }
 

@@ -12,7 +12,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { distill, distillFrom } from "./index.js";
+import { distill, distillFrom, EXCERPT_LENGTH, summaryFrom } from "./index.js";
 
 /** What every retrieval in this file asks under, since the caller always names one. */
 const AGENT = "ExampleReader/1.0 (+https://example.com/reader)";
@@ -85,6 +85,51 @@ describe("distillFrom", () => {
 		expect(article.data.byline).toBe("A Writer");
 	});
 
+	test("takes the excerpt from the summary the page shares links under", () => {
+		let source = page(
+			ARTICLE,
+			`<meta name="description" content="A plain description."><meta property="og:description" content="  A morning at the
+			harbour.  ">`,
+		);
+
+		let article = distillFrom(source, "https://example.com/post");
+
+		expect(isSuccess(article)).toBe(true);
+		if (!isSuccess(article)) return;
+		expect(article.data.excerpt).toBe("A morning at the harbour.");
+	});
+
+	test("falls back to the article's first paragraph of prose for the excerpt", () => {
+		let source = page(`
+			<article>
+				<div class="share"><p>Share this on every network you have an account on, please.</p></div>
+				<p>Short line.</p>
+				${PARAGRAPH.repeat(4)}
+			</article>
+		`);
+
+		let article = distillFrom(source, "https://example.com/post");
+
+		expect(isSuccess(article)).toBe(true);
+		if (!isSuccess(article)) return;
+		expect(article.data.excerpt).toBe(
+			"The harbour was quiet that morning, and the boats, tied close together, barely moved against the stone.",
+		);
+	});
+
+	test("cuts a long excerpt at the last whole word that fits", () => {
+		let words = "harbour ".repeat(60).trim();
+		let source = page(ARTICLE, `<meta name="description" content="${words}">`);
+
+		let article = distillFrom(source, "https://example.com/post");
+
+		expect(isSuccess(article)).toBe(true);
+		if (!isSuccess(article)) return;
+		let excerpt = article.data.excerpt ?? "";
+		expect(excerpt.length).toBeLessThanOrEqual(EXCERPT_LENGTH);
+		expect(excerpt.endsWith("harbour…")).toBe(true);
+	});
+
 	test("counts the characters of readable text, which is what tells a teaser apart", () => {
 		let teaser = distillFrom(
 			page(`<article><p>${"Just a teaser sentence, and no more of it.".repeat(1)}</p></article>`),
@@ -95,6 +140,42 @@ describe("distillFrom", () => {
 		expect(isSuccess(full)).toBe(true);
 		if (!isSuccess(full)) return;
 		expect(full.data.chars).toBeGreaterThan(isSuccess(teaser) ? teaser.data.chars : 0);
+	});
+});
+
+describe("summaryFrom", () => {
+	test("summarizes a page that carries no article from what it declares", () => {
+		let source = page(
+			`<div id="root"></div>`,
+			`<meta property="og:title" content="A Video"><meta property="og:description" content="Five minutes on harbours."><link rel="canonical" href="/watch/1">`,
+		);
+
+		let summary = summaryFrom(source, "https://example.com/watch?v=1");
+
+		expect(isSuccess(summary)).toBe(true);
+		if (!isSuccess(summary)) return;
+		expect(summary.data).toEqual({
+			title: "A Video",
+			excerpt: "Five minutes on harbours.",
+			url: "https://example.com/watch/1",
+		});
+	});
+
+	test("reads the window title and the article's opening when the page declares neither", () => {
+		let summary = summaryFrom(page(ARTICLE), "https://example.com/post");
+
+		expect(isSuccess(summary)).toBe(true);
+		if (!isSuccess(summary)) return;
+		expect(summary.data.title).toBe("A Headline");
+		expect(summary.data.excerpt).toContain("The harbour was quiet");
+	});
+
+	test("answers no excerpt for a page with neither a summary nor prose", () => {
+		let summary = summaryFrom(page(`<div id="root"></div>`), "https://example.com/app");
+
+		expect(isSuccess(summary)).toBe(true);
+		if (!isSuccess(summary)) return;
+		expect(summary.data.excerpt).toBeNull();
 	});
 });
 

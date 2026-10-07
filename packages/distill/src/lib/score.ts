@@ -57,7 +57,7 @@ const LENGTH_CAP = 3;
 const PARENT_SHARE = 0.5;
 
 /** Characters a paragraph must run to be counted as prose at all. */
-const PROSE_FLOOR = 25;
+export const PROSE_FLOOR = 25;
 
 /** Tags that hold prose directly, which is what a container is scored by holding. */
 const PROSE_TAGS = new Set(["blockquote", "p", "pre"]);
@@ -79,7 +79,7 @@ export function isFurniture(element: DOMElement): boolean {
 }
 
 /** Whether an element sits inside something already ruled out as furniture. */
-function isBuried(element: DOMElement): boolean {
+export function isBuried(element: DOMElement): boolean {
 	for (let parent = element.parentElement; parent !== null; parent = parent.parentElement) {
 		if (isFurniture(parent)) return true;
 	}
