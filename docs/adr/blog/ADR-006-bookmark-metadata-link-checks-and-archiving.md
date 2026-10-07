@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** - 2026-10-07 (implemented; deploy pending)
+**Implemented** - 2026-10-07
 
 ## Background
 
