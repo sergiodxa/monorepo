@@ -90,7 +90,7 @@ describe("POST /webmention", () => {
 	 */
 	test("accepts a mention of a published post for verification", async () => {
 		let response = await sendMention(
-			"https://replies.example/1",
+			"https://replies.example.com/1",
 			`${ORIGIN}/articles/${WITHDRAWN}`,
 		);
 		await ArticlePost.destroy(db, withdrawnId);
@@ -98,14 +98,30 @@ describe("POST /webmention", () => {
 		expect(response.status).toBe(202);
 	});
 
+	/**
+	 * A reserved name such as `.example` never denotes a public host, so the source is
+	 * refused before any verification is queued, whatever the target.
+	 */
+	test("rejects a source on a reserved name", async () => {
+		let response = await sendMention("https://replies.example/1", `${ORIGIN}/articles/${LIVE}`);
+
+		expect(response.status).toBe(400);
+	});
+
 	test("rejects a target that is not a post on this site", async () => {
-		let response = await sendMention("https://replies.example/1", `${ORIGIN}/articles/nope-${RUN}`);
+		let response = await sendMention(
+			"https://replies.example.com/1",
+			`${ORIGIN}/articles/nope-${RUN}`,
+		);
 
 		expect(response.status).toBe(400);
 	});
 
 	test("rejects a deleted post as a target", async () => {
-		let response = await sendMention("https://replies.example/1", `${ORIGIN}/articles/${DELETED}`);
+		let response = await sendMention(
+			"https://replies.example.com/1",
+			`${ORIGIN}/articles/${DELETED}`,
+		);
 
 		expect(response.status).toBe(400);
 	});
@@ -114,7 +130,7 @@ describe("POST /webmention", () => {
 		let response = await fetchPath("/webmention", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify({ source: "https://replies.example/1", target: ORIGIN }),
+			body: JSON.stringify({ source: "https://replies.example.com/1", target: ORIGIN }),
 		});
 
 		expect(response.status).toBe(400);
@@ -133,21 +149,21 @@ describe("a post page", () => {
 		let target = new URL(`${ORIGIN}/articles/${LIVE}`);
 		let mention = (name: string) => ({
 			kind: "reply" as const,
-			url: `https://replies.example/${name}`,
-			author: { name, url: "https://replies.example", photo: null },
+			url: `https://replies.example.com/${name}`,
+			author: { name, url: "https://replies.example.com", photo: null },
 			content: { html: `<p>From ${name}</p>`, text: `From ${name}` },
 			name: null,
 			published: null,
 		});
 		await Webmention.upsert(db, {
 			postId: liveId,
-			pair: { source: new URL("https://replies.example/approved"), target },
+			pair: { source: new URL("https://replies.example.com/approved"), target },
 			mention: mention("Approved Author"),
 			status: "approved",
 		});
 		await Webmention.upsert(db, {
 			postId: liveId,
-			pair: { source: new URL("https://replies.example/pending"), target },
+			pair: { source: new URL("https://replies.example.com/pending"), target },
 			mention: mention("Pending Author"),
 			status: "pending",
 		});

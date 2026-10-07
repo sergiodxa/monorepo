@@ -24,7 +24,7 @@ import { seedAuthor } from "~/app/test/fixtures";
 import handler from "./verify";
 
 const TARGET = "https://blog.test/articles/verified";
-const SOURCE = "https://replies.example/notes/1";
+const SOURCE = "https://replies.example.com/notes/1";
 
 const server = setupServer();
 
@@ -49,7 +49,7 @@ function serveReply(status = 200) {
 	server.use(
 		http.get(SOURCE, () =>
 			HttpResponse.html(
-				`<div class="h-entry"><a class="p-author h-card" href="https://replies.example">Ada</a>
+				`<div class="h-entry"><a class="p-author h-card" href="https://replies.example.com">Ada</a>
 				<p class="e-content">Great post!</p>
 				<a class="u-in-reply-to" href="${TARGET}">in reply to</a></div>`,
 				{ status },
@@ -88,7 +88,7 @@ describe("the verify job", () => {
 	});
 
 	test("approves on arrival a mention from an allowed host", async () => {
-		await Webmention.setPolicy(db, "replies.example", "allow");
+		await Webmention.setPolicy(db, "replies.example.com", "allow");
 		serveReply();
 
 		await run();
@@ -125,7 +125,7 @@ describe("the verify job", () => {
 	});
 
 	test("drops a mention from a blocked host without fetching it", async () => {
-		await Webmention.setPolicy(db, "replies.example", "block");
+		await Webmention.setPolicy(db, "replies.example.com", "block");
 
 		await expect(run()).rejects.toBeInstanceOf(Job.Ack);
 		expect(await stored()).toBeNull();
