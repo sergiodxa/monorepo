@@ -303,6 +303,8 @@ positioning, or a custom `--ui-*` command answered by a mixin.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted body copy, an uppercase section label in a
   `<header>`, a shortcut hint in a `<kbd>`, and a typography layer for already-rendered
   markup with `docs`, `chat` and `reading` presets.
+- `Highlight` — text split into `{ text, match }` segments, each match a tinted `<mark>`
+  that keeps the surrounding color and weight, for search results and filtered lists.
 - `HeadingScope`, `Heading` — an ambient heading-depth scope and the heading that reads it.
 - `SharedElement` — a host carrying a stable view-transition identity across page loads.
 - `Calendar`, `RangeCalendar`, `DatePicker`, `DateRangePicker` — a month grid for one day or

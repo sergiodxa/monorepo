@@ -31,6 +31,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] Spinner — static styling
 - [x] Separator — static styling
 - [x] Keyboard — static styling
+- [x] Highlight — static styling; `{ text, match }` segments rendered inline, each match a `<mark>` tinted through a semantic color role
 - [x] Header — static styling
 - [x] Heading — static styling
 - [x] HeadingScope — markup + `css()` only, no mixin of its own; establishes the ambient heading level `Heading` and nested scopes read automatically. `Dialog.Title`, `AlertDialog.Title`, `Card.Title`, `Alert.Title`, `Empty.Title`, and `Disclosure.Header` already read this ambient level instead of a hardcoded tag.

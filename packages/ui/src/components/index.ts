@@ -53,6 +53,7 @@ export * from "./group.js";
 export * from "./header.js";
 export * from "./heading.js";
 export * from "./heading-scope.js";
+export * from "./highlight.js";
 export * from "./hover-card.js";
 export * from "./image-placeholder.js";
 export * from "./input.js";
