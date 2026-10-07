@@ -38,11 +38,16 @@ post_search_fts USING fts5(title, tags, content, content='', contentless_delete=
                            tokenize='unicode61 remove_diacritics 2')
 ```
 
-| Kind     | `title`                   | `tags`               | `content`     |
-| -------- | ------------------------- | -------------------- | ------------- |
-| Article  | Title                     | `[]`                 | Markdown body |
-| Tutorial | Title                     | Tags as a JSON array | Markdown body |
-| Glossary | Term, then alias when set | `[]`                 | Definition    |
+| Kind     | `title`                   | `tags`               | `content`                  |
+| -------- | ------------------------- | -------------------- | -------------------------- |
+| Article  | Title                     | `[]`                 | Markdown body              |
+| Tutorial | Title                     | Tags as a JSON array | Markdown body              |
+| Glossary | Term, then alias when set | `[]`                 | Definition                 |
+| Bookmark | Title                     | `[]`                 | Address without its scheme |
+
+Bookmarks (posts of type `like`) were added by `0007_BookmarkSearch.sql`, which backfills them.
+A bookmark result links to the page it saved and shows its address as its description; its
+kind is `bookmark` in results, in `kind:` and in the MCP tool's `kind` argument.
 
 No kind, slug, excerpt or timestamp is copied. Three triggers keep `post_search_fts` in step
 with `post_search`, each deleting a `rowid` before inserting it, since a trigger takes the

@@ -21,6 +21,7 @@ import { and, inList, rawSql, sql } from "remix/data-table";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
+import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import * as schema from "~/database/schema";
 
@@ -30,7 +31,7 @@ import * as schema from "~/database/schema";
  */
 export namespace PostSearch {
 	/** The content types a search can reach. */
-	export type Kind = "article" | "tutorial" | "glossary";
+	export type Kind = "article" | "tutorial" | "glossary" | "bookmark";
 
 	/** Narrowing a search accepts beyond its text. */
 	export interface Filters {
@@ -61,9 +62,12 @@ export namespace PostSearch {
 		kind: Kind;
 		title: string;
 		slug: string;
-		/** The public URL of the post, so a caller can cite what it quotes. */
+		/** The public URL of the post, so a caller can cite what it quotes; a bookmark's is the page it saved. */
 		url: string;
-		/** The post's summary: an article's or tutorial's excerpt, a glossary entry's definition. */
+		/**
+		 * The post's summary: an article's or tutorial's excerpt, a glossary entry's definition,
+		 * a bookmark's address without its scheme.
+		 */
 		excerpt: string | undefined;
 		tags: Array<string>;
 		/** Publication instant as ISO 8601 when the post has one, or `null` otherwise. */
@@ -75,23 +79,34 @@ export namespace PostSearch {
 	 * shown where a match sits in a post whose summary does not hold it.
 	 */
 	export interface Hit extends Result {
-		/** The post's searchable body: Markdown for a post, a glossary entry's definition. */
+		/**
+		 * The post's searchable body: Markdown for a post, a glossary entry's definition, a
+		 * bookmark's address without its scheme.
+		 */
 		body: string;
 	}
 }
 
 /** Every kind a search reaches. */
-const KINDS: ReadonlyArray<PostSearch.Kind> = ["article", "tutorial", "glossary"];
+const KINDS: ReadonlyArray<PostSearch.Kind> = ["article", "tutorial", "glossary", "bookmark"];
 
-/** Where each kind's pages live, used to build a result's public URL. */
-const KIND_PATHS: Record<PostSearch.Kind, string> = {
+/** The `posts.type` each kind is stored as; a bookmark is a `like`. */
+const KIND_TYPES: Record<PostSearch.Kind, Post.Type> = {
+	article: "article",
+	tutorial: "tutorial",
+	glossary: "glossary",
+	bookmark: "like",
+};
+
+/** Where each kind's pages live, used to build a result's public URL; a bookmark links out. */
+const KIND_PATHS: Record<Exclude<PostSearch.Kind, "bookmark">, string> = {
 	article: "/articles",
 	tutorial: "/tutorials",
 	glossary: "/glossary",
 };
 
 /** The `post_meta` keys a result is read from. */
-const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition"];
+const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition", "url"];
 
 /**
  * A `posts` date column as epoch milliseconds, read the way `Post.isPublishedAt` reads it: a
@@ -133,6 +148,10 @@ const KIND_NAMES: Record<string, PostSearch.Kind> = {
 	tutorials: "tutorial",
 	glossary: "glossary",
 	glossaries: "glossary",
+	bookmark: "bookmark",
+	bookmarks: "bookmark",
+	like: "bookmark",
+	likes: "bookmark",
 };
 
 /** Language names `lang:` accepts beside a language tag, read as that tag. */
@@ -154,9 +173,17 @@ const DEFAULT_LANGUAGE = "en";
  */
 const POST_LANGUAGE = `lower(replace(coalesce((select "post_meta"."value" from "post_meta" where "post_meta"."post_id" = "post_search"."post_id" and "post_meta"."key" = 'locale' order by "post_meta"."updated_at" desc, "post_meta"."created_at" desc limit 1), '${DEFAULT_LANGUAGE}'), '_', '-'))`;
 
-/** Whether a stored type is one search reaches. */
-function isKind(value: string): value is PostSearch.Kind {
-	return Object.hasOwn(KIND_PATHS, value);
+/** The kind a stored `posts.type` is searched as, or `null` for a type search skips. */
+function kindOf(type: string): PostSearch.Kind | null {
+	return KINDS.find((kind) => KIND_TYPES[kind] === type) ?? null;
+}
+
+/**
+ * A bookmark's address as it is searched and shown: without its scheme, so its host and path
+ * words match while `https` never does.
+ */
+function addressOf(url: string): string {
+	return LikePost.normalizeUrl(url).replace(/^https?:\/\//i, "");
 }
 
 /**
@@ -322,10 +349,11 @@ export class PostSearch {
 	/** The source-table condition a projected row must meet to be returned. */
 	private static published(kinds: ReadonlyArray<PostSearch.Kind>, now: number): SqlStatement {
 		if (kinds.length === 0) return rawSql("0 = 1");
-		let placeholders = kinds.map(() => "?").join(", ");
+		let types = kinds.map((kind) => KIND_TYPES[kind]);
+		let placeholders = types.map(() => "?").join(", ");
 		return rawSql(
 			`exists (select 1 from "posts" where "posts"."id" = "post_search"."post_id" and "posts"."deleted_at" is null and "posts"."type" in (${placeholders}) and ("posts"."published_at" is null or (${PUBLISHED_MS}) <= ?))`,
-			[...kinds, now],
+			[...types, now],
 		);
 	}
 
@@ -357,16 +385,17 @@ export class PostSearch {
 
 		return rows.flatMap((row) => {
 			let post = postsById.get(row.post_id);
-			if (!post || post.deleted_at !== null || !isKind(post.type)) return [];
-			let result = this.result(post.type, post, metaByPost.get(post.id) ?? [], row.tags);
+			let kind = post && post.deleted_at === null ? kindOf(post.type) : null;
+			if (!post || kind === null) return [];
+			let result = this.result(kind, post, metaByPost.get(post.id) ?? [], row.tags);
 			return [{ ...result, body: row.content }];
 		});
 	}
 
 	/**
 	 * Projects one post into the result shape callers and the MCP tool read: a glossary
-	 * entry is titled by its alias or else its term and summarized by its definition, and
-	 * tags come from the projection, which holds the post's tags normalized.
+	 * entry is titled by its alias or else its term and summarized by its definition, a
+	 * bookmark links to the page it saved and has no slug, and tags come from the projection.
 	 */
 	private static result(
 		kind: PostSearch.Kind,
@@ -385,11 +414,17 @@ export class PostSearch {
 			excerpt = value("definition") ?? "";
 		}
 
+		let url = kind === "bookmark" ? "" : `${KIND_PATHS[kind]}/${slug}`;
+		if (kind === "bookmark") {
+			url = LikePost.normalizeUrl(value("url") ?? "");
+			excerpt = addressOf(value("url") ?? "");
+		}
+
 		return {
 			kind,
 			title,
 			slug,
-			url: `${KIND_PATHS[kind]}/${slug}`,
+			url,
 			excerpt,
 			tags: kind === "tutorial" ? tagsOf(tags) : [],
 			publishedAt: Number.isNaN(timestamp) ? null : new Date(timestamp).toISOString(),
@@ -399,7 +434,8 @@ export class PostSearch {
 	/**
 	 * Reads a post through its own type's repository, so the projection carries exactly the
 	 * metadata the post's pages show. A glossary entry's title holds its term and its alias,
-	 * so either one finds it, and its definition is its content.
+	 * so either one finds it, and its definition is its content; a bookmark's content is its
+	 * address, so a site's name finds what was saved from it.
 	 *
 	 * @returns The projection, or `null` when the post is deleted or of a kind search skips.
 	 */
@@ -422,6 +458,12 @@ export class PostSearch {
 				tags: TutorialPost.tags(tutorial.meta.tags),
 				content: tutorial.meta.content,
 			};
+		}
+
+		if (type === "like") {
+			let bookmark = await LikePost.findById(db, id);
+			if (!bookmark) return null;
+			return { title: bookmark.meta.title, tags: [], content: addressOf(bookmark.meta.url) };
 		}
 
 		if (type === "glossary") {

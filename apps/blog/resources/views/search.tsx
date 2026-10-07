@@ -92,7 +92,7 @@ const SYNTAX: ReadonlyArray<{ example: string; meaning: string }> = [
 	{ example: "remix OR react", meaning: "either word" },
 	{ example: "title:forms", meaning: "a word in the title" },
 	{ example: 'tag:"react router"', meaning: "tutorials with a tag" },
-	{ example: "kind:tutorial", meaning: "article, tutorial or glossary" },
+	{ example: "kind:tutorial", meaning: "article, tutorial, glossary or bookmark" },
 	{ example: "lang:es", meaning: "posts in a language" },
 ];
 

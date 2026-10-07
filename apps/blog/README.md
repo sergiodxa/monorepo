@@ -44,13 +44,14 @@ Smart Placement and Observability are enabled.
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
 - Full-text search at `/search` and through the MCP `search_posts` tool: an FTS5 index over
-  each live post's title, tags and body, ranked title first, then tags, then body. Only posts
+  each live post's title, tags and body (a bookmark's title and its address without the
+  scheme, so a site's name finds it; a bookmark result links to the saved page), ranked title first, then tags, then body. Only posts
   published by now appear, previews and deleted posts never. Results page ten at a time with
   `Link` and `X-Total-Count` headers, and matched words are highlighted.
 - Search syntax, shared by `/search`, the search panel and `search_posts`: `"phrases"`,
   `-exclusions`, `OR` in capitals, `title:` for a word in the title, and the filters
   `tag:"react router"` (a tutorial tag, any case), `kind:tutorial` (`article`, `tutorial`,
-  `glossary`, plural accepted) and `lang:es` (also `locale:` and `language:`; `es` matches
+  `glossary`, `bookmark`, plural accepted, `like` for bookmarks too) and `lang:es` (also `locale:` and `language:`; `es` matches
   `es-AR`, and `spanish`/`español`/`english` work too). An article's language is its `locale`;
   tutorials and glossary entries are English. A search of filters alone lists newest first.
   `/search` explains the syntax under its form.

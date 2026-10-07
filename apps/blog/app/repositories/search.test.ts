@@ -15,6 +15,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
+import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
@@ -23,6 +24,9 @@ import { PostSearch } from "./search";
 
 /** The migration that creates and backfills the search projection. */
 const SEARCH_MIGRATION = "0006_PostSearch.sql";
+
+/** The migration that adds bookmarks to the search projection. */
+const BOOKMARK_MIGRATION = "0007_BookmarkSearch.sql";
 
 /** A publish date safely in the past. */
 const PAST = "2026-01-15T10:00:00.000Z";
@@ -113,7 +117,7 @@ describe("the 0006 migration", () => {
 			)
 			.run();
 
-		await applyMigrations(binding, (file) => file >= SEARCH_MIGRATION);
+		await applyMigrations(binding, (file) => file === SEARCH_MIGRATION);
 
 		expect(await projections(legacy)).toEqual([
 			{
@@ -148,7 +152,96 @@ describe("the 0006 migration", () => {
 	});
 });
 
+describe("the 0007 migration", () => {
+	test("backfills every live bookmark by its title and scheme-less address, leaving other rows alone", async () => {
+		let binding = createD1Database();
+		await applyMigrations(binding, (file) => file < BOOKMARK_MIGRATION);
+		let legacy = new Database(createD1DatabaseAdapter(binding));
+		let user = await seedAuthor(legacy);
+		let saved = await LikePost.create(legacy, {
+			author_id: user,
+			meta: { title: "Already indexed", url: "https://example.com/kept" },
+		});
+		await legacy.exec(
+			sql`update "post_search" set "content" = 'as written' where "post_id" = ${saved!.id}`,
+		);
+
+		await binding
+			.prepare(
+				`INSERT INTO posts (id, type, author_id, published_at, created_at, updated_at, deleted_at) VALUES
+				('b1', 'like', '${user}', NULL, '2026-01-01T00:00:00.000Z', '2026-01-01T00:00:00.000Z', NULL),
+				('b2', 'like', '${user}', NULL, '2026-01-02T00:00:00.000Z', '2026-01-02T00:00:00.000Z', NULL),
+				('b3', 'like', '${user}', NULL, '2026-01-03T00:00:00.000Z', '2026-01-03T00:00:00.000Z', '2026-02-01T00:00:00.000Z')`,
+			)
+			.run();
+		await binding
+			.prepare(
+				`INSERT INTO post_meta (id, post_id, key, value, created_at, updated_at) VALUES
+				('l1', 'b1', 'title', 'Old title', '2026-01-01', '2026-01-01'),
+				('l2', 'b1', 'title', 'Remix v3 is here', '2026-01-01', '2026-01-03'),
+				('l3', 'b1', 'url', 'https://remix.run/blog/remix-v3', '2026-01-01', '2026-01-01'),
+				('l4', 'b2', 'title', 'A bare host', '2026-01-02', '2026-01-02'),
+				('l5', 'b2', 'url', 'example.org/notes', '2026-01-02', '2026-01-02'),
+				('l6', 'b3', 'title', 'Deleted', '2026-01-03', '2026-01-03')`,
+			)
+			.run();
+
+		await applyMigrations(binding, (file) => file === BOOKMARK_MIGRATION);
+
+		expect(await projections(legacy)).toEqual(
+			[
+				{ post_id: saved!.id, title: "Already indexed", tags: "[]", content: "as written" },
+				{
+					post_id: "b1",
+					title: "Remix v3 is here",
+					tags: "[]",
+					content: "remix.run/blog/remix-v3",
+				},
+				{ post_id: "b2", title: "A bare host", tags: "[]", content: "example.org/notes" },
+			].sort((a, b) => a.post_id.localeCompare(b.post_id)),
+		);
+		expect(await PostSearch.query(legacy, { query: "remix.run" })).toEqual([
+			{
+				kind: "bookmark",
+				title: "Remix v3 is here",
+				slug: "",
+				url: "https://remix.run/blog/remix-v3",
+				excerpt: "remix.run/blog/remix-v3",
+				tags: [],
+				publishedAt: "2026-01-01T00:00:00.000Z",
+			},
+		]);
+	});
+});
+
 describe("keeping post_search current", () => {
+	test("a bookmark is searchable by its title and its site, follows edits and leaves on delete", async () => {
+		let created = await LikePost.create(db, {
+			author_id: author,
+			meta: { title: "Remix v3 is here", url: "https://remix.run/blog/remix-v3" },
+		});
+		let id = created!.id;
+		let urls = async (query: string) =>
+			(await PostSearch.query(db, { query })).map((result) => result.url);
+
+		expect(await projections(db)).toEqual([
+			{ post_id: id, title: "Remix v3 is here", tags: "[]", content: "remix.run/blog/remix-v3" },
+		]);
+		expect(await urls("remix")).toEqual(["https://remix.run/blog/remix-v3"]);
+		expect(await urls("blog")).toEqual(["https://remix.run/blog/remix-v3"]);
+		expect(await urls("https")).toEqual([]);
+
+		await LikePost.update(db, id, {
+			meta: { title: "Streaming in Workers", url: "developers.cloudflare.com/workers" },
+		});
+		expect(await urls("remix")).toEqual([]);
+		expect(await urls("cloudflare")).toEqual(["https://developers.cloudflare.com/workers"]);
+
+		await LikePost.destroy(db, id);
+		expect(await urls("cloudflare")).toEqual([]);
+		expect(await projections(db)).toEqual([]);
+	});
+
 	test("a created post is searchable, an edit replaces what it matches, and a delete removes it", async () => {
 		let created = await article({ slug: "first", title: "Caching at the edge" });
 		let id = created!.id;

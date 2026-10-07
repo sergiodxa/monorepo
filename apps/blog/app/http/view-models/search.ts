@@ -95,6 +95,7 @@ const KIND_LABELS: Record<PostSearch.Kind, string> = {
 	article: "Article",
 	tutorial: "Tutorial",
 	glossary: "Glossary",
+	bookmark: "Bookmark",
 };
 
 /** Words of excerpt each result shows around its first match. */
@@ -186,10 +187,12 @@ export class SearchViewModel {
 	/**
 	 * Picks the text a result shows. The summary wins when it holds a match, the body when
 	 * only the body does, and with no match in either the summary's (or body's) opening
-	 * words stand in. The body is read as plain text, so no Markdown syntax shows.
+	 * words stand in. The body is read as plain text, so no Markdown syntax shows. A bookmark
+	 * shows its address.
 	 */
 	private static excerpt(hit: PostSearch.Hit, parsed: ParsedQuery): Excerpt | null {
 		let window = (text: string) => excerpt(text, parsed, { words: EXCERPT_WORDS });
+		if (hit.kind === "bookmark") return hit.body === "" ? null : window(hit.body);
 		let summary = hit.kind === "glossary" ? plainText(hit.body) : (hit.excerpt?.trim() ?? "");
 
 		let fromSummary = summary === "" ? null : window(summary);

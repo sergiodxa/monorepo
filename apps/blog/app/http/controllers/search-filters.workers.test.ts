@@ -14,6 +14,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
+import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
@@ -35,6 +36,8 @@ const POSTS = {
 	older: `/tutorials/${TOKEN}-older`,
 	newer: `/tutorials/${TOKEN}-newer`,
 	term: `/glossary#${TOKEN}-term`,
+	newerBookmark: `https://${TOKEN}.example/newer`,
+	olderBookmark: `https://${TOKEN}.example/older`,
 };
 
 /** A full `App.Env` over the real bindings, with the secrets a local run cannot read. */
@@ -58,15 +61,17 @@ async function found(q: string): Promise<Array<string>> {
 		new Request(new URL(`/search?${new URLSearchParams({ q })}`, ORIGIN)),
 	);
 	let html = await response.text();
-	let links = [...html.matchAll(/href="([^"]+)"/g)].map((match) => match[1] ?? "");
+	let links = [...html.matchAll(/href="([^"]+)"/g)].map((match) =>
+		(match[1] ?? "").replaceAll("&amp;", "&"),
+	);
 	return [...new Set(links.filter((link) => link.includes(TOKEN) && !link.startsWith("/search")))];
 }
 
-/** The slugs `search_posts` answers for `query` and any other arguments, as an MCP client reads them. */
-async function searchPosts(
+/** What `search_posts` answers for `query` and any other arguments, as an MCP client reads it. */
+async function searchResults(
 	query: string,
 	extra: Record<string, unknown> = {},
-): Promise<Array<string>> {
+): Promise<Array<{ slug: string; url: string; kind: string; title: string }>> {
 	let response = await createApplication(environment()).fetch(
 		new Request(new URL("/mcp", ORIGIN), {
 			method: "POST",
@@ -93,9 +98,17 @@ async function searchPosts(
 	);
 	let body = (await response.json()) as { result?: { content?: Array<{ text?: string }> } };
 	let output = JSON.parse(body.result?.content?.[0]?.text ?? "{}") as {
-		results?: Array<{ slug: string }>;
+		results?: Array<{ slug: string; url: string; kind: string; title: string }>;
 	};
-	return (output.results ?? []).map((result) => result.slug);
+	return output.results ?? [];
+}
+
+/** The slugs `search_posts` answers for `query` and any other arguments. */
+async function searchPosts(
+	query: string,
+	extra: Record<string, unknown> = {},
+): Promise<Array<string>> {
+	return (await searchResults(query, extra)).map((result) => result.slug);
 }
 
 beforeAll(async () => {
@@ -156,6 +169,59 @@ beforeAll(async () => {
 		published_at: "2026-01-15T12:00:00.000Z",
 		meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
 	});
+
+	/** Saved before the newer one, so their ids run opposite to their dates. */
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: "2025-11-01T12:00:00.000Z",
+		meta: { title: "An older saved page", url: POSTS.olderBookmark },
+	});
+
+	await LikePost.create(db, {
+		author_id: author,
+		published_at: "2026-04-01T12:00:00.000Z",
+		meta: { title: "Remix routing, saved", url: POSTS.newerBookmark },
+	});
+});
+
+describe("bookmarks", () => {
+	test("are found by a word in their title, linking to the page they saved", async () => {
+		expect(await found(`${TOKEN} routing`)).toEqual([POSTS.newerBookmark]);
+	});
+
+	test("are found by their site's name", async () => {
+		expect((await found(`${TOKEN}.example`)).sort()).toEqual(
+			[POSTS.newerBookmark, POSTS.olderBookmark].sort(),
+		);
+	});
+
+	test("kind:bookmarks lists them newest first, and -kind:bookmark leaves them out", async () => {
+		let listed = (await searchResults("kind:bookmarks", { limit: 50 })).map((result) => result.url);
+		expect(listed.indexOf(POSTS.newerBookmark)).toBeGreaterThan(-1);
+		expect(listed.indexOf(POSTS.newerBookmark)).toBeLessThan(listed.indexOf(POSTS.olderBookmark));
+		expect(await found(`${TOKEN} kind:like`)).toHaveLength(2);
+		expect(await found(`${TOKEN} -kind:bookmark`)).not.toContain(POSTS.newerBookmark);
+	});
+
+	test("show their address in the search panel, and the tool answers their URL", async () => {
+		let response = await createApplication(environment()).fetch(
+			new Request(
+				new URL(`/frames/search?${new URLSearchParams({ q: `${TOKEN} routing` })}`, ORIGIN),
+			),
+		);
+		let html = await response.text();
+		expect(html).toContain(`href="${POSTS.newerBookmark}"`);
+		expect(html).toContain("🔖");
+		expect(html).toMatch(new RegExp(`<mark>${TOKEN}</mark>\\.example/newer`));
+
+		expect(await searchResults(`${TOKEN} routing`, { kind: "bookmark" })).toEqual([
+			expect.objectContaining({
+				kind: "bookmark",
+				url: POSTS.newerBookmark,
+				title: "Remix routing, saved",
+			}),
+		]);
+	});
 });
 
 describe("title:", () => {
@@ -178,7 +244,7 @@ describe("tag:", () => {
 
 	test("leaves the tagged posts out when excluded", async () => {
 		expect((await found(`${TOKEN} -tag:${TAG}`)).sort()).toEqual(
-			[POSTS.english, POSTS.spanish, POSTS.term].sort(),
+			[POSTS.english, POSTS.spanish, POSTS.term, POSTS.newerBookmark, POSTS.olderBookmark].sort(),
 		);
 	});
 
@@ -200,7 +266,9 @@ describe("kind:", () => {
 	});
 
 	test("leaves a kind out when excluded", async () => {
-		expect(await found(`${TOKEN} -kind:article -kind:tutorial`)).toEqual([POSTS.term]);
+		expect((await found(`${TOKEN} -kind:article -kind:tutorial -kind:bookmark`)).sort()).toEqual([
+			POSTS.term,
+		]);
 	});
 });
 
@@ -218,7 +286,14 @@ describe("lang:", () => {
 
 	test("counts a post with no language of its own as English", async () => {
 		expect((await found(`${TOKEN} lang:en`)).sort()).toEqual(
-			[POSTS.english, POSTS.newer, POSTS.older, POSTS.term].sort(),
+			[
+				POSTS.english,
+				POSTS.newer,
+				POSTS.older,
+				POSTS.term,
+				POSTS.newerBookmark,
+				POSTS.olderBookmark,
+			].sort(),
 		);
 	});
 
