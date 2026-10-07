@@ -171,13 +171,21 @@ describe("GET /llms.txt", () => {
 	});
 
 	test("closes on the author: blog, X and GitHub Sponsors", async () => {
-		let body = await (await fetchApp("/llms.txt")).text();
+		let response = await fetchApp("/llms.txt");
+		let body = await response.text();
 		let author = body.slice(body.indexOf("## Author"));
 
 		expect(author).toContain("Sergio Xalambrí");
 		expect(author).toContain("https://sergiodxa.com");
 		expect(author).toContain("https://x.com/sergiodxa");
 		expect(author).toContain("https://github.com/sponsors/sergiodxa");
+	});
+
+	test("declares UTF-8, so a browser reads the author's name as written", async () => {
+		let response = await fetchApp("/llms.txt");
+
+		expect(response.headers.get("content-type")).toContain("charset=utf-8");
+		expect(await response.text()).toContain("Xalambrí");
 	});
 });
 
