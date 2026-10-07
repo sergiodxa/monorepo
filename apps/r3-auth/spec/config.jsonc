@@ -17,6 +17,13 @@
 		"allow": [
 			["net", "localhost:3002"],
 			["env", "DATABASE_URL"],
+			["db", "local"],
 		],
+	},
+	// The one connection the `db` seeds query: the local Miniflare D1 file, named by
+	// `DATABASE_URL` at run time. Declaring it is an address, not a grant — the `db`
+	// grant above is what lets a run reach it, and only under `--allow-config`.
+	"databases": {
+		"local": { "env": "DATABASE_URL" },
 	},
 }

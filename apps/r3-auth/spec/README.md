@@ -53,22 +53,24 @@ The suite talks to a live dev server on **`http://localhost:3002`**.
    Or from source (slower start): `DATABASE_URL="sqlite://$DBFILE" bun
 packages/spec/src/cli.ts run apps/r3-auth/spec --allow-config`.
 
-`--allow-config` applies the two grants `config.jsonc` declares: `net` scoped to
-`localhost:3002` (the `http`/`browser` origin) and `env` scoped to
-`DATABASE_URL` (the one variable the `db` seeds read). Nothing is granted without
-it, so a cloned repo can never self-authorize. The `db` capability opens the
-connection string in `DATABASE_URL` — the WAL-mode SQLite file above — which Bun
-can write while `bun dev` holds it open.
+`--allow-config` applies the three grants `config.jsonc` declares: `net` scoped to
+`localhost:3002` (the `http`/`browser` origin), `env` scoped to `DATABASE_URL`
+(the one variable the `db` seeds read), and `db` scoped to `local`, the one
+connection the config declares. Nothing is granted without it, so a cloned repo
+can never self-authorize. The `local` connection opens the connection string in
+`DATABASE_URL` — the WAL-mode SQLite file above — which Bun can write while
+`bun dev` holds it open.
 
 ### Structural validity (no live app needed)
 
 Running with **no** grant proves the whole suite parses, loads, and resolves
 every name — every test fails closed at the permission gate rather than at a
-parse or resolution error:
+parse or resolution error. The `local` connection still needs an address to
+load, and no test reaches it, so any value will do:
 
 ```sh
-bun packages/spec/src/cli.ts run apps/r3-auth/spec
-# → "Permission denied: net (57 tests)", exit code 1
+DATABASE_URL="sqlite::memory:" bun packages/spec/src/cli.ts run apps/r3-auth/spec
+# → "Permission denied: net (57 tests)" and "… db (17 tests)", exit code 1
 ```
 
 Exit code 1 (a clean permission denial) confirms structural validity; exit code
