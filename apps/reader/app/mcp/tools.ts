@@ -92,7 +92,7 @@ export default tools({
 			input: s.object({
 				query: s.string().pipe(checks.minLength(1), checks.maxLength(200)).meta({
 					description:
-						"Words to look for, each matched anywhere in a title, excerpt or author. Quote a phrase to match it as written; lead a word with - to leave out posts holding it.",
+						'Words to look for, each matched anywhere in a title, excerpt or author. Quote a phrase to match it as written; put OR (in capitals) between two words to match either; lead a word with - or NOT to leave out posts holding it; quote "OR", "AND" or "NOT" to search for the word itself.',
 				}),
 				readState: READ_STATE,
 				cursor: CURSOR,

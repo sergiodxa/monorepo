@@ -61,7 +61,7 @@ export function agentStore() {
 export function agentPage(result: UserStore.TimelineResult): AgentPage {
 	if (!result.ok && result.reason === "bad-query") {
 		throw new ToolError(
-			`That query has nothing to search for. Give at least one word to find, in at most ${DEFAULT_MAX_QUERY_TERMS} words and ${DEFAULT_MAX_QUERY_LENGTH} characters; a word led by - only leaves posts out.`,
+			`That query has nothing to search for. Give at least one word to find, in at most ${DEFAULT_MAX_QUERY_TERMS} words and ${DEFAULT_MAX_QUERY_LENGTH} characters; a word led by - or NOT only leaves posts out.`,
 		);
 	}
 

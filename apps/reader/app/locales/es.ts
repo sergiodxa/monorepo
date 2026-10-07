@@ -337,7 +337,7 @@ export default {
 		refused: {
 			title: "Nada que buscar",
 			description:
-				"Escribe al menos una palabra que encontrar, en hasta {$terms} palabras y {$length} caracteres. Una palabra precedida de - deja fuera las entradas que la contienen.",
+				"Escribe al menos una palabra que encontrar, en hasta {$terms} palabras y {$length} caracteres. OR entre dos palabras encuentra cualquiera de ellas, y una palabra precedida de - o NOT deja fuera las entradas que la contienen.",
 		},
 		/**
 		 * What a search page looked at, said under the list. A search that shows nothing has

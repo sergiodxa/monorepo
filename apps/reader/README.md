@@ -45,7 +45,9 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 - One list of every post across every followed feed, which continues as you scroll it
 - The same list narrowed to what is read or unread, to words you searched for, or to both.
   A search finds the posts holding every word in their title, summary or author; quote a
-  phrase to find it as written, and lead a word with `-` to leave out the posts holding it
+  phrase to find it as written, put `OR` between two words to find either, and lead a word
+  with `-` or `NOT` to leave out the posts holding it. `OR`, `AND` and `NOT` are operators in
+  capitals; quote them to search for the word
 - Follow a feed by its own address or by the address of a site that advertises one
 - Unfollow a feed, which takes its posts with it
 - The article behind a post's link, fetched when you open that post and read in place,

@@ -249,7 +249,7 @@ export default {
 		refused: {
 			title: "Nothing to search for",
 			description:
-				"Give at least one word to find, in up to {$terms} words and {$length} characters. A word led by - leaves out the posts holding it.",
+				"Give at least one word to find, in up to {$terms} words and {$length} characters. OR between two words finds either one, and a word led by - or NOT leaves out the posts holding it.",
 		},
 		/**
 		 * What a search page looked at, said under the list. A search that shows nothing has

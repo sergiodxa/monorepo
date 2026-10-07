@@ -249,5 +249,5 @@ both strategies directly.
 ## Current Progress
 
 - [x] Phase 1: The package
-- [ ] Phase 2: The reader
+- [x] Phase 2: The reader
 - [ ] Phase 3: The blog

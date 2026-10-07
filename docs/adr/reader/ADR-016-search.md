@@ -250,9 +250,12 @@ The statement is built by `@sdxc/search` (ADR-109) from `itemSearch`, a definiti
 `feed_items`' `title`, `summary` and `author`, and every column in it is qualified with the
 table's name. The words come from `parseQuery`: whitespace separates them, a post has to hold
 every word in one of the three columns, a double-quoted phrase matches as the exact string it
-holds, and a word led by `-` leaves out the posts holding it. `%`, `_` and `\` are escaped,
-so each matches as itself. The score the package computes is never ordered by: the pager
-orders by the keyset, so search stays a predicate.
+holds, `OR` between two words matches either one (it binds the words beside it, so
+`remix OR react router` is `(remix OR react) router`), and a word led by `-` or `NOT` leaves
+out the posts holding it. `OR`, `AND` and `NOT` are operators only in capitals, and a quoted
+`"OR"` is the word itself (ADR-117). `%`, `_` and `\` are escaped, so each matches as
+itself. The score the package computes is never ordered by: the pager orders by the keyset,
+so search stays a predicate.
 
 The plan is the timeline's: `feed_items_unread_timeline_idx` for unread,
 `feed_items_read_timeline_idx` for read, `feed_items_timeline_idx` for every post, and the
@@ -461,8 +464,9 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 | 17  | The twenty-first saved search is refused, and no existing one is evicted                        |
 | 18  | Several words match a post holding every one of them, each in any of the three columns          |
 | 19  | A quoted phrase matches only the exact string it holds                                          |
-| 20  | A word led by `-` leaves out the posts holding it                                               |
+| 20  | A word led by `-` or `NOT` leaves out the posts holding it                                      |
 | 21  | Words no search can run are refused as `bad-query`, and as `invalid-query` when saved           |
+| 22  | `OR` matches either word beside it, and a quoted `"OR"` matches the word itself                 |
 
 ## Implementation
 
@@ -485,6 +489,7 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
       `itemSearch.predicate`
 - [x] Test 4 read off the statement each page actually runs, cursor pages included, with the
       cursor's moment bounding the seek
+- [x] `OR` and `NOT` as operators (ADR-117), on the queue and on a label's page
 
 ## References
 
@@ -498,4 +503,5 @@ against a SQLite `Database`, the entitlement and flag paths in `*.workers.test.t
 - [ADR-015](./ADR-015-tags-pins-and-saved-organization.md) — the tag list a tagged search pages as
 - [ADR-029](../ADR-029-pagination-package.md) — the keyset pager a search page borrows its cursor grammar from
 - [ADR-109](../ADR-109-search-package.md) — the package that parses the words and builds the match
+- [ADR-117](../ADR-117-search-query-syntax.md) — the query syntax: phrases, `OR`, `NOT` and `-`
 - [ADR-033](../ADR-033-wide-events-as-the-logging-contract.md) — the logging contract `user.search` follows

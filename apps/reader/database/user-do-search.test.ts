@@ -289,6 +289,50 @@ describe("readingQueue, searched", () => {
 		]);
 	});
 
+	test("matches a post holding either word OR joins", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "remix", publishedAt: NOW - DAY_MS, title: "Remix routing" },
+			{ id: "react", publishedAt: NOW - 2 * DAY_MS, summary: "A React hook" },
+			{ id: "neither", publishedAt: NOW - 3 * DAY_MS, title: "Vue templates" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: "remix OR react" }))).toEqual([
+			"remix",
+			"react",
+		]);
+	});
+
+	test("leaves out a post holding a word led by NOT", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "current", publishedAt: NOW - DAY_MS, title: "Remix routing" },
+			{ id: "legacy", publishedAt: NOW - 2 * DAY_MS, title: "Remix, the legacy way" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: "remix NOT legacy" }))).toEqual([
+			"current",
+		]);
+	});
+
+	test("matches a quoted OR as the word itself", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+
+		seedItems(state, [
+			{ id: "or-gate", publishedAt: NOW - DAY_MS, title: "The OR gate" },
+			{ id: "plain-gate", publishedAt: NOW - 2 * DAY_MS, title: "The NAND gate" },
+		]);
+
+		expect(ids(await user.readingQueue({ readState: "all", query: '"OR" gate' }))).toEqual([
+			"or-gate",
+		]);
+	});
+
 	test("matches %, _ and \\ as those characters inside a query of several words", async () => {
 		let { state, user } = await createReader();
 		seedFeed(state);
@@ -652,20 +696,20 @@ describe("the statement a search runs as", () => {
 			let pages = await searchStatements(state, async () => {
 				let first = await user.readingQueue({
 					readState: readState as UserStore.ReadState,
-					query: "beacon -light",
+					query: "beacon OR lamp NOT light",
 					limit: 1,
 				});
 
 				let second = await user.readingQueue({
 					readState: readState as UserStore.ReadState,
-					query: "beacon -light",
+					query: "beacon OR lamp NOT light",
 					limit: 1,
 					cursor: cursorsOf(first).next,
 				});
 
 				return user.readingQueue({
 					readState: readState as UserStore.ReadState,
-					query: "beacon -light",
+					query: "beacon OR lamp NOT light",
 					limit: 1,
 					cursor: cursorsOf(second).prev,
 				});
@@ -673,9 +717,11 @@ describe("the statement a search runs as", () => {
 
 			/**
 			 * The pages after the first seek from a cursor, forwards and then back, and the
-			 * seek's `or` is the clause that would otherwise have the plan merge and sort.
+			 * seek's `or` is the clause that would otherwise have the plan merge and sort. The
+			 * query's own OR group reaches every statement beside it.
 			 */
 			expect(pages).toHaveLength(3);
+			for (let statement of pages) expect(statement.values).toContain("%lamp%");
 			expect(pages[1]?.text).toContain(`"feed_items"."id" < ?`);
 			expect(pages[2]?.text).toContain(`"feed_items"."id" > ?`);
 
@@ -692,10 +738,10 @@ describe("the statement a search runs as", () => {
 		seedFeed(state);
 
 		let [byFeed] = await searchStatements(state, () =>
-			user.readingQueue({ readState: "all", query: "beacon", feedId: FEED_ID }),
+			user.readingQueue({ readState: "all", query: "beacon OR lamp", feedId: FEED_ID }),
 		);
 		let [byFolder] = await searchStatements(state, () =>
-			user.readingQueue({ readState: "all", query: "beacon", folderId: "folder-1" }),
+			user.readingQueue({ readState: "all", query: "beacon OR lamp", folderId: "folder-1" }),
 		);
 
 		if (byFeed === undefined || byFolder === undefined) {
@@ -718,7 +764,7 @@ describe("the statement a search runs as", () => {
 		if (!tag.ok) throw new Error("expected the label to be created");
 
 		let [statement] = await searchStatements(state, () =>
-			user.taggedQueue(tag.tag.id, { query: "beacon light" }),
+			user.taggedQueue(tag.tag.id, { query: "beacon OR lamp light" }),
 		);
 
 		if (statement === undefined) throw new Error("expected a search statement");
@@ -783,6 +829,34 @@ describe("taggedQueue, searched", () => {
 			ok: false,
 			reason: "bad-query",
 		});
+	});
+
+	test("matches a label's posts on either word OR joins, leaves out NOT, and reads a quoted OR as the word", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state);
+		seedItems(state, [
+			{ id: "remix", publishedAt: NOW - DAY_MS, title: "Remix routing" },
+			{ id: "react", publishedAt: NOW - 2 * DAY_MS, title: "React legacy hooks" },
+			{ id: "or-gate", publishedAt: NOW - 3 * DAY_MS, title: "The OR gate" },
+			{ id: "nand-gate", publishedAt: NOW - 4 * DAY_MS, title: "The NAND gate" },
+		]);
+
+		let tag = await user.createTag("Reading");
+		if (!tag.ok) throw new Error("expected the label to be created");
+
+		for (let itemId of ["remix", "react", "or-gate", "nand-gate"]) {
+			let applied = await user.tagItem(itemId, { tagId: tag.tag.id });
+			if (!applied.ok) throw new Error(`expected ${itemId} to be labelled`);
+		}
+
+		expect(ids(await user.taggedQueue(tag.tag.id, { query: "remix OR react" }))).toEqual([
+			"remix",
+			"react",
+		]);
+		expect(ids(await user.taggedQueue(tag.tag.id, { query: "remix OR react NOT legacy" }))).toEqual(
+			["remix"],
+		);
+		expect(ids(await user.taggedQueue(tag.tag.id, { query: '"OR" gate' }))).toEqual(["or-gate"]);
 	});
 });
 
