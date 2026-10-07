@@ -14,9 +14,10 @@ import { env, reset } from "cloudflare:test";
 import { column as c, Database, rawSql, sql, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { ARTICLES_SCHEMA } from "../test/schema.js";
+
 import type { ParsedQuery } from "./query.js";
 
-import { ARTICLES_SCHEMA } from "./fixtures/schema.js";
 import { parseQuery } from "./query.js";
 import { defineSearch } from "./search.js";
 

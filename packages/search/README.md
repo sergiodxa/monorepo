@@ -1,32 +1,69 @@
 # @sdxc/search
 
-Full-text search over SQLite tables an app already declares: query parsing, safe FTS5 and
-`LIKE` matching, field-weighted ranking, highlighting and batched reindexing.
+Full-text search over SQLite tables you already declare: safe query parsing, FTS5 and `LIKE`
+matching, field-weighted ranking, highlighting and batched reindexing.
 
-## Overview
+## Installation
 
-A search box hands the server raw text, and raw text is not safe in either kind of SQLite
-search. FTS5 reads `it's`, `c++`, `AND` and `a:b` as query syntax and fails; `LIKE` reads `%`
-and `_` as wildcards. This package parses the text into terms once, then compiles them so no
-user text reaches FTS5 as syntax or `LIKE` as a wildcard.
+```bash
+npm add @sdxc/search
+```
 
-The package owns logic, never storage: point `defineSearch` at the table that already holds
-the text, declared with `remix/data-table`'s `table()`. With `LIKE` that is all, with no
-migration. FTS5 adds a virtual table and three triggers to the app's own migration (see
-[Storage](#storage)). A search is a query that `Pagination.byOffset` and `Pagination.byKeyset`
-from `@sdxc/pagination` page like any other list, on D1 and on Durable Object SQLite alike.
-
-Two entry points:
-
-| Import               | Contents                                                     | Database code |
-| -------------------- | ------------------------------------------------------------ | ------------- |
-| `@sdxc/search/query` | `parseQuery`, `highlight`, `excerpt` and their types         | None          |
-| `@sdxc/search`       | Everything above, plus `defineSearch`, `SearchQuery`, errors | Yes           |
-
-`@sdxc/search/query` is safe in a browser bundle, so a client highlights with the same code
-the server searched with.
+Tables are declared and queried with `remix/data-table`, from
+[`remix`](https://www.npmjs.com/package/remix). A search is a query that
+[`@sdxc/pagination`](https://www.npmjs.com/package/@sdxc/pagination) pages, fallible calls answer
+with a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and a bad
+query fails with a `ValidationError` from
+[`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate). All install alongside this
+package. It runs on any SQLite `remix/data-table` adapter, Cloudflare D1 and Durable Object
+storage included.
 
 ## Usage
+
+### Parse what somebody typed
+
+Input is text, never query syntax, so `it's`, `c++`, `AND` and `100%` are ordinary words:
+
+```typescript
+import { parseQuery } from "@sdxc/search";
+
+parseQuery(`remix "route pattern" -legacy`);
+// success({ text, terms: [
+//   { text: "remix", phrase: false, prefix: true, exclude: false },
+//   { text: "route pattern", phrase: true, prefix: false, exclude: false },
+//   { text: "legacy", phrase: false, prefix: true, exclude: true },
+// ] })
+
+parseQuery("   "); // success(null): a blank box is no search
+parseQuery("-legacy"); // failure(ValidationError): nothing left to find
+```
+
+### Search a table with `LIKE`
+
+No schema change: point a definition at the table that holds the text.
+
+```typescript
+import { defineSearch } from "@sdxc/search";
+
+import { articles } from "./schema";
+
+const ARTICLE_SEARCH = defineSearch({
+	table: articles,
+	columns: [
+		{ name: "title", weight: 10 },
+		{ name: "summary", weight: 1 },
+	],
+});
+
+let rows = await ARTICLE_SEARCH.query(db, parsed).limit(10).all();
+// articles, best match first, each with a `rank`
+```
+
+### Search with FTS5 and page the results
+
+Add an FTS5 table and its triggers to your migration (see
+[Pattern: Storing an FTS5 index](#pattern-storing-an-fts5-index)), and name it in the
+definition. The query pages like any other:
 
 ```typescript
 import { createPaging, Pagination } from "@sdxc/pagination";
@@ -34,9 +71,6 @@ import { isFailure } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
 import { sql } from "remix/data-table";
 
-import { articles } from "./schema";
-
-/** Articles, ranked so a title hit outranks a tag, and a tag outranks the summary. */
 const ARTICLE_SEARCH = defineSearch({
 	table: articles,
 	columns: [
@@ -47,261 +81,117 @@ const ARTICLE_SEARCH = defineSearch({
 	fts: { table: "articles_fts" },
 });
 
-const PAGING = createPaging({ perPage: 20, maxPerPage: 50 });
+const PAGING = createPaging({ perPage: 20 });
 
 let parsed = parseQuery(url.searchParams.get("q") ?? "");
-if (isFailure(parsed)) return badRequest(parsed.error);
-if (parsed.data === null) return renderEmptySearch();
+if (isFailure(parsed)) return new Response(parsed.error.message, { status: 400 });
 
 let params = PAGING.parse(url.searchParams);
-if (isFailure(params)) return redirectToFirstPage(url);
+if (parsed.data === null || isFailure(params)) return renderEmptySearch();
 
 let page = await Pagination.byOffset(
-	ARTICLE_SEARCH.query(ctx.db, parsed.data).where(sql`"published_at" <= ${Date.now()}`),
+	ARTICLE_SEARCH.query(db, parsed.data).where(sql`"published_at" <= ${Date.now()}`),
 	{ page: params.data.page, perPage: params.data.perPage },
 );
-if (isFailure(page)) return serverError(page.error);
-
-page.data.items; // articles, best match first, each with its `rank`
 ```
 
-Leave out `fts` and the same definition searches with `LIKE`, over the table exactly as it is:
+### Highlight what matched
 
 ```typescript
-const ARTICLE_SEARCH = defineSearch({
-	table: articles,
-	columns: [
-		{ name: "title", weight: 10 },
-		{ name: "summary", weight: 1 },
-	],
-});
+import { excerpt, highlight } from "@sdxc/search/query";
+
+highlight("Remix Route Pattern basics", parsed);
+// [{ text: "Remix", match: true }, { text: " ", match: false },
+//  { text: "Route Pattern", match: true }, { text: " basics", match: false }]
+
+excerpt(article.body, parsed, { words: 24 });
+// { segments, truncatedStart: true, truncatedEnd: false }
 ```
 
-`paginate()` from `@sdxc/pagination` carries every other query parameter into its `Link` URLs,
-so `q` survives paging with no extra code.
+`@sdxc/search/query` imports no database code, so a browser bundle can parse and highlight with
+the code the server searched with.
 
 ## API
 
 ### `parseQuery(input, options?)`
 
-Parses search box text into terms, returning `Result<ParsedQuery | null, ValidationError>`:
-`null` for a blank box, and a `ValidationError` (the one `@sdxc/validate` defines, with its issue
-on `q`) for a query that is too long, holds too many terms, or has nothing left to find.
+Parses search box text into terms, answering `Result<ParsedQuery | null, ValidationError>`.
+Whitespace separates terms, a double-quoted run is a phrase (an unclosed quote closes at the
+end), a leading `-` excludes a term, and the text is NFKC-normalized first. Terms holding no
+letter or number are dropped, and at least one term must be left to find.
 
-```typescript
-parseQuery(`remix "route pattern" -legacy data*`);
-// success({ text, terms: [
-//   { text: "remix", phrase: false, prefix: true, exclude: false },
-//   { text: "route pattern", phrase: true, prefix: false, exclude: false },
-//   { text: "legacy", phrase: false, prefix: true, exclude: true },
-//   { text: "data", phrase: false, prefix: true, exclude: false },
-// ] })
-```
+| Option      | Default | Meaning                                                                           |
+| ----------- | ------- | --------------------------------------------------------------------------------- |
+| `prefix`    | `"all"` | Which words match as prefixes: `"all"`, `"last"` (search as you type) or `"none"` |
+| `maxLength` | `256`   | Characters the normalized query may hold                                          |
+| `maxTerms`  | `8`     | Terms the query may hold, exclusions included                                     |
 
-- Input is text, never syntax. Whitespace separates terms, a double-quoted run is a phrase (an
-  unclosed quote closes at the end), and a leading `-` excludes a term. `AND`, `OR`, `NOT`,
-  `NEAR`, `column:` and parentheses are ordinary words. Text is NFKC-normalized first.
-- Terms holding no letter or number are dropped, since a tokenizer keeps nothing of them.
-- At least one term must be left to find once exclusions are set aside.
-
-| Option      | Default | Meaning                                                                              |
-| ----------- | ------- | ------------------------------------------------------------------------------------ |
-| `prefix`    | `"all"` | Which words match as prefixes: `"all"`, `"last"` (search as you type) or `"none"`    |
-| `maxLength` | `256`   | Characters the normalized query may hold                                             |
-| `maxTerms`  | `8`     | Terms the query may hold, exclusions included; it keeps `LIKE` inside the bind limit |
-
-Phrases always match exactly. A trailing `*` makes its own word a prefix whatever `prefix` says.
+Phrases always match exactly; a trailing `*` makes its word a prefix whatever `prefix` says.
 
 ### `highlight(text, query, options?)`
 
-Splits `text` into `{ text, match }` segments that concatenate back to `text`. Matching mirrors
-`unicode61 remove_diacritics 2`: case and diacritics are ignored, prefix terms match a word's
-start (and mark the whole word), phrases match consecutive words, and the segments keep the text
-as written, so `Résumé` is marked when somebody typed `resume`. Excluded terms never highlight.
-Pass `{ mode: "substring" }` for results found by `LIKE` or a `trigram` index.
-
-```typescript
-highlight("Remix Route Pattern basics", parsed);
-// [{ text: "Remix", match: true }, { text: " ", match: false },
-//  { text: "Route Pattern", match: true }, { text: " basics", match: false }]
-```
+Splits `text` into `{ text, match }` segments that concatenate back to `text`, for rendering
+matches as `<mark>` without building HTML from strings. Case and diacritics are ignored, as
+FTS5's `unicode61 remove_diacritics 2` ignores them, and the segments keep the text as written.
+Excluded terms never highlight. Pass `{ mode: "substring" }` for `LIKE` and `trigram` results.
 
 ### `excerpt(text, query, options?)`
 
-A window of `words` (default 24) whitespace-separated words around the first match, as
+A window of `words` (default 24) words around the first match, highlighted, as
 `{ segments, truncatedStart, truncatedEnd }`. A text with no match yields its opening words.
 
 ### `defineSearch(options)`
 
-Describes a searchable table and returns a frozen `Search` definition. It throws a `RangeError`
-for a description that can never work: empty `columns`, a non-positive weight, a column the
-table lacks, a table that declares a `rank` column, a table without a single-column primary key
-and no `key`, or a non-integer `key` with `fts`.
+Describes a searchable table and returns a frozen definition, which holds no connection, so one
+module-level definition serves every database.
 
-| Option          | Meaning                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------- |
-| `table`         | The app's own `table()` value; a search returns its rows plus `rank`                               |
-| `key`           | The row's identifying column, default the primary key; with `fts`, the integer the `rowid` mirrors |
-| `columns`       | `{ name, weight }[]` in the FTS5 table's declaration order, since `bm25()` weighs by position      |
-| `fts.table`     | The FTS5 virtual table's name; without `fts`, every query runs as `LIKE`                           |
-| `fts.tokenizer` | `"unicode61"` (default, declared with `remove_diacritics 2`) or `"trigram"`                        |
+| Option          | Meaning                                                                                     |
+| --------------- | ------------------------------------------------------------------------------------------- |
+| `table`         | Your `table()` value; a search returns its rows plus `rank`                                 |
+| `key`           | The identifying column, default the primary key; with `fts`, an integer the `rowid` mirrors |
+| `columns`       | `{ name, weight }[]`, in the FTS5 table's column order                                      |
+| `fts.table`     | The FTS5 table's name; without `fts`, every query runs as `LIKE`                            |
+| `fts.tokenizer` | `"unicode61"` (default, declared with `remove_diacritics 2`) or `"trigram"`                 |
 
-A definition holds no connection and no rows, so one module-level definition serves every
-tenant: the `Database` arrives on every call.
+It throws a `RangeError` for a description that can never work: empty `columns`, a non-positive
+weight, a column the table lacks, a table that declares `rank`, no single-column key, or a
+non-integer `key` with `fts`.
 
 ### `search.query(db, query)`
 
-A `SearchQuery` matching `query`. Without `orderBy` it orders by `rank`, then `key`, both
-ascending, so the best match comes first. It implements the `OffsetQuery` and `KeysetQuery`
-contracts `@sdxc/pagination` pages:
+A query matching `query`, ordered by `rank` then key unless `orderBy` says otherwise. `where`
+takes a `remix/data-table` predicate, a `{ column: value }` object or a `sql` fragment;
+`orderBy`, `limit` and `offset` return new queries; `all()` reads rows, decoding JSON and boolean
+columns, and `count()` counts matches. Both reject with a `SearchError`, which `Pagination` turns
+into its `QueryFailedError`.
 
-- `where(input)` takes a `remix/data-table` predicate or `{ column: value }` object over the
-  table's columns or `rank`, or a `sql` fragment for anything the predicates cannot say.
-- `orderBy(column, direction)`, `limit(n)` and `offset(n)` each return a new query.
-- `all()` reads the rows, decoding `c.json()` and `c.boolean()` columns as the table declares
-  them; `count()` counts the matches.
-
-`all()` and `count()` reject with a `SearchError` rather than answering a `Result`, since a
-pager expects a query builder; `Pagination` turns the rejection into its `QueryFailedError`.
+With FTS5, `rank` is `bm25()` with the column weights. With `LIKE`, it is the negated weighted
+count of the columns each term hit. Lower is better under both. A `trigram` index cannot answer a
+term shorter than three characters, so such a query runs as `LIKE`.
 
 ### `search.predicate(query, { alias? })`
 
-The match alone as a `sql` fragment, for a statement the app writes itself — a page read through
-a join table, for instance. It is the `LIKE` clauses qualified to `alias` (default the table's
-name), or `"<alias>"."<key>" in (select "rowid" from <fts> where <fts> match ?)`. It carries no
-`rank`.
+The match alone as a `sql` fragment, qualified to `alias`, for a statement you write yourself,
+such as a page read through a join table. It carries no `rank`.
 
 ### `search.reindex(db, { after?, limit? })`
 
-Writes the next `limit` (default 500) source rows with a key above `after` into the FTS5 index,
-returning `Result<{ indexed, next }, SearchError>`; `next` is the `after` for the following call,
-or `null` once every row is indexed. Each statement is complete on its own and the write is
-`insert or replace` by `rowid`, so a call that fails or runs twice — a job is delivered at least
-once — leaves the index correct. It needs an index that accepts that write, which the
-contentless-delete table below does and an external-content table does not.
+Writes the next `limit` (default 500) rows with a key above `after` into the FTS5 index, answering
+`Result<{ indexed, next }, SearchError>`; pass `next` as the following call's `after` until it is
+`null`. A batch that fails or runs twice leaves the index correct.
 
-### `SearchError` and `ParameterBudgetError`
+### Errors and limits
 
-`SearchError` is every failure of a statement this package built, with the database's error in
-`cause`. `ParameterBudgetError` extends it, carrying `count` and `limit`: D1 and Durable Object
-SQLite bind at most 100 values per statement (`MAX_BOUND_PARAMETERS`), and the query counts its
-values before executing instead of letting the database fail mid-page.
+`SearchError` is any failure of a statement this package built, with the database error in
+`cause`. `ParameterBudgetError` extends it: SQLite on D1 and Durable Objects binds at most 100
+values per statement (`MAX_BOUND_PARAMETERS`), and `LIKE` binds two per term per column, so a
+query over the limit is refused before it runs. `DEFAULT_MAX_QUERY_LENGTH` and
+`DEFAULT_MAX_QUERY_TERMS` are `parseQuery`'s defaults.
 
-## Strategies
+## Pattern: Storing an FTS5 index
 
-### FTS5
-
-```text
-with "search_hits" as (
-  select "rowid" as "search_key", bm25("articles_fts", 10, 6, 1) as "search_rank"
-  from "articles_fts" where "articles_fts" match ?   -- '"remix"* "route pattern" NOT "legacy"*'
-)
-select "articles".*, "search_hits"."search_rank" as "rank"
-from "search_hits" cross join "articles" on "articles"."id" = "search_hits"."search_key"
-where (<filters>) order by "search_hits"."search_rank" asc, "articles"."id" asc limit ? offset ?
-```
-
-Every term is double-quoted with inner quotes doubled, so nothing is read as syntax. The whole
-`MATCH` argument is one bound value however many terms it holds. The CTE makes the FTS table
-the driving table and names the score `search_rank`, so a seek on `rank` compares a plain
-column. Weights are passed to `bm25()` per query, so changing one is a code change.
-
-A `trigram` index cannot answer a term shorter than three characters, so a query holding one
-runs as `LIKE`.
-
-### `LIKE`
-
-Each term becomes `%…%` with `\`, `%` and `_` escaped, tested with `escape '\'`. A phrase
-matches as one substring. `rank` is the negated weighted count of the columns each term hit,
-so `rank asc` puts the best match first under both strategies.
-
-`LIKE` folds case for ASCII only and compares diacritics as written; an app that needs `café`
-to find `cafe` uses FTS5. It binds two values per term per column, so eight terms over three
-columns bind 48, leaving room for filters and a seek.
-
-## Patterns
-
-### Pattern: A search results page
-
-Offset paging gives the numbered pager and total a results page shows; highlight the fields
-the result shows with segments rendered through `remix/component`, which keeps the text escaped
-by construction.
-
-```tsx
-import type { HighlightSegment } from "@sdxc/search/query";
-
-import { excerpt, highlight } from "@sdxc/search/query";
-
-function Highlighted() {
-	return ({ segments }: { segments: HighlightSegment[] }) => (
-		<span>{segments.map((part) => (part.match ? <mark>{part.text}</mark> : part.text))}</span>
-	);
-}
-
-<Highlighted segments={highlight(article.title, parsed)} />;
-<Highlighted segments={excerpt(article.summary, parsed, { words: 24 }).segments} />;
-```
-
-### Pattern: Search narrowing a list's own order
-
-When search only narrows a list, page it by the list's ordering and the search becomes a
-predicate. Keyset paging over a stable order is exact, as for any list.
-
-```typescript
-let page = await Pagination.byKeyset(ITEM_SEARCH.query(db, parsed).where({ feed_id: feedId }), {
-	orderBy: [
-		["published_at", "desc"],
-		["id", "desc"],
-	],
-	cursor: params.data.cursor,
-	limit: 50,
-});
-```
-
-With FTS5, a stable order sorts the whole match set before the first row returns.
-
-### Pattern: Reindexing from a job
-
-```typescript
-let progress = await ARTICLE_SEARCH.reindex(ctx.db, { after: job.data.after, limit: 500 });
-if (isFailure(progress)) return ctx.retry({ delay: "1 minute", cause: progress.error });
-if (progress.data.next !== null)
-	await ctx.enqueue("reindex-articles", { after: progress.data.next });
-```
-
-Batches keep every statement far from D1's 30-second limit and its per-invocation query budget,
-and keep a Durable Object's thread free between alarms. Writes made while a reindex runs are
-kept current by the triggers.
-
-## Relevance and cursors
-
-`bm25()` depends on the whole index's statistics, so any write between two page requests moves
-every score; no cursor makes relevance order snapshot-consistent.
-
-| Pager                                             | When the index changes between pages                                 |
-| ------------------------------------------------- | -------------------------------------------------------------------- |
-| `byOffset`, default order                         | Every row after an insertion shifts; a boundary row repeats or skips |
-| `byKeyset`, `[["rank", "asc"], [key, "asc"]]`     | Only rows whose score crossed the boundary repeat or go missing      |
-| `byKeyset`, a stable order such as `published_at` | Exact                                                                |
-
-Offset is the recommended relevance pager for pages a person reads. Keyset over `(rank, key)`
-suits feeds and APIs: the key breaks ties between identical documents, and a `bm25()` value
-survives the cursor's JSON exactly. A cursor carries no query, so replaying it against another
-`q` seeks on meaningless scores; only a hand-edited URL does that.
-
-## Storage
-
-`LIKE` needs nothing: it searches the table as it is. FTS5 needs two things of the table a
-search is defined on, and guidance below an app copies into its own migration and adapts; the
-package creates nothing.
-
-- **The searched columns are columns of that table**, so each row is one document whose
-  columns `bm25()` weighs together.
-- **Its `key` is an integer** the FTS5 table's `rowid` mirrors. An `INTEGER PRIMARY KEY` is the
-  natural one; never the implicit `rowid` of a table keyed otherwise, which `VACUUM` and an
-  export may renumber.
-
-A table like this one meets both, so the migration indexes it directly:
+FTS5 needs the searched columns on one row of the table you define the search on, and an integer
+key its `rowid` mirrors. A table like this meets both:
 
 ```sql
 CREATE TABLE "articles" (
@@ -314,8 +204,8 @@ CREATE TABLE "articles" (
 );
 ```
 
-The FTS5 table declares the searched columns in the order `columns` lists them, and the
-triggers copy every write into it:
+The migration adds an index holding only the inverted index, and triggers that keep it current
+on every write:
 
 ```sql
 CREATE VIRTUAL TABLE "articles_fts" USING fts5(
@@ -341,63 +231,69 @@ CREATE TRIGGER "articles_fts_delete" AFTER DELETE ON "articles" BEGIN
 END;
 ```
 
-- **Contentless-delete** stores only the inverted index; the text stays in the source row, which
-  is where a search reads it and where highlighting runs. It needs SQLite 3.43, which `workerd`
-  carries.
-- **Triggers** are the one write path, so no repository or deletion site can forget the index.
-  A trigger commits inside the statement that fired it, on D1 and Durable Object SQLite alike.
-- **A `DELETE` by `rowid`, then an `INSERT`** is idempotent, which is what makes the triggers
-  and a batched `reindex` safe to interleave. A trigger's statements take the conflict policy
-  of the statement that fired it, so an upsert (`ON CONFLICT … DO UPDATE`) or a plain
-  `INSERT` on the source turns a trigger's `INSERT OR REPLACE` into a plain insert, which
-  leaves the old terms indexed beside the new ones; the explicit `DELETE` holds under every
-  policy. An external-content table's `'delete'` command corrupts the index for a row it never
-  held, so it is unsafe beside a backfill.
-- **Quoting** is single quotes for option values and double quotes for identifiers, so the
-  migration replays with double-quoted string literals disabled.
-- **`prefix='2 3'`** speeds prefix queries on a large index at the cost of a larger index.
+- The triggers delete before inserting because a trigger takes the conflict policy of the
+  statement that fired it: under an upsert on the source, `INSERT OR REPLACE` would leave the old
+  words indexed.
+- `contentless_delete=1` needs SQLite 3.43, which D1 and Durable Objects carry.
+- When the text is spread across rows or the key is not an integer, keep a search table of one
+  row per searchable thing, with an `INTEGER PRIMARY KEY` and the source's id as a unique column,
+  write it with one upsert per source write, and define the search on it.
+- D1 refuses to export a database holding a virtual table: drop the three triggers, then the
+  index, export, recreate both, and run `reindex` from the start.
 
-### A table that does not fit
+## Pattern: Reindexing from a background job
 
-When the text is spread across rows (a key/value attribute table, say) or the key is a UUID,
-give the table an integer column of its own (`"search_id" INTEGER NOT NULL UNIQUE`) and use it as
-`key`, or, when the text is not on one row at all, keep a search document table: one row per
-searchable thing with an `INTEGER PRIMARY KEY`, the source's id as a `UNIQUE` column and the
-searched text as columns, written with one upsert wherever the source is written. Define the
-search on that table, and filter or join back to the source by its id.
-
-### Exporting a D1 database
-
-`wrangler d1 export` refuses a database holding a virtual table. Drop the triggers first, since
-a trigger left behind fails every write to the source, then the index; export; recreate both
-from the migration; and run `reindex` from the start.
-
-```text
-DROP TRIGGER "articles_fts_insert";
-DROP TRIGGER "articles_fts_update";
-DROP TRIGGER "articles_fts_delete";
-DROP TABLE "articles_fts";
+```typescript
+let progress = await ARTICLE_SEARCH.reindex(db, { after: job.data.after, limit: 500 });
+if (isFailure(progress)) return retryLater(progress.error);
+if (progress.data.next !== null) await enqueue("reindex-articles", { after: progress.data.next });
 ```
 
-### Multi-tenancy
+Batches keep every statement short, and writes made while a reindex runs stay current through the
+triggers.
 
-Tenancy inside one database is the caller's `where`, as for every list. `where` cannot fix one
-thing: `bm25()` statistics are per index, so tenants sharing one FTS5 table share document
-frequencies, and a term's score leaks how common it is elsewhere. A database per tenant has no
-such channel; a shared D1 that cares keeps an index per tenant.
+## Pattern: Search narrowing a list's own order
 
-## Related Packages
+When search only narrows a list, page it by the list's ordering; keyset paging over a stable order
+is exact, while relevance order shifts whenever the index changes between pages.
 
-- [`@sdxc/pagination`](../pagination/README.md) — the offset and keyset pagers a `SearchQuery` plugs into
-- [`@sdxc/validate`](../validate/README.md) — the `ValidationError` `parseQuery` fails with
-- [`@sdxc/data-table-d1`](../data-table-d1/README.md) and [`@sdxc/data-table-sqlstorage`](../data-table-sqlstorage/README.md) — the adapters a search runs through
+```typescript
+let page = await Pagination.byKeyset(ITEM_SEARCH.query(db, parsed).where({ feed_id: feedId }), {
+	orderBy: [
+		["published_at", "desc"],
+		["id", "desc"],
+	],
+	cursor: params.data.cursor,
+	limit: 50,
+});
+```
 
-## Tips
+## Versioning
 
-- Parse once per request and hand the same `ParsedQuery` to the query and to `highlight`, so
-  what is marked is what was searched.
-- Answer a `ValidationError` from `parseQuery` with `400`, and a failed page with `500`, the same
-  split `@sdxc/pagination` draws for cursors.
-- Keep definitions at module scope; they are configuration, and a mistake throws at load.
-- Reach for `trigram` when substring matching matters more than word relevance; it costs a much
-  larger index.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/search": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
+
+## License
+
+MIT
+
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)

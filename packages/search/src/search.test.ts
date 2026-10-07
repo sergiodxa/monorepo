@@ -21,11 +21,12 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { column as c, Database, eq, gt, inList, lt, rawSql, sql, table } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { ARTICLES_SCHEMA } from "../test/schema.js";
+
 import type { ParsedQuery, ParseQueryOptions } from "./query.js";
 import type { ReindexProgress } from "./search.js";
 
 import { ParameterBudgetError, SearchError } from "./errors.js";
-import { ARTICLES_SCHEMA } from "./fixtures/schema.js";
 import { parseQuery } from "./query.js";
 import { defineSearch } from "./search.js";
 

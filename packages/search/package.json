@@ -1,8 +1,7 @@
 {
 	"name": "@sdxc/search",
 	"version": "0.0.1",
-	"private": true,
-	"description": "Full-text search over SQLite tables an app declares: query parsing, safe FTS5 and LIKE matching, field weights, highlighting and batched reindexing",
+	"description": "Full-text search over SQLite tables you already declare: safe query parsing, FTS5 and LIKE matching, field-weighted ranking, highlighting and batched reindexing",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
