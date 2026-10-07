@@ -9,8 +9,9 @@
 
 import type { Handle } from "remix/component";
 
-import { bg } from "@sdxc/u/color";
+import { bg, borderEdge } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
+import { dark, light } from "@sdxc/u/responsive";
 import { p } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
 import { Highlight } from "@sdxc/ui";
@@ -24,8 +25,8 @@ interface SearchResultProps {
 	item: SearchViewModel.Item;
 	size?: "sm" | "lg";
 	/**
-	 * Makes the row an `option` with this id, tinted while hovered or chosen, so a combobox
-	 * can point `aria-activedescendant` at it.
+	 * Makes the row an `option` with this id, tinted while hovered or chosen and marked with a
+	 * brand bar on its leading edge while chosen, so a combobox can point at it.
 	 */
 	optionId?: string;
 }
@@ -50,8 +51,17 @@ export function SearchResult(handle: Handle<SearchResultProps>) {
 						? [
 								p(2),
 								rounded("md"),
-								hover(bg("neutral.bg-tint-hover")),
-								when('&[aria-selected="true"]', bg("neutral.bg-tint-hover")),
+								borderEdge("inline-start", { width: 2, color: "transparent" }),
+								/**
+								 * The panel is the lightest neutral in light mode, so a neutral step is lost
+								 * on it; a brand wash reads at a glance and keeps the green title at 4.7:1.
+								 */
+								hover([light(bg("brand.bg-tint-hover")), dark(bg("neutral.bg-tint-hover"))]),
+								when('&[aria-selected="true"]', [
+									light(bg("brand.bg-tint-hover")),
+									dark(bg("neutral.bg-tint-hover")),
+									borderEdge("inline-start", { color: "brand" }),
+								]),
 							]
 						: undefined
 				}
