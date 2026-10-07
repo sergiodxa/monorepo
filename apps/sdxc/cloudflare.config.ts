@@ -39,10 +39,12 @@ export default defineConfig({
 		/**
 		 * `CACHE` holds what the site reads back from GitHub — the changelog, and who funds
 		 * the work; the rest renders from the deploy, and each page serves its cached copy
-		 * when a call fails. The optional `GITHUB_TOKEN` secret is typed in `config/env.d.ts`.
+		 * when a call fails. A deploy keeps exactly the secrets declared here, so
+		 * `GITHUB_TOKEN`, which the sponsor refresh needs, survives every release.
 		 */
 		env: {
 			CACHE: bindings.kv({ id: "006c6214d1d6469787114fe5b30e6e41" }),
+			GITHUB_TOKEN: bindings.secret(),
 		},
 	},
 });
