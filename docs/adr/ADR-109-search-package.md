@@ -696,8 +696,11 @@ and render without building HTML from strings.
 - The adapters read rows back from a statement opening with `WITH`, which the FTS statement
   relies on; a statement opening any other way with a CTE would come back as a write.
 - D1 has blocked `sqlite_version()`, so its SQLite version is not observable from a query;
-  contentless-delete support on D1 is established by the Phase 1 workers test, and by a
-  migration applied to a preview database before the blog's production one.
+  contentless-delete support was established on 2026-10-07 against a throwaway production D1
+  database: the blog's migrations 0000–0006 applied, and with the recommended schema an
+  upsert, an update and a delete each left exactly the current text indexed, `NOT`, prefix
+  and diacritic-folding matches answered correctly, `bm25()` ranked in both the CTE and the
+  correlated-subquery form, and `integrity-check` passed.
 - `SearchQuery` ships as an interface; the class behind it stays internal, so consumers
   compose it only through `search.query()`.
 - The FTS statement joins with `cross join`, which fixes the CTE as SQLite's outer loop
