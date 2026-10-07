@@ -33,4 +33,14 @@ export const PROFILE = {
 	youtube: {
 		profile: "https://www.youtube.com/sergiodxa",
 	},
+
+	/** One-off tips, for a reader who would rather give once than sponsor monthly. */
+	paypal: {
+		/** Takes an amount and currency as one more path segment, such as `10USD`. */
+		profile: "https://www.paypal.com/paypalme/sergiodxa",
+	},
+
+	kofi: {
+		profile: "https://ko-fi.com/sergiodxa",
+	},
 } as const;

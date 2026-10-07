@@ -16,7 +16,7 @@ Production URL: https://sergiodxa.com
 | Service     | Binding                                               | Purpose                                     |
 | ----------- | ----------------------------------------------------- | ------------------------------------------- |
 | D1 Database | `DB`                                                  | Blog content and CMS data                   |
-| KV          | `CACHE`                                               | Response and data caching                   |
+| KV          | `CACHE`                                               | Response, data and sponsor roster caching   |
 | KV          | `AUTH`                                                | Authentication/session state                |
 | KV          | `REDIRECTS`                                           | URL redirect mappings                       |
 | R2          | `BACKUPS`                                             | Database backup storage                     |
@@ -25,6 +25,7 @@ Production URL: https://sergiodxa.com
 | Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64  |
 | Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
 | Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
+| Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster     |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Assets      | N/A                                                   | Static assets served from `build/client`    |
 
@@ -72,6 +73,11 @@ Smart Placement and Observability are enabled.
   disposable-email check, and StopForumSpam's free lookup). A request scored as spam is
   discarded as if sent; an uncertain one arrives tagged `[Possible spam]` with its signals.
   An unset inbox makes the form report a failure.
+- Sponsors page (`/sponsors`): why sponsoring helps, GitHub Sponsors, one-off PayPal ($5,
+  $10, $20) and Ko-fi tips, then current sponsors named with large avatars and past ones as
+  a wall of small avatars. A job every six hours stores GitHub's public roster in `CACHE`
+  with `GITHUB_TOKEN` (no scopes needed); each list draws only when it names someone. The
+  short `/sponsor` link and the card under every post lead here.
 
 ## Routes
 

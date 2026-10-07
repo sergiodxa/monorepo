@@ -20,7 +20,10 @@ import rss from "~/routes/rss";
 export default route({
 	feed: get("/"),
 	colors: get("/colors"),
+	/** The short sponsor URL shared in the wild, which redirects to `sponsors`. */
 	sponsor: get("/sponsor"),
+	/** The case for sponsoring, and who sponsors the author now and did before. */
+	sponsors: get("/sponsors"),
 
 	wellKnown: route({
 		webFinger: get("/.well-known/webfinger"),

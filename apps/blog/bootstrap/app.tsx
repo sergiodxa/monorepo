@@ -198,6 +198,10 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		lazy(() => import("~/app/http/controllers/sponsor")),
 	);
 	router.map(
+		routes.sponsors,
+		lazy(() => import("~/app/http/controllers/sponsors")),
+	);
+	router.map(
 		routes.sitemap,
 		lazy(() => import("~/app/http/controllers/sitemap")),
 	);

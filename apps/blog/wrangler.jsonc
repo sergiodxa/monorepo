@@ -103,9 +103,10 @@
 		"producers": [{ "binding": "QUEUE", "queue": "blog-jobs" }],
 	},
 	// Every quarter hour, the job map's `webmentions.scheduled` sends the Webmentions of
-	// posts whose scheduled publish date has arrived. Kept equal to the job's `cron`, which
+	// posts whose scheduled publish date has arrived, and every six hours `sponsors.refresh`
+	// stores the sponsor roster. Kept equal to the jobs' `cron`, which
 	// `app/jobs/dispatcher.test.ts` checks.
-	"triggers": { "crons": ["*/15 * * * *"] },
+	"triggers": { "crons": ["*/15 * * * *", "0 */6 * * *"] },
 
 	"d1_databases": [
 		{

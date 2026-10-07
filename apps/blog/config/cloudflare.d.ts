@@ -59,6 +59,11 @@ declare global {
 			EMAIL?: SendEmail;
 			/** Set with `bunx wrangler secret put SUPPORT_INBOX`; unset keeps the form failing closed. */
 			SUPPORT_INBOX?: string;
+			/**
+			 * Set with `bunx wrangler secret put GITHUB_TOKEN`; a token with no scopes reads the
+			 * public sponsor roster, and unset keeps the stored roster unrefreshed.
+			 */
+			GITHUB_TOKEN?: string;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
 			COOKIE_SESSION_SECRET: SecretsStoreSecret;

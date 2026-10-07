@@ -29,4 +29,8 @@ export default jobs({
 		/** Sends for posts whose scheduled publish date has arrived since the last run. */
 		scheduled: job({ cron: "*/15 * * * *" }),
 	},
+	sponsors: {
+		/** Stores the public sponsor roster `/sponsors` renders, four times a day. */
+		refresh: job({ cron: "0 */6 * * *" }),
+	},
 });

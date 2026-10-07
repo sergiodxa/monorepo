@@ -254,12 +254,12 @@ export function PostView() {
 							</p>
 						</div>
 						<LinkButton
-							href={PROFILE.github.sponsor}
+							href={routes.sponsors.href()}
 							color="brand"
 							size="lg"
 							mix={[shrink(0), weight("bold")]}
 						>
-							Sponsor me on GitHub
+							Become a sponsor
 						</LinkButton>
 					</Card>
 
