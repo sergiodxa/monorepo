@@ -20,10 +20,9 @@ import { withBundleCache } from "~/app/http/caching";
 import { siteCache } from "~/app/services/cache";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
-import Band from "~/resources/components/band";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
-import Sponsors from "~/resources/components/sponsors";
+import { sponsorTags } from "~/resources/components/sponsors";
 import philosophySource from "~/resources/content/philosophy.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -48,17 +47,9 @@ export default createAction(routes.philosophy, async (ctx) => {
 
 			{/* Each band tints the full width, so the cap belongs on the content inside one. */}
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
-				{toRemix(content.data, { components: LANDING_COMPONENTS })}
-
-				{/*
-				 * The people funding the work close the argument, since it is their argument too.
-				 * With nobody to name, the page ends on the argument itself.
-				 */}
-				{roster.current.length > 0 ? (
-					<Band>
-						<Sponsors sponsors={roster.current} />
-					</Band>
-				) : null}
+				{toRemix(content.data, {
+					components: { ...LANDING_COMPONENTS, ...sponsorTags(roster.current) },
+				})}
 			</main>
 		</DocumentLayout>,
 	);

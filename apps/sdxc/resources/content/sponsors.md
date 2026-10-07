@@ -3,8 +3,9 @@
 
 # Fund the work behind sdxc
 
-{% $packageCount %} packages, their guides and their releases are written and maintained by one
-person. Sponsoring pays for that time, and keeps every one of them maintained.
+{% $packageCount %} packages, their guides and their releases are maintained by one person working
+alongside AI coding agents. Sponsoring pays for both the hours and the tokens, and keeps every
+package maintained.
 
 <actions cta-href="https://github.com/sponsors/sergiodxa" cta-label="Sponsor on GitHub" alt-href="/philosophy" alt-label="Read the philosophy" />
 

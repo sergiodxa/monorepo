@@ -100,6 +100,9 @@ export const TAGS = {
 
 	"package-groups": { content: "none", attributes: s.object({ source: s.enum_(["registry"]) }) },
 
+	/** The people funding the work now, read per request, so the page supplies its component. */
+	"current-sponsors": { content: "none" },
+
 	note: {
 		content: "blocks",
 		attributes: s.object({ kind: s.optional(s.enum_(["info", "caution"])) }),

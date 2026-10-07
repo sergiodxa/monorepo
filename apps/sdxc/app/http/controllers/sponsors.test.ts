@@ -75,6 +75,26 @@ describe("GET /sponsors", () => {
 	});
 });
 
+describe("GET /", () => {
+	test("names the current sponsors before the closing call, and none of the past ones", async () => {
+		await store({ current: [sponsor("ada")], past: [sponsor("grace")] });
+
+		let body = await (await fetchApp("/")).text();
+		let named = body.indexOf("ada the sponsor");
+
+		expect(named).toBeGreaterThan(-1);
+		expect(named).toBeLessThan(body.indexOf('id="start"'));
+		expect(body).not.toContain("grace the sponsor");
+	});
+
+	test("closes up around the band while nobody sponsors the work", async () => {
+		let body = await (await fetchApp("/")).text();
+
+		expect(body).not.toContain("People who fund this work");
+		expect(body).not.toContain("current-sponsors");
+	});
+});
+
 describe("GET /philosophy", () => {
 	test("names the current sponsors and points at the sponsors page", async () => {
 		await store({ current: [sponsor("ada")], past: [sponsor("grace")] });

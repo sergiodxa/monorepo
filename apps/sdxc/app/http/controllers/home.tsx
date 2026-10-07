@@ -14,9 +14,12 @@ import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { readOptionSelections } from "~/app/http/cookies";
+import { siteCache } from "~/app/services/cache";
 import { readContent } from "~/app/services/content";
+import { readStoredSponsors } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
+import { sponsorTags } from "~/resources/components/sponsors";
 import homeSource from "~/resources/content/home.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -33,6 +36,8 @@ export default createAction(routes.home, async (ctx) => {
 		throw content.error;
 	}
 
+	let roster = await readStoredSponsors(siteCache());
+
 	return ctx.render(
 		<DocumentLayout
 			title="sdxc"
@@ -44,7 +49,9 @@ export default createAction(routes.home, async (ctx) => {
 
 			{/* Each band tints the full width, so the cap belongs on the content inside one. */}
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
-				{toRemix(content.data, { components: LANDING_COMPONENTS })}
+				{toRemix(content.data, {
+					components: { ...LANDING_COMPONENTS, ...sponsorTags(roster.current) },
+				})}
 			</main>
 		</DocumentLayout>,
 	);

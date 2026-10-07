@@ -461,6 +461,8 @@ scheme where the number carries no compatibility meaning.
 </split>
 </section-block>
 
+<current-sponsors />
+
 <section-block id="start" title="Take one, or take the set." tone="grid" align="center">
 
 Start with the guides, or go straight to the package you came for.

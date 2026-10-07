@@ -5,12 +5,14 @@
  * carries no tiers, no perks and no sizes: everyone here is on the same row.
  *
  * With nobody to name the block draws nothing at all, which is what keeps a page
- * whose sponsor list could not be read from showing an empty heading.
+ * whose sponsor list could not be read from showing an empty heading. A content file
+ * places it with the `current-sponsors` tag, which `sponsorTags` supplies per request.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixOptions } from "@sdxc/markdown/remix";
 import type { Handle } from "remix/component";
 
 import { HeartIcon } from "@sdxc/icons";
@@ -22,7 +24,9 @@ import { text, tracking, weight } from "@sdxc/u/typography";
 import { Avatar } from "@sdxc/ui";
 
 import type { Sponsor } from "~/app/services/sponsors";
+import type { MarkdownProps } from "~/resources/components/markdown-props";
 
+import Band from "~/resources/components/band";
 import routes from "~/routes/web";
 
 /** What the block is titled, everywhere it appears. */
@@ -78,5 +82,26 @@ export default function Sponsors(handle: Handle<Sponsors.Props>) {
 				</a>
 			</section>
 		);
+	};
+}
+
+/**
+ * The `current-sponsors` tag for one request, bound to the sponsors it names, so a content
+ * file decides where on the page the band sits. The band draws nothing while the list is
+ * empty, so the page closes up around it.
+ *
+ * @param sponsors The current sponsors, from the stored roster.
+ * @returns The tag's component, to spread over the page's component map.
+ */
+export function sponsorTags(sponsors: Sponsor[]): NonNullable<RemixOptions["components"]> {
+	return {
+		"current-sponsors": function CurrentSponsors(_handle: Handle<MarkdownProps>) {
+			return () =>
+				sponsors.length > 0 ? (
+					<Band>
+						<Sponsors sponsors={sponsors} />
+					</Band>
+				) : null;
+		},
 	};
 }

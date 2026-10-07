@@ -128,3 +128,5 @@ record. A set of habits is only evidence if it is not a highlight reel, so the d
 taken back are written down beside the ones that held.
 
 </section-block>
+
+<current-sponsors />
