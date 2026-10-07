@@ -1,7 +1,7 @@
 /**
- * Tests for `parseQuery`, `highlight` and `excerpt`: the inputs FTS5 rejects as syntax all
- * parse as plain terms, prefix rules and limits hold, and highlighting maps folded matches
- * back onto the text exactly as written.
+ * Tests for `parseQuery`, `highlight` and `excerpt`: the Lucene-style syntax and its lenient
+ * fallbacks, the inputs FTS5 rejects as syntax parsed as plain terms, prefix rules and
+ * limits, and highlighting mapped back onto the text exactly as written.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { describe, expect, test } from "vitest";
 
-import type { ParsedQuery } from "./query.js";
+import type { ParsedQuery, SearchClause, SearchTerm } from "./query.js";
 
 import { excerpt, highlight, parseQuery } from "./query.js";
 
@@ -22,16 +22,37 @@ function parsed(input: string, options?: Parameters<typeof parseQuery>[1]): Pars
 	return query;
 }
 
+/** A term with the defaults most tests expect: a word, a prefix, in every column. */
+function word(text: string, overrides: Partial<SearchTerm> = {}): SearchTerm {
+	return { text, phrase: false, prefix: true, field: null, ...overrides };
+}
+
+/** A clause of one term. */
+function one(term: SearchTerm, exclude = false): SearchClause {
+	return { terms: [term], exclude };
+}
+
+/** The text of every term, clause by clause, with excluded clauses marked by a leading `-`. */
+function shape(query: ParsedQuery): string[] {
+	return query.clauses.map(
+		(clause) => (clause.exclude ? "-" : "") + clause.terms.map((term) => term.text).join("|"),
+	);
+}
+
+/** Declared fields and filters the qualifier tests parse with. */
+const QUALIFIED = { fields: ["title"], filters: ["tag", "kind"] } as const;
+
 describe("parseQuery", () => {
 	test("reads words, phrases, exclusions and a trailing star", () => {
 		expect(parsed(`remix "route pattern" -legacy data*`)).toEqual({
 			text: `remix "route pattern" -legacy data*`,
-			terms: [
-				{ text: "remix", phrase: false, prefix: true, exclude: false },
-				{ text: "route pattern", phrase: true, prefix: false, exclude: false },
-				{ text: "legacy", phrase: false, prefix: true, exclude: true },
-				{ text: "data", phrase: false, prefix: true, exclude: false },
+			clauses: [
+				one(word("remix")),
+				one(word("route pattern", { phrase: true, prefix: false })),
+				one(word("legacy"), true),
+				one(word("data")),
 			],
+			filters: [],
 		});
 	});
 
@@ -40,59 +61,65 @@ describe("parseQuery", () => {
 		expect(unwrap(parseQuery("   \n\t"))).toBeNull();
 	});
 
-	test.each([`foo"`, "AND", "OR", "NOT", "NEAR", "a:b", "c++", "it's", "(x)", "x^y"])(
-		"reads %s as a plain term",
-		(input) => {
-			let query = parsed(input);
-			expect(query.terms.every((term) => !term.exclude)).toBe(true);
-			expect(query.terms.length).toBeGreaterThan(0);
-		},
-	);
+	test.each([
+		`foo"`,
+		"and",
+		"or",
+		"not",
+		"NEAR",
+		"a:b",
+		"c++",
+		"it's",
+		"(x)",
+		"x^y",
+		"https://x.dev",
+	])("reads %s as a plain term", (input) => {
+		let query = parsed(input);
+		expect(query.clauses.every((clause) => !clause.exclude)).toBe(true);
+		expect(query.clauses.length).toBeGreaterThan(0);
+	});
 
 	test("closes an unclosed quote at the end of the text", () => {
-		expect(parsed(`"route pattern`).terms).toEqual([
-			{ text: "route pattern", phrase: true, prefix: false, exclude: false },
+		expect(parsed(`"route pattern`).clauses).toEqual([
+			one(word("route pattern", { phrase: true, prefix: false })),
 		]);
 	});
 
 	test("keeps a quote inside a word as part of the word", () => {
-		expect(parsed(`foo"bar`).terms[0]?.text).toBe(`foo"bar`);
+		expect(shape(parsed(`foo"bar`))).toEqual([`foo"bar`]);
 	});
 
 	test("collapses whitespace inside a phrase", () => {
-		expect(parsed(`"  route \t pattern  "`).terms[0]?.text).toBe("route pattern");
+		expect(shape(parsed(`"  route \t pattern  "`))).toEqual(["route pattern"]);
 	});
 
 	test("excludes a phrase", () => {
-		expect(parsed(`remix -"old api"`).terms[1]).toEqual({
-			text: "old api",
-			phrase: true,
-			prefix: false,
-			exclude: true,
-		});
+		expect(parsed(`remix -"old api"`).clauses[1]).toEqual(
+			one(word("old api", { phrase: true, prefix: false }), true),
+		);
 	});
 
 	test("drops terms holding no letter or number", () => {
-		expect(parsed(`remix ++ "--" - *`).terms.map((term) => term.text)).toEqual(["remix"]);
+		expect(shape(parsed(`remix ++ "--" - *`))).toEqual(["remix"]);
 	});
 
 	test("NFKC-normalizes the text first", () => {
-		expect(parsed("ｒｅｍｉｘ").terms[0]?.text).toBe("remix");
+		expect(shape(parsed("ｒｅｍｉｘ"))).toEqual(["remix"]);
 	});
 
 	test("prefixes only the last word with prefix: last", () => {
-		let terms = parsed("route pat", { prefix: "last" }).terms;
+		let terms = parsed("route pat", { prefix: "last" }).clauses.flatMap((clause) => clause.terms);
 		expect(terms.map((term) => term.prefix)).toEqual([false, true]);
 	});
 
 	test("prefixes nothing with prefix: none, except a starred word", () => {
-		let terms = parsed("route pat*", { prefix: "none" }).terms;
+		let terms = parsed("route pat*", { prefix: "none" }).clauses.flatMap((clause) => clause.terms);
 		expect(terms.map((term) => term.prefix)).toEqual([false, true]);
 	});
 
 	test("refuses a query with nothing left to find", () => {
-		for (let input of ["-legacy", "-a -b", "++", `""`]) {
-			let result = parseQuery(input);
+		for (let input of ["-legacy", "-a -b", "++", `""`, "NOT legacy", "-tag:remix"]) {
+			let result = parseQuery(input, QUALIFIED);
 			expect(isFailure(result) && result.error).toBeInstanceOf(ValidationError);
 		}
 	});
@@ -103,16 +130,118 @@ describe("parseQuery", () => {
 		expect(isFailure(parseQuery("abcdef", { maxLength: 5 }))).toBe(true);
 	});
 
-	test("refuses a query with more terms than maxTerms", () => {
+	test("refuses more terms and filter values than maxTerms", () => {
 		expect(isFailure(parseQuery("a b c d e f g h i"))).toBe(true);
 		expect(isFailure(parseQuery("a b c d e f g h"))).toBe(false);
-		expect(isFailure(parseQuery("a b c", { maxTerms: 2 }))).toBe(true);
+		expect(isFailure(parseQuery("a OR b c", { maxTerms: 2 }))).toBe(true);
+		expect(isFailure(parseQuery("a tag:b tag:c", { ...QUALIFIED, maxTerms: 2 }))).toBe(true);
 	});
 
 	test("names the query parameter in the issue", () => {
 		let result = parseQuery("-legacy");
 		if (!isFailure(result)) throw new Error("expected a failure");
 		expect(result.error.issues[0]?.path).toEqual(["q"]);
+	});
+
+	describe("operators", () => {
+		test("joins the terms on each side of OR into one clause", () => {
+			expect(shape(parsed("remix OR react router"))).toEqual(["remix|react", "router"]);
+			expect(shape(parsed("a OR b OR c d"))).toEqual(["a|b|c", "d"]);
+		});
+
+		test("reads NOT as an exclusion", () => {
+			expect(shape(parsed("remix NOT legacy"))).toEqual(["remix", "-legacy"]);
+			expect(shape(parsed(`remix NOT "old api"`))).toEqual(["remix", "-old api"]);
+		});
+
+		test("accepts + and AND as the default", () => {
+			expect(shape(parsed("+remix AND router"))).toEqual(["remix", "router"]);
+		});
+
+		test("reads operators only in capitals, and never when quoted", () => {
+			expect(shape(parsed("remix or react"))).toEqual(["remix", "or", "react"]);
+			expect(shape(parsed(`remix "OR" react`))).toEqual(["remix", "OR", "react"]);
+			expect(shape(parsed("-OR remix"))).toEqual(["-OR", "remix"]);
+		});
+
+		test("falls back to AND where OR cannot apply", () => {
+			expect(shape(parsed("OR remix"))).toEqual(["remix"]);
+			expect(shape(parsed("remix OR"))).toEqual(["remix"]);
+			expect(shape(parsed("remix OR -legacy"))).toEqual(["remix", "-legacy"]);
+			expect(shape(parsed("-legacy OR remix"))).toEqual(["-legacy", "remix"]);
+			expect(shape(parsed("remix OR OR react"))).toEqual(["remix|react"]);
+			expect(shape(parsed("remix OR ++ OR react"))).toEqual(["remix|react"]);
+		});
+
+		test("lets an OR group mix phrases and words", () => {
+			expect(parsed(`"route pattern" OR router`).clauses).toEqual([
+				{
+					terms: [word("route pattern", { phrase: true, prefix: false }), word("router")],
+					exclude: false,
+				},
+			]);
+		});
+	});
+
+	describe("fields and filters", () => {
+		test("scopes a term to a declared field", () => {
+			expect(parsed(`title:remix title:"route pattern"`, QUALIFIED).clauses).toEqual([
+				one(word("remix", { field: "title" })),
+				one(word("route pattern", { phrase: true, prefix: false, field: "title" })),
+			]);
+		});
+
+		test("reads a declared filter's exact value, untokenized", () => {
+			expect(parsed(`remix tag:"React Router" kind:tutorial tag:c++`, QUALIFIED).filters).toEqual([
+				{ name: "tag", values: ["React Router"], exclude: false },
+				{ name: "kind", values: ["tutorial"], exclude: false },
+				{ name: "tag", values: ["c++"], exclude: false },
+			]);
+		});
+
+		test("accepts a query made only of filters", () => {
+			let query = parsed("tag:remix", QUALIFIED);
+			expect(query.clauses).toEqual([]);
+			expect(query.filters).toEqual([{ name: "tag", values: ["remix"], exclude: false }]);
+		});
+
+		test("excludes and alternates filters like terms", () => {
+			expect(parsed("remix -tag:legacy tag:a OR tag:b", QUALIFIED).filters).toEqual([
+				{ name: "tag", values: ["legacy"], exclude: true },
+				{ name: "tag", values: ["a", "b"], exclude: false },
+			]);
+		});
+
+		test("matches declared names case-insensitively and lowercases them", () => {
+			let query = parsed("Title:remix TAG:x", QUALIFIED);
+			expect(query.clauses[0]?.terms[0]?.field).toBe("title");
+			expect(query.filters[0]?.name).toBe("tag");
+		});
+
+		test("keeps an undeclared or empty qualifier as text", () => {
+			expect(shape(parsed("body:remix https://x.dev tag:", QUALIFIED))).toEqual([
+				"body:remix",
+				"https://x.dev",
+				"tag:",
+			]);
+		});
+
+		test("reads OR between a filter and a term as AND", () => {
+			let query = parsed("tag:remix OR react", QUALIFIED);
+			expect(shape(query)).toEqual(["react"]);
+			expect(query.filters).toEqual([{ name: "tag", values: ["remix"], exclude: false }]);
+		});
+
+		test("keeps OR between different filters as AND", () => {
+			expect(parsed("tag:a OR kind:b", QUALIFIED).filters).toEqual([
+				{ name: "tag", values: ["a"], exclude: false },
+				{ name: "kind", values: ["b"], exclude: false },
+			]);
+		});
+
+		test("joins scoped and unscoped terms with OR", () => {
+			expect(shape(parsed("title:remix OR react", QUALIFIED))).toEqual(["remix|react"]);
+		});
 	});
 });
 
@@ -181,6 +310,39 @@ describe("highlight", () => {
 	test("merges overlapping matches", () => {
 		expect(highlight("remix router", parsed(`remix "remix router"`))).toEqual([
 			{ text: "remix router", match: true },
+		]);
+	});
+
+	test("marks every alternative of an OR", () => {
+		expect(highlight("Remix and React", parsed("remix OR react"))).toEqual([
+			{ text: "Remix", match: true },
+			{ text: " and ", match: false },
+			{ text: "React", match: true },
+		]);
+	});
+
+	test("marks a scoped term only in the field it names", () => {
+		let query = parsed("title:remix router", { fields: ["title"] });
+		expect(highlight("Remix router", query, { field: "title" })).toEqual([
+			{ text: "Remix", match: true },
+			{ text: " ", match: false },
+			{ text: "router", match: true },
+		]);
+		expect(highlight("Remix router", query, { field: "body" })).toEqual([
+			{ text: "Remix ", match: false },
+			{ text: "router", match: true },
+		]);
+		expect(highlight("Remix router", query)).toEqual([
+			{ text: "Remix ", match: false },
+			{ text: "router", match: true },
+		]);
+	});
+
+	test("never marks a filter value", () => {
+		let query = parsed("remix tag:react", { filters: ["tag"] });
+		expect(highlight("Remix with React", query)).toEqual([
+			{ text: "Remix", match: true },
+			{ text: " with React", match: false },
 		]);
 	});
 

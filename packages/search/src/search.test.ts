@@ -73,6 +73,27 @@ const ARTICLE_LIKE = defineSearch({
 	],
 });
 
+/** The FTS5 definition with `title` declared as a field, for scoped terms. */
+const ARTICLE_FIELDS = defineSearch({
+	table: articleTable,
+	columns: [
+		{ name: "title", weight: 10, field: "Title" },
+		{ name: "tags", weight: 6 },
+		{ name: "summary", weight: 1 },
+	],
+	fts: { table: "articles_fts" },
+});
+
+/** The same fields searched with `LIKE`. */
+const ARTICLE_FIELDS_LIKE = defineSearch({
+	table: articleTable,
+	columns: [
+		{ name: "title", weight: 10, field: "title" },
+		{ name: "tags", weight: 6 },
+		{ name: "summary", weight: 1 },
+	],
+});
+
 /** One article the fixtures insert. */
 interface ArticleSeed {
 	id: number;
@@ -183,12 +204,22 @@ describe.each(ADAPTERS)("defineSearch over %s", (_name, open) => {
 			expect(ids(await ARTICLE_SEARCH.query(db, q(`"patterns route"`)).all())).toEqual([]);
 		});
 
-		test.each([`it's`, `c++`, `AND`, `OR`, `a:b`, `foo"`, `NEAR(x)`, `100%`, `-x remix`])(
-			"runs %s as text without a syntax error",
-			async (input) => {
-				await expect(ARTICLE_SEARCH.query(db, q(input)).all()).resolves.toBeInstanceOf(Array);
-			},
-		);
+		test.each([
+			`it's`,
+			`c++`,
+			`and`,
+			`or`,
+			`remix AND edge`,
+			`remix OR NOT`,
+			`a:b`,
+			`foo"`,
+			`NEAR(x)`,
+			`100%`,
+			`-x remix`,
+			`(remix)`,
+		])("runs %s as text without a syntax error", async (input) => {
+			await expect(ARTICLE_SEARCH.query(db, q(input)).all()).resolves.toBeInstanceOf(Array);
+		});
 
 		test("finds text holding an apostrophe, a quote and query keywords", async () => {
 			expect(ids(await ARTICLE_SEARCH.query(db, q("it's")).all())).toEqual([4]);
@@ -321,6 +352,78 @@ describe.each(ADAPTERS)("defineSearch over %s", (_name, open) => {
 				.where(lt("rank", 0))
 				.all();
 			expect(rows).toBeInstanceOf(Array);
+		});
+	});
+
+	describe.each([
+		["FTS5", ARTICLE_FIELDS],
+		["LIKE", ARTICLE_FIELDS_LIKE],
+	])("the query syntax with %s", (_strategy, search) => {
+		/** Parses with the definition's fields and a `tag` filter. */
+		function syntax(input: string): ParsedQuery {
+			return q(input, { fields: search.fields, filters: ["tag"] });
+		}
+
+		test("matches either alternative of an OR", async () => {
+			expect(sortedIds(await search.query(db, syntax("career OR cpp")).all())).toEqual([4, 6]);
+		});
+
+		test("combines an OR group, a phrase and an exclusion", async () => {
+			let rows = await search.query(db, syntax(`"route patterns" OR career -resume`)).all();
+			expect(ids(rows)).toEqual([1]);
+		});
+
+		test("requires every clause beside an OR group", async () => {
+			expect(ids(await search.query(db, syntax("legacy OR edge forms")).all())).toEqual([5]);
+		});
+
+		test("ranks a row by the alternatives it holds", async () => {
+			let rows = await search.query(db, syntax("career OR tips OR cpp")).all();
+			expect(ids(rows)[0]).toBe(6);
+		});
+
+		test("scopes a term to its field's column", async () => {
+			expect(sortedIds(await search.query(db, syntax("remix")).all())).toEqual([1, 2, 3, 5]);
+			expect(sortedIds(await search.query(db, syntax("title:remix")).all())).toEqual([1, 5]);
+			expect(sortedIds(await search.query(db, syntax("-title:remix remix")).all())).toEqual([2, 3]);
+		});
+
+		test("answers a filter-only query with every row, ranked 0, minus exclusions", async () => {
+			let all = await search.query(db, syntax("tag:anything")).all();
+			expect(sortedIds(all)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+			expect(all.every((row) => row.rank === 0)).toBe(true);
+
+			let excluded = search.query(db, syntax("tag:anything -remix"));
+			expect(sortedIds(await excluded.all())).toEqual([4, 6, 7]);
+			expect(await excluded.count()).toBe(3);
+		});
+
+		test("pages a filter-only query by the caller's ordering", async () => {
+			let rows = await search
+				.query(db, syntax("tag:anything"))
+				.orderBy("published_at", "desc")
+				.limit(2)
+				.all();
+			expect(ids(rows)).toEqual([7, 6]);
+		});
+
+		test("embeds OR groups and filter-only exclusions in a predicate", async () => {
+			let either = search.predicate(syntax("career OR cpp"), { alias: "a" });
+			let { rows = [] } = await db.exec(
+				sql`select a."id" from "articles" a where ${either} order by a."id"`,
+			);
+			expect(rows.map((row) => row.id)).toEqual([4, 6]);
+
+			let none = search.predicate(syntax("tag:x -remix"), { alias: "a" });
+			let { rows: kept = [] } = await db.exec(
+				sql`select a."id" from "articles" a where ${none} order by a."id"`,
+			);
+			expect(kept.map((row) => row.id)).toEqual([4, 6, 7]);
+		});
+
+		test("rejects a term scoped to a field the definition does not map", async () => {
+			let query = q("summary:remix", { fields: ["summary"] });
+			await expect(search.query(db, query).all()).rejects.toBeInstanceOf(SearchError);
 		});
 	});
 
@@ -655,6 +758,24 @@ describe("defineSearch validation", () => {
 		expect(() =>
 			defineSearch({ table: pairs, key: "a", columns: [{ name: "title", weight: 1 }] }),
 		).not.toThrow();
+	});
+
+	test("lists its declared fields, lowercased", () => {
+		expect(ARTICLE_FIELDS.fields).toEqual(["title"]);
+		expect(ARTICLE_SEARCH.fields).toEqual([]);
+	});
+
+	test.each([
+		["a blank field", [{ name: "title", weight: 1, field: " " }]],
+		[
+			"a field used twice",
+			[
+				{ name: "title", weight: 1, field: "t" },
+				{ name: "slug", weight: 1, field: "T" },
+			],
+		],
+	] as const)("throws a RangeError for %s", (_case, columns) => {
+		expect(() => defineSearch({ table: posts, columns })).toThrow(RangeError);
 	});
 
 	test("freezes the definition", () => {

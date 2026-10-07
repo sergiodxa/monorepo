@@ -28,7 +28,7 @@ import {
 	rawSql,
 } from "remix/data-table";
 
-import type { ParsedQuery, SearchTerm } from "./query.js";
+import type { ParsedQuery, SearchClause, SearchTerm } from "./query.js";
 
 import { ParameterBudgetError, SearchError } from "./errors.js";
 
@@ -53,6 +53,11 @@ export interface SearchColumn<Column extends string> {
 	name: Column;
 	/** A positive multiplier; a column weighted 10 outranks one weighted 1 for the same match. */
 	weight: number;
+	/**
+	 * The name a query scopes a term to this column with, as in `title:remix`. A column
+	 * without one is searched only by unscoped terms.
+	 */
+	field?: string;
 }
 
 /** The FTS5 table an app keeps beside its source table. */
@@ -141,6 +146,8 @@ export interface Search<Source extends AnyTable> {
 	readonly table: Source;
 	/** The column identifying a row, and the one the FTS5 `rowid` mirrors. */
 	readonly key: TableColumnName<Source>;
+	/** The declared field names, lowercased, to pass to `parseQuery` as its `fields`. */
+	readonly fields: readonly string[];
 	/**
 	 * A query matching `query`, ordered best first unless `orderBy` says otherwise, ready
 	 * for `Pagination.byOffset` or `Pagination.byKeyset`.
@@ -173,6 +180,8 @@ interface Plan {
 	tableName: string;
 	key: string;
 	columns: readonly SearchColumn<string>[];
+	/** Each declared field name, lowercased, and the column it scopes a term to. */
+	fields: ReadonlyMap<string, string>;
 	fts: Required<SearchFts> | null;
 	known: ReadonlySet<string>;
 	json: ReadonlySet<string>;
@@ -186,7 +195,8 @@ interface Plan {
  * @param options The source table, its searched columns and weights, and its FTS5 table.
  * @returns A frozen definition that queries, builds match fragments and reindexes.
  * @throws RangeError for empty `columns`, a non-positive weight, a column the table lacks,
- * a table holding a column named `rank`, a key that is not one column, or a non-integer key with `fts`.
+ * a field name used twice or blank, a table holding a column named `rank`, a key that is
+ * not one column, or a non-integer key with `fts`.
  * @example
  * let articleSearch = defineSearch({ table: articles, columns: [{ name: "title", weight: 10 }], fts: { table: "articles_fts" } });
  */
@@ -199,6 +209,7 @@ export function defineSearch<Source extends AnyTable>(
 	return Object.freeze({
 		table: options.table,
 		key,
+		fields: Object.freeze([...plan.fields.keys()]),
 		query(db: Database, query: ParsedQuery): SearchQuery<Source> {
 			return new ComposedSearch<Source>(db, plan, query, EMPTY_STATE);
 		},
@@ -229,6 +240,7 @@ function toPlan<Source extends AnyTable>(options: DefineSearchOptions<Source>): 
 	}
 
 	let seen = new Set<string>();
+	let fields = new Map<string, string>();
 	for (let column of options.columns) {
 		if (!known.has(column.name)) {
 			throw new RangeError(`${tableName} declares no column named ${column.name}.`);
@@ -240,6 +252,13 @@ function toPlan<Source extends AnyTable>(options: DefineSearchOptions<Source>): 
 			throw new RangeError(`${column.name} needs a positive weight, received ${column.weight}.`);
 		}
 		seen.add(column.name);
+
+		if (column.field === undefined) continue;
+		let field = column.field.trim().toLowerCase();
+		if (field.length === 0 || fields.has(field)) {
+			throw new RangeError(`${column.name} needs a field name no other column uses.`);
+		}
+		fields.set(field, column.name);
 	}
 
 	let key = options.key ?? singleKey(tableName, getTablePrimaryKey(options.table));
@@ -270,6 +289,7 @@ function toPlan<Source extends AnyTable>(options: DefineSearchOptions<Source>): 
 		tableName,
 		key,
 		columns: options.columns.map((column) => ({ name: column.name, weight: column.weight })),
+		fields,
 		fts,
 		known,
 		json,
@@ -462,7 +482,9 @@ function strategyOf(plan: Plan, query: ParsedQuery): Strategy {
 	if (plan.fts === null) return "like";
 	if (plan.fts.tokenizer !== "trigram") return "fts";
 
-	let short = query.terms.some((term) => Array.from(term.text).length < TRIGRAM_LENGTH);
+	let short = query.clauses.some((clause) =>
+		clause.terms.some((term) => Array.from(term.text).length < TRIGRAM_LENGTH),
+	);
 	return short ? "like" : "fts";
 }
 
@@ -483,7 +505,8 @@ function buildStatement(
 ): SqlStatement {
 	let strategy = strategyOf(plan, query);
 	let table = quote(plan.tableName);
-	let rankRef = strategy === "fts" ? HITS_RANK : `"rank"`;
+	let ranked = strategy === "fts" && hasPositive(query);
+	let rankRef = ranked ? HITS_RANK : `"rank"`;
 	let text: string[] = [];
 	let values: unknown[] = [];
 
@@ -491,17 +514,21 @@ function buildStatement(
 	let from: string;
 	let conditions: SqlStatement[] = [];
 
-	if (strategy === "fts" && plan.fts !== null) {
+	if (ranked && plan.fts !== null) {
 		let fts = quote(plan.fts.table);
 		let weights = plan.columns.map((column) => String(column.weight)).join(", ");
 
 		text.push(
 			`with ${HITS} as (select "rowid" as "search_key", bm25(${fts}, ${weights}) as "search_rank" from ${fts} where ${fts} match ?)`,
 		);
-		values.push(ftsMatch(query, plan.fts.tokenizer));
+		values.push(ftsMatch(plan, query));
 
 		selection = rawSql(`${table}.*, ${HITS_RANK} as "rank"`);
 		from = `${HITS} cross join ${table} on ${table}.${quote(plan.key)} = ${HITS}."search_key"`;
+	} else if (strategy === "fts") {
+		selection = rawSql(`${table}.*, 0 as "rank"`);
+		from = table;
+		conditions.push(matchPredicate(plan, query, plan.tableName));
 	} else {
 		selection = likeScore(plan, query, table);
 		from = table;
@@ -560,22 +587,65 @@ function buildStatement(
 	return rawSql(text.join(" "), values);
 }
 
+/** Whether a query has any clause to find, as opposed to only filters and exclusions. */
+function hasPositive(query: ParsedQuery): boolean {
+	return query.clauses.some((clause) => !clause.exclude);
+}
+
 /**
- * The FTS5 `MATCH` argument for a query: every term double-quoted with inner quotes
- * doubled, so no user text is read as query syntax. Positives join as an implicit `AND`,
- * and each exclusion follows as `NOT`, since FTS5 rejects a query opening with one.
+ * The columns a term searches: every column for an unscoped term, or the one its field
+ * names. A field the definition does not map means parsing and the definition disagree.
  */
-function ftsMatch(query: ParsedQuery, tokenizer: "unicode61" | "trigram"): string {
-	let compile = (term: SearchTerm): string => {
-		let quoted = `"${term.text.replaceAll('"', '""')}"`;
-		return term.prefix && tokenizer === "unicode61" ? `${quoted}*` : quoted;
-	};
+function columnsOf(plan: Plan, term: SearchTerm): readonly SearchColumn<string>[] {
+	if (term.field === null) return plan.columns;
 
-	let positives = query.terms.filter((term) => !term.exclude).map(compile);
-	let exclusions = query.terms.filter((term) => term.exclude).map(compile);
+	let name = plan.fields.get(term.field);
+	let column = plan.columns.find((candidate) => candidate.name === name);
+	if (column === undefined) {
+		throw new SearchError(`${plan.tableName}'s search declares no field named ${term.field}`);
+	}
 
-	if (exclusions.length === 0) return positives.join(" ");
-	return [`(${positives.join(" ")})`, ...exclusions.map((term) => `NOT ${term}`)].join(" ");
+	return [column];
+}
+
+/**
+ * One term in FTS5 query syntax: double-quoted with inner quotes doubled, so no user text
+ * is read as syntax, a `*` for a prefix, and a column filter for a scoped term.
+ */
+function ftsTerm(plan: Plan, term: SearchTerm): string {
+	let quoted = `"${term.text.replaceAll('"', '""')}"`;
+	let token = term.prefix && plan.fts?.tokenizer !== "trigram" ? `${quoted}*` : quoted;
+	if (term.field === null) return token;
+
+	let [column] = columnsOf(plan, term);
+	return `{${quote(column?.name ?? "")}} : ${token}`;
+}
+
+/** A clause in FTS5 query syntax: its alternatives joined with `OR`, parenthesized. */
+function ftsClause(plan: Plan, clause: SearchClause): string {
+	return `(${clause.terms.map((term) => ftsTerm(plan, term)).join(" OR ")})`;
+}
+
+/**
+ * The FTS5 `MATCH` argument for a query with a positive clause: positive clauses joined
+ * with an explicit `AND`, which FTS5 requires after a parenthesized group, and each
+ * exclusion after them as `NOT`, since FTS5 rejects a query opening with one.
+ */
+function ftsMatch(plan: Plan, query: ParsedQuery): string {
+	let positives = query.clauses.filter((clause) => !clause.exclude);
+	let exclusions = query.clauses.filter((clause) => clause.exclude);
+
+	return [
+		positives.map((clause) => ftsClause(plan, clause)).join(" AND "),
+		...exclusions.map((clause) => `NOT ${ftsClause(plan, clause)}`),
+	].join(" ");
+}
+
+/** Every excluded clause as one FTS5 expression any of them satisfies. */
+function ftsExclusions(plan: Plan, query: ParsedQuery): string | null {
+	let exclusions = query.clauses.filter((clause) => clause.exclude);
+	if (exclusions.length === 0) return null;
+	return exclusions.map((clause) => ftsClause(plan, clause)).join(" OR ");
 }
 
 /**
@@ -593,56 +663,77 @@ function likeTest(qualified: string): string {
 }
 
 /**
- * The `LIKE` match: every positive term found in some column, and no excluded term found
- * in any. `coalesce` keeps a `NULL` column from turning an exclusion into an unknown.
+ * The `LIKE` match: every positive clause found through one of its terms, each term in
+ * one of its columns, and no excluded term in any. `coalesce` keeps a `NULL` column from
+ * turning an exclusion into an unknown.
  */
 function likeMatch(plan: Plan, query: ParsedQuery, qualifier: string): SqlStatement {
 	let clauses: string[] = [];
 	let values: unknown[] = [];
 
-	for (let term of query.terms) {
-		let pattern = likePattern(term);
-		let tests = plan.columns.map((column) => likeTest(`${qualifier}.${quote(column.name)}`));
-		values.push(...plan.columns.map(() => pattern));
+	for (let clause of query.clauses) {
+		let alternatives: string[] = [];
 
-		let any = `(${tests.join(" or ")})`;
-		clauses.push(term.exclude ? `not coalesce(${any}, 0)` : any);
+		for (let term of clause.terms) {
+			let columns = columnsOf(plan, term);
+			let pattern = likePattern(term);
+			alternatives.push(
+				columns.map((column) => likeTest(`${qualifier}.${quote(column.name)}`)).join(" or "),
+			);
+			values.push(...columns.map(() => pattern));
+		}
+
+		let any = `(${alternatives.join(" or ")})`;
+		clauses.push(clause.exclude ? `not coalesce(${any}, 0)` : any);
 	}
 
+	if (clauses.length === 0) return rawSql("1 = 1");
 	return rawSql(clauses.join(" and "), values);
 }
 
 /**
- * The `LIKE` score: the negated weighted count of columns each positive term hit, so
- * `rank asc` puts the best match first with the sign `bm25()` uses.
+ * The `LIKE` score: the negated weighted count of columns each positive term hit, every
+ * alternative of a clause included, so `rank asc` puts the best match first with the sign
+ * `bm25()` uses. A query with nothing positive scores every row `0`.
  */
 function likeScore(plan: Plan, query: ParsedQuery, table: string): SqlStatement {
 	let parts: string[] = [];
 	let values: unknown[] = [];
 
-	for (let term of query.terms) {
-		if (term.exclude) continue;
-		let pattern = likePattern(term);
+	for (let clause of query.clauses) {
+		if (clause.exclude) continue;
 
-		for (let column of plan.columns) {
-			parts.push(`${column.weight} * coalesce(${likeTest(`${table}.${quote(column.name)}`)}, 0)`);
-			values.push(pattern);
+		for (let term of clause.terms) {
+			let pattern = likePattern(term);
+
+			for (let column of columnsOf(plan, term)) {
+				parts.push(`${column.weight} * coalesce(${likeTest(`${table}.${quote(column.name)}`)}, 0)`);
+				values.push(pattern);
+			}
 		}
 	}
 
+	if (parts.length === 0) return rawSql(`${table}.*, 0 as "rank"`);
 	return rawSql(`${table}.*, -(${parts.join(" + ")}) as "rank"`, values);
 }
 
-/** The match alone, qualified to `alias`, for a statement the app writes. */
+/**
+ * The match alone, qualified to `alias`, for a statement the app writes. With FTS5 and
+ * nothing positive, it is the exclusions alone, as a `not in`.
+ */
 function matchPredicate(plan: Plan, query: ParsedQuery, alias: string): SqlStatement {
 	let qualifier = quote(alias);
 
 	if (strategyOf(plan, query) === "fts" && plan.fts !== null) {
 		let fts = quote(plan.fts.table);
-		return rawSql(
-			`${qualifier}.${quote(plan.key)} in (select "rowid" from ${fts} where ${fts} match ?)`,
-			[ftsMatch(query, plan.fts.tokenizer)],
-		);
+		let key = `${qualifier}.${quote(plan.key)}`;
+		let rowids = `select "rowid" from ${fts} where ${fts} match ?`;
+
+		if (hasPositive(query)) return rawSql(`${key} in (${rowids})`, [ftsMatch(plan, query)]);
+
+		let exclusions = ftsExclusions(plan, query);
+		if (exclusions === null) return rawSql("1 = 1");
+		return rawSql(`${key} not in (${rowids})`, [exclusions]);
 	}
 
 	let match = likeMatch(plan, query, qualifier);

@@ -1,7 +1,7 @@
 # @sdxc/search
 
-Full-text search over SQLite tables you already declare: safe query parsing, FTS5 and `LIKE`
-matching, field-weighted ranking, highlighting and batched reindexing.
+Full-text search over SQLite tables you already declare: Lucene-style query parsing, FTS5 and
+`LIKE` matching, field-weighted ranking, highlighting and batched reindexing.
 
 ## Installation
 
@@ -22,21 +22,45 @@ storage included.
 
 ### Parse what somebody typed
 
-Input is text, never query syntax, so `it's`, `c++`, `AND` and `100%` are ordinary words:
+The syntax is a Lucene-style subset read leniently, so no input is ever a syntax error and
+`it's`, `c++`, `a:b` and `100%` stay ordinary words:
 
 ```typescript
 import { parseQuery } from "@sdxc/search";
 
-parseQuery(`remix "route pattern" -legacy`);
-// success({ text, terms: [
-//   { text: "remix", phrase: false, prefix: true, exclude: false },
-//   { text: "route pattern", phrase: true, prefix: false, exclude: false },
-//   { text: "legacy", phrase: false, prefix: true, exclude: true },
-// ] })
+let parsed = parseQuery(`remix OR react "route pattern" -legacy title:forms tag:"react router"`, {
+	fields: ["title"],
+	filters: ["tag"],
+});
+// success({
+//   text,
+//   clauses: [
+//     { terms: [remix, react], exclude: false },   // either word
+//     { terms: ["route pattern"], exclude: false }, // the exact phrase
+//     { terms: [legacy], exclude: true },          // left out
+//     { terms: [forms, in the title field], exclude: false },
+//   ],
+//   filters: [{ name: "tag", values: ["react router"], exclude: false }],
+// })
 
 parseQuery("   "); // success(null): a blank box is no search
 parseQuery("-legacy"); // failure(ValidationError): nothing left to find
 ```
+
+| Typed                                  | Meaning                                         |
+| -------------------------------------- | ----------------------------------------------- |
+| `remix router`                         | Both words                                      |
+| `"route pattern"`                      | The exact phrase                                |
+| `rout*`                                | A prefix (every word is one by default)         |
+| `-legacy`, `NOT legacy`                | Leave out results holding it                    |
+| `+remix`, `remix AND router`           | Required, the same as the default               |
+| `remix OR react`                       | Either; `OR` joins the terms on each side of it |
+| `title:remix`, `title:"route pattern"` | A word or phrase in one declared field          |
+| `tag:"react router"`, `-tag:legacy`    | An exact value for a declared filter            |
+
+Operators count only in capitals, and `"OR"` quoted is always the word. A name that is not
+declared keeps `name:value` as text. Where an operator cannot apply (a dangling `OR`, an `OR`
+next to an exclusion or between a filter and a term), the query reads as plain AND.
 
 ### Search a table with `LIKE`
 
@@ -63,18 +87,19 @@ let rows = await ARTICLE_SEARCH.query(db, parsed).limit(10).all();
 
 Add an FTS5 table and its triggers to your migration (see
 [Pattern: Storing an FTS5 index](#pattern-storing-an-fts5-index)), and name it in the
-definition. The query pages like any other:
+definition. A column can declare a field for scoped terms, and filters become your own `where`.
+The query pages like any other:
 
 ```typescript
 import { createPaging, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
-import { sql } from "remix/data-table";
+import { inList, notInList, sql } from "remix/data-table";
 
 const ARTICLE_SEARCH = defineSearch({
 	table: articles,
 	columns: [
-		{ name: "title", weight: 10 },
+		{ name: "title", weight: 10, field: "title" },
 		{ name: "tags", weight: 6 },
 		{ name: "summary", weight: 1 },
 	],
@@ -83,16 +108,26 @@ const ARTICLE_SEARCH = defineSearch({
 
 const PAGING = createPaging({ perPage: 20 });
 
-let parsed = parseQuery(url.searchParams.get("q") ?? "");
+let parsed = parseQuery(url.searchParams.get("q") ?? "", {
+	fields: ARTICLE_SEARCH.fields,
+	filters: ["author"],
+});
 if (isFailure(parsed)) return new Response(parsed.error.message, { status: 400 });
 
 let params = PAGING.parse(url.searchParams);
 if (parsed.data === null || isFailure(params)) return renderEmptySearch();
 
-let page = await Pagination.byOffset(
-	ARTICLE_SEARCH.query(db, parsed.data).where(sql`"published_at" <= ${Date.now()}`),
-	{ page: params.data.page, perPage: params.data.perPage },
-);
+let query = ARTICLE_SEARCH.query(db, parsed.data).where(sql`"published_at" <= ${Date.now()}`);
+for (let filter of parsed.data.filters) {
+	query = query.where(
+		filter.exclude ? notInList("author", filter.values) : inList("author", filter.values),
+	);
+}
+
+let page = await Pagination.byOffset(query, {
+	page: params.data.page,
+	perPage: params.data.perPage,
+});
 ```
 
 ### Highlight what matched
@@ -115,16 +150,20 @@ the code the server searched with.
 
 ### `parseQuery(input, options?)`
 
-Parses search box text into terms, answering `Result<ParsedQuery | null, ValidationError>`.
-Whitespace separates terms, a double-quoted run is a phrase (an unclosed quote closes at the
-end), a leading `-` excludes a term, and the text is NFKC-normalized first. Terms holding no
-letter or number are dropped, and at least one term must be left to find.
+Parses search box text with the syntax above, answering
+`Result<ParsedQuery | null, ValidationError>`. A `ParsedQuery` holds `clauses`, every one of which
+must match (a clause is the `OR` alternatives of one or more `{ text, phrase, prefix, field }`
+terms, or one excluded term), and `filters` of `{ name, values, exclude }` for you to apply as
+`where`. Text is NFKC-normalized, terms with no letter or number are dropped, and a query needs at
+least one positive clause or filter.
 
 | Option      | Default | Meaning                                                                           |
 | ----------- | ------- | --------------------------------------------------------------------------------- |
 | `prefix`    | `"all"` | Which words match as prefixes: `"all"`, `"last"` (search as you type) or `"none"` |
 | `maxLength` | `256`   | Characters the normalized query may hold                                          |
-| `maxTerms`  | `8`     | Terms the query may hold, exclusions included                                     |
+| `maxTerms`  | `8`     | Terms and filter values the query may hold, exclusions included                   |
+| `fields`    | `[]`    | Names that scope a term to a column, usually a definition's `fields`              |
+| `filters`   | `[]`    | Names that read an exact value into `filters`                                     |
 
 Phrases always match exactly; a trailing `*` makes its word a prefix whatever `prefix` says.
 
@@ -133,7 +172,8 @@ Phrases always match exactly; a trailing `*` makes its word a prefix whatever `p
 Splits `text` into `{ text, match }` segments that concatenate back to `text`, for rendering
 matches as `<mark>` without building HTML from strings. Case and diacritics are ignored, as
 FTS5's `unicode61 remove_diacritics 2` ignores them, and the segments keep the text as written.
-Excluded terms never highlight. Pass `{ mode: "substring" }` for `LIKE` and `trigram` results.
+Excluded terms and filters never highlight, and a scoped term highlights only where `field`
+names its field. Pass `{ mode: "substring" }` for `LIKE` and `trigram` results.
 
 ### `excerpt(text, query, options?)`
 
@@ -143,19 +183,19 @@ A window of `words` (default 24) words around the first match, highlighted, as
 ### `defineSearch(options)`
 
 Describes a searchable table and returns a frozen definition, which holds no connection, so one
-module-level definition serves every database.
+module-level definition serves every database. Its `fields` lists the declared field names.
 
-| Option          | Meaning                                                                                     |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| `table`         | Your `table()` value; a search returns its rows plus `rank`                                 |
-| `key`           | The identifying column, default the primary key; with `fts`, an integer the `rowid` mirrors |
-| `columns`       | `{ name, weight }[]`, in the FTS5 table's column order                                      |
-| `fts.table`     | The FTS5 table's name; without `fts`, every query runs as `LIKE`                            |
-| `fts.tokenizer` | `"unicode61"` (default, declared with `remove_diacritics 2`) or `"trigram"`                 |
+| Option          | Meaning                                                                                       |
+| --------------- | --------------------------------------------------------------------------------------------- |
+| `table`         | Your `table()` value; a search returns its rows plus `rank`                                   |
+| `key`           | The identifying column, default the primary key; with `fts`, an integer the `rowid` mirrors   |
+| `columns`       | `{ name, weight, field? }[]`, in the FTS5 table's column order; `field` names it for `field:` |
+| `fts.table`     | The FTS5 table's name; without `fts`, every query runs as `LIKE`                              |
+| `fts.tokenizer` | `"unicode61"` (default, declared with `remove_diacritics 2`) or `"trigram"`                   |
 
 It throws a `RangeError` for a description that can never work: empty `columns`, a non-positive
 weight, a column the table lacks, a table that declares `rank`, no single-column key, or a
-non-integer `key` with `fts`.
+non-integer `key` with `fts`, or a field name that is blank or used twice.
 
 ### `search.query(db, query)`
 
@@ -167,7 +207,9 @@ into its `QueryFailedError`.
 
 With FTS5, `rank` is `bm25()` with the column weights. With `LIKE`, it is the negated weighted
 count of the columns each term hit. Lower is better under both. A `trigram` index cannot answer a
-term shorter than three characters, so such a query runs as `LIKE`.
+term shorter than three characters, so such a query runs as `LIKE`. A query with only filters
+and exclusions matches every row not excluded, with `rank` `0`, so order it by a column of your
+own. A term scoped to a field the definition does not declare rejects with a `SearchError`.
 
 ### `search.predicate(query, { alias? })`
 

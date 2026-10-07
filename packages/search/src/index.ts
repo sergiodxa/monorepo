@@ -14,6 +14,8 @@ export type {
 	HighlightSegment,
 	ParsedQuery,
 	ParseQueryOptions,
+	SearchClause,
+	SearchFilter,
 	SearchTerm,
 } from "./query.js";
 export type {
