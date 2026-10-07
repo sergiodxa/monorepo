@@ -12,13 +12,12 @@
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
 import { bg, border, fg, outline } from "@sdxc/u/color";
-import { ringShadow, rounded } from "@sdxc/u/effects";
+import { ringShadow, rounded, visibility } from "@sdxc/u/effects";
 import { userSelect } from "@sdxc/u/general";
 import {
 	absolute,
 	center,
 	flex,
-	hidden,
 	inlineFlex,
 	insBe,
 	insIe,
@@ -250,9 +249,11 @@ ImagePlaceholder.Fallback = function ImagePlaceholderFallback(
 					/*
 					 * Both layers fill the host, and this one is written after the image, so it
 					 * would cover a picture that loaded. It stands down while an image is present
-					 * and unbroken, and takes over once the image reports that it failed.
+					 * and unbroken, and takes over once the image reports that it failed. It
+					 * stands down through `visibility`, which no other rule here sets, so the
+					 * order the page declared these rules in cannot bring it back.
 					 */
-					precededBy('img[data-slot="image"]:not([data-image-error])', hidden()),
+					precededBy('img[data-slot="image"]:not([data-image-error])', visibility("hidden")),
 					absolute(),
 					center(),
 					weight("medium"),
