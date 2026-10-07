@@ -58,15 +58,33 @@ describe("parseRecordData", () => {
 	test("reads CAA with a quoted or bare value", () => {
 		expect(unwrap(parseRecordData("CAA", '0 issue "letsencrypt.org"'))).toEqual({
 			type: "CAA",
+			flags: 0,
 			critical: false,
 			tag: "issue",
 			value: "letsencrypt.org",
 		});
 		expect(unwrap(parseRecordData("CAA", "128 iodef mailto:security@example.com"))).toEqual({
 			type: "CAA",
+			flags: 128,
 			critical: true,
 			tag: "iodef",
 			value: "mailto:security@example.com",
+		});
+	});
+
+	test("keeps CAA reserved flag bits and lowercases the tag", () => {
+		expect(unwrap(parseRecordData("CAA", '1 ISSUE "caatestsuite.com"'))).toEqual({
+			type: "CAA",
+			flags: 1,
+			critical: false,
+			tag: "issue",
+			value: "caatestsuite.com",
+		});
+		expect(unwrap(parseRecordData("CAA", "\\# 7 81 01 61 76 61 6c 75"))).toMatchObject({
+			flags: 129,
+			critical: true,
+			tag: "a",
+			value: "valu",
 		});
 	});
 
@@ -102,6 +120,7 @@ describe("parseRecordData", () => {
 		let caa = "\\# 22 00 05 69 73 73 75 65 6c 65 74 73 65 6e 63 72 79 70 74 2e 6f 72 67";
 		expect(unwrap(parseRecordData("CAA", caa))).toEqual({
 			type: "CAA",
+			flags: 0,
 			critical: false,
 			tag: "issue",
 			value: "letsencrypt.org",
@@ -143,6 +162,7 @@ describe("parseRecordData", () => {
 		["CNAME", ""],
 		["A", "\\# 3 0A0000"],
 		["A", "\\# 4 0A0000"],
+		["CAA", "\\# 4 00 00 61 62"],
 	])("fails on %s %j", (type, data) => {
 		let result = parseRecordData(type, data);
 		expect(isFailure(result)).toBe(true);

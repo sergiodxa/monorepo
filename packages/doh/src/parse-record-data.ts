@@ -123,6 +123,7 @@ function parsePresentation(type: string, value: string): Result<ParsedData, Reco
 			}
 			return success({
 				type,
+				flags,
 				critical: (flags & 0x80) !== 0,
 				tag: match[2].toLowerCase(),
 				value: text,
@@ -256,9 +257,10 @@ class WireReader {
 				let flags = this.#uint(1);
 				let tagLength = this.#uint(1);
 				let tag = tagLength === null ? null : this.#bytes(tagLength);
-				if (flags === null || !tag) return null;
+				if (flags === null || !tag || tag.length === 0) return null;
 				let rest = this.#bytes(this.#octets.length - this.#offset) ?? new Uint8Array();
 				return {
+					flags,
 					critical: (flags & 0x80) !== 0,
 					tag: decodeOctets(tag).toLowerCase(),
 					value: decodeOctets(rest),

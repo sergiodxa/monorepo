@@ -17,6 +17,7 @@ export {
 	ServerFailureError,
 	TransportError,
 } from "./errors.js";
+export { formatRecordData } from "./format-record-data.js";
 export { parseRecordData } from "./parse-record-data.js";
 export { resolve } from "./resolve.js";
 export { CLOUDFLARE, GOOGLE } from "./resolvers.js";

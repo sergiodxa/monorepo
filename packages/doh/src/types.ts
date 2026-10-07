@@ -86,8 +86,11 @@ export namespace DoH {
 	/** Which certificate authorities may issue for the name (RFC 8659). */
 	export interface CAARecord extends RecordBase {
 		type: "CAA";
-		/** The issuer-critical flag: a CA that does not understand `tag` must refuse to issue. */
+		/** The flags octet as published, reserved bits included, so the record prints back unchanged. */
+		flags: number;
+		/** Bit 128 of `flags`: a CA that does not understand `tag` must refuse to issue. */
 		critical: boolean;
+		/** Lowercased, since tags match case-insensitively. */
 		tag: string;
 		value: string;
 	}

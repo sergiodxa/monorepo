@@ -21,13 +21,18 @@ export class NameNotFoundError extends DoHError {
 	 */
 	readonly ttl: number | null;
 
+	/** The AD flag: the resolver validated the denial of existence with DNSSEC. */
+	readonly authenticated: boolean;
+
 	/**
 	 * @param queried - The name that was looked up.
 	 * @param ttl - The negative-caching TTL, when known.
+	 * @param authenticated - Whether the answer carried the AD flag.
 	 */
-	constructor(queried: string, ttl: number | null) {
+	constructor(queried: string, ttl: number | null, authenticated = false) {
 		super(`${queried} does not exist (NXDOMAIN)`);
 		this.ttl = ttl;
+		this.authenticated = authenticated;
 	}
 }
 

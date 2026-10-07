@@ -90,7 +90,10 @@ export async function resolve<Type extends DoH.RecordType>(
 	let durationMs = Math.round(performance.now() - started);
 
 	let { Status: rcode } = envelope.data;
-	if (rcode === 3) return failure(new NameNotFoundError(name, negativeTtl(envelope.data)));
+	if (rcode === 3) {
+		let authenticated = envelope.data.AD ?? false;
+		return failure(new NameNotFoundError(name, negativeTtl(envelope.data), authenticated));
+	}
 	if (rcode === 2) return failure(new ServerFailureError(name));
 	if (rcode !== 0) return failure(new ResponseCodeError(name, rcode));
 

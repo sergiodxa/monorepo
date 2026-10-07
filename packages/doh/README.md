@@ -87,7 +87,7 @@ back lowercased without the trailing dot; an AAAA address comes back in RFC 5952
 - `timeoutMs`: abandons the request as a `TransportError`, default `5000`
 
 Typed record types: `A` (`address`), `AAAA` (`address`), `CNAME` (`target`), `NS` (`host`), `MX`
-(`preference`, `exchange`), `TXT` (`text`, `strings`), `CAA` (`critical`, `tag`, `value`), `SRV`
+(`preference`, `exchange`), `TXT` (`text`, `strings`), `CAA` (`flags`, `critical`, `tag`, `value`), `SRV`
 (`priority`, `weight`, `port`, `target`), `SOA` (`primary`, `mailbox`, `serial`, `refresh`,
 `retry`, `expire`, `minimum`). Any other type returns records with a raw `data` string.
 
@@ -100,6 +100,20 @@ answers CAA. TXT bare words are separate character-strings, per RFC 1035.
 ```typescript
 parseRecordData("TXT", '"v=DKIM1; p=AAA" "BBB"');
 // success({ type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] })
+```
+
+#### `formatRecordData(data): string`
+
+Prints record data in canonical presentation format, the inverse of `parseRecordData`: names
+absolute with the trailing dot (the root stays `"."`), TXT strings and the CAA value quoted with `"`
+and `\` escaped and every octet outside printable ASCII as `\DDD`, the CAA tag lowercased. Untyped
+records print their raw `data`. For any `data` that `parseRecordData` produced,
+`parseRecordData(data.type, formatRecordData(data))` gives back `data`, so two spellings of one
+record print to one string.
+
+```typescript
+formatRecordData(unwrap(parseRecordData("CAA", '0 ISSUE "comodoca.com"'))); // '0 issue "comodoca.com"'
+formatRecordData({ type: "MX", preference: 10, exchange: "mx.example.com" }); // "10 mx.example.com."
 ```
 
 #### `verifyTxtRecord(name, expected, options?): Promise<Result<boolean, DoHError>>`
@@ -121,14 +135,14 @@ a loop), so it holds even when the target resolves to nothing. NXDOMAIN is `succ
 
 #### Errors
 
-| Class                | When                                                                       | Extra field                                         |
-| -------------------- | -------------------------------------------------------------------------- | --------------------------------------------------- |
-| `DoHError`           | Base of every `resolve` failure                                            |                                                     |
-| `NameNotFoundError`  | RCODE 3, NXDOMAIN                                                          | `ttl`: the SOA's negative-caching TTL, or `null`    |
-| `ServerFailureError` | RCODE 2, SERVFAIL, DNSSEC validation failures included                     |                                                     |
-| `ResponseCodeError`  | Any other non-zero RCODE (FORMERR, NOTIMP, REFUSED)                        | `rcode`                                             |
-| `TransportError`     | Network error, timeout, abort, non-2xx, or a body that is not the envelope | `status`: the HTTP status, `null` when none arrived |
-| `RecordDataError`    | `parseRecordData` on data that does not fit the type                       |                                                     |
+| Class                | When                                                                       | Extra field                                                                                               |
+| -------------------- | -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `DoHError`           | Base of every `resolve` failure                                            |                                                                                                           |
+| `NameNotFoundError`  | RCODE 3, NXDOMAIN                                                          | `ttl`: the SOA's negative-caching TTL, or `null`; `authenticated`: the AD flag, a DNSSEC-validated denial |
+| `ServerFailureError` | RCODE 2, SERVFAIL, DNSSEC validation failures included                     |                                                                                                           |
+| `ResponseCodeError`  | Any other non-zero RCODE (FORMERR, NOTIMP, REFUSED)                        | `rcode`                                                                                                   |
+| `TransportError`     | Network error, timeout, abort, non-2xx, or a body that is not the envelope | `status`: the HTTP status, `null` when none arrived                                                       |
+| `RecordDataError`    | `parseRecordData` on data that does not fit the type                       |                                                                                                           |
 
 #### `DoH` namespace
 
@@ -152,6 +166,24 @@ if (isFailure(answer)) {
 }
 
 let viaAlias = answer.data.chain.length > 0;
+```
+
+## Pattern: Compare A Zone File With DNS
+
+A zone file and a resolver can spell one record differently: `0 ISSUE "ca.example"` in one,
+RFC 3597 generic data (`\# 15 00 05 69 73 73 75 65 …`) in the other. Parse both and print them, and
+equal records give equal strings.
+
+```typescript
+import { formatRecordData, parseRecordData, resolve } from "@sdxc/doh";
+import { isSuccess } from "@sdxc/result";
+
+let published = parseRecordData("CAA", zoneLine.data);
+let answer = await resolve("example.com", "CAA");
+if (isSuccess(published) && isSuccess(answer)) {
+	let live = new Set(answer.data.records.map(formatRecordData));
+	let missing = !live.has(formatRecordData(published.data));
+}
 ```
 
 ## Pattern: Cache Through The Answer's TTL

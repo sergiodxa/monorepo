@@ -290,6 +290,19 @@ describe("resolve", () => {
 		).toBeNull();
 	});
 
+	test("reports whether the resolver authenticated an NXDOMAIN", async () => {
+		answerWith(envelope("nope.example.com", 257, { Status: 3, AD: true }));
+		let signed = await resolve("nope.example.com", "CAA");
+		expect(isFailure(signed) && signed.error instanceof NameNotFoundError).toBe(true);
+		if (isFailure(signed)) expect((signed.error as NameNotFoundError).authenticated).toBe(true);
+
+		answerWith(envelope("nope.example.com", 257, { Status: 3 }));
+		let unsigned = await resolve("nope.example.com", "CAA");
+		if (isFailure(unsigned))
+			expect((unsigned.error as NameNotFoundError).authenticated).toBe(false);
+		expect(isFailure(unsigned)).toBe(true);
+	});
+
 	test("fails SERVFAIL as a server failure", async () => {
 		answerWith(envelope("broken.example.com", 1, { Status: 2 }));
 		let result = await resolve("broken.example.com", "A");
