@@ -250,5 +250,5 @@ both strategies directly.
 ## Current Progress
 
 - [x] Phase 1: The package
-- [x] Phase 2: The reader
-- [x] Phase 3: The blog
+- [x] Phase 2: The reader (deploy pending)
+- [x] Phase 3: The blog (deployed 2026-10-07)

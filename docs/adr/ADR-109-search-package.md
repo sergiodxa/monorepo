@@ -685,8 +685,8 @@ and render without building HTML from strings.
 ## Current Progress
 
 - [x] Phase 1: The package
-- [x] Phase 2: The reader's `LIKE` search
-- [x] Phase 3: The blog's FTS5 search and search page (deploy pending)
+- [x] Phase 2: The reader's `LIKE` search (deploy pending)
+- [x] Phase 3: The blog's FTS5 search and search page (deployed 2026-10-07)
 - [ ] Phase 4: The reader's FTS5 index (conditional)
 
 ## Notes
