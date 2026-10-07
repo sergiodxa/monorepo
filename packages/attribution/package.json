@@ -1,0 +1,23 @@
+{
+	"name": "@sdxc/attribution",
+	"version": "0.0.1",
+	"description": "Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./middleware": "./src/middleware.ts",
+		"./parameters": "./src/parameters.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/user-agent": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"remix": "3.0.0"
+	}
+}
