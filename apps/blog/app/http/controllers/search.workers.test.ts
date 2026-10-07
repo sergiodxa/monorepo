@@ -161,6 +161,16 @@ describe("GET /search", () => {
 		expect(html).not.toContain('aria-label="Search results"');
 	});
 
+	test("folds the search tips under the field, one definition list of syntax chips", async () => {
+		let html = await (await get("/search")).text();
+		let tips = html.slice(html.indexOf("<details"), html.indexOf("</details>"));
+
+		expect(tips).toMatch(/<summary[^>]*>[\s\S]*Search tips<\/summary>/);
+		expect(tips).not.toMatch(/<details[^>]* open/);
+		expect(tips.match(/<dt>/g)).toHaveLength(8);
+		expect(tips).toMatch(/<code[^>]*>tag:remix<\/code>/);
+	});
+
 	test("renders published matches with the matched words marked, previews left out", async () => {
 		let response = await get(`/search?q=${TOKEN}`);
 		let html = await response.text();

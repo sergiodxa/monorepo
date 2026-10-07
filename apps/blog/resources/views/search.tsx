@@ -9,13 +9,26 @@
 
 import type { Handle } from "remix/component";
 
+import { ChevronRightIcon } from "@sdxc/icons";
 import { bg, border, fg } from "@sdxc/u/color";
-import { rounded } from "@sdxc/u/effects";
+import { rounded, transition } from "@sdxc/u/effects";
 import { cursor, listStyle, raw } from "@sdxc/u/general";
-import { flexWrap, gap, grid, gridTemplate, hstack, inlineFlex, repeat } from "@sdxc/u/layout";
+import {
+	contents,
+	flexWrap,
+	gap,
+	grid,
+	gridTemplate,
+	hidden,
+	inlineFlex,
+	items,
+	shrink,
+} from "@sdxc/u/layout";
+import { media } from "@sdxc/u/responsive";
 import { m, mbs, p, pi } from "@sdxc/u/size";
 import { hover, when } from "@sdxc/u/state";
-import { nowrap, tabularNums, text } from "@sdxc/u/typography";
+import { rotate } from "@sdxc/u/transform";
+import { font, nowrap, tabularNums, text } from "@sdxc/u/typography";
 import { FieldError, Heading, Pagination } from "@sdxc/ui";
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
@@ -85,13 +98,55 @@ const SYNTAX: ReadonlyArray<{ example: string; meaning: string }> = [
 ];
 
 /**
- * The search syntax, collapsed under the field behind a small muted summary: each piece as
- * a chip the size of the text beside its meaning, in as many columns as the width holds.
+ * A piece of search syntax as typed: monospace a step smaller than the text around it, which
+ * evens out the face's larger x-height, on a subtle tint that adds width but no height.
+ */
+function SyntaxChip(handle: Handle<{ children: string }>) {
+	return () => (
+		<code
+			mix={[
+				font("mono"),
+				pi(1),
+				rounded("sm"),
+				bg("neutral.bg-tint-hover"),
+				fg("neutral.emphasis"),
+				nowrap(),
+				raw({ fontSize: "0.85em", lineHeight: "inherit" }),
+			]}
+		>
+			{handle.props.children}
+		</code>
+	);
+}
+
+/**
+ * The search syntax, collapsed under the field behind a small muted summary with a chevron
+ * that turns when open: one tip a row, read top-down, the chips in a column as wide as the
+ * widest of them and the meanings beside it, stacked under their chip on the narrowest screens.
  */
 function SyntaxHelp() {
 	return () => (
 		<details mix={[text("sm"), fg("neutral.muted")]}>
-			<summary mix={[inlineFlex(), cursor("pointer"), hover(fg("neutral.emphasis"))]}>
+			<summary
+				mix={[
+					inlineFlex(),
+					items("center"),
+					gap(1),
+					cursor("pointer"),
+					listStyle("none"),
+					when("&::-webkit-details-marker", hidden()),
+					hover(fg("neutral.emphasis")),
+				]}
+			>
+				<ChevronRightIcon
+					size="1em"
+					mix={[
+						shrink(0),
+						transition("transform"),
+						when(":is(details[open]) > summary > &", rotate(90)),
+						media("(prefers-reduced-motion: reduce)", raw({ transition: "none" })),
+					]}
+				/>
 				Search tips
 			</summary>
 			<dl
@@ -99,31 +154,27 @@ function SyntaxHelp() {
 					m(0),
 					mbs(3),
 					grid(),
-					gridTemplate({ columns: repeat("auto-fill", "minmax(15rem, 1fr)") }),
-					raw({ columnGap: "1.5rem", rowGap: "0.5rem" }),
+					gridTemplate({ columns: "max-content minmax(0, 1fr)" }),
+					items("baseline"),
+					raw({ columnGap: "1rem", rowGap: "0.5rem" }),
+					media("(max-width: 22rem)", [
+						gridTemplate({ columns: "minmax(0, 1fr)" }),
+						raw({ rowGap: "0.25rem" }),
+					]),
 				]}
 			>
 				{SYNTAX.map((row) => (
-					<div key={row.example} mix={[hstack({ gap: 2, align: "baseline" })]}>
+					<div key={row.example} mix={[contents()]}>
 						<dt>
-							<code
-								mix={[
-									pi(1.5),
-									rounded("sm"),
-									bg("neutral.bg-tint-hover"),
-									fg("neutral.emphasis"),
-									nowrap(),
-									raw({ fontSize: "inherit" }),
-								]}
-							>
-								{row.example}
-							</code>
+							<SyntaxChip>{row.example}</SyntaxChip>
 						</dt>
 						<dd mix={[m(0)]}>{row.meaning}</dd>
 					</div>
 				))}
 			</dl>
-			<p mix={[m(0), mbs(3)]}>Filters alone, like tag:remix, list the newest posts first.</p>
+			<p mix={[m(0), mbs(3)]}>
+				Filters alone, like <SyntaxChip>tag:remix</SyntaxChip>, list the newest posts first.
+			</p>
 		</details>
 	);
 }
