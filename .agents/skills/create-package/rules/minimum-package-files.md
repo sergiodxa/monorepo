@@ -31,7 +31,7 @@ Substitute `slugify` for the package name throughout.
 {
 	"name": "@sdxc/slugify",
 	"version": "0.0.1",
-	"private": true,
+	"description": "Converts arbitrary text into URL-safe slugs",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -39,19 +39,15 @@ Substitute `slugify` for the package name throughout.
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
-	},
-	"devDependencies": {
-		"@types/bun": "^1.3.14"
 	}
 }
 ```
 
 Notes on each field, because every one of them is load-bearing:
 
-- **`private: true`** on a new package. Workspace consumers resolve it through Bun either
-  way; the flag comes off once the package is meant for npm consumers, following the
-  publishing steps in `AGENTS.md` and ADR-007 (a `description`, a `LICENSE.md`, the mark in
-  the root README table, a bootstrap publish, a trusted publisher).
+- **`description`** — the README's one-line description, which npm shows in search
+  results. Every package ships to npm; the remaining publishing steps are under
+  [After writing](#after-writing).
 - **`version: "0.0.1"`** — the shared placeholder. The daily release writes the dated
   version into the generated publish manifest, so nothing in the repo reads or bumps it.
 - **`license: "MIT"`**, matching the `LICENSE.md` next to it.
@@ -62,8 +58,8 @@ Notes on each field, because every one of them is load-bearing:
   `files` field to maintain.
 - **`typecheck`** gives `tsc`'s second opinion on the workspace. CI runs `vp check`, which
   covers this package either way.
-- **`@types/bun`** as the only devDependency a pure package needs; add `msw` when the
-  package makes outbound HTTP calls and its tests intercept them.
+- **No devDependencies** for a pure package. `typescript`, `@types/bun`, `vitest` and
+  `msw` are declared once in the root workspace and reach every package from there.
 
 Take `@sdxc/*` dependencies as `workspace:*`. Read every version pin off a sibling package
 rather than off this rule; `bun run upgrade` moves them across the repo at once.
@@ -165,7 +161,7 @@ that form; `test/import-extensions.test.ts` fails on any other.
 ### `README.md`
 
 Follows [the package documentation guidelines](../../../../docs/guides/package-documentation.md):
-title, overview, usage, API, patterns, related packages, tips. Do not restate that
+title, installation, usage, API, patterns, versioning, license, author. Do not restate that
 structure here; open the guide. See [document-the-package](./document-the-package.md) for
 what makes it a MUST.
 
@@ -177,15 +173,20 @@ MIT, `Copyright (c) 2026 Sergio Xalambrí`. Copy the text from any sibling packa
 
 ```bash
 bun install                              # from the repo root, so the workspace resolves
-bun test packages/slugify                # single-scope run needs no --isolate
-vp check                                 # format, lint, and type check
+vp test run packages/slugify             # scope Vitest to the new package
+bun check                                # format, lint, and type check
 ```
+
+Then publish it, following the publishing steps in the root `AGENTS.md`: add its row to
+the root README package table with ✅, run `bun run release:bootstrap @sdxc/slugify`, and
+configure its trusted publisher on npmjs.com. `test/public-packages.test.ts` fails until
+the description, README, license, and table row are all in place.
 
 ## Rules
 
 1. Write the six files, then `bun install` at the repo root
 2. Read version pins off a sibling package, never off this rule
-3. Start with `private: true`; keep `version: "0.0.1"`, `license: "MIT"`, `type: "module"`, and a `typecheck` script
+3. Give it a `description`; keep `version: "0.0.1"`, `license: "MIT"`, `type: "module"`, and a `typecheck` script
 4. Point `exports` at TypeScript source with no `main` or `types` field; the release script builds `dist/` for npm
 5. Start every file with the module JSDoc header, `@author` and `@copyright` included, and give every export its own JSDoc
 6. Colocate `*.test.ts` next to the module, import through `./index.js`, and never exclude tests from the tsconfig

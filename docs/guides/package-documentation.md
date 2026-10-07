@@ -2,33 +2,16 @@
 
 This document describes how to write README files for packages in this monorepo.
 
-A published package (`private` absent from its `package.json`) follows
-[Public Packages](#public-packages) instead of the structure below — its README
-ships to npmjs.com and is read by people who can see only that one package.
+A package README is its npm landing page. Write it for a stranger who can reach
+only what npm serves, and keep it short — a reference, not an essay.
 
 ## Structure
 
-Every internal package README should follow this structure:
-
-1. **Title** - Package name as heading
-2. **Overview** - Brief description of what the package does and why
-3. **Usage** - Quick start examples showing common use cases
-4. **API** - Detailed documentation of all exports
-5. **Patterns** - Common patterns and integration examples
-6. **Related Packages** - Links to related packages in the monorepo
-7. **Tips** - Best practices and recommendations
-
-## Public Packages
-
-The README of a published package is its npm landing page. Write it for a
-stranger who can reach only what npm serves, and keep it short — a reference,
-not an essay.
-
-Structure:
+Every package README follows this structure:
 
 1. **Title** - Package name, then one line saying what it is
 2. **Installation** - `npm add @sdxc/<name>`, plus one line naming any
-   third-party or published companion the consumer also installs
+   third-party or `@sdxc/*` companion the consumer also installs
 3. **Usage** - Two to five focused examples, smallest one first
 4. **API** - Every public export, one or two sentences each
 5. **Patterns** - How the exports combine on a real task
@@ -36,32 +19,28 @@ Structure:
 7. **License** - `MIT`
 8. **Author** - `[Sergio Xalambrí](https://sergiodxa.com)`
 
-Rules:
+## Rules
 
 - Link only to what a reader can open from npm: npmjs.com package pages, MDN,
   and the documentation of third-party dependencies. Repository links,
   `/packages/<name>` links, `../<name>/README.md` links, and `docs/adr/` links
-  all break outside the monorepo.
-- Name only published packages. A private `@sdxc/*` dependency stays out of the
-  prose entirely — rewrite the sentence so it stands on its own.
+  all break outside the monorepo. Link another `@sdxc/*` package through its
+  npmjs.com page.
 - Keep examples free of internal vocabulary. Application names, route module
-  paths, and internal symbols mean nothing to the reader; use generic subjects
-  instead.
+  paths, `~/` aliases, and internal symbols mean nothing to the reader; use
+  generic subjects instead.
 - Describe the package as an installed dependency. Commands that only run
   inside a checkout belong in the repository documentation.
-- Keep the `## Pattern: ...` sections. They show a reader how the exports
-  combine on a real task, which the API reference alone never conveys. Place
-  them after the API reference, and write each one so it stands alone: generic
-  subjects, published dependencies only, and imports included. Skip the
-  `Related Packages` and `Tips` sections.
+- Write each `## Pattern: ...` section so it stands alone: generic subjects,
+  published dependencies only, and imports included.
 - Show what an export stands in for when a longhand teaches the reader
   something — the raw `Intl` or WebCrypto call, the arithmetic, the try/catch.
   Where no honest one-line equivalent exists, describe the behavior instead of
   inventing one.
-- Prefer a sentence over a paragraph, and a code block over a sentence. Drop
-  the `**Parameters:** / **Returns:** / **Example:**` scaffolding wherever a
-  single sentence carries the same information; keep a parameter list only when
-  an options object needs field-by-field explanation.
+- Prefer a sentence over a paragraph, and a code block over a sentence. Skip
+  `**Parameters:** / **Returns:** / **Example:**` scaffolding wherever a single
+  sentence carries the same information; keep a parameter list only when an
+  options object needs field-by-field explanation.
 
 ## Section Guidelines
 
@@ -75,86 +54,58 @@ Use the package name as an H1 heading, followed by a one-line description.
 One-line description of what this package does.
 ```
 
-### Overview
+### Installation
 
-Explain:
+Show the install command, then name in one line any peer or companion package
+the consumer installs alongside it.
 
-- What problem the package solves
-- Key technologies or patterns used
-- Architecture decisions (e.g., server/client split)
-- Links to external documentation for underlying libraries
+```markdown
+## Installation
 
-Keep it to 2-3 paragraphs maximum.
+\`\`\`sh
+npm add @sdxc/package-name
+\`\`\`
+```
 
 ### Usage
 
-Show the most common use case with a complete, runnable example. Include:
-
-- Import statements
-- Setup/configuration
-- Basic usage
-- What the output looks like
-
-For packages with multiple entry points, show each one.
+Open with the smallest complete example — imports included — and build up to
+the common cases. For packages with multiple entry points, show each one.
 
 ### API
 
-Document every public export with:
-
-- **Name and type** (function, class, component, type)
-- **Description** of what it does
-- **Parameters** with types and descriptions
-- **Returns** with type and description
-- **Example** showing usage
-
-Format:
+Document every public export in one or two sentences under a heading that
+carries its signature. Group types under their own heading. Reach for a
+parameter list only for an options object whose fields need explanation.
 
 ```markdown
-#### `functionName(param1: Type, param2: Type): ReturnType`
+### `functionName(input: string, options?: Options): Result`
 
-Description of what the function does.
-
-**Parameters:**
-
-- `param1`: Description of first parameter
-- `param2`: Description of second parameter
-
-**Returns:**
-
-- Description of return value
-
-**Example:**
+What the function returns and the case a caller has to handle.
 
 \`\`\`typescript
-let result = functionName(value1, value2);
+let result = functionName("value");
 \`\`\`
 ```
 
 ### Patterns
 
-Show real-world usage patterns:
+Show how the exports combine on a real task: wiring the package into a request
+handler, pairing it with another published package, customizing a default, or
+handling its errors. Place them after the API reference, give each a
+descriptive title, and include a complete code example. They show a reader how
+the exports combine, which the API reference alone never conveys.
 
-- Integration with Remix (route tables, controllers, actions)
-- Combining with other packages in the monorepo
-- Common customization scenarios
-- Error handling approaches
+### Versioning
 
-Each pattern should have a descriptive title and complete code example.
+Use the shared text: releases are dated `YYYY.M.D`, a later date carries no
+compatibility promise, and a consumer pins one exact date. Copy the section
+from an existing package README and change only the package name in the
+`dependencies` example.
 
-### Related Packages
+### License and Author
 
-Link to other packages that work well together or provide similar functionality.
-
-```markdown
-## Related Packages
-
-- [`@sdxc/result`](/packages/result) - Result type for explicit error handling
-- [`@sdxc/validate`](/packages/validate) - Form validation with Standard Schema
-```
-
-### Tips
-
-Numbered list of best practices, gotchas, and recommendations. Keep each tip to 1-2 sentences.
+`MIT`, and `[Sergio Xalambrí](https://sergiodxa.com)`.
 
 ## Template
 
@@ -163,18 +114,13 @@ Numbered list of best practices, gotchas, and recommendations. Keep each tip to 
 
 One-line description of what this package does.
 
-## Overview
+## Installation
 
-Explain what problem this package solves, the approach it takes, and any key
-technologies or patterns it uses. Link to external documentation for underlying
-libraries when relevant.
-
-Mention any architectural decisions like server/client splits or why certain
-dependencies were chosen.
+\`\`\`sh
+npm add @sdxc/package-name
+\`\`\`
 
 ## Usage
-
-### Basic Example
 
 \`\`\`typescript
 import { something } from "@sdxc/package-name";
@@ -182,170 +128,62 @@ import { something } from "@sdxc/package-name";
 let result = something();
 \`\`\`
 
-### Another Common Use Case
-
-\`\`\`typescript
-// Show another common pattern
-\`\`\`
-
 ## API
 
-### `exportedFunction(param: Type): ReturnType`
+### `something(input: Type): ReturnType`
 
-Description of what the function does.
+What it returns and when.
 
-**Parameters:**
+### `SomeClass`
 
-- `param`: Description of the parameter
+What an instance holds and the guarantee it gives.
 
-**Returns:**
-
-- Description of the return value
-
-**Example:**
-
-\`\`\`typescript
-let result = exportedFunction(value);
-\`\`\`
-
-### `ExportedClass`
-
-Description of the class.
-
-#### `new ExportedClass(options: Options)`
-
-Creates a new instance.
-
-**Parameters:**
+#### `new SomeClass(options: Options)`
 
 - `options.field1`: Description
 - `options.field2`: Description
-
-#### `instance.method(param: Type): ReturnType`
-
-Description of the method.
-
-### `ExportedComponent`
-
-React component description.
-
-**Props:**
-
-- `prop1`: `Type` - Description
-- `prop2?`: `Type` - Optional prop description
-
-**Example:**
-
-\`\`\`tsx
-<ExportedComponent prop1={value} />
-\`\`\`
 
 ### Types
 
 #### `SomeType`
 
-\`\`\`typescript
-interface SomeType {
-field1: string;
-field2: number;
-}
-\`\`\`
-
-## Integration with Remix
-
-### Route Table
-
-Every URL an app answers is declared once in `routes/web.ts`, so controllers, links, and
-redirects all resolve through `routes.*.href(...)`.
-
-\`\`\`typescript
-import { form, get, route } from "remix/routes";
-
-export default route({
-	dashboard: get("/dashboard"),
-	/** `form()` pairs the settings page's `GET` render with the `POST` that acts on it. */
-	teamSettings: form("/teams/:teamId/settings"),
-});
-\`\`\`
-
-### Action Pattern
-
-A route with a single method maps to one action under `app/http/controllers`.
-
-\`\`\`tsx
-import { something } from "@sdxc/package-name";
-import { createAction } from "remix/router";
-
-import DashboardView from "~/resources/views/dashboard";
-import routes from "~/routes/web";
-
-/** GET /dashboard — show how to use the package in an action. */
-export default createAction(routes.dashboard, async (ctx) => {
-	let result = await something(ctx.request);
-	return ctx.render(<DashboardView result={result} />);
-});
-\`\`\`
-
-### Controller Pattern
-
-A route declared with `form()` maps to a controller whose `index` answers the `GET` and
-whose `action` answers the `POST`. Read path params through a `remix/data-schema` schema,
-so a controller states the shape it needs.
-
-\`\`\`tsx
-import { something } from "@sdxc/package-name";
-import * as s from "remix/data-schema";
-import { redirect } from "remix/response/redirect";
-import { createController } from "remix/router";
-
-import TeamSettingsView from "~/resources/views/team-settings";
-import routes from "~/routes/web";
-
-const ParamsSchema = s.object({ teamId: s.string() });
-
-export default createController(routes.teamSettings, {
-	actions: {
-		/** GET /teams/:teamId/settings — renders the form. */
-		index(ctx) {
-			let { teamId } = s.parse(ParamsSchema, ctx.params);
-			return ctx.render(<TeamSettingsView teamId={teamId} />);
-		},
-
-		/** POST /teams/:teamId/settings — persists the submission and returns to the page. */
-		async action(ctx) {
-			let { teamId } = s.parse(ParamsSchema, ctx.params);
-			await something(await ctx.request.formData());
-			return redirect(routes.teamSettings.index.href({ teamId }));
-		},
-	},
-});
-\`\`\`
+What a value of this type stands for.
 
 ## Pattern: Descriptive Pattern Name
 
-Explain when to use this pattern.
+When to reach for this pattern.
 
 \`\`\`typescript
+import { something } from "@sdxc/package-name";
+
 // Complete example
 \`\`\`
 
-## Pattern: Another Pattern
+## Versioning
 
-Explain when to use this pattern.
+Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
 
-\`\`\`typescript
-// Complete example
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+\`\`\`json
+{
+	"dependencies": {
+		"@sdxc/package-name": "2026.9.4"
+	}
+}
 \`\`\`
 
-## Related Packages
+A caret or tilde range reads the date as major, minor and patch, so it accepts every later release in the same year. An exact version keeps the upgrade yours to schedule.
 
-- [`@sdxc/related`](/packages/related) - Brief description of relationship
+## License
 
-## Tips
+MIT
 
-1. **Tip title** - Explanation of the tip
-2. **Another tip** - Explanation
-3. **Third tip** - Explanation
+## Author
+
+[Sergio Xalambrí](https://sergiodxa.com)
 ```
 
 ## Writing Style
@@ -355,4 +193,3 @@ Explain when to use this pattern.
 - Keep examples minimal but complete
 - Prefer real-world scenarios over contrived examples
 - Link to external documentation rather than duplicating it
-- Use consistent formatting for parameters and return values

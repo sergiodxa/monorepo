@@ -119,7 +119,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 
 ### Publishing
 
-Public packages ship to npm under the `@sdxc` scope through the daily release described in
+Every package ships to npm under the `@sdxc` scope through the daily release described in
 [ADR-007](./docs/adr/ADR-007-publishable-package-releases.md): the commits since the previous
 release decide which packages changed, every dependent of a changed package republishes with a
 new exact pin, and the version is the UTC date of the run (`2026.9.4`). `bun run release` is a
@@ -127,8 +127,7 @@ dry run of exactly what the workflow does; `bun run release --publish` performs 
 
 - MUST write every relative import inside `packages/*` with its `.js` extension (`from "./parse.js"`), tests included; `test/import-extensions.test.ts` fails on any other form, because emitted JavaScript keeps specifiers verbatim and Node resolves only the extension form
 - MUST keep `version` in every `package.json` as the `0.0.1` placeholder; the release writes the dated version into the generated publish manifest only, and nothing in the repo reads the field
-- MUST keep a package `private: true` while it only runs under Vite (a `?raw` import, for example) or while its public surface is still moving; remove the flag only when the package is meant for npm consumers
-- MUST, to make a package public: remove `private: true`, add a `description` (taken from the package README, per ADR-017) and a `LICENSE.md`, mark its row in the root README package table with ✅ in the untitled last column, make every package it depends on public first (`test/public-packages.test.ts` names each private dependency it reaches), run `bun run release:bootstrap @sdxc/<name>` from a developer machine so the package exists on npm as `0.0.0-pre.1` under the `alpha` tag (the registry also points `latest` at a first publish; the first dated release moves it), then configure its trusted publisher on npmjs.com (GitHub Actions, `sergiodxa/monorepo`, workflow `release.yml`); the next daily run publishes the dated version
+- MUST, when adding a package: give it a `description` (taken from the package README, per ADR-017) and a `LICENSE.md`, add its row to the root README package table with ✅ in the untitled last column, run `bun run release:bootstrap @sdxc/<name>` from a developer machine so the package exists on npm as `0.0.0-pre.1` under the `alpha` tag (the registry also points `latest` at a first publish; the first dated release moves it), then configure its trusted publisher on npmjs.com (GitHub Actions, `sergiodxa/monorepo`, workflow `release.yml`); the next daily run publishes the dated version. `test/public-packages.test.ts` fails on a package missing any of the repo-side pieces
 - MUST keep the `npm` entry beside Bun in the root `devEngines.packageManager`; it is what lets `npm login`, `npm whoami`, `npm view` and the release script's registry reads run inside the repo, while `bun install` stays the only way to install
 
 ### Documentation

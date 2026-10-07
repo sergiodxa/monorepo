@@ -109,19 +109,19 @@ README. Anything app-shaped is a constructor option.
 
 #### document-the-package - @rules/document-the-package.md
 
-Every package has a README following the package documentation guidelines, and every
-exported symbol has JSDoc. This is a MUST in the root `AGENTS.md`, not a nice-to-have.
+Every package has a README following the package documentation guidelines — its npm
+landing page — and every exported symbol has JSDoc. This is a MUST in the root `AGENTS.md`, not a nice-to-have.
 
 ```text
 docs/guides/package-documentation.md
--> Title, Overview, Usage, API, Patterns, Related Packages, Tips
+-> Title, Installation, Usage, API, Patterns, Versioning, License, Author
 ```
 
 ## Philosophy
 
 Good package creation is:
 
-1. **Derived** - The structure comes from the 49 packages that ship, not a snapshot of them
+1. **Derived** - The structure comes from the packages that ship, not a snapshot of them
 2. **Minimal** - Six files, one entry point, and a second only when a consumer needs it
 3. **Pointed** - Every concern past the minimum names the package to read, so the guidance cannot rot
 4. **Agnostic** - No app can be named in it; anything app-specific is passed in

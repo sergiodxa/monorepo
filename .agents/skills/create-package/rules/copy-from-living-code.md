@@ -7,7 +7,7 @@ tags: [packages, references, reuse]
 # Copy Each Concern From the Package That Ships It
 
 Past the minimum file set, do not invent a shape. Open the package that already ships that
-concern, read how it does it, and copy that. There are 49 of them; one of them has already
+concern, read how it does it, and copy that. There are dozens of them; one of them has already
 solved it.
 
 ## Why

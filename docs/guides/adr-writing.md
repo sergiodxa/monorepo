@@ -305,8 +305,8 @@ Capture additional context, gotchas, or implementation details:
 ```markdown
 ## Notes
 
-- All packages are `private: true` since they're workspace-only
-- Use Bun's test runner for consistency with the monorepo
+- Every package ships to npm, so its README links only to what npm readers can open
+- KV assertions run in a `*.workers.test.ts` file against the real binding
 - The `@sdxc/auth` package takes `remix` as an optional peer dependency
 - SSL monitoring relies on manually entered expiry dates (Workers can't read TLS certs)
 - Daily aggregation uses idempotent upserts - safe to run multiple times

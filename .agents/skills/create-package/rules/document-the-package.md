@@ -8,13 +8,14 @@ tags: [packages, documentation, jsdoc]
 
 Every package has a README written to the repo's package documentation guidelines, a
 module JSDoc header on every file, and JSDoc on every export. All three are MUST rules in
-the root `AGENTS.md`, and all 49 packages satisfy the README one — a new package that does
+the root `AGENTS.md`, and every package satisfies the README one — a new package that does
 not is the only one.
 
 ## Why
 
-- **The README is the only view of the package a consumer gets.** `exports` says what can
-  be imported; nothing else in the package says what any of it is for.
+- **The README is the only view of the package a consumer gets.** It is the npm landing
+  page, read by someone who can open nothing else in this repo; `exports` says what can be
+  imported, and nothing else in the package says what any of it is for.
 - **Written after the fact, it never happens.** The old package template's README was a
   fill-in-the-blank sheet, which is the version of "write it later" that gets committed.
 - **JSDoc is what `vp check` reads.** The `jsdoc` lint plugin is enabled repo-wide with
@@ -25,8 +26,8 @@ not is the only one.
 ### The README
 
 Follow [the package documentation guidelines](../../../../docs/guides/package-documentation.md).
-It specifies the section order — Title, Overview, Usage, API, Patterns, Related Packages,
-Tips — and what each one has to contain. Read it rather than working from the shape of
+It specifies the section order — Title, Installation, Usage, API, Patterns, Versioning,
+License, Author — what each one has to contain, and which links survive outside the repo. Read it rather than working from the shape of
 another README, which may predate the guide.
 
 ```markdown
@@ -34,17 +35,25 @@ another README, which may predate the guide.
 
 Converts arbitrary text into URL-safe slugs.
 
-## Overview
+## Installation
 
-<!-- what problem it solves, the approach, 2-3 paragraphs max -->
+<!-- npm add @sdxc/slugify, plus any companion the consumer installs -->
 
 ## Usage
 
-<!-- one complete runnable example, with imports -->
+<!-- two to five focused examples, smallest first, imports included -->
 
 ## API
 
-<!-- every public export: name, type, params, returns, example -->
+<!-- every public export, one or two sentences each -->
+
+## Pattern: …
+
+## Versioning
+
+## License
+
+## Author
 ```
 
 ### Module headers

@@ -16,7 +16,7 @@ string. The README H1 is the full scoped name.
 - **The import path is the only name most readers ever see.** `@sdxc/data-table-d1`
   reading as `packages/dataTableD1` on disk costs a lookup every time somebody goes from
   an import to the source.
-- **Kebab-case is what all 49 of them use.** Consistency here is the whole benefit.
+- **Kebab-case is what every one of them uses.** Consistency here is the whole benefit.
 
 ## Pattern
 
