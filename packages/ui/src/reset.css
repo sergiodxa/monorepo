@@ -3,8 +3,9 @@
  * borders reset to "0 solid" so bare border-widths work later, the theme's
  * sans font stack applied once at the document root for every element to
  * inherit, form controls that inherit font/color/line-height, transparent
- * button/input backgrounds with a sensible cursor, block-level media, and the
- * rest of the usual list/table/[hidden] normalizations.
+ * button/input backgrounds with a sensible cursor, block-level media, the theme's
+ * focus ring for keyboard focus, and the rest of the usual list/table/[hidden]
+ * normalizations.
  *
  * Every selector is wrapped in :where(...) so the whole file carries zero
  * specificity and can never beat a component's own css() rules.
@@ -100,6 +101,16 @@
 
 	:where(:-moz-focusring) {
 		outline: auto;
+	}
+
+	/*
+	 * Keyboard focus draws the theme's ring on anything a component leaves unstyled, so a
+	 * plain <summary>, link or control shows the same ring as the components do. It sits
+	 * after the Firefox rule above so the ring wins there too.
+	 */
+	:where(:focus-visible) {
+		outline: 2px solid var(--ui-ring, Highlight);
+		outline-offset: 2px;
 	}
 
 	:where(progress) {
