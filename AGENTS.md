@@ -90,7 +90,7 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST deploy after migration, to ensure the latest code is running with the new database schema
 - MUST NOT deploy before migration, to avoid running old code with an incompatible database schema
 - MUST configure a Worker in `cloudflare.config.ts` and run it through the app's `cf` scripts; the apps with a `*.workers.test.ts` project stay on `wrangler.jsonc` and `bunx wrangler` until the Workers test pool reads `cloudflare.config.ts` (ADR-100)
-- MUST declare with `bindings.secret()` only the secrets every deployed Worker has: `cf deploy` fails when a declared secret is missing remotely, so an optional secret is typed on `Cloudflare.Env` in the app's `config/env.d.ts`
+- MUST declare every secret a deployed Worker reads with `bindings.secret()`: `cf deploy` uploads the Worker with exactly the declared secrets and removes any other, and fails when a declared one is missing remotely — so set a new secret with `cf workers secrets update` before the first deploy that declares it
 - MUST use `@sdxc/logger`, never `console.log`
 - MUST log through the invocation's log — `ctx.log` in route handlers and job handlers, `currentLog()` anywhere else — and never construct a logger per request; the worker configures one `createLogger()` and attaches it with `log(logger)` at the top of the router's middleware chain and as the job dispatcher's `logger` option (ADR-033)
 - MUST use `@sdxc/jobs` for background jobs

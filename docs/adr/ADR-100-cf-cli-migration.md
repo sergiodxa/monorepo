@@ -40,8 +40,10 @@ work it cannot do. The pieces around the config each have their own constraint:
   `--persist-to .cloudflare/state` to write where `vite dev` reads. Local databases start
   empty after the move.
 - **Secrets.** `cf deploy` uploads each `bindings.secret()` as an inherited binding and fails
-  when the deployed Worker has no secret of that name. An optional secret is typed on
-  `Cloudflare.Env` in the app's `config/env.d.ts` instead.
+  when the deployed Worker has no secret of that name. The upload carries the Worker's whole
+  binding list, so a secret the config leaves out is removed by the deploy: every secret a
+  deployed Worker reads is declared, and a new one is set remotely before the deploy that
+  declares it.
 - **`cf dev`** delegates to `npx vite`; the `dev` and `build` scripts call `vite` directly so
   every step stays inside Bun.
 
