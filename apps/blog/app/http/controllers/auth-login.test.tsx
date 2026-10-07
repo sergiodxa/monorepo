@@ -26,6 +26,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import auth from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
+import { User } from "~/app/repositories/user";
 import { testDatabase } from "~/app/test/database";
 import routes from "~/routes/web";
 
@@ -86,8 +87,9 @@ function createEnv(): App.Env {
  * its ID token bound to that login's nonce.
  *
  * @param authorization Where the login sent the browser to authenticate.
+ * @param claims Claims layered over the ID token's fixture profile.
  */
-async function serveGrant(authorization: URL): Promise<void> {
+async function serveGrant(authorization: URL, claims: Record<string, unknown>): Promise<void> {
 	let idToken = await new JWT({
 		iss: ISSUER,
 		aud: CLIENT_ID,
@@ -99,6 +101,7 @@ async function serveGrant(authorization: URL): Promise<void> {
 		name: "Sergio",
 		preferred_username: "sergiodxa",
 		picture: "https://example.com/avatar.png",
+		...claims,
 	}).sign(JWK.Algorithm.ES256, keys);
 
 	let accessToken = await new JWT({
@@ -127,8 +130,11 @@ async function serveGrant(authorization: URL): Promise<void> {
 interface Browser {
 	/** Requests a path the way a browser does, sending and keeping the session cookie. */
 	visit(path: string, init?: RequestInit): Promise<Response>;
-	/** Opens the login screen at `loginPath`, submits it, and follows the provider back. */
-	signIn(loginPath: string): Promise<Response>;
+	/**
+	 * Opens the login screen at `loginPath`, submits it, and follows the provider back with
+	 * an ID token carrying `claims` over its fixture profile.
+	 */
+	signIn(loginPath: string, claims?: Record<string, unknown>): Promise<Response>;
 }
 
 /**
@@ -175,7 +181,7 @@ function openBrowser(db: Database): Browser {
 	return {
 		visit,
 
-		async signIn(loginPath) {
+		async signIn(loginPath, claims = {}) {
 			let screen = await visit(loginPath);
 			let action = /<form[^>]*\saction="([^"]*)"/.exec(await screen.text())?.[1] ?? "";
 
@@ -183,7 +189,7 @@ function openBrowser(db: Database): Browser {
 				method: routes.auth.login.action.method,
 			});
 			let authorization = new URL(started.headers.get("location") ?? APP_ORIGIN);
-			await serveGrant(authorization);
+			await serveGrant(authorization, claims);
 
 			let state = authorization.searchParams.get("state") ?? "";
 			return visit(`${routes.auth.callback.href()}?code=auth-code&state=${state}`);
@@ -263,5 +269,50 @@ describe("opening the login screen while signed in", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.cms.dashboard.href());
+	});
+});
+
+describe("signing in with the email an existing account holds", () => {
+	/** Creates the admin account registered under the fixture profile's email. */
+	async function seedAdmin(db: Database) {
+		let admin = await User.create(db, {
+			subjectId: "subject-admin",
+			role: "admin",
+			email: "sergio@example.com",
+			avatar: "https://example.com/admin.png",
+			username: "admin",
+			displayName: "Admin",
+		});
+		if (!admin) throw new Error("Seeding the admin failed");
+		return admin;
+	}
+
+	test("refuses an unverified email and leaves the visitor signed out", async () => {
+		let db = await testDatabase();
+		let admin = await seedAdmin(db);
+		let browser = openBrowser(db);
+
+		let response = await browser.signIn(routes.auth.login.index.href(), {
+			email_verified: false,
+		});
+
+		expect(response.status).toBe(200);
+		expect(await response.text()).toContain("Verify it with the identity provider");
+		expect(await User.findById(db, admin.id)).toEqual(admin);
+
+		let screen = await browser.visit(routes.auth.login.index.href());
+		expect(screen.status).toBe(200);
+	});
+
+	test("links a verified email to that account", async () => {
+		let db = await testDatabase();
+		let admin = await seedAdmin(db);
+		let browser = openBrowser(db);
+
+		let response = await browser.signIn(routes.auth.login.index.href(), { email_verified: true });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.cms.dashboard.href());
+		expect((await User.findById(db, admin.id))?.subject_id).toBe("subject-1");
 	});
 });

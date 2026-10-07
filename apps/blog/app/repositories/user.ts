@@ -7,7 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
+
+import { failure, success } from "@sdxc/result";
 
 import * as schema from "~/database/schema";
 
@@ -25,6 +28,8 @@ export namespace User {
 	export interface AuthProfile {
 		subjectId: string;
 		email: string;
+		/** Whether the provider vouches the person controls `email`, which linking requires. */
+		emailVerified: boolean;
 		avatar: string;
 		username: string;
 		displayName: string;
@@ -76,6 +81,19 @@ export namespace User {
 		displayName?: string;
 		updatedAt?: string;
 	}
+}
+
+/**
+ * A first login refused because its email names an existing account and the provider has
+ * not verified the person controls that address, so the account stays with its owner.
+ */
+export class UnverifiedEmailError extends Error {
+	override name = "UnverifiedEmailError";
+}
+
+/** Raised when a user was written but could not be read back. */
+export class UserSaveError extends Error {
+	override name = "UserSaveError";
 }
 
 /**
@@ -242,17 +260,27 @@ export class User {
 	/**
 	 * Reconciles an auth profile with a local user record.
 	 *
-	 * Lookup order is subject-id first, then email fallback for first-time linking.
-	 * Creates when no match exists, otherwise updates profile-driven fields.
+	 * Lookup order is subject-id first, then email for a first login, which links to the
+	 * account holding that email only when the provider verified it. Creates a guest when
+	 * no account matches, otherwise updates profile-driven fields.
 	 *
 	 * @param db Database client used to run operations.
 	 * @param profile Auth-provider profile payload.
-	 * @returns The linked or created user.
-	 * @throws {Error} When the follow-up read after create/update returns null.
+	 * @returns The linked or created user, an `UnverifiedEmailError` when an unverified
+	 *   email names an existing account, or a `UserSaveError` when the row cannot be read back.
 	 */
-	static async findOrCreateFromAuthProfile(db: Database, profile: User.AuthProfile) {
+	static async findOrCreateFromAuthProfile(
+		db: Database,
+		profile: User.AuthProfile,
+	): Promise<Result<schema.SelectUser, UnverifiedEmailError | UserSaveError>> {
 		let existing = await this.findBySubjectId(db, profile.subjectId);
-		if (!existing) existing = await this.findByEmail(db, profile.email);
+
+		if (!existing) {
+			existing = await this.findByEmail(db, profile.email);
+			if (existing && !profile.emailVerified) {
+				return failure(new UnverifiedEmailError("The email names an account it cannot claim"));
+			}
+		}
 
 		if (!existing) {
 			let created = await this.create(db, {
@@ -264,11 +292,8 @@ export class User {
 				displayName: profile.displayName,
 			});
 
-			if (!created) {
-				throw new Error("Failed to create user from auth profile");
-			}
-
-			return created;
+			if (!created) return failure(new UserSaveError("Failed to create user from auth profile"));
+			return success(created);
 		}
 
 		let updated = await this.update(db, existing.id, {
@@ -279,11 +304,8 @@ export class User {
 			displayName: profile.displayName,
 		});
 
-		if (!updated) {
-			throw new Error("Failed to update user from auth profile");
-		}
-
-		return updated;
+		if (!updated) return failure(new UserSaveError("Failed to update user from auth profile"));
+		return success(updated);
 	}
 
 	/**

@@ -49,6 +49,7 @@ const SUBJECT = "subject-1";
 /** The claims a login fills the account fields from. */
 const PROFILE_CLAIMS = {
 	email: "sergio@example.com",
+	email_verified: true,
 	name: "Sergio",
 	preferred_username: "sergiodxa",
 	picture: "https://example.com/avatar.png",
@@ -272,6 +273,7 @@ describe("relyingParty", () => {
 		expect(grant?.subject).toBe(SUBJECT);
 		expect(grant?.profile).toEqual({
 			email: PROFILE_CLAIMS.email,
+			emailVerified: true,
 			avatar: PROFILE_CLAIMS.picture,
 			username: PROFILE_CLAIMS.preferred_username,
 			displayName: PROFILE_CLAIMS.name,
@@ -330,6 +332,15 @@ describe("relyingParty", () => {
 		expect(grant).toBeNull();
 		expect(AuthError.is(error, AuthErrorCode.NonceMismatch)).toBe(true);
 	});
+
+	test.each([false, undefined])(
+		"reads an email as unverified when `email_verified` is %j",
+		async (emailVerified) => {
+			let { grant } = await attemptLogin({ claims: { email_verified: emailVerified } });
+
+			expect(grant?.profile.emailVerified).toBe(false);
+		},
+	);
 
 	test("refuses a token carrying no email, which the account has no room to omit", async () => {
 		let { grant, error } = await attemptLogin({ claims: { email: undefined } });

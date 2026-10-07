@@ -16,13 +16,17 @@ import { createAction, createController, type Middleware } from "remix/router";
 import { relyingParty } from "~/app/auth/relying-party";
 import { isAuthenticated, login, logout } from "~/app/http/middleware/auth";
 import { parseReturnPath, requestedReturnPath } from "~/app/http/return-path";
-import { User } from "~/app/repositories/user";
+import { UnverifiedEmailError, User } from "~/app/repositories/user";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
 import routes from "~/routes/web";
 
 /** What the login screen says about a login that could not be completed. */
 const GENERIC_FAILURE = "Authentication failed. Please try again.";
+
+/** What the login screen says when an unverified email names an existing account. */
+const UNVERIFIED_EMAIL_FAILURE =
+	"This email belongs to an existing account. Verify it with the identity provider, then sign in again.";
 
 /**
  * What the login screen says about each way the provider's answer can be refused, so a
@@ -50,6 +54,7 @@ const LOGOUT_HEADERS = { "Clear-Site-Data": '"*"' };
  * @returns The message rendered with the login form.
  */
 function describeFailure(error: Error): string {
+	if (error instanceof UnverifiedEmailError) return UNVERIFIED_EMAIL_FAILURE;
 	if (!(error instanceof AuthError)) return GENERIC_FAILURE;
 
 	if (error.code === AuthErrorCode.AuthorizationFailed) {
@@ -167,9 +172,9 @@ export let logoutController = createController(routes.auth.logout, {
 export let callbackAction = createAction(routes.auth.callback, {
 	middleware: [],
 	/**
-	 * Correlates the provider's answer with the login that asked for it and verifies the
-	 * ID token before any claim is believed, then reconciles the subject with the local
-	 * account so the session names a row of this app's own.
+	 * Correlates the provider's answer with the login that asked for it and verifies the ID
+	 * token before any claim is believed, then reconciles the subject with a local account;
+	 * a refused reconcile ends the session the callback opened, leaving the visitor anonymous.
 	 * @returns The login view carrying an error, or a 303 redirect to the page the login
 	 *   was started for, the dashboard when it named none.
 	 */
@@ -191,8 +196,16 @@ export let callbackAction = createAction(routes.auth.callback, {
 			...grant.profile,
 		});
 
-		login(user);
-		ctx.log.set({ user: { id: user.id, username: user.username } }).note("auth.callback_completed");
+		if (isFailure(user)) {
+			logout();
+			ctx.log.warn("auth.account_link_refused", { reason: user.error.name });
+			return ctx.render(LoginView, { error: describeFailure(user.error) });
+		}
+
+		login(user.data);
+		ctx.log
+			.set({ user: { id: user.data.id, username: user.data.username } })
+			.note("auth.callback_completed");
 
 		let returnTo = parseReturnPath(grant.returnTo) ?? routes.cms.dashboard.href();
 		return redirect(returnTo, { status: redirect.Status.SeeOther });

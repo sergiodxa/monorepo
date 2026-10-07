@@ -19,12 +19,13 @@ import { getEnv } from "~/app/http/middleware/env";
 import routes from "~/routes/web";
 
 /**
- * The claims a local account is filled from. Every one is required, because the row
- * has no room for an absent value, so a provider that stops sending one refuses the
- * login instead of writing a blank field over a real one.
+ * The claims a local account is filled from. A stored one that goes missing refuses the
+ * login instead of blanking a real field, and an absent `email_verified` reads as `false`,
+ * since only a verified address may claim an existing account.
  */
 const PROFILE_CLAIMS = s.object({
 	email: s.string(),
+	email_verified: s.optional(s.boolean()),
 	name: s.string(),
 	preferred_username: s.string(),
 	picture: s.string(),
@@ -66,6 +67,7 @@ export function relyingParty(url: URL | string): RelyingParty<AuthProfile> {
 
 			return {
 				email: profile.email,
+				emailVerified: profile.email_verified === true,
 				avatar: profile.picture,
 				username: profile.preferred_username,
 				displayName: profile.name,

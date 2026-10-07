@@ -41,7 +41,9 @@ with it empty, is answered with a 500.
 - CMS layout and authenticated routes for content management. Opening a CMS page without a
   session sends you to `/login?next=<path and query>`, and signing in lands back on that page,
   so a link such as `/cms/bookmarks/new?url=…` survives an expired session. `next` accepts
-  only a path on this site; anything else lands on the dashboard.
+  only a path on this site; anything else lands on the dashboard. A first sign-in claims the
+  existing account holding its email only when the identity provider has verified that
+  address; an unverified one is sent back to the login screen to verify it first.
 - Markdown processing through shared markdown utilities.
 - Request-scoped services published onto the request context by middleware.
 - Microformats2 markup (`h-entry`, `h-card`, `h-feed`, `rel="me"`) on public pages.
