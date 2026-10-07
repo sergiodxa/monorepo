@@ -21,7 +21,6 @@ import type {
 	NodeOf,
 } from "./expression.js";
 import type { Node } from "./grammar.js";
-import type { Context } from "./read.js";
 
 import { BUILTIN_NAMES } from "./builtins.js";
 import { compile } from "./compile.js";
@@ -81,9 +80,9 @@ export interface Language<E, C> {
 	 * Answers whether a compiled expression holds for a context, synchronously.
 	 *
 	 * @param compiled What `compile` returned.
-	 * @param context JSON fields, with `Date` values allowed.
+	 * @param context Any object, read by path: nested records, arrays and `Date` values.
 	 */
-	evaluate(compiled: C, context: Context): boolean;
+	evaluate(compiled: C, context: object): boolean;
 	/**
 	 * Reads the text form into the JSON form, validated against the schema. A
 	 * failure carries the `line` and `column` the text broke at.

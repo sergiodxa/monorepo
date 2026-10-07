@@ -123,24 +123,29 @@ Defines a dialect and returns a `Language`. Every option is optional:
 
 - `schema`: a Standard Schema for the dialect's JSON form, to validate an expression before storing it.
 - `compile(expression, { references }?)`: validates an expression, runs every operator's compile step and resolves references. Returns `Result<Compiled, ExpressionError>`.
-- `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is a JSON object, with `Date` values allowed.
+- `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is any object: nested records, arrays and `Date` values are read by path.
 - `parse(text)`: reads the text form into the JSON form, validated against the schema. Returns `Result<Expression, ExpressionError>`, the error carrying the `line` and `column` the text broke at.
 - `stringify(expression)`: prints the canonical text, which `parse` reads back to the same JSON.
 - `Expression` and `Compiled`: type-only members; write `typeof language.Expression` for the JSON form's type and `typeof language.Compiled` for the compiled one.
 
 ### Built-in operators
 
-| Operator                             | JSON form                                 | Holds when the field…               |
-| ------------------------------------ | ----------------------------------------- | ----------------------------------- |
-| `eq`, `ne`                           | `{ op, field, value }` (a JSON primitive) | is, or is not, exactly `value`      |
-| `in`, `notIn`                        | `{ op, field, values }`                   | is, or is not, one of `values`      |
-| `lt`, `lte`, `gt`, `gte`             | `{ op, field, value }` (a number)         | is a number ordered against `value` |
-| `startsWith`, `endsWith`, `contains` | `{ op, field, value }` (a string)         | is a string with `value` in place   |
-| `matches`                            | `{ op, field, pattern }`                  | is a string the pattern matches     |
-| `exists`                             | `{ op, field }`                           | resolves to anything, `null` too    |
-| `all`, `any`                         | `{ op, of: [...] }`                       | —                                   |
-| `not`                                | `{ op, of }`                              | —                                   |
-| `always`                             | `{ op }`                                  | —                                   |
+| Operator                             | JSON form                                 | Holds when the field…                           |
+| ------------------------------------ | ----------------------------------------- | ----------------------------------------------- |
+| `eq`, `ne`                           | `{ op, field, value }` (a JSON primitive) | is, or is not, exactly `value`                  |
+| `in`, `notIn`                        | `{ op, field, values }`                   | is, or is not, one of `values`                  |
+| `lt`, `lte`, `gt`, `gte`             | `{ op, field, value }` (a number)         | is a number ordered against `value`             |
+| `includes`                           | `{ op, field, value }` (a JSON primitive) | is a list with a member equal to `value`        |
+| `intersects`                         | `{ op, field, values }`                   | is a list sharing a member with `values`        |
+| `subsetOf`                           | `{ op, field, values }`                   | is a list whose every member is one of `values` |
+| `startsWith`, `endsWith`, `contains` | `{ op, field, value }` (a string)         | is a string with `value` in place               |
+| `matches`                            | `{ op, field, pattern }`                  | is a string the pattern matches                 |
+| `exists`                             | `{ op, field }`                           | resolves to anything, `null` too                |
+| `all`, `any`                         | `{ op, of: [...] }`                       | —                                               |
+| `not`                                | `{ op, of }`                              | —                                               |
+| `always`                             | `{ op }`                                  | —                                               |
+
+Every operator from `eq` to `subsetOf` also takes its right-hand side from the context: write `path` in place of `value` or `values`, as in `{ op: "eq", field: "article.authorId", path: "actor.id" }`. A node carries one or the other, never both. A comparison between two paths is false when either holds `null`, and two `Date`s compare by time value.
 
 `field` is a dotted path: `plan.tier` reads a nested object and `roles.0` an array element. A path that resolves to nothing makes every operator except `exists` false. Every comparison stays within one type, so `eq` between `"5"` and `5` is false and `lt` on a string is false. `matches` compiles its pattern with the [`v` flag](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/unicodeSets) at compile time, so a bad pattern fails the compile.
 

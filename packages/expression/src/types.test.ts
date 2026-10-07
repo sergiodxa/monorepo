@@ -36,11 +36,19 @@ test("derives every built-in, and nothing else, for a plain language", () => {
 	let plain = createLanguage();
 	type Expression = typeof plain.Expression;
 
-	expectTypeOf<Extract<Expression, { op: "eq" }>>().toEqualTypeOf<{
-		op: "eq";
-		field: string;
-		value: string | number | boolean | null;
-	}>();
+	expectTypeOf<Extract<Expression, { op: "eq" }>>().toEqualTypeOf<
+		| { op: "eq"; field: string; value: string | number | boolean | null; path?: never }
+		| { op: "eq"; field: string; path: string; value?: never }
+	>();
+	expectTypeOf<Extract<Expression, { op: "intersects" }>>().toEqualTypeOf<
+		| {
+				op: "intersects";
+				field: string;
+				values: (string | number | boolean | null)[];
+				path?: never;
+		  }
+		| { op: "intersects"; field: string; path: string; values?: never }
+	>();
 	expectTypeOf<Extract<Expression, { op: "matches" }>["pattern"]>().toEqualTypeOf<string>();
 	expectTypeOf<Extract<Expression, { op: "all" }>["of"]>().toEqualTypeOf<Expression[]>();
 	expectTypeOf<Extract<Expression, { op: "segment" }>>().toBeNever();
@@ -56,6 +64,9 @@ test("derives every built-in, and nothing else, for a plain language", () => {
 		| "lte"
 		| "gt"
 		| "gte"
+		| "includes"
+		| "intersects"
+		| "subsetOf"
 		| "startsWith"
 		| "endsWith"
 		| "contains"
@@ -122,4 +133,10 @@ test("narrows a node written in code on its op", () => {
 	// @ts-expect-error -- `lt` compares numbers only
 	let wrong: typeof flags.Expression = { op: "lt", field: "age", value: "18" };
 	expectTypeOf(wrong).not.toBeNever();
+	// @ts-expect-error -- a comparison reads a literal or a path, never both
+	let both: typeof flags.Expression = { op: "eq", field: "a", value: 1, path: "b" };
+	expectTypeOf(both).not.toBeNever();
+	// @ts-expect-error -- a comparison needs a right-hand side
+	let neither: typeof flags.Expression = { op: "eq", field: "a" };
+	expectTypeOf(neither).not.toBeNever();
 });

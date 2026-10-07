@@ -31,7 +31,7 @@ export interface Context {
  * field explicitly holding `null` reads back as `null`.
  * @example read({ plan: { tier: "pro" } }, "plan.tier") // "pro"
  */
-export function read(context: Context, path: string): ContextValue {
+export function read(context: object, path: string): ContextValue {
 	if (path === "") return undefined;
 
 	let current: unknown = context;

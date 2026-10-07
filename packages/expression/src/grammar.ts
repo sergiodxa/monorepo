@@ -15,7 +15,7 @@ import { lazy } from "remix/data-schema/lazy";
 import type { BuiltinName, StructuralName } from "./builtins.js";
 import type { AnyOperator } from "./expression.js";
 
-import { FIELD_BUILTINS } from "./builtins.js";
+import { FIELD_BUILTINS, FIELD_SCHEMA } from "./builtins.js";
 
 /** A node of any language, as the internals walk it before the public types apply. */
 export interface Node {
@@ -33,9 +33,6 @@ export interface Grammar {
 	reference?: string;
 	schema: Schema<unknown, Node>;
 }
-
-/** A dotted path into the context, which an empty string cannot name. */
-const FIELD_SCHEMA = s.string().refine((field) => field.length > 0, "Expected a context field");
 
 /**
  * Builds a grammar from the built-ins kept and the operators added. An added
