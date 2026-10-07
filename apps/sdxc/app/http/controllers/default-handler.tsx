@@ -21,11 +21,7 @@ import routes from "~/routes/web";
 /** Renders the 404 document for unmatched routes. */
 export default function defaultHandler(ctx: RequestContext) {
 	return ctx.render(
-		<DocumentLayout
-			title="Not found — sdxc"
-			description="The requested page does not exist."
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title="Not found — sdxc" description="The requested page does not exist.">
 			<main mix={[vstack({ gap: 5, align: "center", justify: "center" }), p(24, 5)]}>
 				<h1 mix={[m(0), text("3xl")]}>Not found</h1>
 				<p mix={[m(0), text("base"), fg("neutral")]}>The requested page does not exist.</p>

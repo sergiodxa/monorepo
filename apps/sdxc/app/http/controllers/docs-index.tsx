@@ -12,7 +12,6 @@ import { m } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { listGuides } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { readPackageFacts } from "~/app/services/packages";
@@ -65,12 +64,7 @@ export default createAction(routes.docs.index, async (ctx) => {
 		]);
 
 	let response = await ctx.render(
-		<DocumentLayout
-			title="Documentation — sdxc"
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title="Documentation — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
 			<DocsLayout tree={tree} activePath={routes.docs.index.href()} breadcrumbs={[]}>
 				<PageTitle eyebrow="Guides" title="Documentation">
 					{DESCRIPTION}
@@ -94,5 +88,5 @@ export default createAction(routes.docs.index, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

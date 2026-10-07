@@ -53,12 +53,7 @@ export default createAction(routes.docs.changelog, async (ctx) => {
 	}));
 
 	let response = await ctx.render(
-		<DocumentLayout
-			title={`${TITLE} — sdxc`}
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title={`${TITLE} — sdxc`} description={DESCRIPTION} canonical={ctx.url.href}>
 			<DocsLayout
 				tree={tree}
 				activePath={routes.docs.changelog.href()}

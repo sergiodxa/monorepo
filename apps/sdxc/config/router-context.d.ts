@@ -11,16 +11,12 @@ import type { Renderer } from "remix/middleware/render";
  */
 import type {} from "remix/router";
 
-import type { Sponsor } from "~/app/services/sponsors";
-
 declare module "remix/router" {
 	interface RequestContext {
 		/** Renders a `remix/component` node into an HTML `Response`. */
 		render: Renderer<RemixNode>;
 		/** The request's parsed `FormData`, populated by the global `formData()` middleware. */
 		formData: FormData;
-		/** The people the footer names, populated by the global `sponsors()` middleware. */
-		sponsors: Sponsor[];
 	}
 }
 

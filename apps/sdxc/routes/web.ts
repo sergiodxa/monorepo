@@ -21,6 +21,8 @@ export default route({
 	security: get("/security"),
 	/** What support a dated release carries, which is the question its number raises. */
 	maintenance: get("/maintenance"),
+	/** The case for funding the work, and who funds it now and did before. */
+	sponsors: get("/sponsors"),
 
 	/** The handwritten guides, each one a markdown file in `resources/docs`. */
 	docs: {

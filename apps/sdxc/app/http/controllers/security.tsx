@@ -13,7 +13,6 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readPolicy } from "~/app/services/policy";
 import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
 import source from "~/resources/content/security.md?raw";
@@ -36,7 +35,6 @@ export default createAction(routes.security, async (ctx) => {
 			title={`${frontmatter.title} — sdxc`}
 			description={frontmatter.description}
 			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
 		>
 			<PageLayout
 				eyebrow="Policy"
@@ -50,5 +48,5 @@ export default createAction(routes.security, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

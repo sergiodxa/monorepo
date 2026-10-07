@@ -20,7 +20,6 @@ import type { NavTree } from "~/app/services/navigation";
 import type { ThemeDeclaration } from "~/app/services/theming";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { THEMING_SUMMARY, THEMING_TITLE } from "~/app/services/catalogue-markdown";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { absoluteUrl } from "~/app/services/site";
@@ -58,7 +57,6 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 			title={`${THEMING_TITLE} — @sdxc/ui`}
 			description={THEMING_SUMMARY}
 			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -137,7 +135,7 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 }
 
 /** The fragment one band of the contract is linked by. */

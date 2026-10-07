@@ -17,8 +17,9 @@ import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
+import { siteCache } from "~/app/services/cache";
 import { readContent } from "~/app/services/content";
+import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
 import Band from "~/resources/components/band";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";
 import SiteHeader from "~/resources/components/site-header";
@@ -39,14 +40,10 @@ export default createAction(routes.philosophy, async (ctx) => {
 		throw content.error;
 	}
 
+	let roster = await readStoredSponsors(siteCache());
+
 	let response = await ctx.render(
-		<DocumentLayout
-			title="Philosophy — sdxc"
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			/* This page names them itself, below the argument they fund, so the closing bar leaves them out. */
-			sponsors={[]}
-		>
+		<DocumentLayout title="Philosophy — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
 			<SiteHeader activePath={routes.philosophy.href()} />
 
 			{/* Each band tints the full width, so the cap belongs on the content inside one. */}
@@ -57,14 +54,14 @@ export default createAction(routes.philosophy, async (ctx) => {
 				 * The people funding the work close the argument, since it is their argument too.
 				 * With nobody to name, the page ends on the argument itself.
 				 */}
-				{ctx.sponsors.length > 0 ? (
+				{roster.current.length > 0 ? (
 					<Band>
-						<Sponsors sponsors={ctx.sponsors} />
+						<Sponsors sponsors={roster.current} />
 					</Band>
 				) : null}
 			</main>
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response, sponsorsTag(roster));
 });

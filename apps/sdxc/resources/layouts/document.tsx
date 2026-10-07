@@ -22,7 +22,6 @@ import resetStyles from "@sdxc/ui/reset.css?url";
 import themeStyles from "@sdxc/ui/theme.css?url";
 
 import type { OptionSelections } from "~/app/services/option-groups";
-import type { Sponsor } from "~/app/services/sponsors";
 
 import { seo, SITE_URL } from "~/app/services/site";
 import OptionGroupScope from "~/resources/components/option-groups";
@@ -52,11 +51,6 @@ namespace DocumentLayout {
 		 * page renders itself from. A page carrying no such strip leaves it out.
 		 */
 		selections?: OptionSelections;
-		/**
-		 * The people the closing bar names. A page renders the bar whether or not there
-		 * are any, and the block inside it draws nothing while the list is empty.
-		 */
-		sponsors?: Sponsor[];
 	}
 }
 
@@ -67,7 +61,7 @@ namespace DocumentLayout {
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
-		let { canonical, children, description, og, selections, sponsors = [], title } = handle.props;
+		let { canonical, children, description, og, selections, title } = handle.props;
 
 		return (
 			<html
@@ -107,7 +101,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				<body mix={[m(0), vstack({ align: "center" }), minBs("100dvh"), font("sans"), bg(), fg()]}>
 					<OptionGroupScope selections={selections}>
 						{children}
-						<SiteFooter sponsors={sponsors} />
+						<SiteFooter />
 					</OptionGroupScope>
 					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
 				</body>

@@ -22,7 +22,7 @@ export default {
 	},
 
 	/**
-	 * Reads the sponsors from GitHub into the cache the footer renders from, so a page
+	 * Reads the sponsors from GitHub into the cache the pages render from, so a page
 	 * never waits on GitHub and the list survives an outage there. A run that cannot
 	 * reach GitHub leaves the stored list in place, which is the whole point of doing
 	 * this here rather than in a request. GitHub's sponsor query needs a token, so a
@@ -35,8 +35,8 @@ export default {
 		await log
 			.run(async () => {
 				if (!token) return void log.set({ skipped: "missing_token" });
-				let sponsors = await refreshSponsors(siteCache(), token);
-				log.set({ count: sponsors.length });
+				let roster = await refreshSponsors(siteCache(), token);
+				log.set({ current: roster.current.length, past: roster.past.length });
 			})
 			.catch(() => undefined);
 	},

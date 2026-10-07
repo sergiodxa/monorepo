@@ -19,7 +19,6 @@ import { Badge, LinkButton } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { listGuides } from "~/app/services/docs";
 import { listShowcase } from "~/app/services/showcase";
 import Band from "~/resources/components/band";
@@ -43,12 +42,7 @@ export default createAction(routes.showcase, async (ctx) => {
 	let firstGuide = first ? routes.docs.show.href({ slug: first.slug }) : null;
 
 	let response = await ctx.render(
-		<DocumentLayout
-			title="Showcase — sdxc"
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title="Showcase — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
 			<SiteHeader activePath={routes.showcase.href()} />
 
 			<main mix={[vstack({ align: "center" }), is("100%")]}>
@@ -201,5 +195,5 @@ export default createAction(routes.showcase, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

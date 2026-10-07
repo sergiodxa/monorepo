@@ -22,7 +22,6 @@ import type { PropsTable } from "~/app/services/components";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import themingPage from "~/app/http/controllers/ui-theming";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
@@ -75,7 +74,6 @@ export default createAction(routes.api.component, async (ctx) => {
 			title={`${reference.name} — @sdxc/ui`}
 			description={reference.summary}
 			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -208,7 +206,7 @@ export default createAction(routes.api.component, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });
 
 /** The fragment a part's own props are linked by. */

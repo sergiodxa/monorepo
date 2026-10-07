@@ -20,7 +20,6 @@ import type { Anchor } from "~/app/services/article";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { buildUtilitiesNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
@@ -74,7 +73,6 @@ export default createAction(routes.api.utility, async (ctx) => {
 			title={`${reference.property} — @sdxc/u`}
 			description={reference.summary}
 			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -194,5 +192,5 @@ export default createAction(routes.api.utility, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

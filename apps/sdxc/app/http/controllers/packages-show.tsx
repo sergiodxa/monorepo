@@ -27,7 +27,6 @@ import type { PackageEntry } from "~/app/services/packages";
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { readOptionSelections } from "~/app/http/cookies";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import {
 	buildPackageNav,
@@ -82,7 +81,6 @@ export default createAction(routes.api.show, async (ctx) => {
 			canonical={ctx.url.href}
 			selections={selections}
 			og={{ type: "article" }}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -157,7 +155,7 @@ export default createAction(routes.api.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });
 
 /**

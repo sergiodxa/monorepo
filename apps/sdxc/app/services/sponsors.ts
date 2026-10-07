@@ -1,19 +1,20 @@
 /**
- * The people funding this work, read from GitHub's GraphQL API and remembered in the
- * site's cache. A page reads the stored list and nothing else, so the footer renders
- * at the speed of a KV read and stays up whatever GitHub is doing; a scheduled refresh
- * is what puts a fresh list there.
+ * The people funding this work, now and before, read from GitHub's GraphQL API and
+ * remembered in the site's cache. A page reads the stored roster and nothing else, so it
+ * renders at the speed of a KV read and stays up whatever GitHub is doing; a scheduled
+ * refresh is what puts a fresh roster there.
  *
  * A sponsorship GitHub marks private is one this module is never told about: the query
  * asks for the public view, which GitHub applies before it answers. Nothing here has a
  * sample list, a placeholder or a fallback name — a read that cannot be completed
- * yields nobody, and nobody is what makes the block disappear.
+ * yields nobody, and nobody is what makes a sponsor list disappear.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Cache } from "@sdxc/cache";
+import type { InferOutput } from "remix/data-schema";
 
 import { APIClient } from "@sdxc/api-client";
 import { isSuccess } from "@sdxc/result";
@@ -22,12 +23,12 @@ import * as s from "remix/data-schema";
 /** The GitHub account the sponsorships belong to. */
 export const SPONSORED_LOGIN = "sergiodxa";
 
-/** The entry the rendered list is read from, and the refresh writes. */
-export const SPONSORS_CACHE_KEY = "sponsors:public";
+/** The entry the rendered roster is read from, and the refresh writes. */
+export const SPONSORS_CACHE_KEY = "sponsors:roster";
 
 /**
  * How long a stored list stays readable. It outlives the refresh interval by enough
- * that a missed run leaves the footer intact rather than empty, and expires on its own
+ * that a missed run leaves the pages intact rather than empty, and expires on its own
  * so a list nothing refreshes any more stops being presented as current.
  */
 const SPONSORS_TTL = "2 days";
@@ -35,14 +36,19 @@ const SPONSORS_TTL = "2 days";
 /** How GitHub marks a sponsorship its sponsor chose to show. */
 const PUBLIC_PRIVACY = "PUBLIC";
 
-/** How many sponsors one read asks for, which is more than the account has. */
+/** How many sponsorships one read asks for, which is the most GitHub answers with at once. */
 const PAGE_SIZE = 100;
 
 /** Identifies this site to GitHub, which requires a caller to name itself. */
 const USER_AGENT = "sdxc.sergiodxa.com";
 
 /**
- * Asks for the maintainer's sponsorships with the private ones left out.
+ * Asks for the maintainer's sponsorships with the private ones left out, twice: the
+ * active ones, and every one ever made. Past sponsors are the second list less the first,
+ * because the field that marks a sponsorship active needs the same scope `privacyLevel`
+ * does.
+ *
+ * Every list leaves the private ones out.
  * `includePrivate` defaults to true for a token that owns the account, so it is stated
  * here, and it is the authoritative filter: GitHub applies it server-side, and nothing
  * a sponsor asked to keep private is in the answer at all.
@@ -55,14 +61,19 @@ const USER_AGENT = "sdxc.sergiodxa.com";
 const SPONSORS_QUERY = `
 	query Sponsors($login: String!, $first: Int!) {
 		user(login: $login) {
-			sponsorshipsAsMaintainer(first: $first, includePrivate: false, orderBy: { field: CREATED_AT, direction: ASC }) {
-				nodes {
-					sponsorEntity {
-						... on User { login name avatarUrl url }
-						... on Organization { login name avatarUrl url }
-					}
-				}
+			current: sponsorshipsAsMaintainer(first: $first, includePrivate: false, activeOnly: true, orderBy: { field: CREATED_AT, direction: ASC }) {
+				nodes { ...Sponsorship }
 			}
+			ever: sponsorshipsAsMaintainer(first: $first, includePrivate: false, activeOnly: false, orderBy: { field: CREATED_AT, direction: DESC }) {
+				nodes { ...Sponsorship }
+			}
+		}
+	}
+
+	fragment Sponsorship on Sponsorship {
+		sponsorEntity {
+			... on User { login name avatarUrl url }
+			... on Organization { login name avatarUrl url }
 		}
 	}
 `;
@@ -77,6 +88,18 @@ export interface Sponsor {
 	url: string;
 }
 
+/**
+ * Who funds the work now, longest-standing first, and who funded it before, most recent
+ * first. A sponsor appears in one list at most.
+ */
+export interface SponsorRoster {
+	current: Sponsor[];
+	past: Sponsor[];
+}
+
+/** The roster while nobody could be read. */
+export const NO_SPONSORS: SponsorRoster = { current: [], past: [] };
+
 /** The shape of a sponsor GitHub answers with, whether a person or an organisation. */
 const entitySchema = s.object({
 	login: s.string(),
@@ -85,26 +108,22 @@ const entitySchema = s.object({
 	url: s.string(),
 });
 
+/** One sponsorship, of which only the sponsor and its visibility are read. */
+const sponsorshipSchema = s.object({
+	/** Present only where a token may read it; absent is not "private". */
+	privacyLevel: s.optional(s.nullable(s.string())),
+	sponsorEntity: s.nullable(entitySchema),
+});
+
+/** One list of sponsorships the query asks for. */
+const connectionSchema = s.object({
+	nodes: s.nullable(s.array(s.nullable(sponsorshipSchema))),
+});
+
 /** What the site accepts back from the sponsors query, which is external input. */
 const responseSchema = s.object({
 	data: s.object({
-		user: s.nullable(
-			s.object({
-				sponsorshipsAsMaintainer: s.object({
-					nodes: s.nullable(
-						s.array(
-							s.nullable(
-								s.object({
-									/** Present only where a token may read it; absent is not "private". */
-									privacyLevel: s.optional(s.nullable(s.string())),
-									sponsorEntity: s.nullable(entitySchema),
-								}),
-							),
-						),
-					),
-				}),
-			}),
-		),
+		user: s.nullable(s.object({ current: connectionSchema, ever: connectionSchema })),
 	}),
 });
 
@@ -167,20 +186,38 @@ function readErrors(payload: unknown): string[] {
 }
 
 /**
- * The sponsors a payload says are public, in the order GitHub listed them.
+ * The roster a payload says is public, each list in the order GitHub gave it.
  *
  * @param payload Whatever came back from the sponsors query.
  * @returns The sponsors safe to name. A payload that misses the schema yields none,
  * because a list the site cannot read is a list it cannot vouch for, and none is what
- * makes the block disappear rather than stand there with something invented in it.
+ * makes a sponsor list disappear rather than stand there with something invented in it.
  */
-export function publicSponsors(payload: unknown): Sponsor[] {
+export function sponsorRoster(payload: unknown): SponsorRoster {
 	let parsed = s.parseSafe(responseSchema, payload);
-	if (!parsed.success) return [];
+	if (!parsed.success) return NO_SPONSORS;
 
+	let user = parsed.value.data.user;
+	if (user === null) return NO_SPONSORS;
+
+	let current = publicSponsors(user.current.nodes ?? []);
+	let named = new Set(current.map((sponsor) => sponsor.login));
+	let past: Sponsor[] = [];
+
+	for (let sponsor of publicSponsors(user.ever.nodes ?? [])) {
+		if (named.has(sponsor.login)) continue;
+		named.add(sponsor.login);
+		past.push(sponsor);
+	}
+
+	return { current, past };
+}
+
+/** The public sponsors among `nodes`, in their order. */
+function publicSponsors(nodes: Array<InferOutput<typeof sponsorshipSchema> | null>): Sponsor[] {
 	let sponsors: Sponsor[] = [];
 
-	for (let node of parsed.value.data.user?.sponsorshipsAsMaintainer.nodes ?? []) {
+	for (let node of nodes) {
 		if (node === null) continue;
 
 		/* The query already excluded the private ones; a level that says otherwise wins. */
@@ -202,44 +239,56 @@ export function publicSponsors(payload: unknown): Sponsor[] {
 }
 
 /**
- * Asks GitHub who is sponsoring the account.
+ * Asks GitHub who sponsors the account, and who did.
  *
  * @param token The credential the query is made with.
- * @returns The public sponsors.
- * @throws When the call fails, so a failed refresh leaves the stored list alone.
+ * @returns The public roster.
+ * @throws When the call fails, so a failed refresh leaves the stored roster alone.
  */
-export async function fetchPublicSponsors(token: string): Promise<Sponsor[]> {
+export async function fetchSponsorRoster(token: string): Promise<SponsorRoster> {
 	let client = new GitHubGraphQL(token);
 	let payload = await client.run(SPONSORS_QUERY, { login: SPONSORED_LOGIN, first: PAGE_SIZE });
-	return publicSponsors(payload);
+	return sponsorRoster(payload);
 }
 
 /**
- * The stored list a page renders.
+ * The stored roster a page renders.
  *
- * @param cache Where the list is kept.
- * @returns The sponsors, or none when the store is empty or unreachable. A page that
- * gets none draws nothing, which is the honest answer while the list is unknown.
+ * @param cache Where the roster is kept.
+ * @returns The roster, or nobody when the store is empty or unreachable. A page that
+ * gets nobody draws no list, which is the honest answer while the roster is unknown.
  */
-export async function readStoredSponsors(cache: Cache): Promise<Sponsor[]> {
-	let stored = await cache.read<Sponsor[]>(SPONSORS_CACHE_KEY);
-	if (!isSuccess(stored) || stored.data === null) return [];
+export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
+	let stored = await cache.read<SponsorRoster>(SPONSORS_CACHE_KEY);
+	if (!isSuccess(stored) || stored.data === null) return NO_SPONSORS;
 	return stored.data;
+}
+
+/**
+ * Names one version of the roster, so a stored copy of a page retires when the people it
+ * names change.
+ *
+ * @param roster The roster a page was rendered with.
+ * @returns A short string standing for that roster.
+ */
+export function sponsorsTag(roster: SponsorRoster): string {
+	let logins = (list: Sponsor[]) => list.map((sponsor) => sponsor.login).join(",");
+	return `${logins(roster.current)}|${logins(roster.past)}`;
 }
 
 /**
  * Reads GitHub and stores what it says, which is what the schedule calls.
  *
- * The list is asked for rather than fetched through the cache, because the point of a
+ * The roster is asked for rather than fetched through the cache, because the point of a
  * refresh is to replace an entry that is still perfectly readable.
  *
- * @param cache Where the list is kept.
+ * @param cache Where the roster is kept.
  * @param token The credential the query is made with.
- * @returns The sponsors now stored.
- * @throws When GitHub cannot be read, which leaves the stored list standing.
+ * @returns The roster now stored.
+ * @throws When GitHub cannot be read, which leaves the stored roster standing.
  */
-export async function refreshSponsors(cache: Cache, token: string): Promise<Sponsor[]> {
-	let sponsors = await fetchPublicSponsors(token);
-	await cache.write(SPONSORS_CACHE_KEY, sponsors, { ttl: SPONSORS_TTL });
-	return sponsors;
+export async function refreshSponsors(cache: Cache, token: string): Promise<SponsorRoster> {
+	let roster = await fetchSponsorRoster(token);
+	await cache.write(SPONSORS_CACHE_KEY, roster, { ttl: SPONSORS_TTL });
+	return roster;
 }

@@ -20,7 +20,6 @@ import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
@@ -73,7 +72,6 @@ export default createAction(routes.docs.show, async (ctx) => {
 			description={frontmatter.description}
 			canonical={ctx.url.href}
 			og={{ type: "article" }}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -107,5 +105,5 @@ export default createAction(routes.docs.show, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

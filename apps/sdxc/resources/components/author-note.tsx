@@ -14,13 +14,8 @@ import { m } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
 
-import {
-	AUTHOR_NAME,
-	AUTHOR_URL,
-	AUTHOR_X_HANDLE,
-	AUTHOR_X_URL,
-	SPONSOR_URL,
-} from "~/app/services/site";
+import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_HANDLE, AUTHOR_X_URL } from "~/app/services/site";
+import routes from "~/routes/web";
 
 /** Renders the credit line. */
 export default function AuthorNote(_handle: Handle) {
@@ -35,7 +30,7 @@ export default function AuthorNote(_handle: Handle) {
 				{AUTHOR_X_HANDLE}
 			</a>{" "}
 			for new packages, or{" "}
-			<a href={SPONSOR_URL} rel="noreferrer" mix={[fg("neutral"), when("&:hover", fg("brand"))]}>
+			<a href={routes.sponsors.href()} mix={[fg("neutral"), when("&:hover", fg("brand"))]}>
 				sponsor the work
 			</a>
 			.

@@ -17,7 +17,6 @@ import { Button, Keyboard } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { buildPackagesNav } from "~/app/services/navigation";
 import { listPackageGroups } from "~/app/services/packages";
 import PageTitle from "~/resources/components/page-title";
@@ -35,12 +34,7 @@ export default createAction(routes.api.index, async (ctx) => {
 	let groups = listPackageGroups();
 
 	let response = await ctx.render(
-		<DocumentLayout
-			title="API — sdxc"
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title="API — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
 			<DocsLayout tree={tree} activePath={routes.api.index.href()} breadcrumbs={[]}>
 				<PageTitle eyebrow="API" title="Every package">
 					{DESCRIPTION}
@@ -98,5 +92,5 @@ export default createAction(routes.api.index, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

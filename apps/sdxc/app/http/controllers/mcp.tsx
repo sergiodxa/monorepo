@@ -17,7 +17,6 @@ import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { readContent } from "~/app/services/content";
 import mcp from "~/bootstrap/mcp";
 import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
@@ -45,12 +44,7 @@ export default createAction(routes.mcp, async (ctx) => {
 	}
 
 	let response = await ctx.render(
-		<DocumentLayout
-			title="MCP endpoint — sdxc"
-			description={DESCRIPTION}
-			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
-		>
+		<DocumentLayout title="MCP endpoint — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
 			<PageLayout
 				eyebrow="For agents"
 				title="The MCP endpoint"
@@ -62,5 +56,5 @@ export default createAction(routes.mcp, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });

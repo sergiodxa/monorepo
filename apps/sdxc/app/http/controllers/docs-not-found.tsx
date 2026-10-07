@@ -32,7 +32,6 @@ export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
 		<DocumentLayout
 			title="Not found — sdxc"
 			description="No documentation page answers to that address."
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}

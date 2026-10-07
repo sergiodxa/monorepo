@@ -39,7 +39,6 @@ export default createAction(routes.home, async (ctx) => {
 			description={DESCRIPTION}
 			canonical={ctx.url.href}
 			selections={await readOptionSelections(ctx.request)}
-			sponsors={ctx.sponsors}
 		>
 			<SiteHeader activePath={routes.home.href()} />
 

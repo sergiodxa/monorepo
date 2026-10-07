@@ -23,7 +23,6 @@ import type { UiSymbol } from "~/app/services/ui-exports";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import { sponsorsTag } from "~/app/http/middleware/sponsors";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
@@ -86,7 +85,6 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 			title={`${reference.name} — ${module}`}
 			description={reference.summary}
 			canonical={ctx.url.href}
-			sponsors={ctx.sponsors}
 		>
 			<DocsLayout
 				tree={tree}
@@ -186,7 +184,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 		</DocumentLayout>,
 	);
 
-	return await withBundleCache(ctx.request, response, sponsorsTag(ctx.sponsors));
+	return await withBundleCache(ctx.request, response);
 });
 
 /** The fragment a companion is linked by. */

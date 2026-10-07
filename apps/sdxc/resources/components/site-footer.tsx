@@ -1,7 +1,7 @@
 /**
  * The bar every page ends on: the collection's name, the places a reader reaches once —
  * the argument for the packages, the applications built on them, the policies, the
- * source — and the author: where to follow them, and how to fund the work.
+ * source — and the author: where to follow them, and where to read about funding the work.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,10 +18,7 @@ import { is, m, maxIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, text, tracking, weight } from "@sdxc/u/typography";
 
-import type { Sponsor } from "~/app/services/sponsors";
-
-import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL, SPONSOR_URL } from "~/app/services/site";
-import Sponsors from "~/resources/components/sponsors";
+import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/app/services/site";
 import routes from "~/routes/web";
 
 /** Where the collection is read and its issues are filed. */
@@ -31,11 +28,6 @@ const REPOSITORY_HREF = "https://github.com/sergiodxa/monorepo";
 const NPM_HREF = "https://www.npmjs.com/org/sdxc";
 
 namespace SiteFooter {
-	export interface Props {
-		/** The people to name, empty while the list is unknown. */
-		sponsors: Sponsor[];
-	}
-
 	/** One link in a column. */
 	export interface Link {
 		label: string;
@@ -52,7 +44,7 @@ namespace SiteFooter {
 }
 
 /** Renders the closing bar. */
-export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
+export default function SiteFooter(_handle: Handle) {
 	return () => (
 		<footer
 			mix={[
@@ -156,12 +148,10 @@ export default function SiteFooter(handle: Handle<SiteFooter.Props>) {
 						links={[
 							{ label: "Blog", href: AUTHOR_URL },
 							{ label: "X", href: AUTHOR_X_URL },
-							{ label: "Sponsor", href: SPONSOR_URL },
+							{ label: "Sponsor", href: routes.sponsors.href() },
 						]}
 					/>
 				</div>
-
-				<Sponsors sponsors={handle.props.sponsors} />
 			</div>
 		</footer>
 	);

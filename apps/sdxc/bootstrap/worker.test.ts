@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 let records: Record<string, unknown>[] = [];
 
 /** Stands in for the GitHub read so the test observes which token it receives. */
-let refreshSponsors = vi.fn(async (_cache: unknown, _token: string) => []);
+let refreshSponsors = vi.fn(async (_cache: unknown, _token: string) => ({ current: [], past: [] }));
 
 vi.doMock("./logger", () => ({
 	logger: createLogger({ service: "sdxc", sink: (record) => void records.push(record) }),
@@ -44,6 +44,6 @@ describe("scheduled", () => {
 		await worker.scheduled({} as ScheduledController, env);
 
 		expect(refreshSponsors).toHaveBeenCalledWith(expect.anything(), "token");
-		expect(records[0]).toMatchObject({ kind: "cron", count: 0 });
+		expect(records[0]).toMatchObject({ kind: "cron", current: 0, past: 0 });
 	});
 });

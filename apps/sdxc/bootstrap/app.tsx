@@ -48,9 +48,9 @@ import searchIndex from "~/app/http/controllers/search-index";
 import security from "~/app/http/controllers/security";
 import showcase from "~/app/http/controllers/showcase";
 import sitemap from "~/app/http/controllers/sitemap";
+import sponsors from "~/app/http/controllers/sponsors";
 import uiExportShow from "~/app/http/controllers/ui-export-show";
 import utilityShow from "~/app/http/controllers/utility-show";
-import { sponsors } from "~/app/http/middleware/sponsors";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -76,7 +76,6 @@ export default function application() {
 		formData() as Middleware,
 		cop(),
 		renderWith(createHtmlRenderer) as Middleware,
-		sponsors(),
 		userAgent(),
 	];
 
@@ -97,6 +96,7 @@ export default function application() {
 	router.map(routes.showcase, showcase);
 	router.map(routes.security, security);
 	router.map(routes.maintenance, maintenance);
+	router.map(routes.sponsors, sponsors);
 
 	/* The same pages as markdown, plus the surfaces derived from what is in the bundle. */
 	router.map(routes.markdown.docs, markdownTwin);

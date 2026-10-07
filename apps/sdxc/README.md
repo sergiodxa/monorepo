@@ -15,9 +15,10 @@ Production URL: https://sdxc.sergiodxa.com
 Configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
 
 - **KV** (`CACHE`) holds what the site reads back from GitHub: the changelog and the
-  sponsor list. Every other page renders from files in the deployed bundle.
-- **Cron** (`0 */6 * * *`) refreshes the sponsor list into KV, so a page never waits on
-  GitHub.
+  sponsor roster, current and past. Every other page renders from files in the deployed
+  bundle.
+- **Cron** (`0 */6 * * *`) refreshes the sponsor roster into KV, so `/sponsors` never waits
+  on GitHub.
 - **Custom domain** `sdxc.sergiodxa.com`.
 
 Observability is enabled, with traces head-sampled at 10%.
