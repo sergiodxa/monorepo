@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/lazy-frame",
+	"version": "0.0.1",
+	"description": "A remix/component frame that loads its page once the reader reaches it, by scrolling near it or opening the dialog around it",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		"./ui": "./src/ui.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0"
+	}
+}
