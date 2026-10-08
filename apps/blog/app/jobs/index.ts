@@ -6,6 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import { Federation } from "@sdxc/activitypub";
 import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
@@ -44,6 +45,20 @@ export default jobs({
 		sweep: job({ cron: "0 6 * * 1" }),
 		/** Mails the flags raised since the last digest; sends nothing when there are none. */
 		digest: job({ cron: "0 14 * * *" }),
+	},
+	activityPub: {
+		/**
+		 * Runs one step the federation queued: an activity the inbox verified, the fan-out of
+		 * a published activity, or one signed delivery to one inbox.
+		 */
+		process: job({ input: Federation.MESSAGE }),
+		/**
+		 * Federates a created, edited or deleted post: `Create` the first time, `Update` after,
+		 * `Delete` once gone. `changedAt` is when the edit happened, which names its `Update`.
+		 */
+		publish: job({ input: s.object({ postId: s.string(), changedAt: s.string() }) }),
+		/** Federates posts whose scheduled publish date has arrived since the last run. */
+		scheduled: job({ cron: "*/15 * * * *" }),
 	},
 	sponsors: {
 		/** Stores the public sponsor roster `/sponsors` renders, four times a day. */

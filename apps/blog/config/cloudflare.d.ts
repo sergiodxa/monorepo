@@ -55,6 +55,8 @@ declare global {
 			MCP_RATE_LIMITER?: RateLimit;
 			/** Present only once a deploy's bindings include the `SUPPORT_RATE_LIMITER` entry. */
 			SUPPORT_RATE_LIMITER?: RateLimit;
+			/** Present only once a deploy's bindings include the `ACTIVITYPUB_RATE_LIMITER` entry. */
+			ACTIVITYPUB_RATE_LIMITER?: RateLimit;
 			/** The `send_email` binding support requests are delivered through. */
 			EMAIL?: SendEmail;
 			/** Set with `bunx wrangler secret put SUPPORT_INBOX`; unset keeps the form failing closed. */
@@ -70,6 +72,8 @@ declare global {
 			/** The archive.org account keys bookmarks are captured under, from the Secrets Store. */
 			WAYBACK_ACCESS_KEY: SecretsStoreSecret;
 			WAYBACK_SECRET_KEY: SecretsStoreSecret;
+			/** The ActivityPub actor's PKCS#8 RSA private key, from the Secrets Store. */
+			ACTIVITYPUB_PRIVATE_KEY: SecretsStoreSecret;
 		}
 	}
 

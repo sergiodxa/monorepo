@@ -9,7 +9,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { and, eq, inList, isNull, notNull } from "remix/data-table";
+import { and, eq, inList, isNull, notNull, sql } from "remix/data-table";
 
 import { PostMeta } from "~/app/repositories/post-meta";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
@@ -163,6 +163,15 @@ export namespace Post {
 		content: string;
 		published_at: string | null;
 		deleted_at: string | null;
+		/** When followers were sent its `Create`; `null` while they never were. */
+		federated_at: string | null;
+	}
+
+	/** A published article or tutorial in the order the ActivityPub outbox lists it. */
+	export interface Federatable {
+		id: string;
+		/** Epoch milliseconds of its publish date, else its creation date. */
+		timestamp: number;
 	}
 
 	/** Tutorial related-post summary matched through one shared tag. */
@@ -380,6 +389,7 @@ export class Post {
 			content: latestMeta(meta, "content") ?? "",
 			published_at: post.published_at,
 			deleted_at: post.deleted_at,
+			federated_at: post.federated_at,
 		};
 	}
 
@@ -406,6 +416,54 @@ export class Post {
 				return this.parseTimestamp(row.mentions_sent_at) < this.parseTimestamp(row.published_at);
 			})
 			.map((row) => row.id);
+	}
+
+	/**
+	 * Articles and tutorials whose scheduled publish date has arrived and whose `Create`
+	 * followers never received. A post published on save federates from the CMS, and one
+	 * already public when federation started counts as federated, so neither lands here.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @returns The ids of the posts due to federate.
+	 */
+	static async findDueForFederation(db: Database): Promise<string[]> {
+		let rows = await db.findMany(this.table, {
+			where: and(
+				inList("type", ["article", "tutorial"]),
+				isNull("deleted_at"),
+				isNull("federated_at"),
+				notNull("published_at"),
+			),
+		});
+		return rows.filter((row) => this.isPublishedAt(row.published_at)).map((row) => row.id);
+	}
+
+	/**
+	 * The published, live articles and tutorials, newest first with the id breaking a tie,
+	 * which is the order the outbox pages through and the count NodeInfo reports.
+	 *
+	 * @param db Database handle used for lookups.
+	 */
+	static async findFederatable(db: Database): Promise<Post.Federatable[]> {
+		let rows = await db.findMany(this.table, {
+			where: and(inList("type", ["article", "tutorial"]), isNull("deleted_at")),
+		});
+		return rows
+			.filter((row) => this.isPublishedAt(row.published_at))
+			.map((row) => ({ id: row.id, timestamp: this.timestampFromPublishedOrCreated(row) }))
+			.filter((row) => Number.isFinite(row.timestamp))
+			.sort((a, b) => b.timestamp - a.timestamp || (a.id < b.id ? 1 : a.id > b.id ? -1 : 0));
+	}
+
+	/**
+	 * Stamps a post as sent to its followers, leaving `updated_at` alone because nothing a
+	 * reader sees changed. One statement, so it is safe on D1.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param id Post identifier.
+	 */
+	static async markFederated(db: Database, id: string) {
+		await db.exec(sql`update "posts" set "federated_at" = ${this.timestamp} where "id" = ${id}`);
 	}
 
 	/**
@@ -572,15 +630,29 @@ export class Post {
 		db: Database,
 		input: { postType: Post.PublicTypePath; postSlug: string },
 	): Promise<boolean> {
+		return (await this.findTombstone(db, input)) !== null;
+	}
+
+	/**
+	 * The deleted post a public URL belonged to, with when it was deleted, which the
+	 * ActivityPub `Tombstone` it is served as carries; `null` when no deleted post had it.
+	 *
+	 * @param db Database handle used for lookups.
+	 * @param input Route-like lookup input.
+	 */
+	static async findTombstone(
+		db: Database,
+		input: { postType: Post.PublicTypePath; postSlug: string },
+	): Promise<{ deleted_at: string } | null> {
 		let type = PUBLIC_TYPES[input.postType];
 		let matches = await PostMeta.findByKeyValue(db, "slug", input.postSlug);
 		for (let match of matches) {
 			let post = await db.findOne(this.table, {
 				where: and({ id: match.post_id, type }, notNull("deleted_at")),
 			});
-			if (post) return true;
+			if (post?.deleted_at) return { deleted_at: post.deleted_at };
 		}
-		return false;
+		return null;
 	}
 
 	/**
@@ -737,6 +809,7 @@ export class Post {
 				published_at: this.table.published_at,
 				deleted_at: this.table.deleted_at,
 				mentions_sent_at: this.table.mentions_sent_at,
+				federated_at: this.table.federated_at,
 				meta_id: schema.postMeta.id,
 				meta_created_at: schema.postMeta.created_at,
 				meta_updated_at: schema.postMeta.updated_at,
@@ -778,6 +851,7 @@ export class Post {
 			published_at: string | null;
 			deleted_at: string | null;
 			mentions_sent_at: string | null;
+			federated_at: string | null;
 			meta_id: string;
 			meta_created_at: string;
 			meta_updated_at: string;
@@ -801,6 +875,7 @@ export class Post {
 					published_at: row.published_at,
 					deleted_at: row.deleted_at,
 					mentions_sent_at: row.mentions_sent_at,
+					federated_at: row.federated_at,
 					meta: [],
 				};
 				posts.set(row.id, post);

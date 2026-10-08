@@ -52,6 +52,8 @@ export namespace BlogLayout {
 		locale?: string;
 		activePath?: string;
 		canonical?: string;
+		/** The page's ActivityStreams representation, advertised as an `alternate` link. */
+		activity?: string;
 		meta?: Array<MetaTag>;
 		/**
 		 * Text the search dialog opens holding, with its results already rendered; the
@@ -90,6 +92,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 	return () => {
 		let {
 			activePath,
+			activity,
 			canonical,
 			children,
 			description,
@@ -105,6 +108,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 				title={title}
 				description={description}
 				canonical={canonical}
+				activity={activity}
 				meta={meta}
 				bodyMix={[
 					m(0),

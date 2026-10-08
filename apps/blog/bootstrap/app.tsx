@@ -28,6 +28,7 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
+import { NODEINFO_2_1, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
@@ -43,6 +44,8 @@ import { createRouter } from "remix/router";
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
+import activityPub from "~/app/http/middleware/activitypub";
+import activityPubRateLimit from "~/app/http/middleware/activitypub-rate-limit";
 import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
@@ -60,6 +63,7 @@ import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { jobQueue } from "~/app/jobs/queue";
 import mcpRateLimit from "~/app/mcp/rate-limit";
 import { createDatabase } from "~/app/services/database";
+import { PROFILE } from "~/config/profile";
 import { SECURITY_TXT } from "~/config/security-txt";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
@@ -71,7 +75,21 @@ import { logger } from "./logger";
  * only `GET` here. Matched exactly against the route table, so a path *beneath* one of
  * these still falls through to the full chain and the normal 404 page.
  */
-const MACHINE_PATHS = new Set<string>([routes.mcp.index.href(), routes.webmention.href()]);
+const MACHINE_PATHS = new Set<string>([
+	routes.mcp.index.href(),
+	routes.webmention.href(),
+	routes.activityPub.inbox.href(),
+]);
+
+/**
+ * The `/.well-known/nodeinfo` links document: one link, to the NodeInfo 2.1 document on the
+ * canonical origin, which is the same for every request.
+ */
+const NODEINFO_LINKS = {
+	links: [
+		{ rel: NODEINFO_2_1, href: new URL(routes.nodeInfo.href(), PROFILE.canonical.origin).href },
+	],
+};
 
 /**
  * Whether a request is the machine half of a machine path. Method-aware because `/mcp`
@@ -124,6 +142,30 @@ function feedsOf(stream: Syndication.Stream) {
 	return [routes.rss[stream], routes.atom[stream], routes.jsonFeed[stream]];
 }
 
+/**
+ * Publishes `ctx.activityPub` over the request's database, its job enqueuer and the `CACHE`
+ * namespace. The federation is imported on the first request that reaches a federating
+ * route, which keeps the resolver and signing code off every other cold start.
+ *
+ * @param env Environment bindings, read for the `CACHE` namespace.
+ */
+function activityPubService(env: App.Env): Middleware {
+	return activityPub(async (ctx) => {
+		let [{ createFederation, federationQueue }, { BLOG_KEYS }, { WorkerKVCache }] =
+			await Promise.all([
+				import("~/app/services/activitypub"),
+				import("~/app/services/activitypub-keys"),
+				import("@sdxc/cache/worker-kv"),
+			]);
+		return createFederation({
+			db: ctx.db,
+			cache: new WorkerKVCache(env.CACHE),
+			keys: BLOG_KEYS,
+			queue: federationQueue(ctx.jobs),
+		});
+	});
+}
+
 /** Services {@link createApplication} otherwise builds from the Worker's bindings. */
 export interface ApplicationOptions {
 	/** Delivers Encore support requests in place of the `EMAIL` binding. */
@@ -160,7 +202,10 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		createEnvMiddleware(env),
 		createNoWWWMiddleware(),
 		trailingSlash(),
-		wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
+		wellKnown({
+			"security.txt": serve(securityTxt, () => SECURITY_TXT),
+			nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
+		}),
 		asyncContext(),
 		database(createDatabase),
 		jobEnqueuer(jobQueue),
@@ -195,9 +240,12 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		},
 	});
 
+	let federating = activityPubService(env);
+
+	/** The home page negotiates to the actor document, which `ctx.activityPub` builds. */
 	router.map(
 		routes.feed,
-		lazy(() => import("~/app/http/controllers/feed")),
+		lazy(() => import("~/app/http/controllers/feed"), [federating]),
 	);
 	router.map(
 		routes.colors,
@@ -228,6 +276,26 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		routes.webmention,
 		lazy(() => import("~/app/http/controllers/webmention"), webmentionRateLimit(env)),
 	);
+	/**
+	 * Any server delivers activities here, so the inbox answers behind a per-network budget
+	 * before the service or the controller is loaded.
+	 */
+	router.map(
+		routes.activityPub.inbox,
+		lazy(
+			() => import("~/app/http/controllers/activitypub-inbox"),
+			[...activityPubRateLimit(env), federating],
+		),
+	);
+	router.map(
+		routes.activityPub.documents,
+		lazy(() => import("~/app/http/controllers/activitypub"), [federating]),
+	);
+	router.map(
+		routes.nodeInfo,
+		lazy(() => import("~/app/http/controllers/nodeinfo")),
+	);
+
 	/**
 	 * Anonymous submissions, behind honeypot fields and the rate-limited support desk. The
 	 * honeypot keys off the session secret under a `honeypot:` label, so it needs no secret of
@@ -277,9 +345,10 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		routes.searchFrame,
 		lazy(() => import("~/app/http/controllers/search-frame")),
 	);
+	/** A post page negotiates to its `Article`, which `ctx.activityPub` answers. */
 	router.map(
 		routes.post,
-		lazy(() => import("~/app/http/controllers/post")),
+		lazy(() => import("~/app/http/controllers/post"), [federating]),
 	);
 	router.map(
 		routes.postRelated,

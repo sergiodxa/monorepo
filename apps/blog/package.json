@@ -13,6 +13,7 @@
 		"db:remote:migrate": "bunx wrangler d1 migrations apply DB --remote"
 	},
 	"dependencies": {
+		"@sdxc/activitypub": "workspace:*",
 		"@sdxc/atom": "workspace:*",
 		"@sdxc/auth": "workspace:*",
 		"@sdxc/backoff": "workspace:*",
@@ -21,6 +22,7 @@
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/distill": "workspace:*",
+		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
@@ -64,6 +66,7 @@
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "^1.54.2",
 		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/http-signatures": "workspace:*",
 		"vite": "^8.2.2",
 		"wrangler": "^4.127.1"
 	}

@@ -2,7 +2,7 @@
  * CMS controller for article CRUD. It renders index and edit/new HTML views and handles
  * create, update, and destroy actions, validating form data against the article schema and
  * using See Other redirects to preserve post/redirect/get flow. Every write queues the
- * article's Webmentions, and missing records get in-context 404 views.
+ * article's Webmentions and its ActivityPub publish, and missing records get 404 views.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -82,6 +82,10 @@ export default createController(routes.cms.articles, {
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
+			await ctx.jobs.enqueue(jobs.activityPub.publish, {
+				postId: created.id,
+				changedAt: new Date().toISOString(),
+			});
 
 			return redirect(routes.cms.articles.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
@@ -105,7 +109,13 @@ export default createController(routes.cms.articles, {
 			let article = await ArticlePost.findById(ctx.db, id);
 
 			let destroyed = await ArticlePost.destroy(ctx.db, id);
-			if (destroyed) await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+			if (destroyed) {
+				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+				await ctx.jobs.enqueue(jobs.activityPub.publish, {
+					postId: id,
+					changedAt: new Date().toISOString(),
+				});
+			}
 
 			if (article) ctx.cache.purgeLater(TAGS.post("articles", article.meta.slug));
 
@@ -185,6 +195,10 @@ export default createController(routes.cms.articles, {
 			}
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+			await ctx.jobs.enqueue(jobs.activityPub.publish, {
+				postId: id,
+				changedAt: new Date().toISOString(),
+			});
 
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);

@@ -30,6 +30,8 @@ declare global {
 			MCP_RATE_LIMITER: RateLimit | undefined;
 			/** The Webmention endpoint's budget; absent from a deployment predating the binding. */
 			WEBMENTION_RATE_LIMITER?: RateLimit;
+			/** The ActivityPub inbox's budget; absent from a deployment predating the binding. */
+			ACTIVITYPUB_RATE_LIMITER?: RateLimit;
 			/** Delivers support requests; absent from a deployment without the `send_email` binding. */
 			EMAIL?: SendEmailBinding;
 			/** Where Encore support requests are delivered, set as a Worker secret. */

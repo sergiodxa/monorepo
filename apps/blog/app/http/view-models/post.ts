@@ -16,6 +16,7 @@ import type { Webmention } from "~/app/repositories/webmention";
 
 import { Post } from "~/app/repositories/post";
 import { hostOf } from "~/app/repositories/webmention";
+import { permalink } from "~/app/services/webmention";
 
 /**
  * Type contracts used to build the post page view model.
@@ -36,6 +37,8 @@ export namespace PostViewModel {
 		activePath: string;
 		/** Preferred URL for indexing; may differ from the request URL. */
 		canonical: string;
+		/** The post's ActivityStreams id, its permalink on the canonical origin. */
+		activity: string;
 		/** Open Graph and Twitter meta entries emitted by the layout. */
 		meta: Array<{ property: string; content: string }>;
 		post: {
@@ -185,6 +188,7 @@ export class PostViewModel {
 				description: excerpt || `Article: ${title}`,
 				activePath: `/${loadedPost.postType}`,
 				canonical,
+				activity: permalink({ postType: loadedPost.postType, slug }).href,
 				meta: [
 					{ property: "og:title", content: title },
 					{ property: "og:type", content: "article" },
@@ -223,6 +227,7 @@ export class PostViewModel {
 			description: excerpt || `Tutorial: ${title}`,
 			activePath: `/${loadedPost.postType}`,
 			canonical: postUrl,
+			activity: permalink({ postType: loadedPost.postType, slug }).href,
 			meta: [
 				{ property: "og:title", content: title },
 				{ property: "og:type", content: "article" },

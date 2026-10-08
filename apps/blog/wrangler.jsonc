@@ -58,6 +58,12 @@
 			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
 			"secret_name": "BLOG_WAYBACK_SECRET_KEY",
 		},
+		// The PKCS#8 RSA private key the ActivityPub actor signs deliveries with.
+		{
+			"binding": "ACTIVITYPUB_PRIVATE_KEY",
+			"store_id": "e8d9e39c4db6485bbd65a9658e8f9a71",
+			"secret_name": "BLOG_ACTIVITYPUB_PRIVATE_KEY",
+		},
 	],
 	"kv_namespaces": [
 		{
@@ -98,6 +104,13 @@
 			"name": "SUPPORT_RATE_LIMITER",
 			"namespace_id": "1003",
 			"simple": { "limit": 5, "period": 60 },
+		},
+		// The ActivityPub inbox's budget per client network
+		// (`app/http/middleware/activitypub-rate-limit.ts`, which mirrors the limit).
+		{
+			"name": "ACTIVITYPUB_RATE_LIMITER",
+			"namespace_id": "1004",
+			"simple": { "limit": 300, "period": 60 },
 		},
 	],
 

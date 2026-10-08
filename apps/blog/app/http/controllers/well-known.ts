@@ -10,12 +10,14 @@
 
 import type { Jrd, JrdLink } from "@sdxc/well-known/webfinger";
 
+import { actorLink } from "@sdxc/activitypub";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { respond } from "@sdxc/well-known/response";
 import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
 import { createController } from "remix/router";
 
+import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
@@ -59,7 +61,9 @@ function normalizeResource(resource: string) {
 }
 
 /**
- * Returns the stable JRD payload advertised for Sergio's public site identity.
+ * Returns the stable JRD payload advertised for Sergio's public site identity. Its `self`
+ * link is the ActivityPub actor, which is the link Mastodon follows to resolve the handle;
+ * the home page is the `profile-page` link.
  *
  * @param subject Canonical resource identifier to expose in the JRD payload.
  * @returns WebFinger document with homepage, avatar, feed, and social profile links.
@@ -79,7 +83,7 @@ function createWebFingerDocument(subject: string): Jrd {
 			"http://schema.org/image": avatar,
 		},
 		links: [
-			link("self", home, "text/html"),
+			actorLink(ACTOR_ID),
 			link("http://webfinger.net/rel/profile-page", home, "text/html"),
 			link("http://webfinger.net/rel/avatar", avatar, "image/png"),
 			...FEED_STREAMS.flatMap((stream) => [

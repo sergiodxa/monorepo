@@ -33,6 +33,11 @@ This document defines app-specific rules for `apps/blog`.
 - MUST keep Cloudflare/environment typing declarations in `config/*.d.ts` (outside `app/`) and include them in app TS config.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
+- MUST serve every ActivityPub URL through `ctx.activityPub` (the `Federation` that `createFederation` in `app/services/activitypub.ts` builds and the `activityPub` middleware publishes): `/activitypub/*` answers `ctx.activityPub.fetch(ctx.request)`, and a page that also has an ActivityStreams form answers `ctx.activityPub.respond(...)` before any `ctx.cache(...)` declaration.
+- MUST keep every negotiated variant of a URL other than its HTML out of the edge cache (`NEGOTIATED_ACTIVITY` for ActivityStreams, no `ctx.cache` for Markdown picked from `Accept`): Workers Cache keys an entry by URL and serves a hit without running the Worker, so a stored variant reaches every client of that URL.
+- MUST enqueue `jobs.activityPub.publish` with `changedAt` wherever `jobs.webmentions.send` is enqueued for a post, so followers see every create, edit and delete.
+- MUST NOT change `ACTOR_ID`, `INBOX_ID` or the other ids in `config/activitypub.ts`, nor the post permalinks they federate under: followers' servers cache them, and a change orphans every follower.
+
 - SHOULD keep controller logic small and move reusable data transforms to models or helpers.
 - SHOULD keep color and typography changes consistent with the black, emerald, and silver style: the `neutral` scale is a near-achromatic cool silver (hue 250) whose dark end supplies the black, while `brand` is a blue-leaning emerald (hue 162) running near the sRGB ceiling — restraint belongs to the neutrals, not to brand, which is mostly link text and goes dusty grey if desaturated.
 - MUST keep every chroma in `resources/css/colors.css` inside the sRGB gamut for its own lightness, and verify it rather than eyeballing it: a chroma the gamut cannot hold does not fail loudly, it silently renders as a different lightness and hue, which flattens adjacent steps into the same color. The ceiling collapses hardest toward emerald at mid lightness, toward yellow at low lightness, and toward red at high lightness, so `brand`, `warning`, and `danger` are all ceiling-pinned across part of their range.
@@ -120,6 +125,13 @@ This document defines app-specific rules for `apps/blog`.
   - `app/repositories/posts/article.ts`
   - `app/repositories/posts/tutorial.ts`
   - `app/repositories/posts/like.ts`
+- Federation
+  - `app/services/activitypub.ts`
+  - `app/services/federated-posts.ts`
+  - `app/jobs/activitypub/process.ts`
+  - `app/jobs/activitypub/publish.ts`
+  - `config/activitypub.ts`
+  - `packages/activitypub/README.md`
 - Markdown integration
   - `packages/markdown/src/index.ts`
   - `packages/markdown/src/remix/index.tsx`

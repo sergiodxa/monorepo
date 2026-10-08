@@ -37,6 +37,8 @@ export const posts = table({
 		deleted_at: c.text().nullable(),
 		/** When the post last sent its Webmentions; `null` when it never has. */
 		mentions_sent_at: c.text().nullable(),
+		/** When followers were first sent the post's `Create`; `null` while they never were. */
+		federated_at: c.text().nullable(),
 	},
 	validate({ value }) {
 		return validateTimestamps(value, [
@@ -45,6 +47,7 @@ export const posts = table({
 			{ name: "published_at", nullable: true },
 			{ name: "deleted_at", nullable: true },
 			{ name: "mentions_sent_at", nullable: true },
+			{ name: "federated_at", nullable: true },
 		]);
 	},
 });

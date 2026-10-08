@@ -20,14 +20,16 @@ Production URL: https://sergiodxa.com
 | KV          | `AUTH`                                                | Authentication/session state                |
 | KV          | `REDIRECTS`                                           | URL redirect mappings                       |
 | R2          | `BACKUPS`                                             | Database backup storage                     |
-| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmention receive/send)   |
+| Queue       | `QUEUE` (`blog-jobs`)                                 | Background jobs (Webmentions, ActivityPub)  |
 | Rate limit  | `WEBMENTION_RATE_LIMITER`                             | Webmention endpoint budget                  |
+| Rate limit  | `ACTIVITYPUB_RATE_LIMITER` (namespace `1004`)         | ActivityPub inbox budget per IPv4 or /64    |
 | Rate limit  | `SUPPORT_RATE_LIMITER`                                | Encore support budget per IPv4 or IPv6 /64  |
 | Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
 | Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
 | Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster     |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Secrets     | `WAYBACK_ACCESS_KEY`, `WAYBACK_SECRET_KEY`            | archive.org keys from Secrets Store         |
+| Secret      | `ACTIVITYPUB_PRIVATE_KEY`                             | ActivityPub signing key from Secrets Store  |
 | Assets      | N/A                                                   | Static assets served from `build/client`    |
 
 Smart Placement and Observability are enabled.
@@ -56,6 +58,17 @@ with it empty, is answered with a 500.
 - Webmention sending: creating, updating or deleting an article or tutorial notifies every
   page it links to (and every page it stopped linking to); a cron every 15 minutes sends
   for posts whose scheduled publish date has arrived.
+- ActivityPub: the blog is one fediverse account, `@hello@sergiodxa.com` (a `Person` at
+  `/activitypub/actor`, found through WebFinger), that anyone can follow; follows are
+  accepted on arrival. Creating an article or tutorial delivers it to followers as an
+  `Article`, editing it delivers an `Update`, and deleting it a `Delete`; a cron every 15
+  minutes delivers posts whose scheduled publish date has arrived. Posts public before
+  federation started are in the outbox but were never pushed. Replies, quotes, mentions,
+  likes and boosts of a post are stored as Webmentions: they join the same moderation queue,
+  a host allowed there is approved on arrival and a blocked one is refused outright (it can
+  neither deliver nor follow), and approved ones render under the post. An `Undo` or
+  `Delete` withdraws them. A post page and the home page answer ActivityStreams to a client
+  that asks for it in `Accept`, and link it as `<link rel="alternate">`.
 - Full-text search at `/search` and through the MCP `search_posts` tool: an FTS5 index over
   each live post's title, tags and body (a bookmark's title, its address without the
   scheme so a site's name finds it, and its description, which its result shows as the
@@ -116,32 +129,40 @@ with it empty, is answered with a 500.
 
 ## Routes
 
-| Route                  | Description                                |
-| ---------------------- | ------------------------------------------ |
-| `/`                    | Homepage                                   |
-| `/articles`            | Articles listing                           |
-| `/articles/:slug`      | Article detail page                        |
-| `/tutorials`           | Tutorials listing                          |
-| `/tutorials/:slug`     | Tutorial detail page                       |
-| `/bookmarks`           | Saved bookmarks                            |
-| `/search`              | Full-text search over published posts      |
-| `/frames/search`       | Search dialog body and top matches for `q` |
-| `/rss`                 | Main RSS feed                              |
-| `/atom.xml`            | Main feed as Atom                          |
-| `/feed.json`           | Main feed as JSON Feed                     |
-| `/articles.rss`        | Articles RSS feed                          |
-| `/tutorials.rss`       | Tutorials RSS feed                         |
-| `/bookmarks.rss`       | Bookmarks RSS feed                         |
-| `/articles.atom`       | Articles Atom feed                         |
-| `/tutorials.atom`      | Tutorials Atom feed                        |
-| `/bookmarks.atom`      | Bookmarks Atom feed                        |
-| `/articles.json`       | Articles JSON Feed                         |
-| `/tutorials.json`      | Tutorials JSON Feed                        |
-| `/bookmarks.json`      | Bookmarks JSON Feed                        |
-| `/sitemap.xml`         | Sitemap for search engines                 |
-| `/webmention`          | Webmention endpoint (POST)                 |
-| `/apps/encore/support` | Encore support page and form               |
-| `/apps/encore/privacy` | Encore privacy policy (`.md` for Markdown) |
+| Route                    | Description                                           |
+| ------------------------ | ----------------------------------------------------- |
+| `/`                      | Homepage                                              |
+| `/articles`              | Articles listing                                      |
+| `/articles/:slug`        | Article detail page                                   |
+| `/tutorials`             | Tutorials listing                                     |
+| `/tutorials/:slug`       | Tutorial detail page                                  |
+| `/bookmarks`             | Saved bookmarks                                       |
+| `/search`                | Full-text search over published posts                 |
+| `/frames/search`         | Search dialog body and top matches for `q`            |
+| `/rss`                   | Main RSS feed                                         |
+| `/atom.xml`              | Main feed as Atom                                     |
+| `/feed.json`             | Main feed as JSON Feed                                |
+| `/articles.rss`          | Articles RSS feed                                     |
+| `/tutorials.rss`         | Tutorials RSS feed                                    |
+| `/bookmarks.rss`         | Bookmarks RSS feed                                    |
+| `/articles.atom`         | Articles Atom feed                                    |
+| `/tutorials.atom`        | Tutorials Atom feed                                   |
+| `/bookmarks.atom`        | Bookmarks Atom feed                                   |
+| `/articles.json`         | Articles JSON Feed                                    |
+| `/tutorials.json`        | Tutorials JSON Feed                                   |
+| `/bookmarks.json`        | Bookmarks JSON Feed                                   |
+| `/sitemap.xml`           | Sitemap for search engines                            |
+| `/webmention`            | Webmention endpoint (POST)                            |
+| `/activitypub/actor`     | ActivityPub actor (`@hello@sergiodxa.com`)            |
+| `/activitypub/inbox`     | ActivityPub inbox, personal and shared (POST, signed) |
+| `/activitypub/outbox`    | Published posts as `Create`s, `?page=true` pages      |
+| `/activitypub/followers` | Follower count and pages                              |
+| `/activitypub/following` | Empty collection                                      |
+| `/.well-known/webfinger` | WebFinger; `self` is the ActivityPub actor            |
+| `/.well-known/nodeinfo`  | Links the NodeInfo 2.1 document                       |
+| `/nodeinfo/2.1`          | NodeInfo: software, one user, post count              |
+| `/apps/encore/support`   | Encore support page and form                          |
+| `/apps/encore/privacy`   | Encore privacy policy (`.md` for Markdown)            |
 
 ## Client Islands
 
@@ -247,11 +268,71 @@ expired session signs in first and comes back to the form.
 | `db:remote:migrate` | Apply remote migrations           |
 | `typecheck`         | Type-check                        |
 
+## Jobs
+
+| Job                     | Trigger                    | Work                                                             |
+| ----------------------- | -------------------------- | ---------------------------------------------------------------- |
+| `activityPub.process`   | Queued by the federation   | One inbox activity, one fan-out, or one signed delivery          |
+| `activityPub.publish`   | CMS create, update, delete | Picks `Create`, `Update` or `Delete` for a post and publishes it |
+| `activityPub.scheduled` | `*/15 * * * *`             | Publishes posts whose scheduled date arrived and never federated |
+
+`activityPub.process` retries what the next attempt can change (a server error, a timeout,
+a `429`, a failing store) on the federation's backoff, about 21 hours over the queue's five
+retries, and acknowledges the rest. `posts.federated_at` records the first `Create`, which is
+what makes later changes an `Update` and a deletion a `Delete`.
+
 ## Deployment
 
 ```bash
+bun run build
+bun run db:remote:migrate
 bun run cf:deploy
 ```
+
+### Deploying Federation
+
+The actor's id and key are what every follower caches, so both are fixed before the first
+deploy that serves them.
+
+1. Generate the actor's key once, from `apps/blog`:
+
+   ```bash
+   bun -e 'import { ActorKeys } from "@sdxc/activitypub"; import { unwrap } from "@sdxc/result"; process.stdout.write(unwrap(await ActorKeys.generate()).privateKeyPem)' > activitypub-key.pem
+   ```
+
+2. Store it in the Secrets Store as `BLOG_ACTIVITYPUB_PRIVATE_KEY`, then delete the file:
+
+   ```bash
+   bunx wrangler secrets-store secret create e8d9e39c4db6485bbd65a9658e8f9a71 \
+     --name BLOG_ACTIVITYPUB_PRIVATE_KEY --scopes workers --remote \
+     --value "$(cat activitypub-key.pem)"
+   rm activitypub-key.pem
+   ```
+
+3. Build, apply migrations `0010_ActivityPubFollowers` and `0011_PostFederatedAt` (which
+   marks every post already public as federated), and deploy. The deploy creates the
+   `ACTIVITYPUB_RATE_LIMITER` binding (namespace `1004`) from `wrangler.jsonc`.
+
+   ```bash
+   bun run build
+   bun run db:remote:migrate
+   bun run cf:deploy
+   ```
+
+4. Check the actor carries its key, then follow `@hello@sergiodxa.com` from a Mastodon
+   account and reply to, like and boost a post:
+
+   ```bash
+   curl -s -H 'Accept: application/activity+json' https://sergiodxa.com/activitypub/actor | jq .publicKey
+   ```
+
+A post page and the home page are edge-cached as HTML for a minute. Only that variant is
+stored (ActivityStreams and negotiated Markdown answer `private`), so a browser never
+receives JSON. Workers Cache serves a hit without running the Worker and documents no `Vary`
+handling for it, so check after deploying: view a post in a browser, then request it with
+`Accept: application/activity+json` and read `cf-cache-status`. A `HIT` with an HTML body
+means a server asking for ActivityStreams within that minute gets the page; the fix is a
+Cache Rule that varies on `Accept`, or edge caching off for post pages.
 
 ## Environment Variables
 

@@ -158,6 +158,7 @@ describe(BOOKMARKS_MIGRATION, () => {
 		});
 
 		await applyMigrations(binding, (file) => file === BOOKMARKS_MIGRATION);
+		await applyMigrations(binding, (file) => file > BOOKMARKS_MIGRATION);
 
 		let live = new Set((await LikePost.findAll(db)).map((bookmark) => bookmark.id));
 		expect(live).toEqual(new Set([older?.id, unrelated?.id]));

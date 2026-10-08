@@ -13,6 +13,7 @@ import { describe, expect, test } from "vitest";
 
 import type { AppContext } from "~/app/http/context";
 
+import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
@@ -57,6 +58,28 @@ describe("GET /.well-known/webfinger", () => {
 		if (document.status !== "success") return;
 		expect(document.data.subject).toBe(PROFILE.canonical.resource);
 		expect(document.data.links.map((link) => link.rel)).toContain("me");
+	});
+
+	/**
+	 * Regression: `self` pointed at the HTML home page, and Mastodon reads `self` as the
+	 * actor, so the handle could not be followed.
+	 */
+	test("names the ActivityPub actor as self and the home page as the profile page", async () => {
+		let document = parse(await (await lookup(forAccount())).text());
+
+		expect(document.status).toBe("success");
+		if (document.status !== "success") return;
+		let self = document.data.links.filter((link) => link.rel === "self");
+		expect(self).toEqual([
+			expect.objectContaining({ href: ACTOR_ID, type: "application/activity+json" }),
+		]);
+		expect(document.data.links).toContainEqual(
+			expect.objectContaining({
+				rel: "http://webfinger.net/rel/profile-page",
+				href: `${PROFILE.canonical.origin}/`,
+				type: "text/html",
+			}),
+		);
 	});
 
 	test("resolves the homepage URL to the same account", async () => {

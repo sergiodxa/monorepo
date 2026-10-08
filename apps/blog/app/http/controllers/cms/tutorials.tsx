@@ -2,7 +2,7 @@
  * CMS controller for tutorial CRUD. It renders index and edit/new HTML views and handles
  * create, update, and destroy actions, validating form data against the tutorial schema
  * and using See Other redirects for the post/redirect/get flow. Every write queues the
- * tutorial's Webmentions; parsing and shaping stay in the schema and view-model layers.
+ * tutorial's Webmentions and its ActivityPub publish; parsing stays in the schemas.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -84,6 +84,10 @@ export default createController(routes.cms.tutorials, {
 				});
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
+			await ctx.jobs.enqueue(jobs.activityPub.publish, {
+				postId: created.id,
+				changedAt: new Date().toISOString(),
+			});
 
 			return redirect(routes.cms.tutorials.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
@@ -107,7 +111,13 @@ export default createController(routes.cms.tutorials, {
 			let tutorial = await TutorialPost.findById(ctx.db, id);
 
 			let destroyed = await TutorialPost.destroy(ctx.db, id);
-			if (destroyed) await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+			if (destroyed) {
+				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+				await ctx.jobs.enqueue(jobs.activityPub.publish, {
+					postId: id,
+					changedAt: new Date().toISOString(),
+				});
+			}
 
 			if (tutorial) ctx.cache.purgeLater(TAGS.post("tutorials", tutorial.meta.slug));
 
@@ -189,6 +199,10 @@ export default createController(routes.cms.tutorials, {
 			}
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
+			await ctx.jobs.enqueue(jobs.activityPub.publish, {
+				postId: id,
+				changedAt: new Date().toISOString(),
+			});
 
 			let slugs = new Set([input.meta.slug]);
 			if (previous) slugs.add(previous.meta.slug);

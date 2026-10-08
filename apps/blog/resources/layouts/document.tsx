@@ -56,6 +56,11 @@ namespace DocumentLayout {
 		/** The page's canonical absolute URL, when it differs from the request URL. */
 		canonical?: string;
 		/**
+		 * Where the page's ActivityStreams representation lives, advertised as an
+		 * `alternate`, which Mastodon follows when someone pastes the page URL into search.
+		 */
+		activity?: string;
+		/**
 		 * Open Graph and Twitter card tags. The page's view model builds them: it
 		 * owns the URL and title strings they carry, and knows which set the page
 		 * type needs.
@@ -78,6 +83,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let {
+			activity,
 			bodyMix,
 			canonical,
 			children,
@@ -127,6 +133,14 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						<meta name="description" content={description} data-rmx-key="description" />
 					)}
 					{canonical && <link rel="canonical" href={canonical} data-rmx-key="canonical" />}
+					{activity && (
+						<link
+							rel="alternate"
+							type="application/activity+json"
+							href={activity}
+							data-rmx-key="activity"
+						/>
+					)}
 					<link rel="webmention" href={routes.webmention.href()} data-rmx-key="webmention" />
 					{REL_ME.map((href) => (
 						<link key={href} rel="me" href={href} data-rmx-key={`me:${href}`} />

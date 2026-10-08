@@ -1,13 +1,17 @@
 /**
  * HTTP action for public article and tutorial post pages. Route params are validated
- * before any lookup, the response format is negotiated from the URL extension and the
- * `Accept` header, unpublished posts stay admin-only behind a 403, and deleted posts
- * answer 410. HTML pages advertise the Webmention endpoint and list approved mentions.
+ * before any lookup, the response format (HTML, Markdown or ActivityStreams) is negotiated
+ * from the URL extension and the `Accept` header, unpublished posts stay admin-only behind
+ * a 403, and deleted posts answer 410. HTML pages advertise the Webmention endpoint.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Federation } from "@sdxc/activitypub";
+import type { Database } from "remix/data-table";
+
+import { wantsActivity } from "@sdxc/activitypub";
 import * as ct from "@sdxc/http/content-type";
 import { accepts } from "@sdxc/http/negotiate";
 import { advertise } from "@sdxc/webmention/discover";
@@ -19,7 +23,8 @@ import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
-import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
+import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
+import { article, tombstone } from "~/app/services/federated-posts";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
@@ -82,6 +87,10 @@ export default createAction(
 				description: "The content you requested could not be found.",
 				emoji: "🔎",
 			});
+		}
+
+		if (validation.params.contentType === undefined && wantsActivity(ctx.request)) {
+			return await activityFor(ctx, validation.params);
 		}
 
 		let prefersMarkdown =
@@ -172,7 +181,10 @@ export default createAction(
 		// Only a published post is edge-cacheable. An admin previewing a draft reaches
 		// here too, and the middleware would refuse their session anyway, but the draft
 		// stays out of a shared cache on its own terms rather than on that check's.
-		if (isPublished) {
+		// Markdown negotiated from `Accept` on the extensionless URL stays out too: the
+		// edge keys an entry by URL, so storing it would serve Markdown to browsers.
+		let negotiatedMarkdown = prefersMarkdown && validation.params.contentType !== "md";
+		if (isPublished && !negotiatedMarkdown) {
 			ctx.cache(PUBLIC_PAGE, TAGS.post(validation.params.postType, validation.params.postSlug));
 		}
 
@@ -186,6 +198,38 @@ export default createAction(
 		});
 	},
 );
+
+/**
+ * The post as ActivityStreams, for a server that asked for it on the extensionless URL: the
+ * `Article` of a published post, the `Tombstone` of a deleted one with `410`, and an empty
+ * `404` for anything else, drafts included. Answered before the edge-cache declaration,
+ * with a private policy, so only the HTML variant is ever stored under this URL.
+ *
+ * @param ctx The request context, carrying the database and `ctx.activityPub`.
+ * @param params The validated collection and slug.
+ */
+async function activityFor(
+	ctx: { db: Database; request: Request; activityPub: Federation },
+	params: ValidPostRequestParams,
+): Promise<Response> {
+	let options = { cache: NEGOTIATED_ACTIVITY };
+	let post = await Post.findByTypeAndSlug(ctx.db, params);
+	let document = null;
+	if (post && Post.isPublishedAt(post.post.published_at)) document = article(post);
+
+	let deleted = post ? null : await Post.findTombstone(ctx.db, params);
+	if (deleted) {
+		document = tombstone({
+			postType: params.postType,
+			slug: params.postSlug,
+			deleted_at: deleted.deleted_at,
+		});
+	}
+
+	let as2 =
+		document === null ? null : await ctx.activityPub.respond(ctx.request, document, options);
+	return as2 ?? new Response(null, { status: 404, headers: { Vary: "Accept" } });
+}
 
 /**
  * Enforces supported post collections and extension values before the database lookup

@@ -138,6 +138,7 @@ export function PostView() {
 				description={model.description}
 				activePath={model.activePath}
 				canonical={model.canonical}
+				activity={model.activity}
 				meta={model.meta}
 			>
 				<main mix={[grid(), gap(4), mi("auto")]}>

@@ -30,6 +30,25 @@ export default route({
 		avatar: get("/.well-known/avatar"),
 	}),
 
+	/**
+	 * The blog's one ActivityPub actor and its endpoints. The ids in
+	 * `config/activitypub.ts` name these paths on the canonical origin, and remote servers
+	 * cache them, so they never move. The inbox takes signed `POST`s from any server; the
+	 * documents are what a server reads to follow the actor and backfill its posts.
+	 */
+	activityPub: route("/activitypub", {
+		inbox: post("/inbox"),
+		documents: route({
+			actor: get("/actor"),
+			outbox: get("/outbox"),
+			followers: get("/followers"),
+			following: get("/following"),
+		}),
+	}),
+
+	/** The NodeInfo 2.1 document `/.well-known/nodeinfo` links to, describing the server. */
+	nodeInfo: get("/nodeinfo/2.1"),
+
 	sitemap: get("/sitemap.xml"),
 
 	healthcheck: get("/healthcheck"),

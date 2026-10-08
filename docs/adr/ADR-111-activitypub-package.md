@@ -854,8 +854,12 @@ reads posts. The repositories run the `@sdxc/activitypub/testing` conformance su
 - **Signatures verified in the request** put a remote key fetch on the inbox's latency path the
   first time a server is seen.
 - **Queue-size bound.** An activity must serialize under 120 KB.
-- **Content negotiation and the edge cache.** Post pages already vary on `Accept` for
-  Markdown. AS2 adds a third variant that the blog's `@sdxc/workers-cache` must key separately.
+- **Content negotiation and the edge cache.** Workers Cache keys an entry by URL and serves a
+  hit without running the Worker; it documents no `Vary` handling. The blog therefore stores
+  only the HTML of a post page and answers ActivityStreams (and Markdown negotiated from
+  `Accept`) as `private`, so a browser never receives JSON, but a server asking for
+  ActivityStreams within the minute after a browser view may be served the cached HTML until
+  a Cache Rule varies on `Accept`.
 
 ### Neutral
 
@@ -911,13 +915,14 @@ reads posts. The repositories run the `@sdxc/activitypub/testing` conformance su
 **Priority:** High
 **Estimated Effort:** 2 days
 
-1. Migration and `FollowerStore` repository, `SeenActivities` over KV, `LocalObjects` over
-   posts, and the conformance suite in the blog's tests.
-2. Routes: actor, inbox, outbox, followers, following, NodeInfo, and the WebFinger `self`
-   link.
-3. `post.tsx` negotiation with the `alternate` link, the jobs, and handlers into `webmentions`.
-4. Generate the key, set the secret, then build, migrate and deploy. Follow from a Mastodon
-   account and a Misskey account and verify replies, likes and boosts end to end.
+- [x] Migration and `FollowerStore` repository, `SeenActivities` over KV, `LocalObjects` over
+      posts, and the conformance suite in the blog's tests.
+- [x] Routes: actor, inbox, outbox, followers, following, NodeInfo, and the WebFinger `self`
+      link.
+- [x] `post.tsx` negotiation with the `alternate` link, the jobs, and handlers into
+      `webmentions`.
+- [ ] Generate the key, set the secret, then build, migrate and deploy. Follow from a
+      Mastodon account and a Misskey account and verify replies, likes and boosts end to end.
 
 ### Phase 6: Object integrity proofs (optional)
 

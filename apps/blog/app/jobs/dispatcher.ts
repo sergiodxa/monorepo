@@ -13,6 +13,7 @@ import { createJobDispatcher } from "@sdxc/jobs";
 import jobs from "~/app/jobs";
 import { logger } from "~/bootstrap/logger";
 
+import { activityPub } from "./middleware/activitypub";
 import { database } from "./middleware/database";
 import { mail } from "./middleware/mail";
 import { jobQueue } from "./queue";
@@ -24,7 +25,7 @@ import { jobQueue } from "./queue";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), mail()],
+	middleware: [database(), mail(), activityPub()],
 	timeout: "2 minutes",
 	queue: jobQueue,
 });
@@ -37,6 +38,9 @@ dispatcher.map(jobs.bookmarks.inspect, () => import("~/app/jobs/bookmarks/inspec
 dispatcher.map(jobs.bookmarks.archive, () => import("~/app/jobs/bookmarks/archive"));
 dispatcher.map(jobs.bookmarks.sweep, () => import("~/app/jobs/bookmarks/sweep"));
 dispatcher.map(jobs.bookmarks.digest, () => import("~/app/jobs/bookmarks/digest"));
+dispatcher.map(jobs.activityPub.process, () => import("~/app/jobs/activitypub/process"));
+dispatcher.map(jobs.activityPub.publish, () => import("~/app/jobs/activitypub/publish"));
+dispatcher.map(jobs.activityPub.scheduled, () => import("~/app/jobs/activitypub/scheduled"));
 dispatcher.map(jobs.sponsors.refresh, () => import("~/app/jobs/sponsors/refresh"));
 
 declare module "@sdxc/jobs" {

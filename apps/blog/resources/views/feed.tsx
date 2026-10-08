@@ -16,6 +16,7 @@ import { m, maxIs, mbs, mis, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Badge, Heading, Link } from "@sdxc/ui";
 
+import { ACTOR_ID } from "~/config/activitypub";
 import { ActivityRow } from "~/resources/components/activity-row";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -50,7 +51,12 @@ export namespace FeedView {
  */
 export function FeedView() {
 	return ({ model }: { model: FeedView.Model }) => (
-		<BlogLayout title="Sergio Xalambrí" description="Sergio Xalambrí" activePath="/">
+		<BlogLayout
+			title="Sergio Xalambrí"
+			description="Sergio Xalambrí"
+			activePath="/"
+			activity={ACTOR_ID}
+		>
 			<main mix={[mf("h-feed"), grid(), gap(4)]}>
 				<Heading level={1} mix={[mf("p-name"), m(0), text("4xl")]}>
 					Sergio Xalambrí

@@ -1,12 +1,14 @@
 /**
  * Barrel module for the blog database schema. Re-exports the posts, post_meta, post_search,
- * bookmarks, users and Webmention tables, their relation definitions, and the select/insert
- * row types, giving repositories one import point for the whole schema surface.
+ * bookmarks, users, Webmention and ActivityPub follower tables, their relations, and the
+ * select/insert row types, giving repositories one import point for the whole schema surface.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+export { activityPubFollowers } from "./activitypub-followers";
+export type { SelectActivityPubFollower } from "./activitypub-followers";
 export { bookmarks } from "./bookmarks";
 export type { SelectBookmark } from "./bookmarks";
 export { postMeta } from "./post-meta";

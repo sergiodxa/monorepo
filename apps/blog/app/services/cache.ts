@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { PolicyOptions } from "@sdxc/http/cache";
+
 import { createTags } from "@sdxc/workers-cache";
 
 /**
@@ -30,3 +32,10 @@ export const TAGS = createTags({
  * safe once the purge path has been watched working.
  */
 export const PUBLIC_PAGE = "public, max-age=0, s-maxage=60, must-revalidate";
+
+/**
+ * Lifetime for the ActivityStreams representation of a URL that also serves HTML, such as
+ * a post or the home page. `private` keeps it out of the edge cache, so only the HTML
+ * variant is ever stored under that URL and a browser can never be served the JSON.
+ */
+export const NEGOTIATED_ACTIVITY: PolicyOptions = { visibility: "private", maxAge: "5 minutes" };

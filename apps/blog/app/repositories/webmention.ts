@@ -10,6 +10,8 @@
 import type { Webmention as Protocol } from "@sdxc/webmention";
 import type { Database } from "remix/data-table";
 
+import { sql } from "remix/data-table";
+
 import * as schema from "~/database/schema";
 
 /** Types for stored mentions and moderation policies. */
@@ -102,6 +104,20 @@ export class Webmention {
 			updated_at: new Date().toISOString(),
 		});
 		return existing.post_id;
+	}
+
+	/**
+	 * Marks deleted every mention a source made, whatever post it named, which is what an
+	 * ActivityPub `Undo` or `Delete` of that source means. One statement, so it is D1-safe,
+	 * and a source never stored changes nothing.
+	 *
+	 * @param db Database handle used for writes.
+	 * @param source The remote post, like or boost the mentions came from.
+	 */
+	static async markSourceDeleted(db: Database, source: URL): Promise<void> {
+		await db.exec(
+			sql`update "webmentions" set "status" = 'deleted', "updated_at" = ${new Date().toISOString()} where "source" = ${source.href}`,
+		);
 	}
 
 	/**
