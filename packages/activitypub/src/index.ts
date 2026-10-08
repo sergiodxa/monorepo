@@ -70,3 +70,4 @@ export { wantsActivity } from "./lib/response.js";
 export { EXTENSION_CONTEXT, stringify } from "./lib/stringify.js";
 export { tombstone } from "./lib/tombstone.js";
 export { RemoteResolver } from "./remote.js";
+export { CacheSeenActivities } from "./seen-activities.js";

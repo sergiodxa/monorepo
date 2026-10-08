@@ -570,7 +570,7 @@ Every error extends `ActivityPubError`, which carries a `code` and a `retryable`
 ### Storage
 
 The package keeps no state of its own. It calls four interfaces, exported as types, and the
-app implements them over its own database:
+app implements them over its own database, or uses `CacheSeenActivities` for `SeenActivities`:
 
 - `FollowerStore`: followers keyed by `(actor, id)`. `put` inserts or replaces, so a repeated
   Follow refreshes the inbox and `followId`. `list`, `count` and `inboxes` see accepted
@@ -581,6 +581,33 @@ app implements them over its own database:
   `ttl`, a `DurationInput` such as `"1 day"`.
 - `LocalObjects`: `find(id)` answers the object the app serves under `id`, or `null`.
 - `KeyProvider`: `keysOf(actor)` answers a hosted actor's `ActorKeys`, or `null`.
+
+### `CacheSeenActivities`
+
+A shipped `SeenActivities` over any `@sdxc/cache` `Cache`, so an app that already caches remote
+documents in Workers KV can hold its claims there too.
+
+```typescript
+import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
+import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+
+let cache = new WorkerKVCache(env.CACHE);
+
+let federation = new Federation({
+	// ...
+	stores: { followers, seen: new CacheSeenActivities(cache), objects },
+	cache,
+});
+```
+
+- Claims live under `activitypub:seen:<id>`, apart from anything else the cache holds.
+- A claim's TTL is rounded up to whole seconds and held for at least 60, the shortest
+  expiration Workers KV accepts, so a TTL under a minute is stretched rather than refused.
+- `claim` fails with a `RangeError` for a TTL that is not a positive duration, and with the
+  cache's error when the key cannot be read. A refused write still answers `true`: the
+  activity is processed, and a redelivery is processed again.
+- A claim reads the key and writes it when missing, so two deliveries racing through different
+  isolates can both win. Every handler is idempotent, which makes that harmless.
 
 ### `@sdxc/activitypub/testing`
 
