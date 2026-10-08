@@ -12,7 +12,7 @@ import type { Translate } from "@sdxc/i18n";
 import type { QR } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
-import { QrCode } from "@sdxc/qr/component";
+import { QrCode } from "@sdxc/qr/ui";
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Alert, Button, Card, Text, TextField } from "@sdxc/ui";
