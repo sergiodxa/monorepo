@@ -160,9 +160,9 @@ capping `maxVersion` to keep a code small on screen is the one that sees it.
 ### SVG path data
 
 ```typescript
-import { svgPath } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 
-let path = svgPath(symbol, { margin: 4 });
+let path = QR.toSVGPath(symbol, { margin: 4 });
 // { d: "M4 4h7v1h-7zM12 4h1v1h-1z…", viewBox: "0 0 53 53", size: 53 }
 ```
 
@@ -342,7 +342,7 @@ rather than a fixed set of renderers.
 **Priority:** High
 **Estimated Effort:** 6 hours
 
-1. Create `packages/qr`, public, with `QR.encode`, `svgPath`, `QrSymbol`, `QrLevel` and `QrError`.
+1. Create `packages/qr`, public, with `QR.encode`, `QR.toSVGPath`, `QrSymbol`, `QrLevel` and `QrError`.
 2. Known-answer tests under `src/`:
    - The ISO/IEC 18004 annex example, `"01234567"` at 1-M with `boostLevel: false`: the data
      codewords `10 20 0C 56 61 80 EC 11 …`, the error correction codewords, and the matrix.

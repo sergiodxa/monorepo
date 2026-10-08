@@ -8,7 +8,7 @@
  */
 import type { QrSymbol } from "./encode.js";
 
-/** How `svgPath` frames the symbol. */
+/** How `QR.toSVGPath` frames the symbol. */
 export interface SvgPathOptions {
 	/**
 	 * Light modules around the symbol. The standard asks for 4; a smaller value suits a code
@@ -29,14 +29,7 @@ export interface SvgPath {
 	size: number;
 }
 
-/**
- * Path data for `symbol`, offset by `margin` so the viewBox includes the quiet zone.
- *
- * @param symbol - A symbol from `QR.encode`
- * @param options - The quiet zone width
- * @returns The path, its viewBox and its side length in modules
- * @example let { d, viewBox } = svgPath(symbol);
- */
+/** Path data for `symbol`, offset by `margin` so the viewBox includes the quiet zone. */
 export function svgPath(symbol: QrSymbol, options: SvgPathOptions = {}): SvgPath {
 	let { margin = 4 } = options;
 	let commands: string[] = [];

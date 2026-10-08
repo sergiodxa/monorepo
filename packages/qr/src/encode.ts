@@ -12,6 +12,7 @@ import { failure, success } from "@sdxc/result";
 
 import type { Matrix } from "./matrix.js";
 import type { Segment } from "./segment.js";
+import type { SvgPath, SvgPathOptions } from "./svg-path.js";
 
 import {
 	applyMask,
@@ -22,6 +23,7 @@ import {
 } from "./matrix.js";
 import { reedSolomonDivisor, reedSolomonRemainder } from "./reed-solomon.js";
 import { appendBits, bytesSegments, textSegments, totalBits, writeSegments } from "./segment.js";
+import { svgPath } from "./svg-path.js";
 import {
 	dataCodewordCount,
 	eccCodewordsPerBlock,
@@ -189,6 +191,20 @@ export class QR {
 				return x >= 0 && x < size && y >= 0 && y < size && dark[y * size + x] === 1;
 			},
 		});
+	}
+
+	/**
+	 * Path data for `symbol`: one rectangle per horizontal run of dark modules, one unit per
+	 * module, offset by `margin` so the viewBox includes the quiet zone. It returns attribute
+	 * values, so the caller's renderer owns the markup.
+	 *
+	 * @param symbol - A symbol from `QR.encode`
+	 * @param options - The quiet zone width
+	 * @returns The path, its viewBox and its side length in modules
+	 * @example let { d, viewBox } = QR.toSVGPath(symbol);
+	 */
+	static toSVGPath(symbol: QrSymbol, options: SvgPathOptions = {}): SvgPath {
+		return svgPath(symbol, options);
 	}
 }
 

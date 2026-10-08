@@ -41,9 +41,9 @@ The component takes an encoded `QrSymbol`, so the handler that has the text enco
 ### Drawing Into Your Own Markup
 
 ```typescript
-import { QR, svgPath } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 
-let { d, viewBox } = svgPath(symbol, { margin: 4 });
+let { d, viewBox } = QR.toSVGPath(symbol, { margin: 4 });
 // <svg viewBox={viewBox}><path d={d} /></svg>
 ```
 
@@ -75,7 +75,7 @@ Encode text or bytes as the smallest symbol that holds them. A string is split i
 
 Text goes into byte segments as UTF-8, with no ECI designator. Phone scanners read UTF-8 this way, and ASCII, which covers every URI, reads the same under any interpretation.
 
-### `svgPath(symbol: QrSymbol, options?: SvgPathOptions): SvgPath`
+### `QR.toSVGPath(symbol: QrSymbol, options?: SvgPathOptions): SvgPath`
 
 Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, which `margin` sets in modules and defaults to the standard's 4; a smaller margin suits a code inside a light container that already provides one.
 

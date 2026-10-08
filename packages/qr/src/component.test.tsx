@@ -12,7 +12,6 @@ import { expect, test } from "vitest";
 
 import { QrCode } from "./component.js";
 import { QR } from "./encode.js";
-import { svgPath } from "./svg-path.js";
 
 /** A version 1 symbol, 21 modules a side. */
 const SYMBOL = unwrap(QR.encode("HELLO WORLD"));
@@ -38,7 +37,7 @@ test("draws dark modules over a light background at the given size", async () =>
 	expect(html).toContain('height="10rem"');
 	expect(html).toContain('shape-rendering="crispEdges"');
 	expect(html).toContain('<rect width="100%" height="100%" fill="#fff"');
-	expect(html).toContain(`<path d="${svgPath(SYMBOL).d}" fill="#000"`);
+	expect(html).toContain(`<path d="${QR.toSVGPath(SYMBOL).d}" fill="#000"`);
 });
 
 test("defaults to 12rem and accepts brand colors", async () => {

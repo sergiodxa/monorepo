@@ -12,7 +12,7 @@ import { css } from "remix/component";
 
 import type { QrSymbol } from "./encode.js";
 
-import { svgPath } from "./svg-path.js";
+import { QR } from "./encode.js";
 
 /** The props {@link QrCode} accepts. */
 export namespace QrCode {
@@ -71,7 +71,7 @@ export function QrCode(handle: Handle<QrCode.Props>) {
 			light = "#fff",
 			mix,
 		} = handle.props;
-		let path = svgPath(symbol, { margin });
+		let path = QR.toSVGPath(symbol, { margin });
 
 		return (
 			<svg

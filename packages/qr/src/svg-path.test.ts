@@ -11,7 +11,6 @@ import { expect, test } from "vitest";
 import type { QrSymbol } from "./encode.js";
 
 import { QR } from "./encode.js";
-import { svgPath } from "./svg-path.js";
 
 /** A 3×3 symbol from `#`/`.` rows, so expected paths can be written by hand. */
 function grid(...rows: string[]): QrSymbol {
@@ -25,7 +24,7 @@ function grid(...rows: string[]): QrSymbol {
 }
 
 test("merges each row's dark runs into rectangles, offset by the margin", () => {
-	let path = svgPath(grid("##.", ".#.", "#.#"), { margin: 1 });
+	let path = QR.toSVGPath(grid("##.", ".#.", "#.#"), { margin: 1 });
 	expect(path).toEqual({
 		d: "M1 1h2v1h-2zM2 2h1v1h-1zM1 3h1v1h-1zM3 3h1v1h-1z",
 		viewBox: "0 0 5 5",
@@ -35,12 +34,12 @@ test("merges each row's dark runs into rectangles, offset by the margin", () => 
 
 test("defaults to the standard's four-module quiet zone", () => {
 	let symbol = unwrap(QR.encode("HELLO"));
-	let path = svgPath(symbol);
+	let path = QR.toSVGPath(symbol);
 	expect(path.size).toBe(symbol.size + 8);
 	expect(path.viewBox).toBe(`0 0 ${symbol.size + 8} ${symbol.size + 8}`);
 	expect(path.d.startsWith("M4 4h7v1h-7z")).toBe(true);
 });
 
 test("draws a symbol with no margin from the origin", () => {
-	expect(svgPath(grid("#.", ".#"), { margin: 0 }).d).toBe("M0 0h1v1h-1zM1 1h1v1h-1z");
+	expect(QR.toSVGPath(grid("#.", ".#"), { margin: 0 }).d).toBe("M0 0h1v1h-1zM1 1h1v1h-1z");
 });
