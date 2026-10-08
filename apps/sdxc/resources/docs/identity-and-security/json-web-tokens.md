@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 6
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A JSON Web Token lets one service vouch for a caller to another without either calling back.
@@ -53,43 +53,30 @@ class you call them on, so `ServiceToken.verify(…)` hands back these accessors
 
 Every isolate that signs must use the same keys, and they must outlive any one deploy, so they
 live in storage. `JWK.signingKeys` reads them through the three-method `KeyStorage` contract,
-which maps onto an R2 bucket in a few lines:
+and `createR2KeyStorage` from `@sdxc/jwt/r2` implements it over an R2 bucket binding:
 
 ```typescript {% title="app/services/key-storage.ts" %}
-import type { KeyStorage } from "@sdxc/jwt";
+import { createR2KeyStorage } from "@sdxc/jwt/r2";
+import { env } from "cloudflare:workers";
 
-export function r2KeyStorage(bucket: R2Bucket): KeyStorage {
-	return {
-		async get(key) {
-			let object = await bucket.get(key);
-			if (object === null) return null;
-			let body = await object.arrayBuffer();
-			return new File([body], key, { type: "application/json" });
-		},
-		async list(options) {
-			let result = await bucket.list(options);
-			let files = result.objects.map((object) => ({ key: object.key }));
-			return { files, cursor: result.truncated ? result.cursor : undefined };
-		},
-		async set(key, file) {
-			await bucket.put(key, await file.arrayBuffer());
-		},
-	};
+export function keyStorage() {
+	return createR2KeyStorage(env.SIGNING_KEYS);
 }
 ```
 
-`list` returns a `cursor` only while more pages remain, which is how `signingKeys` knows the
-walk is over. A `FileStorage` from `remix/file-storage` satisfies the same contract, so a test
-can pass `createMemoryFileStorage()` instead of a bucket.
+Each key is written with its file name and type, so a read hands back the `File` that was
+stored, and a listing carries R2's cursor only while more pages remain, which is how
+`signingKeys` knows the walk is over. The bucket is typed by the three methods the storage
+calls, so any `R2Bucket` binding fits. A `FileStorage` from `remix/file-storage` satisfies the
+same contract, so a test can pass `createMemoryFileStorage()` instead of a bucket.
 
 Reading the keys is a listing, a read per key and two imports per key, so hold the result for a
 few minutes rather than repeating that on every request:
 
 ```typescript {% title="app/services/signing-keys.ts" %}
 import { JWK } from "@sdxc/jwt";
-import { env } from "cloudflare:workers";
 
-import { r2KeyStorage } from "~/app/services/key-storage";
+import { keyStorage } from "~/app/services/key-storage";
 
 const REREAD_AFTER_MS = 5 * 60 * 1000;
 
@@ -97,7 +84,7 @@ let cached: { keys: Promise<JWK.KeyPair[]>; readAt: number } | null = null;
 
 export function signingKeys(): Promise<JWK.KeyPair[]> {
 	if (cached === null || Date.now() - cached.readAt > REREAD_AFTER_MS) {
-		let keys = JWK.signingKeys(r2KeyStorage(env.SIGNING_KEYS));
+		let keys = JWK.signingKeys(keyStorage());
 		cached = { keys, readAt: Date.now() };
 		keys.catch(() => {
 			if (cached?.keys === keys) cached = null;
@@ -275,16 +262,15 @@ while the old key stays in the published set:
 
 ```typescript {% title="app/services/rotate-signing-key.ts" %}
 import { JWK } from "@sdxc/jwt";
-import { env } from "cloudflare:workers";
 
-import { r2KeyStorage } from "~/app/services/key-storage";
+import { keyStorage } from "~/app/services/key-storage";
 
 export async function rotateSigningKey() {
 	let pair = await JWK.generateKeyPair(JWK.Algorithm.ES256);
 	let file = new File([JSON.stringify(pair)], `${pair.id}.json`, {
 		type: "application/json",
 	});
-	await r2KeyStorage(env.SIGNING_KEYS).set(`signing:key:${pair.id}`, file);
+	await keyStorage().set(`signing:key:${pair.id}`, file);
 }
 ```
 
