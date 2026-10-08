@@ -8,10 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Attribution } from "@sdxc/attribution";
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { Billing, BillingError, Customer as BillingCustomer } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 
+import { toMetadata } from "@sdxc/attribution";
 import { BillingError as BillingFailure, supports } from "@sdxc/billing";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -71,22 +73,27 @@ export default class Customer {
 
 	/**
 	 * Opens the hosted checkout the team's owner subscribes through, returning them to the
-	 * team's own dashboard, which is where a completed purchase is visible.
+	 * team's own dashboard, which is where a completed purchase is visible. The owner's first
+	 * and last touch ride along as metadata, which the platform hands back on the order and
+	 * subscription webhooks.
 	 *
 	 * @param billing - The configured platform.
 	 * @param team - The team being subscribed, whose owner pays.
 	 * @param url - The current request's URL, which the return address is resolved against.
+	 * @param attribution - Where the owner arrived from, as the request knows it.
 	 * @returns The page to redirect the owner to.
 	 */
 	static async checkout(
 		billing: Billing,
 		team: BillableTeam,
 		url: URL,
+		attribution: Pick<Attribution, "first" | "last">,
 	): Promise<Result<string, BillingError>> {
 		let opened = await billing.checkouts.create({
 			product: MONITORING_PRODUCT,
 			customer: { externalId: team.owner_id },
 			returnTo: returnTo(team, url),
+			metadata: toMetadata(attribution),
 		});
 
 		if (isFailure(opened)) return opened;

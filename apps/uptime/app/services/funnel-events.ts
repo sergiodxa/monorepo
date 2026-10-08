@@ -10,9 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Touch, Utm } from "@sdxc/attribution";
 import type { Log } from "@sdxc/logger";
 
-import type { TrialAttribution } from "~/app/http/middleware/attribution";
 import type { MonitorStatus } from "~/database/schema";
 
 /** Prefix every event name carries, so one filter selects the whole funnel. */
@@ -72,13 +72,15 @@ export interface FunnelAttribution {
 export type FunnelMonitorType = "http" | "dns" | "tcp" | "cron";
 
 /**
- * What {@link attributionProperties} accepts: the first-touch record as the session carries
- * it, or the same three fields copied onto a stored conversion, differing only in whether a
- * landing path can be absent — so both callers pass the record they already hold.
+ * What {@link attributionProperties} accepts: a first touch's landing path and campaign
+ * fields, as a stored conversion row copies them. A field the touch did not carry, or a row
+ * recorded without one, is `null`.
  */
-export type FunnelAttributionInput = Pick<TrialAttribution, "source" | "campaign"> & {
-	landingPath: string | null;
-};
+export interface FunnelAttributionInput {
+	landingPath: Touch["landingPath"] | null;
+	source: Utm["source"] | null;
+	campaign: Utm["campaign"] | null;
+}
 
 /**
  * The campaign fields off a first-touch record, with every one nulled when there is no

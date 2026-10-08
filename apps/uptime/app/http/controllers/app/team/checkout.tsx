@@ -86,7 +86,7 @@ export default createAction(routes.app.team.checkout, {
 
 		let opened = hasActiveSubscription
 			? await Customer.portal(ctx.billing, ctx.team, ctx.url)
-			: await Customer.checkout(ctx.billing, ctx.team, ctx.url);
+			: await Customer.checkout(ctx.billing, ctx.team, ctx.url, ctx.attribution);
 
 		if (isFailure(opened)) {
 			ctx.log.warn("billing.hosted_page_failed", {

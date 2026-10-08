@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createTranslator } from "@sdxc/i18n";
@@ -92,11 +93,18 @@ async function createFixture() {
 	return { db, team };
 }
 
+/**
+ * Requests the checkout page through the attribution middleware the app installs, so a
+ * navigation carrying campaign parameters reaches the handler as the owner's first touch.
+ *
+ * @param init - The page's query string and request headers, for a request that is a navigation.
+ */
 async function renderCheckout(
 	db: Database,
 	team: SelectTeam,
 	membership: SelectMembership,
 	platform: Billing,
+	init: { search?: string; headers?: HeadersInit } = {},
 ) {
 	let router = createRouter({
 		middleware: [
@@ -104,6 +112,7 @@ async function renderCheckout(
 			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
+			attribution({ store: "session" }),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});
@@ -112,10 +121,9 @@ async function renderCheckout(
 		handler: (checkoutModule.default as { handler: RequestHandler<any> }).handler,
 	});
 
-	let request = new Request(
-		new URL(routes.app.team.checkout.href({ team: team.slug }), "https://uptime.test"),
-		{ redirect: "manual" },
-	);
+	let url = new URL(routes.app.team.checkout.href({ team: team.slug }), "https://uptime.test");
+	url.search = init.search ?? "";
+	let request = new Request(url, { redirect: "manual", headers: init.headers });
 	return router.fetch(request);
 }
 
@@ -165,6 +173,39 @@ describe("checkout page", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(onlyCheckout(platform).url);
+	});
+
+	/**
+	 * The checkout's metadata comes back on the platform's order and subscription webhooks,
+	 * which is how a payment is joined to the campaign that brought the owner in.
+	 */
+	test("opens the checkout carrying where the owner arrived from", async () => {
+		let { db, team } = await createFixture();
+		let membership = await db.create(
+			memberships,
+			{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
+			{ touch: true, returnRow: true },
+		);
+		let platform = createTestBilling();
+
+		await renderCheckout(db, team, membership, platform, {
+			search: "?utm_source=newsletter&utm_medium=email&utm_campaign=launch-week",
+			headers: {
+				Accept: "text/html",
+				"Sec-Fetch-Dest": "document",
+				"User-Agent":
+					"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+			},
+		});
+
+		expect(onlyCheckout(platform).providerData).toMatchObject({
+			metadata: {
+				first_channel: "email",
+				first_source: "newsletter",
+				first_campaign: "launch-week",
+				first_landing: routes.app.team.checkout.href({ team: team.slug }),
+			},
+		});
 	});
 
 	test("redirects the owner to the hosted portal when there's an active subscription", async () => {

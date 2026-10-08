@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Attribution, Touch } from "@sdxc/attribution";
 import type {
 	Billing,
 	CreateCheckoutInput,
@@ -41,6 +42,22 @@ const DASHBOARD = new URL(
 	routes.app.team.dashboard.index.href({ team: TEAM.slug }),
 	REQUEST_URL,
 ).toString();
+
+/** Where the owner first arrived: a newsletter link to the pricing page. */
+const FIRST_TOUCH: Touch = {
+	at: Date.parse("2026-10-01T09:12:44.000Z"),
+	landingPath: "/pricing",
+	utm: { source: "newsletter", medium: "email", campaign: "launch-week" },
+	click: null,
+	referrer: null,
+	channel: "email",
+};
+
+/** An owner whose only recorded visit is {@link FIRST_TOUCH}. */
+const ATTRIBUTION: Pick<Attribution, "first" | "last"> = { first: FIRST_TOUCH, last: FIRST_TOUCH };
+
+/** An owner the request knows nothing about. */
+const NO_ATTRIBUTION: Pick<Attribution, "first" | "last"> = { first: null, last: null };
 
 let idToken = new IdToken({ sub: "user-1", email: "user@example.com", name: "User One" });
 
@@ -170,7 +187,7 @@ describe("Customer.provision", () => {
 });
 
 describe("Customer.checkout", () => {
-	test("opens a session for the monitoring product and returns the owner to their team", async () => {
+	test("opens a session for the monitoring product, carrying where the owner arrived from", async () => {
 		let billing = createTestBilling();
 		await unwrap(
 			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
@@ -188,7 +205,7 @@ describe("Customer.checkout", () => {
 			},
 		});
 
-		let url = await unwrap(Customer.checkout(recording, TEAM, REQUEST_URL));
+		let url = await unwrap(Customer.checkout(recording, TEAM, REQUEST_URL, ATTRIBUTION));
 
 		expect(url).not.toBe("");
 		expect(opened).toEqual([
@@ -196,6 +213,20 @@ describe("Customer.checkout", () => {
 				product: MONITORING_PRODUCT,
 				customer: { externalId: TEAM.owner_id },
 				returnTo: DASHBOARD,
+				metadata: {
+					first_channel: "email",
+					first_landing: "/pricing",
+					first_at: "2026-10-01T09:12:44.000Z",
+					first_source: "newsletter",
+					first_medium: "email",
+					first_campaign: "launch-week",
+					last_channel: "email",
+					last_landing: "/pricing",
+					last_at: "2026-10-01T09:12:44.000Z",
+					last_source: "newsletter",
+					last_medium: "email",
+					last_campaign: "launch-week",
+				},
 			},
 		]);
 	});
@@ -204,7 +235,7 @@ describe("Customer.checkout", () => {
 		let billing = createTestBilling();
 		billing.fail("checkouts.create", "unknown");
 
-		let opened = await Customer.checkout(billing, TEAM, REQUEST_URL);
+		let opened = await Customer.checkout(billing, TEAM, REQUEST_URL, NO_ATTRIBUTION);
 
 		expect(isFailure(opened)).toBe(true);
 		if (isFailure(opened)) expect(opened.error.code).toBe("unknown");

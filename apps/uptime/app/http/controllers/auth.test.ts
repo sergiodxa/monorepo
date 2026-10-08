@@ -12,9 +12,11 @@ import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
+import { attribution } from "@sdxc/attribution/middleware";
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { JWK, JWT } from "@sdxc/jwt";
 import { log } from "@sdxc/logger/middleware";
 import { failure, unwrap } from "@sdxc/result";
@@ -29,6 +31,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 
 import Customer from "~/app/data/customer";
 import Lead from "~/app/data/lead";
+import TrialConversion from "~/app/data/trial-conversion";
 import TrialWatch from "~/app/data/trial-watch";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
@@ -207,18 +210,25 @@ function seedSession(session: Session): Middleware {
 
 /**
  * Builds a minimal router mapping the whole `/auth` controller against its own database and
- * billing platform, so what a sign-in provisioned can be read back from it.
+ * billing platform, so what a sign-in provisioned can be read back from it. `HEAD` handling
+ * leads the chain and attribution follows the session with the aliases the app passes, so a
+ * visit before the sign-in records its touch exactly as the app does.
  */
 function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], session: Session) {
 	let platform = createTestBilling();
 
 	let router = createRouter({
 		middleware: [
+			headRequests(),
 			asyncContext(),
 			database(() => db),
 			log() as Middleware,
 			billing({ provider: platform }),
 			seedSession(session),
+			attribution({
+				store: "session",
+				aliases: { source: ["ref", "source"], campaign: ["campaign"] },
+			}),
 			auth as Middleware,
 			i18n as Middleware,
 			renderWith(createTestRenderer) as Middleware,
@@ -677,5 +687,88 @@ describe("GET /auth trial conversion", () => {
 		expect(response.headers.get("Location")).toBe(routes.app.index.href());
 		expect(JWT.decode(agent.tokens()!.idToken).subject).toBe("user-1");
 		expect(await db.findMany(monitors, {})).toHaveLength(0);
+	});
+});
+
+/**
+ * Pins what the sign-in copies onto the conversion row: the first touch the anonymous session
+ * recorded, reduced to its landing path, source and campaign.
+ */
+describe("GET /auth signup attribution", () => {
+	/** Headers a browser sends when it loads a page, which is what records a touch. */
+	const NAVIGATION = {
+		Accept: "text/html",
+		"Sec-Fetch-Dest": "document",
+		"User-Agent":
+			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15",
+	};
+
+	/** A lead for the signing-in address, which is what gives the sign-in a conversion row. */
+	async function seedLead(db: ReturnType<typeof createTestDatabase>["db"]) {
+		await Lead.upsertByEmail(db, { email: "ada@example.com", locale: "en", consented: false });
+	}
+
+	test("copies the first touch onto the conversion row, ahead of any later campaign", async () => {
+		let { db } = createTestDatabase();
+		await seedLead(db);
+		let agent = createAgent(db);
+
+		await agent.visit(
+			new Request("https://uptime.test/for/agencies?ref=Outreach&campaign=agencies-august", {
+				headers: NAVIGATION,
+			}),
+		);
+		await agent.visit(
+			new Request("https://uptime.test/pricing?utm_source=twitter&utm_campaign=launch", {
+				headers: NAVIGATION,
+			}),
+		);
+		await signInThrough(agent);
+
+		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+			landing_path: "/for/agencies",
+			campaign_source: "outreach",
+			campaign_name: "agencies-august",
+		});
+	});
+
+	/**
+	 * The `HEAD` middleware runs the request as a `GET` while keeping the request's own method,
+	 * so a monitoring probe of a campaign page leaves the first touch to the visitor behind it.
+	 */
+	test("records nothing for a HEAD probe ahead of the visitor's own landing", async () => {
+		let { db } = createTestDatabase();
+		await seedLead(db);
+		let agent = createAgent(db);
+
+		await agent.visit(
+			new Request("https://uptime.test/for/agencies?ref=probe", {
+				method: "HEAD",
+				headers: NAVIGATION,
+			}),
+		);
+		await agent.visit(
+			new Request("https://uptime.test/pricing?ref=outreach", { headers: NAVIGATION }),
+		);
+		await signInThrough(agent);
+
+		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+			landing_path: "/pricing",
+			campaign_source: "outreach",
+			campaign_name: null,
+		});
+	});
+
+	test("records the arrival as unknown when the session holds no touch", async () => {
+		let { db } = createTestDatabase();
+		await seedLead(db);
+
+		await signInThrough(createAgent(db));
+
+		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+			landing_path: null,
+			campaign_source: null,
+			campaign_name: null,
+		});
 	});
 });

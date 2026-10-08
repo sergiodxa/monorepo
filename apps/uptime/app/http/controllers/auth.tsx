@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Touch } from "@sdxc/attribution";
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
@@ -26,16 +27,14 @@ import { m, minBs, p } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import { createController } from "remix/router";
-import { Session } from "remix/session";
 
-import type { TrialAttribution } from "~/app/http/middleware/attribution";
+import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
 
 import { relyingParty } from "~/app/auth/relying-party";
 import Customer from "~/app/data/customer";
 import Team from "~/app/data/team";
 import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
-import { TRIAL_ATTRIBUTION } from "~/app/http/middleware/attribution";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
 import DocumentLayout from "~/resources/layouts/document";
@@ -77,6 +76,19 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	});
 
 	return created;
+}
+
+/**
+ * The three columns a conversion row stores, from the first touch. A missing touch stays
+ * `undefined`, which the row records as unknown rather than as direct.
+ */
+function signupAttribution(touch: Touch | null): TrialSignupAttribution | undefined {
+	if (!touch) return undefined;
+	return {
+		landingPath: touch.landingPath,
+		source: touch.utm?.source ?? null,
+		campaign: touch.utm?.campaign ?? null,
+	};
 }
 
 /**
@@ -201,11 +213,10 @@ export default createController(routes.auth, {
 				teamId: team.id,
 				authorId: idToken.subject,
 				/**
-				 * Read here because this request is the last one holding the anonymous
-				 * session `attribution` was captured into. Left in the session afterward,
-				 * so a sign-in racing in a second tab still finds its own attribution intact.
+				 * The first touch, read here because this request is the last one holding the
+				 * anonymous session it was recorded into.
 				 */
-				attribution: ctx.get(Session)?.get(TRIAL_ATTRIBUTION) as TrialAttribution | undefined,
+				attribution: signupAttribution(ctx.attribution.first),
 			});
 
 			let target = Location.safe(grant.returnTo, { fallback: routes.app.index.href() });

@@ -1,7 +1,7 @@
 /**
  * Assembles the uptime fetch-router: the global middleware stack (async
  * context, logging, the database, mail, form data, method override, session,
- * auth, language resolution, first-touch attribution, cross-origin protection,
+ * auth, language resolution, visit attribution, cross-origin protection,
  * HTML rendering) followed by every route mapped to its controller. Shared
  * by the worker and any other runtime entry point.
  *
@@ -19,6 +19,7 @@
 
 import type { Middleware } from "remix/router";
 
+import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -43,7 +44,6 @@ import { createController, createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { attribution } from "~/app/http/middleware/attribution";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
@@ -192,11 +192,16 @@ export default function application(options: application.Options) {
 		 */
 		htmlOnly(i18n),
 		/**
-		 * Records first-touch acquisition while the visitor is still anonymous —
-		 * the only time it's knowable. Wrapped in `htmlOnly` since a webhook or an
-		 * API call has no campaign and no session worth writing to.
+		 * Publishes `ctx.attribution` and keeps the visitor's first and last touch in the
+		 * session, so the sign-in can copy the first onto the conversion row and a checkout
+		 * can carry both. Only a page navigation records anything, which leaves webhooks and
+		 * API calls untouched. `ref`/`source` and `campaign` stand in for the `utm_*` names
+		 * an outreach link is likelier to carry.
 		 */
-		htmlOnly(attribution),
+		attribution({
+			store: "session",
+			aliases: { source: ["ref", "source"], campaign: ["campaign"] },
+		}),
 		/**
 		 * Machine surfaces authenticate differently: a webhook sender proves itself
 		 * by signing the request body — a stronger claim than an `Origin` header —

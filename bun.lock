@@ -337,6 +337,7 @@
     "apps/uptime": {
       "name": "@apps/uptime",
       "dependencies": {
+        "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/cache": "workspace:*",
