@@ -13,6 +13,7 @@ import type { Middleware } from "remix/router";
 import { text } from "@sdxc/http/response";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, wrap } from "@sdxc/result";
+import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { validate } from "@sdxc/validate";
 import { createCookie } from "remix/cookie";
 import * as s from "remix/data-schema";
@@ -20,7 +21,6 @@ import { minLength } from "remix/data-schema/checks";
 import { session } from "remix/middleware/session";
 
 import { getEnv } from "~/app/http/middleware/env";
-import { KVSessionStorage } from "~/app/infrastructure/session/kv-session-storage-adapter";
 
 /**
  * Session payload types for cookie-backed sessions.

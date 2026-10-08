@@ -24,6 +24,7 @@ import { redirect } from "@sdxc/http/response";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { noWWW } from "@sdxc/no-www-middleware";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -50,7 +51,6 @@ import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
-import createNoWWWMiddleware from "~/app/http/middleware/no-www";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
@@ -200,7 +200,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		getClientIP(),
 		trace(),
 		createEnvMiddleware(env),
-		createNoWWWMiddleware(),
+		noWWW(),
 		trailingSlash(),
 		wellKnown({
 			"security.txt": serve(securityTxt, () => SECURITY_TXT),

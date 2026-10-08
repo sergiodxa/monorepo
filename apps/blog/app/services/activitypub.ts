@@ -13,7 +13,7 @@ import type { JobEnqueuer } from "@sdxc/jobs";
 import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { Federation } from "@sdxc/activitypub";
+import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, success, wrap } from "@sdxc/result";
 
@@ -22,7 +22,6 @@ import { FollowerRepository } from "~/app/repositories/follower";
 import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
 import { FederatedPosts } from "~/app/services/federated-posts";
-import { SeenActivityCache } from "~/app/services/seen-activities";
 import {
 	ACTIVITYPUB_USER_AGENT,
 	ACTOR_ID,
@@ -128,7 +127,7 @@ export function createFederation(services: FederationServices): Federation {
 		keys: services.keys,
 		stores: {
 			followers: new FollowerRepository(db),
-			seen: new SeenActivityCache(services.cache),
+			seen: new CacheSeenActivities(services.cache),
 			objects: posts,
 		},
 		cache: services.cache,
