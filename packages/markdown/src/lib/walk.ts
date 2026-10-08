@@ -38,6 +38,7 @@ const BLOCK_TYPES = new Set<string>([
 	"thematicBreak",
 	"html",
 	"footnoteDefinition",
+	"comment",
 	"tag",
 ]);
 
@@ -55,6 +56,7 @@ const INLINE_TYPES = new Set<string>([
 	"inlineHtml",
 	"footnoteReference",
 	"variable",
+	"comment",
 	"tag",
 ]);
 

@@ -137,6 +137,7 @@ function renderNode(node: Markdown.Node, context: Context): string {
 			return escapeText(node.value);
 
 		case "footnoteDefinition":
+		case "comment":
 			return "";
 
 		case "tag":

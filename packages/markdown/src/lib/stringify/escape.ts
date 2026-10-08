@@ -98,6 +98,13 @@ export function escapeText(value: string, context: EscapeContext): string {
 			continue;
 		}
 
+		if (char === "{" && value.startsWith("/*", index + 1)) {
+			out += "\\{/";
+			index += 2;
+			lineStart = false;
+			continue;
+		}
+
 		if (char === "@" && matchLiteralEmail(value, index, 0, value.length) !== null) {
 			out += "\\@";
 			index += 1;

@@ -78,6 +78,7 @@ function inlineText(node: Markdown.Node, options: ResolvedOptions): string {
 		case "thematicBreak":
 		case "footnoteReference":
 		case "variable":
+		case "comment":
 			return "";
 
 		case "tableRow":

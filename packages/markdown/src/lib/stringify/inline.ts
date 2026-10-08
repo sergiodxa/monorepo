@@ -125,6 +125,8 @@ function stringifyInline(
 			return `{% $${node.name} %}`;
 		case "tag":
 			return writeTag(node, context);
+		case "comment":
+			return `{/*${node.value}*/}`;
 	}
 }
 

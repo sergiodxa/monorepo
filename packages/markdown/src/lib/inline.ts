@@ -323,8 +323,7 @@ class InlineRun {
 				this.#handleEntity();
 				return OK;
 			case "{":
-				this.#handleBrace();
-				return OK;
+				return this.#handleBrace();
 			case "<":
 				return this.#handleLessThan();
 			default:
@@ -747,16 +746,46 @@ class InlineRun {
 		this.#pos = entity.end;
 	}
 
-	/** An opening brace, which holds a variable when the annotation inside it names one. */
-	#handleBrace(): void {
+	/**
+	 * An opening brace, which holds a comment when `/*` follows it and a variable when
+	 * the annotation inside it names one. A comment that never closes is a failure,
+	 * so a missing `*\/}` cannot hide the rest of a paragraph.
+	 *
+	 * @returns Nothing, or the failure an unclosed comment produced
+	 */
+	#handleBrace(): Result<undefined, MarkdownParseError> {
 		let start = this.#pos;
+
+		if (this.#subject.startsWith("/*", start + 1)) {
+			let close = this.#subject.indexOf("*/}", start + 3);
+			if (close === -1 || close + 3 > this.#end) {
+				return failure(
+					new MarkdownParseError("A comment opened here is never closed", {
+						position: this.#text.position(start, start + 3),
+					}),
+				);
+			}
+
+			this.#append(
+				{
+					type: "comment",
+					value: this.#subject.slice(start + 3, close),
+					position: this.#text.position(start, close + 3),
+				},
+				start,
+				close + 3,
+			);
+			this.#pos = close + 3;
+			return OK;
+		}
+
 		let annotation = scanAnnotation(this.#subject, start);
 		let name = annotation && annotation.end <= this.#end ? readVariableName(annotation.body) : null;
 
 		if (!annotation || !name) {
 			this.#appendText("{", start, start + 1, true);
 			this.#pos = start + 1;
-			return;
+			return OK;
 		}
 
 		this.#append(
@@ -765,6 +794,7 @@ class InlineRun {
 			annotation.end,
 		);
 		this.#pos = annotation.end;
+		return OK;
 	}
 
 	/** @returns Nothing, or the error a registered tag written here produced */

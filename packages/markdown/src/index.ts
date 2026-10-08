@@ -339,6 +339,18 @@ export namespace Markdown {
 		position: Position;
 	}
 
+	/**
+	 * A `{/* … *\/}` note for whoever edits the source. Renderers leave it out and
+	 * `Markdown.stringify` writes it back, so an edit round trip keeps it. Written on
+	 * its own line it is a block, inside a line it is inline.
+	 */
+	export interface Comment {
+		type: "comment";
+		/** Everything between `{/*` and `*\/}`, whitespace and line breaks as written. */
+		value: string;
+		position: Position;
+	}
+
 	export type Block =
 		| Heading
 		| Paragraph
@@ -353,6 +365,7 @@ export namespace Markdown {
 		| ThematicBreak
 		| Html
 		| FootnoteDefinition
+		| Comment
 		| Tag;
 
 	export type Inline =
@@ -368,6 +381,7 @@ export namespace Markdown {
 		| InlineHtml
 		| FootnoteReference
 		| Variable
+		| Comment
 		| Tag;
 
 	export type Node = Document | Block | Inline;
@@ -406,7 +420,7 @@ export namespace Markdown {
 		frontmatter: FM;
 	}
 
-	/** The category a node of type `K` belongs to; `tag` belongs to both. */
+	/** The category a node of type `K` belongs to; `tag` and `comment` belong to both. */
 	type Category<K extends Node["type"]> =
 		| (K extends Block["type"] ? Block : never)
 		| (K extends Inline["type"] ? Inline : never)

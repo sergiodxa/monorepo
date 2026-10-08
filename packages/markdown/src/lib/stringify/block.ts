@@ -86,6 +86,8 @@ function stringifyBlock(node: Markdown.Block): string {
 			return writeFootnoteDefinition(node);
 		case "tag":
 			return writeTag(node);
+		case "comment":
+			return `{/*${node.value}*/}`;
 	}
 }
 

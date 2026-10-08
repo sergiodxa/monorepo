@@ -181,17 +181,18 @@ one when a handler is asynchronous. See
 The AST. `Markdown.Node` is `Document | Block | Inline`; `document` is the root and belongs
 to neither column, so a `Block[]` can never hold a nested document.
 
-| Blocks                                                                                                                                               | Inline                                                                                                                                           |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `heading` `paragraph` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `tag` | `text` `emphasis` `strong` `strikethrough` `inlineCode` `link` `image` `softBreak` `hardBreak` `inlineHtml` `footnoteReference` `variable` `tag` |
+| Blocks                                                                                                                                                         | Inline                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `heading` `paragraph` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `comment` `tag` | `text` `emphasis` `strong` `strikethrough` `inlineCode` `link` `image` `softBreak` `hardBreak` `inlineHtml` `footnoteReference` `variable` `comment` `tag` |
 
 Every `type` names exactly one interface, so `Extract<Markdown.Node, { type: K }>` always
-narrows to one shape. The one name in both columns is `tag`: a tag is block-level or inline
-depending on where it is written, and its `children` say which.
+narrows to one shape. Two names sit in both columns: a `tag` is block-level or inline
+depending on where it is written, and its `children` say which; a `comment` is a block on a
+line of its own and inline inside one.
 
 Every node carries a `position` — 1-based `line` and `column`, 0-based `offset`, all into the
-source as written, frontmatter included. Every block carries `attributes`, because an
-annotation may sit above any block.
+source as written, frontmatter included. Every block but `comment` carries `attributes`,
+because an annotation may sit above any block that renders.
 
 Two constructs exist in the source and not in the tree. A link reference definition is
 consumed at parse time and every reference to it becomes a `link`. Footnotes keep both
@@ -460,6 +461,25 @@ nothing leaves the hole in place.
 
 Because variables survive parsing, `Markdown.stringify` round-trips them, so the markdown a
 client fetches is the template rather than one tenant's copy.
+
+## Pattern: Comments
+
+`{/* … */}` is a note for whoever edits the source. Every renderer leaves it out, and
+`Markdown.stringify` writes it back, so a document parsed and written by an editor keeps it.
+
+```text
+{/*
+  Numbers below come from the pricing page; update both together.
+*/}
+
+Starter costs $9 a month. {/* TODO: confirm with billing */}
+```
+
+On a line of its own it is a `comment` block, and it may span lines, blank ones included; the
+line holding `*/}` ends with it. Inside a line it is an inline `comment`. An annotation above a
+comment decorates the block after it, so a comment can sit between the two. A comment that
+never closes is a parse error at the line it opened on, so a missing `*/}` cannot swallow the
+rest of a document. `\{/*` writes the characters themselves.
 
 ## Pattern: GitHub Alerts
 

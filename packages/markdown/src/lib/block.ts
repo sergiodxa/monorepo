@@ -63,6 +63,7 @@ type OpenType =
 	| "heading"
 	| "code"
 	| "html"
+	| "comment"
 	| "table"
 	| "thematicBreak";
 
@@ -121,6 +122,8 @@ interface OpenNode {
 	tagName?: string;
 	tagContent?: ResolvedTag["content"];
 	tagClosed: boolean;
+	/** Whether a comment has met its `*\/}`, which an unclosed one is reported for. */
+	commentClosed: boolean;
 	/** The opening tag's own span, which is where a tag failure is reported. */
 	openPosition?: Markdown.Position;
 	align?: Alignment[];
@@ -299,6 +302,8 @@ class BlockParser {
 				this.#finalize(container);
 			}
 
+			if (container.type === "comment") this.#closeComment(container);
+
 			return;
 		}
 
@@ -324,6 +329,7 @@ class BlockParser {
 		if (node.type === "tag") return this.#continueTag(node);
 		if (node.type === "code") return this.#continueCode(node);
 		if (node.type === "html") return this.#blank && node.htmlKind >= 6 ? "closed" : "matched";
+		if (node.type === "comment") return "matched";
 		if (node.type === "paragraph" || node.type === "table") {
 			return this.#blank ? "closed" : "matched";
 		}
@@ -455,6 +461,9 @@ class BlockParser {
 		if (outcome !== "none") return outcome;
 
 		outcome = this.#tryTagOpen();
+		if (outcome !== "none") return outcome;
+
+		outcome = this.#tryComment(container);
 		if (outcome !== "none") return outcome;
 
 		outcome = this.#tryHtmlBlock(container);
@@ -742,6 +751,68 @@ class BlockParser {
 		return validated.value as Markdown.Attributes;
 	}
 
+	/**
+	 * `{/*` opening a line opens a block comment, which takes every line up to the
+	 * one holding `*\/}`, blank lines included. A comment closed on its first line with
+	 * text after it is inline content, so that line opens a paragraph instead. The
+	 * annotation waiting above stays waiting, for the block the comment sits on top of.
+	 *
+	 * @param container - The deepest block the line matched into
+	 * @returns Whether the line opened a comment
+	 */
+	#tryComment(container: OpenNode): StartOutcome {
+		if (this.#indented || container.type === "paragraph") return "none";
+
+		let text = this.#line.text.slice(this.#nextNonspace);
+		if (!text.startsWith("{/*")) return "none";
+
+		let close = text.indexOf("*/}", 3);
+		if (close !== -1 && text.slice(close + 3).trim() !== "") return "none";
+
+		this.#closeUnmatched();
+		this.#advanceNextNonspace();
+		this.#addChild("comment", this.#offset, false);
+
+		return "leaf";
+	}
+
+	/**
+	 * Closes a comment on the line holding its `*\/}`. That marker ends the line, so
+	 * text after it is a failure rather than content the comment silently swallows.
+	 *
+	 * @param node - The open comment, whose last chunk is the line just added
+	 */
+	#closeComment(node: OpenNode): void {
+		let chunk = lastOf(node.chunks);
+		if (!chunk) return;
+
+		let from = node.chunks.length === 1 ? 3 : 0;
+		let close = chunk.text.indexOf("*/}", from);
+		if (close === -1) return;
+
+		if (chunk.text.slice(close + 3).trim() !== "") {
+			let start = {
+				line: chunk.line,
+				column: chunk.column + close + 3,
+				offset: chunk.offset + close + 3,
+			};
+			this.#fail("A comment ends its line, so text after `*/}` goes on the next one", {
+				start,
+				end: this.#lineEnd(),
+			});
+			return;
+		}
+
+		chunk.text = chunk.text.slice(0, close + 3);
+		node.commentClosed = true;
+		node.end = {
+			line: chunk.line,
+			column: chunk.column + close + 3,
+			offset: chunk.offset + close + 3,
+		};
+		this.#finalize(node);
+	}
+
 	/** An unregistered element falls back to CommonMark's own seven HTML block conditions. */
 	#tryHtmlBlock(container: OpenNode): StartOutcome {
 		if (this.#indented || this.#line.text.charAt(this.#nextNonspace) !== "<") return "none";
@@ -934,14 +1005,14 @@ class BlockParser {
 	 * @param index - Where in the line the block begins
 	 * @returns The opened block, which becomes the tip
 	 */
-	#addChild(type: OpenType, index: number): OpenNode {
+	#addChild(type: OpenType, index: number, takesPending = true): OpenNode {
 		while (this.#tip.parent && !canContain(this.#tip, type)) this.#finalize(this.#tip);
 
 		let node = createNode(type, this.#pointAt(index));
 		node.parent = this.#tip;
 		this.#tip.children.push(node);
 
-		let pending = this.#tip.pending;
+		let pending = takesPending ? this.#tip.pending : null;
 		if (pending) {
 			node.attributes = { ...pending.attributes };
 			this.#tip.pending = null;
@@ -993,6 +1064,7 @@ class BlockParser {
 		if (node.type === "paragraph") this.#finalizeParagraph(node);
 		else if (node.type === "code") this.#finalizeCode(node);
 		else if (node.type === "html") node.content = joinChunks(trimBlankChunks(node.chunks));
+		else if (node.type === "comment") this.#finalizeComment(node);
 		else if (node.type === "list") finalizeList(node);
 		else if (node.type === "listItem") finalizeItem(node);
 		else if (node.type === "blockquote") finalizeBlockquote(node);
@@ -1064,6 +1136,22 @@ class BlockParser {
 		}
 
 		node.content = joinChunks(node.chunks);
+	}
+
+	/** A comment that never met its `*\/}` reports the line it was opened on. */
+	#finalizeComment(node: OpenNode): void {
+		if (!node.commentClosed) {
+			this.#fail("A comment opened here is never closed", {
+				start: node.start,
+				end: { ...node.start, column: node.start.column + 3, offset: node.start.offset + 3 },
+			});
+			return;
+		}
+
+		node.content = node.chunks
+			.map((chunk) => chunk.text)
+			.join("\n")
+			.slice(3, -3);
 	}
 
 	/** A tag that never met its closer reports the line it was opened on. */
@@ -1390,6 +1478,8 @@ class BlockParser {
 			return success({ type: "thematicBreak", attributes: node.attributes, position });
 		}
 
+		if (node.type === "comment") return success({ type: "comment", value: node.content, position });
+
 		if (node.type === "listItem") {
 			return success({
 				type: "listItem",
@@ -1586,6 +1676,7 @@ function createNode(type: OpenType, start: Markdown.Point): OpenNode {
 		fenceIndent: 0,
 		htmlKind: 0,
 		tagClosed: false,
+		commentClosed: false,
 	};
 }
 
@@ -1643,6 +1734,7 @@ function acceptsLines(node: OpenNode): boolean {
 		node.type === "paragraph" ||
 		node.type === "code" ||
 		node.type === "html" ||
+		node.type === "comment" ||
 		node.type === "table"
 	);
 }

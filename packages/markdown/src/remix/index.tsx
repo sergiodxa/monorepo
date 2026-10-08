@@ -255,6 +255,9 @@ function renderNode(node: Markdown.Node, options: RemixOptions): RemixNode {
 
 		case "variable":
 			return `{% $${node.name} %}`;
+
+		case "comment":
+			return null;
 	}
 }
 

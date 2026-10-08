@@ -380,6 +380,27 @@ describe("toRemix", () => {
 		expect(html).not.toContain("callout");
 	});
 
+	test("leaves block and inline comments out", async () => {
+		let html = await render(
+			document(
+				{ type: "comment", value: " block ", position: position() },
+				{
+					type: "paragraph",
+					attributes: {},
+					children: [
+						text("Before "),
+						{ type: "comment", value: " inline ", position: position() },
+						text("after"),
+					],
+					position: position(),
+				},
+			),
+		);
+
+		expect(html).toMatch(/<p[^>]*>Before after<\/p>/);
+		expect(html).not.toContain("block");
+	});
+
 	test("shows raw HTML as the text it was written as", async () => {
 		let html = await render(
 			document(
