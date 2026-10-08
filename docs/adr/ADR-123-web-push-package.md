@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-08
+**Accepted** - 2026-10-08
 
 ## Background
 
@@ -117,14 +117,14 @@ let sent = await push.send(subscription, JSON.stringify(payload), {
 // Result<{ status: number }, WebPushError>
 ```
 
-| Option    | Default        | Meaning                                                                                                |
-| --------- | -------------- | ------------------------------------------------------------------------------------------------------ |
-| `ttl`     | `"4 weeks"`    | How long the push service holds the message for an offline device; a `@sdxc/duration` value or seconds |
-| `urgency` | `"normal"`     | RFC 8030 urgency, which lets a device on battery defer low-urgency messages                            |
-| `topic`   | None           | Replaces an undelivered message with the same topic, so an offline device receives only the latest     |
-| `padding` | `0`            | Bytes of padding added inside the record, so ciphertext length says less about the payload             |
-| `timeout` | `"10 seconds"` | Deadline for the `POST`                                                                                |
-| `signal`  | None           | Aborts the `POST`                                                                                      |
+| Option    | Default        | Meaning                                                                                                                                                             |
+| --------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ttl`     | `"4 weeks"`    | How long the push service holds the message for an offline device; a `@sdxc/duration` value (a bare number is milliseconds, as everywhere `DurationInput` is taken) |
+| `urgency` | `"normal"`     | RFC 8030 urgency, which lets a device on battery defer low-urgency messages                                                                                         |
+| `topic`   | None           | Replaces an undelivered message with the same topic, so an offline device receives only the latest                                                                  |
+| `padding` | `0`            | Bytes of padding added inside the record, so ciphertext length says less about the payload                                                                          |
+| `timeout` | `"10 seconds"` | Deadline for the `POST`                                                                                                                                             |
+| `signal`  | None           | Aborts the `POST`                                                                                                                                                   |
 
 - `payload` is a `string` (UTF-8 encoded) or a `Uint8Array`, or omitted for a push with no body
   (a "tickle" the service worker answers by fetching).
@@ -422,10 +422,22 @@ Durable Object and `uptime` would keep them in D1 per user; the policy differs w
 
 ## Current Progress
 
-- [ ] Phase 1: The package
-- [ ] Phase 2: The browser entry
-- [ ] Phase 3: Migrate `reader`
-- [ ] Phase 4: `@sdxc/messaging` provider
+- [x] Phase 1: The package
+- [x] Phase 2: The browser entry
+- [x] Phase 3: Migrate `reader`
+- [ ] Phase 4: `@sdxc/messaging` provider — waits for `uptime` to schedule browser alerts
+
+### As built
+
+- Subscription checks also test that `p256dh` lies on the P-256 curve (the check `reader` already
+  ran at registration), so `invalid-subscription` never waits for the ECDH import to find it.
+- A subscription whose `applicationServerKey` matches neither `vapid` nor any of `previous` fails
+  `invalid-subscription` before any request: signing it with another key would only earn a `403`.
+- `subscribe` asks for permission before registering the worker, so the prompt runs inside the user
+  activation that called it rather than after an `await` that may have spent it.
+- `reader` already prompted from a button press; its island now calls `subscribe` from that press,
+  posts `{ subscription, locale }`, and stores the subscription's key in `push_subscriptions.vapid_key`
+  (`UserDO` migration `0018-push-vapid-key`).
 
 ## Notes
 

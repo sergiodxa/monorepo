@@ -1469,6 +1469,18 @@
         "remix": "3.0.0",
       },
     },
+    "packages/web-push": {
+      "name": "@sdxc/web-push",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
     "packages/webhooks": {
       "name": "@sdxc/webhooks",
       "version": "0.0.1",
@@ -2352,6 +2364,8 @@
     "@sdxc/uuid": ["@sdxc/uuid@workspace:packages/uuid"],
 
     "@sdxc/validate": ["@sdxc/validate@workspace:packages/validate"],
+
+    "@sdxc/web-push": ["@sdxc/web-push@workspace:packages/web-push"],
 
     "@sdxc/webhooks": ["@sdxc/webhooks@workspace:packages/webhooks"],
 
