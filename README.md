@@ -143,6 +143,7 @@ Run from the repository root:
 | [messageformat](packages/messageformat)                         | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                       | ✅  |
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
+| [newsletter](packages/newsletter)                               | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                      |     |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
 | [messaging](packages/messaging)                                 | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more      |     |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |

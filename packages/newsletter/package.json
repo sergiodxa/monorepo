@@ -1,0 +1,30 @@
+{
+	"name": "@sdxc/newsletter",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./buttondown": "./src/buttondown/index.ts",
+		"./conformance": "./src/conformance.ts",
+		"./kit": "./src/kit/index.ts",
+		"./memory": "./src/memory.ts",
+		"./middleware": "./src/middleware.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/api-client": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/email-address": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@sdxc/webhooks": "workspace:*",
+		"remix": "3.0.0"
+	}
+}

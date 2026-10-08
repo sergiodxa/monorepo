@@ -963,6 +963,21 @@
         "remix": "3.0.0",
       },
     },
+    "packages/newsletter": {
+      "name": "@sdxc/newsletter",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/api-client": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/email-address": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@sdxc/webhooks": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
     "packages/openapi": {
       "name": "@sdxc/openapi",
       "version": "0.0.1",
@@ -2092,6 +2107,8 @@
     "@sdxc/microformats": ["@sdxc/microformats@workspace:packages/microformats"],
 
     "@sdxc/micropub": ["@sdxc/micropub@workspace:packages/micropub"],
+
+    "@sdxc/newsletter": ["@sdxc/newsletter@workspace:packages/newsletter"],
 
     "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
 
