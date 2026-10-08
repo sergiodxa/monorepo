@@ -18,11 +18,10 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Header, Keyboard, Separator } from "@sdxc/ui";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry } from "remix/component";
 
 import type { PreviewRequest } from "~/resources/components/ui-previews.server";
-
-import { shortcutKeys } from "~/app/services/shortcut-keys";
 
 /** The shortcuts the panel lists, written as abstract combos rather than glyphs. */
 const SHORTCUTS = [
@@ -53,7 +52,7 @@ let appleKeyboard = isAppleKeyboard(parse(request.headers.get("user-agent") ?? "
 				<div key={shortcut.combo} mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
 					<span>{shortcut.action}</span>
 					<span mix={[hstack({ gap: 1, align: "baseline" })]}>
-						{shortcutKeys(shortcut.combo, appleKeyboard).map((key) => (
+						{keyComboGlyphs(shortcut.combo, appleKeyboard).map((key) => (
 							<Keyboard key={key}>{key}</Keyboard>
 						))}
 					</span>
@@ -80,7 +79,7 @@ export const KeyboardPreview = clientEntry(
 							>
 								<span mix={[text("sm"), fg("neutral.emphasis")]}>{shortcut.action}</span>
 								<span mix={[hstack({ gap: 1, align: "baseline" })]}>
-									{shortcutKeys(shortcut.combo, handle.props.appleKeyboard).map((key) => (
+									{keyComboGlyphs(shortcut.combo, handle.props.appleKeyboard).map((key) => (
 										<Keyboard key={key}>{key}</Keyboard>
 									))}
 								</span>

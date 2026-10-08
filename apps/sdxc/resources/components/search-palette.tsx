@@ -25,12 +25,12 @@ import { font, text, textDecoration, truncate, weight } from "@sdxc/u/typography
 import { Button, Command, Keyboard } from "@sdxc/ui";
 import { FilterModel } from "@sdxc/ui/behaviors";
 import { commandKeys, hotkey } from "@sdxc/ui/mixins";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry, on } from "remix/component";
 
 import type { SearchDocument } from "~/app/services/search-query";
 
 import { rankDocuments } from "~/app/services/search-query";
-import { shortcutKeys } from "~/app/services/shortcut-keys";
 
 /** The dialog id the header button, the shortcut and any other trigger all name. */
 export const SEARCH_DIALOG_ID = "site-search";
@@ -132,7 +132,7 @@ export const SearchPalette = clientEntry(
 					<SearchIcon size={16} aria-hidden="true" />
 					Search
 					<Keyboard mix={[fg("inherit")]}>
-						{shortcutKeys("mod+k", handle.props.appleKeyboard).join("")}
+						{keyComboGlyphs("mod+k", handle.props.appleKeyboard).join("")}
 					</Keyboard>
 				</Button>
 
