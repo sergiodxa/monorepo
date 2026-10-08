@@ -33,6 +33,7 @@ import type {
 } from "./types.js";
 
 import { NewsletterError } from "./errors.js";
+import { visitorIP } from "./ip.js";
 import { DEFAULT_PAGE_SIZE } from "./types.js";
 
 /** Connection code reported when the caller names none. */
@@ -438,7 +439,7 @@ export class MemoryNewsletter implements Newsletter {
 			tags: [...new Set(input.tags ?? [])],
 			createdAt: new Date(),
 			attribution: input.attribution ? { ...input.attribution } : null,
-			ip: input.ip ?? null,
+			ip: visitorIP(input.ip),
 		};
 
 		this.#records.set(record.canonical, record);

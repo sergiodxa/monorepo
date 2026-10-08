@@ -169,7 +169,8 @@ interface SubscribeInput {
 	metadata?: Readonly<Record<string, string>>;
 	attribution?: SubscriberAttribution;
 	/** The visitor's address, for platforms that screen sign-ups by IP. */
-	ip?: IP | null;
+	/** The result of `IP.parse` is accepted as it is; a failed parse records no address. */
+	ip?: IP | Result<IP, IP.Error> | null;
 }
 
 interface SubscribeOutcome {
@@ -239,7 +240,9 @@ the unknown key as a warning — logs `newsletter.metadata_dropped` and answers 
 Kit stored it.
 
 **Addresses arrive parsed.** `SubscribeInput.ip` is an `IP` from `@sdxc/ip`, the type
-`ctx.ip` already carries, and providers send its canonical spelling. `SubscribeInput.email` and
+`ctx.ip` already carries, or the `Result` of `IP.parse` handed over as it is, which spares the
+caller unwrapping a header; a failed parse records no address, and providers send the canonical
+spelling. `SubscribeInput.email` and
 the `{ email }` arm of `SubscriberRef` are an `EmailAddress` from `@sdxc/email-address`, so normalization happens once at the boundary
 that received the input. Providers send `address` (the form RFC 5321 says to deliver to), and
 `MemoryNewsletter` keys its records on `canonical`, so a lookup differing only in local-part

@@ -9,6 +9,7 @@
 
 import type { EmailAddress } from "@sdxc/email-address";
 import type { IP } from "@sdxc/ip";
+import type { Result } from "@sdxc/result";
 
 /**
  * Page size a list uses when the caller names no `limit`, which is the largest
@@ -66,10 +67,10 @@ export interface SubscribeInput {
 	metadata?: Readonly<Record<string, string>>;
 	attribution?: SubscriberAttribution;
 	/**
-	 * The visitor's address, for platforms that screen sign-ups by IP. It arrives
-	 * parsed, so a provider sends only a valid address in its canonical spelling.
+	 * The visitor's address, for platforms that screen sign-ups by IP. The result
+	 * of `IP.parse` is accepted as it is; a failed parse records no address.
 	 */
-	ip?: IP | null;
+	ip?: IP | Result<IP, IP.Error> | null;
 }
 
 /** What a subscribe answers once the address is on the list. */

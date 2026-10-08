@@ -30,6 +30,7 @@ import type {
 } from "../types.js";
 
 import { NewsletterError, reportSkipped } from "../errors.js";
+import { visitorIP } from "../ip.js";
 import { DEFAULT_PAGE_SIZE } from "../types.js";
 
 import type { ButtondownSubscriber } from "./map.js";
@@ -162,7 +163,7 @@ function subscribeBody(input: SubscribeInput, confirmation: ConfirmationPolicy):
 			utm_medium: attribution.medium,
 			utm_campaign: attribution.campaign,
 			referrer_url: attribution.referrer ?? attribution.landingPage,
-			ip_address: input.ip?.toString(),
+			ip_address: visitorIP(input.ip)?.toString(),
 		}),
 	};
 }

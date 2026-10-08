@@ -82,6 +82,26 @@ describe("MemoryNewsletter", () => {
 		expect(newsletter.ip("reader@example.com")?.toString()).toBe("203.0.113.9");
 	});
 
+	test("accepts the result of parsing an IP, recording none when the parse failed", async () => {
+		let newsletter = new MemoryNewsletter();
+
+		await unwrap(
+			newsletter.subscribers.subscribe({
+				email: unwrap(parseEmailAddress("parsed@example.com")),
+				ip: IP.parse("2001:DB8::0:1"),
+			}),
+		);
+		await unwrap(
+			newsletter.subscribers.subscribe({
+				email: unwrap(parseEmailAddress("malformed@example.com")),
+				ip: IP.parse("unknown"),
+			}),
+		);
+
+		expect(newsletter.ip("parsed@example.com")?.toString()).toBe("2001:db8::1");
+		expect(newsletter.ip("malformed@example.com")).toBeNull();
+	});
+
 	test("an armed fault fails its method until healed", async () => {
 		let newsletter = new MemoryNewsletter({ faults: { "subscribers.subscribe": "suppressed" } });
 		let email = unwrap(parseEmailAddress("reader@example.com"));

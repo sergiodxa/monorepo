@@ -8,7 +8,7 @@ Vendor-neutral newsletter subscriber lists, with Buttondown and Kit providers, a
 npm add @sdxc/newsletter
 ```
 
-Addresses arrive parsed by [`@sdxc/email-address`](https://www.npmjs.com/package/@sdxc/email-address), a visitor's IP as an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip), and every answer is a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+Addresses arrive parsed by [`@sdxc/email-address`](https://www.npmjs.com/package/@sdxc/email-address), a visitor's IP as an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip) or the `Result` of `IP.parse`, and every answer is a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 
 ## Usage
 
@@ -30,17 +30,15 @@ Subscribe an address. One already on the list, in any status, is a success with 
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
 import { IP } from "@sdxc/ip";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure } from "@sdxc/result";
 
 let email = parseEmailAddress(form.get("email"));
 if (isFailure(email)) return invalid();
 
-let ip = IP.parse(request.headers.get("cf-connecting-ip") ?? "");
-
 let outcome = await newsletter.subscribers.subscribe({
 	email: email.data,
 	attribution: { source: "twitter", campaign: "launch" },
-	ip: isSuccess(ip) ? ip.data : null,
+	ip: IP.parse(request.headers.get("cf-connecting-ip") ?? ""), // a failed parse records no IP
 });
 
 if (isFailure(outcome)) {
