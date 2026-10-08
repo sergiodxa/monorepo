@@ -17,6 +17,11 @@ browser (RFC 8291), signs a VAPID token for the push service (RFC 8292), sends o
 says what the answer means for the stored subscription. `@sdxc/web-push/browser` subscribes
 from a click. Where subscriptions live, and when one is given up on, stay in your app.
 
+There is no push provider to sign up for. Each browser picks its vendor's push service (Chrome
+uses `fcm.googleapis.com`, Firefox `updates.push.services.mozilla.com`, Safari
+`web.push.apple.com`) and hands you an endpoint on it; your Worker `POST`s there, identified
+only by the key pair you generate below.
+
 ```bash
 npm add @sdxc/web-push @sdxc/result @sdxc/validate remix
 ```
@@ -156,7 +161,7 @@ adds a new one.
 ## Send a notification
 
 Build one `WebPush` per batch of sends: it caches one VAPID token per push service, so fifty
-browsers on Firebase cost one signature. Each send makes one attempt and answers a `Result`
+browsers on Chrome's push service cost one signature. Each send makes one attempt and answers a `Result`
 whose error code says what to do with the row:
 
 ```typescript {% title="app/notifications/push.ts" %}
