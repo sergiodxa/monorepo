@@ -110,7 +110,7 @@ Run from the repository root:
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                                                        | ✅  |
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                                                   | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                                              | ✅  |
-| [digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                          |     |
+| [digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                          | ✅  |
 | [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
 | [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                                                       | ✅  |
