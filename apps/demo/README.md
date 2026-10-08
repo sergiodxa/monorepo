@@ -63,7 +63,11 @@ fresh checkout needs the migration once before the board has a table.
 `spec/board.spec` drives the board through a real browser: it publishes a position through
 the dialog, opens it, and finds the confirmation in the outbox. Its `setup` empties the
 `postings` table in the local D1 copy and starts a dev server of its own on port 3008, which
-the run stops when it ends, so keep that port free and run:
+the run stops when it ends.
+
+That server starts in the `spec` mode, which reads `.dev.vars.spec` in place of `.dev.vars`:
+its empty Turnstile keys keep the captcha on the local word the spec types, whatever keys
+your own `.dev.vars` holds. Keep port 3008 free and run:
 
 ```bash
 bun run spec

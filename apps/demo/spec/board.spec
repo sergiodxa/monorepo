@@ -8,9 +8,10 @@ use http
 use html
 
 # Empties the board and starts a dev server of its own, which the run stops once it ends.
+# The `spec` mode reads `.dev.vars.spec`, which keeps the captcha on the local word.
 setup {
 	db.query "delete from postings" on "local"
-	let server = cli.start "bun" "run" "dev" in "."
+	let server = cli.start "bun" "run" "dev" "--mode" "spec" in "."
 	eventually within 30s {
 		expect cli.output server contains "localhost:3008"
 	}
