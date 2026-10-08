@@ -21,6 +21,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",
+		"@sdxc/ip": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",

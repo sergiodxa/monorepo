@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { IP } from "@sdxc/ip";
 import type { Result } from "@sdxc/result";
 
 import { parseEmailAddress } from "@sdxc/email-address";
@@ -138,7 +139,7 @@ interface StoredSubscriber {
 	tags: string[];
 	createdAt: Date;
 	attribution: SubscriberAttribution | null;
-	ipAddress: string | null;
+	ip: IP | null;
 }
 
 /** Our status vocabulary, so a delivery naming any other fails the parse. */
@@ -263,7 +264,7 @@ export class MemoryNewsletter implements Newsletter {
 				tags: [...(seed.tags ?? [])],
 				createdAt: seed.createdAt ?? new Date(),
 				attribution: null,
-				ipAddress: null,
+				ip: null,
 			};
 
 			this.#records.set(canonical, record);
@@ -324,8 +325,8 @@ export class MemoryNewsletter implements Newsletter {
 	 * @param email - The reader's address.
 	 * @returns The address, or `null` when none was recorded.
 	 */
-	ipAddress(email: string): string | null {
-		return this.#records.get(canonicalOf(email))?.ipAddress ?? null;
+	ip(email: string): IP | null {
+		return this.#records.get(canonicalOf(email))?.ip ?? null;
 	}
 
 	#nextId(): string {
@@ -437,7 +438,7 @@ export class MemoryNewsletter implements Newsletter {
 			tags: [...new Set(input.tags ?? [])],
 			createdAt: new Date(),
 			attribution: input.attribution ? { ...input.attribution } : null,
-			ipAddress: input.ipAddress ?? null,
+			ip: input.ip ?? null,
 		};
 
 		this.#records.set(record.canonical, record);

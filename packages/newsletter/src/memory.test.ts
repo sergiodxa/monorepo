@@ -8,6 +8,7 @@
  */
 
 import { parseEmailAddress } from "@sdxc/email-address";
+import { IP } from "@sdxc/ip";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
@@ -70,7 +71,7 @@ describe("MemoryNewsletter", () => {
 			newsletter.subscribers.subscribe({
 				email: unwrap(parseEmailAddress("reader@example.com")),
 				attribution: { source: "twitter", campaign: "launch" },
-				ipAddress: "203.0.113.9",
+				ip: unwrap(IP.parse("203.0.113.9")),
 			}),
 		);
 
@@ -78,7 +79,7 @@ describe("MemoryNewsletter", () => {
 			source: "twitter",
 			campaign: "launch",
 		});
-		expect(newsletter.ipAddress("reader@example.com")).toBe("203.0.113.9");
+		expect(newsletter.ip("reader@example.com")?.toString()).toBe("203.0.113.9");
 	});
 
 	test("an armed fault fails its method until healed", async () => {

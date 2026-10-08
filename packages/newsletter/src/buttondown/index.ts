@@ -162,7 +162,7 @@ function subscribeBody(input: SubscribeInput, confirmation: ConfirmationPolicy):
 			utm_medium: attribution.medium,
 			utm_campaign: attribution.campaign,
 			referrer_url: attribution.referrer ?? attribution.landingPage,
-			ip_address: input.ipAddress ?? undefined,
+			ip_address: input.ip?.toString(),
 		}),
 	};
 }

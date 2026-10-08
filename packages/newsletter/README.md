@@ -8,7 +8,7 @@ Vendor-neutral newsletter subscriber lists, with Buttondown and Kit providers, a
 npm add @sdxc/newsletter
 ```
 
-Addresses arrive parsed by [`@sdxc/email-address`](https://www.npmjs.com/package/@sdxc/email-address), and every answer is a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+Addresses arrive parsed by [`@sdxc/email-address`](https://www.npmjs.com/package/@sdxc/email-address), a visitor's IP as an `IP` from [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip), and every answer is a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 
 ## Usage
 
@@ -29,15 +29,18 @@ Subscribe an address. One already on the list, in any status, is a success with 
 
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
-import { isFailure } from "@sdxc/result";
+import { IP } from "@sdxc/ip";
+import { isFailure, isSuccess } from "@sdxc/result";
 
 let email = parseEmailAddress(form.get("email"));
 if (isFailure(email)) return invalid();
 
+let ip = IP.parse(request.headers.get("cf-connecting-ip") ?? "");
+
 let outcome = await newsletter.subscribers.subscribe({
 	email: email.data,
 	attribution: { source: "twitter", campaign: "launch" },
-	ipAddress: request.headers.get("cf-connecting-ip"),
+	ip: isSuccess(ip) ? ip.data : null,
 });
 
 if (isFailure(outcome)) {
@@ -122,7 +125,7 @@ The error in every failed `Result`: a normalized `code`, the platform's `provide
 
 ### `@sdxc/newsletter/memory`
 
-`MemoryNewsletter({ confirmation?, connection?, webhookSecret?, faults? })` implements the whole contract in memory and adds `seed(records)`, `confirm(email)`, `fail(target, code?)`, `heal(target?)`, `attribution(email)`, `ipAddress(email)` and `webhooks.emit(event)`, which signs a Standard Webhooks delivery.
+`MemoryNewsletter({ confirmation?, connection?, webhookSecret?, faults? })` implements the whole contract in memory and adds `seed(records)`, `confirm(email)`, `fail(target, code?)`, `heal(target?)`, `attribution(email)`, `ip(email)` and `webhooks.emit(event)`, which signs a Standard Webhooks delivery.
 
 ### `@sdxc/newsletter/conformance`
 

@@ -115,6 +115,7 @@ and the conformance suite's `vitest` import stays out of production bundles.
 
 ```ts
 import type { EmailAddress } from "@sdxc/email-address";
+import type { IP } from "@sdxc/ip";
 import type { Result } from "@sdxc/result";
 
 interface Newsletter {
@@ -168,7 +169,7 @@ interface SubscribeInput {
 	metadata?: Readonly<Record<string, string>>;
 	attribution?: SubscriberAttribution;
 	/** The visitor's address, for platforms that screen sign-ups by IP. */
-	ipAddress?: string | null;
+	ip?: IP | null;
 }
 
 interface SubscribeOutcome {
@@ -237,8 +238,9 @@ key answers `invalid_request`, and `subscribe` — where Kit creates the subscri
 the unknown key as a warning — logs `newsletter.metadata_dropped` and answers the subscriber as
 Kit stored it.
 
-**Addresses arrive parsed.** `SubscribeInput.email` and the `{ email }` arm of `SubscriberRef`
-are an `EmailAddress` from `@sdxc/email-address`, so normalization happens once at the boundary
+**Addresses arrive parsed.** `SubscribeInput.ip` is an `IP` from `@sdxc/ip`, the type
+`ctx.ip` already carries, and providers send its canonical spelling. `SubscribeInput.email` and
+the `{ email }` arm of `SubscriberRef` are an `EmailAddress` from `@sdxc/email-address`, so normalization happens once at the boundary
 that received the input. Providers send `address` (the form RFC 5321 says to deliver to), and
 `MemoryNewsletter` keys its records on `canonical`, so a lookup differing only in local-part
 case finds the same reader. A caller holding a raw string, such as an order's customer email,
@@ -285,7 +287,7 @@ await ctx.newsletter.subscribers.subscribe({
 		landingPage: touch ? new URL(touch.landingPath, ctx.url).href : undefined,
 	},
 	metadata: toMetadata(ctx.attribution), // first_* and last_* keys, for a richer record
-	ipAddress: ctx.ip?.toString() ?? null,
+	ip: ctx.ip,
 });
 ```
 
@@ -296,7 +298,7 @@ Each provider writes what its platform has a place for:
 | `source`, `medium`, `campaign` | `utm_source`, `utm_medium`, `utm_campaign`      | Appended as `utm_*` to the `landingPage` sent as the form's `referrer`, which Kit parses into `referrer_utm_parameters` | Recorded |
 | `term`, `content`              | Metadata keys `utm_term`, `utm_content`         | Same as above                                                                                                           | Recorded |
 | `referrer`, `landingPage`      | `referrer_url` (`referrer`, else `landingPage`) | `landingPage` is the form's `referrer`; `referrer` has no field                                                         | Recorded |
-| `ipAddress`                    | `ip_address`                                    | No field; dropped                                                                                                       | Recorded |
+| `ip`                           | `ip_address`                                    | No field; dropped                                                                                                       | Recorded |
 
 Kit records attribution only through a form and a landing page; without either, the provider
 logs `newsletter.attribution_dropped`. On Kit, `toMetadata`'s keys must exist as custom fields,
@@ -540,7 +542,7 @@ await endpoint.handler(new RequestContext(delivery.request));
 
 Beyond the contract it adds `seed(records)`, `confirm(email)` (a reader clicking the
 confirmation link), `fail(target, code?)` and `heal(target?)` with targets typed from the
-contract's own method names, `attribution(email)` and `ipAddress(email)` reading back what a
+contract's own method names, `attribution(email)` and `ip(email)` reading back what a
 subscribe recorded, and `webhooks.emit(payload)`, which signs a delivery with Standard Webhooks
 through `@sdxc/webhooks` so a test drives a real endpoint through a real signature check.
 
@@ -562,6 +564,7 @@ documented behavior.
 | `@sdxc/api-client`    | Base class of both network providers; trace propagation                   |
 | `@sdxc/crypto`        | `hmac`, `Hex`, `timingSafeEqual` for both signature schemes               |
 | `@sdxc/email-address` | `EmailAddress` in the contract                                            |
+| `@sdxc/ip`            | `IP` in the contract, for the visitor's address                           |
 | `@sdxc/logger`        | `currentLog()` notes: `newsletter.subscribe`, `newsletter.skipped_row`, … |
 | `@sdxc/result`        | Every answer                                                              |
 | `@sdxc/validate`      | `remix/data-schema` parsing of every response and delivery body           |
@@ -590,7 +593,7 @@ contract has stopped moving; every dependency above is already public.
 let outcome = await ctx.newsletter.subscribers.subscribe({
 	email: payload.email,
 	attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
-	ipAddress: ctx.ip?.toString() ?? null,
+	ip: ctx.ip,
 });
 
 if (isFailure(outcome)) {

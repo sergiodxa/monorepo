@@ -12,6 +12,7 @@ import type { Result } from "@sdxc/result";
 
 import { Hex, hmac } from "@sdxc/crypto";
 import { parseEmailAddress } from "@sdxc/email-address";
+import { IP } from "@sdxc/ip";
 import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -152,7 +153,7 @@ describe("subscribe", () => {
 					referrer: "https://news.ycombinator.com/",
 					landingPage: "https://books.sergiodxa.com/",
 				},
-				ipAddress: "203.0.113.7",
+				ip: unwrap(IP.parse("203.0.113.7")),
 			}),
 		);
 
@@ -191,7 +192,7 @@ describe("subscribe", () => {
 			create({ confirmation: "single" }).subscribers.subscribe({
 				email: email("reader@example.com"),
 				attribution: { landingPage: "https://books.sergiodxa.com/sample" },
-				ipAddress: null,
+				ip: null,
 			}),
 		);
 

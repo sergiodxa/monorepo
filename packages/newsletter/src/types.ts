@@ -8,6 +8,7 @@
  */
 
 import type { EmailAddress } from "@sdxc/email-address";
+import type { IP } from "@sdxc/ip";
 
 /**
  * Page size a list uses when the caller names no `limit`, which is the largest
@@ -64,8 +65,11 @@ export interface SubscribeInput {
 	tags?: readonly string[];
 	metadata?: Readonly<Record<string, string>>;
 	attribution?: SubscriberAttribution;
-	/** The visitor's address, for platforms that screen sign-ups by IP. */
-	ipAddress?: string | null;
+	/**
+	 * The visitor's address, for platforms that screen sign-ups by IP. It arrives
+	 * parsed, so a provider sends only a valid address in its canonical spelling.
+	 */
+	ip?: IP | null;
 }
 
 /** What a subscribe answers once the address is on the list. */

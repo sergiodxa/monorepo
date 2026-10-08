@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { parseEmailAddress } from "@sdxc/email-address";
+import { IP } from "@sdxc/ip";
 import { Log } from "@sdxc/logger";
 import { isFailure, unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
@@ -300,7 +301,7 @@ describe("KitNewsletter.subscribers.subscribe", () => {
 					content: "hero",
 					landingPage: "https://example.com/book?ref=home",
 				},
-				ipAddress: "203.0.113.7",
+				ip: unwrap(IP.parse("203.0.113.7")),
 			}),
 		);
 		let outcome = unwrap(value);
