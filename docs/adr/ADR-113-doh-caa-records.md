@@ -693,7 +693,7 @@ and `auth-saas` has a use for the same check.
 
 - [x] Phase 1: Record level
 - [x] Phase 2: `@sdxc/doh/caa`
-- [ ] Phase 3: uptime tracks CAA
+- [x] Phase 3: uptime tracks CAA
 - [ ] Phase 4: uptime renewal check
 
 ## Notes
