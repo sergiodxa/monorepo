@@ -108,7 +108,7 @@ The setup route is a `POST`, since it writes, and renders the page:
 
 ```tsx {% title="app/http/controllers/two-factor/setup.tsx" %}
 import { redirect } from "@sdxc/http/response";
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
@@ -125,7 +125,7 @@ export default createAction(routes.twoFactor.setup, async (ctx) => {
 	}
 
 	let { uri, setupKey } = started.data;
-	let encoded = encodeQr(uri, { level: "M" });
+	let encoded = QR.encode(uri, { level: "M" });
 	if (isFailure(encoded)) {
 		ctx.log.warn("two_factor.qr_failed", { code: encoded.error.code });
 	}
@@ -141,7 +141,7 @@ export default createAction(routes.twoFactor.setup, async (ctx) => {
 ```
 
 `currentUser` is your own lookup of the signed-in account, behind whatever middleware protects
-the route. `encodeQr` turns the URI into a QR symbol and answers a `Result`, so the action
+the route. `QR.encode` turns the URI into a QR symbol and answers a `Result`, so the action
 encodes before rendering and logs the rare failure, such as a URI too long for any symbol;
 the page then renders without the code. `QrCode` draws the symbol as an inline SVG, which needs
 no `img-src data:` in your CSP and stays dark on light under a dark theme. The page shows the
