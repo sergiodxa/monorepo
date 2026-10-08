@@ -1189,7 +1189,34 @@ async function interact(
 ): Promise<Result<Value, SpecError>> {
 	let found = await address(tool, args, context, session, {});
 	if (isFailure(found)) return found;
-	let response = await runBrowser([tool, selectorFor(found.data)], session);
+	let selector = selectorFor(found.data);
+	if (tool === "click") return await clickInView(selector, session);
+	let response = await runBrowser([tool, selector], session);
+	if (isFailure(response)) return response;
+	return success(null);
+}
+
+/**
+ * Click where a person would: on the element's centre, scrolled to the middle of the
+ * viewport first when that point lies outside it, as for a control straddling the fold.
+ * An element whose centre is already visible is clicked in place, keeping the scroll.
+ */
+async function clickInView(selector: string, session: string): Promise<Result<Value, SpecError>> {
+	let script = [
+		"(() => {",
+		`	let element = document.querySelector(${JSON.stringify(selector)});`,
+		"	if (element === null) return false;",
+		"	let box = element.getBoundingClientRect();",
+		"	let x = box.left + box.width / 2;",
+		"	let y = box.top + box.height / 2;",
+		"	let visible = x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;",
+		'	if (!visible) element.scrollIntoView({ block: "center", inline: "center" });',
+		"	return true;",
+		"})()",
+	].join("\n");
+	let scrolled = await runBrowser(["eval", script], session);
+	if (isFailure(scrolled)) return scrolled;
+	let response = await runBrowser(["click", selector], session);
 	if (isFailure(response)) return response;
 	return success(null);
 }
@@ -1303,9 +1330,7 @@ async function press(args: ToolArg[], session: string): Promise<Result<Value, Sp
 async function clickSelector(args: ToolArg[], session: string): Promise<Result<Value, SpecError>> {
 	let selector = stringArg(args, 0, "click_selector", "selector");
 	if (isFailure(selector)) return selector;
-	let response = await runBrowser(["click", selector.data], session);
-	if (isFailure(response)) return response;
-	return success(null);
+	return await clickInView(selector.data, session);
 }
 
 /**

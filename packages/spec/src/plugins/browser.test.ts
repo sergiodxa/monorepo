@@ -2139,3 +2139,79 @@ describe("dropdowns and modals against a real browser", () => {
 		expect(refused.message).toContain("takes no `enabled` predicate");
 	});
 });
+
+/**
+ * A page whose "Save" button starts five pixels above the bottom of the viewport,
+ * so its centre — where a click lands — lies below the visible page, and a "Near"
+ * button already in view that reports the scroll offset it was clicked at.
+ */
+const FOLD_PAGE = `<!doctype html>
+<html><head><title>Fold</title><style>body { margin: 0 } button { block-size: 40px }</style></head><body>
+	<button type="button" id="near">Near</button>
+	<div id="spacer"></div>
+	<button type="button" id="save">Save</button>
+	<p id="status">untouched</p>
+	<script>
+		document.getElementById("spacer").style.blockSize = innerHeight - 45 + "px";
+		document.getElementById("near").addEventListener("click", function () {
+			document.getElementById("status").textContent = "near at " + scrollY;
+		});
+		document.getElementById("save").addEventListener("click", function () {
+			document.getElementById("status").textContent = "saved";
+		});
+	</script>
+</body></html>`;
+
+/**
+ * A click lands on its target's centre, and a target barely inside the viewport
+ * has that centre outside it, where the click would hit the page instead. Each
+ * case drives the live page, since only a real layout puts a control at the fold.
+ */
+describe("clicks at the viewport's edge against a real browser", () => {
+	let plugin: Plugin;
+	let server: PageServer | undefined;
+	let baseUrl = "";
+	let context: ToolContext;
+
+	beforeAll(async () => {
+		plugin = createBrowserPlugin();
+		server = await servePage(() => ({ html: FOLD_PAGE }));
+		baseUrl = `${server.origin}/`;
+		context = buildContext(allowAll(), "/tmp/spec-browser-fold-session");
+	});
+
+	afterAll(async () => {
+		if (plugin.dispose !== undefined) await plugin.dispose();
+		server?.stop();
+	});
+
+	test.skipIf(!AVAILABLE)(
+		"a click reaches a control whose centre sits below the fold",
+		async () => {
+			expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+			expectSuccess(await plugin.call("click", [word("button"), value("Save")], context));
+
+			expect(expectSuccess(await plugin.call("text", [value("saved")], context))).toBe(true);
+		},
+	);
+
+	test.skipIf(!AVAILABLE)("click_selector reaches the same control", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+		expectSuccess(await plugin.call("click_selector", [value("#save")], context));
+
+		expect(expectSuccess(await plugin.call("text", [value("saved")], context))).toBe(true);
+	});
+
+	test.skipIf(!AVAILABLE)(
+		"a click on a control already in view leaves the page where it was",
+		async () => {
+			expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+			expectSuccess(await plugin.call("click", [word("button"), value("Near")], context));
+
+			expect(expectSuccess(await plugin.call("text", [value("near at 0")], context))).toBe(true);
+		},
+	);
+});
