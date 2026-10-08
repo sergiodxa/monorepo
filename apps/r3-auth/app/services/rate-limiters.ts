@@ -13,16 +13,16 @@ import type { CloudflareAdapterOptions } from "@sdxc/rate-limit";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 
 /**
- * Limit and window of every binding, mirroring the `simple: { limit, period }`
- * blocks in `cloudflare.config.ts`. The platform never reports these values back, so
- * drift here silently makes every `RateLimit` response header wrong.
+ * Limit and window of every binding, mirroring the `simple: { limit, period }` blocks in
+ * `cloudflare.config.ts`, development budgets included. The platform never reports these
+ * values back, so drift here silently makes every `RateLimit` response header wrong.
  */
 const POLICIES = {
 	token: { limit: 20, window: "1 minute" },
 	introspect: { limit: 100, window: "1 minute" },
 	revoke: { limit: 50, window: "1 minute" },
-	authorize: { limit: 30, window: "1 minute" },
-	login: { limit: 10, window: "1 minute" },
+	authorize: { limit: import.meta.env.PROD ? 30 : 300, window: "1 minute" },
+	login: { limit: import.meta.env.PROD ? 10 : 100, window: "1 minute" },
 } as const satisfies Record<string, CloudflareAdapterOptions>;
 
 /** The bindings each limiter counts against, one per protected surface. */

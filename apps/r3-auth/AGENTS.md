@@ -119,7 +119,10 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST validate `post_logout_redirect_uri` against the client's registered logout URI by
   exact match too.
 - MUST rate-limit the token, introspection, revocation, authorization and login endpoints,
-  keeping the published `429` body and headers (`app/services/rate-limit.ts`).
+  keeping the published `429` body and headers (`app/services/rate-limit.ts`). A development
+  build allows ten times the authorization and login budgets so the spec suite fits in one
+  run; `mode` in `cloudflare.config.ts` and `import.meta.env.PROD` in
+  `app/services/rate-limiters.ts` choose them, and the two MUST stay in step.
 - MUST fail open on a rate-limiter outage: a broken limiter MUST NOT stop token issuance.
 
 ### Tokens and sessions

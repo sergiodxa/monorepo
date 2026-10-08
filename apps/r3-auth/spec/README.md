@@ -102,21 +102,18 @@ through the `db` capability (`commands/seed.spec`), both idempotent:
   redirect URI is this origin's `/healthcheck`, so a signed-in `/authorize` can
   complete an SSO redirect that lands on a real 200 page.
 
-## Rate limiting (why a full run wants a rested budget)
+## Rate limiting
 
-The server rate-limits its auth surface **per client IP**: the authorization
-endpoint at 30 requests/minute and the login POST at 10/minute
-(`app/services/rate-limiters.ts`, `cloudflare.config.ts`). Every guard redirect and
-every sign-in spends from those budgets, and the whole suite runs from one
-address, so a back-to-back sequence of runs can carry drained budget from the
-previous run into the next and make endpoints answer `429` instead of their
-specified status.
+The server rate-limits its auth surface **per client IP**, and the whole suite
+runs from one address. A full run makes some sixty authorization requests and a
+dozen sign-ins inside a minute — more than production's 30 and 10 — so a
+development server (`bun dev`) allows ten times those two budgets
+(`cloudflare.config.ts`, `app/services/rate-limiters.ts`). A run, and a second
+one straight after it, fit inside that. Production builds keep the published
+limits, and the unit tests drive the `429` path with budgets of their own.
 
-For a clean pass, **run against a freshly-started (or ~60s-idle) server** so the
-per-IP window has reset; the run itself then fits inside the budget. This is the
-app's real protection, not a spec defect — the negative `oauth`/`authorize`
-specs assert the `429` shape on purpose. Do **not** run the authenticated specs
-with `--concurrency>1`: they share one backend and one IP budget.
+Do **not** run the authenticated specs with `--concurrency>1`: they share one
+backend and one IP budget.
 
 ## The hardcoded base URL (a known v1 limitation)
 

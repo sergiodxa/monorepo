@@ -96,15 +96,18 @@ export default defineConfig(({ mode }) => ({
 				namespace: "1003",
 				simple: { limit: 50, period: 60 },
 			}),
-			/** Authorization endpoint: 30 requests per minute per IP. */
+			/**
+			 * Authorization endpoint: 30 requests per minute per IP. A development server allows
+			 * ten times that, since the executable spec suite drives every sign-in from one address.
+			 */
 			AUTHORIZE_RATE_LIMITER: bindings.rateLimit({
 				namespace: "1004",
-				simple: { limit: 30, period: 60 },
+				simple: { limit: mode === "production" ? 30 : 300, period: 60 },
 			}),
-			/** Login routes: 10 requests per minute per IP, the strictest budget. */
+			/** Login routes: 10 requests per minute per IP, the strictest budget; 100 in development. */
 			LOGIN_RATE_LIMITER: bindings.rateLimit({
 				namespace: "1005",
-				simple: { limit: 10, period: 60 },
+				simple: { limit: mode === "production" ? 10 : 100, period: 60 },
 			}),
 			/**
 			 * Plain secrets, read on ordinary requests, so each one needs a local value too:

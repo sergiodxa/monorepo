@@ -220,6 +220,10 @@ An IP key is the client's IPv4 address, or the `/64` its IPv6 address belongs to
 client rotating addresses inside its prefix spends one budget. Requests whose
 `CF-Connecting-IP` is absent or malformed share a single budget.
 
+A development server (`bun dev`) allows ten times the two IP budgets, 300 authorization
+requests and 100 logins a minute, so the executable spec suite in `spec/` can sign in a
+dozen times a minute from one address. Production builds carry the limits in the table.
+
 A refused request answers `429` with
 `{ "error": "too_many_requests", "error_description": "Rate limit exceeded. Please try again later." }`,
 the `RateLimit` / `RateLimit-Policy` fields, and `Retry-After` set to the limiter's full
