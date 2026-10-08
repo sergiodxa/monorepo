@@ -8,6 +8,6 @@
  */
 export type { QrLevel, QrOptions } from "./encode.js";
 
-export { QR, QrError } from "./encode.js";
+export { QR, QrError, QrOptionsError, QrTooLongError } from "./encode.js";
 
 export type { SvgPath, SvgPathOptions } from "./svg-path.js";

@@ -1,6 +1,6 @@
 ---
 name: sdxc-qr
-description: "@sdxc/qr encodes text or bytes as a QR Code Model 2 symbol — `QR.encode(data, { level, minVersion, maxVersion, mask, boostLevel })` answering `Result<QR, QrError>` — builds SVG path data with the instance's `toSVGPath({ margin })`, and renders it with the `QrCode` component from `@sdxc/qr/ui`. Use when a page must show a QR code: an `otpauth://` URI during TOTP enrolment, a device-grant `verification_uri_complete`, any link a phone should scan; or when drawing a code in a terminal or custom renderer from `isDark(x, y)`."
+description: "@sdxc/qr encodes text or bytes as a QR Code Model 2 symbol — `QR.encode(data, { level, minVersion, maxVersion, mask, boostLevel })` answering `Result<QR, QrTooLongError | QrOptionsError>` — builds SVG path data with the instance's `toSVGPath({ margin })`, and renders it with the `QrCode` component from `@sdxc/qr/ui`. Use when a page must show a QR code: an `otpauth://` URI during TOTP enrolment, a device-grant `verification_uri_complete`, any link a phone should scan; or when drawing a code in a terminal or custom renderer from `isDark(x, y)`."
 ---
 
 # @sdxc/qr
@@ -43,7 +43,7 @@ if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.cod
 - Keep the text alternative (setup key, link) on the page; the code's payload is not in the accessibility tree.
 - `label` is required and says what the code is for; take it from the app's locales.
 - Leave `dark`/`light` at black on white unless a brand pair has strong contrast; never derive them from `currentColor` or theme variables.
-- Cap `maxVersion` only to keep a code small on screen, and handle `too-long` (`error.bits` has `needed`/`available`).
+- Cap `maxVersion` only to keep a code small on screen, and handle `too-long`: checking `error.code === "too-long"` narrows to `QrTooLongError`, whose `bits` has `needed`/`available`.
 
 ## Related
 

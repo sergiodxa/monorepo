@@ -63,7 +63,7 @@ for (let y = -1; y <= qr.size; y++) {
 
 One encoded symbol. `QR.encode` is the only way to get one, so every instance holds a valid symbol: `version` (1–40), `level` (the level applied, after any boost), `mask` (0–7) and `size` (`17 + 4 * version` modules a side, quiet zone excluded).
 
-#### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrError>`
+#### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrTooLongError | QrOptionsError>`
 
 Encode text or bytes as the smallest symbol that holds them. A string is split into numeric, alphanumeric and byte segments with the fewest total bits, so a URI around an upper-case token takes fewer modules than it would as bytes alone. A `Uint8Array` is encoded as bytes as given.
 
@@ -102,10 +102,10 @@ The colors stay as given under a dark theme, and the SVG sets `forced-color-adju
 
 ### `QrError`
 
-An `Error` with a `code`:
+The `Error` every failure extends, with a `code`. `QR.encode` fails with one of two subclasses, and checking `code` narrows to it:
 
-- `too-long`: the data does not fit `maxVersion` at `level`. `error.bits` holds `{ needed, available }`. Version 40 at level L holds 2,953 bytes, so this comes from a capped `maxVersion` in practice.
-- `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion`, a mask outside 0–7, or an unknown level.
+- `QrTooLongError`, code `too-long`: the data does not fit `maxVersion` at `level`. `error.bits` holds `{ needed, available }`. Version 40 at level L holds 2,953 bytes, so this comes from a capped `maxVersion` in practice.
+- `QrOptionsError`, code `invalid-options`: a version outside 1–40, `minVersion` above `maxVersion`, a mask outside 0–7, or an unknown level.
 
 ### Types
 
@@ -161,7 +161,7 @@ import { isFailure } from "@sdxc/result";
 let encoded = QR.encode(url, { level: "L", maxVersion: 6 });
 
 if (isFailure(encoded) && encoded.error.code === "too-long") {
-	let { needed, available } = encoded.error.bits!;
+	let { needed, available } = encoded.error.bits;
 	console.warn(
 		`Shorten the URL by ${Math.ceil((needed - available) / 8)} bytes to fit a version 6 code`,
 	);

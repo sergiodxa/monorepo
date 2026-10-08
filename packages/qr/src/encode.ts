@@ -67,8 +67,8 @@ export interface QrOptions {
 }
 
 /**
- * Why `QR.encode` produced no symbol. A `too-long` error carries `bits`, the data's length
- * and the capacity at `maxVersion`, so a caller can say how much to cut.
+ * Why `QR.encode` produced no symbol. `QR.encode` fails with one of its two subclasses, so
+ * checking `code` narrows the error to the one that carries the matching details.
  */
 export class QrError extends Error {
 	override name = "QrError";
@@ -76,14 +76,38 @@ export class QrError extends Error {
 	/**
 	 * @param code - What went wrong
 	 * @param message - A description for logs
-	 * @param bits - For `too-long`, the bits the data needs and the bits `maxVersion` holds
 	 */
 	constructor(
 		readonly code: QrError.Code,
 		message: string,
-		readonly bits?: QrError.Bits,
 	) {
 		super(message);
+	}
+}
+
+/** The data does not fit `maxVersion` at `level`; `bits` says how much to cut. */
+export class QrTooLongError extends QrError {
+	declare readonly code: "too-long";
+
+	/**
+	 * @param bits - The bits the data needs and the bits `maxVersion` holds
+	 * @param message - A description for logs
+	 */
+	constructor(
+		readonly bits: QrError.Bits,
+		message: string,
+	) {
+		super("too-long", message);
+	}
+}
+
+/** An option is out of range: a version outside 1–40 or out of order, a mask outside 0–7, or an unknown level. */
+export class QrOptionsError extends QrError {
+	declare readonly code: "invalid-options";
+
+	/** @param message - Which option was out of range, for logs */
+	constructor(message: string) {
+		super("invalid-options", message);
 	}
 }
 
@@ -127,26 +151,26 @@ export class QR {
 	 *
 	 * @param data - Text, or bytes for a payload that is not text
 	 * @param options - Level, version range, mask and level boost
-	 * @returns The symbol, or a `QrError` when the options are out of range or the data does not fit
+	 * @returns The symbol, a `QrOptionsError` when an option is out of range, or a `QrTooLongError` when the data does not fit
 	 * @example QR.encode("https://example.com/device?user_code=WDJB-MJHT")
 	 * @example QR.encode(uri, { level: "Q", maxVersion: 10 })
 	 */
-	static encode(data: string | Uint8Array, options: QrOptions = {}): Result<QR, QrError> {
+	static encode(
+		data: string | Uint8Array,
+		options: QrOptions = {},
+	): Result<QR, QrTooLongError | QrOptionsError> {
 		let { level = "M", minVersion = 1, maxVersion = 40, mask, boostLevel = true } = options;
 
 		if (!isVersion(minVersion) || !isVersion(maxVersion) || minVersion > maxVersion) {
 			return failure(
-				new QrError(
-					"invalid-options",
-					"minVersion and maxVersion must be integers in 1–40, in order",
-				),
+				new QrOptionsError("minVersion and maxVersion must be integers in 1–40, in order"),
 			);
 		}
 		if (mask !== undefined && !(Number.isInteger(mask) && mask >= 0 && mask <= 7)) {
-			return failure(new QrError("invalid-options", "mask must be an integer in 0–7"));
+			return failure(new QrOptionsError("mask must be an integer in 0–7"));
 		}
 		if (!LEVELS.includes(level)) {
-			return failure(new QrError("invalid-options", "level must be one of L, M, Q or H"));
+			return failure(new QrOptionsError("level must be one of L, M, Q or H"));
 		}
 
 		let segments: Segment[] = [];
@@ -162,13 +186,9 @@ export class QR {
 			if (usedBits <= capacity) break;
 			if (version >= maxVersion) {
 				return failure(
-					new QrError(
-						"too-long",
+					new QrTooLongError(
+						{ needed: usedBits, available: capacity },
 						`The data needs ${usedBits} bits; version ${version}-${level} holds ${capacity}`,
-						{
-							needed: usedBits,
-							available: capacity,
-						},
 					),
 				);
 			}

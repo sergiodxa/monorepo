@@ -11,7 +11,14 @@ import { describe, expect, test } from "vitest";
 
 import type { QrLevel, QrOptions } from "./encode.js";
 
-import { dataCodewords, QR, interleave, QrError } from "./encode.js";
+import {
+	dataCodewords,
+	interleave,
+	QR,
+	QrError,
+	QrOptionsError,
+	QrTooLongError,
+} from "./encode.js";
 import FIXTURES from "./fixtures/nayuki.json" with { type: "json" };
 import { textSegments, totalBits } from "./segment.js";
 import { dataCodewordCount } from "./tables.js";
@@ -167,16 +174,18 @@ describe("errors", () => {
 		["an unknown level", { level: "X" as QrLevel }],
 	])("rejects %s as invalid-options", (_, options) => {
 		let result = QR.encode("HELLO", options);
+		expect(isFailure(result) && result.error).toBeInstanceOf(QrOptionsError);
 		expect(isFailure(result) && result.error).toBeInstanceOf(QrError);
 		expect(isFailure(result) && result.error.code).toBe("invalid-options");
 	});
 
 	test("reports the bits needed and available when the data outgrows maxVersion", () => {
 		let result = QR.encode("a".repeat(100), { level: "H", maxVersion: 3 });
-		expect(isFailure(result)).toBe(true);
-		if (!isFailure(result)) return;
-		expect(result.error.code).toBe("too-long");
-		expect(result.error.bits).toEqual({
+		expect(isFailure(result) && result.error).toBeInstanceOf(QrTooLongError);
+		if (!isFailure(result) || result.error.code !== "too-long")
+			throw new Error("expected too-long");
+		let bits: QrError.Bits = result.error.bits;
+		expect(bits).toEqual({
 			needed: 4 + 8 + 800,
 			available: dataCodewordCount(3, "H") * 8,
 		});

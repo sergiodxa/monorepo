@@ -87,7 +87,7 @@ Add `@sdxc/qr`: a QR Code Model 2 encoder in plain TypeScript, an SVG path build
 import { QR } from "@sdxc/qr";
 
 let encoded = QR.encode("otpauth://totp/Acme:ada%40example.com?secret=…", { level: "M" });
-// Result<QR, QrError>
+// Result<QR, QrTooLongError | QrOptionsError>
 ```
 
 | Option       | Default  | Meaning                                                                                      |
@@ -105,7 +105,10 @@ one byte-mode segment, for a caller encoding something that is not text.
 export type QrLevel = "L" | "M" | "Q" | "H";
 
 export class QR {
-	static encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrError>;
+	static encode(
+		data: string | Uint8Array,
+		options?: QrOptions,
+	): Result<QR, QrTooLongError | QrOptionsError>;
 
 	/** 1–40; the symbol is `17 + 4 * version` modules a side. */
 	readonly version: number;
@@ -151,12 +154,13 @@ non-ASCII text and a target reader needs the designator.
 
 ### Errors
 
-`QrError` carries a `code`:
+Every failure is a `QrError` with a `code`, through one subclass per code, so checking `code`
+narrows the error and `QrTooLongError.bits` needs no null check:
 
-| `code`            | When                                                                                              |
-| ----------------- | ------------------------------------------------------------------------------------------------- |
-| `too-long`        | The data does not fit `maxVersion` at `level`; the error carries the bits needed and available    |
-| `invalid-options` | `minVersion` or `maxVersion` outside 1–40, `minVersion` above `maxVersion`, or `mask` outside 0–7 |
+| Class            | `code`            | When                                                                                              |
+| ---------------- | ----------------- | ------------------------------------------------------------------------------------------------- |
+| `QrTooLongError` | `too-long`        | The data does not fit `maxVersion` at `level`; `bits` holds the bits needed and available         |
+| `QrOptionsError` | `invalid-options` | `minVersion` or `maxVersion` outside 1–40, `minVersion` above `maxVersion`, or `mask` outside 0–7 |
 
 Version 40-L holds 2,953 bytes, so a URI never reaches `too-long` with the defaults. A caller
 capping `maxVersion` to keep a code small on screen is the one that sees it.
@@ -348,7 +352,7 @@ rather than a fixed set of renderers.
 **Priority:** High
 **Estimated Effort:** 6 hours
 
-1. Create `packages/qr`, public, with `QR` (`encode`, `isDark`, `toSVGPath`), `QrLevel` and `QrError`.
+1. Create `packages/qr`, public, with `QR` (`encode`, `isDark`, `toSVGPath`), `QrLevel` and the `QrError` classes.
 2. Known-answer tests under `src/`:
    - The ISO/IEC 18004 annex example, `"01234567"` at 1-M with `boostLevel: false`: the data
      codewords `10 20 0C 56 61 80 EC 11 …`, the error correction codewords, and the matrix.
