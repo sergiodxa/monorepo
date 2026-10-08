@@ -12,8 +12,8 @@ import { expect, test } from "vitest";
 
 import type { SvgPath } from "./svg-path.js";
 
-import { QrCode } from "./component.js";
 import { QR } from "./encode.js";
+import { QrCode } from "./ui.js";
 
 /** A version 1 symbol, 21 modules a side, with the standard four-module quiet zone. */
 const PATH = unwrap(QR.encode("HELLO WORLD")).toSVGPath();

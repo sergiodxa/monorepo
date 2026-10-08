@@ -72,14 +72,14 @@ reason to carry a decoder in the package that draws codes.
 ## Decision
 
 Add `@sdxc/qr`: a QR Code Model 2 encoder in plain TypeScript, an SVG path builder, and a
-`remix/component` component in the `@sdxc/qr/component` entry point.
+`remix/component` component in the `@sdxc/qr/ui` entry point.
 
 - The main entry point depends only on `@sdxc/result`. It uses `TextEncoder` and arithmetic, so
   it runs the same in a Worker, Bun, Node and the browser.
 - Reed–Solomon multiplies in GF(256) by shift and XOR, and the per-version tables (block counts,
   codewords per block, alignment positions) are literal `UPPER_SNAKE` constants, so importing the
   module does no work in the Worker's global scope.
-- `remix` is an optional peer dependency, needed only by `@sdxc/qr/component`.
+- `remix` is an optional peer dependency, needed only by `@sdxc/qr/ui`.
 
 ### Encoding
 
@@ -178,7 +178,7 @@ let path = symbol.toSVGPath({ margin: 4 });
 ### The component
 
 ```tsx
-import { QrCode } from "@sdxc/qr/component";
+import { QrCode } from "@sdxc/qr/ui";
 
 <QrCode path={symbol.toSVGPath()} label={t("enrol.qrLabel")} size="12rem" />;
 ```
@@ -237,7 +237,7 @@ TOTP secret; the page's setup key and link are the accessible route to the same 
 **`shapeRendering="crispEdges"`** keeps adjacent rows from showing anti-aliasing seams at
 fractional scales.
 
-#### Why `@sdxc/qr/component` and not `@sdxc/ui`
+#### Why `@sdxc/qr/ui` and not `@sdxc/ui`
 
 `@sdxc/ui` depends on `remix`, `@sdxc/icons` and `@sdxc/u`, and its components are markup and
 styling over the `--ui-*` theme. A QR component in it would make every `@sdxc/ui` consumer depend
@@ -371,7 +371,7 @@ rather than a fixed set of renderers.
 **Priority:** High
 **Estimated Effort:** 2 hours
 
-1. `@sdxc/qr/component` with `QrCode`, tested through `renderToString`: the role, the label, the
+1. `@sdxc/qr/ui` with `QrCode`, tested through `renderToString`: the role, the label, the
    viewBox including the margin, and `forced-color-adjust: none`.
 2. `apps/sdxc`: the two-factor guide switches to `QR.encode` and `QrCode`, in its own commit.
 
@@ -397,7 +397,7 @@ dependency the docs site does not control.
 ### 2. The component in `@sdxc/ui`
 
 **Rejected because**: it adds an encoder to every `@sdxc/ui` install and reads none of the
-theme. See [Why `@sdxc/qr/component` and not `@sdxc/ui`](#why-sdxcqrcomponent-and-not-sdxcui).
+theme. See [Why `@sdxc/qr/ui` and not `@sdxc/ui`](#why-sdxcqrui-and-not-sdxcui).
 
 ### 3. A `value` prop that encodes during render
 

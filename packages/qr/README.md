@@ -8,7 +8,7 @@ QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/com
 npm add @sdxc/qr
 ```
 
-The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/component` renders through [`remix/component`](https://www.npmjs.com/package/remix); install `remix` to use it.
+The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and runs anywhere `TextEncoder` does: Workers, Bun, Node and the browser. `@sdxc/qr/ui` renders through [`remix/component`](https://www.npmjs.com/package/remix); install `remix` to use it.
 
 ## Usage
 
@@ -31,7 +31,7 @@ if (isSuccess(encoded)) {
 ### Rendering With remix/component
 
 ```tsx
-import { QrCode } from "@sdxc/qr/component";
+import { QrCode } from "@sdxc/qr/ui";
 
 <QrCode path={qr.toSVGPath()} label="Scan to add this account to your authenticator app" />;
 ```
@@ -85,7 +85,7 @@ Whether a module is dark. Coordinates outside the symbol answer `false`, so a re
 
 Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, which `margin` sets in modules and defaults to the standard's 4; a smaller margin suits a code inside a light container that already provides one.
 
-### `QrCode` from `@sdxc/qr/component`
+### `QrCode` from `@sdxc/qr/ui`
 
 An inline `<svg role="img">` with a light background rectangle and one dark path.
 
@@ -117,7 +117,7 @@ Encode in the handler, which can log a failure, and render the code above the se
 
 ```tsx
 import { QR } from "@sdxc/qr";
-import { QrCode } from "@sdxc/qr/component";
+import { QrCode } from "@sdxc/qr/ui";
 import { isSuccess } from "@sdxc/result";
 import type { Handle } from "remix/component";
 
