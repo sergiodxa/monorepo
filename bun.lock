@@ -992,6 +992,27 @@
         "@sdxc/ip": "workspace:*",
         "@sdxc/result": "workspace:*",
       },
+    "packages/messaging": {
+      "name": "@sdxc/messaging",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/api-client": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@sdxc/webhooks": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "vitest": "^4.0.0",
+      },
+      "optionalPeers": [
+        "vitest",
+      ],
+    },
     },
     "packages/pagination": {
       "name": "@sdxc/pagination",
@@ -2137,6 +2158,8 @@
     "@sdxc/types": ["@sdxc/types@workspace:packages/types"],
 
     "@sdxc/u": ["@sdxc/u@workspace:packages/u"],
+
+    "@sdxc/messaging": ["@sdxc/messaging@workspace:packages/messaging"],
 
     "@sdxc/ui": ["@sdxc/ui@workspace:packages/ui"],
 

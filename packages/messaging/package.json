@@ -1,0 +1,46 @@
+{
+	"name": "@sdxc/messaging",
+	"version": "0.0.1",
+	"private": true,
+	"description": "Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie or a signed webhook",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./conformance": "./src/conformance.ts",
+		"./discord": "./src/providers/discord.ts",
+		"./google-chat": "./src/providers/google-chat.ts",
+		"./memory": "./src/providers/memory.ts",
+		"./ntfy": "./src/providers/ntfy.ts",
+		"./opsgenie": "./src/providers/opsgenie.ts",
+		"./pagerduty": "./src/providers/pagerduty.ts",
+		"./pushover": "./src/providers/pushover.ts",
+		"./slack": "./src/providers/slack.ts",
+		"./teams": "./src/providers/teams.ts",
+		"./telegram": "./src/providers/telegram.ts",
+		"./webhook": "./src/providers/webhook.ts",
+		"./whatsapp": "./src/providers/whatsapp.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/api-client": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@sdxc/webhooks": "workspace:*",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"vitest": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
+	}
+}

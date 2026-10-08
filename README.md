@@ -144,6 +144,7 @@ Run from the repository root:
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
+| [messaging](packages/messaging)                                 | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more      |     |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
 | [outbound](packages/outbound)                                   | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies        | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    | ✅  |
