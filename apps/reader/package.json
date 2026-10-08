@@ -34,6 +34,7 @@
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/lazy-route": "workspace:*",
+		"@sdxc/lazy-frame": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
 		"@sdxc/mcp": "workspace:*",

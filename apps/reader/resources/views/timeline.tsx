@@ -26,6 +26,7 @@
 import type { Handle } from "remix/component";
 
 import { FlagIcon } from "@sdxc/icons";
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { bg, border, borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -61,7 +62,6 @@ import { css } from "remix/component";
 
 import type { TagChips } from "~/resources/views/tag-chips";
 
-import LazyFrame from "~/resources/components/lazy-frame";
 import ReadToggle from "~/resources/components/read-toggle";
 import SaveToggle from "~/resources/components/save-toggle";
 import { POST_ROW_ATTRIBUTE } from "~/resources/components/shortcuts";

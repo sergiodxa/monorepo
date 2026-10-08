@@ -20,6 +20,7 @@
 import type { I18n } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 import { fg } from "@sdxc/u/color";
 import { flex, flexWrap, gap, items, vstack } from "@sdxc/u/layout";
 import { maxIs, mbs } from "@sdxc/u/size";
@@ -38,7 +39,6 @@ import requireUser from "~/app/http/middleware/require-user";
 import { FRAME_PARAM, isFrameRequest } from "~/app/http/render";
 import { peekArticle, readArticle } from "~/app/lib/article";
 import { userStore } from "~/database/user-do";
-import LazyFrame from "~/resources/components/lazy-frame";
 import SaveToggle from "~/resources/components/save-toggle";
 import AppLayout from "~/resources/layouts/app";
 import Article from "~/resources/views/article";

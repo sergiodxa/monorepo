@@ -116,6 +116,7 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/mcp": "workspace:*",
         "@sdxc/microformats": "workspace:*",
+        "@sdxc/no-www-middleware": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/pagination": "workspace:*",
         "@sdxc/rate-limit": "workspace:*",
@@ -124,6 +125,7 @@
         "@sdxc/rss": "workspace:*",
         "@sdxc/search": "workspace:*",
         "@sdxc/security-headers": "workspace:*",
+        "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/sitemap": "workspace:*",
         "@sdxc/spam": "workspace:*",
         "@sdxc/strings": "workspace:*",
@@ -187,6 +189,7 @@
         "@sdxc/i18n": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
+        "@sdxc/lazy-frame": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",
         "@sdxc/markdown": "workspace:*",
@@ -245,6 +248,7 @@
         "@sdxc/session-storage-kv": "workspace:*",
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
+        "@sdxc/user-agent": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "remix": "3.0.0",
@@ -282,6 +286,7 @@
         "@sdxc/ip": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/jwt": "workspace:*",
+        "@sdxc/lazy-frame": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/mail": "workspace:*",
@@ -947,6 +952,13 @@
         "jose": "^6.2.10",
       },
     },
+    "packages/lazy-frame": {
+      "name": "@sdxc/lazy-frame",
+      "version": "0.0.1",
+      "dependencies": {
+        "remix": "3.0.0",
+      },
+    },
     "packages/lazy-route": {
       "name": "@sdxc/lazy-route",
       "version": "0.0.1",
@@ -1081,6 +1093,13 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
+    "packages/no-www-middleware": {
+      "name": "@sdxc/no-www-middleware",
+      "version": "0.0.1",
+      "dependencies": {
         "remix": "3.0.0",
       },
     },
@@ -2181,6 +2200,8 @@
 
     "@sdxc/jwt": ["@sdxc/jwt@workspace:packages/jwt"],
 
+    "@sdxc/lazy-frame": ["@sdxc/lazy-frame@workspace:packages/lazy-frame"],
+
     "@sdxc/lazy-route": ["@sdxc/lazy-route@workspace:packages/lazy-route"],
 
     "@sdxc/location": ["@sdxc/location@workspace:packages/location"],
@@ -2204,6 +2225,8 @@
     "@sdxc/micropub": ["@sdxc/micropub@workspace:packages/micropub"],
 
     "@sdxc/newsletter": ["@sdxc/newsletter@workspace:packages/newsletter"],
+
+    "@sdxc/no-www-middleware": ["@sdxc/no-www-middleware@workspace:packages/no-www-middleware"],
 
     "@sdxc/openapi": ["@sdxc/openapi@workspace:packages/openapi"],
 

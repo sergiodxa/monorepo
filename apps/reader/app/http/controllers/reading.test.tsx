@@ -34,6 +34,14 @@ import routes from "~/routes/web";
  */
 const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.{ts,tsx}"]);
 
+/**
+ * The islands a page names by package specifier, mapped exactly as `bootstrap/browser.ts`
+ * maps them, since a bare specifier is outside the reach of any glob.
+ */
+const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
+};
+
 let store = createUserStoreDouble();
 vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
 
@@ -556,7 +564,7 @@ describe("paging into a frame", () => {
 	 * above — the enhancement simply never comes up, and the reader is left with the plain
 	 * links and no sign that anything was meant to replace them.
 	 *
-	 * Resolved through the same glob the browser entry resolves them through, so a module
+	 * Resolved through the same map and glob the browser entry uses, so a module
 	 * that has moved out of its reach fails here rather than in a browser nobody is watching.
 	 */
 	test("names every island by a module and an export the browser can reach", async () => {
@@ -574,7 +582,7 @@ describe("paging into a frame", () => {
 		 */
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
-				"/resources/components/lazy-frame.tsx",
+				"@sdxc/lazy-frame/ui",
 				"/resources/components/read-toggle.tsx",
 				"/resources/components/save-toggle.tsx",
 				"/resources/components/shortcuts.tsx",
@@ -582,7 +590,7 @@ describe("paging into a frame", () => {
 		);
 
 		for (let { exportName, moduleUrl } of islands) {
-			let load = CLIENT_MODULES[`../../..${moduleUrl}`];
+			let load = PACKAGE_MODULES[String(moduleUrl)] ?? CLIENT_MODULES[`../../..${moduleUrl}`];
 			expect(load, `nothing the browser can load at ${moduleUrl}`).toBeDefined();
 
 			let module = await load!();

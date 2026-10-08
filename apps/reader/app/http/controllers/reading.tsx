@@ -395,7 +395,7 @@ export async function renderReadingQueue(
 
 	/**
 	 * A frame is continuing a queue already on screen, which is paging rather than opening:
-	 * it reads the page and checks nothing. `lazy-frame` fetches a page per screenful, and a
+	 * it reads the page and checks nothing. `LazyFrame` fetches a page per screenful, and a
 	 * freshness check on each would cost a round trip a reader never sees the result of.
 	 */
 	let isFrame = isFrameRequest(ctx.request);

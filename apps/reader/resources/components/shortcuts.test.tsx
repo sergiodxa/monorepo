@@ -140,7 +140,7 @@ function Chrome(handle: Handle<{ current: string }>) {
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
 	"/resources/components/read-toggle.tsx": () => import("~/resources/components/read-toggle"),
 	"/resources/components/save-toggle.tsx": () => import("~/resources/components/save-toggle"),
-	"/resources/components/lazy-frame.tsx": () => import("~/resources/components/lazy-frame"),
+	"/@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
 	"/resources/components/shortcuts.tsx": () => import("~/resources/components/shortcuts"),
 };
 

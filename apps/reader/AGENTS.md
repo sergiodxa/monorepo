@@ -135,4 +135,3 @@ indicate requirement levels.
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render
   - `resources/views/article.tsx` <- An extracted article, printed as elements rather than markup
-  - `resources/components/lazy-frame.tsx` <- Fetches the page below one as a reader reaches it

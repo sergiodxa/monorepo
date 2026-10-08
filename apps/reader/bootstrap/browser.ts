@@ -69,12 +69,20 @@ const CLIENT_MODULES = import.meta.glob([
 	"../routes/**/*.{ts,tsx}",
 ]);
 
+/**
+ * Islands shipped by packages, keyed by the bare specifier their client entry names, since a
+ * glob over the app's own directories cannot reach into `node_modules`.
+ */
+const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
+};
+
 let runtime = run({
 	/** Resolves a hydrated island's module and named export from the URL the server wrote. */
 	async loadModule(moduleUrl, exportName) {
 		let pathname = new URL(moduleUrl, location.origin).pathname;
 
-		let load = CLIENT_MODULES[`..${pathname}`];
+		let load = PACKAGE_MODULES[moduleUrl] ?? CLIENT_MODULES[`..${pathname}`];
 		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
 
 		let mod = await load();
