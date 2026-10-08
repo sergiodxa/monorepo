@@ -52,6 +52,18 @@ describe("GET /admin", () => {
 		expect(html).toContain(">1<");
 	});
 
+	/**
+	 * The layout carries the page title as the one `<h1>`, so every card and dialog title on
+	 * the page sits a level below it in the document outline.
+	 */
+	test("names the page with a single level-one heading", async () => {
+		await signInAsAdmin();
+
+		let html = await (await get(routes.admin.dashboard.href())).text();
+
+		expect(html.match(/<h1\b/g)).toHaveLength(1);
+	});
+
 	test("counts every registered client", async () => {
 		await Client.create(app.db, {
 			name: "Second App",

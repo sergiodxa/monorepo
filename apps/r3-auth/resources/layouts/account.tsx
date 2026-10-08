@@ -18,7 +18,16 @@ import { bs, m, maxIs, mbe, mi, p, pb, pi } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { text, weight } from "@sdxc/u/typography";
-import { Breadcrumbs, Button, Form, Heading, LinkButton, NavLink, Toolbar } from "@sdxc/ui";
+import {
+	Breadcrumbs,
+	Button,
+	Form,
+	Heading,
+	HeadingScope,
+	LinkButton,
+	NavLink,
+	Toolbar,
+} from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -94,9 +103,9 @@ function AccountNavLink(handle: Handle<{ href: string; label: string; isCurrent:
 }
 
 /**
- * Renders the header, navigation and page frame around an account page's
- * content. Nav links read `aria-current` from the server, and the sign-out
- * button submits to the logout endpoint, which owns session cleanup.
+ * Renders the header, navigation and page frame around an account page's content. The
+ * header's title is the page's one `<h1>`, so content headings start at level 2, and the
+ * sign-out button submits to the logout endpoint, which owns session cleanup.
  */
 export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 	return () => {
@@ -177,7 +186,7 @@ export default function AccountLayout(handle: Handle<AccountLayout.Props>) {
 						</Form>
 					</Toolbar>
 
-					{children}
+					<HeadingScope level={2}>{children}</HeadingScope>
 				</main>
 			</DocumentLayout>
 		);

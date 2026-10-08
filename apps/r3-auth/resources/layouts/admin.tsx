@@ -21,7 +21,16 @@ import { is, m, maxIs, mbs, mis, p } from "@sdxc/u/size";
 import { z } from "@sdxc/u/stacking";
 import { when } from "@sdxc/u/state";
 import { text } from "@sdxc/u/typography";
-import { Breadcrumbs, Button, Form, Heading, LinkButton, NavLink, Toolbar } from "@sdxc/ui";
+import {
+	Breadcrumbs,
+	Button,
+	Form,
+	Heading,
+	HeadingScope,
+	LinkButton,
+	NavLink,
+	Toolbar,
+} from "@sdxc/ui";
 
 import type { AdminView } from "~/app/http/view-models/admin";
 
@@ -71,9 +80,9 @@ function SectionLink(
 }
 
 /**
- * Wraps an admin page in the document shell, the section toolbar and the page
- * header. Breadcrumb items skip `aria-current` since the heading below is
- * already current, and the heading's own type styles win by stylesheet order.
+ * Wraps an admin page in the document shell, the section toolbar and the page header,
+ * whose heading is the page's one `<h1>` with content headings a level below. Breadcrumbs
+ * skip `aria-current` as that heading is current; its type styles win by stylesheet order.
  */
 export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 	return () => {
@@ -163,7 +172,9 @@ export default function AdminLayout(handle: Handle<AdminLayout.Props>) {
 						{actions && <aside mix={[mis("auto"), flex(), items("center")]}>{actions}</aside>}
 					</header>
 
-					<div mix={[mbs(6)]}>{children}</div>
+					<div mix={[mbs(6)]}>
+						<HeadingScope level={2}>{children}</HeadingScope>
+					</div>
 				</main>
 			</DocumentLayout>
 		);

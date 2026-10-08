@@ -55,6 +55,21 @@ describe("GET /account/sessions", () => {
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 	});
 
+	/**
+	 * The layout's header carries the page title as the one `<h1>`, so the card repeating
+	 * it sits a level below and the document outline names the page once.
+	 */
+	test("names the page with a single level-one heading", async () => {
+		await signIn(app, fixtures);
+
+		let html = await (
+			await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`))
+		).text();
+
+		expect(html.match(/<h1\b/g)).toHaveLength(1);
+		expect(html).toMatch(/<h2\b[^>]*>\s*Sessions\s*</);
+	});
+
 	test("lists each session with its parsed device, address and client", async () => {
 		await signIn(app, fixtures);
 		await extraSession(
