@@ -20,7 +20,7 @@ import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
 import { NotificationEmail, textFrom, translationFor } from "~/app/push/copy";
 import { unsubscribeUrl } from "~/app/push/unsubscribe";
 import { vapidKeys } from "~/app/push/vapid";
-import { pushRequest } from "~/app/push/web-push";
+import { payloadFits, pushRequest } from "~/app/push/web-push";
 import {
 	feeds,
 	NOTIFY_FEED_TITLES,
@@ -89,7 +89,10 @@ export type PushOutcome =
 	| "expired"
 	/** The service is busy or broken, which the count remembers. */
 	| "transient"
-	/** Our signature or keys are wrong, which is a deploy mistake rather than a dead device. */
+	/**
+	 * Our signature, keys or payload are wrong, which is a mistake on our side rather than a
+	 * dead device, so the row stays and is not counted.
+	 */
 	| "rejected";
 
 /** What the notification step did, which is what the object writes its event from. */
@@ -386,6 +389,16 @@ async function deliverTo(
 		titles: summary.titles,
 		url: routes.reading.index.href(),
 	});
+
+	if (!payloadFits(payload)) {
+		record("alarm", {
+			event: "push.rejected",
+			reason: "payload-too-large",
+			failureCount: device.failure_count,
+		});
+
+		return false;
+	}
 
 	let status = 0;
 

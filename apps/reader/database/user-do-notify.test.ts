@@ -616,6 +616,23 @@ describe("what a refusal does to a device", () => {
 		expect(eventsNamed("push.rejected")[0]?.["status"]).toBe(403);
 	});
 
+	/**
+	 * A feed names itself, so its title can push the payload past the one record a push
+	 * service accepts. That is our payload being wrong, which no device is counted for.
+	 */
+	test("a payload too large for one record is never sent and keeps the row uncounted", async () => {
+		let reader = await createReader();
+		seedFeed(reader.state, "feed-a", "A".repeat(5000), true);
+		seedItem(reader.state, "i1", "feed-a", 10);
+		await registerDevice(reader.user);
+
+		await wake(reader.state, reader.user);
+
+		expect(deliveries).toHaveLength(0);
+		expect(devices(reader.state)[0]?.["failure_count"]).toBe(0);
+		expect(eventsNamed("push.rejected")[0]?.["reason"]).toBe("payload-too-large");
+	});
+
 	test("ten consecutive transient failures delete the row", async () => {
 		let { state, user } = await readerWithSomethingToSay();
 		await registerDevice(user);

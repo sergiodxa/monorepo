@@ -11,7 +11,13 @@ import { describe, expect, test } from "vitest";
 
 import type { PushTarget, VapidKeys } from "~/app/push/web-push";
 
-import { encryptPayload, pushRequest, vapidAuthorization } from "~/app/push/web-push";
+import {
+	encryptPayload,
+	MAX_PAYLOAD_BYTES,
+	payloadFits,
+	pushRequest,
+	vapidAuthorization,
+} from "~/app/push/web-push";
 
 /** RFC 8291 §5's subscription, sender pair, salt and expected record. */
 const VECTOR = {
@@ -259,6 +265,22 @@ describe("encrypting a payload for one device", () => {
 		let second = await encryptPayload(target, "hello");
 
 		expect(encode(first)).not.toBe(encode(second));
+	});
+
+	/** The limit is exactly the plaintext that fills the 4,096-byte record the header declares. */
+	test("fits a payload of the limit in one record, and nothing longer", async () => {
+		let { target } = await subscription();
+
+		let body = await encryptPayload(target, "a".repeat(MAX_PAYLOAD_BYTES));
+
+		expect(body.length).toBe(4096);
+		expect(payloadFits("a".repeat(MAX_PAYLOAD_BYTES))).toBe(true);
+		expect(payloadFits("a".repeat(MAX_PAYLOAD_BYTES + 1))).toBe(false);
+	});
+
+	/** A title in another script takes several bytes a character, which is what is counted. */
+	test("measures a payload in UTF-8 bytes rather than characters", () => {
+		expect(payloadFits("é".repeat(Math.ceil(MAX_PAYLOAD_BYTES / 2)))).toBe(false);
 	});
 });
 

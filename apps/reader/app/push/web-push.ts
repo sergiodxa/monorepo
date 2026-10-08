@@ -20,6 +20,12 @@ const PUBLIC_KEY_LENGTH = 65;
 /** Record size written into the header; one record carries the whole payload. */
 const RECORD_SIZE = 4096;
 
+/**
+ * The most plaintext one record carries: 4,096 bytes less the 86-byte header, the 16-byte
+ * AES-GCM tag and the one-byte padding delimiter. Every push service accepts a body this size.
+ */
+export const MAX_PAYLOAD_BYTES = 3993;
+
 /** Four weeks, the longest a push service is asked to hold an undelivered message. */
 const DEFAULT_TTL = 2_419_200;
 
@@ -101,6 +107,17 @@ function encodingInfo(label: string): Uint8Array<ArrayBuffer> {
  */
 function importHkdfKey(bytes: Uint8Array<ArrayBuffer>): Promise<CryptoKey> {
 	return crypto.subtle.importKey("raw", bytes, "HKDF", false, ["deriveBits"]);
+}
+
+/**
+ * Whether a payload fits the single record {@link encryptPayload} writes, measured in the
+ * UTF-8 bytes it is encrypted as. A payload that does not is refused by every push service,
+ * whichever device it is addressed to.
+ *
+ * @param payload - The plaintext a notification carries.
+ */
+export function payloadFits(payload: string): boolean {
+	return new TextEncoder().encode(payload).length <= MAX_PAYLOAD_BYTES;
 }
 
 /**
