@@ -257,6 +257,7 @@ function writeInline(node: Markdown.Inline, dialect: Dialect, budget: Budget): s
 			return writeChildren(node.children, dialect, budget);
 		case "footnoteReference":
 		case "variable":
+		case "comment":
 			return "";
 	}
 }
@@ -267,7 +268,7 @@ function writeChildren(
 	dialect: Dialect,
 	budget: Budget,
 ): string {
-	let first = children[0];
+	let first = children.find((child) => child.type !== "comment");
 	if (first === undefined) return "";
 	if (isInline(first)) return writeInlines(children as Markdown.Inline[], dialect, budget);
 	return writeBlocks(children as Markdown.Block[], dialect, budget);
@@ -341,6 +342,7 @@ function writeBlock(node: Markdown.Block, dialect: Dialect, budget: Budget): str
 		case "html":
 			return dialect.escape(spend(node.value.replace(/\n$/u, ""), budget));
 		case "footnoteDefinition":
+		case "comment":
 			return "";
 		case "tag":
 			return writeChildren(node.children, dialect, budget);

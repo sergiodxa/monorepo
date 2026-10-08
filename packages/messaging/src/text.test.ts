@@ -46,6 +46,12 @@ describe("writeText", () => {
 		expect(writeText("snake\\_case", teamsMarkdown)).toBe("snake\\_case");
 	});
 
+	test("leaves comments out", () => {
+		expect(writeText("{/* block */}\n\nBefore {/* inline */}after", plainText)).toBe(
+			"Before after",
+		);
+	});
+
 	test("writes a heading as a bold line and a table as its plain rows", () => {
 		let source = "# Status\n\n| a | b |\n| - | - |\n| 1 | 2 |";
 		expect(writeText(source, mrkdwn)).toBe("*Status*\n\na | b\n1 | 2");
