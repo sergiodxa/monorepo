@@ -12,6 +12,7 @@
 
 import type { Handle } from "remix/component";
 
+import { monthGrid, systemTimeZone, toDayKey } from "@sdxc/dates";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { text } from "@sdxc/u/typography";
@@ -20,8 +21,6 @@ import { CalendarModel } from "@sdxc/ui/behaviors";
 import { calendarKeys } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
-import { dayKey, monthGrid } from "~/app/services/month-grid";
-
 /** Column headings, in the order `monthGrid` lays a week out. */
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -29,18 +28,19 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const OPENING_DAY = new Date(2026, 8, 15);
 
 /** The source the page shows, matching the markup below. */
-const CODE = `let model = new CalendarModel({ focusedDate: OPENING_DAY });
-let selected = dayKey(OPENING_DAY);
+const CODE = `let timeZone = systemTimeZone();
+let model = new CalendarModel({ focusedDate: OPENING_DAY });
+let selected = toDayKey(OPENING_DAY, timeZone);
 
 model.addEventListener("change", () => void handle.update());
 
-let weeks = monthGrid(model.visibleMonth);
-let days = weeks.flatMap((week) => week.days);
+let weeks = monthGrid(model.visibleMonth, { weekStartsOn: 0, timeZone });
+let days = weeks.flat();
 let monthLabel = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" }).format(
 	model.visibleMonth,
 );
-let focusedKey = dayKey(model.focusedDate);
-let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => !day.outsideMonth);
+let focusedKey = toDayKey(model.focusedDate, timeZone);
+let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => day.inMonth);
 
 <div mix={[vstack({ gap: 2, align: "start" })]}>
 	<Calendar aria-label="Pick a check-in date">
@@ -81,8 +81,8 @@ let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => 
 			</Calendar.GridHeader>
 			<Calendar.GridBody>
 				{weeks.map((week) => (
-					<Calendar.Row key={week.key}>
-						{week.days.map((day) => (
+					<Calendar.Row key={week[0]?.key}>
+						{week.map((day) => (
 							<Calendar.Cell
 								key={day.key}
 								data-date={day.key}
@@ -92,7 +92,7 @@ let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => 
 								data-unavailable={
 									day.date.getDay() === 0 || day.date.getDay() === 6 ? "" : undefined
 								}
-								data-outside-month={day.outsideMonth ? "" : undefined}
+								data-outside-month={day.inMonth ? undefined : ""}
 							>
 								{day.date.getDate()}
 							</Calendar.Cell>
@@ -115,22 +115,22 @@ let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => 
 export const CalendarPreview = clientEntry(
 	"/resources/components/previews/calendar.tsx#CalendarPreview",
 	function CalendarPreview(handle: Handle) {
+		let timeZone = systemTimeZone();
 		let model = new CalendarModel({ focusedDate: OPENING_DAY });
-		let selected = dayKey(OPENING_DAY);
+		let selected = toDayKey(OPENING_DAY, timeZone);
 
 		// The listener lives as long as the model, which this island owns outright.
 		model.addEventListener("change", () => void handle.update());
 
 		return () => {
-			let weeks = monthGrid(model.visibleMonth);
-			let days = weeks.flatMap((week) => week.days);
+			let weeks = monthGrid(model.visibleMonth, { weekStartsOn: 0, timeZone });
+			let days = weeks.flat();
 			let monthLabel = new Intl.DateTimeFormat("en-US", {
 				month: "long",
 				year: "numeric",
 			}).format(model.visibleMonth);
-			let focusedKey = dayKey(model.focusedDate);
-			let tabbable =
-				days.find((day) => day.key === focusedKey) ?? days.find((day) => !day.outsideMonth);
+			let focusedKey = toDayKey(model.focusedDate, timeZone);
+			let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => day.inMonth);
 
 			return (
 				<div mix={[vstack({ gap: 2, align: "start" })]}>
@@ -175,8 +175,8 @@ export const CalendarPreview = clientEntry(
 							</Calendar.GridHeader>
 							<Calendar.GridBody>
 								{weeks.map((week) => (
-									<Calendar.Row key={week.key}>
-										{week.days.map((day) => (
+									<Calendar.Row key={week[0]?.key}>
+										{week.map((day) => (
 											<Calendar.Cell
 												key={day.key}
 												data-date={day.key}
@@ -186,7 +186,7 @@ export const CalendarPreview = clientEntry(
 												data-unavailable={
 													day.date.getDay() === 0 || day.date.getDay() === 6 ? "" : undefined
 												}
-												data-outside-month={day.outsideMonth ? "" : undefined}
+												data-outside-month={day.inMonth ? undefined : ""}
 											>
 												{day.date.getDate()}
 											</Calendar.Cell>

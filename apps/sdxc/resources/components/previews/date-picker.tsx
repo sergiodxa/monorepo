@@ -11,17 +11,17 @@
 
 import type { Handle } from "remix/component";
 
+import { systemTimeZone, toDayKey } from "@sdxc/dates";
 import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { DatePicker, Description, Input, Label } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
 import { parseDayValue, relativeDayHint } from "~/app/services/calendar-labels";
-import { dayKey } from "~/app/services/month-grid";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const DATE_PICKER_CODE = `let today = new Date();
-let value = dayKey(today);
+let value = toDayKey(today, systemTimeZone());
 
 function readField(event: Event) {
 	value = (event.target as HTMLInputElement).value;
@@ -41,7 +41,7 @@ export const DatePickerPreview = clientEntry(
 	"/resources/components/previews/date-picker.tsx#DatePickerPreview",
 	function DatePickerPreview(handle: Handle) {
 		let today = new Date();
-		let value = dayKey(today);
+		let value = toDayKey(today, systemTimeZone());
 
 		/**
 		 * Reads the day back out of the field. The field owns its own value — it is the only

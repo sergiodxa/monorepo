@@ -2,16 +2,15 @@
  * The words a calendar preview puts around its dates: the month a grid is paged to, the
  * weekday column captions, and the human phrasing of a distance between two days.
  *
- * Every function reads a date's local year, month and day, matching the keys a month grid
- * names its cells by, so a label never disagrees with the cell it sits on.
+ * Every function reads a date in the zone the page runs in, the same zone a month grid
+ * names its cells in, so a label never disagrees with the cell it sits on.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { diffInDays, formatWeekday } from "@sdxc/dates";
-
-import { dayKey } from "~/app/services/month-grid";
+import { diffInDays, formatWeekday, fromDayKey, quarterRange, systemTimeZone } from "@sdxc/dates";
+import { isSuccess } from "@sdxc/result";
 
 const MONTH_FORMAT = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
 
@@ -59,14 +58,11 @@ export function dayLabel(date: Date): string {
  * midnight so it lands on the same calendar day the person picked.
  *
  * @param value - A date input's value, which is empty until a day is picked.
- * @returns The day, or `null` when the value is empty or malformed.
+ * @returns The day, or `null` when the value is empty or names no calendar day.
  */
 export function parseDayValue(value: string): Date | null {
-	let match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-	if (match === null) return null;
-
-	let [, year, month, day] = match;
-	return new Date(Number(year), Number(month) - 1, Number(day));
+	let day = fromDayKey(value, systemTimeZone());
+	return isSuccess(day) ? day.data : null;
 }
 
 /**
@@ -79,7 +75,7 @@ export function parseDayValue(value: string): Date | null {
  * @returns The signed number of days, positive when `to` comes later.
  */
 export function dayDistance(from: Date, to: Date): number {
-	return diffInDays(to, from, Intl.DateTimeFormat().resolvedOptions().timeZone);
+	return diffInDays(to, from, systemTimeZone());
 }
 
 /**
@@ -115,12 +111,8 @@ export interface DayBounds {
  * @returns The quarter's first and last day as date-input values.
  */
 export function quarterBounds(today: Date): DayBounds {
-	let firstMonth = Math.floor(today.getMonth() / 3) * 3;
-	let year = today.getFullYear();
-	return {
-		min: dayKey(new Date(year, firstMonth, 1)),
-		max: dayKey(new Date(year, firstMonth + 3, 0)),
-	};
+	let quarter = quarterRange(today, systemTimeZone());
+	return { min: quarter.from, max: quarter.to };
 }
 
 /**

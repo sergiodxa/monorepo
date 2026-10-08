@@ -8,8 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { MonthGridDay } from "@sdxc/dates";
 import type { Handle } from "remix/component";
 
+import { monthGrid, systemTimeZone, toDayKey } from "@sdxc/dates";
 import { bg, fg } from "@sdxc/u/color";
 import { flex, vstack } from "@sdxc/u/layout";
 import { is, m } from "@sdxc/u/size";
@@ -19,10 +21,6 @@ import { RangeCalendar } from "@sdxc/ui";
 import { CalendarModel } from "@sdxc/ui/behaviors";
 import { calendarKeys, rangePreview } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
-
-import type { MonthDay } from "~/app/services/month-grid";
-
-import { dayKey, monthGrid } from "~/app/services/month-grid";
 
 /** Column headings, written out rather than formatted so the grid renders the same everywhere. */
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -46,7 +44,8 @@ const MONTHS = [
 const OPENING_MONTH = new Date(2026, 8, 14);
 
 /** The source the page shows, matching the markup below. */
-const CODE = `let model = new CalendarModel({ focusedDate: OPENING_MONTH });
+const CODE = `let timeZone = systemTimeZone();
+let model = new CalendarModel({ focusedDate: OPENING_MONTH });
 let range = { start: "2026-09-14", end: "2026-09-20" };
 
 function pickDay(key: string) {
@@ -57,7 +56,7 @@ function pickDay(key: string) {
 		range = null;
 	} else {
 		let picked = model.completeRange(date);
-		range = picked ? { start: dayKey(picked.start), end: dayKey(picked.end) } : range;
+		range = picked ? { start: toDayKey(picked.start, timeZone), end: toDayKey(picked.end, timeZone) } : range;
 	}
 
 	void handle.update();
@@ -90,7 +89,7 @@ function pickDay(key: string) {
 			on<HTMLTableElement, "keydown">("keydown", (event) => {
 				if (event.key !== "Enter" && event.key !== " ") return;
 				event.preventDefault();
-				pickDay(dayKey(model.focusedDate));
+				pickDay(toDayKey(model.focusedDate, timeZone));
 			}),
 			// RangeCalendar.Cell styles the committed range; the band the pointer
 			// drags out between the two picks is the consumer's to paint.
@@ -111,14 +110,14 @@ function pickDay(key: string) {
 		</RangeCalendar.GridHeader>
 
 		<RangeCalendar.GridBody>
-			{monthGrid(model.visibleMonth).map((week) => (
-				<RangeCalendar.Row key={week.key} mix={[flex()]}>
-					{week.days.map((day) => (
+			{monthGrid(model.visibleMonth, { weekStartsOn: 0, timeZone }).map((week) => (
+				<RangeCalendar.Row key={week[0]?.key} mix={[flex()]}>
+					{week.map((day) => (
 						<RangeCalendar.Cell
 							key={day.key}
 							data-date={day.key}
-							data-outside-month={day.outsideMonth || undefined}
-							tabIndex={day.key === dayKey(model.focusedDate) ? 0 : -1}
+							data-outside-month={!day.inMonth || undefined}
+							tabIndex={day.key === toDayKey(model.focusedDate, timeZone) ? 0 : -1}
 							aria-selected={inRange(day) ? "true" : undefined}
 							data-selection-start={day.key === range?.start ? "" : undefined}
 							data-selection-end={day.key === range?.end ? "" : undefined}
@@ -142,12 +141,13 @@ function parseDayKey(key: string): Date {
 export const RangeCalendarPreview = clientEntry(
 	"/resources/components/previews/range-calendar.tsx#RangeCalendarPreview",
 	function RangeCalendarPreview(handle: Handle) {
+		let timeZone = systemTimeZone();
 		let model = new CalendarModel({ focusedDate: OPENING_MONTH });
 		let range: { start: string; end: string } | null = {
 			start: "2026-09-14",
 			end: "2026-09-20",
 		};
-		let renderedMonth = dayKey(model.visibleMonth);
+		let renderedMonth = toDayKey(model.visibleMonth, timeZone);
 
 		/**
 		 * Redraws only when the model pages to another month. Hover preview is mirrored
@@ -155,7 +155,7 @@ export const RangeCalendarPreview = clientEntry(
 		 * model belongs to this island, so it needs no unsubscribe of its own.
 		 */
 		model.addEventListener("change", () => {
-			let month = dayKey(model.visibleMonth);
+			let month = toDayKey(model.visibleMonth, timeZone);
 			if (month === renderedMonth) return;
 
 			renderedMonth = month;
@@ -171,14 +171,15 @@ export const RangeCalendarPreview = clientEntry(
 				range = null;
 			} else {
 				let picked = model.completeRange(date);
-				if (picked) range = { start: dayKey(picked.start), end: dayKey(picked.end) };
+				if (picked)
+					range = { start: toDayKey(picked.start, timeZone), end: toDayKey(picked.end, timeZone) };
 			}
 
 			void handle.update();
 		}
 
 		/** Whether a day falls inside the committed range, which is what paints the band. */
-		function inRange(day: MonthDay): boolean {
+		function inRange(day: MonthGridDay): boolean {
 			if (range === null) return false;
 			return day.key >= range.start && day.key <= range.end;
 		}
@@ -186,7 +187,7 @@ export const RangeCalendarPreview = clientEntry(
 		return () => {
 			let visible = model.visibleMonth;
 			let monthLabel = `${MONTHS[visible.getMonth()]} ${visible.getFullYear()}`;
-			let focusedKey = dayKey(model.focusedDate);
+			let focusedKey = toDayKey(model.focusedDate, timeZone);
 
 			return (
 				<div mix={[vstack({ gap: 3, align: "center" })]}>
@@ -225,7 +226,7 @@ export const RangeCalendarPreview = clientEntry(
 								on<HTMLTableElement, "keydown">("keydown", (event) => {
 									if (event.key !== "Enter" && event.key !== " ") return;
 									event.preventDefault();
-									pickDay(dayKey(model.focusedDate));
+									pickDay(toDayKey(model.focusedDate, timeZone));
 								}),
 								// RangeCalendar.Cell styles the committed range; the band the pointer
 								// drags out between the two picks is the consumer's to paint.
@@ -246,13 +247,13 @@ export const RangeCalendarPreview = clientEntry(
 							</RangeCalendar.GridHeader>
 
 							<RangeCalendar.GridBody>
-								{monthGrid(visible).map((week) => (
-									<RangeCalendar.Row key={week.key} mix={[flex()]}>
-										{week.days.map((day) => (
+								{monthGrid(visible, { weekStartsOn: 0, timeZone }).map((week) => (
+									<RangeCalendar.Row key={week[0]?.key} mix={[flex()]}>
+										{week.map((day) => (
 											<RangeCalendar.Cell
 												key={day.key}
 												data-date={day.key}
-												data-outside-month={day.outsideMonth || undefined}
+												data-outside-month={!day.inMonth || undefined}
 												tabIndex={day.key === focusedKey ? 0 : -1}
 												aria-selected={inRange(day) ? "true" : undefined}
 												data-selection-start={day.key === range?.start ? "" : undefined}

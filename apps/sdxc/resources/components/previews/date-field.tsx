@@ -11,17 +11,17 @@
 
 import type { Handle } from "remix/component";
 
+import { systemTimeZone, toDayKey } from "@sdxc/dates";
 import { is } from "@sdxc/u/size";
 import { DateField } from "@sdxc/ui";
 import { clientEntry, on } from "remix/component";
 
 import { parseDayValue, quarterBounds, relativeDayHint } from "~/app/services/calendar-labels";
-import { dayKey } from "~/app/services/month-grid";
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const DATE_FIELD_CODE = `let today = new Date();
 let { min, max } = quarterBounds(today);
-let value = dayKey(today);
+let value = toDayKey(today, systemTimeZone());
 
 function pickDate(event: Event & { currentTarget: HTMLInputElement }) {
 	value = event.currentTarget.value;
@@ -46,7 +46,7 @@ export const DateFieldPreview = clientEntry(
 	function DateFieldPreview(handle: Handle) {
 		let today = new Date();
 		let { min, max } = quarterBounds(today);
-		let value = dayKey(today);
+		let value = toDayKey(today, systemTimeZone());
 
 		/** Keeps the picked day so the description beneath the field can describe it. */
 		function pickDate(event: Event & { currentTarget: HTMLInputElement }) {
