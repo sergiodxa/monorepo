@@ -72,6 +72,21 @@ describe("POST /sample", () => {
 		expect(body.match(/<pre class="language-/g)).toHaveLength(6);
 	});
 
+	test("links the chapter's EPUB through a signed, expiring link", async () => {
+		let body = await submit(new MemoryNewsletter(), "reader@example.com").then((response) =>
+			response.text(),
+		);
+
+		expect(body).toMatch(/href="\/sample\/download\?expires=\d+&amp;signature=[0-9a-f]{64}"/);
+		expect(body).toContain("Download this chapter as an EPUB");
+	});
+
+	test("shows no download link before the address unlocks the chapter", async () => {
+		let body = await fetchApp("/sample").then((response) => response.text());
+
+		expect(body).not.toContain("/sample/download");
+	});
+
 	test("keeps the chapter out of the index, since the URL's other state is the form", async () => {
 		let body = await submit(new MemoryNewsletter(), "reader@example.com").then((response) =>
 			response.text(),

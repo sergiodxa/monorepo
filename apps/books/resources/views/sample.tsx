@@ -1,8 +1,7 @@
 /**
- * Sample-chapter view. Before the address is given it is the offer and its
- * email field; once on the list it is the chapter itself, rendered as an
- * article of prose. The chapter renders only as the POST response, so
- * reloading the page always shows the offer again.
+ * Sample-chapter view. Before the address is given it is the offer and its email field;
+ * once on the list it is the chapter itself, as an article of prose, with a short-lived
+ * link to the same chapter as an EPUB. Only the POST response renders the chapter.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,6 +25,8 @@ export namespace SampleView {
 		action: string;
 		/** The rendered chapter. Given only on the response that unlocks it. */
 		chapter?: RemixNode;
+		/** The signed, short-lived link to the chapter as an EPUB, minted with the unlock. */
+		download?: string;
 		/** A server-rendered error to show under the email field. */
 		error?: string;
 		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
@@ -40,11 +41,20 @@ export namespace SampleView {
  */
 export default function SampleView(handle: Handle<SampleView.Props>) {
 	return () => {
-		let { action, chapter, confirmEmail, error } = handle.props;
+		let { action, chapter, confirmEmail, download, error } = handle.props;
 
 		if (chapter) {
 			return (
 				<div class="prose" mix={[mi("auto"), maxIs("65ch"), pi(5), pb(10), media(LARGE, pb(20))]}>
+					{download && (
+						<p>
+							Prefer an e-reader?{" "}
+							<a href={download} download="oauth2-handbook-sample.epub">
+								Download this chapter as an EPUB
+							</a>{" "}
+							for Kindle, Kobo, Apple Books or any reading app. The link works for an hour.
+						</p>
+					)}
 					{chapter}
 				</div>
 			);

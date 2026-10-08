@@ -35,6 +35,7 @@ import healthcheck from "~/app/http/controllers/healthcheck";
 import home from "~/app/http/controllers/home";
 import release from "~/app/http/controllers/release";
 import * as sample from "~/app/http/controllers/sample";
+import { sampleDownload } from "~/app/http/controllers/sample-download";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
@@ -96,6 +97,7 @@ export default function application(provider: Billing = polar, list: Newsletter 
 	router.map(routes.healthcheck, healthcheck);
 	router.map(routes.sample.index, sample.index);
 	router.map(routes.sample.action, sample.action);
+	router.map(routes.sampleDownload, sampleDownload);
 	router.map(routes.upgrade.index, upgrade.index);
 	router.map(routes.upgrade.action, upgrade.action);
 	router.map(routes.api.subscribe, subscribe);

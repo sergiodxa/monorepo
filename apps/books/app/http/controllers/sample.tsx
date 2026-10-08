@@ -8,16 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
 import { toCampaign } from "@sdxc/attribution";
-import { highlight } from "@sdxc/highlight/markdown";
-import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import {
@@ -25,9 +21,10 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
+import { CHAPTER_FILE, readChapter } from "~/app/lib/sample-chapter";
+import { signSampleLink } from "~/app/lib/sample-link";
 import { seo } from "~/app/lib/seo";
 import { subscribe } from "~/app/services/subscribe";
-import chapterSource from "~/resources/content/sample.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import SampleView from "~/resources/views/sample";
 import routes from "~/routes/web";
@@ -45,39 +42,6 @@ const BLOCKED_MESSAGE =
 	"My upstream provider is blocking you for some reason.\nPlease try with another email address and sorry for the inconvenience.";
 const INVALID_MESSAGE = "Invalid email address. \nPlease try with another email address.";
 const GENERIC_MESSAGE = "Something went wrong, please try again.";
-
-/** Logged beside a failure's line so a malformed chapter names the file to open. */
-const CHAPTER_FILE = "resources/content/sample.md";
-
-/** The chapter opens straight into prose, so the block it may carry is an empty one. */
-const MARKDOWN_OPTIONS = { frontmatter: s.object({}) } satisfies Markdown.Options;
-
-/**
- * The chapter, parsed and painted once per isolate.
- *
- * The first request that needs it does the work, because the Workers global scope
- * is reserved for imports and deploy validation holds a module-load parse to that.
- */
-let chapter: Result<Markdown.Document, Markdown.ParseError | Markdown.WalkError> | undefined;
-
-/**
- * Reads and paints the chapter, or hands back the work already done in this isolate.
- *
- * @returns The painted document, or the failure that stopped it.
- */
-function readChapter() {
-	if (chapter) return chapter;
-
-	let parsed = Markdown.parse(chapterSource, MARKDOWN_OPTIONS);
-
-	if (isFailure(parsed)) {
-		chapter = parsed;
-		return chapter;
-	}
-
-	chapter = Markdown.walk(parsed.data.document, highlight);
-	return chapter;
-}
 
 /**
  * Renders the page in its locked state: the offer, the email field, and any error.
@@ -112,7 +76,7 @@ function renderForm(
  * @param ctx - The request context, for its URL and renderer.
  * @returns The rendered HTML response, or the form again for a parse failure.
  */
-function renderChapter(ctx: RequestContext) {
+async function renderChapter(ctx: RequestContext) {
 	let parsed = readChapter();
 
 	if (isFailure(parsed)) {
@@ -127,6 +91,14 @@ function renderChapter(ctx: RequestContext) {
 		return renderForm(ctx, { error: GENERIC_MESSAGE, status: 500 });
 	}
 
+	/**
+	 * The download link is minted here, on the page the address unlocked, so the file sits
+	 * behind the same gate. Signing failing leaves the reader the chapter itself, without
+	 * the link, rather than taking the page away.
+	 */
+	let download = await signSampleLink();
+	if (isFailure(download)) ctx.log.fail(download.error, { sample: { download: "unsigned" } });
+
 	return ctx.render(
 		<DocumentLayout
 			title={TITLE}
@@ -134,7 +106,11 @@ function renderChapter(ctx: RequestContext) {
 			canonical={seo.canonical(ctx.url)}
 			robots={seo.robotsTag({ index: false, follow: true })}
 		>
-			<SampleView action={routes.sample.action.href()} chapter={toRemix(parsed.data)} />
+			<SampleView
+				action={routes.sample.action.href()}
+				chapter={toRemix(parsed.data)}
+				download={isSuccess(download) ? download.data : undefined}
+			/>
 		</DocumentLayout>,
 	);
 }
@@ -175,7 +151,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 
 	if (isSuccess(result)) {
 		log.set({ sample: { unlocked: true } });
-		return renderChapter(ctx);
+		return await renderChapter(ctx);
 	}
 
 	let error = result.error;

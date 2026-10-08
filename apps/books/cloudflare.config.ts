@@ -34,13 +34,15 @@ export default defineConfig({
 		/**
 		 * The worker keeps no storage of its own; its state lives in Buttondown and Polar.
 		 * `COOKIE_SECRET` signs the attribution cookie, so a visitor cannot forge the
-		 * campaign a subscriber or a checkout is credited to.
+		 * campaign a subscriber or a checkout is credited to. `SAMPLE_LINK_SECRET` signs the
+		 * hour-long link to the sample chapter's EPUB, so the file stays behind the email gate.
 		 */
 		env: {
 			BUTTONDOWN_API_KEY: bindings.secret(),
 			POLAR_ACCESS_TOKEN: bindings.secret(),
 			POLAR_WEBHOOK_SECRET: bindings.secret(),
 			COOKIE_SECRET: bindings.secret(),
+			SAMPLE_LINK_SECRET: bindings.secret(),
 		},
 	},
 });

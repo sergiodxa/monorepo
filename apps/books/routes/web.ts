@@ -1,8 +1,8 @@
 /**
- * Route table for the books funnel. Declares the four pages, the two form endpoints,
- * the checkout redirect, and the Polar webhook. Every pattern here is a published
- * contract — the checkout URL is linked from the pricing page, the webhook URL is
- * registered in Polar's dashboard — so patterns stay fixed once published.
+ * Route table for the books funnel: the four pages, the two form endpoints, the sample's
+ * EPUB download, the checkout redirect, and the Polar webhook. Every pattern is a published
+ * contract — the checkout URL is linked from the pricing page, the webhook URL is registered
+ * in Polar's dashboard — so patterns stay fixed once published.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +20,12 @@ export default route({
 
 	/** GET renders the email form; POST unlocks and renders the sample chapter. */
 	sample: form("/sample"),
+
+	/**
+	 * The sample chapter as an EPUB. Reached only through the signed, hour-long link the
+	 * unlocked sample page mints; any other request is sent back to the form.
+	 */
+	sampleDownload: get("/sample/download"),
 
 	/** GET renders the email form; POST resolves the customer and redirects to checkout. */
 	upgrade: form("/upgrade"),

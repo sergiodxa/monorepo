@@ -44,6 +44,12 @@ breaks something you cannot see from here:
 - **The sample chapter is not persisted.** Reloading `/sample` shows the form again, by
   design. Do not "fix" this with a session or a cookie — the app has no session
   middleware, and that is deliberate.
+- **The EPUB download link expires after an hour.** `/sample/download` serves the file only
+  for the `expires` and `signature` query the unlocked page minted (an HMAC under
+  `SAMPLE_LINK_SECRET`); anything else is a 303 to `/sample`, where the address mints a fresh
+  link. That link is the whole gate, so keep it out of anything persisted or shared. The EPUB's
+  identifier stays fixed in `app/lib/sample-chapter.ts`; move `SAMPLE_MODIFIED` whenever
+  `sample.md` changes.
 - **The webhook only tags customers who are already subscribers.** A purchase from a
   non-subscriber is logged and otherwise ignored.
 - **`order.paid` is the only event handled.** Every other delivery is acknowledged with

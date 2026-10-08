@@ -32,6 +32,9 @@ visitor's browser.
   applicable launch discount applied.
 - **Gated sample chapter**: an address unlocks the chapter, rendered from Markdown at
   request time and deliberately not persisted across reloads.
+- **Sample chapter as an EPUB**: the unlocked page links the same chapter as an ebook for
+  Kindle, Kobo, Apple Books and other readers. The link is signed with `SAMPLE_LINK_SECRET`
+  and expires after an hour, so the file stays behind the email gate without a session.
 - **Upgrade path** from the Essentials package to the Complete package, priced with a
   fixed upgrade discount for customers who already own Essentials.
 - **Purchase tagging**: a paid Polar order tags the customer in Buttondown with their
@@ -56,6 +59,7 @@ visitor's browser.
 | `/release`            | GET     | Sales page with live prices, packages, FAQ                  |
 | `/sample`             | GET     | The sample-chapter email form                               |
 | `/sample`             | POST    | Subscribes, then renders the sample chapter                 |
+| `/sample/download`    | GET     | The chapter's EPUB for a signed link; `/sample` otherwise   |
 | `/upgrade`            | GET     | The upgrade email form                                      |
 | `/upgrade`            | POST    | Resolves the customer and redirects to the upgrade checkout |
 | `/api/subscribe`      | POST    | Subscribes a visitor and redirects to `/release`            |

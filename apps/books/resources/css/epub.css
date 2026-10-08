@@ -1,0 +1,55 @@
+/*
+ * The stylesheet inside the sample chapter's EPUB. Reading systems apply a publisher's CSS
+ * beneath the reader's own font, size and theme choices, so it sets structure only — code
+ * blocks that wrap instead of overflowing, quiet tables — and no colors, which would fight a
+ * sepia or night theme. Token roles are carried by weight and face, as on the site.
+ */
+
+pre {
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+	font-size: 0.85em;
+	line-height: 1.4;
+	padding: 0.75em;
+	border: 1px solid;
+	border-radius: 4px;
+}
+
+code {
+	font-family: monospace;
+	hyphens: none;
+}
+
+table {
+	border-collapse: collapse;
+	margin: 1em 0;
+}
+
+th,
+td {
+	border-bottom: 1px solid;
+	padding: 0.25em 0.5em;
+	text-align: left;
+}
+
+img {
+	max-width: 100%;
+}
+
+.cover {
+	text-align: center;
+}
+
+.token.comment {
+	font-style: italic;
+}
+
+.token.keyword,
+.token.important {
+	font-weight: bold;
+}
+
+.token.function,
+.token.class-name {
+	font-weight: 600;
+}

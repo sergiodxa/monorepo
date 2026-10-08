@@ -537,6 +537,10 @@ NCX that EPUB 2 readers need is written alongside.
 - [x] Phase 3: `@sdxc/epub` — five golden fixtures (minimal, cover, sections, media, long-form
       Markdown) pass epubcheck 5.4.0 with no errors or warnings
 - [ ] Phase 4: Consumers
+  - [x] `books`: `/sample/download` serves the chapter as an EPUB with a cover and
+        accessibility metadata, behind a signed link that expires after an hour; the built
+        file passes epubcheck 5.4.0 with no errors or warnings
+  - [ ] `blog`, `uptime`, `reader`
 
 ## Notes
 
@@ -556,5 +560,7 @@ NCX that EPUB 2 readers need is written alongside.
 3. **Footnotes as pop-ups.** Reading systems show `epub:type="noteref"` / `"footnote"` as pop-ups.
    Should the XHTML mode of `@sdxc/markdown/html` write those attributes, which are EPUB-specific,
    or should `@sdxc/epub` take a hook that rewrites the tree?
-4. **Gating the `books` download.** A signed short-lived link from the unlocked page, or a second
-   `POST` carrying the address; decided in `books`, recorded here because it shapes the route.
+4. **Gating the `books` download.** Decided: a signed short-lived link. The unlocked page mints
+   `/sample/download?expires=…&signature=…`, an HMAC-SHA-256 under the `SAMPLE_LINK_SECRET`
+   secret over a purpose prefix and the expiry, valid for one hour; any other request is
+   redirected to the form. The app keeps no session, and the link carries its own proof.
