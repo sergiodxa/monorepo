@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/activitypub",
 	"version": "0.0.1",
-	"private": true,
 	"description": "ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery",
 	"license": "MIT",
 	"type": "module",

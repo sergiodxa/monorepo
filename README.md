@@ -91,7 +91,7 @@ Run from the repository root:
 
 | Package                                                         | Description                                                                                                       |     |
 | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | --- |
-| [activitypub](packages/activitypub)                             | ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery                   |     |
+| [activitypub](packages/activitypub)                             | ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery                   | ✅  |
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                                                       | ✅  |
 | [atom](packages/atom)                                           | Atom 1.0 feed parser and builder                                                                                  | ✅  |
 | [attribution](packages/attribution)                             | Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch                    | ✅  |
