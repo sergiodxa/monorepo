@@ -13,6 +13,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
@@ -20,7 +21,7 @@ import { createController } from "remix/router";
 
 import { ForgotPasswordSchema } from "~/app/http/validators/password";
 import { requestPasswordReset } from "~/app/services/password-reset";
-import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
+import { spendRateLimit } from "~/app/services/rate-limit";
 import DocumentLayout from "~/resources/layouts/document";
 import ForgotPasswordView from "~/resources/views/password/forgot";
 import PasswordNoticeView from "~/resources/views/password/notice";
@@ -91,7 +92,7 @@ export default createController(routes.password.forgot, {
 		 * branch on. Its per-address cooldown bounds mail; the shared IP budget bounds callers.
 		 */
 		action: async (ctx) => {
-			let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
+			let limited = await spendRateLimit(ctx.limiters.login, addressKey(ctx.ip));
 			if (limited) return limited;
 
 			let result = await validate(ctx.formData, ForgotPasswordSchema);

@@ -14,9 +14,8 @@
 import type { JWT } from "@sdxc/jwt";
 
 import { JWK } from "@sdxc/jwt";
+import { createR2KeyStorage } from "@sdxc/jwt/r2";
 import { env } from "cloudflare:workers";
-
-import { createR2KeyStorage } from "~/app/services/r2-key-storage";
 
 /**
  * How long a warm isolate reuses keys before rereading them.

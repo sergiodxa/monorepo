@@ -14,6 +14,7 @@ import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
+import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid";
 import { validate } from "@sdxc/validate";
@@ -40,7 +41,7 @@ import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { startGitHubLogin } from "~/app/services/github-login";
-import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
+import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
@@ -225,7 +226,7 @@ export default createController(routes.authorize, {
 			let query = result.data;
 			ctx.log.set({ client: { id: query.client_id } });
 
-			let limited = await spendRateLimit(ctx.limiters.authorize, clientAddressKey(ctx));
+			let limited = await spendRateLimit(ctx.limiters.authorize, addressKey(ctx.ip));
 			if (limited) return limited;
 
 			let client = await Client.findById(ctx.db, query.client_id);
@@ -322,7 +323,7 @@ export default createController(routes.authorize, {
 		 * alone. This server's own client keeps its parked request for its callback.
 		 */
 		action: async (ctx) => {
-			let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
+			let limited = await spendRateLimit(ctx.limiters.login, addressKey(ctx.ip));
 			if (limited) return limited;
 
 			let authz = getAuthz();

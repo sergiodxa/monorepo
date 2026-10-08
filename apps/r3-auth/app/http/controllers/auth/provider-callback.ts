@@ -12,6 +12,7 @@
 import type { RequestContext } from "remix/router";
 
 import { badRequest } from "@sdxc/http/response/json";
+import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
@@ -23,7 +24,7 @@ import { getAuthz, unsetAuthz } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
-import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
+import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
 import routes from "~/routes/web";
 
@@ -78,7 +79,7 @@ async function errorResponse(
 export default createAction(routes.auth.providerCallback, async (ctx) => {
 	ctx.log.set({ auth: { provider: ctx.params.provider } });
 
-	let limited = await spendRateLimit(ctx.limiters.login, clientAddressKey(ctx));
+	let limited = await spendRateLimit(ctx.limiters.login, addressKey(ctx.ip));
 	if (limited) return limited;
 
 	if (ctx.params.provider !== "github") {

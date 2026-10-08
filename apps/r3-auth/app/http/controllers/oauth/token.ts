@@ -9,6 +9,7 @@
  */
 
 import { badRequest, internalServerError, ok, unauthorized } from "@sdxc/http/response/json";
+import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
@@ -18,7 +19,7 @@ import { OIDC } from "~/app/auth/oidc-provider";
 import { createOidcProvider } from "~/app/auth/repository";
 import { TokenRequestSchema } from "~/app/http/validators/oauth";
 import { readClientCredentials } from "~/app/services/client-credentials";
-import { clientAddressKey, spendRateLimit } from "~/app/services/rate-limit";
+import { spendRateLimit } from "~/app/services/rate-limit";
 import routes from "~/routes/web";
 
 /**
@@ -89,7 +90,7 @@ export default createAction(routes.oauth.token, async (ctx) => {
 		ctx.limiters.token,
 		body.grant_type === "client_credentials" && credentials
 			? credentials.clientId
-			: clientAddressKey(ctx),
+			: addressKey(ctx.ip),
 	);
 	if (limited) return limited;
 

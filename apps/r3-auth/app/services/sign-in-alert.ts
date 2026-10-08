@@ -18,7 +18,7 @@ import type { RequestContext } from "remix/router";
 import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { NewSignInEmail } from "~/app/emails/new-sign-in";
-import { parseUserAgent } from "~/app/http/view-models/account-session";
+import { describeUserAgent } from "~/app/http/view-models/account-session";
 
 /**
  * The copy stays in {@link DEFAULT_EMAIL_LOCALE}, since its reader may be a
@@ -42,7 +42,7 @@ export async function notifyNewSignIn(
 			return;
 		}
 
-		let ua = parseUserAgent(ctx.request.headers.get("user-agent"));
+		let ua = describeUserAgent(ctx.request.headers.get("user-agent"));
 
 		ctx.email.later(
 			new NewSignInEmail({

@@ -8,7 +8,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DeviceType as ParsedDeviceType } from "@sdxc/user-agent";
+
 import { formatParts } from "@sdxc/dates";
+import { parse } from "@sdxc/user-agent";
 
 import type { SessionWithClient } from "~/app/data/session";
 
@@ -18,45 +21,35 @@ const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
 /** Device classes the list distinguishes, each with its own translated label. */
 export type DeviceType = "desktop" | "mobile" | "tablet" | "unknown";
 
-/** What a raw user-agent header was reduced to. */
-export interface ParsedUserAgent {
-	/** Browser family, or `"Unknown"` when no known token matched. */
+/** The labels a raw user-agent header reads as in the device list and the sign-in notice. */
+export interface UserAgentDescription {
+	/** Browser family, or `"Unknown"` when the header names none the parser recognizes. */
 	browser: string;
-	/** Operating system family, or `"Unknown"` when no known token matched. */
+	/** Operating system family, or `"Unknown"` when the header names none the parser recognizes. */
 	os: string;
 	/** Device class, used to pick the row's translated device label. */
 	deviceType: DeviceType;
 }
 
 /**
- * Reduces a user-agent header to browser, OS and device labels using simple token
- * matches, accurate enough for a person to recognize their own device in a list. An
- * unrecognized header reads as `"Unknown"`, flagging the session as one worth revoking.
+ * Reduces a user-agent header to the labels a person recognizes their own device by. A
+ * missing or unrecognized header reads as `"Unknown"`, flagging the session as one worth
+ * revoking; consoles and televisions take the unknown device label.
  */
-export function parseUserAgent(ua: string | null): ParsedUserAgent {
-	if (!ua) return { browser: "Unknown", os: "Unknown", deviceType: "unknown" };
+export function describeUserAgent(header: string | null): UserAgentDescription {
+	let { browser, os, device } = parse(header ?? "");
 
-	let browser = "Unknown";
-	if (ua.includes("Firefox/")) browser = "Firefox";
-	else if (ua.includes("Edg/")) browser = "Edge";
-	else if (ua.includes("OPR/") || ua.includes("Opera/")) browser = "Opera";
-	else if (ua.includes("Chrome/")) browser = "Chrome";
-	else if (ua.includes("Safari/")) browser = "Safari";
+	return {
+		browser: browser.name ?? "Unknown",
+		os: os.name ?? "Unknown",
+		deviceType: toDeviceType(device.type),
+	};
+}
 
-	let os = "Unknown";
-	if (ua.includes("Windows")) os = "Windows";
-	else if (ua.includes("Android")) os = "Android";
-	else if (ua.includes("iPhone") || ua.includes("iPad") || ua.includes("iOS")) os = "iOS";
-	else if (ua.includes("Mac OS X") || ua.includes("Macintosh")) os = "macOS";
-	else if (ua.includes("Linux")) os = "Linux";
-
-	let deviceType: DeviceType = "desktop";
-	if (ua.includes("iPad") || ua.includes("Tablet")) deviceType = "tablet";
-	else if (ua.includes("Mobile") || ua.includes("Android") || ua.includes("iPhone")) {
-		deviceType = "mobile";
-	}
-
-	return { browser, os, deviceType };
+/** Narrows the parser's device classes to the ones the list and the notice carry a label for. */
+function toDeviceType(type: ParsedDeviceType | null): DeviceType {
+	if (type === "desktop" || type === "mobile" || type === "tablet") return type;
+	return "unknown";
 }
 
 /** One row of the account area's device list, ready to render. */
@@ -118,7 +111,7 @@ export function toSessionRow(
 	currentSessionId: string | null,
 	locale: string,
 ): SessionRow {
-	let ua = parseUserAgent(session.user_agent);
+	let ua = describeUserAgent(session.user_agent);
 	let isCurrent = session.id === currentSessionId;
 
 	return {

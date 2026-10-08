@@ -1,5 +1,5 @@
 /**
- * Tests of the session row mapper: the user-agent token matching, the current-session
+ * Tests of the session row mapper: the user-agent labels, the current-session
  * flag, and the staleness threshold — including the guarantee that the session a
  * request arrived on stays marked active, since that request itself just touched it.
  *
@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SessionWithClient } from "~/app/data/session";
 
-import { parseUserAgent, toSessionRow } from "~/app/http/view-models/account-session";
+import { describeUserAgent, toSessionRow } from "~/app/http/view-models/account-session";
 
 /** A session row shaped as the database returns it, with epoch-ms timestamps. */
 function session(overrides: Partial<SessionWithClient> = {}): SessionWithClient {
@@ -29,9 +29,9 @@ function session(overrides: Partial<SessionWithClient> = {}): SessionWithClient 
 	} as SessionWithClient;
 }
 
-describe("parseUserAgent", () => {
+describe("describeUserAgent", () => {
 	test("reads a missing header as unknown rather than hiding the row", () => {
-		expect(parseUserAgent(null)).toEqual({
+		expect(describeUserAgent(null)).toEqual({
 			browser: "Unknown",
 			os: "Unknown",
 			deviceType: "unknown",
@@ -42,7 +42,7 @@ describe("parseUserAgent", () => {
 		let ua =
 			"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
-		expect(parseUserAgent(ua)).toEqual({
+		expect(describeUserAgent(ua)).toEqual({
 			browser: "Chrome",
 			os: "macOS",
 			deviceType: "desktop",
@@ -52,33 +52,33 @@ describe("parseUserAgent", () => {
 	test("does not call Chrome Safari, since Chrome carries a Safari token too", () => {
 		let ua = "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120.0 Safari/537.36";
 
-		expect(parseUserAgent(ua).browser).toBe("Chrome");
+		expect(describeUserAgent(ua).browser).toBe("Chrome");
 	});
 
 	test("does not call Edge Chrome, since Edge carries a Chrome token too", () => {
 		let ua =
 			"Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/120.0 Safari/537.36 Edg/120.0";
 
-		expect(parseUserAgent(ua).browser).toBe("Edge");
+		expect(describeUserAgent(ua).browser).toBe("Edge");
 	});
 
 	test("recognizes Safari on iOS as a mobile device", () => {
 		let ua =
 			"Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1";
 
-		expect(parseUserAgent(ua)).toEqual({ browser: "Safari", os: "iOS", deviceType: "mobile" });
+		expect(describeUserAgent(ua)).toEqual({ browser: "Safari", os: "iOS", deviceType: "mobile" });
 	});
 
 	test("recognizes an iPad as a tablet rather than a phone", () => {
 		let ua = "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1";
 
-		expect(parseUserAgent(ua).deviceType).toBe("tablet");
+		expect(describeUserAgent(ua).deviceType).toBe("tablet");
 	});
 
 	test("recognizes Firefox on Linux", () => {
 		let ua = "Mozilla/5.0 (X11; Linux x86_64; rv:121.0) Gecko/20100101 Firefox/121.0";
 
-		expect(parseUserAgent(ua)).toEqual({
+		expect(describeUserAgent(ua)).toEqual({
 			browser: "Firefox",
 			os: "Linux",
 			deviceType: "desktop",
@@ -88,11 +88,24 @@ describe("parseUserAgent", () => {
 	test("prefers Android over Linux, which every Android agent also carries", () => {
 		let ua = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36";
 
-		expect(parseUserAgent(ua)).toEqual({
+		expect(describeUserAgent(ua)).toEqual({
 			browser: "Chrome",
 			os: "Android",
 			deviceType: "mobile",
 		});
+	});
+	test("reads an unrecognized header as unknown on every label", () => {
+		expect(describeUserAgent("curl/8.4.0")).toEqual({
+			browser: "Unknown",
+			os: "Unknown",
+			deviceType: "unknown",
+		});
+	});
+
+	test("gives a console the unknown device label", () => {
+		let ua = "Mozilla/5.0 (PlayStation 5 3.11) AppleWebKit/605.1.15 (KHTML, like Gecko)";
+
+		expect(describeUserAgent(ua).deviceType).toBe("unknown");
 	});
 });
 
