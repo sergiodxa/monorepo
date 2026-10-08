@@ -196,6 +196,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/location](packages/location)                                   | URL-like `Location` class for URL paths without an origin                                                         |
 | [@sdxc/mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                        |
 | [@sdxc/merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          |
+| [@sdxc/no-www-middleware](packages/no-www-middleware)                 | Router middleware that permanently redirects a `www.` hostname to the apex domain                                 |
 | [@sdxc/openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                |
 | [@sdxc/pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    |
 | [@sdxc/problem](packages/problem)                                     | RFC 9457 problem details and catalogs of an API's problem types                                                   |
@@ -276,12 +277,13 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 ### UI and Internationalization
 
-| Package                       | Description                                                                              |
-| ----------------------------- | ---------------------------------------------------------------------------------------- |
-| [@sdxc/i18n](packages/i18n)   | Language detection and MessageFormat 2 translators for Remix routers and remix/component |
-| [@sdxc/icons](packages/icons) | Lucide icons for Remix UI                                                                |
-| [@sdxc/u](packages/u)         | Tailwind-like Remix UI styling utilities                                                 |
-| [@sdxc/ui](packages/ui)       | Remix v3 UI component library                                                            |
+| Package                                 | Description                                                                              |
+| --------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [@sdxc/i18n](packages/i18n)             | Language detection and MessageFormat 2 translators for Remix routers and remix/component |
+| [@sdxc/icons](packages/icons)           | Lucide icons for Remix UI                                                                |
+| [@sdxc/lazy-frame](packages/lazy-frame) | A remix/component frame that loads once the reader scrolls near it or opens its dialog   |
+| [@sdxc/u](packages/u)                   | Tailwind-like Remix UI styling utilities                                                 |
+| [@sdxc/ui](packages/ui)                 | Remix v3 UI component library                                                            |
 
 ### Foundations
 
