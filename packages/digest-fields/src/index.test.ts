@@ -175,6 +175,12 @@ describe("verify", () => {
 		expectCode(await verify(headers, ITEM, { field: "content-digest" }), "mismatch");
 	});
 
+	test("fails when a legacy algorithm repeats, whichever entry matches", async () => {
+		let forged = `SHA-256=${Base64.encode(new Uint8Array(32))}`;
+		let headers = new Headers({ digest: `${forged}, ${CAVAGE_DIGEST}` });
+		expectCode(await verify(headers, CAVAGE_BODY, { field: "digest" }), "malformed");
+	});
+
 	test("fails when the field is absent", async () => {
 		expectCode(await verify(new Headers(), ITEM, { field: "content-digest" }), "missing");
 	});

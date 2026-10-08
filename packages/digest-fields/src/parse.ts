@@ -109,7 +109,8 @@ function parseDictionary(value: string, field: string): Result<SF.Dictionary, Di
 
 /**
  * Reads RFC 3230's `Digest`: `ALG=base64` entries separated by commas. Empty entries,
- * which a trailing comma leaves, are skipped.
+ * which a trailing comma leaves, are skipped; a repeated algorithm fails, so a second
+ * entry can never stand in for a mismatching first.
  *
  * @param value - The field value.
  */
@@ -124,6 +125,9 @@ function parseLegacy(value: string): Result<Digests, DigestError> {
 		if (separator <= 0) return failure(malformed("digest", "an entry has no algorithm"));
 
 		let algorithm = trimmed.slice(0, separator).trim().toLowerCase();
+		if (entries.some(([seen]) => seen === algorithm)) {
+			return failure(malformed("digest", `${algorithm} is repeated`));
+		}
 		let decoded = Base64.decode(trimmed.slice(separator + 1).trim());
 		if (isFailure(decoded)) {
 			if (isDigestAlgorithm(algorithm)) {
