@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isFailure, isSuccess } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
@@ -16,7 +17,7 @@ import { MemoryBilling } from "../providers/memory/index.js";
 
 import type { EntitlementSnapshot } from "./index.js";
 
-import billing, { Entitlements, requireEntitlement } from "./index.js";
+import billing, { Entitlements, readEntitlements, requireEntitlement } from "./index.js";
 
 /** A projection granting one feature, which is what an entitled request carries. */
 const ENTITLED: EntitlementSnapshot = { products: ["pro"], features: { flow_monitors: true } };
@@ -200,5 +201,69 @@ describe("requireEntitlement", () => {
 		await expect(requireEntitlement("flow_monitors")(ctx, ok)).rejects.toThrow(
 			/Entitlement projection not found/,
 		);
+	});
+});
+
+describe("readEntitlements", () => {
+	test("reads once per request, a null projection included", async () => {
+		let ctx = context();
+		let reads = 0;
+
+		await billing({
+			provider: new MemoryBilling(),
+			entitlements: () => {
+				reads += 1;
+				return null;
+			},
+		})(ctx, ok);
+
+		let first = await readEntitlements(ctx);
+		let second = await readEntitlements(ctx);
+
+		expect(isSuccess(first) && first.data).toBeNull();
+		expect(isSuccess(second) && second.data).toBeNull();
+		expect(reads).toBe(1);
+	});
+
+	test("shares its read with requireEntitlement", async () => {
+		let ctx = context();
+		let reads = 0;
+
+		await billing({
+			provider: new MemoryBilling(),
+			entitlements: () => {
+				reads += 1;
+				return ENTITLED;
+			},
+		})(ctx, ok);
+
+		await readEntitlements(ctx);
+		let response = await requireEntitlement("flow_monitors")(ctx, ok);
+
+		expect(response.status).toBe(200);
+		expect(reads).toBe(1);
+	});
+
+	test("answers a failure when no projection was configured", async () => {
+		let ctx = context();
+
+		await billing({ provider: new MemoryBilling() })(ctx, ok);
+
+		let read = await readEntitlements(ctx);
+		expect(isFailure(read) && read.error.message).toMatch(/Entitlement projection not found/);
+	});
+
+	test("answers a failure when the projection read rejects", async () => {
+		let ctx = context();
+
+		await billing({
+			provider: new MemoryBilling(),
+			entitlements: async () => {
+				throw new Error("database unavailable");
+			},
+		})(ctx, ok);
+
+		let read = await readEntitlements(ctx);
+		expect(isFailure(read) && read.error.message).toBe("database unavailable");
 	});
 });

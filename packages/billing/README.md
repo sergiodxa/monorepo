@@ -408,6 +408,12 @@ middleware ran without an `entitlements` option, and it publishes the snapshot i
 it twice. `Entitlements` is exported as the context key for code preferring
 `context.get(Entitlements)`.
 
+`readEntitlements(context)` runs that projection read at most once per request and answers
+`Result<EntitlementSnapshot | null, Error>`: every later call shares the first answer, `null`
+included, and a missing `entitlements` option or a rejected read is a failure.
+`requireEntitlement()` reads through it, so a guard and any other code deciding on the same
+request share one read.
+
 `EntitlementSnapshot` is `{ products: readonly string[]; features: Readonly<Record<string, boolean>> }`,
 which an `EntitlementState` read back from a platform satisfies as-is.
 

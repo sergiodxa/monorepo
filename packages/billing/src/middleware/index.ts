@@ -7,8 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Result } from "@sdxc/result";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { failure, isFailure, success } from "@sdxc/result";
 import { createContextKey } from "remix/router";
 
 import type { Billing } from "../core/contract.js";
@@ -84,6 +86,9 @@ export const Entitlements: { defaultValue?: EntitlementSnapshot } =
 /** Where the middleware leaves the app's projection reader for the guard to call. */
 const EntitlementReader = createContextKey<EntitlementSource>();
 
+/** The one read a request makes, shared by every guard and fact source that asks for it. */
+const EntitlementRead = createContextKey<Promise<Result<EntitlementSnapshot | null, Error>>>();
+
 /** Answer for a request whose subject holds no such feature. */
 const FORBIDDEN = 403;
 
@@ -129,17 +134,11 @@ export function requireEntitlement(
 	property: "entitlements";
 }> {
 	return async (context, next) => {
-		let read = context.get(EntitlementReader);
+		let read = await readEntitlements(context);
+		if (isFailure(read)) throw read.error;
 
-		if (read === undefined) {
-			throw new Error(
-				"Entitlement projection not found. Pass `entitlements` to billing() before using requireEntitlement().",
-			);
-		}
-
-		let snapshot = context.has(Entitlements) ? context.get(Entitlements) : await read(context);
-
-		if (snapshot === null || snapshot === undefined || snapshot.features[feature] !== true) {
+		let snapshot = read.data;
+		if (snapshot === null || snapshot.features[feature] !== true) {
 			if (options.onDenied) return options.onDenied(context, feature);
 			return new Response("Forbidden", { status: FORBIDDEN });
 		}
@@ -148,4 +147,49 @@ export function requireEntitlement(
 
 		return next();
 	};
+}
+
+/**
+ * Reads the request's entitlement projection through the billing middleware's
+ * `entitlements` option, at most once per request: every later call, whatever
+ * it answered, `null` included, shares the first read.
+ *
+ * @param context The request the billing middleware ran on.
+ * @returns The snapshot, `null` for a request with no billable subject, or a
+ * failure when no `entitlements` option was configured or the read rejected.
+ * @example let read = await readEntitlements(ctx);
+ */
+export function readEntitlements(
+	// oxlint-disable-next-line typescript/no-explicit-any -- any route's context carries the reader
+	context: RequestContext<any>,
+): Promise<Result<EntitlementSnapshot | null, Error>> {
+	let pending = context.get(EntitlementRead);
+	if (pending !== undefined) return pending;
+
+	let reader = context.get(EntitlementReader);
+	pending =
+		reader === undefined
+			? Promise.resolve(
+					failure(
+						new Error(
+							"Entitlement projection not found. Pass `entitlements` to billing() before reading entitlements.",
+						),
+					),
+				)
+			: readOnce(reader, context);
+	context.set(EntitlementRead, pending);
+	return pending;
+}
+
+/** Runs the app's reader, turning a throw or a rejection into a failure. */
+async function readOnce(
+	reader: EntitlementSource,
+	// oxlint-disable-next-line typescript/no-explicit-any -- any route's context carries the reader
+	context: RequestContext<any>,
+): Promise<Result<EntitlementSnapshot | null, Error>> {
+	try {
+		return success((await reader(context)) ?? null);
+	} catch (error) {
+		return failure(error instanceof Error ? error : new Error(String(error), { cause: error }));
+	}
 }
