@@ -7,7 +7,8 @@ Production URL: https://reader.sergiodxa.com
 ## Development
 
 1. Copy `.env.example` to `.dev.vars` for local development
-2. Run `bun run dev` to start the development server at http://localhost:3006
+2. Run `bun run db:local:migrate` to create the feed catalog locally
+3. Run `bun run dev` to start the development server at http://localhost:3006
 
 From the repo root: `bun check` (format, lint and type check in one pass) and `bun run test`.
 
@@ -36,9 +37,9 @@ within a day. The tier each reader is on lives on their own object, which is whe
 limit is compared against the count it caps, and where `@sdxc/authz` decides what the tier,
 the operational switches and an agent token's scope allow (`app/authz/`).
 
-Observability is enabled. The KV namespace id in `wrangler.jsonc` is a placeholder:
-create the namespace with `bunx wrangler kv namespace create` and paste its id into both
-`id` and `preview_id` before the first deploy.
+Observability is enabled. The KV namespace and D1 database ids in `wrangler.jsonc` are
+placeholders; [First deploy](./docs/first-deploy.md) lists them with everything else that has
+to exist before the first deploy.
 
 ## Features
 
@@ -124,21 +125,39 @@ create the namespace with `bunx wrangler kv namespace create` and paste its id i
 
 ## Scripts
 
-| Script       | Description                           |
-| ------------ | ------------------------------------- |
-| `dev`        | Start development server              |
-| `build`      | Build for production                  |
-| `start`      | Preview the production build          |
-| `cf:deploy`  | Deploy to Cloudflare                  |
-| `cf:typegen` | Generate the Cloudflare binding types |
-| `typecheck`  | Type check with `tsc`                 |
+| Script              | Description                                     |
+| ------------------- | ----------------------------------------------- |
+| `dev`               | Start development server                        |
+| `build`             | Build for production                            |
+| `start`             | Preview the production build                    |
+| `cf:deploy`         | Deploy to Cloudflare                            |
+| `cf:typegen`        | Generate the Cloudflare binding types           |
+| `db:local:migrate`  | Apply the feed catalog migrations locally       |
+| `db:remote:migrate` | Apply the feed catalog migrations to production |
+| `typecheck`         | Type check with `tsc`                           |
+
+## Database
+
+The feed catalog in D1 is migrated from `database/catalog-migrations`. Each reader's and each
+feed's own SQLite migrates itself when its Durable Object boots.
+
+```bash
+bun run db:local:migrate
+bun run db:remote:migrate
+```
 
 ## Deployment
 
 ```bash
 bun run build
+bun run db:remote:migrate
 bun run cf:deploy
 ```
+
+## Documentation
+
+- [First deploy](./docs/first-deploy.md) — resources, secrets and outside services to set up
+  before the first production deploy
 
 ## Environment Variables
 

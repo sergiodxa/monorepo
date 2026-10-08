@@ -97,7 +97,8 @@
 	//
 	// `database_id` is a placeholder. Create the real database with
 	// `bunx wrangler d1 create reader-catalog` and paste its id here before the first
-	// deploy, then apply `./database/catalog-migrations` with `wrangler d1 migrations`.
+	// deploy, then apply `./database/catalog-migrations` with `bun run db:remote:migrate`.
+	// `docs/first-deploy.md` lists everything else a first deploy needs.
 	"d1_databases": [
 		{
 			"binding": "PLATFORM_DB",
