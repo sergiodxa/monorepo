@@ -2,6 +2,8 @@
 
 Send Web Push notifications from Cloudflare Workers or any runtime with WebCrypto: RFC 8291 payload encryption, RFC 8292 VAPID signing, subscription checks, and a browser helper to subscribe.
 
+No push provider account or SDK is involved: each browser picks its vendor's push service and hands you an endpoint on it, and your server is identified only by a VAPID key pair you generate.
+
 Every send makes one `POST` with the global `fetch`, answers a `Result` and never throws. Failures carry a code that tells an app what to do with the stored subscription: delete it on `gone`, keep it on `unauthorized`, retry on `unavailable`. Where subscriptions live, and how many failures retire one, stay the app's decision.
 
 ## Installation
@@ -51,7 +53,7 @@ let sent = await push.send(subscription, JSON.stringify({ title: "Deploy finishe
 if (isFailure(sent) && sent.error.code === "gone") await deleteSubscription(subscription.endpoint);
 ```
 
-Build one `WebPush` per batch of sends: it caches one VAPID token per push service origin, so fifty devices on Firebase cost one signature.
+Build one `WebPush` per batch of sends: it caches one VAPID token per push service origin, so fifty browsers on Chrome's push service cost one signature.
 
 ### Accepting A Subscription
 
@@ -127,7 +129,7 @@ A schema whose output is a `Subscription`. `subscriptionSchema({ allowedHosts })
 
 ### `PUSH_SERVICE_HOSTS`
 
-The hosts of Firebase, Mozilla, Apple and Windows push services, for `allowedHosts`.
+The hosts of the push services Chrome, Firefox, Safari and Edge subscribe through, for `allowedHosts`.
 
 ### `MAX_PAYLOAD_BYTES`
 
