@@ -1,0 +1,48 @@
+{
+	"name": "@sdxc/activitypub",
+	"version": "0.0.1",
+	"private": true,
+	"description": "ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./keys": "./src/keys.ts",
+		"./discovery": "./src/discovery.ts",
+		"./response": "./src/response.ts",
+		"./collections": "./src/collections.ts",
+		"./remote": "./src/remote.ts",
+		"./inbox": "./src/inbox.ts",
+		"./outbox": "./src/outbox.ts",
+		"./memory": "./src/memory.ts",
+		"./conformance": "./src/conformance.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/backoff": "workspace:*",
+		"@sdxc/cache": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/digest-fields": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/html": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/http-signatures": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@sdxc/well-known": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"vitest": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"vitest": {
+			"optional": true
+		}
+	}
+}

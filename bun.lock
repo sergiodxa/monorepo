@@ -408,6 +408,33 @@
     },
     "packages/api-client": {
       "name": "@sdxc/api-client",
+    "packages/activitypub": {
+      "name": "@sdxc/activitypub",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/backoff": "workspace:*",
+        "@sdxc/cache": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/digest-fields": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/html": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/http-signatures": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@sdxc/well-known": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0",
+      },
+      "peerDependencies": {
+        "vitest": "^4.0.0",
+      },
+      "optionalPeers": [
+        "vitest",
+      ],
+    },
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/trace-context": "workspace:*",
@@ -2031,6 +2058,8 @@
     "@rolldown/pluginutils": ["@rolldown/pluginutils@1.0.1", "", {}, "sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw=="],
 
     "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
+
+    "@sdxc/activitypub": ["@sdxc/activitypub@workspace:packages/activitypub"],
 
     "@sdxc/atom": ["@sdxc/atom@workspace:packages/atom"],
 
