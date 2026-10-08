@@ -1232,6 +1232,17 @@
         "remix": "3.0.0",
       },
     },
+    "packages/rdap": {
+      "name": "@sdxc/rdap",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/cache": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/outbound": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
     "packages/response": {
       "name": "@sdxc/response",
       "version": "0.0.1",
@@ -2285,6 +2296,8 @@
     "@sdxc/random": ["@sdxc/random@workspace:packages/random"],
 
     "@sdxc/rate-limit": ["@sdxc/rate-limit@workspace:packages/rate-limit"],
+
+    "@sdxc/rdap": ["@sdxc/rdap@workspace:packages/rdap"],
 
     "@sdxc/response": ["@sdxc/response@workspace:packages/response"],
 

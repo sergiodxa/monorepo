@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-08
+**Accepted** - 2026-10-08
 
 ## Background
 
@@ -245,9 +245,10 @@ history) is read through `document`.
 5. Build the `RDAP.Domain`.
 
 The package follows the `related` link only on request: `domain(name, { related: true })` makes a
-second query to the registrar's server and fills `registrar` from it when the registry's answer
-lacked one. The registry's `expiresAt` is kept either way; it is the date the registration lapses
-at the registry, and the registrar's copy can lag it.
+second query to the registrar's server and fills each `registrar` field the registry's answer
+left empty (a thin registry names the registrar but often omits its abuse email). The registry's
+`expiresAt` is kept either way; it is the date the registration lapses at the registry, and the
+registrar's copy can lag it. A registrar server that fails leaves the registry's answer as it was.
 
 ### Rate limits and retries
 
@@ -267,7 +268,7 @@ One class, `RDAPError`, with a `code`, `retryable`, and the fields that code fil
 
 | `code`                  | `retryable` | When                                                                                             | Fields              |
 | ----------------------- | ----------- | ------------------------------------------------------------------------------------------------ | ------------------- |
-| `invalid-domain`        | No          | The name does not parse as a registrable host name                                               | `name`              |
+| `invalid-domain`        | No          | The name does not parse as a registrable host name                                               | `domain`            |
 | `unsupported-tld`       | No          | Neither `servers` nor the bootstrap file lists the TLD                                           | `tld`               |
 | `not-found`             | No          | The registry answered `404`: the name is not registered there                                    | `url`               |
 | `rate-limited`          | Yes         | `429`                                                                                            | `url`, `retryAfter` |
@@ -467,8 +468,8 @@ copy needs an owner whose lifetime the caller controls.
 
 ## Current Progress
 
-- [ ] Phase 1: Bootstrap and lookup
-- [ ] Phase 2: The model
+- [x] Phase 1: Bootstrap and lookup
+- [x] Phase 2: The model (the npm bootstrap, `bun run release:bootstrap @sdxc/rdap`, runs from a developer machine)
 - [ ] Phase 3: `apps/uptime`
 
 ## Open Questions

@@ -200,6 +200,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                |
 | [@sdxc/pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    |
 | [@sdxc/problem](packages/problem)                                     | RFC 9457 problem details and catalogs of an API's problem types                                                   |
+| [@sdxc/rdap](packages/rdap)                                           | Domain registration data over RDAP: expiry, status, registrar and nameservers from the registry                   |
 | [@sdxc/response](packages/response)                                   | Response builders for JSON APIs and redirects                                                                     |
 | [@sdxc/server-timing](packages/server-timing)                         | Server-Timing measurements written to a response header                                                           |
 | [@sdxc/structured-fields](packages/structured-fields)                 | Parse and serialize RFC 9651 structured HTTP field values                                                         |

@@ -1,0 +1,20 @@
+{
+	"name": "@sdxc/rdap",
+	"version": "0.0.1",
+	"description": "Domain registration data over RDAP: expiry, status, registrar and nameservers from the registry",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/cache": "workspace:*",
+		"@sdxc/duration": "workspace:*",
+		"@sdxc/outbound": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0"
+	}
+}
