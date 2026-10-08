@@ -94,7 +94,12 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST keep the app server-rendered: native `<dialog>` with command invokers for
   confirmations, `<details>` for disclosure, links styled with `aria-current` for
   navigation. The only client island is the client-secret copy button; adding another needs
-  a reason the platform cannot cover.
+  a reason the platform cannot cover. Islands live in `resources/components/`, the only
+  directory `bootstrap/browser.ts` bundles: a layout or view in that glob ships the
+  document's stylesheet a second time.
+- MUST link built assets through `app/lib/assets.ts`, which reads the manifest
+  `@pitlane/vite-plugin-remix` writes, and import a stylesheet from the document layout as a
+  side effect (`import "….css"`); MUST NOT link a path the build may rename by hand.
 - MUST route every user-facing string through `ctx.intl.t(...)` and `app/locales/en.ts`;
   MUST NOT hardcode English copy in a view.
 - MUST NOT use `as any`, and MUST NOT call `getContext()` inside a controller when `ctx` is
@@ -215,6 +220,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   - `app/lib/database.ts` <- The D1 connection every request and job reads
   - `app/lib/mail.ts` <- The transport both mailers deliver through
   - `app/lib/rate-limiters.ts` <- The five limiter bindings, wrapped in their policies
+  - `app/lib/assets.ts` <- Built stylesheet and client-entry URLs the document links
 - Auth core
   - `app/auth/oidc-provider.ts` <- The storage-agnostic OAuth/OIDC engine
   - `app/auth/repository.ts` <- The engine's storage binding (data-table + KV)

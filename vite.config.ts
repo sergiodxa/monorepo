@@ -275,7 +275,12 @@ export default defineConfig({
 			{
 				root: "apps/r3-auth",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/r3-auth/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "r3-auth",
 					/**

@@ -1,42 +1,31 @@
 /**
- * Vite configuration for the authorization server. Wires up the Cloudflare plugin so
- * the project builds and serves on Workers, declares `bootstrap/browser.ts` as the
- * client entry, and pins asset output names so the worker can reference the built
- * bundle by a stable path.
+ * Vite configuration for the authorization server. The Cloudflare plugin runs the worker in
+ * the SSR environment, while the Remix plugin builds the client entry and writes the asset
+ * manifest the document resolves its hashed files through. Sourcemaps are built for the client
+ * only, since the asset plugin publishes every non-script file the server build emits beside
+ * the client's, and a server sourcemap would expose the worker's source.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fileURLToPath } from "node:url";
-
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { remix } from "@pitlane/vite-plugin-remix";
 import { defineConfig } from "vite";
 
-const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
-
 export default defineConfig({
-	build: { sourcemap: true },
-
 	server: { port: 3002 },
 
 	resolve: { tsconfigPaths: true },
 
-	environments: {
-		client: {
-			build: {
-				rollupOptions: {
-					input: {
-						clientEntry: clientEntryPath,
-					},
-					output: {
-						entryFileNames: "assets/[name].js",
-						chunkFileNames: "assets/[name]-[hash].js",
-					},
-				},
-			},
-		},
-	},
+	environments: { client: { build: { sourcemap: true } } },
 
-	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
+	plugins: [
+		remix({
+			clientEntry: "bootstrap/browser.ts",
+			serverEntry: "bootstrap/worker.ts",
+			serverHandler: false,
+		}),
+		cloudflare({ viteEnvironment: { name: "ssr" } }),
+	],
 });

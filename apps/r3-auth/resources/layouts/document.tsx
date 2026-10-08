@@ -1,7 +1,7 @@
 /**
  * The HTML document every server-rendered page is wrapped in. Declares the palette on
- * the root element, loads the component library's reset and semantic token layers, and
- * opts the page into the viewer's color scheme, so a view only has to describe itself.
+ * the root element, imports the component library's reset and semantic token layers below in
+ * cascade order, and opts the page into the viewer's color scheme.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,13 +10,23 @@
 import type { Handle, RemixNode } from "remix/component";
 
 import { container } from "@sdxc/u/layout";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/component/server";
+
+import type { DocumentAssets as Assets } from "~/app/lib/assets";
 
 import { DOCUMENT, THEME } from "~/resources/styles";
 
-/** The client runtime, served from source in development and from the build otherwise. */
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+import "@sdxc/ui/reset.css";
+import "@sdxc/ui/theme.css";
+
+/**
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
+ */
+export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 namespace DocumentLayout {
 	export interface Props {
@@ -29,9 +39,9 @@ namespace DocumentLayout {
 		 */
 		head?: RemixNode;
 		/**
-		 * Whether the client runtime is loaded. `false` omits the `modulepreload`
-		 * hint and the module script, so the response ships as static HTML — required
-		 * by pages whose contract forbids script, such as front-channel logout.
+		 * Whether the client runtime is loaded. `false` omits the import map, the
+		 * `modulepreload` hints and the module script, so the response ships as static
+		 * HTML — required by pages whose contract forbids script, such as front-channel logout.
 		 *
 		 * @default true
 		 */
@@ -47,6 +57,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { children, title, head, clientRuntime = true } = handle.props;
+		let { script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html lang="en" class="system" mix={[THEME, DOCUMENT]}>
@@ -54,14 +65,22 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
 					{title && <title>{title}</title>}
-					<link rel="stylesheet" href={resetStyles} />
-					<link rel="stylesheet" href={themeStyles} />
-					{clientRuntime && <link rel="modulepreload" href={CLIENT_ENTRY_SRC} />}
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} />
+					))}
+					{clientRuntime && (
+						<>
+							<ImportMap value={script.importMap} />
+							{script.preloads.map((href) => (
+								<link key={href} rel="modulepreload" href={href} />
+							))}
+						</>
+					)}
 					{head}
 				</head>
 				<body mix={[DOCUMENT, container("page")]}>
 					{children}
-					{clientRuntime && <script type="module" src={CLIENT_ENTRY_SRC}></script>}
+					{clientRuntime && <script type="module" src={script.href}></script>}
 				</body>
 			</html>
 		);

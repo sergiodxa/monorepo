@@ -69,11 +69,13 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
+import { documentAssets } from "~/app/lib/assets";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
 import { createMailTransport } from "~/app/lib/mail";
 import { createRateLimiters } from "~/app/lib/rate-limiters";
 import { logger } from "~/bootstrap/logger";
+import { DocumentAssets } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
@@ -186,11 +188,13 @@ export default function application(options: application.Options) {
  * Creates a request-scoped renderer for server-side HTML responses.
  *
  * Uses `createHtmlResponse` to prepend `<!DOCTYPE html>` onto the stream's
- * first chunk, since JSX serializes text as escaped content.
+ * first chunk, since JSX serializes text as escaped content. The document's built asset URLs
+ * are looked up per render, since a Worker may not await them at module scope.
  */
-function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, {
+export function createHtmlRenderer(ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit) {
+		let assets = await documentAssets();
+		let stream = renderToStream(<DocumentAssets value={assets}>{node}</DocumentAssets>, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);

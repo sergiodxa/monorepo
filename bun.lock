@@ -232,6 +232,7 @@
     "apps/r3-auth": {
       "name": "@apps/r3-auth",
       "dependencies": {
+        "@pitlane/assets": "0.1.0",
         "@sdxc/authz": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/crypto": "workspace:*",
@@ -261,6 +262,7 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+        "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/auth": "workspace:*",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "cf": "1.0.0-beta.5",

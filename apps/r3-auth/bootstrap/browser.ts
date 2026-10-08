@@ -9,10 +9,15 @@
 
 import { run } from "remix/component";
 
+/**
+ * Modules the runtime may hydrate: the islands, which all live in `resources/components/`.
+ * Layouts and views stay out, since bundling them would ship the document's stylesheets
+ * twice, once with the server's document and once in a chunk no page asks for.
+ */
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+	"!../**/*.test.*",
+	"../resources/components/**/*.{ts,tsx}",
 ]);
 
 run({
