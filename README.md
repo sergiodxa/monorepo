@@ -110,6 +110,7 @@ Run from the repository root:
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                                                   | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                                              | ✅  |
 | [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
+| [digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                          |     |
 | [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                                                       | ✅  |
 | [email-address](packages/email-address)                         | Email address parsing and normalization, disposable-domain detection and mail-server checks                       | ✅  |

@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/digest-fields",
+	"version": "0.0.1",
+	"private": true,
+	"description": "RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/crypto": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"@sdxc/structured-fields": "workspace:*"
+	}
+}

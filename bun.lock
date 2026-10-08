@@ -624,6 +624,15 @@
     "packages/email-address": {
       "name": "@sdxc/email-address",
       "version": "0.0.1",
+    "packages/digest-fields": {
+      "name": "@sdxc/digest-fields",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
+      },
+    },
       "dependencies": {
         "@sdxc/doh": "workspace:*",
         "@sdxc/result": "workspace:*",
@@ -2082,6 +2091,8 @@
     "@sdxc/jobs": ["@sdxc/jobs@workspace:packages/jobs"],
 
     "@sdxc/jsdoc": ["@sdxc/jsdoc@workspace:packages/jsdoc"],
+    "@sdxc/digest-fields": ["@sdxc/digest-fields@workspace:packages/digest-fields"],
+
 
     "@sdxc/json-feed": ["@sdxc/json-feed@workspace:packages/json-feed"],
 
