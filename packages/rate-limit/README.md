@@ -14,7 +14,7 @@ The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) f
 
 Two entry points:
 
-- `@sdxc/rate-limit` — the `Adapter` contract, the four backends, `RateLimitError`, header serialization, and the `429` builder. No router dependency.
+- `@sdxc/rate-limit` — the `Adapter` contract, the four backends, `RateLimitError`, header serialization, the `429` builder, and `addressKey`. No router dependency.
 - `@sdxc/rate-limit/middleware` — the `rateLimit` middleware for `remix/router`.
 
 ## Usage
@@ -68,24 +68,24 @@ spend another's budget, and a key the caller controls lets it mint fresh budgets
 the request already authenticated is the strongest choice — a token id, a client id, a tenant.
 An anonymous endpoint has the connecting address, which Cloudflare reports in the
 `CF-Connecting-IP` header. Parse it with
-[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and key on the
-network the address sits in, since an IPv6 client holds a whole `/64` and rotates through it:
+[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and key on it with
+`addressKey`, which widens an IPv6 address to its `/64`, since an IPv6 client holds a whole
+`/64` and rotates through it:
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
+import { addressKey } from "@sdxc/rate-limit";
 
 rateLimit({
 	adapter,
 	prefix: "public",
-	key: (context) =>
-		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
+	key: (context) => addressKey(getClientIP(context.request)),
 });
 ```
 
-Return one shared bucket rather than skipping the limit for a request you cannot identify, so
-an unidentified caller, or one whose header is not an address, still spends something.
-Callers sharing an egress address then share a budget, which is the cost of keying on an
-address at all.
+A request you cannot identify, or one whose header is not an address, lands in one shared
+`"unknown"` bucket, so it still spends something. Callers sharing an egress address then
+share a budget, which is the cost of keying on an address at all.
 
 ## API
 
@@ -193,6 +193,25 @@ tooManyRequests(decision, adapter.window, "<h1>Slow down</h1>", {
 The fields it writes are the ones `rateLimitHeaders` would: a number the backend cannot
 report stays absent rather than being invented.
 
+### `addressKey(address): string`
+
+The budget key for an anonymous caller's connecting address: the canonical text of the
+network it sits in, a `/32` for IPv4 and a `/64` for IPv6, so every spelling of one address
+and every address in one IPv6 `/64` spend the same budget. A `null` or `undefined` address
+answers `UNKNOWN_ADDRESS_KEY`, the single `"unknown"` bucket every unidentified request shares.
+
+```typescript
+addressKey(getClientIP(request)); // "203.0.113.42/32"
+addressKey(ctx.ip); // "2001:db8:85a3::/64", for any address in that /64
+addressKey(null); // "unknown"
+```
+
+`address` is a `RateLimitAddress`: anything with a `network({ v4, v6 })` method answering a
+range whose text is canonical. The `IP` that
+[`@sdxc/get-client-ip`](https://www.npmjs.com/package/@sdxc/get-client-ip) and
+[`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip) parse is one, and importing this package
+needs neither.
+
 ### `RateLimitError`
 
 The failure value adapters report when their backend cannot answer. It carries `backend` (`"memory"`, `"cloudflare"`, `"kv"` or `"data-table"`) and `key` so an outage is diagnosable from one log line, plus the underlying error as `cause`.
@@ -231,7 +250,7 @@ Each limit is a registration, so the policy lives next to the routes it protects
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
-import { CloudflareAdapter } from "@sdxc/rate-limit";
+import { addressKey, CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 let tokenLimiter = rateLimit({
@@ -243,8 +262,7 @@ let tokenLimiter = rateLimit({
 let loginLimiter = rateLimit({
 	adapter: new CloudflareAdapter(env.LOGIN_RATE_LIMITER, { limit: 10, window: "10 seconds" }),
 	prefix: "login",
-	key: (context) =>
-		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
+	key: (context) => addressKey(getClientIP(context.request)),
 });
 ```
 
@@ -256,13 +274,13 @@ The default is fail open, so a storage outage cannot lock every client out. A su
 
 ```typescript
 import { getClientIP } from "@sdxc/get-client-ip";
+import { addressKey } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 
 rateLimit({
 	adapter,
 	prefix: "credentials",
-	key: (context) =>
-		getClientIP(context.request)?.network({ v4: 32, v6: 64 }).toString() ?? "unknown",
+	key: (context) => addressKey(getClientIP(context.request)),
 	failurePolicy: "closed",
 });
 ```
