@@ -38,7 +38,9 @@ test "GET /account/profile shows the signed-in subject their own email" {
 # POST /account/profile/edit — a changed display name is saved and shown afterwards.
 # The edit form is pre-filled from the database, so submitting with only the display
 # name changed keeps the other required fields; the save redirects back to the
-# read-only profile, which then renders the new value.
+# read-only profile, which then renders the new value. The Save button sits at the fold
+# of the browser's default viewport, where a click aimed at its centre lands below the
+# visible page, so it is scrolled into view first.
 test "POST /account/profile/edit saves a changed display name and shows it" {
 	given {
 		login "spec-user@spec.test" "correct horse battery"
@@ -46,6 +48,7 @@ test "POST /account/profile/edit saves a changed display name and shows it" {
 	when {
 		browser.navigate "http://localhost:3002/account/profile/edit"
 		browser.fill textbox "Display Name" with "Spec Edited Name"
+		browser.scroll to button "Save Changes"
 		browser.click button "Save Changes"
 	}
 	then {
@@ -56,7 +59,9 @@ test "POST /account/profile/edit saves a changed display name and shows it" {
 	}
 }
 
-# GET /account/sessions — the signed-in subject's own live session is listed.
+# GET /account/sessions — the signed-in subject's own live session is listed. The
+# layout's header titles the page at level 1, ahead of the session card that repeats
+# the title a level below, so the first heading of that name is the level-1 title.
 test "GET /account/sessions lists the current session" {
 	given {
 		login "spec-user@spec.test" "correct horse battery"
@@ -66,7 +71,7 @@ test "GET /account/sessions lists the current session" {
 	}
 	then {
 		eventually {
-			expect browser.heading "Sessions"
+			expect browser.heading "Sessions" first level 1
 			expect browser.text "Your current session"
 		}
 	}
@@ -74,7 +79,8 @@ test "GET /account/sessions lists the current session" {
 
 # GET /account/grants — the authorized-apps list renders, and the sign-in above
 # created a grant for the auth server's own client, so it is the populated state
-# (not the "No authorized apps found." empty state).
+# (not the "No authorized apps found." empty state). As on the sessions page, the
+# first heading of that name is the level-1 page title, ahead of the card's.
 test "GET /account/grants lists the app the sign-in authorized" {
 	given {
 		login "spec-user@spec.test" "correct horse battery"
@@ -84,7 +90,7 @@ test "GET /account/grants lists the app the sign-in authorized" {
 	}
 	then {
 		eventually {
-			expect browser.heading "Authorized Apps"
+			expect browser.heading "Authorized Apps" first level 1
 			expect browser.text "Auth by Sergio Xalambrí"
 		}
 	}
