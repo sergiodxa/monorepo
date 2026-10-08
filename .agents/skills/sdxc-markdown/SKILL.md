@@ -61,6 +61,7 @@ let body = toHTML(document);
 
 - `Markdown.frontmatter` takes the same options object as `parse` and stops after the block, so an index over a hundred documents reads a hundred titles without parsing a hundred bodies.
 - Every renderer takes any node, not just a document, which is what makes them usable inside a visitor and lets a caller render a fragment.
+- `toHTML(node, { syntax: "xhtml" })` writes output an XML parser reads — self-closed void elements, `name="name"` booleans — for EPUB content documents and other XML consumers; tag renderers stay responsible for their own markup.
 - Raw HTML — block and inline alike — renders as escaped text in both `toHTML` and `toRemix`, which keeps a document from any source safe to render. An author who wants an element registers a tag for it through `options.tags` / `options.components`.
 - `Markdown.walk` returns a new node sharing every subtree no handler touched, and answers with a `Result` (or a promise of one when a handler is asynchronous), so a transform that fails carries the `position` it failed at.
 - `Markdown.stringify` normalizes rather than reproducing the source; what holds is idempotency — parsing the output and serializing again yields the same string.

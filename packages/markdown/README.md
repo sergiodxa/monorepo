@@ -226,6 +226,11 @@ Renders any node as static HTML, with no wrapper element of its own, so a caller
 fragment of a document. `options.tags` carries markup for a tag keyed by tag name; a tag with
 no renderer contributes its children alone.
 
+`options.syntax` is `"html"` by default. Set it to `"xhtml"` for an EPUB content document or any
+other consumer that parses the output as XML: every void element is self-closed (`<input />`)
+and every boolean attribute carries its name as its value (`disabled="disabled"`, an annotation's
+`data-wide="data-wide"`). Markup a tag renderer returns is written as the renderer built it.
+
 Elements are plain and semantic, and a `md-` class appears only where HTML has no element that
 says what the node is:
 

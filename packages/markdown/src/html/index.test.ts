@@ -613,4 +613,46 @@ describe("toHTML", () => {
 			expect(html).toBe('<h2 class="lead" id="install">Install</h2>');
 		});
 	});
+
+	describe("xhtml syntax", () => {
+		test("self-closes an unchecked task box and spells out its disabled state", () => {
+			let item: MarkdownTypes.ListItem = {
+				type: "listItem",
+				checked: false,
+				attributes: {},
+				children: [paragraph("Ship it.")],
+				position: position(),
+			};
+
+			expect(toHTML(item, { syntax: "xhtml" })).toBe(
+				'<li class="md-task"><input class="md-task-box" type="checkbox" disabled="disabled" /><p>Ship it.</p></li>',
+			);
+		});
+
+		test("writes a checked task box's state as a valued attribute", () => {
+			let html = toHTML(parse("- [x] Done\n"), { syntax: "xhtml" });
+
+			expect(html).toContain(
+				'<input class="md-task-box" type="checkbox" disabled="disabled" checked="checked" />',
+			);
+		});
+
+		test("gives a true annotation's data attribute its own name as the value", () => {
+			expect(toHTML(paragraph("Body.", { wide: true, compact: false }), { syntax: "xhtml" })).toBe(
+				'<p data-wide="data-wide">Body.</p>',
+			);
+		});
+
+		test("writes the elements that are already self-closed the same way", () => {
+			let html = toHTML(parse("![Logo](/logo.png)  \nnext\n\n---\n"), { syntax: "xhtml" });
+
+			expect(html).toBe('<p><img src="/logo.png" alt="Logo" /><br />next</p>\n<hr />');
+		});
+
+		test("leaves the default output in HTML syntax", () => {
+			expect(toHTML(parse("- [ ] Todo\n"))).toContain(
+				'<input class="md-task-box" type="checkbox" disabled>',
+			);
+		});
+	});
 });

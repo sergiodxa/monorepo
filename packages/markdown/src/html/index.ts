@@ -15,10 +15,21 @@ export type HTMLTagRenderer = (tag: {
 	children: string;
 }) => string;
 
+/** The serialization the markup follows: HTML, or XHTML an XML parser reads. */
+export type HTMLSyntax = "html" | "xhtml";
+
 /** Options for {@link toHTML}. */
 export interface HTMLOptions {
 	/** Keyed by tag name; a tag with no renderer contributes its children alone. */
 	tags?: Record<string, HTMLTagRenderer>;
+	/**
+	 * `xhtml` self-closes every void element and gives every boolean attribute
+	 * its name as the value, so an EPUB reader or any other XML consumer parses
+	 * the output. Markup a tag renderer returns is written as the renderer built it.
+	 *
+	 * @default "html"
+	 */
+	syntax?: HTMLSyntax;
 }
 
 /**
@@ -54,6 +65,7 @@ interface HTMLAttribute {
  */
 interface Context {
 	options: HTMLOptions;
+	syntax: HTMLSyntax;
 	footnotes: ReadonlyMap<string, number>;
 }
 
@@ -64,7 +76,8 @@ interface Context {
  * @example toHTML(document)
  */
 export function toHTML(node: Markdown.Node, options: HTMLOptions = {}): string {
-	return renderNode(node, { options, footnotes: numberFootnotes(node) });
+	let syntax = options.syntax ?? "html";
+	return renderNode(node, { options, syntax, footnotes: numberFootnotes(node) });
 }
 
 /**
@@ -78,15 +91,15 @@ function renderNode(node: Markdown.Node, context: Context): string {
 		}
 
 		case "heading": {
-			let attributes = elementAttributes(node.attributes);
+			let attributes = elementAttributes(node.attributes, context);
 			return `<h${node.level}${attributes}>${renderInline(node.children, context)}</h${node.level}>`;
 		}
 
 		case "paragraph":
-			return `<p${elementAttributes(node.attributes)}>${renderInline(node.children, context)}</p>`;
+			return `<p${elementAttributes(node.attributes, context)}>${renderInline(node.children, context)}</p>`;
 
 		case "code":
-			return renderCode(node);
+			return renderCode(node, context);
 
 		case "list":
 			return renderList(node, context);
@@ -95,11 +108,12 @@ function renderNode(node: Markdown.Node, context: Context): string {
 			return renderListItem(node, context);
 
 		case "blockquote":
-			return `<blockquote${elementAttributes(node.attributes)}>${renderBlocks(node.children, context)}</blockquote>`;
+			return `<blockquote${elementAttributes(node.attributes, context)}>${renderBlocks(node.children, context)}</blockquote>`;
 
 		case "alert": {
 			let attributes = elementAttributes(
 				node.attributes,
+				context,
 				["md-alert", `md-alert-${node.kind}`],
 				[{ name: "data-kind", value: node.kind }],
 			);
@@ -116,7 +130,7 @@ function renderNode(node: Markdown.Node, context: Context): string {
 			return renderCell(node, false, null, context);
 
 		case "thematicBreak":
-			return `<hr${elementAttributes(node.attributes)} />`;
+			return `<hr${elementAttributes(node.attributes, context)} />`;
 
 		case "html":
 		case "inlineHtml":
@@ -144,19 +158,22 @@ function renderNode(node: Markdown.Node, context: Context): string {
 			return `<code>${escapeText(node.value)}</code>`;
 
 		case "link": {
-			let attributes = renderAttributes([
-				{ name: "href", value: node.href },
-				...titleAttribute(node.title),
-			]);
+			let attributes = renderAttributes(
+				[{ name: "href", value: node.href }, ...titleAttribute(node.title)],
+				context,
+			);
 			return `<a${attributes}>${renderInline(node.children, context)}</a>`;
 		}
 
 		case "image": {
-			let attributes = renderAttributes([
-				{ name: "src", value: node.src },
-				{ name: "alt", value: plainText(node.children) },
-				...titleAttribute(node.title),
-			]);
+			let attributes = renderAttributes(
+				[
+					{ name: "src", value: node.src },
+					{ name: "alt", value: plainText(node.children) },
+					...titleAttribute(node.title),
+				],
+				context,
+			);
 			return `<img${attributes} />`;
 		}
 
@@ -208,11 +225,17 @@ function escapeAttribute(value: string): string {
 	return escapeText(value).replaceAll('"', "&quot;");
 }
 
-/** Writes a list in order, the bare form standing for an attribute that is simply present. */
-function renderAttributes(list: readonly HTMLAttribute[]): string {
+/**
+ * Writes a list in order. A boolean is simply present: bare in HTML, and in XHTML
+ * repeating its name as the value, since XML requires every attribute to carry one.
+ */
+function renderAttributes(list: readonly HTMLAttribute[], context: Context): string {
 	return list
 		.map((attribute) => {
-			if (attribute.value === true) return ` ${attribute.name}`;
+			if (attribute.value === true) {
+				if (context.syntax === "xhtml") return ` ${attribute.name}="${attribute.name}"`;
+				return ` ${attribute.name}`;
+			}
 			return ` ${attribute.name}="${escapeAttribute(attribute.value)}"`;
 		})
 		.join("");
@@ -225,6 +248,7 @@ function renderAttributes(list: readonly HTMLAttribute[]): string {
  */
 function elementAttributes(
 	attributes: Markdown.Attributes,
+	context: Context,
 	classes: readonly string[] = [],
 	extra: readonly HTMLAttribute[] = [],
 ): string {
@@ -252,7 +276,7 @@ function elementAttributes(
 		list.push({ name: `data-${kebabCase(key)}`, value: String(value) });
 	}
 
-	return renderAttributes(list);
+	return renderAttributes(list, context);
 }
 
 /** An annotation writes the key an author types, and a `data-` attribute spells it in dashes. */
@@ -284,10 +308,10 @@ function languageClass(language: string | undefined): string | undefined {
  * Draws a fence, keeping every character between `<pre>` and `</pre>` part of
  * the source, since whitespace there is content rather than formatting.
  */
-function renderCode(node: Markdown.Code): string {
+function renderCode(node: Markdown.Code, context: Context): string {
 	let language = languageClass(node.language);
 	let classes = language ? ["md-code", `language-${language}`] : ["md-code"];
-	let attributes = elementAttributes(node.attributes, classes);
+	let attributes = elementAttributes(node.attributes, context, classes);
 	let inner = language ? ` class="language-${escapeAttribute(language)}"` : "";
 	return `<pre${attributes}><code${inner}>${renderCodeBody(node)}</code></pre>`;
 }
@@ -336,10 +360,10 @@ function renderList(node: Markdown.List, context: Context): string {
 	if (node.ordered) {
 		let start: HTMLAttribute[] =
 			typeof node.start === "number" ? [{ name: "start", value: String(node.start) }] : [];
-		return `<ol${elementAttributes(node.attributes, [], start)}>${items}</ol>`;
+		return `<ol${elementAttributes(node.attributes, context, [], start)}>${items}</ol>`;
 	}
 
-	return `<ul${elementAttributes(node.attributes)}>${items}</ul>`;
+	return `<ul${elementAttributes(node.attributes, context)}>${items}</ul>`;
 }
 
 /** A task item states its state in a control a reader recognizes and cannot change. */
@@ -347,12 +371,18 @@ function renderListItem(node: Markdown.ListItem, context: Context): string {
 	let children = renderBlocks(node.children, context);
 
 	if (typeof node.checked !== "boolean") {
-		return `<li${elementAttributes(node.attributes)}>${children}</li>`;
+		return `<li${elementAttributes(node.attributes, context)}>${children}</li>`;
 	}
 
-	let checked = node.checked ? " checked" : "";
-	let box = `<input class="md-task-box" type="checkbox" disabled${checked}>`;
-	return `<li${elementAttributes(node.attributes, ["md-task"])}>${box}${children}</li>`;
+	let attributes: HTMLAttribute[] = [
+		{ name: "class", value: "md-task-box" },
+		{ name: "type", value: "checkbox" },
+		{ name: "disabled", value: true },
+	];
+	if (node.checked) attributes.push({ name: "checked", value: true });
+	let close = context.syntax === "xhtml" ? " />" : ">";
+	let box = `<input${renderAttributes(attributes, context)}${close}`;
+	return `<li${elementAttributes(node.attributes, context, ["md-task"])}>${box}${children}</li>`;
 }
 
 /**
@@ -374,7 +404,7 @@ function renderTable(node: Markdown.Table, context: Context): string {
 		sections.push(`<tbody>${rows}</tbody>`);
 	}
 
-	return `<table${elementAttributes(node.attributes, ["md-table"])}>${joinBlocks(sections)}</table>`;
+	return `<table${elementAttributes(node.attributes, context, ["md-table"])}>${joinBlocks(sections)}</table>`;
 }
 
 /** Each cell takes the alignment of the column it sits in, which the table carries once. */
@@ -387,7 +417,7 @@ function renderRow(
 		.map((cell, index) => renderCell(cell, node.header, align[index] ?? null, context))
 		.join("");
 
-	return `<tr${elementAttributes(node.attributes)}>${cells}</tr>`;
+	return `<tr${elementAttributes(node.attributes, context)}>${cells}</tr>`;
 }
 
 /** A header row's cells are the table's column headings, so they are marked as such. */
@@ -399,7 +429,7 @@ function renderCell(
 ): string {
 	let name = header ? "th" : "td";
 	let classes = align ? [`md-align-${align}`] : [];
-	let attributes = elementAttributes(node.attributes, classes);
+	let attributes = elementAttributes(node.attributes, context, classes);
 	return `<${name}${attributes}>${renderInline(node.children, context)}</${name}>`;
 }
 
@@ -436,10 +466,10 @@ function renderFootnotes(node: Markdown.Document, context: Context): string {
 
 	let items = definitions.map((definition) => {
 		let identifier = escapeAttribute(definition.identifier);
-		let attributes = elementAttributes({
-			...definition.attributes,
-			id: `md-fn-${definition.identifier}`,
-		});
+		let attributes = elementAttributes(
+			{ ...definition.attributes, id: `md-fn-${definition.identifier}` },
+			context,
+		);
 		let back = `<a class="md-footnote-back" href="#md-fnref-${identifier}">↩</a>`;
 		return `<li${attributes}>${renderBlocks(definition.children, context)}${back}</li>`;
 	});
