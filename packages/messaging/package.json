@@ -26,21 +26,23 @@
 	},
 	"dependencies": {
 		"@sdxc/api-client": "workspace:*",
-		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
-		"@sdxc/web-push": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"peerDependencies": {
+		"@sdxc/web-push": "workspace:*",
 		"vitest": "^4.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@sdxc/web-push": {
+			"optional": true
+		},
 		"vitest": {
 			"optional": true
 		}

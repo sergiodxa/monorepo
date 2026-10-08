@@ -10,7 +10,7 @@ A message is plain data: a title, Markdown text, a severity, fields, link button
 npm add @sdxc/messaging
 ```
 
-Every send answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this package. The `@sdxc/messaging/conformance` entry needs [`vitest`](https://www.npmjs.com/package/vitest).
+Every send answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this package. The `@sdxc/messaging/conformance` entry needs [`vitest`](https://www.npmjs.com/package/vitest). The `@sdxc/messaging/web-push` entry needs [`@sdxc/web-push`](https://www.npmjs.com/package/@sdxc/web-push), an optional peer every other provider runs without.
 
 ## Usage
 
@@ -106,7 +106,7 @@ await pagerduty.send({ title: "Checkout recovered", key: "checkout", state: "res
 
 ### Notifying A Browser
 
-`BrowserPush` sends to one browser subscription through [`@sdxc/web-push`](https://www.npmjs.com/package/@sdxc/web-push). Build one `WebPush` sender per batch, so browsers on one push service share one VAPID signature:
+`BrowserPush` sends to one browser subscription through [`@sdxc/web-push`](https://www.npmjs.com/package/@sdxc/web-push), an optional peer you install alongside when you use this provider. Build one `WebPush` sender per batch, so browsers on one push service share one VAPID signature:
 
 ```typescript
 import { BrowserPush } from "@sdxc/messaging/web-push";

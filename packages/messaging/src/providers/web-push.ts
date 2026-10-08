@@ -11,7 +11,6 @@ import type { DurationInput } from "@sdxc/duration";
 import type { Result } from "@sdxc/result";
 import type { Subscription, Urgency, WebPush, WebPushError } from "@sdxc/web-push";
 
-import { Base64Url, sha256 } from "@sdxc/crypto";
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
 import { MAX_PAYLOAD_BYTES } from "@sdxc/web-push";
@@ -101,12 +100,12 @@ function payloadBytes(payload: BrowserPushPayload): number {
  * otherwise 32 characters of its SHA-256, so any key replaces its own earlier push.
  *
  * @param key - The message's key.
- * @returns The topic, or `undefined` when the digest is unavailable and the push goes untopiced.
  */
-async function topicFor(key: string): Promise<string | undefined> {
+async function topicFor(key: string): Promise<string> {
 	if (/^[\w-]+$/u.test(key) && key.length <= MAX_TOPIC_LENGTH) return key;
-	let digest = await sha256(key);
-	return isFailure(digest) ? undefined : Base64Url.encode(digest.data).slice(0, MAX_TOPIC_LENGTH);
+	let digest = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(key)));
+	let base64 = btoa(String.fromCharCode(...digest));
+	return base64.replaceAll("+", "-").replaceAll("/", "_").slice(0, MAX_TOPIC_LENGTH);
 }
 
 /**
