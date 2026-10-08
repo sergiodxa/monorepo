@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 Some work should not happen while a visitor waits: sending an email, calling a slow API, sweeping
@@ -275,6 +275,52 @@ both produces to and consumes:
 `dispatcher.crons` lists the distinct schedules the mapped jobs declare, so one test comparing it
 against your configuration catches a job whose trigger was never added.
 
+## Alert a channel when a job gives up
+
+A job that exits, or fails on its last delivery, is work that will not happen unless someone
+looks. The dispatcher's `onEnd` hook runs once a delivery's ending is decided and before it is
+settled, so it can tell a channel before the message is acked. [`@sdxc/messaging`](/api/messaging)
+sends one portable message to Slack, Discord, PagerDuty and the rest:
+
+```typescript {% title="app/jobs/alert-ops.ts" %}
+import type { AnyJobContext, JobStatus } from "@sdxc/jobs";
+
+import { SlackWebhook } from "@sdxc/messaging/slack";
+import { isFailure } from "@sdxc/result";
+import { env } from "cloudflare:workers";
+
+const LAST_ATTEMPT = 4;
+
+export async function alertOps(ctx: AnyJobContext, status: JobStatus) {
+	if (status.type !== "refuse" && status.type !== "failed") return;
+	if (status.type === "failed" && ctx.attempts < LAST_ATTEMPT) return;
+
+	let slack = new SlackWebhook({ url: env.OPS_SLACK_WEBHOOK_URL });
+	let sent = await slack.send(
+		{
+			title: `${ctx.name} gave up`,
+			text: status.error instanceof Error ? status.error.message : undefined,
+			severity: "critical",
+			fields: [
+				{ label: "Message", value: ctx.id, inline: true },
+				{ label: "Attempts", value: String(ctx.attempts), inline: true },
+			],
+			timestamp: new Date(),
+		},
+		{ timeout: "4 seconds" },
+	);
+	if (isFailure(sent)) ctx.log.warn("ops_alert.failed", { code: sent.error.code });
+}
+```
+
+Pass it as `onEnd: alertOps` beside `timeout` in `createJobDispatcher`. `refuse` is a
+`ctx.exit`, and `LAST_ATTEMPT` is the first delivery plus the consumer's `max_retries` of 3.
+The hook's failure is never the job's: anything it throws is recorded as `job.hook_failed`,
+and the dispatcher waits five seconds for it at most, which is why the send's own timeout is
+shorter. An alert that has to survive a Slack outage belongs in a delivery job of its own,
+with retries, as [Send alerts to chat and paging services](/docs/data-and-background-work/messaging)
+builds.
+
 ## Run jobs in a test
 
 `@sdxc/jobs/memory` is a queue held in an array. Build the dispatcher over one and over a test
@@ -346,6 +392,8 @@ calls to find the user schedules that are due.
 ## Where to go next
 
 - [Send email](/docs/data-and-background-work/send-email) — the confirmation job, written out.
+- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
+  delivery job that retries Slack, Discord and PagerDuty sends.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the database the
   job middleware publishes.
 - [Logs, traces and timings](/docs/operations-and-testing/observability) — reading the record

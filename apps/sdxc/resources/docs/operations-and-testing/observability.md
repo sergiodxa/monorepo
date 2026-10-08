@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 8
 order: 1
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 When a request misbehaves in production you want to answer three questions quickly: what
@@ -301,6 +301,8 @@ looking for.
   dispatcher these job logs come from.
 - [Wire the router](/docs/building-remix-apps/wire-the-router) explains the middleware order
   and how services reach `ctx`.
+- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) tells
+  Slack, Discord or PagerDuty when something fails, and notes every send on the run's log.
 - [Test Workers apps](/docs/operations-and-testing/testing) shows how to hand a handler a log
   and assert on the record it wrote.
 - [`@sdxc/logger`](/api/logger) and [`@sdxc/trace-context`](/api/trace-context) list every

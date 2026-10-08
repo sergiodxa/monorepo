@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 8
-lastUpdated: 2026-10-07
+lastUpdated: 2026-10-08
 ---
 
 A time-based one-time password, the six digits an authenticator app shows, is a second thing
@@ -144,7 +144,8 @@ export default createAction(routes.twoFactor.setup, async (ctx) => {
 the route. `QR.encode` turns the URI into a QR symbol and answers a `Result`, so the action
 encodes before rendering and logs the rare failure, such as a URI too long for any symbol;
 the page then renders without the code. `QrCode` draws the symbol as an inline SVG, which needs
-no `img-src data:` in your CSP and stays dark on light under a dark theme. The page shows the
+no `img-src data:` in your CSP and stays dark on light under a dark theme;
+[Draw QR codes](/docs/building-remix-apps/qr-codes) covers its options. The page shows the
 code, the setup key for anyone who cannot scan, and the URI as a link, which opens the app
 directly on a phone:
 
@@ -482,4 +483,6 @@ they can still act.
   sealing module, password hashing and reset tokens this flow builds on.
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms): rate limit
   the code page.
+- [Draw QR codes](/docs/building-remix-apps/qr-codes): error correction levels, size caps
+  and serving a code as an SVG file.
 - [`@sdxc/crypto`](/api/crypto): every `totp` option, `Base32` and the error classes.

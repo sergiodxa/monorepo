@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 8
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 A fixed retry delay is wrong in both directions. Ten minutes is too slow for a blip that
@@ -88,6 +88,11 @@ export function waitAfter(response: Response, attempt: number): number {
 `Retry-After` is either a number of seconds or an HTTP date, and both forms show up in the
 wild. The header is the remote server's to write, so `waitAfter` clamps it to the queue's
 hold limit: an answer of a year would otherwise make the retry itself fail.
+
+Some packages read the header for you. A failed send from [`@sdxc/messaging`](/api/messaging)
+carries `retryAfter` in milliseconds, taken from `Retry-After` or the `retry_after` Discord and
+Telegram put in the body, and `null` when the platform named none, so
+`error.retryAfter ?? backoff.delay(ctx.attempts)` falls back to the schedule.
 
 ## Retry a job on a growing delay
 
@@ -344,4 +349,6 @@ covers seeds and streams beyond jitter.
   `retryable` flag on every `OutboundError`.
 - [Join the IndieWeb](/docs/content-and-feeds/indieweb) — Webmention jobs that retry
   transient failures from a sending or receiving site.
+- [Send alerts to chat and paging services](/docs/data-and-background-work/messaging) — a
+  delivery job that retries on the delay the platform asked for.
 - [`@sdxc/backoff`](/api/backoff) — every option, including `growth` and `factor`.
