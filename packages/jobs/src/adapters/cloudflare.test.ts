@@ -91,6 +91,45 @@ describe("queue()", () => {
 		expect(binding.messages).toHaveLength(250);
 	});
 
+	test("closes a batch before its messages outgrow the bytes a single write accepts", async () => {
+		let { binding, sendBatch, platform } = setup();
+		let payload = "x".repeat(4 * 1024);
+		let messages: JobMessage[] = Array.from({ length: 100 }, (_, index) => ({
+			job: "deliver",
+			body: { index, payload },
+		}));
+
+		unwrap(await platform.send(messages));
+
+		let sizes = sendBatch.mock.calls.map(([batch]) =>
+			Array.from(batch).reduce(
+				(total, request) =>
+					total + new TextEncoder().encode(JSON.stringify(request.body)).byteLength,
+				0,
+			),
+		);
+		expect(sizes.length).toBeGreaterThan(1);
+		for (let size of sizes) expect(size).toBeLessThanOrEqual(256 * 1024);
+		expect(binding.messages.map((message) => message.body)).toEqual(
+			messages.map((message) => ({ job: message.job, body: message.body })),
+		);
+	});
+
+	test("fits as many large messages in a write as its byte budget holds", async () => {
+		let { sendBatch, platform } = setup();
+		let payload = "x".repeat(100 * 1024);
+
+		unwrap(
+			await platform.send([
+				{ job: "deliver", body: { payload } },
+				{ job: "deliver", body: { payload } },
+				{ job: "deliver", body: { payload } },
+			]),
+		);
+
+		expect(sendBatch.mock.calls.map(([batch]) => Array.from(batch).length)).toEqual([2, 1]);
+	});
+
 	test("carries a delay the platform can hold", async () => {
 		let { binding, platform } = setup();
 

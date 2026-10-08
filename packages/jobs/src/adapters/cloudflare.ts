@@ -7,7 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Message, MessageBatch, Queue, ScheduledController } from "@cloudflare/workers-types";
+import type {
+	Message,
+	MessageBatch,
+	MessageSendRequest,
+	Queue,
+	ScheduledController,
+} from "@cloudflare/workers-types";
 import type { Result } from "@sdxc/result";
 
 import { toSeconds } from "@sdxc/duration";
@@ -21,6 +27,12 @@ import { invalidMessage, JobQueueError } from "../queue.js";
 
 /** Most messages a single `sendBatch` accepts. */
 const BATCH_LIMIT = 100;
+
+/** Most bytes a single `sendBatch` accepts, counted across every message in it. */
+const BATCH_BYTE_LIMIT = 256 * 1024;
+
+/** What the platform counts per message beyond its serialized body. */
+const MESSAGE_OVERHEAD_BYTES = 256;
 
 /** Longest the platform holds a message, before its first delivery or between retries. */
 const MAX_DELAY_SECONDS = 43_200;
@@ -96,6 +108,41 @@ async function apply(
 }
 
 /**
+ * The writes a list of messages takes, in order: each closes at {@link BATCH_LIMIT} messages
+ * or before its serialized bodies, plus {@link MESSAGE_OVERHEAD_BYTES} apiece, pass
+ * {@link BATCH_BYTE_LIMIT}. A message too large for any batch goes alone, for the platform
+ * to refuse.
+ *
+ * @param messages The messages to write.
+ * @yields One `sendBatch` argument at a time.
+ */
+function* batches(messages: JobMessage[]): Generator<MessageSendRequest[]> {
+	let encoder = new TextEncoder();
+	let batch: MessageSendRequest[] = [];
+	let bytes = 0;
+
+	for (let message of messages) {
+		let body = envelope(message.job, message.body);
+		let size = encoder.encode(JSON.stringify(body)).byteLength + MESSAGE_OVERHEAD_BYTES;
+
+		if (batch.length === BATCH_LIMIT || (batch.length > 0 && bytes + size > BATCH_BYTE_LIMIT)) {
+			yield batch;
+			batch = [];
+			bytes = 0;
+		}
+
+		batch.push({
+			body,
+			contentType: "json",
+			delaySeconds: message.delay === undefined ? undefined : toSeconds(message.delay),
+		});
+		bytes += size;
+	}
+
+	if (batch.length > 0) yield batch;
+}
+
+/**
  * The queue a dispatcher enqueues through.
  *
  * Retries are the platform's: the ceiling and the dead-letter queue are one policy per queue
@@ -123,15 +170,7 @@ export function queue(binding: () => Queue): JobQueue {
 			try {
 				let target = binding();
 
-				for (let start = 0; start < messages.length; start += BATCH_LIMIT) {
-					await target.sendBatch(
-						messages.slice(start, start + BATCH_LIMIT).map((message) => ({
-							body: envelope(message.job, message.body),
-							contentType: "json",
-							delaySeconds: message.delay === undefined ? undefined : toSeconds(message.delay),
-						})),
-					);
-				}
+				for (let batch of batches(messages)) await target.sendBatch(batch);
 
 				return success(undefined);
 			} catch (error) {

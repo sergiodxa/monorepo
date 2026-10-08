@@ -693,7 +693,10 @@ reaches a dead-letter queue only by exhausting retries. A worker given neither d
 every batch it receives and acks a refused body where it stands.
 
 Two adapters ship. `@sdxc/jobs/cloudflare` exports `queue` and `worker`;
-`@sdxc/jobs/memory` exports `queue`. Both are reached through a namespace import, since
+`@sdxc/jobs/memory` exports `queue`. The Cloudflare queue splits one `enqueueMany` into as
+many `sendBatch` writes as the platform's limits need: each holds at most 100 messages and
+stays under 256 KB across their bodies, so callers enqueue any number of messages of any
+size up to the 128 KB a single message may carry. Both are reached through a namespace import, since
 `queue` collides with the first local variable holding one.
 
 A memory queue adds what a test drives it with: `drain(deliver)` runs everything
