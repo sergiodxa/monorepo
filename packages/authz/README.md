@@ -209,7 +209,7 @@ A synchronous access for another scope, sharing every fact already loaded, such 
 
 ### Decisions and errors
 
-A `Decision` is `{ ability, allowed: true, grants }`, or a refusal whose `cause` is `ungranted`, `outOfScope`, `denied` (with the guard's `reason` and `grants`) or `error` (with the `errors` that left a condition undecided). Every refusal carries `as`: `notFound` when any matching guard or the ability says so. It is plain data, so it crosses an RPC boundary intact.
+A `Decision` is `{ ability, allowed: true, grants }`, or a refusal whose `cause` is `ungranted`, `outOfScope`, `denied` (with the guard's `reason` and `grants`) or `error` (with `errors`, each naming the grant, the `message`, and the `missing` path or `mismatch`ed types that left it undecided). Every refusal carries `as`: `notFound` when any matching guard or the ability says so. It is plain data, so it crosses an RPC boundary intact.
 
 `Forbidden` carries a refusal as `decision`. `AuthzError` names the `grant` and `path` of a policy that does not compile.
 

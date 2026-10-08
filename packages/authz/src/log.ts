@@ -31,7 +31,7 @@ export function recordDecision(decision: Decision): void {
 	});
 	if (decision.cause === "error") {
 		let [first] = decision.errors;
-		log.fail(first?.error ?? new Error(`${decision.ability} undecidable`), {
+		log.fail(new Error(first?.message ?? `${decision.ability} undecidable`), {
 			authz: { ability: decision.ability, grant: first?.grant },
 		});
 	}

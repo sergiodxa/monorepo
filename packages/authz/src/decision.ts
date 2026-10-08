@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ExpressionError } from "@sdxc/expression";
-
 import type { DeniedAs } from "./catalog.js";
 
 /** A grant's stable name: its `id`, or its position like `roles.editor.1`. */
@@ -44,13 +42,28 @@ export interface Denied {
 	grants: GrantId[];
 }
 
+/**
+ * Why one grant could not be decided, copied out of the expression failure as
+ * plain fields so a decision survives structured cloning across RPC.
+ */
+export interface ConditionFailure {
+	grant: GrantId;
+	message: string;
+	/** The failing node inside the grant's condition, empty for its root. */
+	path: string;
+	/** The context path that resolved to nothing, like `billing` or `actor.id`. */
+	missing?: string;
+	/** The operand types a comparison refused, like `["string", "boolean"]`. */
+	mismatch?: readonly [string, string];
+}
+
 /** A check some condition could not decide: a missing, unloaded or mistyped fact. */
 export interface Undecidable {
 	ability: string;
 	allowed: false;
 	cause: "error";
 	as: DeniedAs;
-	errors: { grant: GrantId; error: ExpressionError }[];
+	errors: ConditionFailure[];
 }
 
 /** What a check answers. */

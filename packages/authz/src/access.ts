@@ -15,6 +15,7 @@ import { failure, isSuccess, success } from "@sdxc/result";
 import type {
 	AbilityGroup,
 	AnyAbility,
+	CatalogMethods,
 	LoadTarget,
 	Claims,
 	ContextOf,
@@ -23,7 +24,7 @@ import type {
 	GroupContext,
 } from "./catalog.js";
 import type { AbilityIndex, CompiledGrant, CompiledPolicy } from "./compile.js";
-import type { Decision, Refusal } from "./decision.js";
+import type { ConditionFailure, Decision, Refusal } from "./decision.js";
 import type { FactRequest, FactSource, InvocationContext } from "./facts.js";
 import type { FactDefinitions, FactValue } from "./grants.js";
 
@@ -102,9 +103,9 @@ export interface Access<F extends FactDefinitions = FactDefinitions> {
 	 * Answers every ability of a group for one context, each receiving the keys
 	 * it declares, and claims none.
 	 */
-	decide<G extends AbilityGroup>(group: G, context: GroupContext<G>): Decisions<G>;
+	decide<G extends AbilityGroup | CatalogMethods>(group: G, context: GroupContext<G>): Decisions<G>;
 	/** Answers every claim of a group. */
-	claims<G extends AbilityGroup>(group: G): Claims<G>;
+	claims<G extends AbilityGroup | CatalogMethods>(group: G): Claims<G>;
 	/** A synchronous access for another scope, sharing every fact already loaded. */
 	as(binding: DerivedBinding<F>): Access<F>;
 }
@@ -319,16 +320,19 @@ class BoundAccess implements Access {
 		return permitted(evaluation) as FieldOf<A>[];
 	}
 
-	decide<G extends AbilityGroup>(group: G, context: GroupContext<G>): Decisions<G> {
-		return this.#map(group, (ability) => {
+	decide<G extends AbilityGroup | CatalogMethods>(
+		group: G,
+		context: GroupContext<G>,
+	): Decisions<G> {
+		return this.#map(group as AbilityGroup, (ability) => {
 			let decision = this.#decide(ability, context, undefined);
 			this.#shared.onDecision?.(decision);
 			return decision.allowed;
 		}) as Decisions<G>;
 	}
 
-	claims<G extends AbilityGroup>(group: G): Claims<G> {
-		return this.#map(group, (ability) => {
+	claims<G extends AbilityGroup | CatalogMethods>(group: G): Claims<G> {
+		return this.#map(group as AbilityGroup, (ability) => {
 			if (ability.keys.length > 0) return undefined;
 			let decision = this.#decide(ability, undefined, undefined);
 			this.#shared.onDecision?.(decision);
@@ -577,15 +581,14 @@ function decide(evaluation: Evaluation, field: string | undefined): Decision {
 function granted(
 	outcomes: Outcome[],
 	unresolvedRoles: ExpressionError | undefined,
-): string[] | "none" | { errors: { grant: string; error: ExpressionError }[] } {
+): string[] | "none" | { errors: ConditionFailure[] } {
 	let holding = outcomes.filter((outcome) => outcome.answer === true);
 	if (holding.length > 0) return holding.map((outcome) => outcome.grant.id);
 
-	let errors = outcomes.filter(failed).map((outcome) => ({
-		grant: outcome.grant.id,
-		error: outcome.answer,
-	}));
-	if (unresolvedRoles !== undefined) errors.push({ grant: "roles", error: unresolvedRoles });
+	let errors = outcomes
+		.filter(failed)
+		.map((outcome) => conditionFailure(outcome.grant.id, outcome.answer));
+	if (unresolvedRoles !== undefined) errors.push(conditionFailure("roles", unresolvedRoles));
 	return errors.length > 0 ? { errors } : "none";
 }
 
@@ -603,6 +606,17 @@ function denied(ability: AnyAbility, guards: Outcome[]): Refusal {
 	};
 }
 
+/** Copies an expression failure into the plain fields a decision carries. */
+function conditionFailure(grant: string, error: ExpressionError): ConditionFailure {
+	return {
+		grant,
+		message: error.message,
+		path: error.path,
+		...(error.missing === undefined ? {} : { missing: error.missing }),
+		...(error.mismatch === undefined ? {} : { mismatch: error.mismatch }),
+	};
+}
+
 /** A refusal because some guard could not be decided. */
 function undecidable(
 	ability: AnyAbility,
@@ -613,7 +627,7 @@ function undecidable(
 		allowed: false,
 		cause: "error",
 		as: ability.deniedAs,
-		errors: outcomes.map((outcome) => ({ grant: outcome.grant.id, error: outcome.answer })),
+		errors: outcomes.map((outcome) => conditionFailure(outcome.grant.id, outcome.answer)),
 	};
 }
 

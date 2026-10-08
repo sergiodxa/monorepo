@@ -35,6 +35,7 @@ export type {
 export type {
 	Allowed,
 	AuthzErrorOptions,
+	ConditionFailure,
 	Decision,
 	Denied,
 	GrantId,

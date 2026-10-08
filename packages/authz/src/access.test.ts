@@ -299,7 +299,14 @@ describe("lazy facts", () => {
 
 		expect(access.check(CATALOG.reports.export)).toMatchObject({
 			cause: "error",
-			errors: [{ grant: "plan-reports", error: expect.objectContaining({ missing: "billing" }) }],
+			errors: [
+				{
+					grant: "plan-reports",
+					message: 'Fact "billing" has not loaded',
+					path: "when",
+					missing: "billing",
+				},
+			],
 		});
 	});
 
@@ -439,6 +446,27 @@ describe("answers for pages", () => {
 		let access = bind({ roles: ["admin"], facts: { flags: { reportsExport: true } } });
 
 		expect(access.decide(CATALOG.reports, {})).toEqual({ export: false });
+	});
+
+	test("decisions are plain data that survive structured cloning", () => {
+		let decision = bind({ roles: ["member"], facts: { actor: ACTOR } }).check(
+			CATALOG.reports.export,
+		);
+
+		expect(structuredClone(decision)).toEqual(decision);
+	});
+
+	test("claims answers a whole catalog", () => {
+		let free = bind({
+			roles: ["member"],
+			facts: { billing: FREE, flags: { reportsExport: true } },
+		});
+
+		expect(free.claims(CATALOG)).toEqual({
+			article: {},
+			reports: { export: false },
+			agent: { connect: false, write: false },
+		});
 	});
 
 	test("claims answers only the claims of a group", () => {
