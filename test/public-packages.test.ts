@@ -1,7 +1,7 @@
 /**
  * Repo-wide guard that every package without `private: true` is ready to publish: it has a
  * description, README and license, reaches no private package through its dependencies, and
- * its root README row carries the ✅ (while private rows carry none).
+ * has a row in the root README package table.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,19 +18,18 @@ import { packageFromManifest } from "../scripts/release/workspace.js";
 
 import type { PackageFacts } from "./public-packages.js";
 
-import { publicPackageProblems, readmeMarkProblems } from "./public-packages.js";
+import { publicPackageProblems, readmeRowProblems } from "./public-packages.js";
 
 /** Repo root, resolved from this file so the scan targets the same tree from any cwd. */
 const ROOT = join(import.meta.dirname, "..");
 
-/** A README package table with the untitled mark column, as the root README lays it out. */
+/** A README package table as the root README lays it out. */
 const README = [
 	"## Packages",
 	"",
-	"| Package | Description |    |",
-	"| --- | --- | -- |",
-	"| [types](packages/types) | Shared TypeScript types | ✅ |",
-	"| [internal](packages/internal) | Kept private |    |",
+	"| Package | Description |",
+	"| --- | --- |",
+	"| [types](packages/types) | Shared TypeScript types |",
 	"| [blog](apps/blog) | An app row, which the scanner ignores | https://example.com |",
 	"",
 ].join("\n");
@@ -113,36 +112,18 @@ describe("public packages are ready to publish", () => {
 			]);
 		});
 
-		test("accepts a README whose marks agree with the manifests", () => {
+		test("accepts a README listing every public package and ignores private ones", () => {
 			let all = [facts("types"), facts("internal", { isPrivate: true })];
 
-			expect(readmeMarkProblems(README, all)).toEqual([]);
-		});
-
-		test("reports a mark that disagrees with the manifest in either direction", () => {
-			let all = [facts("types", { isPrivate: true }), facts("internal")];
-
-			expect(readmeMarkProblems(README, all)).toEqual([
-				"@sdxc/internal is public but its README row has no ✅",
-				"@sdxc/types is private but its README row has a ✅",
-			]);
+			expect(readmeRowProblems(README, all)).toEqual([]);
 		});
 
 		test("reports a public package with no row at all", () => {
-			let all = [facts("types"), facts("internal", { isPrivate: true }), facts("xml")];
+			let all = [facts("types"), facts("xml")];
 
-			expect(readmeMarkProblems(README, all)).toEqual([
+			expect(readmeRowProblems(README, all)).toEqual([
 				"@sdxc/xml is public but has no row in the README package table",
 			]);
-		});
-
-		test("reads a table without the mark column as marking nothing", () => {
-			let readme = "| [types](packages/types) | Shared TypeScript types |\n";
-
-			expect(readmeMarkProblems(readme, [facts("types")])).toEqual([
-				"@sdxc/types is public but its README row has no ✅",
-			]);
-			expect(readmeMarkProblems(readme, [facts("types", { isPrivate: true })])).toEqual([]);
 		});
 	});
 
@@ -156,12 +137,12 @@ describe("public packages are ready to publish", () => {
 		).toEqual([]);
 	});
 
-	test("the README package table marks exactly the public packages", () => {
+	test("the README package table lists every public package", () => {
 		let readme = readFileSync(join(ROOT, "README.md"), "utf8");
 
 		expect(
-			readmeMarkProblems(readme, repoFacts()),
-			"put ✅ in the last cell of every public package's row and leave private rows empty",
+			readmeRowProblems(readme, repoFacts()),
+			"add a row for the package to the root README package table",
 		).toEqual([]);
 	});
 });

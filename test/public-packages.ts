@@ -1,8 +1,8 @@
 /**
  * Scanners behind the public-package guard. A package that drops `private: true` has to ship
  * the metadata npm and its consumers expect, may only depend on other public packages, and
- * carries the ✅ that tells README readers it is published. Pure functions over facts read
- * once, so a failure names the exact package and the exact gap.
+ * gets a row in the root README package table. Pure functions over facts read once, so a
+ * failure names the exact package and the exact gap.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -21,16 +21,8 @@ export interface PackageFacts {
 	dependencies: string[];
 }
 
-/** The mark a published package's README row carries in its last cell. */
-const PUBLISHED_MARK = "✅";
-
-/**
- * A row of the root README package table: the link cell, the description, and an optional
- * last cell holding the mark. The last group is optional so a table that has not gained the
- * column yet still parses, with every row reading as unmarked.
- */
-const PACKAGE_ROW =
-	/^\|\s*\[(?<label>[^\]]+)\]\(packages\/(?<dir>[^)]+)\)\s*\|(?<description>[^|]*)\|(?:(?<mark>[^|]*)\|)?\s*$/;
+/** A row of the root README package table, captured by the package directory it links. */
+const PACKAGE_ROW = /^\|\s*\[[^\]]+\]\(packages\/(?<dir>[^)]+)\)\s*\|/;
 
 /**
  * One line per gap in a public package: a missing `description`, `README.md` or `LICENSE.md`,
@@ -49,30 +41,15 @@ export function publicPackageProblems(facts: PackageFacts[]): string[] {
 	return problems.sort();
 }
 
-/**
- * One line per README row whose mark disagrees with the package's visibility, plus one per
- * public package with no row at all. Rows for directories outside `facts` are left alone.
- */
-export function readmeMarkProblems(readme: string, facts: PackageFacts[]): string[] {
-	let problems: string[] = [];
-	let byDir = new Map(facts.map((fact) => [fact.dir, fact]));
-	let seen = new Set<string>();
+/** One line per public package with no row in the README package table, sorted. */
+export function readmeRowProblems(readme: string, facts: PackageFacts[]): string[] {
+	let listed = new Set<string>();
 	for (let line of readme.split("\n")) {
-		let groups = PACKAGE_ROW.exec(line)?.groups;
-		let fact = groups?.dir === undefined ? undefined : byDir.get(groups.dir);
-		if (fact === undefined) continue;
-		seen.add(fact.dir);
-		let marked = (groups?.mark ?? "").trim() === PUBLISHED_MARK;
-		if (marked && fact.isPrivate) {
-			problems.push(`${fact.name} is private but its README row has a ${PUBLISHED_MARK}`);
-		}
-		if (!marked && !fact.isPrivate) {
-			problems.push(`${fact.name} is public but its README row has no ${PUBLISHED_MARK}`);
-		}
+		let dir = PACKAGE_ROW.exec(line)?.groups?.dir;
+		if (dir !== undefined) listed.add(dir);
 	}
-	for (let fact of facts) {
-		if (fact.isPrivate || seen.has(fact.dir)) continue;
-		problems.push(`${fact.name} is public but has no row in the README package table`);
-	}
-	return problems.sort();
+	return facts
+		.filter((fact) => !fact.isPrivate && !listed.has(fact.dir))
+		.map((fact) => `${fact.name} is public but has no row in the README package table`)
+		.sort();
 }
