@@ -1,37 +1,27 @@
 /**
- * Vite build configuration for the demo app. Registers the Cloudflare plugin so the worker
- * runs in the SSR environment, and declares the client bundle entry with stable asset
- * file-naming, keeping the entry ready for an island the talk might add live.
+ * Vite build configuration for the demo app. The Cloudflare plugin runs the worker in the
+ * SSR environment and serves dev requests, while the Remix plugin builds the client entry
+ * and writes the asset manifest the document resolves its hashed files through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fileURLToPath } from "node:url";
-
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { remix } from "@pitlane/vite-plugin-remix";
 import { defineConfig } from "vite";
-
-const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
 
 export default defineConfig({
 	server: { port: 3008 },
 
 	resolve: { tsconfigPaths: true },
 
-	environments: {
-		client: {
-			build: {
-				rollupOptions: {
-					input: { clientEntry: clientEntryPath },
-					output: {
-						entryFileNames: "assets/[name].js",
-						chunkFileNames: "assets/[name]-[hash].js",
-					},
-				},
-			},
-		},
-	},
-
-	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
+	plugins: [
+		remix({
+			clientEntry: "bootstrap/browser.ts",
+			serverEntry: "bootstrap/worker.ts",
+			serverHandler: false,
+		}),
+		cloudflare({ viteEnvironment: { name: "ssr" } }),
+	],
 });

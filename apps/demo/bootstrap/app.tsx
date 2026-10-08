@@ -31,9 +31,11 @@ import position from "~/app/http/controllers/position";
 import database from "~/app/http/middleware/database";
 import jobs from "~/app/http/middleware/jobs";
 import callerBudget from "~/app/http/middleware/rate-limit";
+import { documentAssets } from "~/app/lib/assets";
 import { captchaProvider } from "~/app/lib/captcha";
 import { openDatabase } from "~/app/lib/database";
 import { FALLBACK_LANGUAGE, resources, SUPPORTED_LANGUAGES } from "~/app/lib/i18n";
+import { DocumentAssets } from "~/resources/layouts/document";
 import { isFrameRequest } from "~/routes/frames";
 import routes from "~/routes/web";
 
@@ -106,11 +108,12 @@ export default function application(
  * the markup it is and the doctype belongs to whichever response opened the document.
  */
 function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
+	return async function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 
-		let stream = renderToStream(node);
+		let assets = await documentAssets();
+		let stream = renderToStream(<DocumentAssets value={assets}>{node}</DocumentAssets>);
 
 		if (isFrameRequest(ctx.request)) return new Response(stream, { ...init, headers });
 

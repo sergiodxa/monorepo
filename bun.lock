@@ -181,6 +181,7 @@
     "apps/demo": {
       "name": "@apps/demo",
       "dependencies": {
+        "@pitlane/assets": "0.1.0",
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
@@ -205,6 +206,7 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+        "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/messageformat": "workspace:*",
         "@sdxc/spec": "workspace:*",
@@ -1972,6 +1974,14 @@
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.77.0", "", { "os": "win32", "cpu": "x64" }, "sha512-+teyvPDZ2RjUvo+SuCqS/UhaJl1QtdW5fWT5NJTV61V5MIuIS90Db9LixmtEGvXixyttiK62P96MSu3UlpviBw=="],
 
     "@oxlint/plugins": ["@oxlint/plugins@1.73.0", "", {}, "sha512-OhgMQeMmZA0dcFcX4/priaJZWdFECxiClgq6mRX6aatZEcV9PbKC3P3/v8U1hVjviT1i5U+vR8lAtBV6m4FXAA=="],
+
+    "@pitlane/assets": ["@pitlane/assets@0.1.0", "", { "dependencies": { "magic-string": "^0.30.21" }, "peerDependencies": { "vite": ">=8.1.0" }, "optionalPeers": ["vite"] }, "sha512-4eXUkhK6eSLLH+LmcWB+GoAMy1AOeb+I1YhtpDrsDIerEH+FI93Yfkj2gQBdawNxpsLAOK/1BH7OhIOab1hLuA=="],
+
+    "@pitlane/crawler": ["@pitlane/crawler@0.3.0", "", { "peerDependencies": { "remix": "^3.0.0" } }, "sha512-dDrNjGmbvEEXfdi9H0+Ki4SSpFEr5oG1/uUntoVUeiQXOO2ooNmzeFDQCi6uc/RHWvvCwjIJ96mMAaLHsoVZyQ=="],
+
+    "@pitlane/vite-plugin-fetch-server": ["@pitlane/vite-plugin-fetch-server@0.1.0", "", { "dependencies": { "@remix-run/node-fetch-server": "^1.0.0" }, "peerDependencies": { "vite": ">=8.1.0" } }, "sha512-NckJEBc1ECO45ddDSJc12LIPsbuKd1629hA/x3egppG4rKiU7TdfDhnIWw2bDi+36DYMeo8UFGBBEe7THY6o6Q=="],
+
+    "@pitlane/vite-plugin-remix": ["@pitlane/vite-plugin-remix@0.8.0", "", { "dependencies": { "@pitlane/assets": "^0.1.0", "@pitlane/crawler": "^0.3.0", "@pitlane/vite-plugin-fetch-server": "^0.1.0", "magic-string": "^0.30.21" }, "peerDependencies": { "remix": "^3.0.0", "vite": ">=8.1.0" } }, "sha512-xblDN9btIaPAb7JdrUfW4YzqIUQ37raE7vQWzcx5NuTqWLJgBTAlpU3wud4XrCWBRMb6m5Cq/sn5BK0Jx1+33w=="],
 
     "@polka/url": ["@polka/url@1.0.0-next.29", "", {}, "sha512-wwQAWhWSuHaag8c4q/KN/vCoeOJYshAIvMQwD4GpSb3OiZklFfvAgmj0VCBBImRpuF/aFgIRzllXlVX93Jevww=="],
 

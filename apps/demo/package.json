@@ -15,6 +15,7 @@
 		"spec": "spec run spec --allow-config"
 	},
 	"dependencies": {
+		"@pitlane/assets": "0.1.0",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/captcha": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
@@ -39,6 +40,7 @@
 	},
 	"devDependencies": {
 		"@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
 		"@sdxc/spec": "workspace:*",

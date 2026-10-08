@@ -35,4 +35,5 @@ shortest correct version of a thing wins over the clever one.
 | Data access                  | `app/data/posting.ts`      |
 | In-memory adapters           | `app/lib/`                 |
 | Palette the theme derives    | `resources/css/colors.css` |
+| Built asset URLs (manifest)  | `app/lib/assets.ts`        |
 | Router-level tests           | `app/lib/test/router.ts`   |

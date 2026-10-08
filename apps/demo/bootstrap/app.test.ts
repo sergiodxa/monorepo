@@ -15,6 +15,7 @@ import Job from "~/app/data/posting";
 import { cache, LISTING_KEY } from "~/app/lib/cache";
 import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
 import { outbox } from "~/app/lib/mailer";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
 import { createTestDatabase, fetchApp } from "~/app/lib/test/router";
 
 /**
@@ -24,9 +25,6 @@ import { createTestDatabase, fetchApp } from "~/app/lib/test/router";
  */
 const TURNSTILE_HOST = "challenges.cloudflare.com";
 
-/** What the board's own `<script>` points at, which is the client entry and nothing else. */
-const CLIENT_ENTRY_SRC = "/bootstrap/browser.ts";
-
 /** Every opening `<script>` tag in a rendered document, in source order. */
 function scriptTags(html: string): string[] {
 	return [...html.matchAll(/<script\b[^>]*>/g)].map((match) => match[0]);
@@ -34,12 +32,16 @@ function scriptTags(html: string): string[] {
 
 /**
  * The script tags a document asks the browser to run, which is what "shipping script"
- * means. A `application/json` block is the hydration record the island reads and runs
- * nothing, and the captcha's widget is served by the provider rather than by the board.
+ * means. A `application/json` block is the hydration record the island reads and an import
+ * map tells module URLs apart, so neither runs anything; the captcha's widget is served by
+ * the provider rather than by the board.
  */
 function executableScripts(html: string): string[] {
 	return scriptTags(html).filter(
-		(tag) => !tag.includes("application/json") && !tag.includes(TURNSTILE_HOST),
+		(tag) =>
+			!tag.includes("application/json") &&
+			!tag.includes("importmap") &&
+			!tag.includes(TURNSTILE_HOST),
 	);
 }
 
@@ -207,9 +209,22 @@ test("ships the client entry on the board and no script anywhere else", async ()
 	let ownScripts = executableScripts(board);
 
 	expect(ownScripts).toHaveLength(1);
-	expect(ownScripts[0]).toContain(CLIENT_ENTRY_SRC);
+	expect(ownScripts[0]).toContain(CLIENT_ENTRY_HREF);
 
 	expect(executableScripts(position)).toEqual([]);
 	expect(scriptTags(position)).toEqual([]);
 	expect(scriptTags(outbox)).toEqual([]);
+});
+
+/**
+ * The stylesheets are whatever the build emitted for the document's imports, so every page,
+ * with or without an island, links the file the asset manifest names for them.
+ */
+test("links the stylesheet the asset manifest names on every page", async () => {
+	let posting = await publishMarkdownPosting();
+
+	for (let path of ["/", `/positions/${posting.id}`, "/outbox"]) {
+		let html = await (await fetchApp(db, path)).text();
+		expect(html).toContain(`<link rel="stylesheet" href="${STYLESHEET_HREF}"`);
+	}
 });

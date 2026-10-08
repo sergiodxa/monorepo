@@ -1,11 +1,7 @@
 /**
  * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
- * page title, and the three stylesheets the board ships — the reset, the palette the
- * semantic tokens derive from, and the theme that derives them. Every page composes into
- * it, so a page decides only its own content.
- *
- * The client entry is linked by the pages that carry an island and by no others, so a page
- * the browser drives on its own downloads nothing to be told so.
+ * page title, and the three stylesheets the board ships, imported below in cascade order.
+ * The client entry is linked only by pages that carry an island.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,10 +13,13 @@ import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs, minBs, p } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/component/server";
 
-import colorStyles from "~/resources/css/colors.css?url";
+import type { DocumentAssets as Assets } from "~/app/lib/assets";
+
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
 
 /**
  * Class the theme layer reads to follow `prefers-color-scheme`. The board offers no theme
@@ -29,10 +28,13 @@ import colorStyles from "~/resources/css/colors.css?url";
 const THEME_CLASS = "system";
 
 /**
- * The dev server serves the entry from source while the build emits it under a pinned name,
- * so the tag resolves without reading a manifest at render time.
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
  */
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 namespace DocumentLayout {
 	export interface Props {
@@ -54,6 +56,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { children, hydrates = false, locale, title } = handle.props;
+		let { script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html lang={locale} class={THEME_CLASS} mix={[colorScheme("light dark")]}>
@@ -65,9 +68,17 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						data-rmx-key="viewport"
 					/>
 					<title data-rmx-key="title">{title}</title>
-					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-colors" />
-					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
+					))}
+					{hydrates ? (
+						<>
+							<ImportMap value={script.importMap} />
+							{script.preloads.map((href) => (
+								<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />
+							))}
+						</>
+					) : null}
 				</head>
 				<body
 					mix={[
@@ -79,7 +90,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					]}
 				>
 					<main mix={[vstack({ gap: 8 }), is("100%"), maxIs("48rem"), p(6)]}>{children}</main>
-					{hydrates ? <script type="module" async src={CLIENT_ENTRY_SRC}></script> : null}
+					{hydrates ? <script type="module" src={script.href}></script> : null}
 				</body>
 			</html>
 		);

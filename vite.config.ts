@@ -283,11 +283,17 @@ export default defineConfig({
 				/**
 				 * The talk's demo board. Rooted at the app for its `~/*` aliases, and given the
 				 * Cloudflare stub because `cloudflare:workers` supplies the `DB` binding and the
-				 * Turnstile keys the captcha provider chooses by.
+				 * Turnstile keys the captcha provider chooses by. The asset manifest only a dev
+				 * server or build writes comes from the app's test fixture.
 				 */
 				root: "apps/demo",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/demo/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "demo",
 					include: ["**/*.test.ts?(x)"],
