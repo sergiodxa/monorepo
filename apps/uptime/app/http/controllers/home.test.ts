@@ -30,6 +30,7 @@ import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/app/li
 import { findClaimViolations } from "~/app/lib/public-claims";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/lib/test/honeypot";
 import routes from "~/routes/web";
 
@@ -47,7 +48,7 @@ let { default: home } = await import("./home");
 /** Renders through `renderToString`, sufficient since this page emits a plain node tree. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = await renderToString(await withDocumentAssets(node));
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });

@@ -65,15 +65,15 @@ describe("StepperField", () => {
 	});
 
 	/**
-	 * `bootstrap/browser.ts` resolves a client entry by globbing `../resources/**`
+	 * `bootstrap/browser.ts` resolves a client entry by globbing `../resources/components/**`
 	 * and keying on the module URL's pathname, a plain string whose mismatch
 	 * only ever surfaces as a hydration-time throw — the failure this test catches.
 	 */
-	test("names a module the browser bootstrap's resources glob actually covers", async () => {
+	test("names a module the browser bootstrap's islands glob actually covers", async () => {
 		let { h } = await hydrationData(await render());
 		let moduleUrl = Object.values(h)[0]?.moduleUrl ?? "";
 
-		expect(moduleUrl.startsWith("/resources/")).toBe(true);
+		expect(moduleUrl.startsWith("/resources/components/")).toBe(true);
 		expect(existsSync(new URL(`../..${moduleUrl}`, import.meta.url))).toBe(true);
 	});
 

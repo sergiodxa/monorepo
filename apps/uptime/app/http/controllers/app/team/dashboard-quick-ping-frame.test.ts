@@ -38,6 +38,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -122,8 +123,8 @@ async function resolveFrame(
 
 /** Request-scoped HTML renderer mirroring `bootstrap/app.tsx`'s, frame resolution and all. */
 function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, {
+	return async function render(node: RemixNode, init?: ResponseInit) {
+		let stream = renderToStream(await withDocumentAssets(node), {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);

@@ -24,6 +24,8 @@ Rules are written following RFC 2119, which defines the keywords "MUST", "MUST N
 
 - MUST NOT use `as any` anywhere in the code, including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
+- MUST link the document's stylesheets and client entry through `documentAssets()` in `app/lib/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in cascade order. The renderer in `app/http/render.tsx` looks the assets up per render; a test renderer wraps its node with `withDocumentAssets()` from `app/lib/test/document-assets.tsx`.
+- MUST keep the `bootstrap/browser.ts` glob to `resources/components/`, where every `clientEntry()` island lives: a layout or view in the client bundle compiles its stylesheets a second time, and that copy differs from the server's by vendor prefixes, so every page would link both.
 
 ## Reference Files
 
@@ -32,6 +34,7 @@ Reference files are examples of good code that agents can refer to when performi
 - Bootstrap
   - `boostrap/worker.ts` <- Entry point for the Worker, the only place where Cloudflare-specific APIs are used
   - `bootstrap/app.tsx` <- Mapping of routes to controllers and global middleware
+  - `app/lib/assets.ts` <- Built asset URLs (stylesheets, client entry, import map) from the manifest
 - Configuration
   - `routes/web.ts` <- Registry of routes
   - `routes/api-groups.ts` <- Route maps grouping the API leaves each controller handles

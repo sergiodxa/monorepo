@@ -31,6 +31,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import en from "~/app/locales/en";
 import { flowMonitors, memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -65,8 +66,11 @@ let statusPageNewModule = statusPageNewAction as unknown as { handler: RequestHa
  * harmless no-op.
  */
 function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
+	return async function render(node: RemixNode, init?: ResponseInit) {
+		let stream = renderToStream(await withDocumentAssets(node), {
+			frameSrc: ctx.request.url,
+			resolveFrame: async () => "",
+		});
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });

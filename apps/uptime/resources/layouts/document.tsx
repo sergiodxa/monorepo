@@ -1,10 +1,9 @@
 /**
  * Root HTML document layout for the uptime app. It renders the outer html/head/body
  * shell with charset and viewport meta tags, an optional page title, an indexable
- * page's metadata and structured data, the @sdxc/ui design-system stylesheets, and
- * the client entry script, switching between the dev source and the built asset path, and
- * the import map carrying the response's CSP nonce for the client runtime to reuse.
- * It exists as the shared document wrapper every server-rendered page is composed into.
+ * page's metadata and structured data, the stylesheets imported below in cascade order, and
+ * the client entry with the import map its chunks resolve through, both read from the asset
+ * manifest. It is the shared document wrapper every server-rendered page is composed into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,18 +11,21 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { Seo } from "@sdxc/seo";
 import { bg, fg } from "@sdxc/u/color";
 import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
 import { ImportMap } from "remix/component/server";
+
+import type { DocumentAssets as Assets } from "~/app/lib/assets";
 
 import { SEO } from "~/app/lib/seo";
 import { CspNonce } from "~/resources/components/csp-nonce";
-import colorStyles from "~/resources/css/colors.css?url";
+
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
+import "@sdxc/highlight/styles.css";
 
 /**
  * Raw `@font-face` rule for Mona Sans, declared once so every page's `<head>`
@@ -41,7 +43,14 @@ const fontFaceCss = `
 	}
 `;
 
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+/**
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
+ */
+export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 /**
  * The Cloudflare Web Analytics site token — public by construction, since
@@ -87,23 +96,27 @@ namespace DocumentLayout {
 /**
  * Renders the outer `<html>`/`<head>`/`<body>` shell around `children`. The
  * client entry script loads `async`, so a non-blocking Frame's `<template>`
- * is picked up the moment that chunk of the streamed response arrives. With a
- * nonce, the import map carries it and every map the client runtime appends reuses it.
+ * is picked up the moment that chunk of the streamed response arrives. The import map
+ * precedes every module tag and carries the response's nonce, which every map the client
+ * runtime appends reuses.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	let nonce = handle.context.get(CspNonce)?.nonce;
 
 	return () => {
 		let { title, locale = "en", preload = [], seo, children } = handle.props;
+		let { script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html lang={locale} class="system">
 				<head>
 					<meta charSet="utf-8" />
 					<meta name="viewport" content="width=device-width, initial-scale=1" />
-					{nonce && <ImportMap value={{ imports: {} }} nonce={nonce} />}
+					<ImportMap value={script.importMap} nonce={nonce} />
 					{seo ? <Seo title={title} site={SEO.site} {...seo} /> : title && <title>{title}</title>}
-					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} />
+					{script.preloads.map((href) => (
+						<link key={href} rel="modulepreload" href={href} />
+					))}
 					{preload.map((asset) => (
 						<link
 							key={`${asset.href}-${asset.media ?? ""}`}
@@ -113,15 +126,14 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 							media={asset.media}
 						/>
 					))}
-					<link rel="stylesheet" href={resetStyles} />
-					<link rel="stylesheet" href={colorStyles} />
-					<link rel="stylesheet" href={themeStyles} />
-					<link rel="stylesheet" href={highlightStyles} />
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} />
+					))}
 					<style>{fontFaceCss}</style>
 				</head>
 				<body mix={[m(0), bg("neutral.bg-tint"), fg("neutral.emphasis"), font("mono")]}>
 					{children}
-					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+					<script type="module" async src={script.href}></script>
 					<script
 						type="module"
 						src="https://static.cloudflareinsights.com/beacon.min.js"

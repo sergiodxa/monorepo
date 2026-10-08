@@ -26,6 +26,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { dnsMonitorRecords, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -69,8 +70,8 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 
 /** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
 function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit): Response {
-		let stream = renderToStream(node, { frameSrc: ctx.request.url });
+	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
+		let stream = renderToStream(await withDocumentAssets(node), { frameSrc: ctx.request.url });
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });

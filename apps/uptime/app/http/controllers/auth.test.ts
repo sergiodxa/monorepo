@@ -38,6 +38,7 @@ import { language as languageCookie, returnTo } from "~/app/http/cookies";
 import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -193,7 +194,7 @@ afterAll(() => server.close());
 /** Renders straight through `renderToString`, the whole document these pages produce. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = await renderToString(await withDocumentAssets(node));
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });

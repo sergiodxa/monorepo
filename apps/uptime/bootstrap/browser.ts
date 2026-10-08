@@ -3,7 +3,7 @@
  * module-scoped translator so every independently hydrated island
  * (`Avatar`, `Logo`, `CopyButton`, `RunMonitorButton`, `DocsNav`) can call
  * `intl`/`Trans` without an `IntlProvider` of its own, then runs remix/component's
- * client runtime against the globbed resource and route modules.
+ * client runtime against the globbed island modules.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -63,10 +63,16 @@ let { intl } = createTranslator({
 
 setIntl(intl);
 
+/**
+ * Modules the runtime may hydrate: the islands, which all live in `resources/components/`.
+ * Layouts and views stay out, since bundling them would ship their stylesheets twice, once
+ * with the server's document and once in a chunk no page asks for. Tests reach for the
+ * server application, so they stay out too.
+ */
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+	"!../**/*.test.*",
+	"../resources/components/**/*.{ts,tsx}",
 ]);
 
 run({

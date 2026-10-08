@@ -75,7 +75,12 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 			remoteBindings: false,
 		}),
 	],
-	resolve: { tsconfigPaths: true },
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/lib/test/assets-manifest.ts`,
+		},
+	},
 	test: {
 		name: "uptime-workers",
 		include: ["**/*.workers.test.ts?(x)"],
@@ -229,7 +234,12 @@ export default defineConfig({
 				 */
 				root: "apps/uptime",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "uptime",
 					include: ["**/*.test.ts?(x)"],

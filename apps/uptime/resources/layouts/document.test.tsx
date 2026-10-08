@@ -11,14 +11,18 @@
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
+
 import DocumentLayout from "./document";
 
 /** Renders the shell around a trivial body, which is all these assertions need. */
-function renderDocument() {
+async function renderDocument() {
 	return renderToString(
-		<DocumentLayout title="Test">
-			<p>Body</p>
-		</DocumentLayout>,
+		await withDocumentAssets(
+			<DocumentLayout title="Test">
+				<p>Body</p>
+			</DocumentLayout>,
+		),
 	);
 }
 

@@ -18,6 +18,7 @@ import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import i18n from "~/app/http/middleware/i18n";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 
 import defaultHandler from "./default-handler";
 
@@ -32,7 +33,7 @@ function seedAuth(): Middleware {
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = await renderToString(await withDocumentAssets(node));
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });

@@ -29,6 +29,7 @@ import TrialWatch from "~/app/data/trial-watch";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import routes from "~/routes/web";
 
 import unsubscribe from "./unsubscribe";
@@ -38,7 +39,7 @@ type Db = ReturnType<typeof createTestDatabase>["db"];
 /** Renders through `renderToString`, which suffices for a page built from plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = await renderToString(await withDocumentAssets(node));
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });

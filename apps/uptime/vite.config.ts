@@ -1,42 +1,31 @@
 /**
- * Vite configuration for the uptime app. Wires up the Cloudflare plugin so the
- * project builds and serves on Workers, defines a dedicated client entry from
- * bootstrap/browser.ts, and pins asset output names. It exists to bundle both the
- * SSR worker and the browser client for local dev and deployment.
+ * Vite configuration for the uptime app. The Cloudflare plugin runs the worker in the SSR
+ * environment, while the Remix plugin builds the client entry and writes the asset manifest
+ * the document resolves its hashed files through. Sourcemaps ship with the client bundle, so
+ * they are world-readable: the accepted trade for readable browser stack traces. The server
+ * build emits none, since the asset plugin publishes every file it emits beside the client's.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fileURLToPath } from "node:url";
-
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { remix } from "@pitlane/vite-plugin-remix";
 import { defineConfig } from "vite";
 
-const clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
-
 export default defineConfig({
-	build: { sourcemap: true },
-
 	server: { port: 3000 },
 
 	resolve: { tsconfigPaths: true },
 
-	environments: {
-		client: {
-			build: {
-				rollupOptions: {
-					input: {
-						clientEntry: clientEntryPath,
-					},
-					output: {
-						entryFileNames: "assets/[name].js",
-						chunkFileNames: "assets/[name]-[hash].js",
-					},
-				},
-			},
-		},
-	},
+	environments: { client: { build: { sourcemap: true } } },
 
-	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
+	plugins: [
+		remix({
+			clientEntry: "bootstrap/browser.ts",
+			serverEntry: "bootstrap/worker.ts",
+			serverHandler: false,
+		}),
+		cloudflare({ viteEnvironment: { name: "ssr" } }),
+	],
 });

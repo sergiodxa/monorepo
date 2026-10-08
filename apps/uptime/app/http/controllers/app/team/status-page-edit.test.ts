@@ -35,6 +35,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import en from "~/app/locales/en";
 import {
 	flowMonitors,
@@ -71,8 +72,11 @@ let statusPageEditModule = statusPageEditAction as unknown as { handler: Request
 
 /** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });
+	return async function render(node: RemixNode, init?: ResponseInit) {
+		let stream = renderToStream(await withDocumentAssets(node), {
+			frameSrc: ctx.request.url,
+			resolveFrame: async () => "",
+		});
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });

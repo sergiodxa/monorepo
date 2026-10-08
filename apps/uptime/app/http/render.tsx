@@ -22,7 +22,9 @@ import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 import { renderToStream } from "remix/component/server";
 import { createHtmlResponse } from "remix/response/html";
 
+import { documentAssets } from "~/app/lib/assets";
 import { CspNonce } from "~/resources/components/csp-nonce";
+import { DocumentAssets } from "~/resources/layouts/document";
 
 /** How many redirects a frame's sub-request may follow before it is treated as a loop. */
 const MAX_FRAME_REDIRECTS = 10;
@@ -32,11 +34,18 @@ export function createHtmlRenderer(ctx: RequestContext) {
 	/**
 	 * Streams `node` to an HTML response, logging failures explicitly since a Worker
 	 * discards the default console-based error hook, and prepends `<!DOCTYPE html>`
-	 * via `createHtmlResponse` since JSX cannot express a doctype directly.
+	 * via `createHtmlResponse` since JSX cannot express a doctype directly. The document's
+	 * assets are looked up per render, since a Worker may not await at module scope.
 	 */
-	return function render(node: RemixNode, init?: ResponseInit) {
+	return async function render(node: RemixNode, init?: ResponseInit) {
 		let nonce = ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined;
-		let stream = renderToStream(<CspNonce nonce={nonce}>{node}</CspNonce>, {
+		let assets = await documentAssets();
+		let page = (
+			<CspNonce nonce={nonce}>
+				<DocumentAssets value={assets}>{node}</DocumentAssets>
+			</CspNonce>
+		);
+		let stream = renderToStream(page, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, src, target, context);

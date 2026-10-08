@@ -53,6 +53,7 @@ import {
 	createTestBilling,
 } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { honeypotFields, testHoneypot } from "~/app/lib/test/honeypot";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -122,7 +123,7 @@ let { default: trialCheck } = await import("./index");
 /** Renders through `renderToString`, sufficient for a page that outputs plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(node);
+		let html = await renderToString(await withDocumentAssets(node));
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });

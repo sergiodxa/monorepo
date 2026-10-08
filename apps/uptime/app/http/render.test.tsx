@@ -1,7 +1,8 @@
 /**
  * Tests the request-scoped renderer's response contract: the doctype it prepends ahead of
  * the JSX-rendered markup, which keeps every page in standards mode, and the CSP nonce it
- * hands the document, which must match the one the response's policy names.
+ * hands the document, which must match the one the response's policy names, and the asset
+ * manifest's files it hands the document, which a build renames with every change.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +16,11 @@ import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import { SECURITY_POLICY } from "~/app/http/security-policy";
+import {
+	CHUNK_SPECIFIER,
+	CLIENT_ENTRY_HREF,
+	STYLESHEET_HREF,
+} from "~/app/lib/test/assets-manifest";
 import DocumentLayout from "~/resources/layouts/document";
 
 import { createHtmlRenderer } from "./render";
@@ -85,6 +91,29 @@ describe("createHtmlRenderer with the security policy", () => {
 		expect(policy).toContain("https://static.cloudflareinsights.com");
 		expect(policy).toContain("report-to csp");
 		expect(response.headers.get("Content-Security-Policy")).toBeNull();
+	});
+
+	test("links the stylesheet and client entry the asset manifest names", async () => {
+		let html = await (await renderSecuredDocument()).text();
+
+		expect(html).toContain(`<link rel="stylesheet" href="${STYLESHEET_HREF}"`);
+		expect(html).toContain(`<link rel="modulepreload" href="${CLIENT_ENTRY_HREF}"`);
+		expect(html).toContain(`<script type="module" async src="${CLIENT_ENTRY_HREF}">`);
+		expect(html).not.toContain("/assets/clientEntry.js");
+	});
+
+	test("declares the nonced import map before any module tag", async () => {
+		let html = await (await renderSecuredDocument()).text();
+		let importMap = /<script data-rmx-import-map type="importmap" nonce="[^"]+">([^<]*)</.exec(
+			html,
+		);
+
+		expect(importMap).not.toBeNull();
+		expect(JSON.parse(importMap?.[1] ?? "{}")).toEqual({
+			imports: { [CHUNK_SPECIFIER]: CHUNK_SPECIFIER },
+		});
+		expect(importMap?.index).toBeLessThan(html.indexOf('rel="modulepreload"'));
+		expect(importMap?.index).toBeLessThan(html.indexOf('<script type="module"'));
 	});
 
 	test("sends the headers the policy enforces now", async () => {
