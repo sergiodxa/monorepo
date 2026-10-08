@@ -305,6 +305,7 @@
         "@sdxc/u": "workspace:*",
         "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",
+        "@sdxc/validate": "workspace:*",
         "@sdxc/websub": "workspace:*",
         "@sdxc/well-known": "workspace:*",
         "remix": "3.0.0",

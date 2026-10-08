@@ -33,8 +33,8 @@
 		"@sdxc/ip": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
-		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/lazy-frame": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/mail": "workspace:*",
 		"@sdxc/mcp": "workspace:*",
@@ -52,6 +52,7 @@
 		"@sdxc/u": "workspace:*",
 		"@sdxc/ui": "workspace:*",
 		"@sdxc/uuid": "workspace:*",
+		"@sdxc/validate": "workspace:*",
 		"@sdxc/websub": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
 		"remix": "3.0.0"
