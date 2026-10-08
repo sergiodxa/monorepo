@@ -31,6 +31,8 @@ export interface Grammar {
 	fields: ReadonlyMap<string, AnyOperator>;
 	/** How a reference is spelled, absent when the language has none. */
 	reference?: string;
+	/** Holds for a language whose evaluation fails on a missing, `null` or mistyped operand. */
+	strict: boolean;
 	schema: Schema<unknown, Node>;
 }
 
@@ -42,6 +44,7 @@ export function createGrammar(
 	builtins: readonly BuiltinName[],
 	operators: readonly AnyOperator[],
 	reference: string | undefined,
+	strict: boolean,
 ): Grammar {
 	let kept = new Set<string>(builtins);
 	let structural = new Set<StructuralName | "always">();
@@ -53,7 +56,9 @@ export function createGrammar(
 	for (let operator of operators) fields.set(operator.op, operator);
 
 	let known: Omit<Grammar, "schema"> =
-		reference === undefined ? { structural, fields } : { structural, fields, reference };
+		reference === undefined
+			? { structural, fields, strict }
+			: { structural, fields, reference, strict };
 	return { ...known, schema: nodeSchema(known) };
 }
 

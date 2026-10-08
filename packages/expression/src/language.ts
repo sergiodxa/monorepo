@@ -1,7 +1,7 @@
 /**
  * A dialect of the expression language, defined once: the built-ins it keeps,
- * the operators it adds and how it spells a reference. The language carries
- * the schema, compile, evaluate, parse and stringify typed to that dialect.
+ * the operators it adds, how it spells a reference and whether it is strict.
+ * The language carries every step typed to that dialect.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +9,8 @@
 
 import type { Result } from "@sdxc/result";
 import type { Schema } from "remix/data-schema";
+
+import { failure, success } from "@sdxc/result";
 
 import type { BuiltinName } from "./builtins.js";
 import type { CompileOptions, ReferenceCache } from "./compile.js";
@@ -27,6 +29,7 @@ import { compile } from "./compile.js";
 import { evaluate } from "./evaluate.js";
 import { createGrammar } from "./grammar.js";
 import { KEYWORDS, parse } from "./parse.js";
+import { paths } from "./paths.js";
 import { stringify } from "./stringify.js";
 
 /**
@@ -35,11 +38,13 @@ import { stringify } from "./stringify.js";
  * @template B The built-ins it keeps.
  * @template R How it spells a reference.
  * @template O The operators it adds.
+ * @template S Whether it is strict.
  */
 export interface LanguageOptions<
 	B extends BuiltinName,
 	R extends string,
 	O extends readonly AnyOperator[],
+	S extends boolean = false,
 > {
 	/**
 	 * The built-in operators this language keeps, every one by default. Leaving
@@ -53,6 +58,13 @@ export interface LanguageOptions<
 	reference?: R;
 	/** Field operators declared with `defineOperator`. */
 	operators?: O;
+	/**
+	 * Fails an evaluation, instead of answering `false`, when an operand is
+	 * missing, `null` across two paths, or of the wrong type, so a context that
+	 * lacks what a rule reads refuses. `evaluate` then returns a `Result`.
+	 * @default false
+	 */
+	strict?: S;
 }
 
 /**
@@ -60,8 +72,9 @@ export interface LanguageOptions<
  *
  * @template E The JSON form of its expressions.
  * @template C The compiled form evaluation reads.
+ * @template Outcome What `evaluate` returns: a boolean, or a `Result` in a strict language.
  */
-export interface Language<E, C> {
+export interface Language<E, C, Outcome = boolean> {
 	/** The JSON form's type, read as `typeof language.Expression`; it holds nothing at runtime. */
 	readonly Expression: E;
 	/** The compiled form's type, read as `typeof language.Compiled`; it holds nothing at runtime. */
@@ -78,11 +91,21 @@ export interface Language<E, C> {
 	compile(expression: unknown, options?: CompileOptions): Result<C, ExpressionError>;
 	/**
 	 * Answers whether a compiled expression holds for a context, synchronously.
+	 * A strict language answers a failure naming the missing path or the
+	 * mistyped operands when no boolean holds for every such context.
 	 *
 	 * @param compiled What `compile` returned.
 	 * @param context Any object, read by path: nested records, arrays and `Date` values.
 	 */
-	evaluate(compiled: C, context: object): boolean;
+	evaluate(compiled: C, context: object): Outcome;
+	/**
+	 * Every context path a compiled expression reads, through references, for
+	 * loading only the facts a rule needs.
+	 *
+	 * @param compiled What `compile` returned.
+	 * @example rules.paths(compiled) // Set { "article.authorId", "actor.id" }
+	 */
+	paths(compiled: C): ReadonlySet<string>;
 	/**
 	 * Reads the text form into the JSON form, validated against the schema. A
 	 * failure carries the `line` and `column` the text broke at.
@@ -113,11 +136,17 @@ export function createLanguage<
 	const B extends BuiltinName = BuiltinName,
 	const R extends string = never,
 	const O extends readonly AnyOperator[] = [],
+	const S extends boolean = false,
 >(
-	options: LanguageOptions<B, R, O> = {},
-): Language<ExpressionOf<B, R, NodeOf<O[number]>>, CompiledOf<B, R, CompiledNodeOf<O[number]>>> {
+	options: LanguageOptions<B, R, O, S> = {},
+): Language<
+	ExpressionOf<B, R, NodeOf<O[number]>>,
+	CompiledOf<B, R, CompiledNodeOf<O[number]>>,
+	S extends true ? Result<boolean, ExpressionError> : boolean
+> {
 	type E = ExpressionOf<B, R, NodeOf<O[number]>>;
 	type C = CompiledOf<B, R, CompiledNodeOf<O[number]>>;
+	type Outcome = S extends true ? Result<boolean, ExpressionError> : boolean;
 
 	for (let name of [
 		...(options.operators ?? []).map((operator) => operator.op),
@@ -132,6 +161,7 @@ export function createLanguage<
 		options.builtins ?? BUILTIN_NAMES,
 		options.operators ?? [],
 		options.reference,
+		options.strict === true,
 	);
 	let cache: ReferenceCache = new WeakMap();
 
@@ -143,7 +173,12 @@ export function createLanguage<
 			return compile(grammar, expression, compileOptions, cache) as Result<C, ExpressionError>;
 		},
 		evaluate(compiled, context) {
-			return evaluate(grammar, compiled as Node, context);
+			let answer = evaluate(grammar, compiled as Node, context);
+			if (!grammar.strict) return answer as Outcome;
+			return (typeof answer === "boolean" ? success(answer) : failure(answer)) as Outcome;
+		},
+		paths(compiled) {
+			return paths(grammar, compiled as Node);
 		},
 		parse(text) {
 			return parse(grammar, text) as Result<E, ExpressionError>;

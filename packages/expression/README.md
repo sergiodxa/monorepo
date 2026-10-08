@@ -68,6 +68,28 @@ rules.parse(`intersects(ctx.article.teamIds, ctx.actor.teamIds)`);
 
 A rule that compares two values the caller supplies stays one document for every caller, instead of a copy per caller with its values written in.
 
+### Failing closed with a strict language
+
+```typescript
+import { unwrap } from "@sdxc/result";
+
+let rules = createLanguage({ strict: true, reference: "condition" });
+
+let compiled = unwrap(rules.compile(unwrap(rules.parse(`ctx.article.authorId == ctx.actor.id`))));
+
+rules.evaluate(compiled, { article: { authorId: "u_1" } });
+// Failure: ExpressionError { path: "path", missing: "actor.id", message: 'Context has no "actor.id"' }
+
+rules.evaluate(compiled, { article: { authorId: "u_1" }, actor: { id: "u_1" } });
+// Success: true
+
+rules.paths(compiled); // Set { "article.authorId", "actor.id" }
+```
+
+A lenient language, the default, answers `false` for a leaf whose path is missing, so a targeting rule about a field the caller left out falls through to its default. A strict one fails the leaf instead, and also fails a comparison holding `null` across two paths or operands of the wrong type, such as `1 == true` or `lt` on a string. That is the answer an authorization rule needs: `not ctx.article.authorId == ctx.actor.id` refuses when `actor` is missing, where a lenient language would answer `true`.
+
+`all`, `any` and `not` combine failures in three-valued logic, so swapping operands never changes the answer: `any` is `true` when a member is `true`, a failure when a member failed, `false` otherwise; `all` mirrors it around `false`; `not` keeps a failure a failure. Evaluation still stops at the first deciding member, and `exists(ctx.a) and ctx.a == 1` guards the comparison, since `exists` answers `false` for a missing path.
+
 ### Sharing conditions by name
 
 ```typescript
@@ -132,12 +154,14 @@ Defines a dialect and returns a `Language`. Every option is optional:
 - `builtins`: the built-in operators kept, all of them by default.
 - `reference`: the operator name a reference is written under, as in `{ op: "segment", name: "internal" }`. Without it the dialect has no references.
 - `operators`: field operators made with `defineOperator`. One named like a built-in replaces it.
+- `strict`: fails an evaluation on a missing, `null` or mistyped operand instead of answering `false`. `evaluate` then returns `Result<boolean, ExpressionError>`.
 
 ### `Language`
 
 - `schema`: a Standard Schema for the dialect's JSON form, to validate an expression before storing it.
 - `compile(expression, { references }?)`: validates an expression, runs every operator's compile step and resolves references. Returns `Result<Compiled, ExpressionError>`.
-- `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is any object: nested records, arrays and `Date` values are read by path.
+- `evaluate(compiled, context)`: whether a compiled expression holds for a context. The context is any object: nested records, arrays and `Date` values are read by path. A lenient language returns a `boolean`, a strict one a `Result<boolean, ExpressionError>`.
+- `paths(compiled)`: every context path a compiled expression reads, through references, as a `ReadonlySet<string>`; each `field`, and each `path` a comparison reads.
 - `parse(text)`: reads the text form into the JSON form, validated against the schema. Returns `Result<Expression, ExpressionError>`, the error carrying the `line` and `column` the text broke at.
 - `stringify(expression)`: prints the canonical text, which `parse` reads back to the same JSON.
 - `Expression` and `Compiled`: type-only members; write `typeof language.Expression` for the JSON form's type and `typeof language.Compiled` for the compiled one.
@@ -185,7 +209,7 @@ Declares a field operator. `op` is its name, `args` lists its fields in call ord
 
 ### `ExpressionError`
 
-The failure every step reports. `path` names the failing node in the JSON form, like `of.1.pattern`, and is empty for the root. A `parse` failure also sets `line` and `column`, both 1-based.
+The failure every step reports. `path` names the failing node in the JSON form, like `of.1.pattern`, and is empty for the root. A `parse` failure also sets `line` and `column`, both 1-based. A strict `evaluate` failure sets `missing` to the context path that resolved to nothing, or `mismatch` to the two operand types it refused, like `["string", "null"]`; one inside a reference is reported at the reference node with the inner failure as its `cause`.
 
 ### `read(context, path)`
 

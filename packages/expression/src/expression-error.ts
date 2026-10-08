@@ -1,7 +1,8 @@
 /**
  * The failure value every step of a language reports: a stored expression that
- * does not validate or compile names the node at fault by its path, and text
- * that does not parse names the line and column where it broke.
+ * does not validate or compile names the node at fault by its path, text that
+ * does not parse names the line and column where it broke, and a strict
+ * evaluation names the context path it found missing or the types it refused.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,12 +16,17 @@ export interface ExpressionErrorOptions {
 	line?: number;
 	/** The 1-based column of the text form the parse stopped at. */
 	column?: number;
+	/** The context path a strict evaluation found nothing at, like `actor.id`. */
+	missing?: string;
+	/** The types of the two operands a strict evaluation refused to compare, like `["string", "null"]`. */
+	mismatch?: readonly [string, string];
 	cause?: unknown;
 }
 
 /**
  * An expression a language refused, delivered inside a `Failure`. A compile
- * failure carries `path`; a parse failure carries `line` and `column` as well.
+ * failure carries `path`; a parse failure carries `line` and `column` as well;
+ * a strict evaluation failure carries `missing` or `mismatch`.
  */
 export class ExpressionError extends Error {
 	/** The dotted path of the failing node, empty when it is the root. */
@@ -29,6 +35,13 @@ export class ExpressionError extends Error {
 	readonly line?: number;
 	/** Set on a parse failure: the 1-based column of the text it stopped at. */
 	readonly column?: number;
+	/** Set on a strict evaluation failure: the context path that resolved to nothing. */
+	readonly missing?: string;
+	/**
+	 * Set on a strict evaluation failure: the operand types the operator refused,
+	 * `date`, `array`, `object` or `null` beside the JSON scalar types.
+	 */
+	readonly mismatch?: readonly [string, string];
 
 	/**
 	 * @param message What is wrong, phrased for the person who wrote the expression.
@@ -40,6 +53,8 @@ export class ExpressionError extends Error {
 		this.path = options.path ?? "";
 		if (options.line !== undefined) this.line = options.line;
 		if (options.column !== undefined) this.column = options.column;
+		if (options.missing !== undefined) this.missing = options.missing;
+		if (options.mismatch !== undefined) this.mismatch = options.mismatch;
 	}
 }
 

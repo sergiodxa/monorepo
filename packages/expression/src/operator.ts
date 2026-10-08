@@ -49,7 +49,7 @@ export interface Operator<Node extends AnyFieldNode, Compiled extends AnyFieldNo
 	readonly schema: Schema<unknown, object>;
 	/** Runs once per node when an expression compiles; a failure fails the expression. */
 	compile(node: Node): Result<Compiled, Error>;
-	/** Answers for a value the path resolved to; a missing field answers `false` first. */
+	/** Answers for a value the path resolved to; the language answers a missing field first. */
 	test(value: FieldValue, node: Compiled): boolean;
 }
 
@@ -71,7 +71,7 @@ export interface OperatorDefinition<Op extends string, Fields extends object, Pr
 	 * failure fails the expression at compile time instead of every evaluation.
 	 */
 	compile?: (node: FieldNode<Op, Fields>) => Result<Prepared, Error>;
-	/** Answers for a value that is there; the language answers `false` for a missing one. */
+	/** Answers for a value that is there; the language answers for a missing one. */
 	test: (value: FieldValue, node: FieldNode<Op, Fields>, prepared: Prepared) => boolean;
 }
 
