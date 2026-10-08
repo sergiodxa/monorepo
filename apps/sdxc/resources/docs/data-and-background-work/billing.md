@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 6
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 Charging for an app is mostly bookkeeping around a payment platform: linking your accounts to its
@@ -16,10 +16,11 @@ contract in front of the platform, so the rest of your code reads `Customer`, `S
 
 This guide sells a `pro` plan through a hosted checkout, keeps a local projection of what each
 customer holds in sync from webhooks and a nightly job, and gates a feature on that projection.
-[`@sdxc/jobs`](/api/jobs) runs the nightly job.
+[`@sdxc/jobs`](/api/jobs) runs the nightly job, and [`@sdxc/authz`](/api/authz) folds the
+plan into the same checks as roles and ownership.
 
 ```bash
-npm add @sdxc/billing @sdxc/jobs @sdxc/result @sdxc/http remix
+npm add @sdxc/billing @sdxc/jobs @sdxc/result @sdxc/http remix @sdxc/authz
 ```
 
 ## Configure the provider
@@ -313,6 +314,44 @@ same projection instead of loading it a second time. Without `onDenied` a denied
 `403`; with it, the upsell can be a redirect or a page rendered in place. The reader runs only on
 routes that guard, once per request.
 
+### Gate inside an authorization policy
+
+When the same feature also depends on who is asking, a role that may export or an owner of the
+record, keep the plan in the policy that decides the rest. `@sdxc/authz/facts/billing` binds
+the snapshot as a fact, `{ products, features }`, read through the same `entitlements` reader,
+so the request still reads the projection once:
+
+```typescript {% title="app/authz/policy.ts" %}
+import type { BillingFacts } from "@sdxc/authz/facts/billing";
+
+import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+
+import abilities from "~/app/authz/abilities";
+
+export default definePolicy(abilities, {
+	facts: { billing: fact<BillingFacts>() },
+	roles: { member: [allow("reports.export")] },
+	guards: [
+		deny("reports.export", {
+			id: "plan-reports",
+			when: {
+				op: "not",
+				of: { op: "includes", field: "billing.features", value: "reports" },
+			},
+			reason: "entitlement:reports",
+		}),
+	],
+});
+```
+
+Bind it with `access(policy, { facts: { billing: fromEntitlements() } })`, after the billing
+middleware, and a route guards with `requireAbility(abilities.reports.export)`. `features`
+lists only what the snapshot grants as `true`, and an account with no snapshot binds two empty
+lists, so the guard refuses a free account, an admin's included. A failed read refuses only
+the plan-gated abilities, and the guard's `reason` is what the refusal page reads to offer the
+upgrade. [Decide who can do what](/docs/identity-and-security/authorization) covers the
+policy, the responder and the same check inside a job.
+
 ## Repair what webhooks missed
 
 Deliveries get lost: a deploy mid-delivery, a rotated secret, an outage longer than the
@@ -379,5 +418,7 @@ announced, is one more loop over those rows calling the same `syncEntitlements` 
   nightly job and its trigger.
 - [Feature flags](/docs/data-and-background-work/feature-flags) — gating behavior that is not
   sold.
+- [Decide who can do what](/docs/identity-and-security/authorization) — the plan as one fact
+  among roles, ownership and flags.
 - [`@sdxc/billing`](/api/billing) — every resource group, the error codes, and the conformance
   suite for writing a provider of your own.

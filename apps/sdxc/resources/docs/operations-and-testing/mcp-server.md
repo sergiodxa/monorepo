@@ -5,7 +5,7 @@ section:
     title: Operations & testing
     order: 8
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 An agent that can call your app over the Model Context Protocol can search it, read from it
@@ -16,10 +16,11 @@ in front of the search, and a route that serves it all.
 [`@sdxc/mcp`](/api/mcp) implements the stateless Streamable HTTP revision of MCP, where a call
 is one `POST` answered by one response. That makes the server an ordinary route: tools and
 resources are declared like routes, answered like actions, and run behind the same middleware
-as every page. [`@sdxc/cache`](/api/cache) keeps repeated searches off the database.
+as every page. [`@sdxc/cache`](/api/cache) keeps repeated searches off the database, and
+[`@sdxc/authz`](/api/authz) decides which tools a credential may call.
 
 ```bash
-npm add @sdxc/mcp @sdxc/json-schema @sdxc/cache
+npm add @sdxc/mcp @sdxc/json-schema @sdxc/cache @sdxc/authz
 ```
 
 ## Declare the tools
@@ -275,9 +276,68 @@ middleware; with `log(logger)` in that chain, the
 request's record gains `mcp.method`, `mcp.tool` and `mcp.is_error`, so one filter finds every
 call a model did not get a clean answer to. Authentication, when you add it, is ordinary
 request middleware on this route; it runs for `tools/list` too, which matters because the
-list a caller sees can depend on the credential. To hide a tool from callers without the
-right scope, give its action an `available` predicate, and enforce the scope again in the
-action's `middleware`, since `available` only shapes the list.
+list a caller sees can depend on the credential.
+
+## Scope tools to a credential
+
+Once callers bring a token, a tool's `available` predicate decides whether it exists for them:
+a tool it answers `false` for is absent from `tools/list` and reported as unknown by
+`tools/call`. With an [`@sdxc/authz`](/api/authz) policy, the predicate is an ability. Bind
+the token's holder on the route with `access()` from `@sdxc/authz/middleware/router`, giving
+the token's scope as `within`, a ceiling of roles every check must also pass, and listing the
+claims the predicates read under `load`, since `available` answers synchronously:
+
+```typescript {% title="bootstrap/app.tsx" %}
+access(policy, {
+	roles: (ctx) => [ctx.member.role],
+	within: (ctx) => [`agent:${ctx.token.scope}`],
+	load: [abilities.agent],
+});
+```
+
+That middleware goes on the `routes.mcp` mapping after your token middleware, which publishes
+`ctx.token` and `ctx.member`; `abilities` and `policy` are your catalog and policy, with a role
+named `agent:read` and one named `agent:write`. `@sdxc/authz/mcp` then guards the tool, and
+checks the record it touches once its arguments validate:
+
+```typescript {% title="app/mcp/controllers/close-posting.ts" %}
+import type { InputOf } from "@sdxc/mcp";
+
+import { guard, requireToolAbility } from "@sdxc/authz/mcp";
+import { createTool } from "@sdxc/mcp";
+
+import abilities from "~/app/authz/abilities";
+import Posting from "~/app/data/posting";
+import toolset from "~/app/mcp/tools";
+
+type Input = InputOf<typeof toolset.closePosting>;
+
+export const closePosting = createTool(toolset.closePosting, {
+	...guard(abilities.agent.write),
+	middleware: [
+		requireToolAbility<typeof abilities.posting.close, Input>(
+			abilities.posting.close,
+			{
+				context: async (ctx) => {
+					let posting = await Posting.find(ctx.db, ctx.input.id);
+					return posting ? { posting } : null;
+				},
+				notFound: "No open posting has that id.",
+			},
+		),
+	],
+	handler: async (ctx) => {
+		await Posting.close(ctx.db, ctx.input.id);
+		return "Closed.";
+	},
+});
+```
+
+A read-scoped token never sees `close_posting`, and a write-scoped one still closes only the
+postings its holder may. A posting the holder may not see answers with the `notFound` message,
+as a missing one does, and any other refusal answers as `ForbiddenError`. Cache keys for a
+scoped tool carry the credential, as the cache section above explains. [Decide who can do
+what](/docs/identity-and-security/authorization) writes the policy and the scope roles.
 
 ## Where to go next
 
@@ -287,5 +347,7 @@ action's `middleware`, since `available` only shapes the list.
   cache adapters and their failure codes.
 - [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) explains
   rate limiting in more depth.
+- [Decide who can do what](/docs/identity-and-security/authorization) writes the policy a
+  token's scope is checked against.
 - [`@sdxc/mcp`](/api/mcp) lists where each kind of failure is reported, and the schema subset
   tools accept.

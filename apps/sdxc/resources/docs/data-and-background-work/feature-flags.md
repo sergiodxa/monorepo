@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 5
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 A feature flag lets you ship code that is switched off, turn it on for one team, then for ten
@@ -13,10 +13,11 @@ percent of everyone, and switch it off again without a deploy if it misbehaves. 
 that from two packages. [`@sdxc/flags`](/api/flags) is the evaluation API, following the
 OpenFeature model: a provider resolves flags, a client evaluates them, and nothing on that path
 throws. [`@sdxc/flags-engine`](/api/flags-engine) is a provider you run yourself, with targeting
-rules, percentage splits and a store to read definitions from.
+rules, percentage splits and a store to read definitions from. [`@sdxc/authz`](/api/authz)
+turns a flag into a switch that refuses an ability wherever it is checked.
 
 ```bash
-npm add @sdxc/flags @sdxc/flags-engine
+npm add @sdxc/flags @sdxc/flags-engine @sdxc/authz
 ```
 
 ## Write the definitions
@@ -283,6 +284,57 @@ pattern that does not compile — and the error's `path` names the node, so the 
 it. [Rules your users write](/docs/data-and-background-work/conditions) covers the condition language
 on its own, for rules that are not flags.
 
+## Switch an ability off
+
+A flag that guards a whole ability, such as exporting reports, is checked on a page that hides
+the button, on the route that answers it, in the job that builds the file and in an agent's
+tool. Written as a guard in an [`@sdxc/authz`](/api/authz) policy, it is one rule that all four
+read. Add the flag to the catalog as `reportsExport: flag.boolean("reports-export", true)`,
+declare the catalog as a fact, and refuse while it is off:
+
+```typescript {% title="app/authz/policy.ts" %}
+import { allow, definePolicy, deny, fact } from "@sdxc/authz";
+
+import abilities from "~/app/authz/abilities";
+
+export default definePolicy(abilities, {
+	facts: { flags: fact<{ reportsExport: boolean }>() },
+	roles: { member: [allow("reports.export")] },
+	guards: [
+		deny("reports.export", {
+			id: "reports-switch",
+			when: { op: "eq", field: "flags.reportsExport", value: false },
+			reason: "switched-off",
+		}),
+	],
+});
+```
+
+`fromFlags` from `@sdxc/authz/facts/flags` binds the catalog as that fact, in the policy's
+`access()` middleware after `featureFlags()`:
+
+```typescript {% title="app/http/middleware/access.ts" %}
+import { fromFlags } from "@sdxc/authz/facts/flags";
+import { access } from "@sdxc/authz/middleware/router";
+
+import policy from "~/app/authz/policy";
+import { features } from "~/app/lib/flags";
+
+export const memberAccess = access(policy, {
+	roles: (ctx) => [ctx.membership.role],
+	facts: { flags: fromFlags(features) },
+});
+```
+
+It evaluates through `ctx.flags`, so targeting, the wide-event hook and the request's subject
+apply as they do everywhere else, and it evaluates only the flags some rule reads: a split
+nobody's rule reads records no exposure. The guard tests `== false`, so the ability stays on
+while the flag answers its default; pass `fromFlags(features, { onError: "missing" })` to
+refuse instead when the flag system is down. A guard refuses every role, admins included, and
+its `reason` tells a refusal page that the feature is switched off rather than missing from
+the plan. [Decide who can do what](/docs/identity-and-security/authorization) covers the
+policy, the route guard and the job binding.
+
 ## Test with a pinned flag
 
 A test builds its own instance, so nothing it sets leaks into the next one:
@@ -326,6 +378,8 @@ context)` answers what every flag would serve for a given context, with no store
 
 ## Where to go next
 
+- [Decide who can do what](/docs/identity-and-security/authorization) — flags as guards over
+  the abilities a policy grants.
 - [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
   — where `ctx.flags` sits in the middleware order.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — evaluating flags
