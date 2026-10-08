@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 3
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 The IndieWeb is a set of small protocols that let independent sites talk to each other.
@@ -18,6 +18,12 @@ This guide adds all three to a Remix v3 app. It combines
 [`@sdxc/microformats`](/api/microformats), [`@sdxc/webmention`](/api/webmention) and
 [`@sdxc/micropub`](/api/micropub), with [`@sdxc/jobs`](/api/jobs) running every outbound
 fetch off the request and [`@sdxc/backoff`](/api/backoff) spacing out the retries.
+
+Mastodon and the rest of the fediverse reach your posts through a different protocol,
+ActivityPub, which [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) adds
+beside these. The two meet in one place: a fediverse reply, like or boost reads into the same
+kind, author and content a verified Webmention carries, so both can share the table and the
+moderation queue this guide builds.
 
 ```bash
 npm add remix @sdxc/microformats @sdxc/webmention @sdxc/micropub @sdxc/jobs \
@@ -233,7 +239,8 @@ approved reply renders as it stands (in `remix/component`, through `unsafeHTML`)
 an `mf("h-cite")` so the replies under your post are themselves readable microformats.
 
 Store mentions as pending and show them once you approve them; the endpoint is anonymous, and
-moderation is the one policy the protocol leaves entirely to you.
+moderation is the one policy the protocol leaves entirely to you. Responses that arrive over
+ActivityPub can go through `saveMention` too, since their summary carries the same fields.
 
 ## Send Webmentions
 
@@ -466,6 +473,8 @@ editor round-trips it.
   `outboundLinks` reads comes from `toHTML`.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — the other half
   of being followed from someone else's site.
+- [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) — followers,
+  replies and likes from Mastodon and the rest of the fediverse.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — the dispatcher,
   retries and the queue behind every job here.
 - [`@sdxc/microformats`](/api/microformats) — the authorship algorithm, representative

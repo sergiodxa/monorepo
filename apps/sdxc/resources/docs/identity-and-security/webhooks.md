@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 3
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 A webhook endpoint is a public URL that accepts `POST`s from anyone, so its signature check is
@@ -325,4 +325,6 @@ an unreadable secret fails verification, so this receiver fails closed too.
   public surface an app exposes.
 - [Test Workers apps](/docs/operations-and-testing/testing) — run the receiver and its replay
   store against real KV bindings, with deliveries signed by `Webhooks.sign`.
+- [Sign and verify HTTP requests](/docs/identity-and-security/http-message-signatures) — for a
+  sender that signs with an HTTP message signature and a key pair, rather than a shared secret.
 - [`@sdxc/webhooks`](/api/webhooks) — every error class and the replay store contract.

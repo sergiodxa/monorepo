@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 11
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 The moment your app fetches a URL someone typed, a calendar to subscribe to, an avatar to copy,
@@ -375,6 +375,11 @@ hop checks, deadline and caps apply without your code calling it:
   `timeoutMs` and `maxRedirects`, and refuses literals.
 - [`@sdxc/websub`](/api/websub) caps a hub's delivery with `maxBytes` before it compares the
   signature.
+- [`@sdxc/activitypub`](/api/activitypub) fetches every remote actor, key and post through it
+  with each hop's host resolved, within one megabyte and ten seconds by default, and accepts a
+  document only when its `id` has the origin the chain ended at. Deliveries go to an inbox that
+  passed the same checks, with `redirect: "manual"`;
+  [Federate a site with ActivityPub](/docs/content-and-feeds/activitypub) builds on both.
 
 Each keeps its own error type and maps from `OutboundError` at its boundary, the way
 `downloadCalendar` does.
