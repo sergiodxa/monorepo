@@ -12,6 +12,7 @@
 
 import type { I18n } from "@sdxc/i18n";
 
+import { withoutTracking } from "@sdxc/attribution/parameters";
 import { formatDate, formatParts } from "@sdxc/dates";
 import { calendarDayAt } from "@sdxc/dates/zone";
 
@@ -19,7 +20,6 @@ import type { UserStore } from "~/database/user-do";
 import type { TagChips } from "~/resources/views/tag-chips";
 import type { Timeline } from "~/resources/views/timeline";
 
-import { withoutTrackingParameters } from "~/app/lib/tracking-parameters";
 import routes from "~/routes/web";
 
 const MINUTE = 60_000;
@@ -121,7 +121,7 @@ function linkable(stored: string | null, keepParameters: boolean): string | null
 	let url = new URL(stored);
 	if (url.protocol !== "http:" && url.protocol !== "https:") return null;
 
-	return (keepParameters ? url : withoutTrackingParameters(url)).toString();
+	return (keepParameters ? url : withoutTracking(url)).toString();
 }
 
 /**

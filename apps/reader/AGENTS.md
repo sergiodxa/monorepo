@@ -104,7 +104,7 @@ indicate requirement levels.
   - `app/http/security-policy.ts` <- The policy every response is read under
 - Content safety
   - `app/lib/media.ts` <- Signing, retrieving and rewriting a remote image
-  - `app/lib/tracking-parameters.ts` <- What an outbound link is stripped of at render
+  - `app/http/controllers/timeline-entries.ts` <- What an outbound link is stripped of at render, through `@sdxc/attribution/parameters`
 - Feature Flags
   - `app/lib/flags.ts` <- The definitions, the typed catalog and the instance every surface evaluates through
 - Agents

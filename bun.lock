@@ -252,6 +252,7 @@
     "apps/reader": {
       "name": "@apps/reader",
       "dependencies": {
+        "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
