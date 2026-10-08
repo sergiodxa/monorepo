@@ -30,6 +30,8 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"outbound",
 			"user-agent",
 			"structured-fields",
+			"digest-fields",
+			"http-signatures",
 			"server-timing",
 			"catch-response-middleware",
 			"trailing-slash-middleware",
@@ -42,7 +44,17 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Identity & security",
-		packages: ["auth", "jwt", "passkey", "saml", "scim", "crypto", "security-headers", "webhooks"],
+		packages: [
+			"auth",
+			"authz",
+			"jwt",
+			"passkey",
+			"saml",
+			"scim",
+			"crypto",
+			"security-headers",
+			"webhooks",
+		],
 	},
 	{
 		title: "Forms & abuse",
@@ -66,6 +78,8 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"micropub",
 			"webmention",
 			"websub",
+			"activitypub",
+			"newsletter",
 		],
 	},
 	{
@@ -80,7 +94,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Interface",
-		packages: ["ui", "u", "icons", "i18n", "messageformat", "seo", "highlight", "lazy-route"],
+		packages: ["ui", "u", "icons", "i18n", "messageformat", "seo", "highlight", "lazy-route", "qr"],
 	},
 	{
 		title: "Operations",
@@ -94,7 +108,9 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"flags",
 			"flags-engine",
 			"billing",
+			"attribution",
 			"mail",
+			"messaging",
 			"hostname",
 			"doh",
 			"mcp",
