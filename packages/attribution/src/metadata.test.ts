@@ -10,7 +10,7 @@ import { describe, expect, test } from "vitest";
 
 import type { Touch } from "./types.js";
 
-import { toMetadata, toUtmParams } from "./metadata.js";
+import { toCampaign, toMetadata, toUtmParams } from "./metadata.js";
 import { readTouch } from "./touch.js";
 
 const FIRST = readTouch(
@@ -101,5 +101,53 @@ describe(toUtmParams, () => {
 	test("answers {} for no touch or a touch without a campaign", () => {
 		expect(toUtmParams(null)).toEqual({});
 		expect(toUtmParams(LAST)).toEqual({});
+	});
+});
+
+describe(toCampaign, () => {
+	test("answers undefined for no touch", () => {
+		expect(toCampaign(null, "https://example.com")).toBeUndefined();
+	});
+
+	test("answers only the landing page for a touch with no campaign or referrer", () => {
+		let touch = readTouch(new URL("https://example.com/docs"), { referrer: null });
+		expect(toCampaign(touch, "https://example.com")).toEqual({
+			landingPage: "https://example.com/docs",
+		});
+	});
+
+	test("flattens a full touch and leaves out the newer utm fields", () => {
+		let campaign = toCampaign(fullTouch(), new URL("https://example.com/somewhere?x=1"));
+		let long = "x".repeat(64);
+		expect(campaign).toEqual({
+			source: long,
+			medium: long,
+			campaign: long,
+			term: long,
+			content: long,
+			referrer: "example.org",
+			landingPage: `https://example.com/${"p".repeat(255)}`,
+		});
+		expect(Object.keys(campaign ?? {})).not.toContain("id");
+	});
+
+	test("resolves the landing path against a URL or a string, without the query string", () => {
+		expect(toCampaign(FIRST, new URL("https://example.com/other?a=1"))?.landingPage).toBe(
+			"https://example.com/pricing",
+		);
+		expect(toCampaign(FIRST, "https://shop.example.com")?.landingPage).toBe(
+			"https://shop.example.com/pricing",
+		);
+	});
+
+	test("leaves absent fields out of the object", () => {
+		let campaign = toCampaign(FIRST, "https://example.com");
+		expect(campaign).toEqual({
+			source: "newsletter",
+			medium: "email",
+			campaign: "launch-week",
+			landingPage: "https://example.com/pricing",
+		});
+		expect("referrer" in (campaign ?? {})).toBe(false);
 	});
 });

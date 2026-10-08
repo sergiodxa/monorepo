@@ -65,6 +65,22 @@ export type Channel =
 	| "referral"
 	| "other";
 
+/**
+ * A touch as flat campaign fields: the five classic `utm_*` values, the referring hostname and
+ * the absolute landing URL, each present only when the touch carried it.
+ */
+export interface Campaign {
+	source?: string;
+	medium?: string;
+	campaign?: string;
+	term?: string;
+	content?: string;
+	/** The referring site's hostname. */
+	referrer?: string;
+	/** The absolute URL of the page the visitor landed on, without its query string. */
+	landingPage?: string;
+}
+
 /** What the current request knows about how this visitor arrived. */
 export interface Attribution {
 	/** This request's own touch, `null` when the request is not a page navigation. */

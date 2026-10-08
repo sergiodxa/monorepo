@@ -115,6 +115,17 @@ The first and last touch as snake_case keys prefixed `first_` and `last_`. Only 
 
 The touch's campaign fields under their `utm_*` names, for a provider that stores them. A `null` touch gives `{}`.
 
+### `toCampaign(touch: Touch | null, url: URL | string): Campaign | undefined`
+
+The touch as flat campaign fields: `source`, `medium`, `campaign`, `term` and `content` from its UTM values, `referrer` as the referring hostname, and `landingPage` as the landing path resolved against `url` into an absolute URL. Fields the touch lacks are left out, so the result spreads into another object, and a `null` touch gives `undefined`.
+
+```typescript
+import { toCampaign } from "@sdxc/attribution";
+
+toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url);
+// { source: "newsletter", medium: "email", campaign: "launch-week", landingPage: "https://example.com/pricing" }
+```
+
 ### `attribution(options: AttributionOptions): Middleware`
 
 From `@sdxc/attribution/middleware`. Publishes `ctx.attribution` on every request. Writes happen only on a page navigation: a `GET` with `Sec-Fetch-Dest: document`, or, from a browser that omits that header, an `Accept` that includes `text/html`. The first touch is set when there is none or the stored one is older than `window`. The last touch is set whenever the current one is not `direct`. A direct revisit, a bot (`isBot` from [@sdxc/user-agent](https://www.npmjs.com/package/@sdxc/user-agent)), a form submission and a `fetch` write nothing. A stored record that fails validation, such as a forged cookie, counts as no record.
@@ -162,6 +173,10 @@ The referrer's `host` and its `kind`.
 #### `Channel`
 
 The ten channels in the table above.
+
+#### `Campaign`
+
+What `toCampaign` returns: optional `source`, `medium`, `campaign`, `term`, `content`, `referrer` and `landingPage` strings.
 
 #### `Attribution`
 

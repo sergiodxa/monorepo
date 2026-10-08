@@ -11,6 +11,6 @@ export type { ClassifyReferrerOptions } from "./referrer.js";
 export type { ReadTouchOptions } from "./touch.js";
 export type { Attribution, Channel, Click, Referrer, ReferrerKind, Touch, Utm } from "./types.js";
 
-export { toMetadata, toUtmParams } from "./metadata.js";
+export { toCampaign, toMetadata, toUtmParams } from "./metadata.js";
 export { classifyReferrer } from "./referrer.js";
 export { normalizeValue, readTouch } from "./touch.js";

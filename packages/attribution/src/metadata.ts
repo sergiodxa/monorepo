@@ -1,13 +1,13 @@
 /**
  * Flattens touches for the places attribution leaves the app: a billing checkout's metadata bag,
- * which the provider hands back on its orders and webhooks, and the `utm_*` fields a newsletter
- * or CRM provider stores beside a subscriber.
+ * which the provider hands back on its orders and webhooks, and the campaign fields a newsletter
+ * or CRM provider stores beside a subscriber, either under their `utm_*` names or as plain fields.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Attribution, Touch, Utm } from "./types.js";
+import type { Attribution, Campaign, Touch, Utm } from "./types.js";
 
 import { CAMPAIGN_PARAMETERS } from "./parameters.js";
 
@@ -40,6 +40,30 @@ export function toUtmParams(touch: Touch | null): Record<string, string> {
 		if (value !== undefined) params[CAMPAIGN_PARAMETERS[field]] = value;
 	}
 	return params;
+}
+
+/** The `Utm` fields a {@link Campaign} carries; the newer GA4 fields stay out of it. */
+const CAMPAIGN_FIELDS = ["source", "medium", "campaign", "term", "content"] as const;
+
+/**
+ * The touch as flat campaign fields, with the landing path resolved against `url` into an
+ * absolute URL. Fields the touch lacks are left out of the object, so the result spreads
+ * cleanly, and a `null` touch answers `undefined`.
+ *
+ * @param touch - Usually `ctx.attribution.last ?? ctx.attribution.first`.
+ * @param url - The site's origin or the request URL the landing path resolves against.
+ * @example toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url)
+ */
+export function toCampaign(touch: Touch | null, url: URL | string): Campaign | undefined {
+	if (!touch) return undefined;
+	let campaign: Campaign = {};
+	for (let field of CAMPAIGN_FIELDS) {
+		let value = touch.utm?.[field];
+		if (value !== undefined) campaign[field] = value;
+	}
+	if (touch.referrer) campaign.referrer = touch.referrer.host;
+	campaign.landingPage = new URL(touch.landingPath, url).href;
+	return campaign;
 }
 
 /**
