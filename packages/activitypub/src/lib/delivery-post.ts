@@ -33,6 +33,12 @@ const SCHEME_TTL: DurationInput = "30 days";
 /** How long a signature honoring an `Accept-Signature` request with `expires` stays valid. */
 const REQUESTED_EXPIRY_MS = toMs("5 minutes");
 
+/**
+ * The longest wait a `Retry-After` can ask for, equal to the longest `DELIVERY_BACKOFF` step,
+ * so a hostile inbox cannot hold a delivery past the job's retry schedule.
+ */
+const MAX_RETRY_AFTER_MS = toMs("12 hours");
+
 /** The answers that mean "not with this signature", which a knock with another scheme can change. */
 const REFUSED_STATUSES = new Set([400, 401, 403]);
 
@@ -449,8 +455,9 @@ function errorFor(inbox: string, response: Response, now: Date): DeliveryError {
 }
 
 /**
- * Reads `Retry-After` as milliseconds from `now`: delay-seconds or an HTTP date, a date in
- * the past reading as `0`. Anything else reads as `null`.
+ * Reads `Retry-After` as milliseconds from `now`: delay-seconds or an HTTP date, clamped to
+ * `0` through `MAX_RETRY_AFTER_MS`, so an inbox can postpone a retry no longer than the
+ * longest backoff step. Anything else reads as `null`.
  *
  * @param value - The header value.
  * @param now - The time the answer arrived.
@@ -458,8 +465,7 @@ function errorFor(inbox: string, response: Response, now: Date): DeliveryError {
 export function parseRetryAfter(value: string | null, now: Date): number | null {
 	if (value === null) return null;
 	let text = value.trim();
-	if (/^\d+$/u.test(text)) return Number(text) * 1000;
-	let at = Date.parse(text);
-	if (Number.isNaN(at)) return null;
-	return Math.max(0, at - now.getTime());
+	let delay = /^-?\d+$/u.test(text) ? Number(text) * 1000 : Date.parse(text) - now.getTime();
+	if (Number.isNaN(delay)) return null;
+	return Math.min(MAX_RETRY_AFTER_MS, Math.max(0, delay));
 }

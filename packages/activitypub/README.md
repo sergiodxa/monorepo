@@ -341,8 +341,8 @@ orderedCollectionPage({ id: pageUrl, partOf: OUTBOX, orderedItems: creates, next
 #### `actorLink(actorId: string): JrdLink`
 
 The WebFinger `self` link typed `application/activity+json`, which Mastodon follows to
-resolve a handle. The actor's `preferredUsername` must match the handle's user, because
-Mastodon checks the reverse direction.
+resolve a handle. WebFinger for `preferredUsername@<actor host>` must answer this link,
+because Mastodon checks the reverse direction.
 
 #### `lookup(handle: string, options: LookupOptions): Promise<Result<ActivityPub.Actor, ActivityPubFetchError>>`
 
@@ -350,16 +350,20 @@ Resolves `@user@host`, `user@host` or `acct:user@host` the way Mastodon does. It
 `https://host/.well-known/webfinger?resource=acct:user@host` with
 `Accept: application/jrd+json`, takes the `self` link typed `application/activity+json` (or
 `application/ld+json` with the ActivityStreams profile), and fetches that actor through
-`options.resolver`. The actor's `preferredUsername` must equal the handle's user, compared
-without case, so a WebFinger answer cannot attach a handle to someone else's actor.
+`options.resolver`. The actor's canonical handle is `preferredUsername@<actor host>`. A
+handle whose host is the actor's host and whose user is its `preferredUsername`, compared
+without case, resolves directly; any other handle resolves only when WebFinger on the actor's
+host answers the canonical handle with a `self` link to the same actor id. That is how a
+handle on its own domain reaches an actor hosted elsewhere, and why a WebFinger answer on
+one host cannot attach a handle to an actor on another.
 
 - `options.resolver`: the `Resolver` the actor is fetched with, and cached by.
 - `options.userAgent`: sent with the WebFinger request.
-- `options.timeout`: the WebFinger deadline, `"10 seconds"` by default.
+- `options.timeout`: the deadline of each WebFinger request, `"10 seconds"` by default.
 
 Fails `refused-url` for a handle without a public host, `not-found` when WebFinger names no
-ActivityStreams actor, `id-mismatch` when the actor's `preferredUsername` is another user, and
-with any code the resolver answers.
+ActivityStreams actor, `id-mismatch` when the actor's host does not confirm the handle, and
+with any code the resolver or a WebFinger request answers.
 
 ### `@sdxc/activitypub/keys`
 
@@ -696,7 +700,9 @@ honored once, with the components, label, nonce and tag it asks for.
 Every retryable failure except `keys-unavailable` starts or extends the origin's failure
 window, and a 2xx clears it. `DeliveryError` extends `ActivityPubError` with `inbox`,
 `status` (the last answer, or `null`) and `retryAfter` (milliseconds, or `null`).
-`parseRetryAfter(value, now)` reads a `Retry-After` value the same way.
+`parseRetryAfter(value, now)` reads a `Retry-After` value the same way: delay-seconds or an
+HTTP date, clamped between `0` and 12 hours (the longest `DELIVERY_BACKOFF` step), so an
+inbox cannot postpone its retries indefinitely.
 
 #### `DELIVERY_BACKOFF`
 
@@ -778,7 +784,7 @@ every other member optional.
 | Misskey emoji reactions as a `Like` with `content` or only `_misskey_reaction`      | `parseActivity`                                     |
 | Mastodon embeds the first page of `replies` without an `id`                         | `parseCollection`                                   |
 | WebFinger `self` must be typed `application/activity+json`                          | `actorLink`                                         |
-| A handle resolves back through `preferredUsername`                                  | `lookup`                                            |
+| A handle resolves back through `preferredUsername@<actor host>`                     | `lookup`                                            |
 | Secure mode and GoToSocial refuse unsigned GETs                                     | `createResolver`                                    |
 | A deleted account's key answers `410`                                               | `createResolver`                                    |
 | A refetch of a deleted object must answer `410`                                     | `respond`                                           |

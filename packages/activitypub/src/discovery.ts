@@ -10,7 +10,7 @@ import type { DurationInput } from "@sdxc/duration";
 import type { Result } from "@sdxc/result";
 import type { JrdLink } from "@sdxc/well-known/webfinger";
 
-import { failure, isFailure } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 import { MEDIA_TYPE, parse } from "@sdxc/well-known/webfinger";
 
 import type { ActivityPub } from "./lib/types.js";
@@ -38,8 +38,8 @@ export interface LookupOptions {
 
 /**
  * The WebFinger link to an actor document: `rel="self"` typed
- * `application/activity+json`, which Mastodon requires before it fetches the actor.
- * The actor's `preferredUsername` must match the handle's user for the reverse check.
+ * `application/activity+json`, which Mastodon requires before it fetches the actor. WebFinger
+ * for `preferredUsername@<actor host>` must answer this link for the reverse check.
  *
  * @param actorId - The actor document's id.
  * @example
@@ -50,15 +50,15 @@ export function actorLink(actorId: string): JrdLink {
 }
 
 /**
- * Resolves a handle to its actor the way Mastodon does: WebFinger on the handle's host,
- * the `self` link typed as ActivityStreams, then the actor through `resolver`. The actor's
- * `preferredUsername` must name the handle's user, so a WebFinger answer cannot attach
- * a handle to somebody else's actor.
+ * Resolves a handle to its actor the way Mastodon does: WebFinger on the handle's host, the
+ * `self` link typed as ActivityStreams, then the actor through `resolver`. The actor's
+ * canonical handle is `preferredUsername@<actor host>`; unless it equals the given handle,
+ * WebFinger on the actor's host must point that canonical handle back at the same actor.
  *
  * @param handle - `@user@host`, `user@host` or `acct:user@host`.
- * @param options - The resolver, and the `User-Agent` and deadline of the WebFinger request.
+ * @param options - The resolver, and the `User-Agent` and deadline of the WebFinger requests.
  * @returns The actor; `not-found` when WebFinger names no actor link, `id-mismatch` when the
- * actor's `preferredUsername` is another user, `refused-url` for a handle that names no host.
+ * actor's host does not confirm the handle, `refused-url` for a handle that names no host.
  * @example let actor = await lookup("@someone@mastodon.social", { resolver });
  */
 export async function lookup(
@@ -74,6 +74,43 @@ export async function lookup(
 		);
 	}
 
+	let self = await selfLink(user, host, options);
+	if (isFailure(self)) return self;
+
+	let actor = await options.resolver.actor(self.data);
+	if (isFailure(actor)) return actor;
+
+	let actorId = actor.data.id;
+	let actorHost = new URL(actorId).host;
+	let username = actor.data.preferredUsername;
+	let sameHost = actorHost === new URL(`https://${host}/`).host;
+	if (sameHost && username.toLowerCase() === user.toLowerCase()) return actor;
+
+	let canonical = `${username}@${actorHost}`;
+	let reverse = await selfLink(username, actorHost, options);
+	if (isFailure(reverse) && reverse.error.retryable) return reverse;
+	if (isFailure(reverse) || reverse.data !== actorId) {
+		return failure(
+			new ActivityPubFetchError(
+				"id-mismatch",
+				actorId,
+				`${actorId} is ${canonical}, whose WebFinger does not confirm ${user}@${host}`,
+				{ cause: isFailure(reverse) ? reverse.error : undefined },
+			),
+		);
+	}
+	return actor;
+}
+
+/**
+ * The `self` link typed as ActivityStreams that WebFinger on `host` answers for
+ * `acct:user@host`; `not-found` when it names none.
+ */
+async function selfLink(
+	user: string,
+	host: string,
+	options: LookupOptions,
+): Promise<Result<string, ActivityPubFetchError>> {
 	let account = `acct:${user}@${host}`;
 	let url = new URL(`https://${host}/.well-known/webfinger`);
 	url.searchParams.set("resource", account);
@@ -103,20 +140,7 @@ export async function lookup(
 			new ActivityPubFetchError("not-found", url.href, `${account} names no ActivityPub actor`),
 		);
 	}
-
-	let actor = await options.resolver.actor(self.href);
-	if (isFailure(actor)) return actor;
-
-	if (actor.data.preferredUsername.toLowerCase() !== user.toLowerCase()) {
-		return failure(
-			new ActivityPubFetchError(
-				"id-mismatch",
-				self.href,
-				`${self.href} is ${actor.data.preferredUsername}, not ${user}`,
-			),
-		);
-	}
-	return actor;
+	return success(self.href);
 }
 
 /**

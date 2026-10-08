@@ -17,6 +17,7 @@ import { MASTODON_ACTOR } from "./fixtures/index.js";
 import { createResolver } from "./remote.js";
 
 const ACTOR = "https://mastodon.social/users/alice";
+const OTHER_ACTOR = "https://mastodon.social/users/bob";
 const WEBFINGER = "https://mastodon.social/.well-known/webfinger";
 const USER_AGENT = "letters.blog/1.0 (+https://letters.blog)";
 
@@ -54,14 +55,25 @@ function publicDns() {
 	});
 }
 
-/** A JRD for `acct:alice@mastodon.social` with the given links. */
-function webfinger(links: Array<Record<string, string>>) {
-	return http.get(WEBFINGER, () =>
-		HttpResponse.json(
-			{ subject: "acct:alice@mastodon.social", links },
+/**
+ * A JRD with the given links for `account` on `host`, and a `404` for every other account
+ * that host is asked about.
+ */
+function webfinger(
+	links: Array<Record<string, string>>,
+	account = "acct:alice@mastodon.social",
+	host = "mastodon.social",
+) {
+	return http.get(`https://${host}/.well-known/webfinger`, ({ request }) => {
+		let resource = new URL(request.url).searchParams.get("resource") ?? "";
+		if (resource.toLowerCase() !== account.toLowerCase()) {
+			return new HttpResponse(null, { status: 404 });
+		}
+		return HttpResponse.json(
+			{ subject: account, links },
 			{ headers: { "content-type": "application/jrd+json" } },
-		),
-	);
+		);
+	});
 }
 
 /** The actor served as Mastodon serves it. */
@@ -160,6 +172,57 @@ describe("lookup", () => {
 		let result = await lookup("alice@mastodon.social", { resolver: resolver() });
 
 		expect(isFailure(result) && result.error.code).toBe("id-mismatch");
+	});
+
+	test("refuses a handle on another host that the actor's host does not confirm", async () => {
+		server.use(
+			webfinger(
+				[{ rel: "self", type: "application/activity+json", href: ACTOR }],
+				"acct:alice@evil.com",
+				"evil.com",
+			),
+			webfinger([{ rel: "self", type: "application/activity+json", href: OTHER_ACTOR }]),
+			actor(),
+		);
+
+		let result = await lookup("@alice@evil.com", { resolver: resolver() });
+
+		expect(isFailure(result) && result.error.code).toBe("id-mismatch");
+		let reverse = new URL(requests.at(-1)?.url ?? "");
+		expect(reverse.host).toBe("mastodon.social");
+		expect(reverse.searchParams.get("resource")).toBe("acct:alice@mastodon.social");
+	});
+
+	test("refuses a handle on another host when the actor's host knows no such account", async () => {
+		server.use(
+			webfinger(
+				[{ rel: "self", type: "application/activity+json", href: ACTOR }],
+				"acct:alice@evil.com",
+				"evil.com",
+			),
+			http.get(WEBFINGER, () => new HttpResponse(null, { status: 404 })),
+			actor(),
+		);
+
+		let result = await lookup("@alice@evil.com", { resolver: resolver() });
+
+		expect(isFailure(result) && result.error.code).toBe("id-mismatch");
+	});
+
+	test("accepts a handle on another domain whose actor's host points back at it", async () => {
+		server.use(
+			webfinger(
+				[{ rel: "self", type: "application/activity+json", href: ACTOR }],
+				"acct:me@alice.com",
+				"alice.com",
+			),
+			webfinger([{ rel: "self", type: "application/activity+json", href: ACTOR }]),
+			actor(),
+		);
+
+		let result = await lookup("me@alice.com", { resolver: resolver() });
+
+		expect(unwrap(result).id).toBe(ACTOR);
 	});
 
 	test("matches the user regardless of case", async () => {

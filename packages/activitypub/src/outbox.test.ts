@@ -465,6 +465,9 @@ describe("parseRetryAfter", () => {
 		["Wed, 07 Oct 2026 11:00:00 GMT", 0],
 		["soon", null],
 		[null, null],
+		["-30", 0],
+		["31536000", 12 * 60 * 60 * 1000],
+		["Fri, 07 Oct 2116 12:00:00 GMT", 12 * 60 * 60 * 1000],
 	])("reads %s as %s", (value, expected) => {
 		expect(parseRetryAfter(value, now)).toBe(expected);
 	});
