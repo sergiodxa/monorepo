@@ -138,8 +138,9 @@ enforces: `Markdown.parse()` is the method and `Markdown.Document` is the type i
 
 Reads the frontmatter block and the body in one traversal, answering with
 `{ frontmatter, document }` or a `MarkdownParseError` carrying the `position` it stopped at.
-`options.frontmatter` is the schema to validate the block against, and `options.tags` names
-the tags the document may use.
+`options.frontmatter` is the schema to validate the block against, `options.tags` names
+the tags the document may use, and `options.html` the HTML elements it may render as elements
+(see [Pattern: Allowlisted HTML](#pattern-allowlisted-html)).
 
 ##### `Markdown.frontmatter(source, options?)`
 
@@ -181,14 +182,14 @@ one when a handler is asynchronous. See
 The AST. `Markdown.Node` is `Document | Block | Inline`; `document` is the root and belongs
 to neither column, so a `Block[]` can never hold a nested document.
 
-| Blocks                                                                                                                                                         | Inline                                                                                                                                                     |
-| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `heading` `paragraph` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `comment` `tag` | `text` `emphasis` `strong` `strikethrough` `inlineCode` `link` `image` `softBreak` `hardBreak` `inlineHtml` `footnoteReference` `variable` `comment` `tag` |
+| Blocks                                                                                                                                                                   | Inline                                                                                                                                                               |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `heading` `paragraph` `code` `list` `listItem` `blockquote` `alert` `table` `tableRow` `tableCell` `thematicBreak` `html` `footnoteDefinition` `comment` `element` `tag` | `text` `emphasis` `strong` `strikethrough` `inlineCode` `link` `image` `softBreak` `hardBreak` `inlineHtml` `footnoteReference` `variable` `comment` `element` `tag` |
 
 Every `type` names exactly one interface, so `Extract<Markdown.Node, { type: K }>` always
-narrows to one shape. Two names sit in both columns: a `tag` is block-level or inline
-depending on where it is written, and its `children` say which; a `comment` is a block on a
-line of its own and inline inside one.
+narrows to one shape. Three names sit in both columns: a `tag` or an `element` is
+block-level or inline depending on where it is written, and its `children` say which; a
+`comment` is a block on a line of its own and inline inside one.
 
 Every node carries a `position` — 1-based `line` and `column`, 0-based `offset`, all into the
 source as written, frontmatter included. Every block but `comment` carries `attributes`,
@@ -248,8 +249,8 @@ says what the node is:
 An annotation's `id` and `class` are written onto the element, and any other attribute becomes
 a `data-` attribute, so `{% #install .lead %}` styles and links the way it reads.
 
-Raw HTML renders **as escaped text**, so nothing the renderer did not vet becomes markup. A
-code block a visitor painted first renders one `<span class="token …">` per run.
+Raw HTML renders **as escaped text**, so nothing the renderer did not vet becomes markup; an
+`element` the allowlist let through renders as itself. A code block a visitor painted first renders one `<span class="token …">` per run.
 
 #### `HTMLTagRenderer`
 
@@ -268,7 +269,8 @@ It returns nodes from data and holds no props or reactive state, so calling it i
 closure is not a component called as a function.
 
 Raw HTML renders **as escaped text**, so a stray `<div>` shows as written rather than becoming
-an element. An author who wants an element registers a tag for it.
+an element. An element the document's allowlist names renders as itself; anything richer is a
+registered tag.
 
 #### `MarkdownComponent`
 
@@ -283,6 +285,8 @@ Returns a visitor for `Markdown.walk` that fills every variable from `values`: a
 becomes a `text` node, and an attribute value takes the value itself, arrays and objects
 included. A block holding no variable is handed back as the same object.
 
+- `options.html`: The document's HTML allowlist, so a URL an element's variable is filled with
+  is checked the way a literal one is at parse time.
 - `options.tags`: The document's tag vocabulary. A tag whose schema waited on a variable is
   checked once its attributes are filled in, keeping what the schema coerced; a failure is
   the walk's failure, carrying the tag's position and the `MarkdownParseError` with the
@@ -499,6 +503,44 @@ A visitor of your own that handles `variable` does the same job for any other po
 
 Because variables survive parsing, `Markdown.stringify` round-trips them, so the markdown a
 client fetches is the template rather than one tenant's copy.
+
+## Pattern: Allowlisted HTML
+
+Raw HTML stays escaped text unless the document opts an element in. `options.html` names each
+element and the attributes it may carry:
+
+```typescript
+let options = {
+	html: { details: ["open"], summary: [], sup: [], kbd: [], a: ["href", "title"], br: [] },
+} satisfies Markdown.Options;
+```
+
+```text
+<details open>
+<summary>What does **retry** mean?</summary>
+
+A failed check runs again before it alerts.
+</details>
+
+E = mc<sup>2</sup>, and <kbd>Cmd</kbd> opens search.
+```
+
+An allowlisted name parses to an `element` node whose children are markdown, the way a tag's
+are, and every renderer draws it as itself. Where it stands comes from the element:
+
+| Element                                                       | Reads as                                                                       |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `details`, `div`, `section`, `aside`, `figure`, `dl`, `dd`, … | a block alone on its line holding blocks, or its text when written on one line |
+| `summary`, `figcaption`, `dt`                                 | a block holding a line of inline content                                       |
+| `sup`, `sub`, `kbd`, `abbr`, `mark`, `a`, `span`, `time`, …   | inline content wherever it is written                                          |
+| `br`, `img`, `wbr`, `hr`                                      | void, closing slash optional; `hr` alone is a block                            |
+
+Elements markdown already spells — `p`, `h1`, `ul`, `table`, `pre` — and those whose body is
+script or raw text cannot be allowlisted. An attribute the allowlist does not name is a parse
+error at the opening tag, an `on…` handler is refused even when named, and `href`, `src` and
+the other URL attributes take only relative, `http`, `https`, `mailto` and `tel` URLs. A value
+may be a variable; the [`variables`](#sdxc-markdownpluginvariables) visitor checks the URL once
+it is filled in, given `html`. A registered tag of the same name takes precedence.
 
 ## Pattern: Comments
 

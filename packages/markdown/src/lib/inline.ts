@@ -18,7 +18,6 @@ import type { ResolvedOptions, ResolvedTag } from "./options.js";
 import type { SourceText } from "./source.js";
 
 import {
-	holdsVariable,
 	parseAttributeList,
 	readVariableName,
 	scanAnnotation,
@@ -42,7 +41,7 @@ import {
 	scanDelimiterRun,
 	skipSpaceAndNewline,
 } from "./inline/scan.js";
-import { validateTagAttributes } from "./options.js";
+import { tagNode, validateTagAttributes } from "./options.js";
 
 export { normalizeLabel } from "./inline/scan.js";
 
@@ -885,12 +884,10 @@ class InlineRun {
 			);
 		}
 
-		let validated = holdsVariable(parsed.data)
-			? success(parsed.data)
-			: validateTagAttributes(definition, parsed.data, position);
+		let validated = validateTagAttributes(definition, parsed.data, position);
 		if (isFailure(validated)) return validated;
 
-		if (definition.content === "none" && !open.selfClosing) {
+		if (definition.content === "none" && !open.selfClosing && !definition.element) {
 			return failure(
 				new MarkdownParseError(
 					`A <${definition.name}> tag holds no children, so it is written self-closing`,
@@ -900,22 +897,12 @@ class InlineRun {
 		}
 
 		if (open.selfClosing || definition.content === "none") {
-			this.#append(
-				{
-					type: "tag",
-					name: definition.name,
-					attributes: validated.data,
-					children: [],
-					position,
-				},
-				start,
-				open.end,
-			);
+			this.#append(tagNode(definition, validated.data, [], position), start, open.end);
 			this.#pos = open.end;
 			return OK;
 		}
 
-		if (definition.content === "blocks") {
+		if (definition.content === "blocks" && !definition.element) {
 			return failure(
 				new MarkdownParseError(
 					`A <${definition.name}> tag whose children are blocks has nowhere to put them inside a line`,
@@ -937,13 +924,7 @@ class InlineRun {
 		if (isFailure(children)) return children;
 
 		this.#append(
-			{
-				type: "tag",
-				name: definition.name,
-				attributes: validated.data,
-				children: children.data,
-				position: this.#text.position(start, close.end),
-			},
+			tagNode(definition, validated.data, children.data, this.#text.position(start, close.end)),
 			start,
 			close.end,
 		);

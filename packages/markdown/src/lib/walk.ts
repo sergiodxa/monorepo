@@ -39,6 +39,7 @@ const BLOCK_TYPES = new Set<string>([
 	"html",
 	"footnoteDefinition",
 	"comment",
+	"element",
 	"tag",
 ]);
 
@@ -57,6 +58,7 @@ const INLINE_TYPES = new Set<string>([
 	"footnoteReference",
 	"variable",
 	"comment",
+	"element",
 	"tag",
 ]);
 
@@ -296,9 +298,11 @@ function assertSlot(node: Markdown.Node, parent: Markdown.Parent, yielded: Markd
 	);
 }
 
-/** A tag stands in either column, so its children are checked against both. */
+/** A tag or an element stands in either column, so its children are checked against both. */
 function accepts(parent: Markdown.Parent, type: string): boolean {
-	if (parent.type === "tag") return BLOCK_TYPES.has(type) || INLINE_TYPES.has(type);
+	if (parent.type === "tag" || parent.type === "element") {
+		return BLOCK_TYPES.has(type) || INLINE_TYPES.has(type);
+	}
 	if (INLINE_PARENT_TYPES.has(parent.type)) return INLINE_TYPES.has(type);
 	return BLOCK_TYPES.has(type);
 }

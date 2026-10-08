@@ -11,7 +11,7 @@ import { isFailure } from "@sdxc/result";
 import type { Markdown } from "../index.js";
 
 import { holdsVariable, isVariable } from "../lib/attributes.js";
-import { validateTagAttributes } from "../lib/options.js";
+import { resolveOptions, validateTagAttributes } from "../lib/options.js";
 
 /** How the visitor fills a document, and what it does with a name it has no value for. */
 export interface VariablesOptions {
@@ -20,6 +20,8 @@ export interface VariablesOptions {
 	 * once filled in. Passing the options the document was parsed with is the usual call.
 	 */
 	tags?: Markdown.Options["tags"];
+	/** The document's HTML allowlist, so a URL an element's variable is filled with is checked. */
+	html?: Markdown.Options["html"];
 	/**
 	 * `"fail"` turns a name with no value into a walk failure at the variable's position;
 	 * `"keep"` leaves the variable in place for a later pass or a renderer to show.
@@ -43,6 +45,7 @@ export function variables(
 	options: VariablesOptions = {},
 ) {
 	let keep = options.missing === "keep";
+	let definitions = resolveOptions(options).tags;
 
 	/** Fills one value, recursing into arrays and objects, and returns it unchanged when nothing in it is a variable. */
 	function fill(value: Markdown.AttributeValue): Markdown.AttributeValue {
@@ -82,23 +85,24 @@ export function variables(
 	}
 
 	/**
-	 * A tag with its attributes filled and, once no variable remains, checked against
-	 * the schema the parser deferred.
+	 * A tag or element with its attributes filled and checked the way the parser
+	 * deferred: a tag against its schema, an element against its allowlist's URL rules.
+	 * An element the given allowlist does not name has its URLs checked all the same.
 	 *
-	 * @throws {MarkdownParseError} When the filled-in attributes break the tag's schema
+	 * @throws {MarkdownParseError} When the filled-in attributes fail that check
 	 */
-	function fillTag(node: Markdown.Tag): Markdown.Tag | undefined {
+	function fillTag<N extends Markdown.Tag | Markdown.Element>(node: N): N | undefined {
 		let filled = fillBlock(node);
-		if (!filled || holdsVariable(filled.attributes)) return filled;
+		if (!filled) return undefined;
 
-		let schema = options.tags?.[node.name]?.attributes;
-		if (!schema) return filled;
+		let definition = definitions.get(node.name);
+		if (node.type === "element" && !definition?.element) {
+			let allowed = new Set(Object.keys(node.attributes));
+			definition = { name: node.name, content: "inline", element: { level: "inline", allowed } };
+		}
+		if (!definition) return filled;
 
-		let checked = validateTagAttributes(
-			{ name: node.name, attributes: schema },
-			filled.attributes,
-			node.position,
-		);
+		let checked = validateTagAttributes(definition, filled.attributes, node.position);
 		if (isFailure(checked)) throw checked.error;
 
 		return { ...filled, attributes: checked.data };
@@ -138,6 +142,7 @@ export function variables(
 		html: fillBlock,
 		footnoteDefinition: fillBlock,
 		tag: fillTag,
+		element: fillTag,
 		variable: fillText,
 	} satisfies Markdown.Visitor;
 }

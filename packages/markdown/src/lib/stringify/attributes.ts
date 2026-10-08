@@ -8,7 +8,7 @@
  */
 import type { Markdown } from "../../index.js";
 
-import { isVariable } from "../attributes.js";
+import { holdsVariable, isVariable } from "../attributes.js";
 
 /** The spelling a `#id` or `.class` shorthand can carry; anything else writes as a pair. */
 const NAME = /^[A-Za-z_][A-Za-z0-9_-]*$/;
@@ -83,6 +83,20 @@ function writePair(key: string, value: Markdown.AttributeValue): string {
  */
 export function writeBraced(value: Markdown.AttributeValue): string {
 	return `{${writeExpression(value)}}`;
+}
+
+/**
+ * The text an HTML attribute carries for a value: a structured value as JSON a script
+ * can parse, and a value still holding a variable as the braced spelling the source
+ * used, so an unfilled hole shows rather than vanishing.
+ *
+ * @param value - One attribute value other than a boolean or `null`, which have no text
+ * @returns The attribute's text
+ */
+export function attributeText(value: Exclude<Markdown.AttributeValue, boolean | null>): string {
+	if (holdsVariable(value)) return writeBraced(value);
+	if (typeof value === "object") return JSON.stringify(value);
+	return String(value);
 }
 
 /** The expression inside the braces, nested values written the same way. */

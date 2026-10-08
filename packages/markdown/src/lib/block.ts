@@ -20,7 +20,6 @@ import type { ResolvedOptions, ResolvedTag } from "./options.js";
 import type { Chunk } from "./source.js";
 
 import {
-	holdsVariable,
 	parseAttributeList,
 	readVariableName,
 	scanAnnotation,
@@ -34,7 +33,7 @@ import { readDelimiterRow, splitCells } from "./block/table.js";
 import { MarkdownParseError } from "./errors.js";
 import { normalizeLabel, parseInlines } from "./inline.js";
 import { unescapeString } from "./inline/scan.js";
-import { validateTagAttributes } from "./options.js";
+import { tagNode, validateTagAttributes } from "./options.js";
 import { SourceText } from "./source.js";
 
 /** The indentation that opens a code block, and the width a tab stop advances to. */
@@ -124,6 +123,7 @@ interface OpenNode {
 	identifier?: string;
 	tagName?: string;
 	tagContent?: ResolvedTag["content"];
+	tagDefinition?: ResolvedTag;
 	tagClosed: boolean;
 	/** Whether a comment has met its `*\/}`, which an unclosed one is reported for. */
 	commentClosed: boolean;
@@ -669,11 +669,11 @@ class BlockParser {
 		if (!open) return "none";
 
 		let definition = this.#options.tags.get(open.name);
-		if (!definition) return "none";
+		if (!definition || definition.element?.level === "inline") return "none";
 
 		let inner = this.#restIsBlank(open.end) ? null : this.#readOneLineTag(open.name, open.end);
 		if (inner === null && !this.#restIsBlank(open.end)) return "none";
-		if (inner !== null && definition.content !== "inline") return "none";
+		if (inner !== null && definition.content !== "inline" && !definition.element) return "none";
 
 		let span = { start: this.#pointAt(this.#nextNonspace), end: this.#pointAt(open.end) };
 		let attributes = this.#readTagAttributes(definition, open, span);
@@ -683,7 +683,8 @@ class BlockParser {
 
 		let node = this.#addChild("tag", this.#nextNonspace);
 		node.tagName = open.name;
-		node.tagContent = definition.content;
+		node.tagDefinition = definition;
+		node.tagContent = inner === null ? definition.content : "inline";
 		node.openPosition = span;
 		node.attributes = { ...node.attributes, ...attributes };
 
@@ -747,8 +748,6 @@ class BlockParser {
 			this.#fail(parsed.error.message, position);
 			return null;
 		}
-
-		if (holdsVariable(parsed.data)) return parsed.data;
 
 		let validated = validateTagAttributes(definition, parsed.data, position);
 		if (isFailure(validated)) {
@@ -821,9 +820,16 @@ class BlockParser {
 		this.#finalize(node);
 	}
 
-	/** An unregistered element falls back to CommonMark's own seven HTML block conditions. */
+	/**
+	 * An unregistered element falls back to CommonMark's own seven HTML block
+	 * conditions. An allowlisted inline element opening the line is phrasing content,
+	 * so the line opens a paragraph for the inline phase to read it in.
+	 */
 	#tryHtmlBlock(container: OpenNode): StartOutcome {
 		if (this.#indented || this.#line.text.charAt(this.#nextNonspace) !== "<") return "none";
+
+		let name = /^<\/?([A-Za-z][A-Za-z0-9-]*)/.exec(this.#line.text.slice(this.#nextNonspace))?.[1];
+		if (name && this.#options.tags.get(name)?.element?.level === "inline") return "none";
 
 		let kind = readHtmlBlockKind(
 			this.#line.text.slice(this.#nextNonspace),
@@ -1560,24 +1566,24 @@ class BlockParser {
 	 * @param children - Its block children, already built
 	 * @returns The tag as an AST node
 	 */
-	#buildTag(node: OpenNode, children: Markdown.Block[]): Result<Markdown.Tag, Markdown.ParseError> {
+	#buildTag(
+		node: OpenNode,
+		children: Markdown.Block[],
+	): Result<Markdown.Tag | Markdown.Element, Markdown.ParseError> {
 		let position = { start: node.start, end: node.end };
-		let name = node.tagName ?? "";
+		let definition = node.tagDefinition ?? {
+			name: node.tagName ?? "",
+			content: node.tagContent ?? "blocks",
+		};
 
 		if (node.tagContent !== "inline") {
-			return success({ type: "tag", name, attributes: node.attributes, children, position });
+			return success(tagNode(definition, node.attributes, children, position));
 		}
 
 		let inlines = this.#inlines(node.chunks);
 		if (isFailure(inlines)) return inlines;
 
-		return success({
-			type: "tag",
-			name,
-			attributes: node.attributes,
-			children: inlines.data,
-			position,
-		});
+		return success(tagNode(definition, node.attributes, inlines.data, position));
 	}
 
 	/** The header row, then every body row, each padded or cut to the header's width. */

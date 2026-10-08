@@ -8,8 +8,8 @@
  */
 import type { Markdown } from "../index.js";
 
-import { holdsVariable } from "../lib/attributes.js";
-import { writeBraced } from "../lib/stringify/attributes.js";
+import { elementShape, holdsBlocks, isSafeAttributeValue } from "../lib/elements.js";
+import { attributeText } from "../lib/stringify/attributes.js";
 
 /** Builds the markup for one registered tag, given its children already rendered. */
 export type HTMLTagRenderer = (tag: {
@@ -34,27 +34,6 @@ export interface HTMLOptions {
 	 */
 	syntax?: HTMLSyntax;
 }
-
-/**
- * Node types that open a block of their own, which is what tells a tag wrapped
- * around paragraphs apart from one written inside a sentence.
- */
-const BLOCK_TYPES: ReadonlySet<string> = new Set([
-	"alert",
-	"blockquote",
-	"code",
-	"document",
-	"footnoteDefinition",
-	"heading",
-	"html",
-	"list",
-	"listItem",
-	"paragraph",
-	"table",
-	"tableCell",
-	"tableRow",
-	"thematicBreak",
-]);
 
 /** One attribute of an element, `true` standing for the bare form a boolean takes. */
 interface HTMLAttribute {
@@ -145,6 +124,9 @@ function renderNode(node: Markdown.Node, context: Context): string {
 
 		case "tag":
 			return renderTag(node, context);
+
+		case "element":
+			return renderElement(node, context);
 
 		case "text":
 			return escapeText(node.value);
@@ -277,21 +259,10 @@ function elementAttributes(
 			list.push({ name: `data-${kebabCase(key)}`, value: true });
 			continue;
 		}
-		list.push({ name: `data-${kebabCase(key)}`, value: dataValue(value) });
+		list.push({ name: `data-${kebabCase(key)}`, value: attributeText(value) });
 	}
 
 	return renderAttributes(list, context);
-}
-
-/**
- * The text a `data-` attribute carries: a structured value as JSON a script can parse,
- * and a value still holding a variable as the braced spelling the source used, so an
- * unfilled hole shows rather than vanishing.
- */
-function dataValue(value: Exclude<Markdown.AttributeValue, boolean | null>): string {
-	if (holdsVariable(value)) return writeBraced(value);
-	if (typeof value === "object") return JSON.stringify(value);
-	return String(value);
 }
 
 /** An annotation writes the key an author types, and a `data-` attribute spells it in dashes. */
@@ -458,9 +429,32 @@ function renderTag(node: Markdown.Tag, context: Context): string {
 
 /** What a tag was written around decides whether its children read as lines or as a sentence. */
 function renderTagChildren(node: Markdown.Tag, context: Context): string {
-	let [first] = node.children;
-	if (first && BLOCK_TYPES.has(first.type)) return renderBlocks(node.children, context);
+	if (holdsBlocks(node.children)) return renderBlocks(node.children, context);
 	return renderInline(node.children, context);
+}
+
+/**
+ * An allowlisted element as itself, carrying the attributes it was written with.
+ * The rules the parser applies hold here too, so a hand-built tree cannot slip an
+ * event handler or a script URL into the markup.
+ */
+function renderElement(node: Markdown.Element, context: Context): string {
+	let list: HTMLAttribute[] = [];
+
+	for (let [name, value] of Object.entries(node.attributes)) {
+		if (value === false || value === null || /^on/i.test(name)) continue;
+		if (!isSafeAttributeValue(name, value)) continue;
+		list.push({ name, value: value === true ? true : attributeText(value) });
+	}
+
+	let attributes = renderAttributes(list, context);
+	if (elementShape(node.name)?.content === "none") return `<${node.name}${attributes} />`;
+
+	let children = holdsBlocks(node.children)
+		? renderBlocks(node.children, context)
+		: renderInline(node.children, context);
+
+	return `<${node.name}${attributes}>${children}</${node.name}>`;
 }
 
 /** Numbering is the document's to assign, so a fragment draws the identifier it was given. */

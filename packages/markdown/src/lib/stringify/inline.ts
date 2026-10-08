@@ -124,6 +124,7 @@ function stringifyInline(
 		case "variable":
 			return `{% $${node.name} %}`;
 		case "tag":
+		case "element":
 			return writeTag(node, context);
 		case "comment":
 			return `{/*${node.value}*/}`;
@@ -169,7 +170,7 @@ function writeDestination(destination: string, title?: string): string {
 }
 
 /** An inline element, self-closing where it has nothing between its two halves. */
-function writeTag(node: Markdown.Tag, context: InlineContext): string {
+function writeTag(node: Markdown.Tag | Markdown.Element, context: InlineContext): string {
 	let attributes = writeAttributes(node.attributes, false);
 	let open = attributes === "" ? node.name : `${node.name} ${attributes}`;
 

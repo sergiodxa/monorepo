@@ -8,25 +8,11 @@
  */
 import type { Markdown } from "../../index.js";
 
+import { holdsBlocks } from "../elements.js";
+
 import { writeAnnotation, writeAttributes } from "./attributes.js";
 import { longestRun } from "./escape.js";
 import { stringifyInlines } from "./inline.js";
-
-/** The types that belong to the inline category alone, which is what a tag's children are read by. */
-const INLINE_TYPES = new Set([
-	"text",
-	"emphasis",
-	"strong",
-	"strikethrough",
-	"inlineCode",
-	"link",
-	"image",
-	"softBreak",
-	"hardBreak",
-	"inlineHtml",
-	"footnoteReference",
-	"variable",
-]);
 
 /** The narrowest a table column is drawn, which is the width its delimiter row needs. */
 const MIN_COLUMN = 3;
@@ -85,6 +71,7 @@ function stringifyBlock(node: Markdown.Block): string {
 		case "footnoteDefinition":
 			return writeFootnoteDefinition(node);
 		case "tag":
+		case "element":
 			return writeTag(node);
 		case "comment":
 			return `{/*${node.value}*/}`;
@@ -238,17 +225,18 @@ function writeFootnoteDefinition(node: Markdown.FootnoteDefinition): string {
 }
 
 /** A block-level element, whose children are read as blocks unless the first one is inline. */
-function writeTag(node: Markdown.Tag): string {
+function writeTag(node: Markdown.Tag | Markdown.Element): string {
 	let attributes = writeAttributes(node.attributes, false);
 	let open = attributes === "" ? node.name : `${node.name} ${attributes}`;
 
 	if (node.children.length === 0) return `<${open} />`;
 
-	let first = node.children[0];
-	let children =
-		first !== undefined && INLINE_TYPES.has(first.type)
-			? stringifyInlines(node.children as Markdown.Inline[], { table: false }, true)
-			: stringifyBlocks(node.children as Markdown.Block[]);
+	if (holdsBlocks(node.children)) {
+		return `<${open}>\n${stringifyBlocks(node.children as Markdown.Block[])}\n</${node.name}>`;
+	}
+
+	let children = stringifyInlines(node.children as Markdown.Inline[], { table: false }, true);
+	if (node.type === "element") return `<${open}>${children}</${node.name}>`;
 
 	return `<${open}>\n${children}\n</${node.name}>`;
 }

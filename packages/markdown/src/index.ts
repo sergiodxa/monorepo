@@ -357,6 +357,21 @@ export namespace Markdown {
 	}
 
 	/**
+	 * An HTML element the document's allowlist opted into. Its `children` say whether
+	 * it holds blocks or inline content, and a void element holds none.
+	 */
+	export interface Element {
+		type: "element";
+		name: HtmlElement;
+		attributes: Attributes;
+		children: Block[] | Inline[];
+		position: Position;
+	}
+
+	/** The elements `Options.html` can allowlist; anything else stays raw HTML. */
+	export type HtmlElement = import("./lib/elements.js").HtmlElementName;
+
+	/**
 	 * A `{/* … *\/}` note for whoever edits the source. Renderers leave it out and
 	 * `Markdown.stringify` writes it back, so an edit round trip keeps it. Written on
 	 * its own line it is a block, inside a line it is inline.
@@ -383,6 +398,7 @@ export namespace Markdown {
 		| Html
 		| FootnoteDefinition
 		| Comment
+		| Element
 		| Tag;
 
 	export type Inline =
@@ -399,6 +415,7 @@ export namespace Markdown {
 		| FootnoteReference
 		| Variable
 		| Comment
+		| Element
 		| Tag;
 
 	export type Node = Document | Block | Inline;
@@ -424,6 +441,12 @@ export namespace Markdown {
 		frontmatter?: Schema;
 		/** Only these names become tags; anything else stays raw HTML, as GitHub treats it. */
 		tags?: Record<string, TagDefinition>;
+		/**
+		 * The HTML elements that render as elements, each with the attributes it may
+		 * carry. Raw HTML outside this list stays escaped text; an event handler or a
+		 * script URL is refused even here. A tag of the same name takes precedence.
+		 */
+		html?: { [Name in HtmlElement]?: readonly string[] };
 	}
 
 	export interface StringifyOptions {
@@ -440,7 +463,7 @@ export namespace Markdown {
 		frontmatter: FM;
 	}
 
-	/** The category a node of type `K` belongs to; `tag` and `comment` belong to both. */
+	/** The category a node of type `K` belongs to; `tag`, `element` and `comment` belong to both. */
 	type Category<K extends Node["type"]> =
 		| (K extends Block["type"] ? Block : never)
 		| (K extends Inline["type"] ? Inline : never)

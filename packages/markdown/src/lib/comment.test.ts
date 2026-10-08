@@ -208,6 +208,19 @@ describe("stringify", () => {
 		expect(roundTrip("Before {/* note */} after")).toBe("Before {/* note */} after\n");
 	});
 
+	test("writes a tag whose inline content opens with a comment as inline content", () => {
+		let options = { tags: { kbd: { content: "inline" } } } satisfies Markdown.Options;
+		let document = unwrap(Markdown.parse("<kbd>{/* x */}K</kbd>", options)).document;
+
+		let written = unwrap(Markdown.stringify(document));
+
+		expect(written).toBe("<kbd>\n{/* x */}K\n</kbd>\n");
+		expect(unwrap(Markdown.parse(written, options)).document.children[0]).toMatchObject({
+			type: "tag",
+			children: [{ type: "comment" }, { type: "text", value: "K" }],
+		});
+	});
+
 	test("escapes text that would open a comment", () => {
 		let document: Markdown.Document = {
 			type: "document",

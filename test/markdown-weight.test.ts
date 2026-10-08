@@ -16,13 +16,13 @@ import { weigh } from "./markdown-weight";
 const ROOT = join(import.meta.dirname, "..");
 
 /** The budget the format entry is held to, in bytes: a ratchet just above what it weighs. */
-const ROOT_BUDGET = 70 * 1024;
+const ROOT_BUDGET = 72 * 1024;
 
 /** Plain-text extraction is a walk over the tree, so it carries no grammar of its own. */
 const PLAIN_BUDGET = 4 * 1024;
 
 /** Static HTML is a walk plus an escaper, so it stays close to the plain-text entry. */
-const HTML_BUDGET = 8 * 1024;
+const HTML_BUDGET = 9 * 1024;
 
 describe("@sdxc/markdown stays inside its size budget", () => {
 	test(`the format entry is under ${ROOT_BUDGET} bytes minified`, async () => {

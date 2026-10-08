@@ -8,26 +8,7 @@
  */
 import type { Markdown } from "../index.js";
 
-/**
- * Node types that open a block of their own, which is what tells a tag wrapped
- * around paragraphs apart from one written inside a sentence.
- */
-const BLOCK_TYPES: ReadonlySet<string> = new Set([
-	"alert",
-	"blockquote",
-	"code",
-	"document",
-	"footnoteDefinition",
-	"heading",
-	"html",
-	"list",
-	"listItem",
-	"paragraph",
-	"table",
-	"tableCell",
-	"tableRow",
-	"thematicBreak",
-]);
+import { holdsBlocks } from "../lib/elements.js";
 
 /** Options for {@link toPlainText}. */
 export interface PlainTextOptions {
@@ -147,9 +128,10 @@ function collectBlocks(node: Markdown.Node, options: ResolvedOptions, blocks: st
 			return;
 		}
 
-		case "tag": {
+		case "tag":
+		case "element": {
 			let children: Markdown.Node[] = node.children;
-			if (children.some((child) => BLOCK_TYPES.has(child.type))) {
+			if (holdsBlocks(children)) {
 				for (let child of children) collectBlocks(child, options, blocks);
 				return;
 			}

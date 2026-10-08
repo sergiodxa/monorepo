@@ -11,9 +11,12 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import { css } from "remix/component";
+import { createElement, css } from "remix/component";
 
 import type { Markdown } from "../index.js";
+
+import { elementShape, isSafeAttributeValue } from "../lib/elements.js";
+import { attributeText } from "../lib/stringify/attributes.js";
 
 import { Fence } from "./fence.js";
 
@@ -258,7 +261,28 @@ function renderNode(node: Markdown.Node, options: RemixOptions): RemixNode {
 
 		case "comment":
 			return null;
+
+		case "element":
+			return renderElement(node, options);
 	}
+}
+
+/**
+ * An allowlisted element as itself. The parser's rules hold here too, so a
+ * hand-built tree cannot slip an event handler or a script URL into the markup.
+ */
+function renderElement(node: Markdown.Element, options: RemixOptions): RemixNode {
+	let props: Record<string, unknown> = {};
+
+	for (let [name, value] of Object.entries(node.attributes)) {
+		if (value === false || value === null || /^on/i.test(name)) continue;
+		if (!isSafeAttributeValue(name, value)) continue;
+		props[name] = value === true ? true : attributeText(value);
+	}
+
+	if (elementShape(node.name)?.content === "none") return createElement(node.name, props);
+
+	return createElement(node.name, props, renderChildren(node.children, options));
 }
 
 /** Renders a run of nodes in order, which is what every parent does with its children. */

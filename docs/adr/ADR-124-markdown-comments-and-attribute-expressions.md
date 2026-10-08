@@ -133,9 +133,27 @@ reserved object shape, but every consumer reads two places to know a value.
 
 ### Open questions
 
-- An allowlist that renders vetted HTML elements (`<details>`, `<sup>`, `<kbd>`) as elements
-  rather than escaped text. Inline HTML arrives as separate opening and closing nodes, so this
-  belongs in the parser — allowlisted names becoming element nodes — rather than in each
-  renderer.
 - Inline `$x$` math needs a parser change, because emphasis parsing runs before any visitor.
   ` ```math ` fences and ``$`x`$`` can be handled by a visitor.
+
+## Addendum: HTML allowlist (2026-10-08)
+
+Raw HTML stays escaped by default. `Markdown.Options.html` maps element names to the attributes
+each may carry, and an allowlisted element parses to an `element` node — a sibling of `tag` in
+both node unions — which every renderer draws as itself.
+
+- **In the parser, not the renderers.** Inline HTML arrives as separate opening and closing
+  `inlineHtml` nodes, so a renderer cannot pair `<sup>` with `</sup>` across the text between
+  them. Allowlisted names reuse the tag machinery instead: children are markdown, positions
+  and failures work as for tags.
+- **Shape comes from a built-in table.** Each accepted element is a block container
+  (`details`, `div`, …), a block holding a line (`summary`, `figcaption`, `dt`), phrasing
+  (`sup`, `kbd`, `a`, …), or void (`br`, `img`, `wbr`, `hr`). Elements markdown already
+  spells (`p`, `h1`, `ul`, `table`, `pre`) and raw-text or script elements are not accepted,
+  and `HtmlElement` types the option so a typo is a compile error.
+- **A new node rather than a flagged `tag`.** A tag renders through a caller's component; an
+  element renders as itself. One type per behavior keeps every renderer's switch honest.
+- **Attributes are allowlisted per element.** An unlisted attribute is a parse error at the
+  opening tag; `on…` handlers are refused even when listed; URL attributes take only relative,
+  `http`, `https`, `mailto` and `tel` URLs. The variables visitor re-checks a URL once filled,
+  and both renderers drop an unsafe attribute again, so a hand-built tree cannot bypass it.
