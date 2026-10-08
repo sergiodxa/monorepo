@@ -1,11 +1,11 @@
 ---
 title: Canonical URLs, lazy routes and header fields
-description: Redirect to one canonical path, end a request with a thrown Response, load routes on demand, and read structured headers.
+description: Redirect to one canonical host and path, end a request with a thrown Response, load routes on demand, and read structured headers.
 section:
     title: Building Remix apps
     order: 3
 order: 7
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A few small decisions around the router pay off across every route: which spelling of a URL
@@ -14,6 +14,7 @@ evaluates before it answers, and how you read a header that has more structure t
 word. Each has a package, and each takes a line or two in the composition root from
 [Wire the router](/docs/building-remix-apps/wire-the-router).
 
+[`@sdxc/no-www-middleware`](/api/no-www-middleware) keeps the site on one host,
 [`@sdxc/trailing-slash-middleware`](/api/trailing-slash-middleware) picks one form of every
 path, [`@sdxc/catch-response-middleware`](/api/catch-response-middleware) turns a thrown
 `Response` into the answer, [`@sdxc/lazy-route`](/api/lazy-route) imports a route's module on
@@ -21,8 +22,8 @@ the first request that reaches it, and [`@sdxc/structured-fields`](/api/structur
 parses and writes the RFC 9651 header values that newer HTTP fields use.
 
 ```bash
-npm add @sdxc/trailing-slash-middleware @sdxc/catch-response-middleware \
-	@sdxc/lazy-route @sdxc/structured-fields @sdxc/result @sdxc/http remix
+npm add @sdxc/no-www-middleware @sdxc/trailing-slash-middleware \
+	@sdxc/catch-response-middleware @sdxc/lazy-route @sdxc/structured-fields @sdxc/result @sdxc/http remix
 ```
 
 ## One canonical path
@@ -67,6 +68,78 @@ Browsers cache a `308`, so switching a live site from one mode to the other send
 visitors into a loop until those entries expire. Pick once, and generate links in the
 canonical form so a click never pays for the redirect; the middleware is for the links other
 people write by hand.
+
+## One canonical host
+
+`www.example.com` and `example.com` are two sites to a search engine, and a cookie set on the
+apex domain without a `Domain` attribute never reaches the `www.` host. `noWWW()` makes the
+apex domain the only one that answers:
+
+```typescript {% title="bootstrap/app.ts" %}
+import type { Middleware } from "remix/router";
+
+import { log } from "@sdxc/logger/middleware";
+import { noWWW } from "@sdxc/no-www-middleware";
+import { trailingSlash } from "@sdxc/trailing-slash-middleware";
+import { createRouter } from "remix/router";
+
+import pricing from "~/app/http/controllers/pricing";
+import routes from "~/routes/web";
+
+import { logger } from "./logger";
+
+export default function application() {
+	let middleware: Middleware[] = [
+		log(logger) as Middleware,
+		noWWW(),
+		trailingSlash(),
+	];
+
+	let router = createRouter({ middleware });
+	router.map(routes.pricing, pricing);
+	return router;
+}
+```
+
+`GET https://www.example.com/pricing?plan=team` answers `308`, redirecting to
+`https://example.com/pricing?plan=team`: only the leading `www.` label goes, so the scheme,
+the port, the path and the query string carry over. It is the same `308` as the trailing
+slash, for the same reason: a comment form posted to the `www.` host is repeated on the apex
+domain as a `POST` with its body, where a `301` or `302` would let the browser turn it into a
+`GET` and drop what the visitor typed. The hostname is compared as the URL parser normalizes
+it, so `WWW.Example.com` redirects too, while `blog.example.com` and `wwwexample.com` pass
+through untouched.
+
+Each middleware fixes only its own part of the URL and redirects to the rest as it arrived,
+so `https://www.example.com/pricing/` takes two hops in either order. With `noWWW()` first,
+as above, the first hop lands on the canonical host and only the slash is left for the
+second: `www.example.com/pricing/` to `example.com/pricing/`, then to `example.com/pricing`.
+Both sit right after `log(logger)`, ahead of the session and body parsing, so neither hop pays
+for work the final request repeats, and the log records each redirect. Links you generate in
+the canonical form never pay either hop.
+
+The `www.` host must still reach the Worker for the redirect to run, so route it to the same
+Worker as the apex domain. A test sends the router a request for that host and reads the
+redirect, with both middleware running as they do in production:
+
+```typescript {% title="bootstrap/app.test.ts" %}
+import { expect, test } from "vitest";
+
+import application from "./app";
+
+test("the www. host redirects to the apex domain, then the slash goes", async () => {
+	let router = application();
+
+	let first = await router.fetch(new Request("https://www.example.com/pricing/"));
+	expect(first.status).toBe(308);
+	expect(first.headers.get("Location")).toBe("https://example.com/pricing/");
+
+	let location = first.headers.get("Location") ?? "";
+	let second = await router.fetch(new Request(location));
+	expect(second.status).toBe(308);
+	expect(second.headers.get("Location")).toBe("https://example.com/pricing");
+});
+```
 
 ## End a request from any depth
 
@@ -131,6 +204,7 @@ import type { Middleware } from "remix/router";
 import { catchResponse } from "@sdxc/catch-response-middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
+import { noWWW } from "@sdxc/no-www-middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { createRouter } from "remix/router";
 
@@ -144,6 +218,7 @@ const ADMIN: Middleware[] = [requireAdmin];
 export default function application() {
 	let middleware: Middleware[] = [
 		log(logger) as Middleware,
+		noWWW(),
 		trailingSlash(),
 		// …your session, formData() and renderer middleware
 		catchResponse(),
@@ -267,7 +342,7 @@ the window resets.
 - [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
   — the composition root these middleware join.
 - [SEO, sitemaps and robots.txt](/docs/building-remix-apps/seo-sitemaps-and-robots) — the
-  canonical URLs a sitemap should list.
+  canonical host and paths a sitemap should list.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — caching
   the responses your own Worker serves.
 - [Idempotent writes and JSON Merge Patch](/docs/http-apis/safe-writes) — another header,

@@ -35,6 +35,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"server-timing",
 			"catch-response-middleware",
 			"trailing-slash-middleware",
+			"no-www-middleware",
 			"well-known",
 		],
 	},
@@ -94,7 +95,18 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Interface",
-		packages: ["ui", "u", "icons", "i18n", "messageformat", "seo", "highlight", "lazy-route", "qr"],
+		packages: [
+			"ui",
+			"u",
+			"icons",
+			"i18n",
+			"messageformat",
+			"seo",
+			"highlight",
+			"lazy-route",
+			"lazy-frame",
+			"qr",
+		],
 	},
 	{
 		title: "Operations",
