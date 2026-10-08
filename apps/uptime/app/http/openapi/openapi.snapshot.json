@@ -11482,13 +11482,9 @@
                 "reason": {
                   "type": "string",
                   "enum": [
-                    "originDirective",
-                    "ttlDirective",
                     "includeDirective",
                     "generateDirective",
                     "unsupportedDirective",
-                    "multiLineRecord",
-                    "blankOwnerContinuation",
                     "nonInternetClass",
                     "unsupportedType",
                     "outOfZone",

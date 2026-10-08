@@ -22,10 +22,11 @@
 ;     a CNAME to the ESP) and the `_sip._tcp` SRV. Both exist so the parser has
 ;     something to bite on.
 ;
-; The "unsupported constructs" section at the end is deliberate: every row of
-; ADR-026 §7's "not supported, and reported rather than ignored" table appears
-; there at least once, so a parser test can assert that each one comes back as a
-; reported line with a reason rather than being silently dropped.
+; The "standard syntax and refusals" section at the end is deliberate: it
+; carries the RFC 1035 constructs a provider export never writes ($ORIGIN, $TTL,
+; parentheses, blank owners), so a parser test can assert that each imports, and
+; one line per construct still refused, so a test can assert each comes back as
+; a reported line with a reason rather than being silently dropped.
 
 ; --- apex -------------------------------------------------------------------
 
@@ -96,17 +97,25 @@ alias.sergiodxa.com.	CNAME	sergiodxa.com.
 ; A `;` inside a quoted string is data, not a comment.
 _semicolon.sergiodxa.com.	1	IN	TXT	"v=spf1 a; mx; ~all"	; and this part is a comment
 
-; --- unsupported constructs, one per ADR-026 §7 row -------------------------
+; --- standard syntax a provider export never writes ------------------------
 ;
-; None of the lines below may be silently dropped. Each must come back with its
-; line number, its text, and a reason.
+; Each of these must import as the record it declares.
 
-$ORIGIN sergiodxa.com.
+$ORIGIN lab.sergiodxa.com.
 $TTL 3600
-$INCLUDE /etc/bind/sergiodxa.com.extra
-$GENERATE 1-16 host$ A 192.0.2.$
+relative	IN	A	192.0.2.10
+@	IN	TXT	"origin moved"
+$ORIGIN sergiodxa.com.
 
-; Multi-line parenthesised record (only SOA uses them in practice).
+; Multi-line parenthesised record, read as one entry starting on its first line.
+_multi.sergiodxa.com.	1	IN	TXT	( "first half, "
+					"second half" )	; joined across lines
+
+; Blank-owner continuation: a line starting with whitespace inherits the
+; previous record's owner, here `_multi`.
+	1	IN	TXT	"inherits the owner above"
+
+; An SOA spread over parentheses is read whole, then reported as untracked.
 sergiodxa.com.	1	IN	SOA	dora.ns.cloudflare.com. dns.cloudflare.com. (
 					2361787296	; serial
 					10000		; refresh
@@ -114,20 +123,25 @@ sergiodxa.com.	1	IN	SOA	dora.ns.cloudflare.com. dns.cloudflare.com. (
 					604800		; expire
 					1800 )		; minimum
 
-; Blank-owner continuation: a line starting with whitespace inherits the
-; previous owner. Cloudflare always writes the owner, so this is not guessed at.
-	1	IN	TXT	"inherits the owner above"
+; --- refused constructs -----------------------------------------------------
+;
+; None of the lines below may be silently dropped. Each must come back with its
+; line number, its text, and a reason.
+
+$INCLUDE /etc/bind/sergiodxa.com.extra
+$GENERATE 1-16 host$ A 192.0.2.$
 
 ; A class other than IN.
 version.sergiodxa.com.	1	CH	TXT	"not the internet"
 
-; Types outside the six v1 sweep types.
-sergiodxa.com.	1	IN	CAA	0 issue "letsencrypt.org"
-sergiodxa.com.	1	IN	CAA	0 issuewild "digicert.com; cansignhttpexchanges=yes"
+; Types outside the seven tracked types.
 _sip._tcp.sergiodxa.com.	1	IN	SRV	10 5 5060 sip.sergiodxa.com.	; synthetic
 249.58.21.104.in-addr.arpa.	1	IN	PTR	sergiodxa.com.
 sergiodxa.com.	1	IN	DS	2371 13 2 3e8f9a1c0b6d5e4f2a7b8c9d0e1f2a3b4c5d6e7f8091a2b3c4d5e6f708192a3b
 sergiodxa.com.	1	IN	HTTPS	1 . alpn="h3,h2" ipv4hint=104.21.58.249
 
-; A line that is not a record at all.
+; A name in another zone.
+www.example.com.	1	IN	A	192.0.2.1
+
+; A line that is not a resource record at all.
 this line is not a resource record

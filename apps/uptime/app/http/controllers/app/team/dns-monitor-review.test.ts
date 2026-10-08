@@ -289,7 +289,7 @@ describe("dnsMonitorReview", () => {
 		let body = await (
 			await send(db, team, membership, monitor.id, {
 				rejected: [
-					{ line: 3, input: "$ORIGIN example.com.", reason: "originDirective" },
+					{ line: 3, input: "$INCLUDE example.com.extra", reason: "includeDirective" },
 					{
 						line: 9,
 						input: 'example.com. 1 IN CAA 0 issue "letsencrypt.org"',
@@ -301,8 +301,8 @@ describe("dnsMonitorReview", () => {
 		).text();
 
 		expect(body).toContain('id="dns-review-unparsed"');
-		expect(body).toContain("$ORIGIN example.com.");
-		expect(body).toContain(en.page.dnsMonitorReview.unparsed.reasons.originDirective);
+		expect(body).toContain("$INCLUDE example.com.extra");
+		expect(body).toContain(en.page.dnsMonitorReview.unparsed.reasons.includeDirective);
 		expect(body).toContain(en.page.dnsMonitorReview.unparsed.reasons.unsupportedType);
 	});
 

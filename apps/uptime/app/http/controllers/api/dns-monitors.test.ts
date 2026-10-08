@@ -322,7 +322,7 @@ describe("POST /api/v1/dns-monitors", () => {
 			db,
 			createRequest(
 				validDnsMonitorBody({
-					zoneFile: ["$ORIGIN example.com.", "www\t1\tIN\tA\t5.6.7.8"].join("\n"),
+					zoneFile: ["$INCLUDE example.com.extra", "www\t1\tIN\tA\t5.6.7.8"].join("\n"),
 				}),
 				{ Authorization: `Bearer ${key}` },
 			),
@@ -339,10 +339,10 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.dnsMonitor.zoneFileImportedAt).not.toBeNull();
 		expect(body.data.discovery.names).toBe(2);
 		/**
-		 * `$ORIGIN` is the dangerous one to ignore: every relative name after it would resolve
-		 * into the wrong zone, so a script is told about the rejected line explicitly.
+		 * `$INCLUDE` names a file the import does not have, so whatever it declares is missing
+		 * from the zone, and a script is told about the rejected line explicitly.
 		 */
-		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "originDirective" }]);
+		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "includeDirective" }]);
 
 		let dnsMonitorId = TypeID.fromString(body.data.dnsMonitor.id, "dns").toUUID();
 		expect(await DnsMonitorRecord.countByMonitor(db, dnsMonitorId)).toBeGreaterThan(1);

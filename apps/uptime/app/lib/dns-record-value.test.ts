@@ -11,20 +11,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DoH } from "@sdxc/doh";
+import type { ZoneFile } from "@sdxc/zone-file";
 
 import { describe, expect, test } from "vitest";
 
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
 
 import {
-	canonicalizeIpv6,
 	DNS_RECORD_TYPES,
 	isDnsRecordType,
-	isIpv4Address,
 	normalizeDnsName,
 	normalizeDnsRecordValue,
-	parseDnsRecordValue,
 	storedRecordValue,
 } from "~/app/lib/dns-record-value";
 
@@ -60,24 +57,7 @@ describe("normalizeDnsName", () => {
 	});
 });
 
-describe("isIpv4Address", () => {
-	test.each(["1.1.1.1", "104.21.58.249", "0.0.0.0", "255.255.255.255"])("accepts %j", (value) => {
-		expect(isIpv4Address(value)).toBe(true);
-	});
-
-	test.each([
-		"256.1.1.1",
-		"1.1.1",
-		"1.1.1.1.1",
-		/** Ambiguous: read as octal by some resolvers and as decimal by others. */
-		"010.1.1.1",
-		"1.1.1.-1",
-	])("refuses %j", (value) => {
-		expect(isIpv4Address(value)).toBe(false);
-	});
-});
-
-describe("canonicalizeIpv6", () => {
+describe("AAAA canonical form", () => {
 	test.each([
 		["2606:4700:3030:0000:0000:0000:6815:3AF9", "2606:4700:3030::6815:3af9"],
 		["2606:4700:3030::6815:3af9", "2606:4700:3030::6815:3af9"],
@@ -91,18 +71,7 @@ describe("canonicalizeIpv6", () => {
 		["2001:DB8:0:1:1:1:1:1", "2001:db8:0:1:1:1:1:1"],
 		["::ffff:192.0.2.1", "::ffff:c000:201"],
 	])("rewrites %j as %j", (input, expected) => {
-		expect(canonicalizeIpv6(input)).toBe(expected);
-	});
-
-	test.each([
-		"192.0.2.1",
-		"2001:db8::1::2",
-		"2001:db8:0:0:0:0:0:0:1",
-		"fe80::1%eth0",
-		"gggg::1",
-		"",
-	])("refuses %j", (value) => {
-		expect(canonicalizeIpv6(value)).toBeNull();
+		expect(normalizeDnsRecordValue("AAAA", input)).toBe(expected);
 	});
 
 	test.each([
@@ -110,15 +79,12 @@ describe("canonicalizeIpv6", () => {
 		["2001:0:0:1:0:0:0:1", "2001:0:0:1::1"],
 		["1:0:0:1:0:0:1:1", "1::1:0:0:1:1"],
 	])("elides the longest run of zero groups, leftmost on a tie: %j", (input, expected) => {
-		expect(canonicalizeIpv6(input)).toBe(expected);
+		expect(normalizeDnsRecordValue("AAAA", input)).toBe(expected);
 	});
 });
 
-/**
- * The rules themselves, which both readings share. Every case here is also a case of
- * {@link normalizeDnsRecordValue}, since the total reading is this one plus a fallback.
- */
-describe("parseDnsRecordValue", () => {
+/** The identity rules for data that parses, which both input channels share. */
+describe("normalizeDnsRecordValue on valid data", () => {
 	test.each([
 		["A", "104.21.58.249", "104.21.58.249"],
 		["A", " 1.2.3.4 ", "1.2.3.4"],
@@ -155,39 +121,11 @@ describe("parseDnsRecordValue", () => {
 			'0 issuewild "digicert.com; cansignhttpexchanges=yes"',
 		],
 	] as const)("reads a %s of %j as %j", (type, data, expected) => {
-		expect(parseDnsRecordValue(type, data)).toBe(expected);
-	});
-
-	test.each([
-		["A", "not-an-address"],
-		["A", "999.1.1.1"],
-		["AAAA", "1.1.1.1"],
-		["AAAA", "NOT:AN:ADDRESS:::1"],
-		["CNAME", ""],
-		/** A bare host is not an MX record: the preference is half of what an MX says. */
-		["MX", "aspmx.l.google.com."],
-		["MX", "high aspmx.l.google.com."],
-		["MX", "10"],
-		["TXT", '"unterminated'],
-		["CAA", "issue letsencrypt.org"],
-	] as const)("refuses a %s of %j", (type, data) => {
-		expect(parseDnsRecordValue(type, data)).toBeNull();
+		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
 	});
 });
 
-describe("normalizeDnsRecordValue", () => {
-	test.each([
-		["A", "104.21.58.249", "104.21.58.249"],
-		["AAAA", "2606:4700:3030:0:0:0:6815:3AF9", "2606:4700:3030::6815:3af9"],
-		["CNAME", "GH-ds9.Pages.dev.", "gh-ds9.pages.dev"],
-		["NS", "dora.ns.cloudflare.com.", "dora.ns.cloudflare.com"],
-		["MX", "05 aspmx.l.google.com.", "5 aspmx.l.google.com"],
-		["TXT", '"a" "b"', "ab"],
-	] as const)("agrees with the strict reading on a %s of %j", (type, data, expected) => {
-		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
-		expect(parseDnsRecordValue(type, data)).toBe(expected);
-	});
-
+describe("normalizeDnsRecordValue on invalid data", () => {
 	/**
 	 * The whole point of the total reading: a value that fails to parse is still the record's
 	 * identity, so dropping it would report a record the customer still publishes as `missing`
@@ -205,7 +143,6 @@ describe("normalizeDnsRecordValue", () => {
 		/** CAA has no partial reading to fold toward, so the trimmed text is its identity. */
 		["CAA", "  issue letsencrypt.org  ", "issue letsencrypt.org"],
 	] as const)("carries an unparseable %s of %j through as %j", (type, data, expected) => {
-		expect(parseDnsRecordValue(type, data)).toBeNull();
 		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
 	});
 });
@@ -269,36 +206,31 @@ describe("TXT escapes", () => {
 		['"a\\;b"', "a;b"],
 		['"caf\\195\\169"', "caf\u00e9"],
 	])("decodes %j as %j", (data, expected) => {
-		expect(parseDnsRecordValue("TXT", data)).toBe(expected);
+		expect(normalizeDnsRecordValue("TXT", data)).toBe(expected);
 	});
 });
 
 describe("storedRecordValue", () => {
-	let base = { name: "example.com", ttl: 300 };
-
 	/**
 	 * A resolver's answer reaches the sweep as typed records, a zone file as presentation text;
 	 * both must land on one stored value or every imported record diffs as changed.
 	 */
-	let cases: [record: DoH.RecordFor<DnsRecordType>, zoneFile: string][] = [
-		[{ ...base, type: "A", address: "104.21.58.249" }, "104.21.58.249"],
+	let cases: [record: ZoneFile.RecordData<DnsRecordType>, zoneFile: string][] = [
+		[{ type: "A", address: "104.21.58.249" }, "104.21.58.249"],
+		[{ type: "AAAA", address: "2606:4700:3030::6815:3af9" }, "2606:4700:3030:0:0:0:6815:3AF9"],
+		[{ type: "CNAME", target: "gh-ds9.pages.dev" }, "GH-ds9.Pages.dev."],
+		[{ type: "NS", host: "dora.ns.cloudflare.com" }, "dora.ns.cloudflare.com."],
 		[
-			{ ...base, type: "AAAA", address: "2606:4700:3030::6815:3af9" },
-			"2606:4700:3030:0:0:0:6815:3AF9",
-		],
-		[{ ...base, type: "CNAME", target: "gh-ds9.pages.dev" }, "GH-ds9.Pages.dev."],
-		[{ ...base, type: "NS", host: "dora.ns.cloudflare.com" }, "dora.ns.cloudflare.com."],
-		[
-			{ ...base, type: "MX", preference: 5, exchange: "alt1.aspmx.l.google.com" },
+			{ type: "MX", preference: 5, exchange: "alt1.aspmx.l.google.com" },
 			"05 ALT1.aspmx.l.google.com.",
 		],
-		[{ ...base, type: "MX", preference: 0, exchange: "." }, "0 ."],
+		[{ type: "MX", preference: 0, exchange: "." }, "0 ."],
 		[
-			{ ...base, type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] },
+			{ type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] },
 			'"v=DKIM1; p=AAA" "BBB"',
 		],
 		[
-			{ ...base, type: "CAA", flags: 0, critical: false, tag: "issue", value: "letsencrypt.org" },
+			{ type: "CAA", flags: 0, critical: false, tag: "issue", value: "letsencrypt.org" },
 			'0 issue "letsencrypt.org"',
 		],
 	];

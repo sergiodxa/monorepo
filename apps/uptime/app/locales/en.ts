@@ -3540,14 +3540,9 @@ export default {
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
-					originDirective:
-						"Changes which zone the names after it belong to, so we cannot read it safely",
-					ttlDirective: "We do not track TTLs",
 					includeDirective: "Names a file we do not have and will not fetch",
 					generateDirective: "Expands into many names at once",
 					unsupportedDirective: "Not a directive we read",
-					multiLineRecord: "Spread over several lines with parentheses",
-					blankOwnerContinuation: "Starts with a space, inheriting the previous line's name",
 					nonInternetClass: "Not an internet-class record",
 					unsupportedType: "Not one of the seven record types we watch",
 					outOfZone: "Belongs to a different domain",

@@ -3537,15 +3537,10 @@ export default {
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
-					originDirective:
-						"Change la zone à laquelle appartiennent les noms qui suivent, nous ne pouvons donc pas la lire sans risque",
-					ttlDirective: "Nous ne suivons pas les TTL",
 					includeDirective:
 						"Désigne un fichier que nous n'avons pas et que nous n'irons pas chercher",
 					generateDirective: "Se développe en de nombreux noms d'un coup",
 					unsupportedDirective: "Ce n'est pas une directive que nous lisons",
-					multiLineRecord: "Réparti sur plusieurs lignes avec des parenthèses",
-					blankOwnerContinuation: "Commence par une espace et hérite du nom de la ligne précédente",
 					nonInternetClass: "Ce n'est pas un enregistrement de classe internet",
 					unsupportedType: "Ce n'est pas l'un des sept types d'enregistrement que nous surveillons",
 					outOfZone: "Appartient à un autre domaine",

@@ -137,7 +137,7 @@ POST /api/v1/dns-monitors
 | `intervalSeconds` | integer | No       | Check interval in seconds (900-86400, default: 86400)                      |
 | `isEnabled`       | boolean | No       | Whether the monitor is checked on its interval (default: true)             |
 
-The parser reads one record per line, `<owner> [<ttl>] [IN] <TYPE> <rdata>`, with `;` comments, blank lines, absolute and relative owners, `@` for the apex, and quoted TXT character-strings. Anything it cannot use — `$ORIGIN`, `$TTL`, `$INCLUDE`, `$GENERATE`, parenthesised multi-line records, owner-inheriting continuation lines, non-`IN` classes, untracked types — is **reported, never silently dropped**, in `discovery.rejectedLines`.
+The parser reads standard RFC 1035 zone-file syntax: `<owner> [<ttl>] [IN] <TYPE> <rdata>` records, `;` comments, absolute and relative names, `@` for the apex, `$ORIGIN` and `$TTL`, parenthesised multi-line records, owner-inheriting continuation lines, and quoted TXT character-strings. Anything it cannot use — `$INCLUDE`, `$GENERATE`, non-`IN` classes, untracked types, names outside the domain — is **reported, never silently dropped**, in `discovery.rejectedLines`, with the line the entry starts on.
 
 A record the zone file declares but the resolver does not answer is imported **unwatched**, with status `missing`. That is a real finding at import — a stale delegation, a change that never published — and a poor standing alert, since the file is a snapshot that only gets older. Enable it through the records sub-resource if you want it watched. On a proxied zone this is the common case rather than the exceptional one: a proxied record is not in public DNS at all.
 
@@ -176,7 +176,7 @@ curl https://uptime.sergiodxa.com/api/v1/dns-monitors \
 			"names": 3,
 			"recordsImported": 11,
 			"queriesFailed": 0,
-			"rejectedLines": [{ "line": 1, "reason": "originDirective" }],
+			"rejectedLines": [{ "line": 1, "reason": "includeDirective" }],
 			"duplicateLines": [14]
 		}
 	}

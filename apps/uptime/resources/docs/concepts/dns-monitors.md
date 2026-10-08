@@ -106,9 +106,9 @@ The domain the monitor covers. Every check queries this name, and it is the orig
 
 Optional, and the only way to cover names other than the domain itself. Paste a BIND-format zone file — the export button in your DNS provider's dashboard produces one — and every name it declares is added to the set the monitor sweeps.
 
-The parser reads one record per line, `<owner> [<ttl>] [IN] <TYPE> <rdata>`, with `;` comments, blank lines, absolute and relative owners, `@` for the apex, and quoted TXT character-strings and CAA values.
+The parser reads standard RFC 1035 zone-file syntax: `<owner> [<ttl>] [IN] <TYPE> <rdata>` records, `;` comments, absolute and relative names, `@` for the apex, `$ORIGIN` and `$TTL` directives, records spread over several lines with parentheses, lines that start with whitespace to reuse the previous record's name, and quoted TXT character-strings and CAA values. A TXT value is read as DNS reads it: unquoted words are separate character-strings joined with nothing between them, so write `"v=spf1 -all"` in quotes to keep its space.
 
-**A line the parser cannot use is never silently dropped.** `$ORIGIN`, `$TTL`, `$INCLUDE` and `$GENERATE` directives, parenthesised multi-line records, owner-inheriting continuation lines, classes other than `IN`, and record types outside the seven above are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
+**An entry the parser cannot use is never silently dropped.** `$INCLUDE` and `$GENERATE` directives, classes other than `IN`, record types outside the seven above, and names outside the monitor's domain are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
 
 The pasted text is **never stored**. It is parsed on submit; the records and the import date are kept, and the text is discarded. Re-importing later means pasting again.
 

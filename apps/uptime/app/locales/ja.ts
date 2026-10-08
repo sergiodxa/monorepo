@@ -3466,13 +3466,9 @@ export default {
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
-					originDirective: "以降の名前がどのゾーンに属するかを変えるため、安全に読み取れません",
-					ttlDirective: "TTL は追跡していません",
 					includeDirective: "手元になく、取得もしないファイルを指しています",
 					generateDirective: "一度に多数の名前へ展開されます",
 					unsupportedDirective: "読み取り対象のディレクティブではありません",
-					multiLineRecord: "括弧で複数行に分かれています",
-					blankOwnerContinuation: "空白で始まり、前の行の名前を引き継いでいます",
 					nonInternetClass: "インターネットクラスのレコードではありません",
 					unsupportedType: "監視対象の 7 種類のレコードタイプに含まれません",
 					outOfZone: "別のドメインに属しています",

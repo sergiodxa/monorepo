@@ -432,7 +432,9 @@ end of line, outside quoted strings; blank lines; absolute owners with a trailin
 relative owners resolved against the monitor's `domain`; `@` as the apex; quoted TXT
 character-strings, several per line, concatenated; the six supported types.
 
-**Not supported, and reported rather than ignored.**
+**Not supported, and reported rather than ignored.** _Superseded by
+[ADR-034](./ADR-034-zone-file-import-through-sdxc-zone-file.md): `$ORIGIN`, `$TTL`, parenthesised
+records and blank-owner lines now import._
 
 | Construct                             | Why not                                                                                                                                                                           |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

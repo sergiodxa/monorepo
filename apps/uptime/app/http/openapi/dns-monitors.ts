@@ -30,13 +30,9 @@ const DNS_RECORD_SOURCES = ["resolver", "zone_file"] as const;
 
 /** Why a pasted zone-file line was left out of an import, as the parser reports it. */
 const ZONE_FILE_REJECTION_REASONS = [
-	"originDirective",
-	"ttlDirective",
 	"includeDirective",
 	"generateDirective",
 	"unsupportedDirective",
-	"multiLineRecord",
-	"blankOwnerContinuation",
 	"nonInternetClass",
 	"unsupportedType",
 	"outOfZone",

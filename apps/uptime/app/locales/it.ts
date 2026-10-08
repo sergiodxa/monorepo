@@ -3521,14 +3521,9 @@ export default {
 
 				/** One sentence per parser outcome, so each names the fix it points at. */
 				reasons: {
-					originDirective:
-						"Cambia a quale zona appartengono i nomi che seguono, quindi non possiamo leggerla in sicurezza",
-					ttlDirective: "Non teniamo traccia dei TTL",
 					includeDirective: "Indica un file che non abbiamo e che non andremo a recuperare",
 					generateDirective: "Si espande in molti nomi in una volta sola",
 					unsupportedDirective: "Non è una direttiva che leggiamo",
-					multiLineRecord: "Distribuito su più righe con le parentesi",
-					blankOwnerContinuation: "Inizia con uno spazio ed eredita il nome della riga precedente",
 					nonInternetClass: "Non è un record di classe internet",
 					unsupportedType: "Non è uno dei sette tipi di record che monitoriamo",
 					outOfZone: "Appartiene a un altro dominio",

@@ -1,7 +1,7 @@
 /**
- * Tests for the pasted zone-file parser, driven by two fixtures: a genuine provider export,
- * which is what a real paste looks like, and a hand-built file whose tail carries one line for
- * every construct the parser refuses, so each refusal is asserted against the reason it reports.
+ * Tests for the zone-file import policy, driven by two fixtures: a genuine provider export,
+ * which is what a real paste looks like, and a hand-built file whose tail carries the standard
+ * syntax exports never write plus one line per refused construct, each asserted by reason.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -24,7 +24,7 @@ const EXPORT_FIXTURE = readFileSync(
 	"utf8",
 );
 
-/** Real RRsets plus one line per refused construct, which no export would contain. */
+/** Real RRsets plus hand-written syntax and one line per refused construct, which no export contains. */
 const RECONSTRUCTED_FIXTURE = readFileSync(
 	new URL("./fixtures/sergiodxa.com.reconstructed.zone", import.meta.url),
 	"utf8",
@@ -267,33 +267,55 @@ describe("parseZoneFile", () => {
 		});
 	});
 
-	describe("every construct outside the supported subset", () => {
+	describe("standard syntax a provider export never writes", () => {
 		let imported = parse(RECONSTRUCTED_FIXTURE);
 
-		test.each([
-			["$ORIGIN", "originDirective"],
-			["$TTL", "ttlDirective"],
-			["$INCLUDE", "includeDirective"],
-			["$GENERATE", "generateDirective"],
-			["IN\tSOA", "multiLineRecord"],
-			["inherits the owner above", "blankOwnerContinuation"],
-			["CH\tTXT", "nonInternetClass"],
-			["IN\tSRV", "unsupportedType"],
-			["IN\tPTR", "unsupportedType"],
-			["IN\tDS", "unsupportedType"],
-			["IN\tHTTPS", "unsupportedType"],
-			["this line is not a resource record", "malformed"],
-		] as const)("reports %s as %s", (needle, reason) => {
-			expect(reasonForLineContaining(imported, needle)).toBe(reason);
+		test("resolves relative names against an `$ORIGIN` and returns to the domain after it", () => {
+			expect(imported.records).toContainEqual({
+				line: 106,
+				name: "relative.lab.sergiodxa.com",
+				type: "A",
+				value: "192.0.2.10",
+			});
+			expect(imported.records).toContainEqual({
+				line: 107,
+				name: "lab.sergiodxa.com",
+				type: "TXT",
+				value: "origin moved",
+			});
 		});
 
-		test("reports every line of a parenthesised record, not only the first", () => {
-			let multiLine = imported.rejected.filter(
-				(rejection) => rejection.reason === "multiLineRecord",
+		test("reads `$TTL` without reporting it", () => {
+			expect(imported.rejected.some((rejection) => rejection.input.startsWith("$TTL"))).toBe(false);
+			expect(imported.rejected.some((rejection) => rejection.input.startsWith("$ORIGIN"))).toBe(
+				false,
 			);
+		});
 
-			/** The opening line plus its four continuations, through the line closing the paren. */
-			expect(multiLine.map((rejection) => rejection.line)).toEqual([110, 111, 112, 113, 114, 115]);
+		test("reads a parenthesised record as one entry on the line it starts", () => {
+			expect(imported.records).toContainEqual({
+				line: 111,
+				name: "_multi.sergiodxa.com",
+				type: "TXT",
+				value: "first half, second half",
+			});
+		});
+
+		test("gives a blank-owner line the previous record's owner", () => {
+			expect(imported.records).toContainEqual({
+				line: 116,
+				name: "_multi.sergiodxa.com",
+				type: "TXT",
+				value: "inherits the owner above",
+			});
+		});
+
+		test("reports a multi-line SOA once, on the line it starts", () => {
+			let soa = imported.rejected.filter((rejection) => rejection.input.includes("IN\tSOA"));
+
+			expect(soa).toHaveLength(1);
+			expect(soa[0]?.line).toBe(119);
+			expect(soa[0]?.reason).toBe("unsupportedType");
 		});
 
 		test("resumes reading records after a parenthesised record ends", () => {
@@ -301,18 +323,61 @@ describe("parseZoneFile", () => {
 				[
 					"@\t1\tIN\tSOA\tns.example.com. root.example.com. (",
 					"\t1 ; serial",
-					"\t2 )",
+					"\t2 3 4 5 )",
 					"www\t1\tIN\tCNAME\tsergiodxa.com.",
 				].join("\n"),
 			);
 
-			expect(imported.rejected.map((rejection) => rejection.line)).toEqual([1, 2, 3]);
-			expect(imported.records[0]?.name).toBe("www.sergiodxa.com");
+			expect(imported.rejected).toEqual([
+				{ line: 1, input: expect.stringContaining("IN\tSOA"), reason: "unsupportedType" },
+			]);
+			expect(imported.records).toEqual([
+				{ line: 4, name: "www.sergiodxa.com", type: "CNAME", value: "sergiodxa.com" },
+			]);
+		});
+
+		test("joins unquoted TXT words as DNS does, dropping the space between them", () => {
+			/** RFC 1035 reads each unquoted word as a character-string; the record served is `v=spf1-all`. */
+			let imported = parse("@\t1\tIN\tTXT\tv=spf1 -all");
+			expect(imported.records[0]?.value).toBe("v=spf1-all");
+		});
+	});
+
+	describe("every construct the import refuses", () => {
+		let imported = parse(RECONSTRUCTED_FIXTURE);
+
+		test.each([
+			["$INCLUDE", "includeDirective"],
+			["$GENERATE", "generateDirective"],
+			["CH\tTXT", "nonInternetClass"],
+			["IN\tSRV", "unsupportedType"],
+			["IN\tPTR", "unsupportedType"],
+			["IN\tDS", "unsupportedType"],
+			["IN\tHTTPS", "unsupportedType"],
+			["www.example.com.", "outOfZone"],
+			["this line is not a resource record", "malformed"],
+		] as const)("reports %s as %s", (needle, reason) => {
+			expect(reasonForLineContaining(imported, needle)).toBe(reason);
+		});
+
+		test("reports entries in the order the file declares them", () => {
+			let lines = imported.rejected.map((rejection) => rejection.line);
+			expect(lines).toEqual([...lines].sort((left, right) => left - right));
 		});
 
 		test("reports a directive it has never heard of rather than ignoring it", () => {
 			let imported = parse("$WHATEVER 1");
 			expect(imported.rejected[0]?.reason).toBe("unsupportedDirective");
+		});
+
+		test("reads `$GENERATE` in any case", () => {
+			expect(parse("$generate 1-2 host$ A 192.0.2.$").rejected[0]?.reason).toBe(
+				"generateDirective",
+			);
+		});
+
+		test("reports a blank-owner line with no record before it", () => {
+			expect(parse("\t1\tIN\tA\t192.0.2.1").rejected[0]?.reason).toBe("malformed");
 		});
 
 		test("reports rdata that does not fit its type", () => {
@@ -327,7 +392,7 @@ describe("parseZoneFile", () => {
 			expect(parse('@\t1\tIN\tTXT\t"unterminated').rejected[0]?.reason).toBe("malformed");
 		});
 
-		test("carries the line number and the text of every reported line", () => {
+		test("carries the line number and the text of every reported entry", () => {
 			for (let rejection of imported.rejected) {
 				expect(rejection.line).toBeGreaterThan(0);
 				expect(rejection.input.length).toBeGreaterThan(0);
@@ -335,21 +400,35 @@ describe("parseZoneFile", () => {
 			}
 		});
 
-		test.each([
-			["the export", EXPORT_FIXTURE],
-			["the reconstructed file", RECONSTRUCTED_FIXTURE],
-		])("accounts for every meaningful line of %s", (_label, fixture) => {
+		test("accounts for every meaningful line of the export", () => {
 			/** Nothing may fall between the records and the report: a silent drop is the one failure mode. */
-			let meaningful = fixture.split(/\r?\n/).filter((line) => {
+			let meaningful = EXPORT_FIXTURE.split(/\r?\n/).filter((line) => {
 				let value = line.trim();
 				return value.length > 0 && !value.startsWith(";");
 			});
 
-			let accounted = parse(fixture);
+			let accounted = parse(EXPORT_FIXTURE);
 
 			expect(
 				accounted.records.length + accounted.rejected.length + accounted.duplicates.length,
 			).toBe(meaningful.length);
+		});
+
+		test("accounts for every meaningful line of the reconstructed file", () => {
+			let meaningful = RECONSTRUCTED_FIXTURE.split(/\r?\n/).filter((line) => {
+				let value = line.trim();
+				return value.length > 0 && !value.startsWith(";");
+			});
+			/** Two `$ORIGIN`s and a `$TTL` are applied, and six lines continue a parenthesised entry. */
+			let directives = 3;
+			let continuations = 6;
+
+			expect(imported.records).toHaveLength(50);
+			expect(imported.rejected).toHaveLength(10);
+			expect(imported.duplicates).toHaveLength(0);
+			expect(imported.records.length + imported.rejected.length + directives + continuations).toBe(
+				meaningful.length,
+			);
 		});
 	});
 
