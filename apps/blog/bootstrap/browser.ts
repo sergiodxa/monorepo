@@ -24,14 +24,15 @@ function keepDocumentNavigations() {
 keepDocumentNavigations();
 
 /**
- * Modules the runtime may hydrate. Tests sit next to the views they cover and reach for
- * the server application, so they stay out of the bundle the browser downloads.
+ * Modules the runtime may hydrate: the islands, which all live in `resources/components/`.
+ * Layouts and views stay out, since bundling them would ship their stylesheets twice, once
+ * with the server's document and once in a chunk no page asks for. Tests reach for the
+ * server application, so they stay out too.
  */
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
 	"!../**/*.test.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+	"../resources/components/**/*.{ts,tsx}",
 ]);
 
 run({

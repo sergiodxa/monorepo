@@ -10,17 +10,21 @@
 
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { colorScheme } from "@sdxc/u/color";
 import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/component/server";
+
+import type { DocumentAssets as Assets } from "~/app/services/assets";
 
 import { PROFILE } from "~/config/profile";
-import colorStyles from "~/resources/css/colors.css?url";
-import codeStyles from "~/resources/css/highlight.css?url";
 import routes from "~/routes/web";
+
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
+import "@sdxc/highlight/styles.css";
+import "~/resources/css/highlight.css";
 
 /**
  * The profiles `rel="me"` claims as the site owner's, which is how an IndieWeb reader
@@ -29,10 +33,13 @@ import routes from "~/routes/web";
 const REL_ME = [PROFILE.github.profile, PROFILE.x.profile, PROFILE.youtube.profile];
 
 /**
- * The dev server serves the entry from source; the built client writes it to a stable
- * name, so the tag can name the file rather than resolve it through a manifest.
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
  */
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 namespace DocumentLayout {
 	/**
@@ -92,6 +99,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 			meta = [],
 			title,
 		} = handle.props;
+		let { script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html
@@ -122,12 +130,13 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						content="oklch(0.16 0.006 250)"
 						data-rmx-key="theme-color-dark"
 					/>
-					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} data-rmx-key="client-entry" />
-					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
-					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
-					<link rel="stylesheet" href={highlightStyles} data-rmx-key="style-highlight" />
-					<link rel="stylesheet" href={codeStyles} data-rmx-key="style-code" />
+					<ImportMap value={script.importMap} />
+					{script.preloads.map((href) => (
+						<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />
+					))}
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
+					))}
 					<title data-rmx-key="title">{title}</title>
 					{description && (
 						<meta name="description" content={description} data-rmx-key="description" />
@@ -161,7 +170,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				</head>
 				<body mix={bodyMix}>
 					{children}
-					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+					<script type="module" async src={script.href}></script>
 				</body>
 			</html>
 		);

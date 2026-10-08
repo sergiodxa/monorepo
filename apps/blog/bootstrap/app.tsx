@@ -62,9 +62,11 @@ import { loginFor } from "~/app/http/return-path";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { jobQueue } from "~/app/jobs/queue";
 import mcpRateLimit from "~/app/mcp/rate-limit";
+import { documentAssets } from "~/app/services/assets";
 import { createDatabase } from "~/app/services/database";
 import { PROFILE } from "~/config/profile";
 import { SECURITY_TXT } from "~/config/security-txt";
+import { DocumentAssets } from "~/resources/layouts/document";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
 
@@ -464,7 +466,9 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
 	return async function render(ViewComponent, viewModel, options?: RenderOptions) {
 		let renderView = ViewComponent();
-		let stream = renderToStream(renderView({ model: viewModel }), {
+		let assets = await documentAssets();
+		let page = <DocumentAssets value={assets}>{renderView({ model: viewModel })}</DocumentAssets>;
+		let stream = renderToStream(page, {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveSsrFrame(ctx, src, target, context);

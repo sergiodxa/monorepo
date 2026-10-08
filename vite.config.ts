@@ -96,7 +96,12 @@ const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 			remoteBindings: false,
 		}),
 	],
-	resolve: { tsconfigPaths: true },
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/blog/app/test/assets-manifest.ts`,
+		},
+	},
 	test: {
 		name: "blog-workers",
 		include: ["**/*.workers.test.ts?(x)"],
@@ -240,7 +245,12 @@ export default defineConfig({
 			{
 				root: "apps/blog",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/blog/app/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "blog",
 					include: ["**/*.test.ts?(x)"],
