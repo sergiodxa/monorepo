@@ -17,7 +17,8 @@ EPUB 3 is the format every e-reader, phone reading app and Send to Kindle accept
 a pure transformation with no I/O: XHTML content documents, a package document, a navigation
 document, and a ZIP container with one unusual rule about its first entry. This ADR adds
 `@sdxc/epub` to build publications, and `@sdxc/zip` to write the container, because a ZIP writer
-has consumers of its own.
+has consumers of its own. The writer stores entries uncompressed for now; DEFLATE arrives when a
+consumer's archives are large enough to need it.
 
 ## Context
 
@@ -66,9 +67,14 @@ data puts them in the local header; one that streams sets general-purpose bit 3 
 data descriptor after the data. Bit 3 on a **stored** entry leaves a streaming reader no way to find
 the end of the data, so stored entries need their CRC and size up front.
 
-Compression is DEFLATE, which every target runtime provides as `CompressionStream("deflate-raw")`:
-Cloudflare Workers, Bun, Node and browsers. `packages/saml/src/lib/deflate.ts` already relies on it
-in all three server runtimes, with tests. CRC-32 has no Web API and is a 256-entry table and a loop.
+Each entry is either stored (method 0, the bytes as they are) or compressed, almost always with
+DEFLATE (method 8). OCF allows both for every EPUB entry except `mimetype`, which must be stored, and
+every reading system opens an archive whose entries are all stored. A stored entry needs nothing but
+its CRC-32, which has no Web API and is a 256-entry table and a loop.
+
+DEFLATE is available in every target runtime as `CompressionStream("deflate-raw")`, and
+`packages/saml/src/lib/deflate.ts` already relies on it. Text compresses three to four times; images,
+fonts and the consumers' first archives are small or already compressed, so storing costs little today.
 
 ZIP64 extends the format past 4 GiB per entry or 65,535 entries. No consumer here comes near either.
 
@@ -94,7 +100,8 @@ ZIP64 extends the format past 4 GiB per entry or 65,535 entries. No consumer her
 
 Add two public packages:
 
-- **`@sdxc/zip`**: a streaming ZIP writer, with CRC-32. Writing only.
+- **`@sdxc/zip`**: a streaming ZIP writer, with CRC-32. Writing only, and storing only: every entry
+  is written uncompressed (method 0) until a consumer needs DEFLATE.
 - **`@sdxc/epub`**: builds an EPUB 3.3 publication from metadata, XHTML chapters and resources,
   verifies what epubcheck would reject, and writes it through `@sdxc/zip`.
 
@@ -112,7 +119,7 @@ ZIP is a format capability with three consumers, so it is its own package, the w
 import { Zip } from "@sdxc/zip";
 
 let zip = new Zip();
-zip.add("summary.csv", summaryCsv, { method: "deflate" });
+zip.add("summary.csv", summaryCsv); // a string or Uint8Array
 zip.add("daily.csv", dailyStream); // a ReadableStream<Uint8Array>
 let stream = zip.stream(); // ReadableStream<Uint8Array>
 
@@ -124,37 +131,89 @@ return new Response(stream, {
 });
 ```
 
-| Entry option | Default     | Meaning                                                                                  |
-| ------------ | ----------- | ---------------------------------------------------------------------------------------- |
-| `method`     | `"deflate"` | `"store"` or `"deflate"`                                                                 |
-| `modified`   | 1980-01-01  | The entry's DOS timestamp; the fixed default makes the same input produce the same bytes |
-| `comment`    | None        | Entry comment in the central directory                                                   |
+| Entry option | Default    | Meaning                                                                                  |
+| ------------ | ---------- | ---------------------------------------------------------------------------------------- |
+| `modified`   | 1980-01-01 | The entry's DOS timestamp; the fixed default makes the same input produce the same bytes |
+| `comment`    | None       | Entry comment in the central directory                                                   |
 
-- **Bytes go in whole when they can.** A `Uint8Array` or `string` entry has its CRC-32 and sizes
-  computed before its header is written, so the local header is complete and bit 3 is unset. A
-  `ReadableStream` entry is deflated and gets a data descriptor. `{ method: "store" }` on a stream
-  fails `invalid-entry`, for the reason given in [the container](#the-zip-container).
-- **Output is a stream.** `zip.stream()` writes entries in the order they were added and holds one
-  entry's compression in memory at a time, so a Worker can answer a large export without buffering
-  it. `zip.bytes()` collects the stream for a caller that needs a `Uint8Array`, as tests do.
+- **Every entry is stored.** The local header carries method 0, the CRC-32 and both sizes, and
+  general-purpose bit 3 is never set, so every unarchiver and streaming reader finds each entry's
+  end from its header. This is also exactly the form EPUB requires of `mimetype`.
+- **Stream entries are collected before they are written.** A `ReadableStream` entry is read whole
+  when `zip.stream()` reaches it, so its CRC-32 and size are known before its header. Memory holds
+  one entry at a time, and the API stays the same when DEFLATE and data descriptors arrive.
+- **Output is a stream.** `zip.stream()` writes entries in the order they were added, so a Worker
+  answers an export of many entries without holding the whole archive. `zip.bytes()` collects the
+  stream for a caller that needs a `Uint8Array`, as tests and `@sdxc/epub` do.
 - **Names are UTF-8** with bit 11 set, `/`-separated, and checked: an empty segment, `.` or `..`,
   a leading `/`, a backslash or a duplicate name fails `invalid-entry` when added.
-- **Failures are values.** `add` answers `Result<void, ZipError>`; a stream that errors while being
-  written errors the output stream with the `ZipError`, since a response already under way has no
-  other channel. Codes: `invalid-entry`, `too-large` (an entry over 4 GiB or the 65,536th entry,
-  since ZIP64 is not written), `compression-failed`.
+- **Failures are values.** `add` answers `Result<void, ZipError>`; a source stream that errors while
+  being read errors the output stream with a `ZipError` carrying the source error as `cause`, since
+  a response already under way has no other channel. Codes: `invalid-entry`, `too-large` (an entry
+  over 4 GiB or the 65,536th entry, since ZIP64 is not written), `source-failed`.
 - **`crc32(bytes, previous?)`** is exported, since PNG output deferred in
   [ADR-115](./ADR-115-qr-package.md) needs the same checksum. The table is built on first use, so
   importing the module does no work in the Worker's global scope.
 
-Reading archives is out of scope; see [Out of scope](#out-of-scope).
+Reading archives and DEFLATE are out of scope; see [Out of scope](#out-of-scope).
+
+#### README
+
+The package README states in its introduction that entries are stored uncompressed, what that costs
+(text-heavy archives are three to four times larger than a compressed equivalent), and that
+compression is planned. Its usage section carries these examples:
+
+```typescript
+// A download built from strings and bytes
+import { Zip } from "@sdxc/zip";
+
+let zip = new Zip();
+zip.add("README.txt", "Exported on 2026-10-08\n");
+zip.add("feeds.opml", opml);
+zip.add("images/avatar.png", avatarBytes, { modified: new Date("2026-10-01T00:00:00Z") });
+
+return new Response(zip.stream(), {
+	headers: {
+		"content-type": "application/zip",
+		"content-disposition": `attachment; filename="export.zip"`,
+	},
+});
+```
+
+```typescript
+// Entries produced as streams, written one after another
+let zip = new Zip();
+for (let kind of ["summary", "daily", "incidents"]) {
+	let added = zip.add(`reports/${kind}.csv`, reportStream(kind));
+	if (isFailure(added)) return badRequest(added.error.message);
+}
+return new Response(zip.stream(), { headers: { "content-type": "application/zip" } });
+```
+
+```typescript
+// The whole archive as bytes, for a test or a stored object
+let bytes = await zip.bytes();
+await env.EXPORTS.put(`exports/${userId}.zip`, bytes);
+```
+
+```typescript
+// CRC-32 on its own, over one buffer or incrementally across chunks
+import { crc32 } from "@sdxc/zip";
+
+crc32(new TextEncoder().encode("123456789")); // 0xcbf43926
+let running = 0;
+for (let chunk of chunks) running = crc32(chunk, running);
+```
+
+It also shows the failure cases a caller handles: a rejected name (`invalid-entry`), the entry limit
+(`too-large`), and a source stream that errors mid-response (`source-failed` on the output stream).
 
 ### `@sdxc/epub`
 
 ```typescript
 import { EPUB } from "@sdxc/epub";
 
-let built = await EPUB.build({
+let built = EPUB.build({
 	metadata: {
 		identifier: "urn:uuid:5f1c2a86-…", // stable per book, never per download
 		title: "React Router OAuth2 Handbook: OAuth2 in Simple Terms",
@@ -176,8 +235,8 @@ let built = await EPUB.build({
 built.data.stream(); // ReadableStream<Uint8Array>, `application/epub+zip`
 ```
 
-`EPUB.build` is asynchronous only because it compresses through `@sdxc/zip`; everything before that
-is synchronous and answers the first failure it finds.
+`EPUB.build` is synchronous and answers the first failure it finds. Every file of the publication
+is already in memory, so `stream()` writes them through `@sdxc/zip` without waiting on any source.
 
 #### Chapters
 
@@ -221,9 +280,10 @@ fragment must be an `id` inside that chapter.
 | `EPUB/<path>`            | Every style and resource at the path the caller gave                                     |
 
 The cover image carries `cover-image` and is also named by `<meta name="cover">`, which EPUB 3
-reading systems ignore and older ones, Kindle's converter among them, read. Images and fonts are
-written with `method: "store"`, since JPEG, PNG, WebP and WOFF2 are already compressed; XHTML, CSS,
-SVG and the package documents are deflated.
+reading systems ignore and older ones, Kindle's converter among them, read. Every entry is stored,
+which OCF allows for all of them; when `@sdxc/zip` gains DEFLATE, XHTML, CSS, SVG and the package
+documents switch to it and images and fonts stay stored, since JPEG, PNG, WebP and WOFF2 are
+already compressed.
 
 #### Verification
 
@@ -270,6 +330,7 @@ under the European Accessibility Act, so `books` sets them.
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | Reading EPUB, and reading ZIP               | No consumer imports an ebook or an archive; reading untrusted archives also brings zip bombs and path traversal, which deserve their own design |
 | ZIP64                                       | No consumer approaches 4 GiB or 65,535 entries; the writer refuses rather than writing a corrupt archive                                        |
+| DEFLATE in `@sdxc/zip`                      | A sample chapter and the first exports are small enough stored; added, with data descriptors for streams, when an archive's size calls for it   |
 | Fixed layout, media overlays, scripted EPUB | Reflowable text is every consumer's need                                                                                                        |
 | Font obfuscation, encryption, DRM           | Nothing here ships a licensed font or a protected book                                                                                          |
 | Fetching remote images                      | The package does no I/O; the app fetches and passes bytes                                                                                       |
@@ -284,7 +345,7 @@ that memoized document and builds the file lazily the same way, on first request
 
 ```typescript
 let body = toHTML(chapter.data, { syntax: "xhtml" });
-let built = await EPUB.build({
+let built = EPUB.build({
 	metadata: SAMPLE_METADATA,
 	styles: [{ path: "styles/book.css", text: bookCss }],
 	chapters: [{ id: "oauth2-simple-terms", title: "OAuth2 in Simple Terms", body }],
@@ -323,8 +384,9 @@ return attachment(zip.stream(), "reports.zip", "application/zip");
   properties are checked by the package, so an app cannot ship an EPUB a reading system refuses.
 - **A ZIP writer for everyone:** reports and data exports bundle several files without each app
   writing the container.
-- **Runs in a Worker:** Web Streams, `CompressionStream` and `@sdxc/xml`; no Node API, no work at
-  import time.
+- **Runs in a Worker:** Web Streams and `@sdxc/xml`; no Node API, no work at import time.
+- **A small ZIP writer:** storing every entry leaves headers, CRC-32 and a central directory, with
+  one header layout and no runtime compression to test across runtimes.
 - **Reproducible bytes:** a fixed default timestamp and caller-supplied `modified` make output
   byte-stable, so fixtures compare exactly.
 
@@ -332,6 +394,10 @@ return attachment(zip.stream(), "reports.zip", "application/zip");
 
 - **Two packages to own**, and a ZIP writer is the kind of code whose bugs show up only in one
   unarchiver.
+- **Larger files:** text is shipped uncompressed, so an EPUB or a CSV export is three to four times
+  the size it would be deflated. A sample chapter of about 60 KB of XHTML stays about 60 KB.
+- **Stream entries are buffered:** each streamed entry is held whole in memory while it is written,
+  which bounds an entry by the Worker's memory until data descriptors arrive with DEFLATE.
 - **Chapters are strings parsed again.** A Markdown chapter is rendered to text and re-parsed as
   XML; for chapters of tens of kilobytes the cost is milliseconds.
 - **epubcheck needs Java,** so the authoritative check runs outside the usual Vitest run.
@@ -354,11 +420,12 @@ return attachment(zip.stream(), "reports.zip", "application/zip");
    - `crc32` against the standard check value (`"123456789"` → `0xCBF43926`) and chunked input.
    - Archives written by the package, extracted by a reference reader: `fflate`'s `unzipSync` as a
      devDependency pinned exactly, plus `unzip -t` / `zipinfo` in a Bun child process where present,
-     asserting names, bytes, methods, and that bit 3 is set only on streamed entries.
-   - A `*.workers.test.ts` that writes an archive inside workerd, so `CompressionStream("deflate-raw")`
-     is exercised on the runtime that ships it.
-   - Name validation, duplicate names, `store` on a stream, the 65,536-entry limit.
-3. README following the package documentation guide.
+     asserting names, bytes, that every entry is method 0, and that bit 3 is never set.
+   - Stream entries: chunked sources produce the same bytes as the equivalent `Uint8Array`, and a
+     source that errors fails the output with `source-failed`.
+   - Name validation, duplicate names, the 65,536-entry limit.
+3. README following the package documentation guide, stating that entries are stored uncompressed
+   and carrying the usage examples in [README](#readme).
 
 ### Phase 2: XHTML from Markdown
 
@@ -407,23 +474,31 @@ gets its own package so its second consumer does not import an ebook builder for
 
 `fflate` is small and fast and implements DEFLATE in JavaScript.
 
-**Rejected because**: every target runtime already has native DEFLATE, the writer is a few hundred
-lines over it, and the package answers a `Result` and enforces the stored-entry rule EPUB depends
-on. `fflate` stays as a test-only reference reader.
+**Rejected because**: a store-only writer is a few hundred lines, every target runtime has native
+DEFLATE for when compression arrives, and the package answers a `Result` and enforces the
+stored-entry rule EPUB depends on. `fflate` stays as a test-only reference reader.
 
-### 3. Chapters as a `Markdown.Document`
+### 3. DEFLATE from the first version
+
+`CompressionStream("deflate-raw")` would make text entries three to four times smaller.
+
+**Deferred because**: it brings data descriptors for streamed entries, per-entry method choice, a
+compression failure path and a workerd test of the runtime's compressor, for archives that are tens
+of kilobytes today. The API (`add`, `stream`, `bytes`) stays the same when it is added.
+
+### 4. Chapters as a `Markdown.Document`
 
 `@sdxc/epub` could take Markdown trees and render them itself.
 
 **Rejected because**: it ties the ebook builder to one authoring format. XHTML strings accept
 Markdown through one renderer option and accept any other source that can produce XML.
 
-### 4. Chapters as `remix/component` JSX
+### 5. Chapters as `remix/component` JSX
 
 **Deferred**: the HTML5 serializer is not XML. Converting needs an HTML parser that yields a tree,
 which `@sdxc/html` does not expose today. See the open questions.
 
-### 5. EPUB 2
+### 6. EPUB 2
 
 **Rejected because**: EPUB 3 is what every current reading system and Send to Kindle reads; the
 NCX that EPUB 2 readers need is written alongside.
@@ -436,7 +511,6 @@ NCX that EPUB 2 readers need is written alongside.
 - [epubcheck](https://github.com/w3c/epubcheck)
 - [PKWARE APPNOTE.TXT, ZIP File Format Specification](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT)
 - [Compression Streams](https://compression.spec.whatwg.org/)
-- [Cloudflare Workers, Web standards (`CompressionStream`)](https://developers.cloudflare.com/workers/runtime-apis/web-standards/)
 - [Amazon, Send to Kindle supported formats](https://www.amazon.com/gp/help/customer/display.html?nodeId=G5WYD9SAF7PGXRNA)
 - [ADR-007: Publishable Package Releases](./ADR-007-publishable-package-releases.md)
 - [ADR-115: QR Package](./ADR-115-qr-package.md)
