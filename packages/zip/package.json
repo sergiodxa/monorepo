@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/zip",
+	"version": "0.0.1",
+	"description": "Streaming ZIP archive writer with CRC-32, storing every entry uncompressed",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"fflate": "0.8.3"
+	}
+}

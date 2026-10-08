@@ -261,6 +261,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/semver](packages/semver)               | SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons                        |
 | [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                       |
 | [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                   |
+| [@sdxc/zip](packages/zip)                     | Streaming ZIP archive writer with CRC-32, storing every entry uncompressed                          |
 
 ### Cloudflare
 
