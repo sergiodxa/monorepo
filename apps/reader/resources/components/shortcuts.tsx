@@ -14,17 +14,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Keymap } from "@sdxc/ui/mixins";
 import type { Handle } from "remix/component";
 
 import { KeyboardIcon } from "@sdxc/icons";
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { fg } from "@sdxc/u/color";
-import { raw } from "@sdxc/u/general";
-import { flex, gap, grid, items, shrink } from "@sdxc/u/layout";
+import { flex, items, shrink } from "@sdxc/u/layout";
 import { m, mbs } from "@sdxc/u/size";
-import { text, weight } from "@sdxc/u/typography";
-import { Button, Keyboard, Modal, Text } from "@sdxc/ui";
+import { Button, Keyboard, Modal, ShortcutList } from "@sdxc/ui";
 import { Announcer } from "@sdxc/ui/behaviors";
+import { bindKeymap } from "@sdxc/ui/mixins";
 import { clientEntry, ref } from "remix/component";
 
 import routes from "~/routes/web";
@@ -58,9 +57,6 @@ const POST_TITLE = "a[data-post-title]";
  */
 const READ_FORM = 'form[action$="/read"]';
 const SAVE_FORM = 'form[action$="/save"]';
-
-/** Where a reader is already typing, and so where a single letter is a letter. */
-const TYPING = 'input, textarea, select, [contenteditable], [role="textbox"]';
 
 /** The sidebar's own navigation lists, whose links `J` and `K` walk in document order. */
 const SIDEBAR_NAV_LINK = 'nav[data-slot="nav"] a[href]';
@@ -120,6 +116,8 @@ export namespace Shortcuts {
 	export interface Targets {
 		searchFieldId: string;
 		sidebarId: string;
+		/** The element holding the panel, inside which the keys keep answering. */
+		scope?: Element;
 		/** Presses the control that opens the panel listing every binding. */
 		openPanel(): void;
 		/** Says what a control now carries, for a reader who cannot see it change. */
@@ -260,88 +258,41 @@ export function pressShortcutsButton(): void {
 }
 
 /**
- * Whether the keystroke belongs to somebody else. A chord the browser or the operating
- * system owns, a key already handled nearer the event, a composition in progress, a field
- * being typed in, and a dialog other than the panel itself all stand this down.
+ * The binding each key names. Every one of them presses a control the document already
+ * holds, so nothing here resolves a frame by name or navigates: a typo or a race in a
+ * frame's name would otherwise reach for the whole page.
  *
- * Shift is not among them: it is how a keyboard produces `J` and `?` at all, and the
- * character it produced is what the bindings read.
+ * A bare letter is the character typed, so `J` is Shift and `j` together, and `?` is
+ * whatever the reader's layout types it with.
  *
- * @param event - The keystroke as it reached the document.
- * @returns Whether the bindings should stand down.
- */
-function isSpokenFor(event: KeyboardEvent): boolean {
-	if (event.defaultPrevented) return true;
-	if (event.ctrlKey || event.altKey || event.metaKey) return true;
-	if (event.isComposing) return true;
-
-	let target = event.target;
-	if (!(target instanceof Element)) return false;
-
-	if (target.closest(TYPING) !== null) return true;
-
-	let dialog = target.closest("dialog");
-	return dialog !== null && dialog.id !== SHORTCUTS_PANEL_ID;
-}
-
-/**
- * Runs the binding a keystroke names, if any. Every one of them presses a control the
- * document already holds, so nothing here resolves a frame by name or navigates: a typo or
- * a race in a frame's name would otherwise reach for the whole page.
- *
- * @param event - The keystroke as it reached the document.
  * @param targets - What the bindings reach for beyond the document.
+ * @returns Each key mapped to what pressing it does.
  */
-export function runBinding(event: KeyboardEvent, targets: Shortcuts.Targets): void {
-	if (isSpokenFor(event)) return;
-
-	switch (event.key) {
-		case "j":
-			moveRow(1);
-			break;
-		case "k":
-			moveRow(-1);
-			break;
-		case "o":
-			openPost();
-			break;
-		case "m":
-			submitRowForm(READ_FORM);
-			break;
-		case "s":
-			submitRowForm(SAVE_FORM);
-			break;
-		case "r":
-			checkFeeds();
-			break;
-		case "J":
-			moveFeed(targets.sidebarId, 1);
-			break;
-		case "K":
-			moveFeed(targets.sidebarId, -1);
-			break;
-		case "/":
-			focusSearch(targets.searchFieldId);
-			break;
-		case "?":
-			targets.openPanel();
-			break;
-		default:
-			return;
-	}
-
-	event.preventDefault();
+function bindings(targets: Shortcuts.Targets): Keymap.Bindings {
+	return {
+		j: () => moveRow(1),
+		k: () => moveRow(-1),
+		o: () => openPost(),
+		m: () => submitRowForm(READ_FORM),
+		s: () => submitRowForm(SAVE_FORM),
+		r: () => checkFeeds(),
+		J: () => moveFeed(targets.sidebarId, 1),
+		K: () => moveFeed(targets.sidebarId, -1),
+		"/": () => focusSearch(targets.searchFieldId),
+		"?": () => targets.openPanel(),
+	};
 }
 
 /**
- * Binds every key on the document, in the bubble phase, so anything nearer the event that
- * handled the keystroke first has already stopped it.
+ * Binds every key on the document, standing down for a chord the browser or the system
+ * owns, a key handled nearer the event, a field being typed in, and a dialog other than
+ * the panel inside {@link Shortcuts.Targets.scope}.
  *
  * @param targets - What the bindings reach for beyond the document.
  * @param signal - Takes the bindings off the document when the island goes.
  */
 export function watchKeys(targets: Shortcuts.Targets, signal: AbortSignal): void {
-	document.addEventListener("keydown", (event) => runBinding(event, targets), { signal });
+	bindKeymap(document, bindings(targets), { signal, scope: targets.scope });
 }
 
 /**
@@ -375,16 +326,6 @@ export function watchRowMarks(announce: (text: string) => void, signal: AbortSig
 	signal.addEventListener("abort", () => observer.disconnect(), { once: true });
 }
 
-/** One binding as the panel prints it: the character to press and what pressing it does. */
-function ShortcutRow(handle: Handle<{ keyName: string; label: string }>) {
-	return () => (
-		<>
-			<Text mix={[text("sm"), fg("neutral")]}>{handle.props.label}</Text>
-			<Keyboard mix={[m(0), weight("medium")]}>{handle.props.keyName}</Keyboard>
-		</>
-	);
-}
-
 export const Shortcuts = clientEntry(
 	"/resources/components/shortcuts.tsx#Shortcuts",
 	function Shortcuts(handle: Handle<Shortcuts.Props>) {
@@ -395,15 +336,21 @@ export const Shortcuts = clientEntry(
 		 */
 		let hasMounted = false;
 
-		let announcer = new Announcer();
+		/**
+		 * A message stands for as long as a screen reader needs to reach it and is then given
+		 * up, so the next move is a change the region announces rather than the same words
+		 * written again.
+		 */
+		let announcer = new Announcer({ hold: ANNOUNCE_HOLD_MS });
 
-		let mount = ref((_node, signal) => {
+		let mount = ref((node, signal) => {
 			hasMounted = true;
 
 			watchKeys(
 				{
 					searchFieldId: handle.props.searchFieldId,
 					sidebarId: handle.props.sidebarId,
+					scope: node,
 					openPanel: pressShortcutsButton,
 					announce: (text) => announcer.announce(text),
 				},
@@ -412,19 +359,7 @@ export const Shortcuts = clientEntry(
 
 			watchRowMarks((text) => announcer.announce(text), signal);
 
-			/**
-			 * A message stands for as long as a screen reader needs to reach it and is then
-			 * given up, so the next move is a change the region announces rather than the same
-			 * words written again.
-			 */
-			announcer.addEventListener(
-				"change",
-				() => {
-					void handle.update();
-					if (announcer.current) setTimeout(() => announcer.next(), ANNOUNCE_HOLD_MS);
-				},
-				{ signal },
-			);
+			announcer.addEventListener("change", () => void handle.update(), { signal });
 
 			void handle.update();
 		});
@@ -434,7 +369,7 @@ export const Shortcuts = clientEntry(
 
 			if (!hasMounted) return <div mix={[mount]} />;
 
-			let bindings: [string, string][] = [
+			let listed: [string, string][] = [
 				["j", copy.keys.nextPost],
 				["k", copy.keys.previousPost],
 				["o", copy.keys.openPost],
@@ -480,23 +415,13 @@ export const Shortcuts = clientEntry(
 							<Modal.Description>{copy.description}</Modal.Description>
 						</Modal.Header>
 
-						{/**
-						 * Two columns, so every key lands on one vertical line and the list is read
-						 * down that line rather than across ten rows of ragged hints.
-						 */}
-						<div
-							mix={[
-								mbs(3),
-								grid(),
-								gap(2, 4),
-								items("center"),
-								raw({ gridTemplateColumns: "1fr auto" }),
-							]}
-						>
-							{bindings.map(([keyName, label]) => (
-								<ShortcutRow key={keyName} keyName={keyName} label={label} />
+						<ShortcutList mix={[mbs(3)]}>
+							{listed.map(([keyName, label]) => (
+								<ShortcutList.Item key={keyName} keys={[keyName]}>
+									{label}
+								</ShortcutList.Item>
 							))}
-						</div>
+						</ShortcutList>
 					</Modal>
 
 					{/**
