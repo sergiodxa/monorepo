@@ -169,7 +169,10 @@ export function EnrollTwoFactorPage(handle: Handle<EnrollTwoFactorProps>) {
 		return (
 			<form method="post" action={routes.twoFactor.confirm.href()}>
 				{qr && (
-					<QrCode symbol={qr} label="QR code for your authenticator app" />
+					<QrCode
+						path={qr.toSVGPath()}
+						label="QR code for your authenticator app"
+					/>
 				)}
 				<p>
 					Can't scan it? <a href={uri}>Open it in your app</a> or enter the
