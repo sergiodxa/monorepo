@@ -94,8 +94,8 @@ Run from the repository root:
 | [activitypub](packages/activitypub)                             | ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery                   |     |
 | [api-client](packages/api-client)                               | Base class for clients of a remote HTTP API                                                                       | ✅  |
 | [atom](packages/atom)                                           | Atom 1.0 feed parser and builder                                                                                  | ✅  |
-| [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`                          | ✅  |
 | [attribution](packages/attribution)                             | Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch                    | ✅  |
+| [auth](packages/auth)                                           | OAuth 2.0 and OpenID Connect client for any runtime that speaks `Request` and `Response`                          | ✅  |
 | [backoff](packages/backoff)                                     | Retry delay schedules with growth, a ceiling, free attempts and seedable jitter                                   | ✅  |
 | [billing](packages/billing)                                     | Vendor-neutral billing with pluggable providers and a webhook endpoint                                            | ✅  |
 | [bracket-params](packages/bracket-params)                       | Read and write nested query strings and form data with bracket syntax, validated by a Standard Schema             | ✅  |
@@ -110,8 +110,8 @@ Run from the repository root:
 | [data-table-d1](packages/data-table-d1)                         | Remix Data Table adapter for Cloudflare D1                                                                        | ✅  |
 | [data-table-sqlstorage](packages/data-table-sqlstorage)         | Remix Data Table adapter for Durable Object SQL                                                                   | ✅  |
 | [dates](packages/dates)                                         | Zone-aware date operations with Intl-only formatting                                                              | ✅  |
-| [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
 | [digest-fields](packages/digest-fields)                         | RFC 9530 Content-Digest and Repr-Digest, plus the RFC 3230 Digest header                                          |     |
+| [distill](packages/distill)                                     | Distill the article out of a web page: fetch under bounds, score, sanitize                                        | ✅  |
 | [doh](packages/doh)                                             | Typed DNS over HTTPS lookups                                                                                      | ✅  |
 | [duration](packages/duration)                                   | Typed duration strings converted to milliseconds or seconds                                                       | ✅  |
 | [email-address](packages/email-address)                         | Email address parsing and normalization, disposable-domain detection and mail-server checks                       | ✅  |
@@ -125,8 +125,8 @@ Run from the repository root:
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains                            | ✅  |
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name                                | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           | ✅  |
-| [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/component                          | ✅  |
 | [http-signatures](packages/http-signatures)                     | Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12                                 |     |
+| [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/component                          | ✅  |
 | [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                                         | ✅  |
 | [idempotency](packages/idempotency)                             | Idempotency-Key requests: replay the first response, refuse conflicting reuse                                     | ✅  |
@@ -144,11 +144,11 @@ Run from the repository root:
 | [mcp](packages/mcp)                                             | MCP servers over stateless Streamable HTTP                                                                        | ✅  |
 | [merge-patch](packages/merge-patch)                             | Apply, diff and read RFC 7396 JSON Merge Patch documents                                                          | ✅  |
 | [messageformat](packages/messageformat)                         | Unicode MessageFormat 2 parser and formatter shaped like Intl.MessageFormat                                       | ✅  |
+| [messaging](packages/messaging)                                 | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more      |     |
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
 | [newsletter](packages/newsletter)                               | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                      |     |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
-| [messaging](packages/messaging)                                 | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more      |     |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
 | [outbound](packages/outbound)                                   | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies        | ✅  |
 | [pagination](packages/pagination)                               | Offset and keyset pagination with Link headers                                                                    | ✅  |
