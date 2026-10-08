@@ -75,7 +75,8 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 - **One search index serves everything.** The palette, `/search.json` and the MCP
   `search_docs` tool read `app/services/search.ts` and rank through
   `app/services/search-query.ts`, so a reader and a model are answered in one order. The
-  index is built by a line scan and held per isolate, never parsed per request.
+  index is built once per isolate from the same parse and heading anchoring the pages
+  render (`anchorArticle`, `anchorPackageReadme`), so a result's fragment always exists.
 - **There is one palette.** It lives in the site header, holds `⌘K`, and covers the guides
   and every package together. A page wanting search opens `SEARCH_DIALOG_ID` rather than
   standing up a second one, which would take the same binding.

@@ -1,8 +1,7 @@
 /**
- * Tests for the search corpus. The index is read by a line scan rather than a parse, so
- * these assertions are what keep it agreeing with the pages themselves: an anchor that
- * does not exist on the page is a result that lands in the wrong place, and a heading
- * scanned out of a fenced shell sample is a result for something nobody wrote.
+ * Tests for the search corpus, held against the pages themselves: an anchor that does
+ * not exist on the page is a result that lands in the wrong place, so every fragment the
+ * index links to is compared with the ids the rendered page carries.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,9 +11,9 @@ import { Markdown } from "@sdxc/markdown";
 import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { prepareArticle, tableOfContents } from "~/app/services/article";
+import { prepareArticle, preparePackageReadme, tableOfContents } from "~/app/services/article";
 import { listGuides, MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
-import { listPackages } from "~/app/services/packages";
+import { listPackages, readPackageReadme } from "~/app/services/packages";
 import { buildSearchIndex, searchDocs, searchPackages } from "~/app/services/search";
 
 describe("buildSearchIndex", () => {
@@ -37,24 +36,41 @@ describe("buildSearchIndex", () => {
 		}
 	});
 
-	test("gives a heading the anchor the rendered page gives it", async () => {
-		let source = await readGuide("releases/versioning");
-		expect(source).not.toBeNull();
+	test("links every heading to the id its rendered page gives it", async () => {
+		let documents = await buildSearchIndex();
 
-		let parsed = Markdown.parse(source ?? "", MARKDOWN_OPTIONS);
-		expect(isSuccess(parsed)).toBe(true);
-		if (!isSuccess(parsed)) return;
+		/** The fragments the index links to on one page, in index order. */
+		function fragments(page: string): Array<string | undefined> {
+			return documents
+				.filter((entry) => entry.href.startsWith(`${page}#`))
+				.map((entry) => entry.href.split("#").at(1));
+		}
 
-		let prepared = prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
-		expect(isSuccess(prepared)).toBe(true);
-		if (!isSuccess(prepared)) return;
+		for (let section of await listGuides()) {
+			for (let guide of section.guides) {
+				let parsed = Markdown.parse((await readGuide(guide.slug)) ?? "", MARKDOWN_OPTIONS);
+				if (!isSuccess(parsed)) continue;
 
-		let rendered = tableOfContents(prepared.data).map((anchor) => anchor.id);
-		let indexed = (await buildSearchIndex())
-			.filter((entry) => entry.href.startsWith("/docs/releases/versioning#"))
-			.map((entry) => entry.href.split("#").at(1));
+				let prepared = prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
+				if (!isSuccess(prepared)) continue;
 
-		expect(indexed).toEqual(rendered);
+				let rendered = tableOfContents(prepared.data).map((anchor) => anchor.id);
+				expect(fragments(`/docs/${guide.slug}`), guide.slug).toEqual(rendered);
+			}
+		}
+
+		for (let entry of listPackages()) {
+			if (entry.directory === "u" || entry.directory === "ui") continue;
+
+			let parsed = Markdown.parse((await readPackageReadme(entry.directory)) ?? "");
+			if (!isSuccess(parsed)) continue;
+
+			let prepared = preparePackageReadme(parsed.data.document, entry.directory);
+			if (!isSuccess(prepared)) continue;
+
+			let rendered = tableOfContents(prepared.data).map((anchor) => anchor.id);
+			expect(fragments(`/api/${entry.directory}`), entry.directory).toEqual(rendered);
+		}
 	});
 
 	test("leaves the npm boilerplate a package page drops out of the index", async () => {

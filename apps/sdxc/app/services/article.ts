@@ -28,7 +28,7 @@ const SOURCE_BASE = "https://github.com/sergiodxa/monorepo/blob/main/";
 const NAVIGABLE_LEVELS = new Set([2, 3]);
 
 /** The sections a README closes with for npm's sake, which this site frames or states elsewhere. */
-export const BOILERPLATE_SECTIONS = new Set(["Versioning", "License", "Author"]);
+const BOILERPLATE_SECTIONS = new Set(["Versioning", "License", "Author"]);
 
 /** One entry of a page's in-page navigation. */
 export interface Anchor {
@@ -68,7 +68,7 @@ function contentVariables(): Record<string, string> {
 }
 
 /** The fragment a heading is linked to, derived from what the heading reads as. */
-export function slugify(text: string): string {
+function slugify(text: string): string {
 	return (
 		text
 			.toLowerCase()
@@ -110,23 +110,42 @@ function rewriteHref(href: string, directory: string): string {
 }
 
 /**
- * Prepares a page written for this site: the counted holes resolved, every heading
- * addressable, and code painted. A hole with no number behind it fails the walk, because
- * a sentence quoting a count the manifests cannot supply is a sentence to fix. The holes
- * are filled first, so a heading quoting a count is slugged from the number it shows.
+ * A page written for this site with its counted holes resolved and every heading
+ * addressable — the ids the page renders, which search links to. A hole with no number
+ * behind it fails the walk, because a sentence quoting a count the manifests cannot
+ * supply is a sentence to fix. Holes are filled first, so a heading is slugged from the
+ * number it shows.
  *
  * @param document - The parsed page
  * @param options - The options it was parsed with, whose tags check a filled-in attribute
- * @returns The page ready to render, or the walk failure with the position it stopped at
+ * @returns The anchored page, or the walk failure with the position it stopped at
  */
-export function prepareArticle(
+export function anchorArticle(
 	document: Markdown.Document,
 	options: Markdown.Options,
 ): Result<Markdown.Document, MarkdownWalkError> {
 	let filled = Markdown.walk(document, variables(contentVariables(), options));
 	if (isFailure(filled)) return filled;
 
-	return Markdown.walk(filled.data, { ...highlight, ...headingAnchors() });
+	return Markdown.walk(filled.data, headingAnchors());
+}
+
+/**
+ * Prepares a page written for this site: anchored as `anchorArticle` anchors it, and
+ * code painted.
+ *
+ * @param document - The parsed page
+ * @param options - The options it was parsed with
+ * @returns The page ready to render, or the walk failure with the position it stopped at
+ */
+export function prepareArticle(
+	document: Markdown.Document,
+	options: Markdown.Options,
+): Result<Markdown.Document, MarkdownWalkError> {
+	let anchored = anchorArticle(document, options);
+	if (isFailure(anchored)) return anchored;
+
+	return Markdown.walk(anchored.data, highlight);
 }
 
 /**
@@ -161,17 +180,33 @@ function withoutBoilerplateTail(document: Markdown.Document): Markdown.Document 
 }
 
 /**
- * Prepares a package's own README: the same anchors and painting, the npm boilerplate
- * trimmed off both ends, and the link rewriting that turns a file written for npm into
- * a page of this site. The trims run first, so the headings they take never reach a walk.
+ * A package's own README with the npm boilerplate trimmed off both ends and every
+ * heading addressable — the ids its page renders, which search links to. The trims run
+ * first, so the headings they take never take an id.
+ *
+ * @param document - The parsed README
+ * @returns The anchored README, or the walk failure with the position it stopped at
+ */
+export function anchorPackageReadme(
+	document: Markdown.Document,
+): Result<Markdown.Document, MarkdownWalkError> {
+	return Markdown.walk(withoutBoilerplateTail(withoutTitle(document)), headingAnchors());
+}
+
+/**
+ * Prepares a package's own README: anchored as `anchorPackageReadme` anchors it, code
+ * painted, and the link rewriting that turns a file written for npm into a page of this
+ * site.
  */
 export function preparePackageReadme(
 	document: Markdown.Document,
 	directory: string,
 ): Result<Markdown.Document, MarkdownWalkError> {
-	return Markdown.walk(withoutBoilerplateTail(withoutTitle(document)), {
+	let anchored = anchorPackageReadme(document);
+	if (isFailure(anchored)) return anchored;
+
+	return Markdown.walk(anchored.data, {
 		...highlight,
-		...headingAnchors(),
 		link(node) {
 			let href = rewriteHref(node.href, directory);
 			if (href === node.href) return;

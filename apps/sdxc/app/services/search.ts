@@ -1,10 +1,10 @@
 /**
  * The search corpus: one entry per page, plus one per heading a reader can jump to,
- * across the guides, every package reference and every page of the two catalogues. It is read off the markdown sources
- * already in the bundle by a line scan rather than a parse, because the corpus runs to
- * well over a megabyte and a full parse of all of it is work no request should pay for.
+ * across the guides, every package reference and every page of the two catalogues. A
+ * heading's fragment comes from the same parse and anchoring the page renders, so a
+ * result always lands on the section it names; building it costs tens of milliseconds.
  *
- * The result is held for the life of the isolate, so the scan happens once inside the
+ * The result is held for the life of the isolate, so the build happens once inside the
  * first request that needs it rather than in the worker's global scope, where the upload
  * validator rejects the work.
  *
@@ -12,17 +12,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Markdown } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
+
+import type { Anchor } from "~/app/services/article";
 import type { SearchDocument } from "~/app/services/search-query";
 
-import { BOILERPLATE_SECTIONS, slugify } from "~/app/services/article";
+import { anchorArticle, anchorPackageReadme, tableOfContents } from "~/app/services/article";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
-import { listGuides, readGuide } from "~/app/services/docs";
+import { listGuides, MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { listPackageGroups, readPackageReadme } from "~/app/services/packages";
 import { includesWord, rankDocuments, tokenize } from "~/app/services/search-query";
 import routes from "~/routes/web";
-
-/** Heading depths the corpus carries, matching the depths a page's own nav offers. */
-const INDEXED_LEVELS = new Set([2, 3]);
 
 /** How the package half of the corpus is labelled when a result names its section. */
 const PACKAGE_SECTION_PREFIX = "Packages";
@@ -32,14 +33,6 @@ const NAMED_SCORE = 10;
 
 /** Score for a word the README merely uses, which every long README uses many of. */
 const MENTIONED_SCORE = 1;
-
-/** One heading, as the scan reads it off a source file. */
-interface ScannedHeading {
-	level: number;
-	text: string;
-	/** The fragment the rendered page gives this heading, so a result links to it. */
-	id: string;
-}
 
 /** What a package search answers with: enough to decide, and the page to read next. */
 export interface PackageMatch {
@@ -51,110 +44,28 @@ export interface PackageMatch {
 	markdownHref: string;
 }
 
-/** Strips the frontmatter block a guide opens with, which is data rather than prose. */
-function withoutFrontmatter(source: string): string {
-	if (!source.startsWith("---")) return source;
-	let end = source.indexOf("\n---", 3);
-	if (end === -1) return source;
-	return source.slice(source.indexOf("\n", end + 1) + 1);
-}
+/**
+ * The headings a guide offers, with the fragments its page renders. A guide the parser
+ * or the anchoring rejects renders no page, so it offers no headings either.
+ */
+function guideHeadings(source: string): Anchor[] {
+	let parsed = Markdown.parse(source, MARKDOWN_OPTIONS);
+	if (isFailure(parsed)) return [];
 
-/** What a heading reads as once its inline markup and its annotations are taken off. */
-function toPlainHeading(text: string): string {
-	return text
-		.replace(/\{%[^%]*%\}/g, "")
-		.replace(/`([^`]*)`/g, "$1")
-		.replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
-		.replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
-		.replace(/\s+#+\s*$/, "")
-		.trim();
+	let anchored = anchorArticle(parsed.data.document, MARKDOWN_OPTIONS);
+	return isFailure(anchored) ? [] : tableOfContents(anchored.data);
 }
 
 /**
- * Every heading in a source file, in document order. Fenced blocks are tracked so a
- * comment opening on `#` inside a shell sample never reads as a heading, which is the
- * one way a line scan differs from a parse on this corpus.
+ * The headings a package reference offers, after the same trims its page makes: the
+ * opening `# @sdxc/name` the page names above the body, and the npm tail.
  */
-function readHeadings(source: string): Array<{ level: number; text: string }> {
-	let headings: Array<{ level: number; text: string }> = [];
-	let fence: string | null = null;
+function readmeHeadings(source: string): Anchor[] {
+	let parsed = Markdown.parse(source);
+	if (isFailure(parsed)) return [];
 
-	for (let line of withoutFrontmatter(source).split("\n")) {
-		let fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
-
-		if (fenceMatch?.[1]) {
-			let marker = fenceMatch[1][0] ?? "";
-			if (fence === null) fence = marker;
-			else if (fence === marker) fence = null;
-			continue;
-		}
-
-		if (fence !== null) continue;
-
-		let heading = /^(#{1,6})\s+(.+)$/.exec(line);
-		if (!heading?.[1] || !heading[2]) continue;
-
-		let text = toPlainHeading(heading[2]);
-		if (text !== "") headings.push({ level: heading[1].length, text });
-	}
-
-	return headings;
-}
-
-/**
- * Drops the run of sections a README ends on for npm's sake, matching what the renderer
- * takes off the page: a reader searching for "License" is answered by the page that
- * states the licence once, not by sixty headings that no longer exist.
- */
-function withoutBoilerplateTail(
-	headings: Array<{ level: number; text: string }>,
-): Array<{ level: number; text: string }> {
-	let tail = headings.length;
-
-	for (let index = headings.length - 1; index >= 0; index--) {
-		let heading = headings[index];
-		if (heading?.level !== 2) continue;
-		if (!BOILERPLATE_SECTIONS.has(heading.text)) break;
-		tail = index;
-	}
-
-	return headings.slice(0, tail);
-}
-
-/**
- * Gives every heading the fragment the rendered page gives it. The counter runs over all
- * depths, the way the renderer's does, so a repeated `Props` heading is numbered the same
- * here as it is there and a result lands on the section it names.
- */
-function withAnchors(headings: Array<{ level: number; text: string }>): ScannedHeading[] {
-	let taken = new Map<string, number>();
-
-	return headings.map((heading) => {
-		let base = slugify(heading.text);
-		let seen = taken.get(base) ?? 0;
-		taken.set(base, seen + 1);
-
-		return { ...heading, id: seen === 0 ? base : `${base}-${seen}` };
-	});
-}
-
-/** The headings a guide offers, which is every one the rendered page keeps. */
-function guideHeadings(source: string): ScannedHeading[] {
-	return withAnchors(readHeadings(source)).filter((heading) => INDEXED_LEVELS.has(heading.level));
-}
-
-/**
- * The headings a package reference offers. The opening `# @sdxc/name` goes, because the
- * page names the package above the body, and the npm tail goes with it — both matching
- * the trims the renderer performs before the anchors are assigned.
- */
-function readmeHeadings(source: string): ScannedHeading[] {
-	let headings = readHeadings(source);
-	if (headings[0]?.level === 1) headings = headings.slice(1);
-
-	return withAnchors(withoutBoilerplateTail(headings)).filter((heading) =>
-		INDEXED_LEVELS.has(heading.level),
-	);
+	let anchored = anchorPackageReadme(parsed.data.document);
+	return isFailure(anchored) ? [] : tableOfContents(anchored.data);
 }
 
 /** The corpus, built once per isolate and reused by every later request. */
