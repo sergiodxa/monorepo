@@ -74,8 +74,8 @@ describe("CreateCronJobSchema", () => {
 	});
 
 	/**
-	 * `Intl.supportedValuesOf("timeZone")` doesn't enumerate "UTC"; the accepted
-	 * set names it explicitly, so this stays valid (see `app/lib/timezones.ts`).
+	 * The Workers runtime's `Intl.supportedValuesOf("timeZone")` omits "UTC", and
+	 * `isSupportedTimeZone` adds it by name, so the stored default stays valid.
 	 */
 	test("keeps accepting UTC, the default every stored job holds", () => {
 		let result = s.parseSafe(CreateCronJobSchema, baseFormData({ timezone: "UTC" }));

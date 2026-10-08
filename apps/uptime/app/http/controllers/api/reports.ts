@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DayRange } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
@@ -20,7 +21,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { ReportKind } from "~/app/lib/report-csv";
-import type { ReportRange, ReportRangeProblem } from "~/app/lib/report-range";
+import type { ReportRangeProblem } from "~/app/lib/report-range";
 
 import Report from "~/app/data/report";
 import StatusPage from "~/app/data/status-page";
@@ -105,7 +106,7 @@ async function readFilter(ctx: RequestContext): Promise<Report.Filter | Response
 		return invalidField("from and to must be given together", from === undefined ? "/from" : "/to");
 	}
 
-	let requested: ReportRange =
+	let requested: DayRange =
 		from !== undefined && to !== undefined ? { from, to } : presetRange("lastMonth");
 	let range = checkRange(requested);
 	if (isFailure(range)) {
@@ -144,7 +145,7 @@ function csvDownload(
 	body: ReadableStream<Uint8Array>,
 	teamSlug: string,
 	kind: ReportKind,
-	range: ReportRange,
+	range: DayRange,
 ): Response {
 	return csv(body, {
 		headers: {

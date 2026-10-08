@@ -7,19 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DayRange, DayRangeProblem } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
 
 import {
 	addMonths,
-	diffInDays,
-	endOfMonth,
-	endOfQuarter,
-	fromDayKey,
-	startOfDay,
-	startOfMonth,
-	startOfQuarter,
+	lastNDaysRange,
+	monthRange,
+	quarterRange,
 	subDays,
-	toDayKey,
+	validateDayRange,
+	yearToDateRange,
 } from "@sdxc/dates";
 import { failure, isFailure, success } from "@sdxc/result";
 
@@ -29,17 +27,17 @@ import { getYesterdayDateUtc } from "~/app/data/monitor-daily-stats";
 export const MAX_REPORT_DAYS = 366;
 
 /**
- * An inclusive range of UTC days as `YYYY-MM-DD`.
- */
-export interface ReportRange {
-	from: string;
-	to: string;
-}
-
-/**
  * The rule a submitted range breaks, used as the last segment of its translation key.
  */
 export type ReportRangeProblem = "invalid" | "reversed" | "future" | "tooLong";
+
+/** The report's name for each day-range rule; a range past yesterday reaches into the future. */
+const PROBLEMS: Record<DayRangeProblem, ReportRangeProblem> = {
+	invalid: "invalid",
+	reversed: "reversed",
+	tooLate: "future",
+	tooLong: "tooLong",
+};
 
 /**
  * Carries the broken rule to the builder page, which re-renders with its message.
@@ -75,28 +73,19 @@ export type ReportPreset = (typeof REPORT_PRESETS)[number];
  * @param now - The current instant in epoch milliseconds
  * @returns The range the preset names
  */
-export function presetRange(preset: ReportPreset, now: number = Date.now()): ReportRange {
-	let yesterday = getYesterdayDateUtc(now);
+export function presetRange(preset: ReportPreset, now: number = Date.now()): DayRange {
 	let today = new Date(now);
+	let yesterday = subDays(today, 1);
 
 	switch (preset) {
-		case "lastMonth": {
-			let previous = addMonths(startOfMonth(today, "UTC"), -1, "UTC");
-			return { from: toDayKey(previous, "UTC"), to: toDayKey(endOfMonth(previous, "UTC"), "UTC") };
-		}
-		case "last30Days": {
-			return { from: toDayKey(subDays(startOfDay(today, "UTC"), 30), "UTC"), to: yesterday };
-		}
-		case "lastQuarter": {
-			let previous = addMonths(startOfQuarter(today, "UTC"), -3, "UTC");
-			return {
-				from: toDayKey(previous, "UTC"),
-				to: toDayKey(endOfQuarter(previous, "UTC"), "UTC"),
-			};
-		}
-		case "yearToDate": {
-			return { from: `${yesterday.slice(0, 4)}-01-01`, to: yesterday };
-		}
+		case "lastMonth":
+			return monthRange(addMonths(today, -1, "UTC"), "UTC");
+		case "last30Days":
+			return lastNDaysRange(30, { from: yesterday, timeZone: "UTC" });
+		case "lastQuarter":
+			return quarterRange(addMonths(today, -3, "UTC"), "UTC");
+		case "yearToDate":
+			return yearToDateRange(yesterday, "UTC");
 	}
 }
 
@@ -109,52 +98,13 @@ export function presetRange(preset: ReportPreset, now: number = Date.now()): Rep
  * @returns The range, or the first rule it breaks
  */
 export function checkRange(
-	range: ReportRange,
+	range: DayRange,
 	now: number = Date.now(),
-): Result<ReportRange, ReportRangeError> {
-	let from = parseDay(range.from);
-	let to = parseDay(range.to);
-	if (from === null || to === null) return failure(new ReportRangeError("invalid"));
-	if (from.getTime() > to.getTime()) return failure(new ReportRangeError("reversed"));
-	if (range.to > getYesterdayDateUtc(now)) return failure(new ReportRangeError("future"));
-	if (dayCount(range) > MAX_REPORT_DAYS) return failure(new ReportRangeError("tooLong"));
-	return success(range);
-}
-
-/**
- * The number of days a range covers, both ends included.
- *
- * @param range - A checked range
- * @returns The day count
- */
-export function dayCount(range: ReportRange): number {
-	return diffInDays(parseDay(range.to)!, parseDay(range.from)!, "UTC") + 1;
-}
-
-/**
- * Whether a range is exactly one calendar month, which filenames write as `2026-08`.
- *
- * @param range - A checked range
- * @returns `true` for the first through the last day of one month
- */
-export function isWholeMonth(range: ReportRange): boolean {
-	let from = parseDay(range.from);
-	if (from === null) return false;
-	return (
-		range.from === toDayKey(startOfMonth(from, "UTC"), "UTC") &&
-		range.to === toDayKey(endOfMonth(from, "UTC"), "UTC")
-	);
-}
-
-/**
- * Reads `YYYY-MM-DD` exactly as written as the UTC midnight it names, so a day the
- * calendar lacks (`2026-02-30`) or a value with surrounding whitespace reads as `null`.
- *
- * @param value - The submitted day
- * @returns The day's first instant, or `null` when the value names no day
- */
-function parseDay(value: string): Date | null {
-	let parsed = fromDayKey(value, "UTC");
-	if (isFailure(parsed) || toDayKey(parsed.data, "UTC") !== value) return null;
-	return parsed.data;
+): Result<DayRange, ReportRangeError> {
+	let checked = validateDayRange(range, {
+		latest: getYesterdayDateUtc(now),
+		maxDays: MAX_REPORT_DAYS,
+	});
+	if (isFailure(checked)) return failure(new ReportRangeError(PROBLEMS[checked.error.problem]));
+	return success(checked.data);
 }

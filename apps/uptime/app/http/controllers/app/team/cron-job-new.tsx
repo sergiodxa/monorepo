@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { timeZonesByRegion } from "@sdxc/dates";
 import { vstack } from "@sdxc/u/layout";
 import { Button, Select, Switch, TextField } from "@sdxc/ui";
 import { getContext } from "remix/middleware/async-context";
@@ -17,7 +18,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { withPrefix } from "~/app/lib/prefixed-translate";
-import { DEFAULT_TIMEZONE, groupedTimezones } from "~/app/lib/timezones";
+import { DEFAULT_TIMEZONE } from "~/app/lib/timezones";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -135,7 +136,7 @@ export default createAction(routes.app.team.cronJobs.new, {
 												<Select.Option value={DEFAULT_TIMEZONE} selected>
 													{DEFAULT_TIMEZONE}
 												</Select.Option>
-												{groupedTimezones().map((group) => (
+												{timeZonesByRegion().map((group) => (
 													<Select.Group key={group.region} label={group.region}>
 														{group.zones.map((zone) => (
 															<Select.Option key={zone} value={zone}>

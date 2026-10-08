@@ -1,15 +1,16 @@
 /**
  * Tests for report ranges: each preset around month, quarter and year boundaries, and each
- * rule a submitted range can break.
+ * rule a submitted range can break, under the name the builder translates it by.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { dayRangeLength } from "@sdxc/dates";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { checkRange, dayCount, isWholeMonth, presetRange } from "~/app/lib/report-range";
+import { checkRange, presetRange } from "~/app/lib/report-range";
 
 /** 2026-09-29T10:00Z, the reference "now". */
 const NOW = Date.UTC(2026, 8, 29, 10);
@@ -29,7 +30,7 @@ describe("presetRange", () => {
 	test("last30Days ends yesterday and spans thirty days", () => {
 		let range = presetRange("last30Days", NOW);
 		expect(range).toEqual({ from: "2026-08-30", to: "2026-09-28" });
-		expect(dayCount(range)).toBe(30);
+		expect(dayRangeLength(range)).toBe(30);
 	});
 
 	test("lastQuarter is the last full calendar quarter", () => {
@@ -70,17 +71,5 @@ describe("checkRange", () => {
 
 	test("accepts a leap year's 366 days", () => {
 		expect(isSuccess(checkRange({ from: "2024-01-01", to: "2024-12-31" }, NOW))).toBe(true);
-	});
-});
-
-describe("isWholeMonth", () => {
-	test.each([
-		[{ from: "2026-08-01", to: "2026-08-31" }, true],
-		[{ from: "2024-02-01", to: "2024-02-29" }, true],
-		[{ from: "2026-08-01", to: "2026-08-30" }, false],
-		[{ from: "2026-08-02", to: "2026-08-31" }, false],
-		[{ from: "2026-08-01", to: "2026-09-30" }, false],
-	] as const)("%j is %s", (range, expected) => {
-		expect(isWholeMonth(range)).toBe(expected);
 	});
 });

@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isSupportedTimeZone, timeZonesByRegion } from "@sdxc/dates";
 import { notFound } from "@sdxc/http/response/html";
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -22,7 +23,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { withPrefix } from "~/app/lib/prefixed-translate";
-import { DEFAULT_TIMEZONE, groupedTimezones, isSupportedTimezone } from "~/app/lib/timezones";
+import { DEFAULT_TIMEZONE } from "~/app/lib/timezones";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -56,7 +57,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 		let fields = withPrefix(ctx.intl.t, "page.editCronJob.form.fields");
 
 		let timezone = monitor.timezone ?? DEFAULT_TIMEZONE;
-		let hasUnknownTimezone = !isSupportedTimezone(timezone);
+		let hasUnknownTimezone = !isSupportedTimeZone(timezone);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${t("header.title")} ${monitor.name}`}>
@@ -168,7 +169,7 @@ export default createAction(routes.app.team.cronJobs.edit, {
 													>
 														{DEFAULT_TIMEZONE}
 													</Select.Option>
-													{groupedTimezones().map((group) => (
+													{timeZonesByRegion().map((group) => (
 														<Select.Group key={group.region} label={group.region}>
 															{group.zones.map((zone) => (
 																<Select.Option key={zone} value={zone} selected={zone === timezone}>

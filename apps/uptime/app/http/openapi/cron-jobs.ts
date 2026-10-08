@@ -7,17 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { isSupportedTimeZone } from "@sdxc/dates";
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { defineOperation } from "@sdxc/openapi";
 
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
-import {
-	DEFAULT_TIMEZONE,
-	isSupportedTimezone,
-	UNKNOWN_TIMEZONE_MESSAGE,
-} from "~/app/lib/timezones";
+import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
 import { typedId } from "~/app/services/typed-id";
 import { cronJobStatuses } from "~/database/schema";
 import routes from "~/routes/web";
@@ -55,7 +52,7 @@ const CRON_JOB = s
 	.meta({ id: "CronJob" });
 
 /** A time zone from the runtime's IANA list; the zone decides when a job counts as late. */
-const TIMEZONE = s.string().refine(isSupportedTimezone, UNKNOWN_TIMEZONE_MESSAGE);
+const TIMEZONE = s.string().refine(isSupportedTimeZone, UNKNOWN_TIMEZONE_MESSAGE);
 
 /** The path params naming one cron job. */
 export const CRON_JOB_ID_PARAMS = s.object({ cronJobId: typedId("cron") });

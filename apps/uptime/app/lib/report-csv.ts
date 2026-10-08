@@ -8,16 +8,16 @@
  */
 
 import type { Cell, Column } from "@sdxc/csv";
+import type { DayRange } from "@sdxc/dates";
 import type { Translate } from "@sdxc/i18n";
 
 import { streamify } from "@sdxc/csv";
+import { isWholeMonth } from "@sdxc/dates";
 
 import type Report from "~/app/data/report";
 import type { ReportDialect } from "~/app/lib/report-dialect";
-import type { ReportRange } from "~/app/lib/report-range";
 
 import { numberCell } from "~/app/lib/report-dialect";
-import { isWholeMonth } from "~/app/lib/report-range";
 
 /** The reports a team can download, as they appear in the download URL and filename. */
 export const REPORT_KINDS = ["uptime-summary", "uptime-daily"] as const;
@@ -114,7 +114,7 @@ export function dailyCsv(
  * @param range - The range the report covers
  * @returns e.g. `acme-uptime-summary-2026-08.csv`
  */
-export function reportFilename(teamSlug: string, kind: ReportKind, range: ReportRange): string {
+export function reportFilename(teamSlug: string, kind: ReportKind, range: DayRange): string {
 	let period = isWholeMonth(range) ? range.from.slice(0, 7) : `${range.from}_${range.to}`;
 	return `${teamSlug}-${kind}-${period}.csv`;
 }

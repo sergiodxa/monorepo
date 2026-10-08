@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DayRange } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
@@ -16,7 +17,7 @@ import { validate } from "@sdxc/validate";
 import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type Report from "~/app/data/report";
 import type { ReportDialectName } from "~/app/lib/report-dialect";
-import type { ReportRange, ReportRangeProblem } from "~/app/lib/report-range";
+import type { ReportRangeProblem } from "~/app/lib/report-range";
 
 import StatusPage from "~/app/data/status-page";
 import { ReportQuerySchema } from "~/app/http/validators/report";
@@ -60,7 +61,7 @@ export class ReportRequestError extends Error {
  * A query resolved against the team.
  */
 export interface ReportRequest {
-	range: ReportRange;
+	range: DayRange;
 	filter: Report.Filter;
 	dialect: ReportDialectName;
 	/** The `monitors` control's value, echoed back so the builder keeps the selection. */
@@ -87,7 +88,7 @@ export async function resolveReportRequest(
 	if (isFailure(query)) return failure(new ReportRequestError("invalid"));
 
 	let { from, to, monitors, dialect } = query.data;
-	let range: ReportRange;
+	let range: DayRange;
 	if (from === undefined && to === undefined) {
 		range = presetRange("lastMonth", now);
 	} else {
