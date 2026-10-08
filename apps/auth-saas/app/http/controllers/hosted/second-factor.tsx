@@ -14,7 +14,7 @@
 
 import type { RequestContext } from "remix/router";
 
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
@@ -102,7 +102,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 	if (mode === "enrol") {
 		let enrolment = await ctx.tenantStub.beginTotpEnrolment({ subjectId: session.subjectId });
 		if (!enrolment.ok) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
-		let encoded = encodeQr(enrolment.uri, { level: "M" });
+		let encoded = QR.encode(enrolment.uri, { level: "M" });
 		if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 		return ctx.render(
