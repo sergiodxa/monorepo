@@ -150,6 +150,7 @@ Run from the repository root:
 | [passkey](packages/passkey)                                     | Passkeys on both sides: a one-call WebAuthn browser API and a relying party for it                                | ✅  |
 | [password-policy](packages/password-policy)                     | Password acceptance checks: length, common and breached passwords, similarity to the account, and reuse           | ✅  |
 | [problem](packages/problem)                                     | RFC 9457 problem details and catalogs of an API's problem types                                                   | ✅  |
+| [qr](packages/qr)                                               | QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer                   | ✅  |
 | [random](packages/random)                                       | Seeded and system random streams with integer, float, pick and shuffle draws, and resumable state                 | ✅  |
 | [rate-limit](packages/rate-limit)                               | Adapter-based rate limiting with standard response headers                                                        | ✅  |
 | [response](packages/response)                                   | Response builders for JSON APIs and redirects                                                                     | ✅  |

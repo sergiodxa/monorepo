@@ -1,0 +1,30 @@
+{
+	"name": "@sdxc/qr",
+	"version": "0.0.1",
+	"description": "QR Code Model 2 encoder with optimal segmentation, SVG path data and a remix/component renderer",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./component": "./src/component.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"@sdxc/random": "workspace:*",
+		"jsqr": "1.4.0",
+		"remix": "3.0.0"
+	},
+	"peerDependencies": {
+		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"remix": {
+			"optional": true
+		}
+	}
+}
