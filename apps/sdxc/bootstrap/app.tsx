@@ -49,6 +49,7 @@ import security from "~/app/http/controllers/security";
 import showcase from "~/app/http/controllers/showcase";
 import sitemap from "~/app/http/controllers/sitemap";
 import sponsors from "~/app/http/controllers/sponsors";
+import sponsorsWebhook from "~/app/http/controllers/sponsors-webhook";
 import uiExportShow from "~/app/http/controllers/ui-export-show";
 import utilityShow from "~/app/http/controllers/utility-show";
 import { documentAssets } from "~/app/services/assets";
@@ -99,6 +100,7 @@ export default function application() {
 	router.map(routes.security, security);
 	router.map(routes.maintenance, maintenance);
 	router.map(routes.sponsors, sponsors);
+	router.map(routes.sponsorsWebhook, sponsorsWebhook);
 
 	/* The same pages as markdown, plus the surfaces derived from what is in the bundle. */
 	router.map(routes.markdown.docs, markdownTwin);

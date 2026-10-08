@@ -17,8 +17,11 @@ Configured in `cloudflare.config.ts` and deployed with the `cf` CLI.
 - **KV** (`CACHE`) holds what the site reads back from GitHub: the changelog and the
   sponsor roster, current and past. Every other page renders from files in the deployed
   bundle.
-- **Cron** (`0 */6 * * *`) refreshes the sponsor roster into KV, so `/sponsors` never waits
-  on GitHub.
+- **Webhook** (`POST /webhooks/sponsors`) refreshes the sponsor roster into KV whenever
+  GitHub reports a sponsorship change, so `/sponsors` never waits on GitHub. The hook is
+  created on the GitHub Sponsors dashboard with the `GITHUB_SPONSORS_WEBHOOK_SECRET` secret
+  as its secret and `application/json` as its content type.
+- **Cron** (`0 5 * * 1`, Mondays) refreshes the roster too, catching a missed delivery.
 - **Custom domain** `sdxc.sergiodxa.com`.
 
 Observability is enabled, with traces head-sampled at 10%.

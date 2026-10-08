@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { get, route } from "remix/routes";
+import { get, post, route } from "remix/routes";
 
 /** Registers the site's routes. */
 export default route({
@@ -23,6 +23,8 @@ export default route({
 	maintenance: get("/maintenance"),
 	/** The case for funding the work, and who funds it now and did before. */
 	sponsors: get("/sponsors"),
+	/** Where GitHub reports a sponsorship change, so the roster refreshes without waiting. */
+	sponsorsWebhook: post("/webhooks/sponsors"),
 
 	/** The handwritten guides, each one a markdown file in `resources/docs`. */
 	docs: {

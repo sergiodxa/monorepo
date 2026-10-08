@@ -1,8 +1,8 @@
 /**
  * The people funding this work, now and before, read from GitHub's GraphQL API and
  * remembered in the site's cache. A page reads the stored roster and nothing else, so it
- * renders at the speed of a KV read and stays up whatever GitHub is doing; a scheduled
- * refresh is what puts a fresh roster there.
+ * renders at the speed of a KV read and stays up whatever GitHub is doing; a sponsorship
+ * webhook, or the weekly schedule behind it, is what puts a fresh roster there.
  *
  * A sponsorship GitHub marks private is one this module is never told about: the query
  * asks for the public view, which GitHub applies before it answers. Nothing here has a
@@ -31,7 +31,7 @@ export const SPONSORS_CACHE_KEY = "sponsors:roster";
  * that a missed run leaves the pages intact rather than empty, and expires on its own
  * so a list nothing refreshes any more stops being presented as current.
  */
-const SPONSORS_TTL = "2 days";
+const SPONSORS_TTL = "3 weeks";
 
 /** How GitHub marks a sponsorship its sponsor chose to show. */
 const PUBLIC_PRIVACY = "PUBLIC";
@@ -277,7 +277,7 @@ export function sponsorsTag(roster: SponsorRoster): string {
 }
 
 /**
- * Reads GitHub and stores what it says, which is what the schedule calls.
+ * Reads GitHub and stores what it says, which is what the webhook and the schedule call.
  *
  * The roster is asked for rather than fetched through the cache, because the point of a
  * refresh is to replace an entry that is still perfectly readable.

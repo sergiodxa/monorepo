@@ -32,19 +32,22 @@ export default defineConfig({
 		domains: ["sdxc.sergiodxa.com"],
 		/**
 		 * The sponsor list is read into KV on a schedule, so a page never waits on GitHub and
-		 * an outage there leaves the previous list standing. Four times a day is well inside
-		 * how often the list actually changes.
+		 * an outage there leaves the previous list standing. GitHub's sponsorship webhook
+		 * refreshes it as soon as a sponsor changes, so the weekly run only catches a missed
+		 * delivery.
 		 */
-		triggers: [triggers.scheduled({ schedule: "0 */6 * * *" })],
+		triggers: [triggers.scheduled({ schedule: "0 5 * * 1" })],
 		/**
 		 * `CACHE` holds what the site reads back from GitHub — the changelog, and who funds
 		 * the work; the rest renders from the deploy, and each page serves its cached copy
 		 * when a call fails. A deploy keeps exactly the secrets declared here, so
-		 * `GITHUB_TOKEN`, which the sponsor refresh needs, survives every release.
+		 * `GITHUB_TOKEN`, which the sponsor refresh needs, and the secret GitHub signs
+		 * sponsorship webhooks with both survive every release.
 		 */
 		env: {
 			CACHE: bindings.kv({ id: "006c6214d1d6469787114fe5b30e6e41" }),
 			GITHUB_TOKEN: bindings.secret(),
+			GITHUB_SPONSORS_WEBHOOK_SECRET: bindings.secret(),
 		},
 	},
 });

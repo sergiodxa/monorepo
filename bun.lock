@@ -337,6 +337,7 @@
         "@remix-run/ui": "0.12.1",
         "@sdxc/api-client": "workspace:*",
         "@sdxc/cache": "workspace:*",
+        "@sdxc/crypto": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
