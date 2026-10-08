@@ -460,8 +460,8 @@ Durable Object and `uptime` would keep them in D1 per user; the policy differs w
 
 1. **Allowlist by default?** Restricting endpoints to the known push services is the tighter SSRF
    boundary; the cost is silently dropping a new browser vendor's users until the list is updated.
-2. **`@sdxc/messaging` dependency weight.** Should `BrowserPush` take `@sdxc/web-push` as an optional
-   peer, so messaging installs without the JWT and crypto stack, or is a direct dependency simpler?
+2. ~~**`@sdxc/messaging` dependency weight.**~~ Resolved: `@sdxc/web-push` is an optional peer of
+   `@sdxc/messaging`.
 3. **A service worker helper.** If two apps end up with the same `push`/`notificationclick` handler
    for the messaging payload, does it become `@sdxc/web-push/service-worker`?
 4. **`blog` fan-out.** Whether anonymous new-post notifications are worth the per-subscriber cost is
