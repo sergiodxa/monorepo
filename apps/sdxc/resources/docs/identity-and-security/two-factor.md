@@ -152,7 +152,7 @@ directly on a phone:
 import type { QR } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
-import { QrCode } from "@sdxc/qr/component";
+import { QrCode } from "@sdxc/qr/ui";
 import { Button, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
