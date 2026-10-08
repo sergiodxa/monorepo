@@ -460,6 +460,29 @@ describe("Delete", () => {
 		expect(resolver.lookups).toContainEqual({ iri: ALICE_NOTE, fresh: true });
 	});
 
+	test("ignores a gone object on another origin than the sender's", async () => {
+		let elsewhere = "https://pixelfed.social/p/bob/1";
+		resolver.serve(elsewhere, new ActivityPubFetchError("not-found", elsewhere, "404"));
+		let deletion = { ...MASTODON_DELETE_NOTE, object: elsewhere };
+
+		let outcome = unwrap(await handle(input(deletion), options()));
+
+		expect(outcome.reason).toBe("not-owner");
+		expect(calls).toEqual([]);
+	});
+
+	test("ignores a sender whose IRI serves somebody else's actor", async () => {
+		let mallory = "https://evil.social/users/mallory";
+		resolver.serve(mallory, MASTODON_ACTOR).serve(ALICE_NOTE, MASTODON_CREATE_NOTE.object);
+		let deletion = { ...MASTODON_DELETE_NOTE, id: `${mallory}#delete`, actor: mallory };
+		deletion.object = { ...deletion.object, id: ALICE_NOTE };
+
+		let outcome = unwrap(await handle(input(deletion), options()));
+
+		expect(outcome).toMatchObject({ status: "ignored", reason: "actor-unavailable" });
+		expect(calls).toEqual([]);
+	});
+
 	test("ignores a Delete of an object its server still attributes to someone else", async () => {
 		resolver.serve(ALICE_NOTE, {
 			...MASTODON_CREATE_NOTE.object,

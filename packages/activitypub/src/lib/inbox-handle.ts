@@ -132,9 +132,9 @@ export interface HandleOutcome {
  * processing goes on, since every step is idempotent), re-reads the activity, does the work
  * the protocol requires for its type, then calls the app's handler for it.
  *
- * An object another origin embeds is never trusted: it is fetched from its own origin
- * (FEP-c7d3). A failure is retryable when a remote server, a store, a handler or `send`
- * failed transiently, so the job retries it; any other failure is acknowledged.
+ * The sender is the document whose id is the activity's actor, and an object another
+ * origin embeds is fetched from its own origin (FEP-c7d3). A failure is retryable when a
+ * remote server, a store, a handler or `send` failed transiently; any other is acknowledged.
  *
  * @param input - What `receive` answered, as the job read it through `INBOX_INPUT`.
  * @param options - The local actor, the stores, the resolver, `send` and the handlers.
@@ -168,9 +168,9 @@ export async function handle(
 	let run = new Run(input, activity, options);
 
 	let actor = await options.resolver.actor(activity.actor);
-	if (isFailure(actor)) {
+	if (isFailure(actor) || actor.data.id !== activity.actor) {
 		if (deletesActor) return run.deleteActor(null);
-		if (actor.error.retryable) return failure(actor.error);
+		if (isFailure(actor) && actor.error.retryable) return failure(actor.error);
 		return success(outcome("ignored", activity, "actor-unavailable"));
 	}
 
@@ -387,8 +387,8 @@ class Run {
 
 	/**
 	 * A deleted object. Its own origin decides: a refetch that answers `404`, `410` or a
-	 * Tombstone confirms the deletion, and one that still serves it must name the sender
-	 * as its author.
+	 * Tombstone confirms the deletion of an object on the sender's origin, and one that
+	 * still serves it must name the sender as its author.
 	 *
 	 * @param actor - The sender.
 	 */
@@ -402,6 +402,7 @@ class Run {
 			if (code !== "gone" && code !== "not-found") {
 				return this.#unreachable(fetched.error, "unverifiable");
 			}
+			if (originOf(id) !== originOf(actor.id)) return this.#ignored("not-owner");
 		} else if (!fetched.data.attributedTo.includes(actor.id)) {
 			return this.#ignored("not-owner");
 		}

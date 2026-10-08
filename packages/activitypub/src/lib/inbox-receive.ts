@@ -117,7 +117,7 @@ export const INBOX_INPUT: Schema<unknown, Received> = s.object({
 /**
  * Verifies a POST to an inbox. The steps run in order and stop at the first failure: the
  * media type, the size, the activity's shape, the blocked hosts of the key and the actor,
- * the signature and its digest and age, then that the key belongs to the activity's actor.
+ * the signature, its digest and age, the signer's blocked host, then the actor's ownership.
  *
  * A forwarded activity, signed by someone other than its actor, is accepted when its id is
  * on the actor's origin and a fresh copy fetched from there names the same actor; that copy
@@ -197,6 +197,10 @@ export async function receive(
 
 	let { key, verified } = signed.data;
 	let signer = key.owner;
+	let signerHost = hostOf(signer);
+	if (signerHost !== null && (await options.blocked(signerHost))) {
+		return failure(new InboxError("blocked", `${signerHost} is blocked`));
+	}
 	let actor = activity.data.actor;
 	let document = json.data;
 	let verification: Verification = "signature";

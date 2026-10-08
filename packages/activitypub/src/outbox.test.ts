@@ -280,6 +280,33 @@ describe("deliver", () => {
 		expect(received[1]?.headers.get("signature-input")).toContain('nonce="n-1"');
 	});
 
+	test("covers the target, method and body whatever Accept-Signature leaves out", async () => {
+		server.use(
+			http.post(INBOX, async ({ request }) => {
+				if (request.headers.get("signature-input")?.startsWith("sig2=")) {
+					await record(request, "sig2");
+					return new HttpResponse(null, { status: 202 });
+				}
+				await record(request);
+				return new HttpResponse(null, {
+					status: 401,
+					headers: {
+						"accept-signature": 'sig2=("@method" "content-digest";key="sha-256");created',
+					},
+				});
+			}),
+		);
+
+		unwrap(await send());
+
+		expect(received[1]?.components).toEqual([
+			"@method",
+			'content-digest;key="sha-256"',
+			"@target-uri",
+			"content-digest",
+		]);
+	});
+
 	test("answers unauthorized when every scheme is refused", async () => {
 		server.use(
 			http.post(INBOX, async ({ request }) => {

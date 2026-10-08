@@ -8,7 +8,7 @@
  */
 import type { Cache } from "@sdxc/cache";
 import type { DurationInput } from "@sdxc/duration";
-import type { AcceptSignature, Scheme, SignOptions } from "@sdxc/http-signatures";
+import type { AcceptSignature, Component, Scheme, SignOptions } from "@sdxc/http-signatures";
 import type { Result } from "@sdxc/result";
 
 import { toMs } from "@sdxc/duration";
@@ -35,6 +35,12 @@ const REQUESTED_EXPIRY_MS = toMs("5 minutes");
 
 /** The answers that mean "not with this signature", which a knock with another scheme can change. */
 const REFUSED_STATUSES = new Set([400, 401, 403]);
+
+/**
+ * What every delivery signature covers whatever an inbox asks for, so `Accept-Signature`
+ * can never obtain this actor's signature over less than the target, the method and the body.
+ */
+const REQUIRED_COMPONENTS: readonly string[] = ["@method", "@target-uri", "content-digest"];
 
 /** The schemes in the order a first delivery to an origin tries them. */
 const DEFAULT_ORDER: readonly Scheme[] = ["rfc9421", "draft-cavage"];
@@ -332,7 +338,7 @@ async function signFor(
 	};
 	let requested = knock.requested;
 	if (requested !== null) {
-		signOptions.components = requested.components;
+		signOptions.components = withRequired(requested.components);
 		signOptions.label = requested.label;
 		if (requested.params.nonce !== undefined) signOptions.nonce = requested.params.nonce;
 		if (requested.params.tag !== undefined) signOptions.tag = requested.params.tag;
@@ -341,6 +347,19 @@ async function signFor(
 		}
 	}
 	return sign(request, signOptions);
+}
+
+/**
+ * The components an inbox asked for, followed by each required one it left out. Only the
+ * whole field counts as covering `content-digest`, never one member of it.
+ *
+ * @param requested - The components `Accept-Signature` named.
+ */
+function withRequired(requested: Component[]): Component[] {
+	let missing = REQUIRED_COMPONENTS.filter(
+		(name) => !requested.some((component) => component.name === name && !component.params),
+	);
+	return [...requested, ...missing.map((name) => ({ name }))];
 }
 
 /**

@@ -258,6 +258,22 @@ describe("receive", () => {
 		expect(fetched).toEqual([]);
 	});
 
+	test("403 for a key whose owner, reached through a redirect, is on a blocked host", async () => {
+		let relay = "https://relay.social/users/r";
+		let relayKeys = await keysFor(relay);
+		server.use(
+			http.get(relay, () => HttpResponse.redirect(BOB, 302)),
+			serve(BOB, { ...bob(), publicKey: { ...publicKeyOf(relayKeys), owner: BOB } }),
+			serve(MASTODON_CREATE_NOTE.id, MASTODON_CREATE_NOTE),
+		);
+		let request = await post(MASTODON_CREATE_NOTE, { keys: relayKeys });
+
+		expectRefused(
+			await receive(request, options({ blocked: (host) => host === "hachyderm.io" })),
+			"blocked",
+		);
+	});
+
 	test("401 for an unsigned request", async () => {
 		let request = await post(MASTODON_CREATE_NOTE, { unsigned: true });
 
