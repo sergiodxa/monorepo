@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 4
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A form anyone can reach will be found by bots within days. No single check stops all of them,
@@ -308,6 +308,49 @@ about 220 KB gzipped; import from `/length`, `/context` and `/breached` if that 
 a form sent within three seconds of rendering is a signal. A spam verdict is answered like a
 success and creates nothing; an unsure one creates the account held for review.
 
+## Guard a newsletter sign-up
+
+A newsletter box is the same kind of form with one field, and bots fill it to send confirmation
+emails to addresses that never asked, which spends your list's sending reputation. The three
+guards mount the same way on its route:
+
+```typescript {% title="bootstrap/subscribe.ts" %}
+import type { Captcha } from "@sdxc/captcha";
+import type { Router } from "remix/router";
+
+import { captcha } from "@sdxc/captcha/middleware";
+import { Honeypot } from "@sdxc/honeypot";
+import { honeypot } from "@sdxc/honeypot/middleware";
+import { env } from "cloudflare:workers";
+
+import { answerTrappedBots } from "~/app/http/controllers/sign-up/bots";
+import { action, index } from "~/app/http/controllers/subscribe";
+import { callerBudget } from "~/app/http/middleware/rate-limit";
+import routes from "~/routes/web";
+
+const TRAP = new Honeypot({ secret: env.HONEYPOT_SECRET });
+
+export function mountSubscribe(router: Router, guard: Captcha): void {
+	router.map(routes.subscribe, {
+		middleware: [honeypot(TRAP, { onFailure: answerTrappedBots })],
+		actions: {
+			index,
+			action: {
+				middleware: [callerBudget("subscribe", 5), captcha(guard)],
+				handler: action,
+			},
+		},
+	});
+}
+```
+
+The form renders `HoneypotFields` and the challenge widget beside its email input, as the sign-up
+form does. Inside the action, `checkSignUpEmail` runs before the address reaches the list,
+because a disposable inbox or a domain with no mail server can never confirm. The subscribe call
+itself is in [Run a newsletter list](/docs/data-and-background-work/newsletter). It answers an
+address already on the list like a new one, so the trapped bot, the returning reader and the new
+reader all land on the same page.
+
 ## Where to go next
 
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — the schema
@@ -315,5 +358,7 @@ success and creates nothing; an unsure one creates the account held for review.
 - [Security headers and CSP](/docs/identity-and-security/security-headers) — allow the
   challenge's script and frame before enforcing a policy.
 - [Add passkeys](/docs/identity-and-security/passkeys) — an account with no password to check.
+- [Run a newsletter list](/docs/data-and-background-work/newsletter) — the subscribe action
+  behind the guards above.
 - [`@sdxc/spam`](/api/spam) — reputation providers, a trainable classifier and a Workers AI
   second opinion.

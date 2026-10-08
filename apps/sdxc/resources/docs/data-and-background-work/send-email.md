@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 4
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 This guide sends the message a job board owes someone who just published a position: a short
@@ -15,6 +15,11 @@ happens in a background job so a slow provider never delays the page the poster 
 
 [`@sdxc/mail`](/api/mail) provides the mailer, the layout components and the transports,
 [`@sdxc/i18n`](/api/i18n) the translated copy, and [`@sdxc/jobs`](/api/jobs) the job it runs in.
+
+Each message here goes to one person because of something they did. Mail to a list of readers
+belongs on a newsletter platform, which keeps their consent, their unsubscribe links and the
+sending reputation; [Run a newsletter list](/docs/data-and-background-work/newsletter) puts
+readers on one.
 
 ```bash
 npm add @sdxc/mail @sdxc/i18n @sdxc/jobs @sdxc/result
@@ -373,4 +378,6 @@ locally and render its messages on a page.
   same message bundles.
 - [Build the interface with remix/component](/docs/building-remix-apps/interface-with-remix-ui) — the
   component model the email body uses.
+- [Run a newsletter list](/docs/data-and-background-work/newsletter) — mail to subscribers,
+  sent by the platform that holds the list.
 - [Test Workers apps](/docs/operations-and-testing/testing) — more on driving the app in a test.
