@@ -21,7 +21,7 @@ Production URL: https://auth.sergiodxa.com
 | Analytics Engine | `ANALYTICS`                | Monthly-active-user usage tracking                              |
 | Email            | `SEND_EMAIL`               | Cloudflare Email Sending (verification, magic links)            |
 | Rate Limiting    | `AUTH_RATE_LIMITER` et al. | Per-IP limits on auth, sensitive, and management routes         |
-| Static Assets    | `ASSETS`                   | Dashboard + tenant client bundles                               |
+| Static Assets    | `ASSETS`                   | Hashed client entry, island chunks and stylesheets              |
 
 Observability is enabled.
 

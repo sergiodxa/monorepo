@@ -1,8 +1,8 @@
 /**
  * Client-side entry for the platform dashboard. Boots the `remix/component` runtime so
  * server-rendered pages hydrate in the browser, loading `clientEntry()` component
- * modules on demand and resolving `<Frame>` navigations. The built asset is
- * emitted to `assets/clientEntry.js` and loaded via a `<script type="module">`.
+ * modules on demand and resolving `<Frame>` navigations. The hosted document links it
+ * through the asset manifest, which names the hashed file a build emits for it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,16 +11,11 @@
 import { run } from "remix/component";
 
 /**
- * Every client-loadable module, keyed by its source path. Globs only the
- * client-safe `app/views` and `routes` layers, since HTTP controllers import
- * Worker APIs (`cloudflare:workers`) that cannot resolve in the browser.
+ * The islands the runtime may hydrate, keyed by source path: every module that calls
+ * `clientEntry()` belongs here, and only those. A view or layout in the client bundle ships
+ * as a chunk no page asks for, and its route modules lengthen every page's import map.
  */
-let clientModules = import.meta.glob([
-	"!../**/*.server.*",
-	"!../**/*.test.*",
-	"../app/views/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
-]);
+let clientModules = import.meta.glob(["../app/views/hosted/passkey-button.tsx"]);
 
 run({
 	/**

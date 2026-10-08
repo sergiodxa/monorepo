@@ -199,10 +199,13 @@ describe("magic-link", () => {
 
 		expect(known.status).toBe(unknown.status);
 		let [knownBody, unknownBody] = await Promise.all([known.text(), unknown.text()]);
-		// The code field's label/input pair carries a fresh accessibility id each
-		// render, unrelated to anything this response is asserting uniform, so it
-		// is normalized out before the two bodies are compared.
-		let normalizeRenderIds = (html: string) => html.replace(/"s[0-9a-f]+-\d+"/g, '"s-id"');
+		/**
+		 * The code field's label/input pair carries a fresh accessibility id each render, and
+		 * every script tag the response's fresh CSP nonce, neither related to anything this
+		 * response is asserting uniform, so both are normalized out before the comparison.
+		 */
+		let normalizeRenderIds = (html: string) =>
+			html.replace(/"s[0-9a-f]+-\d+"/g, '"s-id"').replace(/nonce="[^"]+"/g, 'nonce=""');
 		expect(normalizeRenderIds(knownBody)).toBe(normalizeRenderIds(unknownBody));
 
 		let transport = harness.mailTransport as MemoryTransport;

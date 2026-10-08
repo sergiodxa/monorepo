@@ -161,7 +161,12 @@ const AUTH_SAAS_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 			remoteBindings: false,
 		}),
 	],
-	resolve: { tsconfigPaths: true },
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/auth-saas/app/test/assets-manifest.ts`,
+		},
+	},
 	test: {
 		name: "auth-saas-workers",
 		include: ["**/*.workers.test.ts?(x)"],
@@ -381,7 +386,12 @@ export default defineConfig({
 			{
 				root: "apps/auth-saas",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/auth-saas/app/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "auth-saas",
 					include: ["**/*.test.ts?(x)"],

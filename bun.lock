@@ -25,6 +25,7 @@
     "apps/auth-saas": {
       "name": "@apps/auth-saas",
       "dependencies": {
+        "@pitlane/assets": "0.1.0",
         "@sdxc/auth": "workspace:*",
         "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
@@ -81,6 +82,7 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
+        "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "vite": "^8.2.2",
         "wrangler": "^4.127.1",

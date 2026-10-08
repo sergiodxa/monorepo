@@ -80,7 +80,9 @@ describe("reset", () => {
 
 		expect(resolved.status).toBe(unresolved.status);
 		let [resolvedBody, unresolvedBody] = await Promise.all([resolved.text(), unresolved.text()]);
-		expect(resolvedBody).toBe(unresolvedBody);
+		/** Every script tag carries its own response's fresh CSP nonce, unrelated to the identifier. */
+		let withoutNonce = (html: string) => html.replace(/nonce="[^"]+"/g, 'nonce=""');
+		expect(withoutNonce(resolvedBody)).toBe(withoutNonce(unresolvedBody));
 	});
 
 	test("sends a reset email only when the identifier resolves, without changing the response", async () => {

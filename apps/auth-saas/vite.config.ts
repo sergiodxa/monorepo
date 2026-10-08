@@ -1,42 +1,27 @@
 /**
- * Vite build configuration for the auth-saas worker: registers the Cloudflare plugin,
- * resolves tsconfig path aliases, and defines a `client` build environment that bundles
- * the browser hydration entry so server-rendered `remix/component` pages hydrate. The
- * `@cloudflare/vite-plugin` detects this environment and serves the bundle through the
- * `ASSETS` binding.
+ * Vite build configuration for the auth-saas worker. The Cloudflare plugin runs the worker
+ * in the SSR environment, while the Remix plugin builds the browser hydration entry and
+ * writes the asset manifest the hosted document resolves its hashed files through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fileURLToPath } from "node:url";
-
 import { cloudflare } from "@cloudflare/vite-plugin";
+import { remix } from "@pitlane/vite-plugin-remix";
 import { defineConfig } from "vite";
-
-/** Absolute path to the browser entrypoint that boots the `remix/component` runtime. */
-let clientEntryPath = fileURLToPath(new URL("./bootstrap/browser.ts", import.meta.url));
 
 export default defineConfig({
 	server: { port: 3004 },
 
 	resolve: { tsconfigPaths: true },
 
-	environments: {
-		client: {
-			build: {
-				rollupOptions: {
-					input: {
-						clientEntry: clientEntryPath,
-					},
-					output: {
-						entryFileNames: "assets/[name].js",
-						chunkFileNames: "assets/[name]-[hash].js",
-					},
-				},
-			},
-		},
-	},
-
-	plugins: [cloudflare({ viteEnvironment: { name: "ssr" } })],
+	plugins: [
+		remix({
+			clientEntry: "bootstrap/browser.ts",
+			serverEntry: "bootstrap/worker.ts",
+			serverHandler: false,
+		}),
+		cloudflare({ viteEnvironment: { name: "ssr" } }),
+	],
 });

@@ -30,6 +30,9 @@ bun run db:remote:migrate # Apply migrations to remote database
 - MUST use `remix/*` packages for the app, not React or React Router
 - MUST check Remix docs on https://github.com/remix-run/remix for any questions about how to do things in Remix way
 - MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/component` for UI
+- MUST link the hosted document's stylesheets and client entry through `documentAssets()` in `app/services/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `app/views/hosted/document.tsx`, in cascade order.
+- MUST give the import map, every `modulepreload` and every module script the document writes the response's CSP nonce, which the renderer in `app/http/middleware/render.tsx` hands the document; the policies allow scripts by `'self'` and nonce, and the import map is inline.
+- MUST list every module that calls `clientEntry()` in `bootstrap/browser.ts`'s glob, and only those: a view or route module in the client bundle ships a chunk no page asks for and lengthens every page's import map.
 
 ## Structure
 
