@@ -29,7 +29,6 @@ import { chrome } from "~/app/http/controllers/chrome";
 import { exactDate, timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { features } from "~/app/lib/flags";
 import { RULE_ACTIONS, RULE_FIELDS, RULE_VALUE_LENGTH } from "~/database/schema";
 import { userStore } from "~/database/user-do";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
@@ -115,6 +114,16 @@ function candidateOf(params: URLSearchParams): UserStore.RuleDraft | null {
 export function rulesPage(outcome: string, extra: Record<string, string> = {}): string {
 	let query = new URLSearchParams({ [RULE_PARAM]: outcome, ...extra });
 	return `${routes.rules.index.href()}?${query}`;
+}
+
+/**
+ * Where a rule submission leaves the reader. With filters switched off there is no page
+ * to return to, so they are sent to the queue, which is where this page sends them too.
+ *
+ * @param outcome - What the reader's object answered, or the success to announce.
+ */
+export function afterRule(outcome: string): string {
+	return outcome === "switched-off" ? routes.reading.index.href() : rulesPage(outcome);
 }
 
 /**
@@ -494,15 +503,6 @@ export default createController(routes.rules, {
 			let viewer = getViewer();
 			if (!viewer) throw new Error("requireUser must run before this handler");
 
-			/**
-			 * With filters off there is nothing here to show and no way to put anything here,
-			 * so a reader following a bookmark is sent to the queue rather than shown a page
-			 * whose every control refuses.
-			 */
-			if (!(await ctx.flags.get(features.filterRules))) {
-				return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
-			}
-
 			let store = userStore(viewer.id);
 			let candidate = candidateOf(ctx.url.searchParams);
 
@@ -513,7 +513,17 @@ export default createController(routes.rules, {
 				candidate === null ? Promise.resolve(null) : store.previewRule(candidate),
 			]);
 
-			return await rulesView(ctx, held, feeds, entitlement.limits.filterRules, candidate, preview);
+			/**
+			 * Applying a preview is offered on every plan, so only the switch refuses it: with
+			 * filters off there is nothing here to show and no way to put anything here, and a
+			 * reader following a bookmark is sent to the queue rather than shown a page whose
+			 * every control refuses.
+			 */
+			if (!entitlement.can.rules.apply) {
+				return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
+			}
+
+			return await rulesView(ctx, held, feeds, entitlement.can.rules.write, candidate, preview);
 		},
 
 		/** POST /rules — writes a rule, which acts on what arrives from now on. */
@@ -521,13 +531,9 @@ export default createController(routes.rules, {
 			let viewer = getViewer();
 			if (!viewer) throw new Error("requireUser must run before this handler");
 
-			if (!(await ctx.flags.get(features.filterRules))) {
-				return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
-			}
-
 			let created = await userStore(viewer.id).createRule(submittedRule(ctx.formData));
 
-			return redirect(rulesPage(created.ok ? "created" : created.reason), {
+			return redirect(afterRule(created.ok ? "created" : created.reason), {
 				status: redirect.Status.SeeOther,
 			});
 		},

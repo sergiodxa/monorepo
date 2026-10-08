@@ -141,6 +141,17 @@ describe("POST /items/:itemId/save", () => {
 			"That post is not in your reading queue.",
 		);
 	});
+
+	test("tells a reader keeping is switched off, and takes nothing they kept", async () => {
+		store.saveItem.mockResolvedValue({ ok: false, reason: "switched-off" });
+
+		let response = await postSave(createRouter(VIEWER), { saved: "true", returnTo: "/reading" });
+
+		expect(response.status).toBe(403);
+		expect((await response.text()).replace(/<[^>]*>/g, "")).toContain(
+			"Saving posts is turned off for now.",
+		);
+	});
 });
 
 describe("a row that moved its own mark", () => {
@@ -171,5 +182,13 @@ describe("a row that moved its own mark", () => {
 		let response = await postInPlace(createRouter(VIEWER), "true");
 
 		expect(response.status).toBe(404);
+	});
+
+	test("answers a switched-off shelf with a status the row reads as a failure", async () => {
+		store.saveItem.mockResolvedValue({ ok: false, reason: "switched-off" });
+
+		let response = await postInPlace(createRouter(VIEWER), "true");
+
+		expect(response.status).toBe(403);
 	});
 });

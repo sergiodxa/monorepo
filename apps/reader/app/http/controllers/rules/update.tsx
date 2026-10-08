@@ -13,7 +13,7 @@ import { redirect } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { rulesPage, submittedRule } from "~/app/http/controllers/rules/manage";
+import { afterRule, submittedRule } from "~/app/http/controllers/rules/manage";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { userStore } from "~/database/user-do";
@@ -33,7 +33,7 @@ export default createAction(routes.rule.update, {
 
 		let written = await userStore(viewer.id).updateRule(ruleId, submittedRule(ctx.formData));
 
-		return redirect(rulesPage(written.ok ? "updated" : written.reason), {
+		return redirect(afterRule(written.ok ? "updated" : written.reason), {
 			status: redirect.Status.SeeOther,
 		});
 	},

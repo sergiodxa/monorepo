@@ -631,6 +631,8 @@ export default {
 		/** Labelling keeps the post, so a full shelf refuses the label for the same reason. */
 		savedFull: "Your saved posts are full, so nothing was labelled. Remove one to make room.",
 		notEntitled: "Labels are part of a paid plan. Everything you have kept stays where it is.",
+		/** Labels are turned off for everybody, which takes nothing anybody has. */
+		switchedOff: "Labels are turned off for now. Everything you have kept stays where it is.",
 		missing: "That label is no longer one of yours.",
 
 		/** The field both the naming forms type into. */
@@ -687,6 +689,9 @@ export default {
 			 * would delete a post they asked to keep. The way out is theirs to choose.
 			 */
 			full: "You have saved as many posts as this keeps. Remove one from Saved to make room for another.",
+			/** Keeping is turned off for everybody; what is already kept stays kept. */
+			switchedOff:
+				"Saving posts is turned off for now. Everything you have kept stays where it is.",
 		},
 	},
 

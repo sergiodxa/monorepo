@@ -29,6 +29,9 @@ import routes from "~/routes/web";
 /** Status for a post this reader has nothing stored for. */
 const NOT_FOUND_STATUS = 404;
 
+/** Status for keeping a post while keeping is switched off for everybody. */
+const SWITCHED_OFF_STATUS = 403;
+
 /** Status for a move that stood and has nothing to say beyond that. */
 const MOVED_STATUS = 204;
 
@@ -60,6 +63,18 @@ export function localPath(returnTo: string): string {
 	return isRelative ? returnTo : routes.reading.index.href();
 }
 
+/**
+ * The status a refused move answers with, which the row reads to tell a full shelf, a
+ * switched-off one and a missing post apart.
+ *
+ * @param reason - Why the reader's object refused.
+ */
+function refusedStatus(reason: "full" | "switched-off" | "not-found"): number {
+	if (reason === "full") return SHELF_FULL_STATUS;
+	if (reason === "switched-off") return SWITCHED_OFF_STATUS;
+	return NOT_FOUND_STATUS;
+}
+
 /** POST /items/:itemId/save — keeps one post, or stops keeping it. */
 export default createAction(routes.items.save, {
 	middleware: [requireUser],
@@ -82,9 +97,7 @@ export default createAction(routes.items.save, {
 		if (ctx.request.headers.has(SAVE_IN_PLACE_HEADER)) {
 			if (result.ok) return new Response(null, { status: MOVED_STATUS });
 
-			return new Response(null, {
-				status: result.reason === "full" ? SHELF_FULL_STATUS : NOT_FOUND_STATUS,
-			});
+			return new Response(null, { status: refusedStatus(result.reason) });
 		}
 
 		if (result.ok) return redirect(localPath(returnTo), { status: redirect.Status.SeeOther });
@@ -92,9 +105,14 @@ export default createAction(routes.items.save, {
 		/**
 		 * A full shelf is the reader's to clear, so the page says so and offers nothing that
 		 * would clear it for them. It is a warning rather than a failure: nothing was lost,
-		 * and everything already kept is still kept.
+		 * and everything already kept is still kept. A switched-off shelf says so in the same
+		 * tone, since it takes nothing either.
 		 */
-		let isFull = result.reason === "full";
+		let notes = {
+			full: ctx.intl.t("items.save.full"),
+			"switched-off": ctx.intl.t("items.save.switchedOff"),
+			"not-found": ctx.intl.t("items.save.notFound"),
+		};
 
 		return ctx.render(
 			<AppLayout
@@ -105,13 +123,11 @@ export default createAction(routes.items.save, {
 			>
 				<Alert color="warning" mix={pageNote()}>
 					<Alert.Content>
-						<Alert.Description>
-							{isFull ? ctx.intl.t("items.save.full") : ctx.intl.t("items.save.notFound")}
-						</Alert.Description>
+						<Alert.Description>{notes[result.reason]}</Alert.Description>
 					</Alert.Content>
 				</Alert>
 			</AppLayout>,
-			{ status: isFull ? SHELF_FULL_STATUS : NOT_FOUND_STATUS },
+			{ status: refusedStatus(result.reason) },
 		);
 	},
 });

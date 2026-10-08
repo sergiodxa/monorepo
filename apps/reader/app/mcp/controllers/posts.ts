@@ -49,6 +49,12 @@ export default createToolController(toolset.posts, {
 
 				if (!kept.ok && kept.reason === "not-found") throw new ToolError(NO_SUCH_POST);
 
+				if (!kept.ok && kept.reason === "switched-off") {
+					throw new ToolError(
+						"Keeping posts is turned off for now, so nothing was kept. Posts already kept stay kept.",
+					);
+				}
+
 				if (!kept.ok) {
 					throw new ToolError(
 						"This reader's shelf is full, so nothing was kept. They can stop keeping something first.",

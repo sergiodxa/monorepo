@@ -12,12 +12,15 @@
 
 import type { ToolContext } from "@sdxc/mcp";
 
+import { testAccess } from "@sdxc/authz/testing";
 import { ForbiddenError } from "@sdxc/mcp";
 import { RequestContext } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AgentIdentity } from "~/app/mcp/agent";
 
+import abilities from "~/app/authz/abilities";
+import policy, { agentRole } from "~/app/authz/policy";
 import { Agent, agentOf, mayWrite, requireWriteScope } from "~/app/mcp/agent";
 
 /** The tool a call is for, which the middleware carries but never reads. */
@@ -27,11 +30,17 @@ const TOOL = {
 	inputSchema: { type: "object", properties: {} },
 } as const;
 
-/** A tool call carrying one verified agent, which is what the route publishes. */
+/**
+ * A tool call carrying one verified agent on the paid tier, which is what the route
+ * publishes, with what it may do decided by the reader's policy as their object decides it.
+ */
 function contextFor(scope: AgentIdentity["scope"]): ToolContext {
 	let ctx = new RequestContext(new Request("https://reader.sergiodxa.com/mcp", { method: "POST" }));
+	let may = testAccess(policy, { roles: ["paid"], within: [agentRole(scope)] }).claims(
+		abilities.agent,
+	);
 
-	ctx.set(Agent, { subject: "sub-agent", tokenId: "tok_1", scope, tier: "paid" });
+	ctx.set(Agent, { subject: "sub-agent", tokenId: "tok_1", scope, tier: "paid", may });
 
 	return Object.assign(ctx, { input: {}, tool: TOOL });
 }

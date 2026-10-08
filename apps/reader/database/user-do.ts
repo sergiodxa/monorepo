@@ -14,6 +14,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AnyAbility, Decision } from "@sdxc/authz";
 import type { Log } from "@sdxc/logger";
 import type { KeysetQuery, OrderByTuple, OrderDirection } from "@sdxc/pagination";
 import type { Predicate, SqlStatement } from "remix/data-table";
@@ -43,6 +44,7 @@ import {
 	sql,
 } from "remix/data-table";
 
+import type { ReaderClaims } from "~/app/authz/access";
 import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/lib/entitlement";
 import type { FeedStore } from "~/database/feed-do";
 import type {
@@ -63,6 +65,9 @@ import type {
 	Velocity,
 } from "~/database/schema";
 
+import abilities from "~/app/authz/abilities";
+import { agentClaimsFor, claimsFor, decideFor, refusalReason } from "~/app/authz/access";
+import { SWITCHED_OFF } from "~/app/authz/policy";
 import {
 	DEFAULT_TIER,
 	DEFAULT_TIER_SOURCE,
@@ -365,6 +370,11 @@ export namespace UserStore {
 		graceUntil: number | null;
 		tierCheckedAt: number;
 		limits: TierLimits;
+		/**
+		 * What the reader may do right now, decided from the tier their row leases and the
+		 * switches, so a page offers exactly what this object would accept.
+		 */
+		can: ReaderClaims;
 		/** Every limit the reader is over, with how many they hold and how many they may. */
 		over: LimitRefusal[];
 		/** How many feeds they follow. */
@@ -433,7 +443,9 @@ export namespace UserStore {
 		/** Labelling keeps the post, and the shelf that keeps it is full. */
 		| "saved-full"
 		/** The reader's plan does not make labels, which deletes none they have. */
-		| "not-entitled";
+		| "not-entitled"
+		/** Labels, or keeping the post a label keeps, are turned off for everybody. */
+		| "switched-off";
 
 	export type TagResult =
 		| { ok: true; tag: Tag }
@@ -504,6 +516,8 @@ export namespace UserStore {
 		| "not-following"
 		/** The reader's plan runs no rules, which deletes none they have. */
 		| "not-entitled"
+		/** Filter rules are turned off for everybody, which deletes none anybody has. */
+		| "switched-off"
 		/** The reader has as many rules as their tier allows; `limit` says how many. */
 		| "rule-limit";
 
@@ -649,11 +663,16 @@ export namespace UserStore {
 		 */
 		enclosure: FeedStore.Enclosure | null;
 		/**
-		 * Whether this reader's tier carries full-text extraction. Answered here rather
-		 * than beside the page, so the tier is read from the row that holds it and a
-		 * surface that forgets to ask is offered nothing.
+		 * Whether this reader's tier carries full-text extraction, which is what decides
+		 * between offering an upgrade and saying the article is not available.
 		 */
 		fullText: boolean;
+		/**
+		 * Whether the article may be fetched now: the tier carries it and the switch is on.
+		 * Answered here rather than beside the page, so a surface that forgets to ask is
+		 * offered nothing.
+		 */
+		extract: boolean;
 	}
 
 	/** Where in a timeline to read from, and how much of it. */
@@ -931,6 +950,8 @@ export namespace UserStore {
 	export type SaveResult =
 		| { ok: true; saved: boolean }
 		| { ok: false; reason: "not-found" }
+		/** Keeping is turned off for everybody; a post already kept stays kept. */
+		| { ok: false; reason: "switched-off" }
 		| { ok: false; reason: "full"; limit: Limit };
 
 	/**
@@ -1058,7 +1079,13 @@ export namespace UserStore {
 	 * allowed, is this account entitled, and is it inside its daily budget.
 	 */
 	export type AgentAuthorization =
-		| { ok: true; scope: AgentScope; tier: Tier }
+		| {
+				ok: true;
+				scope: AgentScope;
+				tier: Tier;
+				/** What the token may do: the reader's tier, capped by the token's scope. */
+				may: ReaderClaims["agent"];
+		  }
 		| {
 				ok: false;
 				/**
@@ -1271,6 +1298,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			graceUntil: row.grace_until,
 			tierCheckedAt: row.tier_checked_at,
 			limits: limitsOf(tier),
+			can: await claimsFor({ tier: leasedTier(row, Date.now()), subject: this.#subject() }),
 			over: measured.filter((refusal) => refusal.current > refusal.allowed),
 			feeds: followed,
 			saved,
@@ -1898,10 +1926,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let row = await this.#db.find(feedItems, { id: itemId });
 		if (row === null) return null;
 
-		let [labels, feed, settingsRow] = await Promise.all([
+		let [labels, feed, extraction] = await Promise.all([
 			this.#tagsFor([row.id]),
 			this.getFeed(row.feed_id),
-			this.#settingsRow(),
+			this.#decide(abilities.articles.extract),
 		]);
 
 		return {
@@ -1915,7 +1943,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 							type: row.enclosure_type,
 							length: row.enclosure_length,
 						},
-			fullText: limitsOf(storedTier(settingsRow)).fullText,
+			fullText: extraction.allowed || extraction.cause !== "ungranted",
+			extract: extraction.allowed,
 		};
 	}
 
@@ -1946,6 +1975,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		}
 
 		if (item.saved_at !== null) return { ok: true, saved: true };
+
+		let keeping = await this.#decide(abilities.posts.keep);
+		if (!keeping.allowed) return { ok: false, reason: SWITCHED_OFF };
 
 		let tier = storedTier(await this.#settingsRow());
 		let kept = await this.#db.count(feedItems, { where: notNull("saved_at") });
@@ -2225,8 +2257,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param name - What to call it, which no other label of this reader's may be called.
 	 */
 	async createTag(name: string): Promise<UserStore.TagResult> {
-		let entitled = await this.#mayLabel();
-		if (!entitled) return { ok: false, reason: "not-entitled" };
+		let labelling = await this.#decide(abilities.tags.label);
+		if (!labelling.allowed) return { ok: false, reason: refusalReason(labelling) };
 
 		let folded = foldTagName(name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
@@ -2258,8 +2290,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param name - What to call it instead.
 	 */
 	async renameTag(tagId: string, name: string): Promise<UserStore.TagResult> {
-		let entitled = await this.#mayLabel();
-		if (!entitled) return { ok: false, reason: "not-entitled" };
+		let labelling = await this.#decide(abilities.tags.label);
+		if (!labelling.allowed) return { ok: false, reason: refusalReason(labelling) };
 
 		let folded = foldTagName(name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
@@ -2334,8 +2366,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		target: { tagId: string } | { name: string },
 		create = true,
 	): Promise<UserStore.TagItemResult> {
-		let entitled = await this.#mayLabel();
-		if (!entitled) return { ok: false, reason: "not-entitled" };
+		let labelling = await this.#decide(abilities.tags.label);
+		if (!labelling.allowed) return { ok: false, reason: refusalReason(labelling) };
 
 		let item = await this.#db.find(feedItems, { id: itemId });
 		if (item === null) return { ok: false, reason: "not-found" };
@@ -2364,6 +2396,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 					this.#record("job", { event: "user.tag.refused", reason: "saved-full", tags: carried });
 					return { ok: false, reason: "saved-full", limit: kept.limit };
 				}
+
+				if (kept.reason === SWITCHED_OFF) return { ok: false, reason: SWITCHED_OFF };
 
 				return { ok: false, reason: "not-found" };
 			}
@@ -2658,8 +2692,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param draft - The field, the text and the action, with the feed it is scoped to.
 	 */
 	async createRule(draft: UserStore.RuleDraft): Promise<UserStore.RuleResult> {
-		let tier = storedTier(await this.#settingsRow());
-		if (!limitsOf(tier).filterRules) return { ok: false, reason: "not-entitled" };
+		let row = await this.#settingsRow();
+		let writing = await this.#decide(abilities.rules.write, row);
+		if (!writing.allowed) return { ok: false, reason: refusalReason(writing) };
+
+		let tier = storedTier(row);
 
 		let checked = await this.#ruleDraft(draft);
 		if (!checked.ok) return checked;
@@ -2705,8 +2742,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param draft - What it should say instead.
 	 */
 	async updateRule(ruleId: string, draft: UserStore.RuleDraft): Promise<UserStore.RuleResult> {
-		let tier = storedTier(await this.#settingsRow());
-		if (!limitsOf(tier).filterRules) return { ok: false, reason: "not-entitled" };
+		let writing = await this.#decide(abilities.rules.write);
+		if (!writing.allowed) return { ok: false, reason: refusalReason(writing) };
 
 		let existing = await this.#db.find(rules, { id: ruleId });
 		if (existing === null) return { ok: false, reason: "not-found" };
@@ -2792,6 +2829,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param draft - The candidate whose matches are being acted on.
 	 */
 	async applyPreviewedRule(draft: UserStore.RuleDraft): Promise<UserStore.RuleSweep> {
+		let applying = await this.#decide(abilities.rules.apply);
+		if (!applying.allowed) return { ok: false, reason: refusalReason(applying) };
+
 		let checked = await this.#ruleDraft(draft);
 		if (!checked.ok) return checked;
 
@@ -2849,7 +2889,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async setChannels(input: { push: boolean; email: boolean }): Promise<UserStore.ChannelResult> {
 		let row = await this.#settingsRow();
 
-		if (input.email && !limitsOf(leasedTier(row, Date.now())).emailDigests) {
+		if (input.email && !(await this.#decide(abilities.digests.email, row)).allowed) {
 			return { ok: false, reason: "not-entitled" };
 		}
 
@@ -3135,8 +3175,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param draft - The id, the name, the scope and the digest of the signed value.
 	 */
 	async createAgentToken(draft: UserStore.AgentTokenDraft): Promise<UserStore.AgentTokenResult> {
-		let tier = storedTier(await this.#settingsRow());
-		if (!limitsOf(tier).mcp) return { ok: false, reason: "not-entitled" };
+		let connecting = await this.#decide(abilities.agent.connect);
+		if (!connecting.allowed) return { ok: false, reason: "not-entitled" };
 
 		let name = draft.name.trim();
 		if (name.length === 0 || name.length > TOKEN_NAME_LENGTH) {
@@ -3205,8 +3245,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let now = Date.now();
 		if (row.expires_at <= now) return { ok: false, reason: "expired" };
 
-		let tier = storedTier(await this.#settingsRow());
-		if (!limitsOf(tier).mcp) return { ok: false, reason: "tier" };
+		let scope = isAgentScope(row.scope) ? row.scope : "read";
+		let tier = leasedTier(await this.#settingsRow(), now);
+		let agent = await agentClaimsFor({ tier, subject: this.#subject(), scope });
+		if (!agent.connect) return { ok: false, reason: "tier" };
 
 		if (!(await this.#withinDailyBudget(tokenId))) return { ok: false, reason: "budget" };
 
@@ -3214,7 +3256,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			await this.#db.update(tokens, { id: tokenId }, { last_used_at: now });
 		}
 
-		return { ok: true, scope: isAgentScope(row.scope) ? row.scope : "read", tier };
+		return { ok: true, scope, tier, may: agent };
 	}
 
 	/**
@@ -3507,15 +3549,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param row - The settings row as the caller's own writes left it.
 	 */
 	async #notifications(row: SelectSettings): Promise<UserStore.Notifications> {
-		let [devices, opted] = await Promise.all([
+		let [devices, opted, emailing] = await Promise.all([
 			this.#db.findMany(pushSubscriptions, { orderBy: [["created_at", "desc"]] }),
 			countNotifiedFeeds(this.#db),
+			this.#decide(abilities.digests.email, row),
 		]);
 
 		return {
 			push: row.notify_push,
 			email: row.notify_email,
-			emailAllowed: limitsOf(leasedTier(row, Date.now())).emailDigests,
+			emailAllowed: emailing.allowed,
 			address: row.email,
 			timeZone: row.time_zone,
 			quietHours: row.quiet_hours,
@@ -3542,7 +3585,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			db: this.#db,
 			row,
 			now,
-			mayEmail: limitsOf(leasedTier(row, now)).emailDigests,
+			mayEmail: (await this.#decide(abilities.digests.email, row)).allowed,
 			mailer: this.#mailer(),
 			appUrl: this.env.APP_URL || null,
 			subject: this.#subject(),
@@ -3617,12 +3660,25 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	/**
-	 * Whether this reader's plan makes labels. An entitlement that lapses leaves every row
-	 * in place: they keep their posts and their labels and can still read by them, and the
-	 * only thing they cannot do is make new ones.
+	 * Decides one claim for the reader this object holds, from the tier their row leases
+	 * right now and the switches evaluated for them. A refusal deletes nothing: a lapsed
+	 * plan leaves every label and rule in place, and only stops new ones being made.
+	 *
+	 * @param ability - The claim being checked.
+	 * @param row - The settings row the caller already read, when it has one.
 	 */
-	async #mayLabel(): Promise<boolean> {
-		return limitsOf(storedTier(await this.#settingsRow())).folders;
+	async #decide(ability: AnyAbility, row?: SelectSettings): Promise<Decision> {
+		let settingsRow = row ?? (await this.#settingsRow());
+		let decision = await decideFor(
+			{ tier: leasedTier(settingsRow, Date.now()), subject: this.#subject() },
+			ability,
+		);
+
+		if (!decision.allowed && decision.cause === "error") {
+			this.#record("job", { event: "user.authz.undecidable", ability: decision.ability });
+		}
+
+		return decision;
 	}
 
 	/**

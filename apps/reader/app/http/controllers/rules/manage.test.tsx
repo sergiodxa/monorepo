@@ -16,7 +16,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { UserStoreDouble } from "~/app/lib/test/store";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createUserStoreDouble, FREE_ENTITLEMENT } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
 let store: UserStoreDouble = createUserStoreDouble();
@@ -69,6 +69,25 @@ describe("GET /rules", () => {
 		expect(html).toContain("When the title of a post contains");
 		expect(html).toContain("Sponsored");
 		expect(html).toContain("has never matched a post");
+	});
+
+	/** The switch is decided by the reader's object, which every path reaches. */
+	test("sends a reader to the queue while their object says filters are switched off", async () => {
+		store.entitlement = vi.fn(async () => ({
+			...FREE_ENTITLEMENT,
+			can: { ...FREE_ENTITLEMENT.can, rules: { write: false, apply: false } },
+		}));
+
+		let response = await fetchRoute(createRouter(VIEWER), routes.rules.index.href());
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
+	});
+
+	test("tells a reader whose plan runs no rules that filters are a paid feature", async () => {
+		let html = await (await fetchRoute(createRouter(VIEWER), routes.rules.index.href())).text();
+
+		expect(html).toContain("Filters are part of a paid plan");
 	});
 
 	test("takes no preview until the reader has typed something to look for", async () => {
@@ -150,5 +169,19 @@ describe("POST /rules", () => {
 		});
 
 		expect(response.headers.get("location")).toBe(`${routes.rules.index.href()}?rule=rule-limit`);
+	});
+
+	test("sends the reader to the queue when their object refuses a switched-off write", async () => {
+		store.createRule = vi.fn(async () => ({ ok: false, reason: "switched-off" }));
+
+		let response = await fetchRoute(createRouter(VIEWER), routes.rules.action.href(), {
+			field: "title",
+			value: "x",
+			action: "drop",
+			feed: "",
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.reading.index.href());
 	});
 });

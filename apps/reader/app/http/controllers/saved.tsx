@@ -62,6 +62,7 @@ function tagNote(outcome: string | null): { key: string } | null {
 	if (outcome === "post-tag-limit") return { key: "tags.postFull" };
 	if (outcome === "saved-full") return { key: "tags.savedFull" };
 	if (outcome === "not-entitled") return { key: "tags.notEntitled" };
+	if (outcome === "switched-off") return { key: "tags.switchedOff" };
 	if (outcome === "not-found") return { key: "tags.missing" };
 	return null;
 }

@@ -724,6 +724,9 @@ export default {
 			"Tus entradas guardadas están llenas, así que no se etiquetó nada. Quita una para hacer sitio.",
 		notEntitled:
 			"Las etiquetas son parte de un plan de pago. Todo lo que has guardado sigue donde está.",
+		/** Labels are turned off for everybody, which takes nothing anybody has. */
+		switchedOff:
+			"Las etiquetas están desactivadas por ahora. Todo lo que has guardado sigue donde está.",
 		missing: "Esa etiqueta ya no es tuya.",
 
 		/** The field both the naming forms type into. */
@@ -780,6 +783,9 @@ export default {
 			 * would delete a post they asked to keep. The way out is theirs to choose.
 			 */
 			full: "Has guardado tantas entradas como caben aquí. Quita una de Guardadas para hacer sitio a otra.",
+			/** Keeping is turned off for everybody; what is already kept stays kept. */
+			switchedOff:
+				"Guardar entradas está desactivado por ahora. Todo lo que has guardado sigue donde está.",
 		},
 	},
 

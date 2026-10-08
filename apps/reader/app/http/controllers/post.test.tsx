@@ -21,7 +21,7 @@ import type { Article } from "~/app/lib/article";
 import type { UserStore } from "~/database/user-do";
 
 import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
+import { restoreFlags } from "~/app/lib/test/flags";
 import { createUserStoreDouble } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
@@ -102,6 +102,8 @@ function opened(overrides: Partial<UserStore.OpenedPost> = {}): UserStore.Opened
 		enclosure: null,
 		/** The paid tier, since extraction is what that tier is bought for. */
 		fullText: true,
+		/** The switch is on, so the paid tier's extraction may fetch. */
+		extract: true,
 		...overrides,
 	};
 }
@@ -216,7 +218,7 @@ describe("GET /reading/:feed/:item", () => {
 	});
 
 	test("tells a reader whose plan does not carry extraction, and fetches nothing", async () => {
-		store.openPost.mockResolvedValue(opened({ fullText: false }));
+		store.openPost.mockResolvedValue(opened({ fullText: false, extract: false }));
 
 		let response = await get(PATH);
 		let body = await response.text();
@@ -229,13 +231,13 @@ describe("GET /reading/:feed/:item", () => {
 		expect(read).not.toHaveBeenCalled();
 	});
 
-	test("fetches nothing at all with the flag turned off", async () => {
-		await serveFlags({ "article-extraction": false });
-		store.openPost.mockResolvedValue(opened());
+	test("fetches nothing at all when the reader's object says the switch is off", async () => {
+		store.openPost.mockResolvedValue(opened({ extract: false }));
 
 		let response = await get(PATH);
 
 		expect(response.status).toBe(200);
+		expect(readsAs(await response.text())).not.toContain("part of the paid plan");
 		expect(peek).not.toHaveBeenCalled();
 		expect(read).not.toHaveBeenCalled();
 	});

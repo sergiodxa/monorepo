@@ -131,6 +131,7 @@ describe("authorizeAgent", () => {
 			ok: true,
 			scope: "write",
 			tier: "paid",
+			may: { connect: true, write: true },
 		});
 	});
 

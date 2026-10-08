@@ -702,7 +702,7 @@ async function settingsPage(
 
 			{notificationsSection(ctx, notifications)}
 
-			{tokensSection(ctx, tokens, entitlement.limits.mcp)}
+			{tokensSection(ctx, tokens, entitlement.can.agent.connect)}
 
 			{transfer && (
 				<Alert color={transfer.color} mix={[maxIs(PAGE_COLUMN), ...pageNote()]}>

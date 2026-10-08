@@ -37,7 +37,6 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { FRAME_PARAM, isFrameRequest } from "~/app/http/render";
 import { peekArticle, readArticle } from "~/app/lib/article";
-import { features } from "~/app/lib/flags";
 import { userStore } from "~/database/user-do";
 import LazyFrame from "~/resources/components/lazy-frame";
 import SaveToggle from "~/resources/components/save-toggle";
@@ -210,16 +209,15 @@ export default createAction(routes.post, {
 			);
 		}
 
-		let { feed, fullText, item } = opened;
+		let { extract, feed, fullText, item } = opened;
 
 		/**
 		 * Three things have to be true before this app asks a publisher for anything: the
-		 * post has an address, the reader's tier carries extraction, and the flag is on. The
-		 * flag is the operational switch a tier is not — off, nothing here fetches, for
-		 * everybody at once.
+		 * post has an address, the reader's tier carries extraction, and the switch is on.
+		 * The reader's object answers the last two together, so off means nothing here
+		 * fetches, for everybody at once.
 		 */
-		let mayExtract =
-			item.url !== null && fullText && (await ctx.flags.get(features.articleExtraction));
+		let mayExtract = item.url !== null && extract;
 
 		/**
 		 * A frame asked for the article alone, so it is answered with the article alone:

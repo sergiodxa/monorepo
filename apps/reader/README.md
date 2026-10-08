@@ -33,7 +33,8 @@ platform delivers to `POST /webhooks/billing`, which verifies the signature, rec
 delivery, and re-reads what the customer holds rather than trusting what arrived; a cron
 trigger re-reads every reader who has ever bought something, so a lost delivery is repaired
 within a day. The tier each reader is on lives on their own object, which is where every
-limit is compared against the count it caps.
+limit is compared against the count it caps, and where `@sdxc/authz` decides what the tier,
+the operational switches and an agent token's scope allow (`app/authz/`).
 
 Observability is enabled. The KV namespace id in `wrangler.jsonc` is a placeholder:
 create the namespace with `bunx wrangler kv namespace create` and paste its id into both

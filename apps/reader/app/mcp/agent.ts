@@ -17,6 +17,7 @@ import { ForbiddenError } from "@sdxc/mcp";
 import { getContext } from "remix/middleware/async-context";
 import { createContextKey } from "remix/router";
 
+import type { ReaderClaims } from "~/app/authz/access";
 import type { Tier } from "~/app/lib/entitlement";
 import type { AgentScope } from "~/database/schema";
 import type { UserStore } from "~/database/user-do";
@@ -32,6 +33,8 @@ export interface AgentIdentity {
 	tokenId: string;
 	scope: AgentScope;
 	tier: Tier;
+	/** What the token may do: the reader's tier capped by its scope, as their object decided. */
+	may: ReaderClaims["agent"];
 }
 
 /**
@@ -63,9 +66,12 @@ export function agentOf(ctx: AnyRequestContext | RequestContext): AgentIdentity 
 	return identity;
 }
 
-/** Whether the current credential may write, which is what hides the five writing tools. */
+/**
+ * Whether the current credential may write, which is what hides the five writing tools. The
+ * reader's object decided it, so a token never writes past its scope nor past its holder.
+ */
 export function mayWrite(ctx: AnyRequestContext): boolean {
-	return agentOf(ctx).scope === "write";
+	return agentOf(ctx).may.write;
 }
 
 /**
@@ -188,6 +194,7 @@ export let requireAgent: Middleware = async (ctx, next) => {
 		tokenId: credential.tokenId,
 		scope: allowed.scope,
 		tier: allowed.tier,
+		may: allowed.may,
 	});
 
 	ctx.log.note("mcp.authorized", {

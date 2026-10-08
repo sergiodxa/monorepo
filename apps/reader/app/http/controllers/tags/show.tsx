@@ -86,6 +86,7 @@ function tagNote(outcome: string | null): Note | null {
 	if (outcome === "tag-name-invalid") return { key: "tags.invalid", color: "warning" };
 	if (outcome === "tag-limit") return { key: "tags.full", color: "warning" };
 	if (outcome === "not-entitled") return { key: "tags.notEntitled", color: "warning" };
+	if (outcome === "switched-off") return { key: "tags.switchedOff", color: "warning" };
 	return null;
 }
 

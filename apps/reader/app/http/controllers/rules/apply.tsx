@@ -14,10 +14,14 @@
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import { APPLIED_PARAM, rulesPage, submittedRule } from "~/app/http/controllers/rules/manage";
+import {
+	afterRule,
+	APPLIED_PARAM,
+	rulesPage,
+	submittedRule,
+} from "~/app/http/controllers/rules/manage";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { features } from "~/app/lib/flags";
 import { userStore } from "~/database/user-do";
 import routes from "~/routes/web";
 
@@ -28,14 +32,10 @@ export default createAction(routes.rule.apply, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		if (!(await ctx.flags.get(features.filterRules))) {
-			return redirect(routes.reading.index.href(), { status: redirect.Status.SeeOther });
-		}
-
 		let applied = await userStore(viewer.id).applyPreviewedRule(submittedRule(ctx.formData));
 
 		if (!applied.ok) {
-			return redirect(rulesPage(applied.reason), { status: redirect.Status.SeeOther });
+			return redirect(afterRule(applied.reason), { status: redirect.Status.SeeOther });
 		}
 
 		return redirect(rulesPage("applied", { [APPLIED_PARAM]: String(applied.affected) }), {

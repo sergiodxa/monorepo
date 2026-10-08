@@ -75,6 +75,10 @@ indicate requirement levels.
   `authorizeAgent`, which reads the scope, the expiry, the revocation, the tier and the
   day's budget from rows. Nothing about any of them is signed into the token, so a
   revocation and a cancellation both take effect on the next call.
+- MUST decide what a tier or a switch allows with a check of an ability from
+  `app/authz/abilities.ts` inside the reader's own object, bound with the tier `leasedTier`
+  derives as the role; numbers a tier caps stay in `TIER_LIMITS`, keyed by the same names.
+  A refusal crosses RPC as `not-entitled` or `switched-off`, never as a raw decision.
 - MUST build markup from `@sdxc/ui` components styled with `@sdxc/u` mixins through `mix`.
 - MUST let `worker-configuration.d.ts` be the only declaration of a binding's type; run
   `bun run cf:typegen` after every change to `wrangler.jsonc`.
@@ -107,6 +111,10 @@ indicate requirement levels.
   - `app/http/controllers/timeline-entries.ts` <- What an outbound link is stripped of at render, through `@sdxc/attribution/parameters`
 - Feature Flags
   - `app/lib/flags.ts` <- The definitions, the typed catalog and the instance every surface evaluates through
+- Authorization
+  - `app/authz/abilities.ts` <- Every ability a tier, a switch or a token scope gates
+  - `app/authz/policy.ts` <- One role per tier, a ceiling role per agent scope, switches as guards
+  - `app/authz/access.ts` <- Binding the policy for one reader, answering plain data
 - Agents
   - `bootstrap/mcp.ts` <- The Model Context Protocol server, and what each tool is mapped to
   - `app/mcp/tools.ts` <- Every tool an agent may call, and the schema its arguments satisfy

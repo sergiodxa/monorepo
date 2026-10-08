@@ -158,6 +158,15 @@ export const FREE_ENTITLEMENT: UserStore.Entitlement = {
 	graceUntil: null,
 	tierCheckedAt: 0,
 	limits: TIER_LIMITS.free,
+	/** What the free tier's role grants with every switch on: keeping and applying a preview. */
+	can: {
+		posts: { keep: true },
+		tags: { label: false },
+		rules: { write: false, apply: true },
+		articles: { extract: false },
+		digests: { email: false },
+		agent: { connect: false, write: false },
+	},
 	over: [],
 	feeds: 0,
 	saved: 0,

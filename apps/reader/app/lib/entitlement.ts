@@ -51,7 +51,10 @@ export const TIER_STALE_MS = DAY_MS;
 /** The counts a tier caps, named so a refusal says which one refused. */
 export type LimitName = "feeds" | "saved" | "rules" | "posts";
 
-/** What one tier allows, as every enforcement point reads it. */
+/**
+ * The numbers one tier allows. What a tier may do at all is an ability its role grants in
+ * the reader's policy, keyed by the same tier names as this table.
+ */
 export interface TierLimits {
 	/** Subscriptions the reader may hold, which is the cap that bounds the worst case. */
 	feeds: number;
@@ -65,22 +68,6 @@ export interface TierLimits {
 	checkIntervalMs: number | null;
 	/** How far back a search reaches, in days; `null` searches everything stored. */
 	searchWindowDays: number | null;
-	/** Whether folders and tags may be created. */
-	folders: boolean;
-	/** Whether the reader's filter rules run on synchronization. */
-	filterRules: boolean;
-	/** Whether a post's full text is extracted. */
-	fullText: boolean;
-	/** Whether the MCP server accepts a session. */
-	mcp: boolean;
-	/** Whether the public API accepts a request. */
-	publicApi: boolean;
-	/** Whether digests are sent by email. */
-	emailDigests: boolean;
-	/** Whether sources other than feeds may be added. */
-	nonFeedSources: boolean;
-	/** Whether the AI surfaces answer. */
-	ai: boolean;
 }
 
 /**
@@ -95,14 +82,6 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 		posts: TIER_BUDGETS.free,
 		checkIntervalMs: null,
 		searchWindowDays: 30,
-		folders: false,
-		filterRules: false,
-		fullText: false,
-		mcp: false,
-		publicApi: false,
-		emailDigests: false,
-		nonFeedSources: false,
-		ai: false,
 	},
 	paid: {
 		feeds: 200,
@@ -111,14 +90,6 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 		posts: TIER_BUDGETS.paid,
 		checkIntervalMs: 30 * 60 * 1000,
 		searchWindowDays: null,
-		folders: true,
-		filterRules: true,
-		fullText: true,
-		mcp: true,
-		publicApi: true,
-		emailDigests: false,
-		nonFeedSources: false,
-		ai: false,
 	},
 	premium: {
 		feeds: 500,
@@ -127,14 +98,6 @@ export const TIER_LIMITS: Record<Tier, TierLimits> = {
 		posts: TIER_BUDGETS.premium,
 		checkIntervalMs: 5 * 60 * 1000,
 		searchWindowDays: null,
-		folders: true,
-		filterRules: true,
-		fullText: true,
-		mcp: true,
-		publicApi: true,
-		emailDigests: true,
-		nonFeedSources: true,
-		ai: true,
 	},
 };
 
