@@ -80,7 +80,7 @@ breaks something you cannot see from here:
 - **Attribution** is `@sdxc/attribution`: its middleware keeps the visitor's first and last
   touch in the cookie `app/lib/cookies.ts` builds, signed with `COOKIE_SECRET`, and publishes
   them as `ctx.attribution`. Forms render no hidden campaign fields; the subscribe service
-  reads the touch through `subscriberAttribution`, and checkouts pass `toMetadata`.
+  receives the touch through `toCampaign`, and checkouts pass `toMetadata`.
 - **Logging** is `@sdxc/logger`, one wide event per request: controllers write through
   `ctx.log`, services through `currentLog()?.`. Keep the existing field and note names
   (`subscribe.result`, `checkout.id`, `discount.id`, `order.tagged`, `checkout.started`,

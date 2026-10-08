@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { toCampaign } from "@sdxc/attribution";
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
@@ -19,7 +20,7 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
-import { subscribe, subscriberAttribution } from "~/app/services/subscribe";
+import { subscribe } from "~/app/services/subscribe";
 import routes from "~/routes/web";
 
 /**
@@ -55,7 +56,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 	}
 
 	let result = await subscribe(ctx.newsletter, payload, {
-		attribution: subscriberAttribution(ctx.attribution, ctx.url),
+		attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
 		ip: ctx.ip,
 	});
 

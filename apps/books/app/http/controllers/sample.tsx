@@ -11,6 +11,7 @@
 import type { Result } from "@sdxc/result";
 import type { RequestContext } from "remix/router";
 
+import { toCampaign } from "@sdxc/attribution";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toRemix } from "@sdxc/markdown/remix";
@@ -25,7 +26,7 @@ import {
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
 import { seo } from "~/app/lib/seo";
-import { subscribe, subscriberAttribution } from "~/app/services/subscribe";
+import { subscribe } from "~/app/services/subscribe";
 import chapterSource from "~/resources/content/sample.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import SampleView from "~/resources/views/sample";
@@ -168,7 +169,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	 * month is exactly the reader this page is for.
 	 */
 	let result = await subscribe(ctx.newsletter, payload, {
-		attribution: subscriberAttribution(ctx.attribution, ctx.url),
+		attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
 		ip: ctx.ip,
 	});
 
