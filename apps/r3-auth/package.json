@@ -13,6 +13,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@sdxc/authz": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",

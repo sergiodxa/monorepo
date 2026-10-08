@@ -13,6 +13,7 @@
 	"dependencies": {
 		"@sdxc/attribution": "workspace:*",
 		"@sdxc/auth": "workspace:*",
+		"@sdxc/authz": "workspace:*",
 		"@sdxc/backoff": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/cache": "workspace:*",
