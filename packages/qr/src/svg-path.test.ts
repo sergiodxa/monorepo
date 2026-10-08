@@ -10,7 +10,7 @@ import { expect, test } from "vitest";
 
 import type { QrSymbol } from "./encode.js";
 
-import { encodeQr } from "./encode.js";
+import { QR } from "./encode.js";
 import { svgPath } from "./svg-path.js";
 
 /** A 3×3 symbol from `#`/`.` rows, so expected paths can be written by hand. */
@@ -34,7 +34,7 @@ test("merges each row's dark runs into rectangles, offset by the margin", () => 
 });
 
 test("defaults to the standard's four-module quiet zone", () => {
-	let symbol = unwrap(encodeQr("HELLO"));
+	let symbol = unwrap(QR.encode("HELLO"));
 	let path = svgPath(symbol);
 	expect(path.size).toBe(symbol.size + 8);
 	expect(path.viewBox).toBe(`0 0 ${symbol.size + 8} ${symbol.size + 8}`);

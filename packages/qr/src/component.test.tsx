@@ -11,11 +11,11 @@ import { renderToString } from "remix/component/server";
 import { expect, test } from "vitest";
 
 import { QrCode } from "./component.js";
-import { encodeQr } from "./encode.js";
+import { QR } from "./encode.js";
 import { svgPath } from "./svg-path.js";
 
 /** A version 1 symbol, 21 modules a side. */
-const SYMBOL = unwrap(encodeQr("HELLO WORLD"));
+const SYMBOL = unwrap(QR.encode("HELLO WORLD"));
 
 test("renders an image named by its label", async () => {
 	let html = await renderToString(<QrCode symbol={SYMBOL} label="Scan to add this account" />);

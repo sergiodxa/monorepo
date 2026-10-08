@@ -15,7 +15,7 @@ import { describe, expect, test } from "vitest";
 
 import type { QrLevel, QrSymbol } from "./encode.js";
 
-import { encodeQr } from "./encode.js";
+import { QR } from "./encode.js";
 
 const SEED = Number(process.env.FUZZ_SEED) || systemSeed();
 
@@ -65,7 +65,7 @@ test.each([
 	"HELLO WORLD",
 	"",
 ])("reads back %j", (text) => {
-	let symbol = unwrap(encodeQr(text));
+	let symbol = unwrap(QR.encode(text));
 	let read = decode(symbol);
 	expect(read?.data).toBe(text);
 	expect(read?.version).toBe(symbol.version);
@@ -73,13 +73,13 @@ test.each([
 
 test("reads back bytes that are not text", () => {
 	let bytes = new Uint8Array(256).map((_, index) => index);
-	let symbol = unwrap(encodeQr(bytes, { level: "L" }));
+	let symbol = unwrap(QR.encode(bytes, { level: "L" }));
 	expect(decode(symbol)?.binaryData).toEqual(Array.from(bytes));
 });
 
 test("reads back every forced mask", () => {
 	for (let mask = 0; mask < 8; mask++) {
-		let symbol = unwrap(encodeQr("https://example.com/abc", { mask }));
+		let symbol = unwrap(QR.encode("https://example.com/abc", { mask }));
 		expect(symbol.mask).toBe(mask);
 		expect(decode(symbol)?.data).toBe("https://example.com/abc");
 	}
@@ -91,7 +91,7 @@ describe(`round trip through jsQR (FUZZ_SEED=${SEED})`, () => {
 		for (let iteration = 0; iteration < 60; iteration++) {
 			let text = mixedText(random, iteration < 50 ? 6 : 40);
 			let level = random.pick<QrLevel>(["L", "M", "Q", "H"]);
-			let symbol = unwrap(encodeQr(text, { level }));
+			let symbol = unwrap(QR.encode(text, { level }));
 			let read = decode(symbol);
 			expect(read?.binaryData, `"${text}" at ${level}`).toEqual(
 				Array.from(new TextEncoder().encode(text)),

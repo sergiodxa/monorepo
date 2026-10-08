@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { QrLevel, QrOptions, QrSymbol } from "./encode.js";
 
-import { dataCodewords, encodeQr, interleave, QrError } from "./encode.js";
+import { dataCodewords, QR, interleave, QrError } from "./encode.js";
 import FIXTURES from "./fixtures/nayuki.json" with { type: "json" };
 import { textSegments, totalBits } from "./segment.js";
 import { dataCodewordCount } from "./tables.js";
@@ -73,7 +73,7 @@ describe("ISO/IEC 18004 annex example: 01234567 at 1-M", () => {
 	});
 
 	test("keeps level M when boostLevel is off", () => {
-		let symbol = unwrap(encodeQr("01234567", { level: "M", boostLevel: false }));
+		let symbol = unwrap(QR.encode("01234567", { level: "M", boostLevel: false }));
 		expect(symbol.version).toBe(1);
 		expect(symbol.level).toBe("M");
 	});
@@ -89,7 +89,7 @@ test("interleaves short blocks before long ones at 5-Q", () => {
 describe("matches Nayuki's reference matrices", () => {
 	for (let fixture of FIXTURES) {
 		test(`${fixture.name} (${fixture.reference})`, () => {
-			let symbol = unwrap(encodeQr(fixture.input, fixture.options as QrOptions));
+			let symbol = unwrap(QR.encode(fixture.input, fixture.options as QrOptions));
 			expect({ version: symbol.version, level: symbol.level, mask: symbol.mask }).toEqual({
 				version: fixture.version,
 				level: fixture.level,
@@ -104,7 +104,7 @@ describe("version selection", () => {
 	test("picks the smallest version that holds the segmented data", () => {
 		for (let fixture of FIXTURES) {
 			let options = fixture.options as QrOptions;
-			let symbol = unwrap(encodeQr(fixture.input, { ...options, boostLevel: false }));
+			let symbol = unwrap(QR.encode(fixture.input, { ...options, boostLevel: false }));
 			let level: QrLevel = options.level ?? "M";
 			let below = symbol.version - 1;
 			if (below < (options.minVersion ?? 1)) continue;
@@ -115,13 +115,13 @@ describe("version selection", () => {
 	});
 
 	test("an empty string is a version 1 symbol", () => {
-		expect(unwrap(encodeQr("")).version).toBe(1);
+		expect(unwrap(QR.encode("")).version).toBe(1);
 	});
 
 	test("bytes encode as one byte-mode run", () => {
 		let bytes = new TextEncoder().encode("01234567");
-		let fromBytes = unwrap(encodeQr(bytes, { boostLevel: false }));
-		let fromText = unwrap(encodeQr("01234567", { boostLevel: false }));
+		let fromBytes = unwrap(QR.encode(bytes, { boostLevel: false }));
+		let fromText = unwrap(QR.encode("01234567", { boostLevel: false }));
 		expect(fromBytes.version).toBe(1);
 		expect(rows(fromBytes)).not.toEqual(rows(fromText));
 	});
@@ -129,19 +129,19 @@ describe("version selection", () => {
 
 describe("boostLevel", () => {
 	test("raises the level while the version still fits", () => {
-		let symbol = unwrap(encodeQr("01234567", { level: "L" }));
+		let symbol = unwrap(QR.encode("01234567", { level: "L" }));
 		expect(symbol.version).toBe(1);
 		expect(symbol.level).toBe("H");
 	});
 
 	test("leaves the level alone when off", () => {
-		expect(unwrap(encodeQr("01234567", { level: "L", boostLevel: false })).level).toBe("L");
+		expect(unwrap(QR.encode("01234567", { level: "L", boostLevel: false })).level).toBe("L");
 	});
 });
 
 describe("isDark", () => {
 	test("answers false outside the symbol", () => {
-		let symbol = unwrap(encodeQr("HELLO"));
+		let symbol = unwrap(QR.encode("HELLO"));
 		expect(symbol.isDark(0, 0)).toBe(true);
 		expect(symbol.isDark(-1, 0)).toBe(false);
 		expect(symbol.isDark(0, -1)).toBe(false);
@@ -160,13 +160,13 @@ describe("errors", () => {
 		["a negative mask", { mask: -1 }],
 		["an unknown level", { level: "X" as QrLevel }],
 	])("rejects %s as invalid-options", (_, options) => {
-		let result = encodeQr("HELLO", options);
+		let result = QR.encode("HELLO", options);
 		expect(isFailure(result) && result.error).toBeInstanceOf(QrError);
 		expect(isFailure(result) && result.error.code).toBe("invalid-options");
 	});
 
 	test("reports the bits needed and available when the data outgrows maxVersion", () => {
-		let result = encodeQr("a".repeat(100), { level: "H", maxVersion: 3 });
+		let result = QR.encode("a".repeat(100), { level: "H", maxVersion: 3 });
 		expect(isFailure(result)).toBe(true);
 		if (!isFailure(result)) return;
 		expect(result.error.code).toBe("too-long");
@@ -177,8 +177,8 @@ describe("errors", () => {
 	});
 
 	test("fits version 40-L's 2,953 bytes and refuses one more", () => {
-		expect(isSuccess(encodeQr(new Uint8Array(2953), { level: "L" }))).toBe(true);
-		let result = encodeQr(new Uint8Array(2954), { level: "L" });
+		expect(isSuccess(QR.encode(new Uint8Array(2953), { level: "L" }))).toBe(true);
+		let result = QR.encode(new Uint8Array(2954), { level: "L" });
 		expect(isFailure(result) && result.error.code).toBe("too-long");
 	});
 });

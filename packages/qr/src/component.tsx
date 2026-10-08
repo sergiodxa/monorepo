@@ -18,7 +18,7 @@ import { svgPath } from "./svg-path.js";
 export namespace QrCode {
 	/** A symbol to draw and the accessible name that says what it is for. */
 	export interface Props {
-		/** A symbol from `encodeQr`. */
+		/** A symbol from `QR.encode`. */
 		symbol: QrSymbol;
 		/** The image's accessible name; the payload itself stays out of the accessibility tree. */
 		label: string;

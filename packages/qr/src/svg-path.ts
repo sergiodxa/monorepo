@@ -32,7 +32,7 @@ export interface SvgPath {
 /**
  * Path data for `symbol`, offset by `margin` so the viewBox includes the quiet zone.
  *
- * @param symbol - A symbol from `encodeQr`
+ * @param symbol - A symbol from `QR.encode`
  * @param options - The quiet zone width
  * @returns The path, its viewBox and its side length in modules
  * @example let { d, viewBox } = svgPath(symbol);

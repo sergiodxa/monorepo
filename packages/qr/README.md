@@ -17,9 +17,9 @@ The main entry point depends only on [`@sdxc/result`](https://www.npmjs.com/pack
 ```typescript
 import { isSuccess } from "@sdxc/result";
 
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 
-let encoded = encodeQr("https://example.com/device?user_code=WDJB-MJHT");
+let encoded = QR.encode("https://example.com/device?user_code=WDJB-MJHT");
 
 if (isSuccess(encoded)) {
 	encoded.data.version; // 4
@@ -41,7 +41,7 @@ The component takes an encoded `QrSymbol`, so the handler that has the text enco
 ### Drawing Into Your Own Markup
 
 ```typescript
-import { encodeQr, svgPath } from "@sdxc/qr";
+import { QR, svgPath } from "@sdxc/qr";
 
 let { d, viewBox } = svgPath(symbol, { margin: 4 });
 // <svg viewBox={viewBox}><path d={d} /></svg>
@@ -61,7 +61,7 @@ for (let y = -1; y <= symbol.size; y++) {
 
 ## API
 
-### `encodeQr(data: string | Uint8Array, options?: QrOptions): Result<QrSymbol, QrError>`
+### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QrSymbol, QrError>`
 
 Encode text or bytes as the smallest symbol that holds them. A string is split into numeric, alphanumeric and byte segments with the fewest total bits, so a URI around an upper-case token takes fewer modules than it would as bytes alone. A `Uint8Array` is encoded as bytes as given.
 
@@ -85,7 +85,7 @@ An inline `<svg role="img">` with a light background rectangle and one dark path
 
 | Prop     | Default  | Notes                                                    |
 | -------- | -------- | -------------------------------------------------------- |
-| `symbol` | Required | A `QrSymbol` from `encodeQr`                             |
+| `symbol` | Required | A `QrSymbol` from `QR.encode`                            |
 | `label`  | Required | The accessible name, saying what the code is for         |
 | `size`   | `12rem`  | A CSS length for the rendered width and height           |
 | `margin` | `4`      | Quiet zone in modules                                    |
@@ -117,7 +117,7 @@ Encode in the handler, which can log a failure, and render the code above the se
 ```tsx
 import type { QrSymbol } from "@sdxc/qr";
 
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 import { QrCode } from "@sdxc/qr/component";
 import { isSuccess } from "@sdxc/result";
 import type { Handle } from "remix/component";
@@ -140,7 +140,7 @@ function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QrSymbol 
 
 let uri =
 	"otpauth://totp/Acme:ada%40example.com?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Acme";
-let encoded = encodeQr(uri, { level: "M" });
+let encoded = QR.encode(uri, { level: "M" });
 
 let page = (
 	<EnrolPage
@@ -156,10 +156,10 @@ let page = (
 Cap the version, and fall back to the link when the data needs more modules than the layout has room for.
 
 ```typescript
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 import { isFailure } from "@sdxc/result";
 
-let encoded = encodeQr(url, { level: "L", maxVersion: 6 });
+let encoded = QR.encode(url, { level: "L", maxVersion: 6 });
 
 if (isFailure(encoded) && encoded.error.code === "too-long") {
 	let { needed, available } = encoded.error.bits!;

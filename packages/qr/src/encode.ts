@@ -33,7 +33,7 @@ import {
 /** Error correction level: `L` recovers about 7% of codewords, `M` 15%, `Q` 25%, `H` 30%. */
 export type QrLevel = "L" | "M" | "Q" | "H";
 
-/** How `encodeQr` chooses the symbol's version, level and mask. */
+/** How `QR.encode` chooses the symbol's version, level and mask. */
 export interface QrOptions {
 	/**
 	 * The minimum error correction level.
@@ -78,7 +78,7 @@ export interface QrSymbol {
 }
 
 /**
- * Why `encodeQr` produced no symbol. A `too-long` error carries `bits`, the data's length
+ * Why `QR.encode` produced no symbol. A `too-long` error carries `bits`, the data's length
  * and the capacity at `maxVersion`, so a caller can say how much to cut.
  */
 export class QrError extends Error {
@@ -110,86 +110,86 @@ export namespace QrError {
 	}
 }
 
-/**
- * Encode `data` as a QR symbol. A string is split into numeric, alphanumeric and UTF-8
- * byte segments with the fewest bits; a `Uint8Array` is one byte-mode run.
- *
- * @param data - Text, or bytes for a payload that is not text
- * @param options - Level, version range, mask and level boost
- * @returns The symbol, or a `QrError` when the options are out of range or the data does not fit
- * @example encodeQr("https://example.com/device?user_code=WDJB-MJHT")
- * @example encodeQr(uri, { level: "Q", maxVersion: 10 })
- */
-export function encodeQr(
-	data: string | Uint8Array,
-	options: QrOptions = {},
-): Result<QrSymbol, QrError> {
-	let { level = "M", minVersion = 1, maxVersion = 40, mask, boostLevel = true } = options;
+/** Encodes QR Code Model 2 symbols; every failure is a `Result`, so a caller decides what to render. */
+export class QR {
+	/**
+	 * Encode `data` as a QR symbol. A string is split into numeric, alphanumeric and UTF-8
+	 * byte segments with the fewest bits; a `Uint8Array` is one byte-mode run.
+	 *
+	 * @param data - Text, or bytes for a payload that is not text
+	 * @param options - Level, version range, mask and level boost
+	 * @returns The symbol, or a `QrError` when the options are out of range or the data does not fit
+	 * @example QR.encode("https://example.com/device?user_code=WDJB-MJHT")
+	 * @example QR.encode(uri, { level: "Q", maxVersion: 10 })
+	 */
+	static encode(data: string | Uint8Array, options: QrOptions = {}): Result<QrSymbol, QrError> {
+		let { level = "M", minVersion = 1, maxVersion = 40, mask, boostLevel = true } = options;
 
-	if (!isVersion(minVersion) || !isVersion(maxVersion) || minVersion > maxVersion) {
-		return failure(
-			new QrError(
-				"invalid-options",
-				"minVersion and maxVersion must be integers in 1–40, in order",
-			),
-		);
-	}
-	if (mask !== undefined && !(Number.isInteger(mask) && mask >= 0 && mask <= 7)) {
-		return failure(new QrError("invalid-options", "mask must be an integer in 0–7"));
-	}
-	if (!LEVELS.includes(level)) {
-		return failure(new QrError("invalid-options", "level must be one of L, M, Q or H"));
-	}
-
-	let segments: Segment[] = [];
-	let usedBits = 0;
-	let version = minVersion;
-	for (; ; version++) {
-		if (version === minVersion || version === 10 || version === 27) {
-			segments =
-				typeof data === "string" ? textSegments(data, version) : bytesSegments(data, version);
-		}
-		usedBits = totalBits(segments, version);
-		let capacity = dataCodewordCount(version, level) * 8;
-		if (usedBits <= capacity) break;
-		if (version >= maxVersion) {
+		if (!isVersion(minVersion) || !isVersion(maxVersion) || minVersion > maxVersion) {
 			return failure(
 				new QrError(
-					"too-long",
-					`The data needs ${usedBits} bits; version ${version}-${level} holds ${capacity}`,
-					{
-						needed: usedBits,
-						available: capacity,
-					},
+					"invalid-options",
+					"minVersion and maxVersion must be integers in 1–40, in order",
 				),
 			);
 		}
-	}
-
-	if (boostLevel) {
-		for (let candidate of LEVELS.slice(LEVELS.indexOf(level) + 1)) {
-			if (usedBits <= dataCodewordCount(version, candidate) * 8) level = candidate;
+		if (mask !== undefined && !(Number.isInteger(mask) && mask >= 0 && mask <= 7)) {
+			return failure(new QrError("invalid-options", "mask must be an integer in 0–7"));
 		}
+		if (!LEVELS.includes(level)) {
+			return failure(new QrError("invalid-options", "level must be one of L, M, Q or H"));
+		}
+
+		let segments: Segment[] = [];
+		let usedBits = 0;
+		let version = minVersion;
+		for (; ; version++) {
+			if (version === minVersion || version === 10 || version === 27) {
+				segments =
+					typeof data === "string" ? textSegments(data, version) : bytesSegments(data, version);
+			}
+			usedBits = totalBits(segments, version);
+			let capacity = dataCodewordCount(version, level) * 8;
+			if (usedBits <= capacity) break;
+			if (version >= maxVersion) {
+				return failure(
+					new QrError(
+						"too-long",
+						`The data needs ${usedBits} bits; version ${version}-${level} holds ${capacity}`,
+						{
+							needed: usedBits,
+							available: capacity,
+						},
+					),
+				);
+			}
+		}
+
+		if (boostLevel) {
+			for (let candidate of LEVELS.slice(LEVELS.indexOf(level) + 1)) {
+				if (usedBits <= dataCodewordCount(version, candidate) * 8) level = candidate;
+			}
+		}
+
+		let codewords = interleave(dataCodewords(segments, version, level), version, level);
+		let matrix = functionPatterns(version, level);
+		placeCodewords(matrix, codewords);
+
+		let chosen = mask ?? bestMask(matrix, level);
+		applyMask(matrix, chosen);
+		drawFormatBits(matrix, level, chosen);
+
+		let { size, dark } = matrix;
+		return success({
+			version,
+			level,
+			mask: chosen,
+			size,
+			isDark(x, y) {
+				return x >= 0 && x < size && y >= 0 && y < size && dark[y * size + x] === 1;
+			},
+		});
 	}
-
-	let codewords = interleave(dataCodewords(segments, version, level), version, level);
-	let matrix = functionPatterns(version, level);
-	placeCodewords(matrix, codewords);
-
-	let chosen = mask ?? bestMask(matrix, level);
-	applyMask(matrix, chosen);
-	drawFormatBits(matrix, level, chosen);
-
-	let { size, dark } = matrix;
-	return success({
-		version,
-		level,
-		mask: chosen,
-		size,
-		isDark(x, y) {
-			return x >= 0 && x < size && y >= 0 && y < size && dark[y * size + x] === 1;
-		},
-	});
 }
 
 /**

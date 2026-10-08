@@ -84,9 +84,9 @@ Add `@sdxc/qr`: a QR Code Model 2 encoder in plain TypeScript, an SVG path build
 ### Encoding
 
 ```typescript
-import { encodeQr } from "@sdxc/qr";
+import { QR } from "@sdxc/qr";
 
-let encoded = encodeQr("otpauth://totp/Acme:ada%40example.com?secret=…", { level: "M" });
+let encoded = QR.encode("otpauth://totp/Acme:ada%40example.com?secret=…", { level: "M" });
 // Result<QrSymbol, QrError>
 ```
 
@@ -200,7 +200,7 @@ It renders:
 
 | Prop     | Default  | Notes                                                                           |
 | -------- | -------- | ------------------------------------------------------------------------------- |
-| `symbol` | Required | A `QrSymbol` from `encodeQr`                                                    |
+| `symbol` | Required | A `QrSymbol` from `QR.encode`                                                   |
 | `label`  | Required | The accessible name, which says what the code is for; the package ships no copy |
 | `size`   | `12rem`  | A CSS length for the rendered width and height                                  |
 | `margin` | `4`      | Quiet zone in modules                                                           |
@@ -268,7 +268,7 @@ it:
 
 ```tsx
 let enrolment = await ctx.tenantStub.beginTotpEnrolment({ subjectId: session.subjectId });
-let encoded = encodeQr(enrolment.uri, { level: "M" });
+let encoded = QR.encode(enrolment.uri, { level: "M" });
 if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 return ctx.render(
@@ -287,7 +287,7 @@ sentence about the missing image. The label is a new locale key.
 ### The two-factor guide
 
 The guide's `qrCodeDataUrl` helper and its "no `@sdxc` package draws QR codes" sentence go. The
-controller encodes with `encodeQr`, and the view renders `<QrCode>` in place of the `<img>`, so
+controller encodes with `QR.encode`, and the view renders `<QrCode>` in place of the `<img>`, so
 the guide shows every step with packages the reader installs from npm.
 
 ### A terminal client
@@ -342,7 +342,7 @@ rather than a fixed set of renderers.
 **Priority:** High
 **Estimated Effort:** 6 hours
 
-1. Create `packages/qr`, public, with `encodeQr`, `svgPath`, `QrSymbol`, `QrLevel` and `QrError`.
+1. Create `packages/qr`, public, with `QR.encode`, `svgPath`, `QrSymbol`, `QrLevel` and `QrError`.
 2. Known-answer tests under `src/`:
    - The ISO/IEC 18004 annex example, `"01234567"` at 1-M with `boostLevel: false`: the data
      codewords `10 20 0C 56 61 80 EC 11 …`, the error correction codewords, and the matrix.
@@ -367,7 +367,7 @@ rather than a fixed set of renderers.
 
 1. `@sdxc/qr/component` with `QrCode`, tested through `renderToString`: the role, the label, the
    viewBox including the margin, and `forced-color-adjust: none`.
-2. `apps/sdxc`: the two-factor guide switches to `encodeQr` and `QrCode`, in its own commit.
+2. `apps/sdxc`: the two-factor guide switches to `QR.encode` and `QrCode`, in its own commit.
 
 ### Phase 3: `auth-saas`
 
