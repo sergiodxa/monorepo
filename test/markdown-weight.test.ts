@@ -16,7 +16,7 @@ import { weigh } from "./markdown-weight";
 const ROOT = join(import.meta.dirname, "..");
 
 /** The budget the format entry is held to, in bytes: a ratchet just above what it weighs. */
-const ROOT_BUDGET = 66 * 1024;
+const ROOT_BUDGET = 70 * 1024;
 
 /** Plain-text extraction is a walk over the tree, so it carries no grammar of its own. */
 const PLAIN_BUDGET = 4 * 1024;

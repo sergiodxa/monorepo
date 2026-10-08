@@ -722,7 +722,7 @@ describe("inline tags", () => {
 	test("a tag whose attributes the schema rejects reports the issues at the opener", () => {
 		let reported = error("<video />", { tags: TAGS });
 
-		expect(reported.message).toContain("invalid");
+		expect(reported.message).toContain("Invalid attributes");
 		expect(reported.issues.length).toBeGreaterThan(0);
 		expect(reported.position?.start.line).toBe(1);
 	});

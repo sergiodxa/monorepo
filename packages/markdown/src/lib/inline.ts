@@ -18,6 +18,7 @@ import type { ResolvedOptions, ResolvedTag } from "./options.js";
 import type { SourceText } from "./source.js";
 
 import {
+	holdsVariable,
 	parseAttributeList,
 	readVariableName,
 	scanAnnotation,
@@ -41,6 +42,7 @@ import {
 	scanDelimiterRun,
 	skipSpaceAndNewline,
 } from "./inline/scan.js";
+import { validateTagAttributes } from "./options.js";
 
 export { normalizeLabel } from "./inline/scan.js";
 
@@ -871,7 +873,9 @@ class InlineRun {
 		let start = this.#pos;
 		let position = this.#text.position(start, open.end);
 
-		let parsed = parseAttributeList(open.attributeText, false);
+		let parsed = parseAttributeList(open.attributeText, false, (from, to) =>
+			this.#text.position(open.attributeStart + from, open.attributeStart + to),
+		);
 		if (isFailure(parsed)) {
 			return failure(
 				new MarkdownParseError(`The <${definition.name}> tag's attributes are unreadable`, {
@@ -881,7 +885,9 @@ class InlineRun {
 			);
 		}
 
-		let validated = this.#validateAttributes(definition, parsed.data, position);
+		let validated = holdsVariable(parsed.data)
+			? success(parsed.data)
+			: validateTagAttributes(definition, parsed.data, position);
 		if (isFailure(validated)) return validated;
 
 		if (definition.content === "none" && !open.selfClosing) {
@@ -944,46 +950,6 @@ class InlineRun {
 		this.#pos = close.end;
 
 		return OK;
-	}
-
-	/**
-	 * Runs a tag's declared schema over the attributes the opening tag wrote, so
-	 * a bad value names the opener's line rather than surfacing at render time.
-	 *
-	 * @param definition - What the document registered under that name
-	 * @param attributes - The literals the opening tag wrote
-	 * @param position - The opening tag's span, which every issue is reported at
-	 * @returns The schema's output, or the issues it raised
-	 */
-	#validateAttributes(
-		definition: ResolvedTag,
-		attributes: Markdown.Attributes,
-		position: Markdown.Position,
-	): Result<Markdown.Attributes, MarkdownParseError> {
-		let schema = definition.attributes;
-		if (!schema) return success(attributes);
-
-		let result = schema["~standard"].validate(attributes);
-
-		if (result instanceof Promise) {
-			return failure(
-				new MarkdownParseError(
-					`The <${definition.name}> tag's attribute schema is asynchronous, and attributes are validated while the document is read`,
-					{ position },
-				),
-			);
-		}
-
-		if (result.issues) {
-			return failure(
-				new MarkdownParseError(`The <${definition.name}> tag's attributes are invalid`, {
-					position,
-					issues: result.issues,
-				}),
-			);
-		}
-
-		return success(result.value as Markdown.Attributes);
 	}
 
 	/** @returns Whether the cursor sat on a bare URL or email address GFM turns into a link */

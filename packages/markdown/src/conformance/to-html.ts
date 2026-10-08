@@ -77,7 +77,8 @@ function attributesOf(attributes: Markdown.Attributes): Attribute[] {
 	let written: Attribute[] = [];
 	for (let [name, value] of Object.entries(attributes)) {
 		if (value === false) continue;
-		written.push([name, value === true ? "" : escapeHtml(String(value))]);
+		let text = typeof value === "object" ? JSON.stringify(value) : String(value);
+		written.push([name, value === true ? "" : escapeHtml(text)]);
 	}
 	return written;
 }

@@ -301,7 +301,7 @@ function componentProps(node: Markdown.Node): Record<string, unknown> {
 }
 
 /** Attributes hold numbers and booleans too, and only a string is a path or a title. */
-function stringAttribute(value: string | number | boolean | undefined): string | undefined {
+function stringAttribute(value: Markdown.AttributeValue | undefined): string | undefined {
 	if (typeof value === "string") return value;
 	return undefined;
 }

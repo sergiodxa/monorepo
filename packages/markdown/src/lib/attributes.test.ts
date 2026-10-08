@@ -30,6 +30,21 @@ function read(text: string, shorthands = false): Markdown.Attributes {
 }
 
 /**
+ * Drops the positions variable nodes carry, so a case names the values it reads.
+ *
+ * @param value - Attributes or one value inside them
+ * @returns The same structure with every `position` removed
+ */
+function shape(value: unknown): unknown {
+	if (Array.isArray(value)) return value.map(shape);
+	if (value === null || typeof value !== "object") return value;
+
+	let out: Record<string, unknown> = {};
+	for (let [key, item] of Object.entries(value)) if (key !== "position") out[key] = shape(item);
+	return out;
+}
+
+/**
  * @param text - The attribute list the reader is expected to reject
  * @param shorthands - Whether `#id` and `.class` are allowed
  * @returns The error it stopped with
@@ -44,27 +59,41 @@ describe("scanAnnotation", () => {
 	test("reads the body between the delimiters and where it ends", () => {
 		expect(scanAnnotation('{% type="warning" %}', 0)).toEqual({
 			body: 'type="warning"',
+			bodyStart: 3,
 			end: 20,
 		});
 	});
 
 	test("reads an annotation that starts part way into the line", () => {
-		expect(scanAnnotation("A paragraph. {% wide %}", 13)).toEqual({ body: "wide", end: 23 });
+		expect(scanAnnotation("A paragraph. {% wide %}", 13)).toEqual({
+			body: "wide",
+			bodyStart: 16,
+			end: 23,
+		});
 	});
 
 	test("keeps a closing delimiter written inside a quoted value from ending it", () => {
 		expect(scanAnnotation('{% title="100%} done" %}', 0)).toEqual({
 			body: 'title="100%} done"',
+			bodyStart: 3,
 			end: 24,
 		});
 	});
 
 	test("keeps an escaped quote from ending the value it sits in", () => {
-		expect(scanAnnotation('{% a="x\\"y" %}', 0)).toEqual({ body: 'a="x\\"y"', end: 14 });
+		expect(scanAnnotation('{% a="x\\"y" %}', 0)).toEqual({
+			body: 'a="x\\"y"',
+			bodyStart: 3,
+			end: 14,
+		});
 	});
 
 	test("reads a single-quoted value the same way", () => {
-		expect(scanAnnotation("{% a='%} b' %}", 0)).toEqual({ body: "a='%} b'", end: 14 });
+		expect(scanAnnotation("{% a='%} b' %}", 0)).toEqual({
+			body: "a='%} b'",
+			bodyStart: 3,
+			end: 14,
+		});
 	});
 
 	test("finds nothing when the opening delimiter is not there", () => {
@@ -108,6 +137,7 @@ describe("scanTagOpen", () => {
 		expect(scanTagOpen('<callout type="info">', 0)).toEqual({
 			name: "callout",
 			attributeText: ' type="info"',
+			attributeStart: 8,
 			selfClosing: false,
 			end: 21,
 		});
@@ -117,6 +147,7 @@ describe("scanTagOpen", () => {
 		expect(scanTagOpen('<callout label="a > b">text', 0)).toEqual({
 			name: "callout",
 			attributeText: ' label="a > b"',
+			attributeStart: 8,
 			selfClosing: false,
 			end: 23,
 		});
@@ -126,6 +157,7 @@ describe("scanTagOpen", () => {
 		expect(scanTagOpen('<video src="x" />', 0)).toEqual({
 			name: "video",
 			attributeText: ' src="x" ',
+			attributeStart: 6,
 			selfClosing: true,
 			end: 17,
 		});
@@ -141,6 +173,7 @@ describe("scanTagOpen", () => {
 		expect(scanTagOpen("<note>", 0)).toEqual({
 			name: "note",
 			attributeText: "",
+			attributeStart: 5,
 			selfClosing: false,
 			end: 6,
 		});
@@ -298,6 +331,86 @@ describe("parseAttributeList", () => {
 
 	test("stops at a braced value nothing closes", () => {
 		expect(rejected("count={42").index).toBe(6);
+	});
+});
+
+describe("attribute expressions", () => {
+	test("reads a braced variable as a variable node located in the list", () => {
+		expect(read("src={$cdn}")).toEqual({
+			src: {
+				type: "variable",
+				name: "cdn",
+				position: {
+					start: { line: 1, column: 6, offset: 5 },
+					end: { line: 1, column: 10, offset: 9 },
+				},
+			},
+		});
+	});
+
+	test("locates a variable through the caller's mapping", () => {
+		let point = (index: number) => ({ line: 4, column: 10 + index, offset: 100 + index });
+		let result = unwrap(
+			parseAttributeList("src={$cdn}", false, (start, end) => ({
+				start: point(start),
+				end: point(end),
+			})),
+		);
+
+		expect(result.src).toMatchObject({ position: { start: { line: 4, column: 15, offset: 105 } } });
+	});
+
+	test("reads a braced string and null", () => {
+		expect(read('label={"x"} empty={null}')).toEqual({ label: "x", empty: null });
+	});
+
+	test("reads an array of literals and variables", () => {
+		expect(shape(read('data={[1, "two", true, null, $four]}'))).toEqual({
+			data: [1, "two", true, null, { type: "variable", name: "four" }],
+		});
+	});
+
+	test("reads an object with bare and quoted keys, nested values included", () => {
+		expect(shape(read('opts={{ size: "lg", "max-width": 3, rows: [$a, { b: false }], }}'))).toEqual(
+			{
+				opts: {
+					size: "lg",
+					"max-width": 3,
+					rows: [{ type: "variable", name: "a" }, { b: false }],
+				},
+			},
+		);
+	});
+
+	test("reads expressions across lines and inside an annotation", () => {
+		expect(shape(read("#top data={[\n  1,\n  $two\n]}", true))).toEqual({
+			id: "top",
+			data: [1, { type: "variable", name: "two" }],
+		});
+	});
+
+	test("reads an empty array and an empty object", () => {
+		expect(read("a={[]} b={{}}")).toEqual({ a: [], b: {} });
+	});
+
+	test("rejects anything beyond a literal or a variable", () => {
+		expect(rejected("n={$a + 1}").message).toBe('Expected a value for "n"');
+		expect(rejected("n={fn()}").message).toBe('Expected a value for "n"');
+		expect(rejected("n={[1 2]}").message).toBe('Expected a value for "n"');
+		expect(rejected("n={{a 1}}").message).toBe('Expected a value for "n"');
+	});
+
+	test("rejects an object a variable node could be mistaken for", () => {
+		let error = rejected('n={{ type: "variable", name: "x" }}');
+
+		expect(error.message).toBe(
+			'"type": "variable" is reserved for variables, so write {$x} instead',
+		);
+		expect(error.index).toBe(2);
+	});
+
+	test("stops at a variable with no name", () => {
+		expect(rejected("src={$}").index).toBe(4);
 	});
 });
 

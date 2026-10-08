@@ -12,6 +12,7 @@ import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Markdown } from "../index.js";
 
+import type { TagOpen } from "./attributes.js";
 import type { Line } from "./block/lines.js";
 import type { Alignment } from "./block/table.js";
 import type { Reference } from "./inline.js";
@@ -19,6 +20,7 @@ import type { ResolvedOptions, ResolvedTag } from "./options.js";
 import type { Chunk } from "./source.js";
 
 import {
+	holdsVariable,
 	parseAttributeList,
 	readVariableName,
 	scanAnnotation,
@@ -32,6 +34,7 @@ import { readDelimiterRow, splitCells } from "./block/table.js";
 import { MarkdownParseError } from "./errors.js";
 import { normalizeLabel, parseInlines } from "./inline.js";
 import { unescapeString } from "./inline/scan.js";
+import { validateTagAttributes } from "./options.js";
 import { SourceText } from "./source.js";
 
 /** The indentation that opens a code block, and the width a tab stop advances to. */
@@ -519,7 +522,11 @@ class BlockParser {
 		if (!found || found.end !== text.length) return "none";
 		if (readVariableName(found.body) !== null) return "none";
 
-		let parsed = parseAttributeList(found.body, true);
+		let base = this.#nextNonspace + found.bodyStart;
+		let parsed = parseAttributeList(found.body, true, (from, to) => ({
+			start: this.#pointAt(base + from),
+			end: this.#pointAt(base + to),
+		}));
 		if (isFailure(parsed)) {
 			this.#fail(parsed.error.message, this.#lineSpan());
 			return "consumed";
@@ -573,7 +580,9 @@ class BlockParser {
 		while (lead < body.length && isSpaceOrTab(body.charAt(lead))) lead += 1;
 
 		let text = body.slice(lead).replace(TRAILING_SPACE, "");
-		let annotated = this.#takeTrailingAnnotation(text);
+		let annotated = this.#takeTrailingAnnotation(text, (index) =>
+			this.#pointAt(base + lead + index),
+		);
 		if (!annotated) return;
 
 		node.attributes = { ...node.attributes, ...annotated.attributes };
@@ -667,7 +676,7 @@ class BlockParser {
 		if (inner !== null && definition.content !== "inline") return "none";
 
 		let span = { start: this.#pointAt(this.#nextNonspace), end: this.#pointAt(open.end) };
-		let attributes = this.#readTagAttributes(definition, open.attributeText, span);
+		let attributes = this.#readTagAttributes(definition, open, span);
 		if (!attributes) return "consumed";
 
 		this.#closeUnmatched();
@@ -716,39 +725,38 @@ class BlockParser {
 	}
 
 	/**
-	 * Reads the opening tag's attributes and runs the declared schema over them.
+	 * Reads the opening tag's attributes and runs the declared schema over them. A
+	 * tag whose attributes hold a variable keeps them as written, for the schema to
+	 * check once the variables are filled in.
 	 *
 	 * @param definition - The registered tag
-	 * @param text - The attribute list, without its delimiters
+	 * @param open - The opening tag as scanned from the current line
 	 * @param position - The opening tag's span, which a failure is reported at
 	 * @returns The validated attributes, or `null` when the failure is already recorded
 	 */
 	#readTagAttributes(
 		definition: ResolvedTag,
-		text: string,
+		open: TagOpen,
 		position: Markdown.Position,
 	): Markdown.Attributes | null {
-		let parsed = parseAttributeList(text, false);
+		let parsed = parseAttributeList(open.attributeText, false, (from, to) => ({
+			start: this.#pointAt(open.attributeStart + from),
+			end: this.#pointAt(open.attributeStart + to),
+		}));
 		if (isFailure(parsed)) {
 			this.#fail(parsed.error.message, position);
 			return null;
 		}
 
-		let schema = definition.attributes;
-		if (!schema) return parsed.data;
+		if (holdsVariable(parsed.data)) return parsed.data;
 
-		let validated = schema["~standard"].validate(parsed.data);
-		if (validated instanceof Promise) {
-			this.#fail("Asynchronous attribute schemas are not supported", position);
+		let validated = validateTagAttributes(definition, parsed.data, position);
+		if (isFailure(validated)) {
+			this.#fail(validated.error.message, position, validated.error.issues);
 			return null;
 		}
 
-		if (validated.issues) {
-			this.#fail(`Invalid attributes for <${definition.name}>`, position, validated.issues);
-			return null;
-		}
-
-		return validated.value as Markdown.Attributes;
+		return validated.data;
 	}
 
 	/**
@@ -1126,8 +1134,15 @@ class BlockParser {
 			return;
 		}
 
-		let info = node.chunks.shift()?.text.trim() ?? "";
-		let annotated = this.#takeTrailingAnnotation(info);
+		let line = node.chunks.shift();
+		let raw = line?.text ?? "";
+		let lead = raw.length - raw.trimStart().length;
+		let info = raw.trim();
+		let annotated = this.#takeTrailingAnnotation(info, (index) => ({
+			line: line?.line ?? node.start.line,
+			column: (line?.column ?? node.start.column) + lead + index,
+			offset: (line?.offset ?? node.start.offset) + lead + index,
+		}));
 
 		if (annotated) {
 			node.attributes = { ...node.attributes, ...annotated.attributes };
@@ -1164,9 +1179,13 @@ class BlockParser {
 	 * Splits a trailing `{% … %}` off a single-line opener's text.
 	 *
 	 * @param text - The heading text or fence info string
+	 * @param pointAt - Where a character of `text` sits in the source, for the variables a value holds
 	 * @returns The text without the annotation and the attributes it held, or `null` on failure
 	 */
-	#takeTrailingAnnotation(text: string): { text: string; attributes: Markdown.Attributes } | null {
+	#takeTrailingAnnotation(
+		text: string,
+		pointAt: (index: number) => Markdown.Point,
+	): { text: string; attributes: Markdown.Attributes } | null {
 		let index = text.lastIndexOf("{%");
 		if (index === -1) return { text, attributes: {} };
 
@@ -1174,7 +1193,11 @@ class BlockParser {
 		if (!found || found.end !== text.length) return { text, attributes: {} };
 		if (readVariableName(found.body) !== null) return { text, attributes: {} };
 
-		let parsed = parseAttributeList(found.body, true);
+		let base = found.bodyStart;
+		let parsed = parseAttributeList(found.body, true, (from, to) => ({
+			start: pointAt(base + from),
+			end: pointAt(base + to),
+		}));
 		if (isFailure(parsed)) {
 			this.#fail(parsed.error.message, this.#lineSpan());
 			return null;

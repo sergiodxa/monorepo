@@ -523,7 +523,7 @@ describe("toHTML", () => {
 			let html = toHTML(tag, {
 				tags: {
 					callout: ({ attributes, children }) =>
-						`<div class="callout" data-type="${String(attributes.type)}">${children}</div>`,
+						`<div class="callout" data-type="${typeof attributes.type === "string" ? attributes.type : ""}">${children}</div>`,
 				},
 			});
 

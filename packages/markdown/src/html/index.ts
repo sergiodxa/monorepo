@@ -8,6 +8,9 @@
  */
 import type { Markdown } from "../index.js";
 
+import { holdsVariable } from "../lib/attributes.js";
+import { writeBraced } from "../lib/stringify/attributes.js";
+
 /** Builds the markup for one registered tag, given its children already rendered. */
 export type HTMLTagRenderer = (tag: {
 	name: string;
@@ -269,15 +272,26 @@ function elementAttributes(
 
 	for (let [key, value] of Object.entries(attributes)) {
 		if (key === "class" || key === "id") continue;
-		if (value === false) continue;
+		if (value === false || value === null) continue;
 		if (value === true) {
 			list.push({ name: `data-${kebabCase(key)}`, value: true });
 			continue;
 		}
-		list.push({ name: `data-${kebabCase(key)}`, value: String(value) });
+		list.push({ name: `data-${kebabCase(key)}`, value: dataValue(value) });
 	}
 
 	return renderAttributes(list, context);
+}
+
+/**
+ * The text a `data-` attribute carries: a structured value as JSON a script can parse,
+ * and a value still holding a variable as the braced spelling the source used, so an
+ * unfilled hole shows rather than vanishing.
+ */
+function dataValue(value: Exclude<Markdown.AttributeValue, boolean | null>): string {
+	if (holdsVariable(value)) return writeBraced(value);
+	if (typeof value === "object") return JSON.stringify(value);
+	return String(value);
 }
 
 /** An annotation writes the key an author types, and a `data-` attribute spells it in dashes. */

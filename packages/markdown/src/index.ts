@@ -129,10 +129,24 @@ export namespace Markdown {
 	}
 
 	/**
-	 * Literal values only. `#id` writes `id`, `.a .b` writes `class: "a b"`, a bare key
-	 * writes `true`, and `{42}` and `{true}` write the number and the boolean.
+	 * What a braced attribute value may hold: a literal, an array or object of them,
+	 * or a `$name` the caller fills in later. A variable keeps its own position, so a
+	 * value that fails once filled in names the place it was written.
 	 */
-	export type Attributes = Record<string, string | number | boolean>;
+	export type AttributeValue =
+		| string
+		| number
+		| boolean
+		| null
+		| Variable
+		| AttributeValue[]
+		| { [key: string]: AttributeValue };
+
+	/**
+	 * `#id` writes `id`, `.a .b` writes `class: "a b"`, a bare key writes `true`, and a
+	 * braced value — `{42}`, `{$plan}`, `{[1, 2]}`, `{{ a: $b }}` — writes what it holds.
+	 */
+	export type Attributes = Record<string, AttributeValue>;
 
 	/** The root. It belongs to neither category, so a `Block[]` can never hold one. */
 	export interface Document {
@@ -332,7 +346,10 @@ export namespace Markdown {
 		position: Position;
 	}
 
-	/** A `{% $name %}` hole. Nothing is substituted at parse time, so one parse serves every render. */
+	/**
+	 * A `{% $name %}` hole in text, or a `{$name}` one in an attribute value. Nothing is
+	 * substituted at parse time, so one parse serves every render.
+	 */
 	export interface Variable {
 		type: "variable";
 		name: string;
@@ -395,7 +412,10 @@ export namespace Markdown {
 	export interface TagDefinition {
 		/** @default "blocks" */
 		content?: "blocks" | "inline" | "none";
-		/** Validated against the opening tag, so a bad attribute is a parse error with a line. */
+		/**
+		 * Validated against the opening tag, so a bad attribute is a parse error with a
+		 * line. A tag whose attributes hold a variable is validated once it is filled in.
+		 */
 		attributes?: StandardSchemaV1;
 	}
 

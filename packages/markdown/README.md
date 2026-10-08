@@ -275,6 +275,25 @@ an element. An author who wants an element registers a tag for it.
 The shape of one entry in `options.components`: a component whose props are the node's own
 content fields and the attributes an annotation wrote, flattened into one bag, plus `children`.
 
+### `@sdxc/markdown/plugin/variables`
+
+#### `variables(values, options?)`
+
+Returns a visitor for `Markdown.walk` that fills every variable from `values`: a text hole
+becomes a `text` node, and an attribute value takes the value itself, arrays and objects
+included. A block holding no variable is handed back as the same object.
+
+- `options.tags`: The document's tag vocabulary. A tag whose schema waited on a variable is
+  checked once its attributes are filled in, keeping what the schema coerced; a failure is
+  the walk's failure, carrying the tag's position and the `MarkdownParseError` with the
+  schema's issues as its `cause`. Passing the options the document was parsed with is the
+  usual call.
+- `options.missing`: `"fail"` (the default) turns a name with no value into a walk failure at
+  the variable's position; `"keep"` leaves the variable in place.
+
+A text hole whose value is a list, an object or `null` is a failure, because only a string,
+number or boolean has a text form.
+
 ## Pattern: Transform A Document
 
 `Markdown.walk` is the only transform mechanism. A visitor is a plain object with one optional
@@ -436,28 +455,47 @@ toRemix(document, { components: { callout: Callout, kbd: Kbd, video: Video } });
 A tag with no component renders its children and nothing else, so a missing component drops
 the chrome and keeps the content.
 
+### Attribute Values
+
+A tag and an annotation take the same values. A quoted string is written as-is; everything
+else goes in braces, and braces hold data and names, never code:
+
+| Written                                            | Reads as                                |
+| -------------------------------------------------- | --------------------------------------- |
+| `title="Plans"`                                    | the string                              |
+| `wide`                                             | `true`                                  |
+| `count={3}`, `open={false}`, `empty={null}`        | the number, boolean or `null`           |
+| `src={$cdn}`                                       | a `variable` node, filled in per render |
+| `data={[1, 2, $three]}`                            | an array                                |
+| `options={{ stacked: true, "max-width": $width }}` | an object                               |
+
+Arrays and objects nest, take a trailing comma, and may span lines. An object whose `type` is
+`"variable"` is a parse error, since that is the shape of a variable node.
+
+A tag's schema runs at parse time on literal attributes. When any attribute holds a variable,
+the check waits for the value: the [`variables`](#sdxc-markdownpluginvariables) visitor runs it
+once the names are filled in, and fails at the tag's position. `toHTML` writes a structured
+annotation value into its `data-` attribute as JSON, and a variable nobody filled in as the
+braced spelling the source used.
+
 ## Pattern: Variables Resolved Per Render
 
-`{% $name %}` in text parses to a `variable` node carrying that name. Nothing is substituted at
-parse time, so one parsed document serves every render, and resolution is a `Markdown.walk` the
-caller writes.
+`{% $name %}` in text and `{$name}` in an attribute value parse to a `variable` node carrying
+that name. Nothing is substituted at parse time, so one parsed document serves every render, and
+filling it is a walk:
 
 ```typescript
-let variables: Record<string, string | number> = { product: "Acme", plan: team.plan };
+import { variables } from "@sdxc/markdown/plugin/variables";
 
-let result = Markdown.walk(cachedDocument, {
-	variable(node) {
-		let value = variables[node.name];
-		if (value === undefined) throw new Error(`Unresolved variable ${node.name}`);
-		return { type: "text", value: String(value), position: node.position };
-	},
-});
+let result = Markdown.walk(
+	cachedDocument,
+	variables({ product: "Acme", plan: team.plan, cdn: env.CDN_URL }, MARKDOWN_OPTIONS),
+);
 ```
 
-What a variable _means_ is the consumer's: documentation can fail loudly on an unresolved name,
-a marketing page can render the literal, and a preview can show the name itself. Throwing from
-the handler turns it into the failure branch with the node's position attached; returning
-nothing leaves the hole in place.
+What a missing name _means_ is the consumer's: documentation fails loudly on one, which is the
+default, and a preview passes `{ missing: "keep" }` to leave the hole for the renderer to show.
+A visitor of your own that handles `variable` does the same job for any other policy.
 
 Because variables survive parsing, `Markdown.stringify` round-trips them, so the markdown a
 client fetches is the template rather than one tenant's copy.

@@ -8,7 +8,8 @@
 		".": "./src/index.ts",
 		"./html": "./src/html/index.ts",
 		"./plain": "./src/plain/index.ts",
-		"./remix": "./src/remix/index.tsx"
+		"./remix": "./src/remix/index.tsx",
+		"./plugin/variables": "./src/plugin/variables.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

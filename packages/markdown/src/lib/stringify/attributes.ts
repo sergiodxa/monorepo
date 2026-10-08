@@ -8,8 +8,13 @@
  */
 import type { Markdown } from "../../index.js";
 
+import { isVariable } from "../attributes.js";
+
 /** The spelling a `#id` or `.class` shorthand can carry; anything else writes as a pair. */
 const NAME = /^[A-Za-z_][A-Za-z0-9_-]*$/;
+
+/** An object key written unquoted; a hyphenated one is quoted, the way a script would spell it. */
+const BARE_KEY = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 /**
  * Writes an attribute list, `#id` and `.a .b` first so the order survives a round
@@ -21,18 +26,20 @@ const NAME = /^[A-Za-z_][A-Za-z0-9_-]*$/;
  * @example writeAttributes({ id: "install" }, true)
  */
 export function writeAttributes(attributes: Markdown.Attributes, shorthands: boolean): string {
-	let id = attributes.id;
-	let classes = attributes.class;
-	let writesId = shorthands && typeof id === "string" && NAME.test(id);
-	let writesClass = shorthands && typeof classes === "string" && isClassList(classes);
+	let { id, class: classes } = attributes;
+	let shortId = shorthands && typeof id === "string" && NAME.test(id) ? id : null;
+	let shortClasses =
+		shorthands && typeof classes === "string" && isClassList(classes) ? classes : null;
 	let parts: string[] = [];
 
-	if (writesId) parts.push(`#${String(id)}`);
-	if (writesClass) for (let name of String(classes).trim().split(/\s+/)) parts.push(`.${name}`);
+	if (shortId !== null) parts.push(`#${shortId}`);
+	if (shortClasses !== null) {
+		for (let name of shortClasses.trim().split(/\s+/)) parts.push(`.${name}`);
+	}
 
 	for (let [key, value] of Object.entries(attributes)) {
-		if (key === "id" && writesId) continue;
-		if (key === "class" && writesClass) continue;
+		if (key === "id" && shortId !== null) continue;
+		if (key === "class" && shortClasses !== null) continue;
 		parts.push(writePair(key, value));
 	}
 
@@ -58,9 +65,41 @@ function isClassList(value: string): boolean {
 	return value.trim() !== "" && names.every((name) => NAME.test(name));
 }
 
-/** One `key="string"`, `key={42}`, `key={false}`, or the bare key a `true` is written as. */
-function writePair(key: string, value: string | number | boolean): string {
+/** One `key="string"`, the bare key a `true` is written as, or `key={…}` for every other value. */
+function writePair(key: string, value: Markdown.AttributeValue): string {
 	if (value === true) return key;
-	if (typeof value === "boolean" || typeof value === "number") return `${key}={${String(value)}}`;
-	return `${key}="${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+	if (typeof value === "string") return `${key}=${writeString(value)}`;
+	return `${key}=${writeBraced(value)}`;
+}
+
+/**
+ * Writes a value as the braced expression the reader turns back into it — `{42}`,
+ * `{$plan}`, `{[1, 2]}`, `{{ a: "b" }}` — which is also how a renderer shows a
+ * value whose variables were never filled in.
+ *
+ * @param value - One attribute value
+ * @returns The value's source spelling, braces included
+ * @example writeBraced({ type: "variable", name: "plan", position }) // "{$plan}"
+ */
+export function writeBraced(value: Markdown.AttributeValue): string {
+	return `{${writeExpression(value)}}`;
+}
+
+/** The expression inside the braces, nested values written the same way. */
+function writeExpression(value: Markdown.AttributeValue): string {
+	if (typeof value === "string") return writeString(value);
+	if (value === null || typeof value !== "object") return String(value);
+	if (Array.isArray(value)) return `[${value.map(writeExpression).join(", ")}]`;
+	if (isVariable(value)) return `$${value.name}`;
+
+	let entries = Object.entries(value).map(
+		([key, item]) => `${BARE_KEY.test(key) ? key : writeString(key)}: ${writeExpression(item)}`,
+	);
+
+	return entries.length === 0 ? "{}" : `{ ${entries.join(", ")} }`;
+}
+
+/** A double-quoted string, its backslashes and quotes escaped the way the reader resolves them. */
+function writeString(value: string): string {
+	return `"${value.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
 }
