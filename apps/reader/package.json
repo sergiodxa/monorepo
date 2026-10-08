@@ -21,6 +21,7 @@
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/csv": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@sdxc/dates": "workspace:*",
@@ -58,6 +59,7 @@
 		"@sdxc/web-push": "workspace:*",
 		"@sdxc/websub": "workspace:*",
 		"@sdxc/well-known": "workspace:*",
+		"@sdxc/zip": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"devDependencies": {
@@ -65,6 +67,7 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
+		"fflate": "0.8.3",
 		"vite": "^8.2.2",
 		"wrangler": "^4.127.1"
 	}

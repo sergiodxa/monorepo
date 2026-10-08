@@ -275,6 +275,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/feeds/export")),
 	);
 	router.map(
+		routes.dataExport,
+		lazy(() => import("~/app/http/controllers/data-export")),
+	);
+	router.map(
 		routes.feeds.import,
 		lazy(() => import("~/app/http/controllers/feeds/import")),
 	);

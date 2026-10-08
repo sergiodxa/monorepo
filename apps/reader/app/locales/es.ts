@@ -464,6 +464,11 @@ export default {
 			/** Names the section on the settings page that carries subscriptions in and out. */
 			legend: "Llevarte tus suscripciones",
 			export: "Descargar como OPML",
+			/** The ZIP of everything the reader keeps, beside the OPML-only download. */
+			exportAll: "Descargar todos tus datos",
+			exportAllDescription:
+				"Tus suscripciones en OPML, las publicaciones que guardaste en CSV y ambas en JSON, en un ZIP.",
+			exportFailed: "No se pudo preparar la exportación. Vuelve a intentarlo en un momento.",
 			/** The exported document's own title, which the receiving reader shows. */
 			documentTitle: "Suscripciones de Reader",
 			import: {

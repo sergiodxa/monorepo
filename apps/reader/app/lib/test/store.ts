@@ -25,6 +25,7 @@ export interface UserStoreDouble {
 	markFeedRead: ReturnType<typeof vi.fn>;
 	markAllRead: ReturnType<typeof vi.fn>;
 	exportFeeds: ReturnType<typeof vi.fn>;
+	exportSaved: ReturnType<typeof vi.fn>;
 	importFeeds: ReturnType<typeof vi.fn>;
 	getFeed: ReturnType<typeof vi.fn>;
 	followFeed: ReturnType<typeof vi.fn>;
@@ -208,6 +209,7 @@ export function createUserStoreDouble(): UserStoreDouble {
 		markFeedRead: vi.fn(async () => 0),
 		markAllRead: vi.fn(async () => 0),
 		exportFeeds: vi.fn(async () => []),
+		exportSaved: vi.fn(async () => []),
 		importFeeds: vi.fn(async () => ({ added: 0, alreadyFollowing: 0, failed: [] })),
 		getFeed: vi.fn(async () => null),
 		followFeed: vi.fn(async () => ({ ok: false, reason: "not-found", feedId: null })),

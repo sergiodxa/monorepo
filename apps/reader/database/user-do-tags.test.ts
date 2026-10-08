@@ -741,3 +741,57 @@ describe("the measured rate a quiet feed is grouped by", () => {
 		expect((await user.listFeeds())[0]?.postsPerDay).toBe(2);
 	});
 });
+
+describe("exportSaved", () => {
+	test("lists every kept post, newest kept first, with its feed and its labels", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state, FEED_ID, "Example Blog");
+		seedItems(state, FEED_ID, [
+			{ id: "kept-early", publishedAt: DAY_MS, savedAt: 5 * DAY_MS },
+			{ id: "kept-late", publishedAt: 2 * DAY_MS, savedAt: 9 * DAY_MS },
+			{ id: "read-only", publishedAt: 3 * DAY_MS, readAt: 4 * DAY_MS },
+		]);
+		await user.tagItem("kept-early", { name: "rust" });
+		await user.tagItem("kept-early", { name: "async" });
+
+		let exported = await user.exportSaved();
+
+		expect(exported).toEqual([
+			{
+				title: "kept-late",
+				url: null,
+				author: null,
+				feed: { title: "Example Blog", feedUrl: `https://${FEED_ID}.example.com/feed.xml` },
+				publishedAt: 2 * DAY_MS,
+				savedAt: 9 * DAY_MS,
+				tags: [],
+			},
+			{
+				title: "kept-early",
+				url: null,
+				author: null,
+				feed: { title: "Example Blog", feedUrl: `https://${FEED_ID}.example.com/feed.xml` },
+				publishedAt: DAY_MS,
+				savedAt: 5 * DAY_MS,
+				tags: ["async", "rust"],
+			},
+		]);
+	});
+
+	test("keeps a post whose feed was unfollowed, with the feed it came from", async () => {
+		let { state, user } = await createReader();
+		seedFeed(state, FEED_ID, "Gone Blog");
+		seedItems(state, FEED_ID, [{ id: "kept", publishedAt: DAY_MS, savedAt: 2 * DAY_MS }]);
+		state.storage.sql.exec("UPDATE feeds SET unfollowed_at = ? WHERE id = ?", 3 * DAY_MS, FEED_ID);
+
+		let [post] = await user.exportSaved();
+
+		expect(post?.feed?.title).toBe("Gone Blog");
+	});
+
+	test("answers an empty list for a reader who kept nothing", async () => {
+		let { user } = await createReader();
+
+		expect(await user.exportSaved()).toEqual([]);
+	});
+});

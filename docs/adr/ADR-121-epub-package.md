@@ -550,7 +550,10 @@ NCX that EPUB 2 readers need is written alongside.
   - [x] `uptime`: the reports builder's "Download both as ZIP" button submits the same `GET`
         form to `/app/:team/reports.zip`, which streams the summary and daily CSVs, under the
         names their single downloads carry, into `<team>-uptime-reports-<period>.zip`
-  - [ ] `reader`
+  - [x] `reader`: `/settings/export.zip`, linked beside the OPML download, holds
+        `subscriptions.opml`, `saved-posts.csv` (each kept post with its labels) and
+        `reader-data.json`; the app has no highlights, so the kept posts are what a reader
+        has to carry beyond their subscriptions
 
 ## Notes
 

@@ -63,6 +63,8 @@ to exist before the first deploy.
 - Save a post, which keeps it whatever every other rule here would do to it
 - Mark one feed or the whole queue read at once
 - Import and export your subscriptions as OPML, folders and all
+- Download all your data in one ZIP: subscriptions as OPML, the posts you kept (with their
+  labels) as CSV, and both as JSON
 - Free, Paid and Premium plans, each sized by how many feeds, saved posts and posts in all
   it keeps: 250,000 posts on Free, 1,500,000 on Paid and 3,000,000 on Premium
 - A failed payment keeps everything for a fortnight, and nothing is ever deleted by a plan
@@ -115,6 +117,7 @@ to exist before the first deploy.
 | `/items/:itemId/read`       | Marks an item read                             |
 | `/items/:itemId/save`       | Keeps an item, or stops keeping it             |
 | `/settings`                 | Your plan, how your pages look, OPML           |
+| `/settings/export.zip`      | Everything you keep, as one ZIP                |
 | `/settings/appearance`      | `POST` sets the scheme and the reading face    |
 | `/settings/tokens`          | `POST` mints an agent token, shown once        |
 | `/settings/tokens/:tokenId` | `DELETE` stops that token answering            |

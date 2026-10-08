@@ -736,7 +736,7 @@ async function settingsPage(
 
 				{/** Outlined rather than quiet: a bare label reads as a sentence, not as the
 				 * control that hands a reader a file. */}
-				<div mix={[flex()]}>
+				<div mix={[flex(), flexWrap("wrap"), gap(2)]}>
 					<LinkButton
 						href={routes.feeds.export.href()}
 						color="neutral"
@@ -744,6 +744,15 @@ async function settingsPage(
 						data-rmx-document=""
 					>
 						{ctx.intl.t("feeds.transfer.export")}
+					</LinkButton>
+					<LinkButton
+						href={routes.dataExport.href()}
+						color="neutral"
+						variant="outline"
+						title={ctx.intl.t("feeds.transfer.exportAllDescription")}
+						data-rmx-document=""
+					>
+						{ctx.intl.t("feeds.transfer.exportAll")}
 					</LinkButton>
 				</div>
 

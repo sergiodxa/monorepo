@@ -100,6 +100,13 @@ describe("the transfer section", () => {
 		expect(body).toContain("Download as OPML");
 	});
 
+	test("offers everything the reader keeps as one ZIP beside it", async () => {
+		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
+
+		expect(body).toContain(`href="${routes.dataExport.href()}"`);
+		expect(body).toContain("Download all your data");
+	});
+
 	test("uploads an OPML document in the encoding that carries its bytes", async () => {
 		let body = await (await fetchRoute(createRouter(VIEWER), routes.settings.href())).text();
 

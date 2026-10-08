@@ -848,6 +848,22 @@ export namespace UserStore {
 		folder: string | null;
 	}
 
+	/**
+	 * One kept post as a data export carries it: enough to find it again anywhere, and the
+	 * labels the reader gave it. Timestamps are milliseconds, as every one crossing RPC is.
+	 */
+	export interface SavedExport {
+		title: string;
+		url: string | null;
+		author: string | null;
+		/** The subscription it arrived through, kept even after that feed was unfollowed. */
+		feed: { title: string; feedUrl: string } | null;
+		publishedAt: number;
+		savedAt: number;
+		/** The labels on it, by the name the reader typed, in alphabetical order. */
+		tags: string[];
+	}
+
 	/** One subscription an import found, with the folder its document filed it under. */
 	export interface ImportEntry {
 		feedUrl: string;
@@ -1419,6 +1435,41 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			feedUrl: row.feed_url,
 			siteUrl: row.site_url,
 			folder: row.folder_id === null ? null : (byId.get(row.folder_id) ?? null),
+		}));
+	}
+
+	/**
+	 * Every post the reader kept, newest kept first, with its feed and its labels. Unpaged for
+	 * the reason the subscription export is: an export holding some of a library is one a
+	 * reader would restore an incomplete library from.
+	 */
+	async exportSaved(): Promise<UserStore.SavedExport[]> {
+		let rows = await this.#db.findMany(feedItems, {
+			where: notNull("saved_at"),
+			orderBy: [
+				["saved_at", "desc"],
+				["id", "desc"],
+			],
+		});
+
+		let ids = [...new Set(rows.map((row) => row.feed_id))];
+		let sources = new Map<string, { title: string; feedUrl: string }>();
+		for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
+			for (let feed of await this.#db.findMany(feeds, { where: inList("id", batch) })) {
+				sources.set(feed.id, { title: feed.title, feedUrl: feed.feed_url });
+			}
+		}
+
+		let labels = await this.#tagsFor(rows.map((row) => row.id));
+
+		return rows.map((row) => ({
+			title: row.title,
+			url: row.url,
+			author: row.author,
+			feed: sources.get(row.feed_id) ?? null,
+			publishedAt: row.published_at,
+			savedAt: row.saved_at ?? row.published_at,
+			tags: (labels.get(row.id) ?? []).map((tag) => tag.name).sort((a, b) => a.localeCompare(b)),
 		}));
 	}
 

@@ -374,6 +374,11 @@ export default {
 			/** Names the section on the settings page that carries subscriptions in and out. */
 			legend: "Carrying your subscriptions",
 			export: "Download as OPML",
+			/** The ZIP of everything the reader keeps, beside the OPML-only download. */
+			exportAll: "Download all your data",
+			exportAllDescription:
+				"Your subscriptions as OPML, the posts you kept as CSV, and both as JSON, in one ZIP.",
+			exportFailed: "The export could not be assembled. Try again in a moment.",
 			/** The exported document's own title, which the receiving reader shows. */
 			documentTitle: "Reader subscriptions",
 			import: {

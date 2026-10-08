@@ -17,29 +17,16 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { OPML } from "@sdxc/opml";
-
-import { toDayKey } from "@sdxc/dates";
-import { stringify } from "@sdxc/opml";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { exportFilename, subscriptionsOpml } from "~/app/lib/data-export";
 import { userStore } from "~/database/user-do";
 import routes from "~/routes/web";
 
 /** The media type OPML travels under, which a reader offering an import looks for. */
 const CONTENT_TYPE = "text/x-opml; charset=utf-8";
-
-/**
- * The name the document lands under. It says which app it came from and which day it
- * describes, so a folder holding several of them stays readable.
- *
- * @param now - When the export was taken.
- */
-function filename(now: Date): string {
-	return `reader-subscriptions-${toDayKey(now, "UTC")}.opml`;
-}
 
 /** GET /feeds.opml — the subscription list as OPML. */
 export default createAction(routes.feeds.export, {
@@ -49,26 +36,13 @@ export default createAction(routes.feeds.export, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let feeds = await userStore(viewer.id).exportFeeds();
-
-		let outlines = feeds.map<OPML.Outline>((feed) => ({
-			title: feed.title,
-			feedUrl: feed.feedUrl,
-			siteUrl: feed.siteUrl ?? undefined,
-			/** The document writes this as the outline around the feed, so filing travels. */
-			folder: feed.folder ?? undefined,
-		}));
-
 		let now = new Date();
-
-		let document = stringify(outlines, {
-			title: ctx.intl.t("feeds.transfer.documentTitle"),
-			dateCreated: now,
-		});
+		let document = subscriptionsOpml(feeds, ctx.intl.t("feeds.transfer.documentTitle"), now);
 
 		return new Response(document, {
 			headers: {
 				"content-type": CONTENT_TYPE,
-				"content-disposition": `attachment; filename="${filename(now)}"`,
+				"content-disposition": `attachment; filename="${exportFilename("subscriptions", "opml", now)}"`,
 				/** One reader's whole subscription list, kept out of every cache between here and them. */
 				"cache-control": "private, no-store",
 			},

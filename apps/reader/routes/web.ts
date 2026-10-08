@@ -237,6 +237,13 @@ export default route({
 	appearance: post("/settings/appearance"),
 
 	/**
+	 * Everything the reader keeps, as one ZIP: the subscription list as OPML, the kept posts as
+	 * CSV, and both as JSON. A `GET` beside the settings page that links it, so a plain link
+	 * downloads it.
+	 */
+	dataExport: get("/settings/export.zip"),
+
+	/**
 	 * The Model Context Protocol endpoint, plus the page explaining it. `form()` answers
 	 * both an agent's `POST` and a browser's `GET` to `/mcp`, so pasting the address into a
 	 * browser explains what is served there rather than refusing the method.
