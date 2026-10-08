@@ -149,7 +149,7 @@ code, the setup key for anyone who cannot scan, and the URI as a link, which ope
 directly on a phone:
 
 ```tsx {% title="resources/views/enroll-two-factor.tsx" %}
-import type { QrSymbol } from "@sdxc/qr";
+import type { QR } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
 import { QrCode } from "@sdxc/qr/component";
@@ -160,7 +160,7 @@ import routes from "~/routes/web";
 interface EnrollTwoFactorProps {
 	uri: string;
 	setupKey: string;
-	qr: QrSymbol | null;
+	qr: QR | null;
 }
 
 export function EnrollTwoFactorPage(handle: Handle<EnrollTwoFactorProps>) {
