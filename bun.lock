@@ -296,6 +296,7 @@
         "@sdxc/icons": "workspace:*",
         "@sdxc/ip": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
+        "@sdxc/jwt": "workspace:*",
         "@sdxc/lazy-frame": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
         "@sdxc/logger": "workspace:*",
@@ -316,7 +317,6 @@
         "@sdxc/ui": "workspace:*",
         "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
-        "@sdxc/web-push": "workspace:*",
         "@sdxc/websub": "workspace:*",
         "@sdxc/well-known": "workspace:*",
         "remix": "3.0.0",
@@ -391,6 +391,7 @@
         "@sdxc/icalendar": "workspace:*",
         "@sdxc/icons": "workspace:*",
         "@sdxc/idempotency": "workspace:*",
+        "@sdxc/ip": "workspace:*",
         "@sdxc/jobs": "workspace:*",
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/lazy-route": "workspace:*",
@@ -420,7 +421,6 @@
         "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/well-known": "workspace:*",
-        "@sdxc/zone-file": "workspace:*",
         "remix": "3.0.0",
       },
       "devDependencies": {
@@ -705,7 +705,6 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/result": "workspace:*",
-        "@sdxc/zone-file": "workspace:*",
         "remix": "3.0.0",
       },
     },
@@ -722,6 +721,19 @@
       "dependencies": {
         "@sdxc/doh": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+    },
+    "packages/epub": {
+      "name": "@sdxc/epub",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/xml": "workspace:*",
+        "@sdxc/zip": "workspace:*",
+      },
+      "devDependencies": {
+        "@sdxc/markdown": "workspace:*",
+        "fflate": "0.8.3",
       },
     },
     "packages/expression": {
@@ -1470,18 +1482,6 @@
         "remix": "3.0.0",
       },
     },
-    "packages/web-push": {
-      "name": "@sdxc/web-push",
-      "version": "0.0.1",
-      "dependencies": {
-        "@sdxc/crypto": "workspace:*",
-        "@sdxc/duration": "workspace:*",
-        "@sdxc/jwt": "workspace:*",
-        "@sdxc/outbound": "workspace:*",
-        "@sdxc/result": "workspace:*",
-        "remix": "3.0.0",
-      },
-    },
     "packages/webhooks": {
       "name": "@sdxc/webhooks",
       "version": "0.0.1",
@@ -1571,16 +1571,6 @@
       },
       "devDependencies": {
         "fflate": "0.8.3",
-      },
-    },
-    "packages/zone-file": {
-      "name": "@sdxc/zone-file",
-      "version": "0.0.1",
-      "dependencies": {
-        "@sdxc/result": "workspace:*",
-      },
-      "devDependencies": {
-        "@sdxc/random": "workspace:*",
       },
     },
   },
@@ -2230,6 +2220,8 @@
 
     "@sdxc/email-address": ["@sdxc/email-address@workspace:packages/email-address"],
 
+    "@sdxc/epub": ["@sdxc/epub@workspace:packages/epub"],
+
     "@sdxc/expression": ["@sdxc/expression@workspace:packages/expression"],
 
     "@sdxc/feed": ["@sdxc/feed@workspace:packages/feed"],
@@ -2376,8 +2368,6 @@
 
     "@sdxc/validate": ["@sdxc/validate@workspace:packages/validate"],
 
-    "@sdxc/web-push": ["@sdxc/web-push@workspace:packages/web-push"],
-
     "@sdxc/webhooks": ["@sdxc/webhooks@workspace:packages/webhooks"],
 
     "@sdxc/webmention": ["@sdxc/webmention@workspace:packages/webmention"],
@@ -2393,8 +2383,6 @@
     "@sdxc/yaml": ["@sdxc/yaml@workspace:packages/yaml"],
 
     "@sdxc/zip": ["@sdxc/zip@workspace:packages/zip"],
-
-    "@sdxc/zone-file": ["@sdxc/zone-file@workspace:packages/zone-file"],
 
     "@sindresorhus/is": ["@sindresorhus/is@7.2.0", "", {}, "sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw=="],
 

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="es" xml:lang="es">
+	<head>
+		<title>Un libro con secciones</title>
+	</head>
+	<body>
+		<nav epub:type="toc" id="toc">
+			<h1>Índice</h1>
+			<ol>
+				<li>
+					<a href="text/uno.xhtml">Primera parte</a>
+					<ol>
+						<li>
+							<a href="text/uno.xhtml#a">Sección A</a>
+							<ol>
+								<li>
+									<a href="text/uno.xhtml#a1">Detalle</a>
+								</li>
+							</ol>
+						</li>
+						<li>
+							<a href="text/uno.xhtml#b">Sección B</a>
+						</li>
+					</ol>
+				</li>
+				<li>
+					<a href="text/quote.xhtml">A Quotation</a>
+				</li>
+			</ol>
+		</nav>
+		<nav epub:type="landmarks" hidden="hidden">
+			<h2>Puntos de referencia</h2>
+			<ol>
+				<li>
+					<a epub:type="toc" href="nav.xhtml#toc">Índice</a>
+				</li>
+				<li>
+					<a epub:type="bodymatter" href="text/uno.xhtml">Comienzo</a>
+				</li>
+			</ol>
+		</nav>
+	</body>
+</html>

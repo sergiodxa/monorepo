@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="en">
+	<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+		<dc:identifier id="pub-id">urn:uuid:7c1e0b3a-9a2f-4d55-9a0e-2c2b9d3f1a04</dc:identifier>
+		<dc:title>Pictures and Formulas</dc:title>
+		<dc:language>en</dc:language>
+		<meta property="dcterms:modified">2026-10-08T00:00:00Z</meta>
+	</metadata>
+	<manifest>
+		<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+		<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+		<item id="svg" href="text/svg.xhtml" media-type="application/xhtml+xml" properties="svg"/>
+		<item id="math" href="text/math.xhtml" media-type="application/xhtml+xml" properties="mathml"/>
+		<item id="images" href="text/images.xhtml" media-type="application/xhtml+xml"/>
+		<item id="style-1" href="styles/media.css" media-type="text/css"/>
+		<item id="resource-2" href="images/pixel.png" media-type="image/png"/>
+		<item id="resource-3" href="images/flow.svg" media-type="image/svg+xml"/>
+	</manifest>
+	<spine toc="ncx">
+		<itemref idref="nav" linear="no"/>
+		<itemref idref="svg"/>
+		<itemref idref="math"/>
+		<itemref idref="images"/>
+	</spine>
+</package>

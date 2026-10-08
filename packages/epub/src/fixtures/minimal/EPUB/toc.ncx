@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="en">
+	<head>
+		<meta name="dtb:uid" content="urn:uuid:7c1e0b3a-9a2f-4d55-9a0e-2c2b9d3f1a01"/>
+		<meta name="dtb:depth" content="1"/>
+		<meta name="dtb:totalPageCount" content="0"/>
+		<meta name="dtb:maxPageNumber" content="0"/>
+	</head>
+	<docTitle>
+		<text>A Minimal Book</text>
+	</docTitle>
+	<navMap>
+		<navPoint id="navpoint-1" playOrder="1">
+			<navLabel>
+				<text>Chapter One</text>
+			</navLabel>
+			<content src="text/chapter-1.xhtml"/>
+		</navPoint>
+	</navMap>
+</ncx>

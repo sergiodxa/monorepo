@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+	<head>
+		<title>Tokens in Simple Terms</title>
+		<link rel="stylesheet" type="text/css" href="../styles/book.css"/>
+	</head>
+	<body><h1>Tokens in Simple Terms</h1>
+<p>An access token is a credential a client presents to an API. It says <em>who</em> authorized the
+request and <strong>what</strong> the client may do, without ever carrying the user's password.<sup class="md-footnote-ref"><a id="md-fnref-password" href="#md-fn-password">1</a></sup></p>
+<aside class="md-alert md-alert-note" data-kind="note"><p>Everything in this chapter applies whether the token is opaque or a JWT.</p></aside>
+<h2 id="the-parties">The Parties</h2>
+<table class="md-table"><thead><tr><th class="md-align-left">Party</th><th class="md-align-left">Holds</th><th class="md-align-right">Trusts</th></tr></thead>
+<tbody><tr><td class="md-align-left">Resource owner</td><td class="md-align-left">Their credentials</td><td class="md-align-right">The authorization server</td></tr>
+<tr><td class="md-align-left">Client</td><td class="md-align-left">Tokens it was issued</td><td class="md-align-right">Nobody</td></tr>
+<tr><td class="md-align-left">Authorization server</td><td class="md-align-left">Signing keys</td><td class="md-align-right">Its own records</td></tr></tbody></table>
+<p>Each party sees only what it needs. A client never sees the resource owner's password, and a
+resource server never sees the client's secret.</p>
+<h2 id="steps">A Request, Step by Step</h2>
+<ol start="1"><li><p>The client redirects the browser to the authorization server.</p></li>
+<li><p>The person signs in and approves the request.</p></li>
+<li><p>The authorization server redirects back with a code.</p></li>
+<li><p>The client exchanges the code for tokens.</p></li></ol>
+<pre class="md-code language-ts"><code class="language-ts">let response = await fetch("https://auth.example.com/token", {
+	method: "POST",
+	body: new URLSearchParams({ grant_type: "authorization_code", code }),
+});
+let { access_token } = await response.json();
+</code></pre>
+<p>Before going further, check that you can answer each of these:</p>
+<ul><li class="md-task"><input class="md-task-box" type="checkbox" disabled="disabled" checked="checked"/><p>What a client is</p></li>
+<li class="md-task"><input class="md-task-box" type="checkbox" disabled="disabled" checked="checked"/><p>Why the password stays with the authorization server</p></li>
+<li class="md-task"><input class="md-task-box" type="checkbox" disabled="disabled"/><p>What a refresh token is for</p></li></ul>
+<h3 id="refresh-tokens">Refresh Tokens</h3>
+<p>A refresh token lets the client ask for a new access token after the old one expires, so a
+person signs in once a month instead of once an hour.<sup class="md-footnote-ref"><a id="md-fnref-lifetime" href="#md-fn-lifetime">2</a></sup> Treat it like a password:
+store it encrypted, send it only to the token endpoint, and rotate it on every use.</p>
+<p><img src="../images/flow.svg" alt="A sequence diagram of the four steps above" title="The authorization code flow"/></p>
+<hr/>
+<p>Next, we look at scopes, which narrow <em>what</em> a token may do. Jump back to <a href="#the-parties">the parties</a>
+if the roles blur. Characters such as ©, — and   arrive as text.</p>
+<section class="md-footnotes"><ol class="md-footnote-list"><li id="md-fn-password"><p>That is the whole point of delegated authorization.</p><a class="md-footnote-back" href="#md-fnref-password">↩</a></li>
+<li id="md-fn-lifetime"><p>Lifetimes vary; thirty days is common for refresh tokens.</p><a class="md-footnote-back" href="#md-fnref-lifetime">↩</a></li></ol></section></body>
+</html>

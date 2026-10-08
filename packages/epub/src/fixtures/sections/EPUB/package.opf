@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="es">
+	<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+		<dc:identifier id="pub-id">urn:uuid:7c1e0b3a-9a2f-4d55-9a0e-2c2b9d3f1a03</dc:identifier>
+		<dc:title>Un libro con secciones</dc:title>
+		<dc:language>es</dc:language>
+		<meta property="dcterms:modified">2026-10-08T00:00:00Z</meta>
+	</metadata>
+	<manifest>
+		<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+		<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+		<item id="uno" href="text/uno.xhtml" media-type="application/xhtml+xml"/>
+		<item id="quote" href="text/quote.xhtml" media-type="application/xhtml+xml"/>
+		<item id="notas" href="text/notas.xhtml" media-type="application/xhtml+xml"/>
+	</manifest>
+	<spine toc="ncx">
+		<itemref idref="nav" linear="no"/>
+		<itemref idref="uno"/>
+		<itemref idref="quote"/>
+		<itemref idref="notas" linear="no"/>
+	</spine>
+</package>

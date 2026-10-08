@@ -1,0 +1,6 @@
+{
+	"extends": "../../../tsconfig.json",
+	// The epubcheck script lives under its own tsconfig so the package's covers `src`
+	// alone, which lets the release build compile the package with `src` as the rootDir.
+	"include": ["**/*"]
+}

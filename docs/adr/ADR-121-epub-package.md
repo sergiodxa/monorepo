@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-08
+**Accepted** - 2026-10-08
 
 ## Background
 
@@ -144,7 +144,8 @@ return new Response(stream, {
   one entry at a time, and the API stays the same when DEFLATE and data descriptors arrive.
 - **Output is a stream.** `zip.stream()` writes entries in the order they were added, so a Worker
   answers an export of many entries without holding the whole archive. `zip.bytes()` collects the
-  stream for a caller that needs a `Uint8Array`, as tests and `@sdxc/epub` do.
+  stream into a `Result<Uint8Array, ZipError>` for a caller that needs one buffer, as tests and
+  `@sdxc/epub` do; the failure is the error the stream would have failed with.
 - **Names are UTF-8** with bit 11 set, `/`-separated, and checked: an empty segment, `.` or `..`,
   a leading `/`, a backslash or a duplicate name fails `invalid-entry` when added.
 - **Failures are values.** `add` answers `Result<void, ZipError>`; a source stream that errors while
@@ -193,7 +194,8 @@ return new Response(zip.stream(), { headers: { "content-type": "application/zip"
 ```typescript
 // The whole archive as bytes, for a test or a stored object
 let bytes = await zip.bytes();
-await env.EXPORTS.put(`exports/${userId}.zip`, bytes);
+if (isFailure(bytes)) throw bytes.error;
+await env.EXPORTS.put(`exports/${userId}.zip`, bytes.data);
 ```
 
 ```typescript
@@ -237,6 +239,10 @@ built.data.stream(); // ReadableStream<Uint8Array>, `application/epub+zip`
 
 `EPUB.build` is synchronous and answers the first failure it finds. Every file of the publication
 is already in memory, so `stream()` writes them through `@sdxc/zip` without waiting on any source.
+`bytes()` answers `Result<Uint8Array, ZipError>` like `zip.bytes()`, and `files` lists every file of
+the container as `{ path, bytes }` in archive order, which is what the golden fixtures are written
+from. `labels` sets the navigation document's headings and landmark text for a book not written in
+English.
 
 #### Chapters
 
@@ -279,6 +285,9 @@ fragment must be an `id` inside that chapter.
 | `EPUB/text/<id>.xhtml`   | One per chapter                                                                          |
 | `EPUB/<path>`            | Every style and resource at the path the caller gave                                     |
 
+The navigation document is also in the spine, `linear="no"`, after the cover: the `toc` landmark
+links to it, and epubcheck reports a link to a document outside the spine (RSC-011).
+
 The cover image carries `cover-image` and is also named by `<meta name="cover">`, which EPUB 3
 reading systems ignore and older ones, Kindle's converter among them, read. Every entry is stored,
 which OCF allows for all of them; when `@sdxc/zip` gains DEFLATE, XHTML, CSS, SVG and the package
@@ -300,6 +309,7 @@ build time, so a successful `Result` is a file reading systems open:
 | A fragment link names an `id` that exists in the target document                  | `missing-resource`  |
 | Media type known from the extension and a core media type (EPUB 3.3 adds WebP)    | `unsupported-media` |
 | Unique paths and ids; ids are NCNames; paths are inside `EPUB/`                   | `invalid-path`      |
+| A chapter out of the spine's linear order and the toc is linked from another one  | `invalid-content`   |
 
 Manifest properties (`svg`, `mathml`, `nav`, `cover-image`) are derived from the parsed tree and
 never passed in, so they cannot drift. `scripted` and `remote-resources` are never written, because
@@ -444,12 +454,16 @@ return attachment(zip.stream(), "reports.zip", "application/zip");
 
 1. Create `packages/epub`, public: `EPUB.build`, `EPUB` (`stream`, `bytes`), `EpubError` classes.
 2. Unit tests per verification rule, each asserting the `code` and `path`.
-3. Golden fixtures: a minimal book, a book with cover, nested sections, SVG and an image, and the
-   `books` sample chapter as a realistic input. Built with fixed `modified` and committed as
-   expanded directories plus the `.epub`, compared byte for byte.
-4. `bun run epubcheck` at the package root: runs epubcheck 5 (Java, through Docker or a local jar)
-   over every golden `.epub` and fails on any error or warning. Run before committing a fixture
-   change; whether CI runs it is an open question.
+3. Golden fixtures: a minimal book, a book with cover, nested sections, SVG and an image, and a
+   long-form Markdown chapter (tables, task lists, footnotes, code, an alert) rendered with
+   `syntax: "xhtml"` as a realistic input; a package keeps no app's content, so the `books` sample
+   chapter is exercised by that app's own tests. Built with fixed `modified` and committed as
+   expanded directories plus the `.epub` under `src/fixtures` (which the formatter ignores),
+   compared byte for byte; `UPDATE_EPUB_FIXTURES=1` rewrites them.
+4. `bun run epubcheck` at the package root: downloads the pinned epubcheck release (5.4.0) once
+   into `.cache/`, runs it with a local Java or in an `eclipse-temurin:21-jre` container, over
+   every golden `.epub` with `--failonwarnings`. Run before committing a fixture change; whether
+   CI runs it is an open question.
 5. README following the package documentation guide, including the identifier rule and the
    accessibility example.
 
@@ -518,9 +532,10 @@ NCX that EPUB 2 readers need is written alongside.
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/zip`
-- [ ] Phase 2: XHTML from Markdown
-- [ ] Phase 3: `@sdxc/epub`
+- [x] Phase 1: `@sdxc/zip`
+- [x] Phase 2: XHTML from Markdown
+- [x] Phase 3: `@sdxc/epub` — five golden fixtures (minimal, cover, sections, media, long-form
+      Markdown) pass epubcheck 5.4.0 with no errors or warnings
 - [ ] Phase 4: Consumers
 
 ## Notes

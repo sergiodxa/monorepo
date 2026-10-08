@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="pub-id" xml:lang="en">
+	<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+		<dc:identifier id="pub-id">urn:uuid:7c1e0b3a-9a2f-4d55-9a0e-2c2b9d3f1a01</dc:identifier>
+		<dc:title>A Minimal Book</dc:title>
+		<dc:language>en</dc:language>
+		<meta property="dcterms:modified">2026-10-08T00:00:00Z</meta>
+	</metadata>
+	<manifest>
+		<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+		<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+		<item id="chapter-1" href="text/chapter-1.xhtml" media-type="application/xhtml+xml"/>
+	</manifest>
+	<spine toc="ncx">
+		<itemref idref="nav" linear="no"/>
+		<itemref idref="chapter-1"/>
+	</spine>
+</package>

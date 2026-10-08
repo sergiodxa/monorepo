@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="en">
+	<head>
+		<meta name="dtb:uid" content="urn:uuid:7c1e0b3a-9a2f-4d55-9a0e-2c2b9d3f1a02"/>
+		<meta name="dtb:depth" content="1"/>
+		<meta name="dtb:totalPageCount" content="0"/>
+		<meta name="dtb:maxPageNumber" content="0"/>
+	</head>
+	<docTitle>
+		<text>A Book With a Cover</text>
+	</docTitle>
+	<navMap>
+		<navPoint id="navpoint-1" playOrder="1">
+			<navLabel>
+				<text>One</text>
+			</navLabel>
+			<content src="text/one.xhtml"/>
+		</navPoint>
+		<navPoint id="navpoint-2" playOrder="2">
+			<navLabel>
+				<text>Two</text>
+			</navLabel>
+			<content src="text/two.xhtml"/>
+		</navPoint>
+	</navMap>
+</ncx>
