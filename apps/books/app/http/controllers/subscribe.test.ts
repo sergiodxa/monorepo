@@ -34,6 +34,35 @@ function submit(
 }
 
 describe("POST /api/subscribe", () => {
+	test("records the visitor's IP from CF-Connecting-IP in its canonical spelling", async () => {
+		let newsletter = new MemoryNewsletter();
+		let body = new URLSearchParams({ email: "reader@example.com" });
+
+		await fetchApp("/api/subscribe", {
+			method: "POST",
+			body,
+			headers: { "cf-connecting-ip": "2001:DB8::0:1" },
+			newsletter,
+		});
+
+		expect(newsletter.ip("reader@example.com")?.toString()).toBe("2001:db8::1");
+	});
+
+	test("subscribes without an IP when CF-Connecting-IP is malformed", async () => {
+		let newsletter = new MemoryNewsletter();
+		let body = new URLSearchParams({ email: "reader@example.com" });
+
+		await fetchApp("/api/subscribe", {
+			method: "POST",
+			body,
+			headers: { "cf-connecting-ip": "unknown" },
+			newsletter,
+		});
+
+		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
+		expect(newsletter.ip("reader@example.com")).toBeNull();
+	});
+
 	test("subscribes a new address and redirects to the sales page", async () => {
 		let newsletter = new MemoryNewsletter();
 

@@ -56,7 +56,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 
 	let result = await subscribe(ctx.newsletter, payload, {
 		attribution: subscriberAttribution(ctx.attribution, ctx.url),
-		ipAddress: ctx.ip?.toString() ?? null,
+		ip: ctx.ip,
 	});
 
 	if (isFailure(result)) {

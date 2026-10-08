@@ -8,6 +8,7 @@
  */
 
 import type { Attribution } from "@sdxc/attribution";
+import type { IP } from "@sdxc/ip";
 import type {
 	Newsletter,
 	NewsletterError,
@@ -51,8 +52,8 @@ export function subscriberAttribution(
 export interface SubscribeContext {
 	/** The campaign that brought the visitor, recorded only on a reader this call creates. */
 	attribution?: SubscriberAttribution;
-	/** The visitor's canonical address, or `null` when `CF-Connecting-IP` is absent or malformed. */
-	ipAddress: string | null;
+	/** The visitor's address, or `null` when `CF-Connecting-IP` is absent or malformed. */
+	ip: IP | null;
 }
 
 /**
@@ -73,7 +74,7 @@ export async function subscribe(
 	let outcome = await newsletter.subscribers.subscribe({
 		email: payload.email,
 		attribution: visitor.attribution,
-		ipAddress: visitor.ipAddress,
+		ip: visitor.ip,
 	});
 
 	if (isSuccess(outcome)) {

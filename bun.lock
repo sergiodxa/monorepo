@@ -153,6 +153,7 @@
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
+        "@sdxc/ip": "workspace:*",
         "@sdxc/location": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",

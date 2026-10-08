@@ -169,7 +169,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	 */
 	let result = await subscribe(ctx.newsletter, payload, {
 		attribution: subscriberAttribution(ctx.attribution, ctx.url),
-		ipAddress: ctx.ip?.toString() ?? null,
+		ip: ctx.ip,
 	});
 
 	if (isSuccess(result)) {
