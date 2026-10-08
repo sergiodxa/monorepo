@@ -438,10 +438,25 @@ federation.on("Follow", (inbound) =>
 
 `"accept"`, `"reject"` and `"pending"` decide; `null` keeps the default, which is `"accept"`
 unless the actor sets `manuallyApprovesFollowers: true`. A pending follower is stored with
-`state: "pending"` and left out of the collection and of deliveries. Approving one later is
-yours: mark it accepted in your store and `publish` an `Accept` addressed to the follower, whose
-`object` is the `Follow` rebuilt from the stored `followId`. A rejected follow, and any follow
-from a blocked server, gets a `Reject`.
+`state: "pending"` and left out of the collection and of deliveries until you decide.
+`federation.approve` accepts it and queues the `Accept` of its stored `Follow`;
+`federation.reject` queues the `Reject` and forgets it:
+
+```typescript {% title="app/controllers/followers.ts" %}
+let federation = createFederation(ctx);
+if (isFailure(federation)) return serviceUnavailable({ error: "not federating" });
+let decided =
+	decision === "approve"
+		? await federation.data.approve(followerId)
+		: await federation.data.reject(followerId);
+if (isFailure(decided) && decided.error.code === "not-found") {
+	return notFound({ error: "not a follower" });
+}
+```
+
+Both are safe to retry, and `not-found` means the actor no longer follows you, for instance
+because it sent an `Undo` first. A rejected follow, and any follow from a blocked server, gets a
+`Reject`.
 
 **Undo.** An `Undo` of a `Follow` removes the follower when the follow it names is the one
 stored. Every `Undo` reaches your handler once the undone activity is shown to be the sender's,
