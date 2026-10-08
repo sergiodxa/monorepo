@@ -783,6 +783,17 @@
         "lucide-static": "^1.38.0",
       },
     },
+    "packages/http-signatures": {
+      "name": "@sdxc/http-signatures",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/crypto": "workspace:*",
+        "@sdxc/digest-fields": "workspace:*",
+        "@sdxc/duration": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "@sdxc/structured-fields": "workspace:*",
+      },
+    },
     "packages/idempotency": {
       "name": "@sdxc/idempotency",
       "version": "0.0.1",
@@ -2109,6 +2120,8 @@
     "@sdxc/mail": ["@sdxc/mail@workspace:packages/mail"],
 
     "@sdxc/markdown": ["@sdxc/markdown@workspace:packages/markdown"],
+
+    "@sdxc/http-signatures": ["@sdxc/http-signatures@workspace:packages/http-signatures"],
 
     "@sdxc/mcp": ["@sdxc/mcp@workspace:packages/mcp"],
 
