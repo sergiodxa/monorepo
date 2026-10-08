@@ -15,7 +15,8 @@ Reports export a team's monitor history as CSV, so it can be kept, charted, or s
 ## How It Works
 
 1. The user opens Reports, chooses a range, monitors and format, and presses a download button.
-2. The form submits as `GET`, and each button targets one report's download URL.
+2. The form submits as `GET`, and each button targets one report's download URL, or the ZIP
+   holding both reports.
 3. The report is computed from the daily roll-up at download time and streamed as CSV.
 4. A range or filter the report cannot use returns the user to the form with the problem shown and the fields kept.
 
@@ -23,6 +24,7 @@ Reports export a team's monitor history as CSV, so it can be kept, charted, or s
 
 - **Uptime summary**: one row per monitor for the range with days with data, total, successful and failed checks, uptime percentage, average and maximum response time, days down, days degraded and maintenance minutes
 - **Daily uptime**: one row per monitor per day with that day's checks, uptime percentage, response times, status and maintenance minutes
+- **Both as ZIP**: the two reports above as CSV files in one ZIP, for the same range, monitors and format, named as their single downloads are; the ZIP is named `<team>-uptime-reports-<period>.zip` and stores the files uncompressed
 
 ## Formats
 

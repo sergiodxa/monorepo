@@ -547,7 +547,10 @@ NCX that EPUB 2 readers need is written alongside.
         the blog fetches none), and `##`/`###` headings get anchors for a nested table of
         contents. All 164 published tutorials build and pass epubcheck 5.4.0 with no errors or
         warnings
-  - [ ] `uptime`, `reader`
+  - [x] `uptime`: the reports builder's "Download both as ZIP" button submits the same `GET`
+        form to `/app/:team/reports.zip`, which streams the summary and daily CSVs, under the
+        names their single downloads carry, into `<team>-uptime-reports-<period>.zip`
+  - [ ] `reader`
 
 ## Notes
 

@@ -559,6 +559,10 @@ export default function application(options: application.Options) {
 		lazy(() => import("~/app/http/controllers/app/team/report-download")),
 	);
 	router.map(
+		routes.app.team.reports.archive,
+		lazy(() => import("~/app/http/controllers/app/team/report-archive")),
+	);
+	router.map(
 		routes.app.team.maintenanceWindows.index,
 		lazy(() => import("~/app/http/controllers/app/team/maintenance-windows")),
 	);

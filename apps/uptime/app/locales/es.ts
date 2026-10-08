@@ -3917,6 +3917,8 @@ export default {
 					summaryDescription: "Una fila por monitor para todo el rango.",
 					daily: "Descargar disponibilidad diaria",
 					dailyDescription: "Una fila por monitor y por día.",
+					archive: "Descargar ambos en ZIP",
+					archiveDescription: "El resumen y el informe diario como dos archivos CSV en un ZIP.",
 				},
 			},
 			errors: {

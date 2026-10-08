@@ -1,7 +1,7 @@
 /**
  * Report builder page controller. Requires `requireUser` + `requireTeam`. The form is a
- * `GET` whose two submit buttons point `formaction` at each report's download, so choosing
- * a range, monitors and format and pressing a button downloads the CSV with no JavaScript.
+ * `GET` whose submit buttons point `formaction` at each report's download, or at a ZIP of
+ * both, so choosing a range, monitors and format and pressing one downloads with no JavaScript.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -227,6 +227,15 @@ export default createAction(routes.app.team.reports.index, {
 												title={t("form.submit.dailyDescription")}
 											>
 												{t("form.submit.daily")}
+											</Button>
+											<Button
+												type="submit"
+												variant="outline"
+												color="neutral"
+												formAction={routes.app.team.reports.archive.href({ team })}
+												title={t("form.submit.archiveDescription")}
+											>
+												{t("form.submit.archive")}
 											</Button>
 										</div>
 									</SettingsSection.Footer>

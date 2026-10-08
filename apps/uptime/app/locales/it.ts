@@ -3916,6 +3916,9 @@ export default {
 					summaryDescription: "Una riga per monitor per l'intero intervallo.",
 					daily: "Scarica la disponibilità giornaliera",
 					dailyDescription: "Una riga per monitor per ogni giorno.",
+					archive: "Scarica entrambi in ZIP",
+					archiveDescription:
+						"Il riepilogo e il report giornaliero come due file CSV in un unico ZIP.",
 				},
 			},
 			errors: {

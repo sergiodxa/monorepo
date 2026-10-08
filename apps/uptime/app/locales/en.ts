@@ -3932,6 +3932,8 @@ export default {
 					summaryDescription: "One row per monitor for the whole range.",
 					daily: "Download daily uptime",
 					dailyDescription: "One row per monitor for each day.",
+					archive: "Download both as ZIP",
+					archiveDescription: "The summary and the daily report as two CSV files in one ZIP.",
 				},
 			},
 			errors: {

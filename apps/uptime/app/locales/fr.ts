@@ -3937,6 +3937,8 @@ export default {
 					summaryDescription: "Une ligne par moniteur pour toute la période.",
 					daily: "Télécharger la disponibilité quotidienne",
 					dailyDescription: "Une ligne par moniteur et par jour.",
+					archive: "Télécharger les deux en ZIP",
+					archiveDescription: "Le résumé et le rapport quotidien en deux fichiers CSV dans un ZIP.",
 				},
 			},
 			errors: {

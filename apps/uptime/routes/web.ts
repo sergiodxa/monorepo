@@ -235,6 +235,8 @@ export default route({
 				index: get("/app/:team/reports"),
 				/** One report as CSV; `:report` is `uptime-summary` or `uptime-daily`, filtered by the query. */
 				download: get("/app/:team/reports/:report.csv"),
+				/** Both reports as CSVs in one ZIP, for the same range, monitors and format. */
+				archive: get("/app/:team/reports.zip"),
 			},
 			settings: get("/app/:team/settings"),
 			account: get("/app/:team/account"),

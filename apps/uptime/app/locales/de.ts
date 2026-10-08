@@ -3935,6 +3935,9 @@ export default {
 					summaryDescription: "Eine Zeile pro Monitor für den gesamten Zeitraum.",
 					daily: "Tägliche Verfügbarkeit herunterladen",
 					dailyDescription: "Eine Zeile pro Monitor und Tag.",
+					archive: "Beide als ZIP herunterladen",
+					archiveDescription:
+						"Die Zusammenfassung und der Tagesbericht als zwei CSV-Dateien in einer ZIP-Datei.",
 				},
 			},
 			errors: {

@@ -115,8 +115,24 @@ export function dailyCsv(
  * @returns e.g. `acme-uptime-summary-2026-08.csv`
  */
 export function reportFilename(teamSlug: string, kind: ReportKind, range: DayRange): string {
-	let period = isWholeMonth(range) ? range.from.slice(0, 7) : `${range.from}_${range.to}`;
-	return `${teamSlug}-${kind}-${period}.csv`;
+	return `${teamSlug}-${kind}-${reportPeriod(range)}.csv`;
+}
+
+/**
+ * The name of the ZIP holding every report for a range, beside the CSV names it contains so
+ * the archive and its files sort together.
+ *
+ * @param teamSlug - The team's slug
+ * @param range - The range the reports cover
+ * @returns e.g. `acme-uptime-reports-2026-08.zip`
+ */
+export function reportArchiveFilename(teamSlug: string, range: DayRange): string {
+	return `${teamSlug}-uptime-reports-${reportPeriod(range)}.zip`;
+}
+
+/** A range as a filename writes it: `YYYY-MM` for a whole month, else first and last day. */
+function reportPeriod(range: DayRange): string {
+	return isWholeMonth(range) ? range.from.slice(0, 7) : `${range.from}_${range.to}`;
 }
 
 /**

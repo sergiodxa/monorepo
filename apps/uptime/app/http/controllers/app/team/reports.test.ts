@@ -114,7 +114,7 @@ async function visit(
 }
 
 describe("report builder", () => {
-	test("starts on last month with both downloads", async () => {
+	test("starts on last month with both downloads and the ZIP of both", async () => {
 		let fixture = await createFixture();
 		let response = await visit(fixture);
 		expect(response.status).toBe(200);
@@ -125,6 +125,8 @@ describe("report builder", () => {
 		expect(body).toContain('max="2026-09-28"');
 		expect(body).toContain('formaction="/app/acme/reports/uptime-summary.csv"');
 		expect(body).toContain('formaction="/app/acme/reports/uptime-daily.csv"');
+		expect(body).toContain('formaction="/app/acme/reports.zip"');
+		expect(body).toContain("Download both as ZIP");
 		expect(body).not.toContain("Enter both dates");
 		expect(body).not.toContain("Reports end yesterday");
 	});

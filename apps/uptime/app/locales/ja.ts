@@ -3861,6 +3861,8 @@ export default {
 					summaryDescription: "範囲全体について、モニターごとに1行です。",
 					daily: "日別の稼働率をダウンロード",
 					dailyDescription: "モニターごと、1日ごとに1行です。",
+					archive: "両方をZIPでダウンロード",
+					archiveDescription: "概要と日別レポートを、2つのCSVファイルとして1つのZIPにまとめます。",
 				},
 			},
 			errors: {
