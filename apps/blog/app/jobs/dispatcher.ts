@@ -6,7 +6,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { JobDispatcherContext } from "@sdxc/jobs";
+import type { JobDispatcherContext, JobEnqueuer } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
 
@@ -25,10 +25,17 @@ import { jobQueue } from "./queue";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), mail(), activityPub()],
+	middleware: [database(), mail(), activityPub(enqueuer)],
 	timeout: "2 minutes",
 	queue: jobQueue,
 });
+
+/**
+ * The dispatcher, for middleware it lists that enqueues through it once a job runs.
+ */
+function enqueuer(): JobEnqueuer {
+	return dispatcher;
+}
 
 dispatcher.map(jobs.webmentions.verify, () => import("~/app/jobs/webmentions/verify"));
 dispatcher.map(jobs.webmentions.send, () => import("~/app/jobs/webmentions/send"));

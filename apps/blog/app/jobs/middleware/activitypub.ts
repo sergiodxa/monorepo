@@ -7,40 +7,26 @@
  * @copyright Sergio Xalambrí 2026
  */
 import type { Federation } from "@sdxc/activitypub";
-import type { JobMiddleware } from "@sdxc/jobs";
+import type { JobEnqueuer, JobMiddleware } from "@sdxc/jobs";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env } from "cloudflare:workers";
 
 import { ActivityPub } from "~/app/http/middleware/activitypub";
 import { Database } from "~/app/http/middleware/database";
-import jobs from "~/app/jobs";
-import { createFederation } from "~/app/services/activitypub";
+import { createFederation, federationQueue } from "~/app/services/activitypub";
 import { BLOG_KEYS } from "~/app/services/activitypub-keys";
 
 /**
- * The federation's queue in a job, written through the dispatcher. The dispatcher is
- * imported when a message is written, because it lists this middleware itself.
- */
-const DISPATCHER_QUEUE: Federation.Queue = {
-	async enqueue(message) {
-		let { dispatcher } = await import("~/app/jobs/dispatcher");
-		await dispatcher.enqueue(jobs.activityPub.process, message);
-	},
-	async enqueueMany(messages) {
-		let { dispatcher } = await import("~/app/jobs/dispatcher");
-		await dispatcher.enqueueMany(jobs.activityPub.process, messages);
-	},
-};
-
-/**
  * Publishes the federation for the job about to run, over the database `database()`
- * published before it.
+ * published before it. The enqueuer is read when a job runs, so the dispatcher listing
+ * this middleware can hand over itself.
  *
+ * @param enqueuer Returns what the federation's queue writes through.
  * @returns The middleware installing it as `ctx.activityPub`.
- * @example createJobDispatcher({ middleware: [database(), activityPub()] });
+ * @example createJobDispatcher({ middleware: [database(), activityPub(() => dispatcher)] });
  */
-export function activityPub(): JobMiddleware<{
+export function activityPub(enqueuer: () => JobEnqueuer): JobMiddleware<{
 	key: typeof ActivityPub;
 	value: Federation;
 	property: "activityPub";
@@ -50,7 +36,7 @@ export function activityPub(): JobMiddleware<{
 			db: ctx.require(Database),
 			cache: new WorkerKVCache(env.CACHE),
 			keys: BLOG_KEYS,
-			queue: DISPATCHER_QUEUE,
+			queue: federationQueue(enqueuer()),
 		});
 		ctx.set(ActivityPub, federation, { property: "activityPub" });
 		await next();
