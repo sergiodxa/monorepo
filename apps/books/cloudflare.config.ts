@@ -33,11 +33,8 @@ export default defineConfig({
 		domains: ["books.sergiodxa.com"],
 		/**
 		 * The worker keeps no storage of its own; its state lives in Buttondown and Polar.
-		 * Buttondown picks a response shape per request from `x-api-version`, so the pinned
-		 * version is what keeps a provider release from changing what this app parses.
 		 */
 		env: {
-			BUTTONDOWN_API_VERSION: bindings.text("2024-07-01"),
 			BUTTONDOWN_API_KEY: bindings.secret(),
 			POLAR_ACCESS_TOKEN: bindings.secret(),
 			POLAR_WEBHOOK_SECRET: bindings.secret(),

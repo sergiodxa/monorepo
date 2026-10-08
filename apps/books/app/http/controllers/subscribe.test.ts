@@ -1,7 +1,7 @@
 /**
- * Tests for `POST /api/subscribe` — the funnel's front door. Covers the happy path, the
- * already-subscribed path Buttondown reports as an error, the two provider rejections
- * that get their own visitor-facing copy, and validation failure. Every failure path
+ * Tests for `POST /api/subscribe` — the funnel's front door. Covers the happy path, an
+ * address already on the list, the two newsletter refusals that get their own
+ * visitor-facing copy, and validation failure. Every failure path
  * re-renders the homepage with the error inline, which is what dropping the client-side
  * fetcher changed.
  *
@@ -9,41 +9,32 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import { describe, expect, test } from "vitest";
 
-import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
+import { subscribed } from "~/app/lib/test/newsletter";
 import { fetchApp } from "~/app/lib/test/router";
 
 /**
- * Hands the controllers under test the client each one installs. The module is imported
- * inside the factory because `vi.mock` is hoisted above this file's own imports.
- */
-vi.mock("~/app/lib/buttondown", async () => {
-	let { installedButtondown } = await import("~/app/lib/test/buttondown");
-	return { buttondown: installedButtondown };
-});
-
-/**
- * Posts the subscribe form against a scripted newsletter client. The body is
+ * Posts the subscribe form against an in-memory newsletter. The body is
  * url-encoded, matching what a browser sends for a form built only from text
  * fields.
  */
 function submit(
-	buttondown: FakeButtondown,
+	newsletter: MemoryNewsletter,
 	email: string,
 	attribution: Record<string, string> = {},
 ) {
 	let body = new URLSearchParams({ email, ...attribution });
-	installButtondown(buttondown);
 
-	return fetchApp("/api/subscribe", { method: "POST", body });
+	return fetchApp("/api/subscribe", { method: "POST", body, newsletter });
 }
 
 describe("POST /api/subscribe", () => {
 	test("subscribes a new address and redirects to the sales page", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@example.com", {
+		let response = await submit(newsletter, "reader@example.com", {
 			source: "newsletter",
 			campaign: "launch",
 			medium: "email",
@@ -55,37 +46,30 @@ describe("POST /api/subscribe", () => {
 		 * Attribution has to reach the newsletter, since that is the only place
 		 * it is stored.
 		 */
-		expect(buttondown.subscribed).toEqual([
-			{
-				email: "reader@example.com",
-				attribution: { source: "newsletter", campaign: "launch", medium: "email" },
-			},
-		]);
+		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
+		expect(newsletter.attribution("reader@example.com")).toEqual({
+			source: "newsletter",
+			campaign: "launch",
+			medium: "email",
+		});
 	});
 
 	test("treats an address already on the list as success without re-subscribing", async () => {
-		let buttondown = new FakeButtondown({ subscribed: ["reader@example.com"] });
+		let newsletter = new MemoryNewsletter();
+		newsletter.seed([{ email: "reader@example.com" }]);
 
-		let response = await submit(buttondown, "reader@example.com");
-
-		expect(response.status).toBe(303);
-		expect(response.headers.get("location")).toBe("/release");
-		expect(buttondown.subscribed).toEqual([]);
-	});
-
-	test("redirects to the sales page when the provider reports the address already exists", async () => {
-		let buttondown = new FakeButtondown({ failWith: "email_already_exists" });
-
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com", { source: "later" });
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe("/release");
+		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
+		expect(newsletter.attribution("reader@example.com")).toBeNull();
 	});
 
 	test("re-renders the homepage with the blocked-subscriber copy", async () => {
-		let buttondown = new FakeButtondown({ failWith: "subscriber_blocked" });
+		let newsletter = new MemoryNewsletter({ faults: { "subscribers.subscribe": "suppressed" } });
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
@@ -94,31 +78,31 @@ describe("POST /api/subscribe", () => {
 	});
 
 	test("re-renders the homepage with the invalid-email copy", async () => {
-		let buttondown = new FakeButtondown({ failWith: "email_invalid" });
+		let newsletter = new MemoryNewsletter({
+			faults: { "subscribers.subscribe": "invalid_address" },
+		});
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid email address.");
 	});
 
 	test("shows a generic message rather than the provider's own error text", async () => {
-		let buttondown = new FakeButtondown({
-			throws: new Error("upstream provider internals leaked here"),
-		});
+		let newsletter = new MemoryNewsletter({ faults: { "subscribers.subscribe": "unknown" } });
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Something went wrong, please try again.");
-		expect(body).not.toContain("upstream provider internals leaked here");
+		expect(body).not.toContain("armed fault");
 	});
 
 	test("re-renders the homepage with the validation message for a malformed address", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "not-an-email");
+		let response = await submit(newsletter, "not-an-email");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid email address");
@@ -126,95 +110,95 @@ describe("POST /api/subscribe", () => {
 		 * Validation failure keeps the address local; only a valid address is
 		 * forwarded to the newsletter.
 		 */
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("refuses an IP-literal address the parser rejects, forwarding nothing", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@127.0.0.1");
+		let response = await submit(newsletter, "reader@127.0.0.1");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid email address");
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("subscribes the parsed address: trimmed, with its domain lowercased", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, " Reader@Example.COM ");
+		let response = await submit(newsletter, " Reader@Example.COM ");
 
 		expect(response.status).toBe(303);
-		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["Reader@example.com"]);
+		expect(await subscribed(newsletter)).toEqual(["Reader@example.com"]);
 	});
 
 	test("refuses a disposable address with its own copy", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@inbox.mailinator.com");
+		let response = await submit(newsletter, "reader@inbox.mailinator.com");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Temporary inboxes");
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("keeps refusing a disposable address that arrives marked as confirmed", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@mailinator.com", {
+		let response = await submit(newsletter, "reader@mailinator.com", {
 			confirmed: "reader@mailinator.com",
 		});
 
 		expect(response.status).toBe(400);
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("suggests the provider for a mistyped domain, prefilling the address as typed", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@gnail.com");
+		let response = await submit(newsletter, "reader@gnail.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Did you mean reader@gmail.com?");
 		expect(body).toContain('value="reader@gnail.com"');
 		expect(body).toContain('name="confirmed" value="reader@gnail.com"');
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("subscribes a mistyped-looking address once the visitor submits it again", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@gnail.com", { confirmed: "reader@gnail.com" });
+		let response = await submit(newsletter, "reader@gnail.com", { confirmed: "reader@gnail.com" });
 
 		expect(response.status).toBe(303);
-		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["reader@gnail.com"]);
+		expect(await subscribed(newsletter)).toEqual(["reader@gnail.com"]);
 	});
 
 	test("suggests the provider for a typo domain the disposable list carries, then refuses it if kept", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let prompt = await submit(buttondown, "reader@gmial.com");
+		let prompt = await submit(newsletter, "reader@gmial.com");
 
 		expect(prompt.status).toBe(400);
 		expect(await prompt.text()).toContain("Did you mean reader@gmail.com?");
 
-		let kept = await submit(buttondown, "reader@gmial.com", { confirmed: "reader@gmial.com" });
+		let kept = await submit(newsletter, "reader@gmial.com", { confirmed: "reader@gmial.com" });
 
 		expect(kept.status).toBe(400);
 		expect(await kept.text()).toContain("Temporary inboxes");
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("asks again when the address changed since the suggestion was shown", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@yaho.com", {
+		let response = await submit(newsletter, "reader@yaho.com", {
 			confirmed: "reader@gnail.com",
 		});
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Did you mean reader@yahoo.com?");
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 });

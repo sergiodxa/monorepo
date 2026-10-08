@@ -34,8 +34,8 @@ breaks something you cannot see from here:
 ## Behavior that looks like a bug and is not
 
 - **An address already on the list is a success**, both when subscribing and when
-  unlocking the sample chapter. Buttondown reports it as an `email_already_exists`
-  error, which is why the subscribe path special-cases it.
+  unlocking the sample chapter. The newsletter answers it as `created: false`, in any
+  status, so a reader who unsubscribed still unlocks the chapter and is not resubscribed.
 - **A "did you mean" prompt is shown once per address.** The homepage and sample-chapter
   forms hold back a likely-mistyped provider and render the form with the address prefilled
   and echoed in a hidden `confirmed` field; resubmitting it unchanged subscribes it as typed.
@@ -73,9 +73,10 @@ breaks something you cannot see from here:
 - **Billing** is `@sdxc/billing`: the Polar connection is built once in `app/lib/billing.ts`
   and published as `ctx.billing` by the middleware, and every call answers a `Result`
   rather than throwing. Address a package by its slug, never by a product id.
-- **The newsletter client** comes from the service container (`app/lib/container.ts`),
-  resolved per request. It calls the global `fetch` directly — never add an injectable
-  `fetch` parameter.
+- **The newsletter** is `@sdxc/newsletter`: the Buttondown list is built once in
+  `app/lib/newsletter.ts` and published as `ctx.newsletter` by the middleware. Controllers
+  branch on `NewsletterError.code` (`suppressed`, `invalid_address`), never on a vendor's
+  own error codes, and the Buttondown API version is pinned by the package.
 - **Logging** is `@sdxc/logger`, one wide event per request: controllers write through
   `ctx.log`, services through `currentLog()?.`. Keep the existing field and note names
   (`subscribe.result`, `checkout.id`, `discount.id`, `order.tagged`, `checkout.started`,
@@ -106,13 +107,13 @@ Run tests from the repo root with `bun run test`, which runs them under Vitest. 
 --project books` scopes a run to this app.
 
 - **Router-level tests** go through `fetchApp()` in `app/lib/test/router.ts`, which
-  builds the real router inside a container scope. Pass `billing` to bill the request
-  against the in-memory platform from `app/lib/test/billing.ts`, and override the
-  newsletter client through the container rather than at the network layer: with MSW's
-  interceptors installed, the form-data middleware sees an empty body and every POST
-  fails validation before reaching the code under test.
-- **Client tests** (`app/services/buttondown.test.ts`) do use MSW, which is where the
-  request shape — URL, method, auth header, body — belongs.
+  builds the real router. Pass `billing` to bill the request against the in-memory
+  platform from `app/lib/test/billing.ts`, and `newsletter` to subscribe it to a
+  `MemoryNewsletter` (an empty one is the default), then assert on that list's state.
+  Never mock outbound HTTP for the newsletter: with MSW's interceptors installed, the
+  form-data middleware sees an empty body and every POST fails validation before
+  reaching the code under test. The Buttondown wire format is tested in the package
+  that owns the provider.
 - Cloudflare `env` in tests comes from the repo-wide preload; a test needing specific
   values mocks `cloudflare:workers` itself.
 

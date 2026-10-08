@@ -1,6 +1,6 @@
 /**
- * Billing webhook controller. On a paid order it tags the buyer in Buttondown
- * with the tier they bought, so the newsletter can segment on it. Verification,
+ * Billing webhook controller. On a paid order it tags the buyer's newsletter
+ * profile with the tier they bought, so the newsletter can segment on it. Verification,
  * deduplication and dispatch belong to the endpoint; what is left here is the
  * one thing a paid order means to this funnel.
  *
@@ -11,14 +11,15 @@
 import type { BillingWebhookHandlers } from "@sdxc/billing";
 import type { RequestContext } from "remix/router";
 
-import { BillingWebhook } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
+import { BillingError, BillingWebhook } from "@sdxc/billing";
+import { parseEmailAddress } from "@sdxc/email-address";
+import { NewsletterError } from "@sdxc/newsletter";
+import { isFailure, isSuccess } from "@sdxc/result";
 
 import { Product } from "~/app/data/product";
 import { polar } from "~/app/lib/billing";
-import { buttondown } from "~/app/lib/buttondown";
 
-/** The Buttondown metadata values that drive purchase segmentation. */
+/** The newsletter metadata values that drive purchase segmentation. */
 const TIERS: Record<string, string> = {
 	[Product.Complete]: "complete",
 	[Product.Essentials]: "individual",
@@ -45,8 +46,9 @@ async function buyerEmail(context: RequestContext, customerId: string | null) {
 
 /**
  * What this funnel does about each delivery it is sent. Tagging reaches only a
- * buyer already subscribed, so every tagged address opted into the newsletter
- * itself; an unsubscribed buyer's purchase is recorded in the log alone.
+ * buyer the newsletter already holds, so every tagged address opted in itself;
+ * any other buyer's purchase is recorded in the log alone. A newsletter failure
+ * is thrown, so the endpoint answers `503` and the platform redelivers.
  */
 export const handlers: BillingWebhookHandlers = {
 	/**
@@ -71,15 +73,37 @@ export const handlers: BillingWebhookHandlers = {
 			return;
 		}
 
-		let newsletter = buttondown();
-		let subscribed = await newsletter.isSubscribed(email);
+		let address = parseEmailAddress(email);
 
-		if (subscribed) await newsletter.addMetadata(email, { purchase: tier });
+		if (isFailure(address)) {
+			log.note("order.untagged", { reason: "invalid_email" });
+			return;
+		}
 
-		log.set({ order: { tagged: subscribed } });
+		let tagged = await context.newsletter.subscribers.update(
+			{ email: address.data },
+			{ metadata: { purchase: tier } },
+		);
+
+		if (isFailure(tagged) && tagged.error.code !== "not_found") throw tagged.error;
+
+		log.set({ order: { tagged: isSuccess(tagged) } });
 		log.note("order.paid", { email });
 	},
 };
 
+/**
+ * Asks the platform to redeliver after any newsletter failure as well as a retryable
+ * billing one: a paid order whose tag never landed would otherwise be acknowledged
+ * and the purchase lost from segmentation.
+ *
+ * @param error - What the handler threw.
+ * @returns Whether the endpoint answers `503`.
+ */
+export function retryDelivery(error: unknown): boolean {
+	if (error instanceof NewsletterError) return true;
+	return error instanceof BillingError && error.retryable;
+}
+
 /** POST /webhooks/polar — records a paid order against the buyer's newsletter profile. */
-export default new BillingWebhook(polar, handlers);
+export default new BillingWebhook(polar, handlers, { retry: retryDelivery });

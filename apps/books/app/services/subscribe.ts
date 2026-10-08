@@ -1,63 +1,65 @@
 /**
- * Subscribe use case. Adds an address to the newsletter, short-circuiting when it is
- * already subscribed, forwarding UTM attribution and the caller's IP, and returning a
- * Result so the controller decides what a visitor sees. Every page with an email field
- * goes through it.
+ * Subscribe use case. Puts a validated form's address on the newsletter with the
+ * visitor's campaign attribution and IP, and records the outcome on the request's log, so
+ * every page with an email field subscribes and reports the same way.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type {
+	Newsletter,
+	NewsletterError,
+	SubscribeOutcome,
+	SubscriberAttribution,
+} from "@sdxc/newsletter";
 import type { Result } from "@sdxc/result";
 
 import { currentLog } from "@sdxc/logger";
-import { failure, success } from "@sdxc/result";
+import { isSuccess } from "@sdxc/result";
 
 import type { SubscribeInput } from "~/app/http/validators/subscribe";
-import type { Buttondown } from "~/app/services/buttondown";
+
+/** Who is subscribing, beyond the address the form posted. */
+export interface SubscribeContext {
+	/** The campaign that brought the visitor, recorded only on a reader this call creates. */
+	attribution?: SubscriberAttribution;
+	/** The visitor's canonical address, or `null` when `CF-Connecting-IP` is absent or malformed. */
+	ipAddress: string | null;
+}
 
 /**
- * Subscribes an address, treating an address that is already on the list as a success:
- * every page that collects an email is offering something in return, and someone who
- * subscribed last month still gets it.
+ * Subscribes an address. An address already on the list answers `created: false`, which
+ * a caller treats as a success: every page that collects an email offers something in
+ * return, and someone who subscribed last month still gets it.
  *
- * @param buttondown - The newsletter client.
+ * @param newsletter - The list to subscribe to.
  * @param payload - The validated form payload.
- * @param ipAddress - The visitor's canonical address, or `null` when `CF-Connecting-IP` is absent or malformed.
- * @returns `success` once the address is on the list, `failure` with the underlying
- * error — a {@link ButtondownError} carries the provider's `code` — otherwise.
+ * @param visitor - The visitor's attribution and IP.
+ * @returns The outcome, or a failure whose `code` names a refusal the visitor can act on.
  */
 export async function subscribe(
-	buttondown: Buttondown,
+	newsletter: Newsletter,
 	payload: SubscribeInput,
-	ipAddress: string | null,
-): Promise<Result<"subscribed" | "already-subscribed", Error>> {
-	try {
-		let log = currentLog();
+	visitor: SubscribeContext,
+): Promise<Result<SubscribeOutcome, NewsletterError>> {
+	let outcome = await newsletter.subscribers.subscribe({
+		email: payload.email,
+		attribution: visitor.attribution,
+		ipAddress: visitor.ipAddress,
+	});
 
-		if (await buttondown.isSubscribed(payload.email.address)) {
-			log?.set({ subscribe: { result: "already-subscribed" } });
-			return success("already-subscribed");
-		}
-
-		await buttondown.subscribe(
-			payload.email.address,
-			{ source: payload.source, campaign: payload.campaign, medium: payload.medium },
-			ipAddress,
-		);
-
-		log?.set({
+	if (isSuccess(outcome)) {
+		currentLog()?.set({
 			subscribe: {
-				result: "subscribed",
-				source: payload.source,
-				campaign: payload.campaign,
-				medium: payload.medium,
+				result: outcome.data.created ? "subscribed" : "already-subscribed",
+				status: outcome.data.subscriber.status,
+				source: visitor.attribution?.source,
+				campaign: visitor.attribution?.campaign,
+				medium: visitor.attribution?.medium,
 			},
 		});
-
-		return success("subscribed");
-	} catch (error) {
-		if (error instanceof Error) return failure(error);
-		return failure(new Error("Unknown error occurred"));
 	}
+
+	return outcome;
 }

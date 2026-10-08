@@ -25,9 +25,7 @@ import {
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
 import { readAttribution } from "~/app/lib/attribution";
-import { buttondown } from "~/app/lib/buttondown";
 import { seo } from "~/app/lib/seo";
-import { ButtondownError } from "~/app/services/buttondown";
 import { subscribe } from "~/app/services/subscribe";
 import chapterSource from "~/resources/content/sample.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
@@ -171,7 +169,14 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 		});
 	}
 
-	let result = await subscribe(buttondown(), payload, ctx.ip?.toString() ?? null);
+	/**
+	 * An address already on the list unlocks the chapter too: someone who subscribed last
+	 * month is exactly the reader this page is for.
+	 */
+	let result = await subscribe(ctx.newsletter, payload, {
+		attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
+		ipAddress: ctx.ip?.toString() ?? null,
+	});
 
 	if (isSuccess(result)) {
 		log.set({ sample: { unlocked: true } });
@@ -180,26 +185,14 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 
 	let error = result.error;
 
-	if (error instanceof ButtondownError) {
-		if (error.code === "subscriber_blocked") {
-			log.set({ subscribe: { result: "rejected", code: error.code } });
-			return renderForm(ctx, { error: BLOCKED_MESSAGE, status: 400 });
-		}
+	if (error.code === "suppressed") {
+		log.set({ subscribe: { result: "rejected", code: error.code } });
+		return renderForm(ctx, { error: BLOCKED_MESSAGE, status: 400 });
+	}
 
-		if (error.code === "email_invalid") {
-			log.set({ subscribe: { result: "rejected", code: error.code } });
-			return renderForm(ctx, { error: INVALID_MESSAGE, status: 400 });
-		}
-
-		/**
-		 * An address already on the list still gets the chapter. Someone who subscribed last
-		 * month is exactly the reader this page is for, and the provider only calls it an error
-		 * because nothing was created.
-		 */
-		if (error.code === "email_already_exists") {
-			log.set({ subscribe: { result: "already-subscribed" }, sample: { unlocked: true } });
-			return renderChapter(ctx);
-		}
+	if (error.code === "invalid_address") {
+		log.set({ subscribe: { result: "rejected", code: error.code } });
+		return renderForm(ctx, { error: INVALID_MESSAGE, status: 400 });
 	}
 
 	log.fail(error);

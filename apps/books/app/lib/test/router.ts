@@ -1,7 +1,7 @@
 /**
  * Drives the real application router — the same middleware chain and controllers
  * the worker builds — end to end. A test supplies the platform every route bills
- * against directly, because MSW's interceptors leave the router's form-data
+ * against and the newsletter every form subscribes to directly, because MSW's interceptors leave the router's form-data
  * middleware reading an empty body, failing every POST before validation.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -9,6 +9,9 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { Newsletter } from "@sdxc/newsletter";
+
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 
 import application from "~/bootstrap/app";
 
@@ -19,20 +22,26 @@ export const ORIGIN = "https://books.test";
 export interface FetchAppOptions extends RequestInit {
 	/** The platform the request bills against, replacing the configured one. */
 	billing?: Billing;
+	/**
+	 * The newsletter the request subscribes to; omitted gives the request an empty
+	 * memory list, so no test reaches the real one.
+	 */
+	newsletter?: Newsletter;
 }
 
 /**
  * Fetches a URL through the real router.
  *
  * @param path - A path or absolute URL to request.
- * @param options - Request init, plus `billing` to bill this request against. A
+ * @param options - Request init, plus `billing` to bill this request against and
+ * `newsletter` to subscribe it to. A
  * non-GET request gets `origin` set to {@link ORIGIN} by default, since
  * cross-origin protection is part of the chain under test.
  * @returns The router's response.
  * @example await fetchApp("/release", { billing: new MemoryBilling({ catalog }) })
  */
 export async function fetchApp(path: string, options: FetchAppOptions = {}): Promise<Response> {
-	let { billing, ...init } = options;
+	let { billing, newsletter = new MemoryNewsletter(), ...init } = options;
 	let headers = new Headers(init.headers);
 
 	if (init.method && init.method !== "GET" && !headers.has("origin")) {
@@ -45,5 +54,5 @@ export async function fetchApp(path: string, options: FetchAppOptions = {}): Pro
 
 	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
 
-	return await application(billing).fetch(request);
+	return await application(billing, newsletter).fetch(request);
 }

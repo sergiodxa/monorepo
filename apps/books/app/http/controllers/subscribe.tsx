@@ -1,6 +1,6 @@
 /**
  * Subscribe controller. Validates and screens the homepage's email form, subscribes the
- * address through Buttondown with the visitor's IP, and maps each refusal to the copy a
+ * address to the newsletter with the visitor's IP, and maps each refusal to the copy a
  * visitor reads. Success — including an address that was already on the list — redirects
  * to the sales page, which is the funnel's actual next step.
  *
@@ -19,13 +19,11 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
-import { buttondown } from "~/app/lib/buttondown";
-import { ButtondownError } from "~/app/services/buttondown";
 import { subscribe } from "~/app/services/subscribe";
 import routes from "~/routes/web";
 
 /**
- * Copy for the two Buttondown rejections a visitor can act on. Everything else gets the
+ * Copy for the two newsletter refusals a visitor can act on. Everything else gets the
  * generic message: the provider's own error text targets API consumers, and showing it
  * verbatim once put upstream wording in front of readers.
  */
@@ -56,34 +54,25 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 		});
 	}
 
-	let result = await subscribe(buttondown(), payload, ctx.ip?.toString() ?? null);
+	let result = await subscribe(ctx.newsletter, payload, {
+		attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
+		ipAddress: ctx.ip?.toString() ?? null,
+	});
 
 	if (isFailure(result)) {
-		let error = result.error;
+		let code = result.error.code;
 
-		if (error instanceof ButtondownError) {
-			if (error.code === "subscriber_blocked") {
-				log.set({ subscribe: { result: "rejected", code: error.code } });
-				return renderHome(ctx, { error: BLOCKED_MESSAGE, status: 400 });
-			}
-
-			if (error.code === "email_invalid") {
-				log.set({ subscribe: { result: "rejected", code: error.code } });
-				return renderHome(ctx, { error: INVALID_MESSAGE, status: 400 });
-			}
-
-			/**
-			 * Buttondown reports an existing subscriber as an error; for this funnel it is a
-			 * success. The visitor asked to be on the list and is on the list, so they go to
-			 * the sales page like anyone else.
-			 */
-			if (error.code === "email_already_exists") {
-				log.set({ subscribe: { result: "already-subscribed" } });
-				return redirect(routes.release.href(), { status: redirect.Status.SeeOther });
-			}
+		if (code === "suppressed") {
+			log.set({ subscribe: { result: "rejected", code } });
+			return renderHome(ctx, { error: BLOCKED_MESSAGE, status: 400 });
 		}
 
-		log.fail(error);
+		if (code === "invalid_address") {
+			log.set({ subscribe: { result: "rejected", code } });
+			return renderHome(ctx, { error: INVALID_MESSAGE, status: 400 });
+		}
+
+		log.fail(result.error);
 		return renderHome(ctx, { error: GENERIC_MESSAGE, status: 400 });
 	}
 

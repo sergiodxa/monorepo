@@ -11,25 +11,17 @@
 import type { MemoryBilling, MemoryDelivery } from "@sdxc/billing/providers/memory";
 
 import { BillingWebhook, MemoryWebhookStore } from "@sdxc/billing";
+import { parseEmailAddress } from "@sdxc/email-address";
 import { Log } from "@sdxc/logger";
-import { unwrap } from "@sdxc/result";
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import { isFailure, unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
-import { describe, expect, test, vi } from "vitest";
+import { describe, expect, test } from "vitest";
 
 import { Product } from "~/app/data/product";
-import { handlers } from "~/app/http/controllers/webhooks/polar";
+import { handlers, retryDelivery } from "~/app/http/controllers/webhooks/polar";
 import { memoryBilling, purchase } from "~/app/lib/test/billing";
-import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
 import { fetchApp } from "~/app/lib/test/router";
-
-/**
- * Hands the controllers under test the client each one installs. The module is imported
- * inside the factory because `vi.mock` is hoisted above this file's own imports.
- */
-vi.mock("~/app/lib/buttondown", async () => {
-	let { installedButtondown } = await import("~/app/lib/test/buttondown");
-	return { buttondown: installedButtondown };
-});
 
 /** A third-party origin, standing in for the platform's webhook delivery. */
 const FOREIGN_ORIGIN = "https://api.polar.sh";
@@ -44,25 +36,37 @@ const FOREIGN_SECRET = "YW5vdGhlci1zaWduaW5nLXNlY3JldA";
  * Answers one delivery through the app's own handlers.
  *
  * @param billing - The platform the delivery came from and is verified against.
- * @param buttondown - The newsletter client the handler tags through.
+ * @param newsletter - The newsletter the handler tags through.
  * @param delivery - The signed delivery to answer.
  * @param store - Where deliveries are recorded, for a redelivery under test.
  * @returns The endpoint's response.
  */
 async function deliver(
 	billing: MemoryBilling,
-	buttondown: FakeButtondown,
+	newsletter: MemoryNewsletter,
 	delivery: MemoryDelivery,
 	store?: MemoryWebhookStore,
 ): Promise<Response> {
-	installButtondown(buttondown);
-
-	let endpoint = new BillingWebhook(billing, handlers, { store });
+	let endpoint = new BillingWebhook(billing, handlers, { store, retry: retryDelivery });
 	let context = new RequestContext(delivery.request);
 	context.billing = billing;
+	context.newsletter = newsletter;
 	context.log = new Log({ kind: "request", sink() {} });
 
 	return await endpoint.handler(context);
+}
+
+/** A list already holding the buyer, which is the only reader a paid order tags. */
+function subscribedBuyer(): MemoryNewsletter {
+	let newsletter = new MemoryNewsletter();
+	newsletter.seed([{ email: BUYER }]);
+	return newsletter;
+}
+
+/** Reads the buyer's stored metadata, or `null` when the list does not hold them. */
+async function buyerMetadata(newsletter: MemoryNewsletter) {
+	let found = await newsletter.subscribers.find({ email: unwrap(parseEmailAddress(BUYER)) });
+	return isFailure(found) ? null : found.data.metadata;
 }
 
 /** Buys a package and signs the paid-order delivery the platform would send for it. */
@@ -74,70 +78,70 @@ async function paidOrder(billing: MemoryBilling, product: Product): Promise<Memo
 describe("the paid-order webhook", () => {
 	test("tags a subscriber who bought the Complete package", async () => {
 		let billing = memoryBilling();
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 
-		let response = await deliver(billing, buttondown, await paidOrder(billing, Product.Complete));
+		let response = await deliver(billing, newsletter, await paidOrder(billing, Product.Complete));
 
 		expect(response.status).toBe(200);
-		expect(buttondown.tagged).toEqual([{ email: BUYER, metadata: { purchase: "complete" } }]);
+		expect(await buyerMetadata(newsletter)).toEqual({ purchase: "complete" });
 	});
 
 	test("tags a subscriber who bought Essentials as an individual purchase", async () => {
 		let billing = memoryBilling();
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 
-		let response = await deliver(billing, buttondown, await paidOrder(billing, Product.Essentials));
+		let response = await deliver(billing, newsletter, await paidOrder(billing, Product.Essentials));
 
 		expect(response.status).toBe(200);
-		expect(buttondown.tagged).toEqual([{ email: BUYER, metadata: { purchase: "individual" } }]);
+		expect(await buyerMetadata(newsletter)).toEqual({ purchase: "individual" });
 	});
 
 	test("accepts the delivery without tagging a buyer who is not a subscriber", async () => {
 		let billing = memoryBilling();
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await deliver(billing, buttondown, await paidOrder(billing, Product.Complete));
+		let response = await deliver(billing, newsletter, await paidOrder(billing, Product.Complete));
 
 		expect(response.status).toBe(200);
-		expect(buttondown.tagged).toEqual([]);
+		expect(await buyerMetadata(newsletter)).toBeNull();
 	});
 
 	test("accepts the delivery without tagging for a package this funnel does not sell", async () => {
 		let billing = memoryBilling();
 		billing.seed({ workshop: { amount: 19_900 } });
 
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 		let order = await purchase(billing, "workshop", BUYER);
 		let delivery = await unwrap(billing.webhooks.emit({ type: "order.paid", order }));
 
-		let response = await deliver(billing, buttondown, delivery);
+		let response = await deliver(billing, newsletter, delivery);
 
 		expect(response.status).toBe(200);
-		expect(buttondown.tagged).toEqual([]);
+		expect(await buyerMetadata(newsletter)).toEqual({});
 	});
 
 	test("accepts an event type it does not handle without touching the newsletter", async () => {
 		let billing = memoryBilling();
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 
 		let order = await purchase(billing, Product.Complete, BUYER);
 		let delivery = await unwrap(billing.webhooks.emit({ type: "order.refunded", order }));
 
-		let response = await deliver(billing, buttondown, delivery);
+		let response = await deliver(billing, newsletter, delivery);
 
 		expect(response.status).toBe(200);
-		expect(buttondown.tagged).toEqual([]);
+		expect(await buyerMetadata(newsletter)).toEqual({});
 	});
 
 	test("rejects a delivery whose signature does not verify", async () => {
 		let billing = memoryBilling();
 		let forger = memoryBilling({ webhookSecret: FOREIGN_SECRET });
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 
-		let response = await deliver(billing, buttondown, await paidOrder(forger, Product.Complete));
+		let response = await deliver(billing, newsletter, await paidOrder(forger, Product.Complete));
 
 		expect(response.status).toBe(401);
-		expect(buttondown.tagged).toEqual([]);
+		expect(await buyerMetadata(newsletter)).toEqual({});
 	});
 
 	test("never echoes the webhook secret back to the caller", async () => {
@@ -146,7 +150,7 @@ describe("the paid-order webhook", () => {
 
 		let response = await deliver(
 			billing,
-			new FakeButtondown(),
+			new MemoryNewsletter(),
 			await paidOrder(forger, Product.Complete),
 		);
 
@@ -155,7 +159,7 @@ describe("the paid-order webhook", () => {
 
 	test("tags a buyer once when the platform delivers the same order twice", async () => {
 		let billing = memoryBilling();
-		let buttondown = new FakeButtondown({ subscribed: [BUYER] });
+		let newsletter = subscribedBuyer();
 		let store = new MemoryWebhookStore();
 		let order = await purchase(billing, Product.Complete, BUYER);
 
@@ -163,11 +167,51 @@ describe("the paid-order webhook", () => {
 		let first = await unwrap(billing.webhooks.emit({ id: "whk_1", type: "order.paid", order }));
 		let second = await unwrap(billing.webhooks.emit({ id: "whk_1", type: "order.paid", order }));
 
-		expect((await deliver(billing, buttondown, first, store)).status).toBe(200);
-		expect((await deliver(billing, buttondown, second, store)).status).toBe(200);
+		expect((await deliver(billing, newsletter, first, store)).status).toBe(200);
 
-		expect(buttondown.tagged).toHaveLength(1);
+		/** A second tag would overwrite this, so it surviving proves the redelivery was skipped. */
+		await unwrap(
+			newsletter.subscribers.update(
+				{ email: unwrap(parseEmailAddress(BUYER)) },
+				{ metadata: { purchase: "edited" } },
+			),
+		);
+
+		expect((await deliver(billing, newsletter, second, store)).status).toBe(200);
+
+		expect(await buyerMetadata(newsletter)).toEqual({ purchase: "edited" });
 		expect(store.deliveries.at(0)?.processed).toBe(true);
+	});
+});
+
+describe("a newsletter failure on a paid order", () => {
+	test("asks the platform to redeliver rather than dropping the tag", async () => {
+		let billing = memoryBilling();
+		let newsletter = subscribedBuyer();
+		newsletter.fail("subscribers.update", "unknown");
+
+		let response = await deliver(billing, newsletter, await paidOrder(billing, Product.Complete));
+
+		expect(response.status).toBe(503);
+		expect(await buyerMetadata(newsletter)).toEqual({});
+	});
+
+	test("tags the buyer once the redelivery finds the newsletter answering", async () => {
+		let billing = memoryBilling();
+		let newsletter = subscribedBuyer();
+		let store = new MemoryWebhookStore();
+		let order = await purchase(billing, Product.Complete, BUYER);
+		let delivery = await unwrap(billing.webhooks.emit({ id: "whk_2", type: "order.paid", order }));
+		let redelivery = await unwrap(
+			billing.webhooks.emit({ id: "whk_2", type: "order.paid", order }),
+		);
+
+		newsletter.fail("subscribers.update", "rate_limited");
+		expect((await deliver(billing, newsletter, delivery, store)).status).toBe(503);
+
+		newsletter.heal();
+		expect((await deliver(billing, newsletter, redelivery, store)).status).toBe(200);
+		expect(await buyerMetadata(newsletter)).toEqual({ purchase: "complete" });
 	});
 });
 

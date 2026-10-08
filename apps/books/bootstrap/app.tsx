@@ -10,6 +10,7 @@
  */
 
 import type { Billing } from "@sdxc/billing";
+import type { Newsletter } from "@sdxc/newsletter";
 import type { RemixNode } from "remix/component";
 import type { Middleware, RequestContext } from "remix/router";
 
@@ -17,6 +18,7 @@ import billing from "@sdxc/billing/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
+import newsletter from "@sdxc/newsletter/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
@@ -36,6 +38,7 @@ import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { polar } from "~/app/lib/billing";
+import { buttondown } from "~/app/lib/newsletter";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -47,9 +50,11 @@ import { logger } from "./logger";
  *
  * @param provider - The platform every route bills against, published as
  * `context.billing`; a test supplies an in-memory one.
+ * @param list - The newsletter every form subscribes to, published as
+ * `context.newsletter`; a test supplies an in-memory one.
  * @returns The configured router the worker forwards requests to.
  */
-export default function application(provider: Billing = polar) {
+export default function application(provider: Billing = polar, list: Newsletter = buttondown) {
 	let globalMiddleware: Middleware[] = [
 		headRequests(),
 		asyncContext(),
@@ -66,6 +71,7 @@ export default function application(provider: Billing = polar) {
 		cop({ insecureBypassPatterns: ["/webhooks/polar"] }),
 
 		billing({ provider }),
+		newsletter({ provider: list }),
 		renderWith(createHtmlRenderer) as Middleware,
 	];
 

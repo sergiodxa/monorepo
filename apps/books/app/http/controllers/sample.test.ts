@@ -7,27 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test, vi } from "vitest";
+import { MemoryNewsletter } from "@sdxc/newsletter/memory";
+import { describe, expect, test } from "vitest";
 
-import { FakeButtondown, installButtondown } from "~/app/lib/test/buttondown";
+import { subscribed } from "~/app/lib/test/newsletter";
 import { fetchApp } from "~/app/lib/test/router";
-
-/**
- * Hands the controllers under test the client each one installs. The module is imported
- * inside the factory because `vi.mock` is hoisted above this file's own imports.
- */
-vi.mock("~/app/lib/buttondown", async () => {
-	let { installedButtondown } = await import("~/app/lib/test/buttondown");
-	return { buttondown: installedButtondown };
-});
 
 /** The chapter's first heading, which only the unlocked page renders. */
 const CHAPTER_HEADING = "OAuth2 in Simple Terms";
 
-function submit(buttondown: FakeButtondown, email: string, fields: Record<string, string> = {}) {
-	installButtondown(buttondown);
-
-	return fetchApp("/sample", { method: "POST", body: new URLSearchParams({ email, ...fields }) });
+function submit(newsletter: MemoryNewsletter, email: string, fields: Record<string, string> = {}) {
+	return fetchApp("/sample", {
+		method: "POST",
+		body: new URLSearchParams({ email, ...fields }),
+		newsletter,
+	});
 }
 
 describe("GET /sample", () => {
@@ -45,39 +39,30 @@ describe("GET /sample", () => {
 
 describe("POST /sample", () => {
 	test("subscribes a new address and renders the chapter", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(body).toContain(CHAPTER_HEADING);
-		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["reader@example.com"]);
+		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
 	});
 
 	test("renders the chapter for an address already on the list", async () => {
-		let buttondown = new FakeButtondown({ subscribed: ["reader@example.com"] });
+		let newsletter = new MemoryNewsletter();
+		newsletter.seed([{ email: "reader@example.com", status: "unsubscribed" }]);
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(200);
 		expect(body).toContain(CHAPTER_HEADING);
-		expect(buttondown.subscribed).toEqual([]);
-	});
-
-	test("renders the chapter when the provider rejects the address as already existing", async () => {
-		let buttondown = new FakeButtondown({ failWith: "email_already_exists" });
-
-		let response = await submit(buttondown, "reader@example.com");
-		let body = await response.text();
-
-		expect(response.status).toBe(200);
-		expect(body).toContain(CHAPTER_HEADING);
+		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
 	});
 
 	test("renders the chapter's code fences, in every language the chapter uses", async () => {
-		let body = await submit(new FakeButtondown(), "reader@example.com").then((response) =>
+		let body = await submit(new MemoryNewsletter(), "reader@example.com").then((response) =>
 			response.text(),
 		);
 
@@ -88,7 +73,7 @@ describe("POST /sample", () => {
 	});
 
 	test("keeps the chapter out of the index, since the URL's other state is the form", async () => {
-		let body = await submit(new FakeButtondown(), "reader@example.com").then((response) =>
+		let body = await submit(new MemoryNewsletter(), "reader@example.com").then((response) =>
 			response.text(),
 		);
 
@@ -96,22 +81,22 @@ describe("POST /sample", () => {
 	});
 
 	test("re-renders the form with the error inline for a malformed address", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "not-an-email");
+		let response = await submit(newsletter, "not-an-email");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Invalid email address");
 		expect(body).toContain("Get a Free Sample");
 		expect(body).not.toContain(CHAPTER_HEADING);
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("shows the provider's blocked rejection as the copy written for a reader", async () => {
-		let buttondown = new FakeButtondown({ failWith: "subscriber_blocked" });
+		let newsletter = new MemoryNewsletter({ faults: { "subscribers.subscribe": "suppressed" } });
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
@@ -120,53 +105,53 @@ describe("POST /sample", () => {
 	});
 
 	test("shows a generic message rather than the provider's own error text", async () => {
-		let buttondown = new FakeButtondown({ throws: new Error("Buttondown: 503 upstream detail") });
+		let newsletter = new MemoryNewsletter({ faults: { "subscribers.subscribe": "unknown" } });
 
-		let response = await submit(buttondown, "reader@example.com");
+		let response = await submit(newsletter, "reader@example.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Something went wrong");
-		expect(body).not.toContain("upstream detail");
+		expect(body).not.toContain("armed fault");
 	});
 
 	test("refuses an address with a zero-width character the parser rejects", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader\u200b@example.com");
+		let response = await submit(newsletter, "reader\u200b@example.com");
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Invalid email address");
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("refuses a disposable address without unlocking the chapter", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(buttondown, "reader@mailinator.com");
+		let response = await submit(newsletter, "reader@mailinator.com");
 		let body = await response.text();
 
 		expect(response.status).toBe(400);
 		expect(body).toContain("Temporary inboxes");
 		expect(body).not.toContain(CHAPTER_HEADING);
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 	});
 
 	test("asks about a mistyped provider, then unlocks the chapter when the address is kept", async () => {
-		let buttondown = new FakeButtondown();
+		let newsletter = new MemoryNewsletter();
 
-		let prompt = await submit(buttondown, "reader@gnail.com");
+		let prompt = await submit(newsletter, "reader@gnail.com");
 		let body = await prompt.text();
 
 		expect(prompt.status).toBe(400);
 		expect(body).toContain("Did you mean reader@gmail.com?");
 		expect(body).toContain('name="confirmed" value="reader@gnail.com"');
-		expect(buttondown.subscribed).toEqual([]);
+		expect(await subscribed(newsletter)).toEqual([]);
 
-		let kept = await submit(buttondown, "reader@gnail.com", { confirmed: "reader@gnail.com" });
+		let kept = await submit(newsletter, "reader@gnail.com", { confirmed: "reader@gnail.com" });
 
 		expect(kept.status).toBe(200);
 		expect(await kept.text()).toContain(CHAPTER_HEADING);
-		expect(buttondown.subscribed.map((entry) => entry.email)).toEqual(["reader@gnail.com"]);
+		expect(await subscribed(newsletter)).toEqual(["reader@gnail.com"]);
 	});
 });
