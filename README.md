@@ -147,7 +147,7 @@ Run from the repository root:
 | [messaging](packages/messaging)                                 | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more      | ✅  |
 | [microformats](packages/microformats)                           | Parse, read and write microformats2                                                                               | ✅  |
 | [micropub](packages/micropub)                                   | Read Micropub requests into typed operations and build the spec's responses                                       | ✅  |
-| [newsletter](packages/newsletter)                               | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                      |     |
+| [newsletter](packages/newsletter)                               | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                      | ✅  |
 | [openapi](packages/openapi)                                     | Build, serve and check OpenAPI 3.1 documents from typed operations                                                | ✅  |
 | [opml](packages/opml)                                           | Read and write OPML subscription lists                                                                            | ✅  |
 | [outbound](packages/outbound)                                   | Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies        | ✅  |

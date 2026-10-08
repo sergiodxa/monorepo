@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/newsletter",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers",
 	"license": "MIT",
 	"type": "module",
