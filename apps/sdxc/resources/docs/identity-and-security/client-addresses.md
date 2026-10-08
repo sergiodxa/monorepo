@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 12
-lastUpdated: 2026-10-05
+lastUpdated: 2026-10-08
 ---
 
 An IP address shows up in more places than it looks: the key of a rate limit, a column on a
@@ -79,24 +79,22 @@ The sections below take each of those in turn.
 
 An IPv6 client is normally handed a whole `/64`, and its operating system rotates through
 addresses inside it on its own. A limit keyed on the full address gives that client a fresh
-budget with every rotation. `ip.network({ v4: 32, v6: 64 })` answers the network the address
-sits in: the address itself for IPv4, its `/64` for IPv6. Its canonical text is the key.
+budget with every rotation. `addressKey` from `@sdxc/rate-limit` keys on the network the
+address sits in instead: the address itself for IPv4, its `/64` for IPv6, written as canonical
+text. A `null` address answers `"unknown"`, the one bucket every unidentified caller shares.
 
 ```typescript {% title="app/http/middleware/rate-limit.ts" %}
-import type { IP } from "@sdxc/ip";
 import type { Middleware } from "remix/router";
 
-import { KVAdapter } from "@sdxc/rate-limit";
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
-
-export const CLIENT_NETWORK: IP.Prefixes = { v4: 32, v6: 64 };
 
 export function clientBudget(prefix: string, limit: number): Middleware {
 	return rateLimit({
 		adapter: new KVAdapter(env.RATE_LIMITS, { limit, window: "1 minute" }),
 		prefix,
-		key: (ctx) => ctx.ip?.network(CLIENT_NETWORK).toString() ?? "unknown",
+		key: (ctx) => addressKey(ctx.ip),
 	});
 }
 ```
@@ -104,8 +102,8 @@ export function clientBudget(prefix: string, limit: number): Middleware {
 Every address in one `/64` prints the same network, so `2001:DB8:1:2::7` and
 `2001:db8:1:2:0:0:0:9` spend the same budget. A `/64` is the narrowest prefix that is reliably
 one subscriber. A provider that hands out a `/56` or a `/48` lets a client spread across
-several keys; a shorter IPv6 prefix in `CLIENT_NETWORK`, such as `56`, caps it at the cost of
-grouping more neighbours behind one budget.
+several keys; to cap that, key on `ctx.ip?.network({ v4: 32, v6: 56 }).toString() ?? "unknown"`
+yourself, at the cost of grouping more neighbours behind one budget.
 [Protect forms from bots and abuse](/docs/identity-and-security/protect-forms) puts this key in
 front of a sign-up form, with a CAPTCHA after it.
 
@@ -120,8 +118,9 @@ import type { Database } from "remix/data-table";
 import { IP } from "@sdxc/ip";
 import { isSuccess } from "@sdxc/result";
 
-import { CLIENT_NETWORK } from "~/app/http/middleware/rate-limit";
 import { SignIns } from "~/app/repositories/sign-ins";
+
+const CLIENT_NETWORK: IP.Prefixes = { v4: 32, v6: 64 };
 
 export async function recordSignIn(db: Database, userId: string, ip: IP | null) {
 	await SignIns.create(db, { userId, ip: ip?.toString() ?? null });
