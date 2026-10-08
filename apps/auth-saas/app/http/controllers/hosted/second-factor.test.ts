@@ -161,4 +161,37 @@ describe("second-factor", () => {
 
 		expect(response.status).toBe(400);
 	});
+
+	test("after an administrator reset, the enrolment page draws the URI as a QR code", async () => {
+		let client = await createTestClient(harness.tenantDO, ["openid"]);
+		let subjectId = await createTestSubjectWithPassword(harness.tenantDO, {
+			email: "ada@example.com",
+			password: "correct horse battery staple",
+		});
+		await enrolFactor(harness, subjectId);
+		await harness.tenantDO.resetSecondFactor({
+			subjectId,
+			actor: { type: "platform", id: "member_1" },
+			reason: "lost device",
+		});
+
+		let { secondFactorPath, sessionCookie } = await signInToSecondFactor(
+			harness,
+			client.id,
+			"ada@example.com",
+			"correct horse battery staple",
+		);
+		expect(new URL(secondFactorPath, REDIRECT_URI).searchParams.get("mode")).toBe("enrol");
+
+		let page = await harness.router.fetch(
+			harness.request(secondFactorPath, { cookie: sessionCookie }),
+		);
+		let html = await page.text();
+
+		expect(page.status).toBe(200);
+		expect(html).toMatch(
+			/<svg [^>]*role="img" aria-label="QR code to scan with your authenticator app"/,
+		);
+		expect(html).toContain('href="otpauth://totp/');
+	});
 });
