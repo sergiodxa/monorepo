@@ -400,6 +400,17 @@ describe("the failure vocabulary", () => {
 		expect(error.remedy).toContain("`exists`");
 	});
 
+	test("a miss names the field lookup reaching a role-less control of that name", () => {
+		let error = noMatch(
+			"browser.fill",
+			{ kind: "role", role: "textbox", name: "Password" },
+			{ fields: ["password"] },
+		);
+		expect(error.message).toContain(
+			'That name labels a control with no role, reached as field "password"',
+		);
+	});
+
 	test("a description says what a person would say", () => {
 		expect(describeQuery({ kind: "role", role: "link", name: "Home", at: 2 })).toBe(
 			'the 2nd link named "Home"',

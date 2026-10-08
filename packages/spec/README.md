@@ -643,6 +643,11 @@ same name under another role — which is usually the whole diagnosis:
   by: link
 ```
 
+A control can carry a label and still expose no role at all: a password input
+is the common one, so `textbox "Password"` never reaches it. The miss then names
+the lookup that does, by the control's `name` attribute — `That name labels a
+control with no role, reached as field "password"`.
+
 Under `--artifacts=<dir>` the failure also writes out the document it read and
 prints the path.
 
@@ -666,7 +671,8 @@ test "the sign-in form authenticates" {
 	when {
 		browser.open "/login"
 		browser.fill textbox "Email" with "user@example.com"
-		browser.fill textbox "Password" with "correct horse"
+		# A password input exposes no role, so it is reached by its `name`.
+		browser.fill field "password" with "correct horse"
 		browser.click button "Sign in"
 	}
 	then {
@@ -684,7 +690,8 @@ session.
 `fill` replaces a control's value and `type` appends keystrokes; both dispatch
 the `input` and `change` events the platform would, so a controlled component
 never reads a stale value. `check` and `uncheck` are the two halves of a box or a
-switch.
+switch. `click` lands where a person's would, on the element's centre, and a
+control straddling the viewport's edge is scrolled to the middle of it first.
 
 `browser.select combobox "Plan" with "Annual"` chooses in a dropdown, taking the
 same `with` every write takes and naming the option the way the list shows it; an

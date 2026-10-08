@@ -2215,3 +2215,69 @@ describe("clicks at the viewport's edge against a real browser", () => {
 		},
 	);
 });
+
+/** A sign-in form whose password input carries a label and a `name`, but no role. */
+const PASSWORD_PAGE = `<!doctype html>
+<html><head><title>Sign in</title></head><body>
+	<form>
+		<label for="email">Email</label>
+		<input id="email" type="email" name="email" />
+		<label for="password">Password</label>
+		<input id="password" type="password" name="password" />
+	</form>
+</body></html>`;
+
+/**
+ * A password input exposes no role, so a role lookup never reaches it however it is
+ * labelled. Against the live page, the miss names the lookup that does.
+ */
+describe("a role-less control against a real browser", () => {
+	let plugin: Plugin;
+	let server: PageServer | undefined;
+	let baseUrl = "";
+	let context: ToolContext;
+
+	beforeAll(async () => {
+		plugin = createBrowserPlugin();
+		server = await servePage(() => ({ html: PASSWORD_PAGE }));
+		baseUrl = `${server.origin}/`;
+		context = buildContext(allowAll(), "/tmp/spec-browser-password-session");
+	});
+
+	afterAll(async () => {
+		if (plugin.dispose !== undefined) await plugin.dispose();
+		server?.stop();
+	});
+
+	test.skipIf(!AVAILABLE)("a textbox miss names the field lookup that fills it", async () => {
+		expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+		let missed = unwrapError(
+			await plugin.call(
+				"fill",
+				[word("textbox"), value("Password"), word("with"), value("hunter22")],
+				context,
+			),
+		);
+		expect(missed.message).toContain(
+			'That name labels a control with no role, reached as field "password"',
+		);
+
+		expectSuccess(
+			await plugin.call(
+				"fill",
+				[word("field"), value("password"), word("with"), value("hunter22")],
+				context,
+			),
+		);
+		expect(
+			expectSuccess(
+				await plugin.call(
+					"element",
+					[word("field"), value("password"), word("value"), value("hunter22")],
+					context,
+				),
+			),
+		).toBe(true);
+	});
+});

@@ -220,12 +220,14 @@ export interface Candidate {
 
 /**
  * What the document held instead: the accessible names under the role asked
- * for, and the roles carrying the name asked for. Between them they are usually
- * the whole diagnosis.
+ * for, the roles carrying the name asked for, and the `name` attributes of
+ * role-less controls carrying it. Between them they are usually the whole diagnosis.
  */
 export interface NearMatches {
 	names?: readonly string[];
 	roles?: readonly string[];
+	/** A password input is the common case: labelled, yet reached only through `field`. */
+	fields?: readonly string[];
 }
 
 /**
@@ -408,7 +410,7 @@ export function ambiguousMatch(
 /**
  * The failure a query with no answer reports: what was looked for, and what the
  * document held instead — the same role under another name, the same name under
- * another role.
+ * another role or under no role at all.
  *
  * @param tool - Qualified tool name, e.g. `"html.element"`.
  * @param query - The query that matched nothing.
@@ -426,6 +428,10 @@ export function noMatch(
 	}
 	if (near.roles !== undefined && near.roles.length > 0) {
 		message += `. That name is carried by: ${near.roles.join(", ")}`;
+	}
+	if (near.fields !== undefined && near.fields.length > 0) {
+		let lookups = near.fields.map((field) => `${FIELD_WORD} ${quote(field)}`);
+		message += `. That name labels a control with no role, reached as ${lookups.join(", ")}`;
 	}
 	let error = new ExpectationError(message, describeQuery(query), null);
 	error.remedy = "Add `exists` where the absence is what the test is about.";

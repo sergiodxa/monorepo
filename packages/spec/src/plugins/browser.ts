@@ -49,6 +49,7 @@ import {
 	parseQuery,
 	QUERY_PARAMS,
 } from "./addressing.js";
+import { nearMatches } from "./near-matches.js";
 import {
 	HTTP_VERBS,
 	buildRequestInit,
@@ -1824,8 +1825,8 @@ function counted(
 
 /**
  * Put a lookup's failure into the shared vocabulary: several matches ask which
- * one, and no match names what the page held under the same lookup and which
- * roles carry the name that was asked for.
+ * one, and no match names what the page held under the same lookup and what
+ * carries the name that was asked for, a role or a control's `name`.
  */
 function missed(tool: string, doc: HTML, query: ElementQuery, error: HTMLQueryError): SpecError {
 	if (error instanceof HTMLAmbiguousMatchError) {
@@ -1840,23 +1841,7 @@ function missed(tool: string, doc: HTML, query: ElementQuery, error: HTMLQueryEr
 		reported.remedy = "Add `exists` where the absence is what the test is about.";
 		return reported;
 	}
-	return noMatch(tool, query, { names: error.available, roles: rolesCarrying(doc, query) });
-}
-
-/**
- * The roles carrying the name that was asked for — the same name under the
- * wrong role, which is half of the near-match diagnosis. Generic elements are
- * left out: a wrapper inherits the name of what it wraps.
- */
-function rolesCarrying(doc: HTML, query: ElementQuery): string[] {
-	if (query.kind !== "role" || query.name === undefined) return [];
-	let roles = new Set<string>();
-	for (let found of doc.queryAll({ name: query.name })) {
-		if (found.role === undefined || found.role === "generic") continue;
-		if (found.role === query.role) continue;
-		roles.add(found.role);
-	}
-	return [...roles];
+	return noMatch(tool, query, nearMatches(doc, query, error.available));
 }
 
 /**

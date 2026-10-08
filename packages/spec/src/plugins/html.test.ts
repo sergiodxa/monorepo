@@ -45,6 +45,8 @@ const PAGE = `
 			<input type="radio" name="cadence" value="monthly">
 			<input type="radio" name="cadence" value="annual">
 			<textarea name="note">Thanks</textarea>
+			<label for="pin">PIN</label>
+			<input id="pin" type="password" name="pin">
 			<input type="checkbox" id="remember" name="remember" checked>
 			<label for="remember">Remember me</label>
 			<input type="checkbox" id="digest" name="digest">
@@ -228,6 +230,18 @@ describe("addressing an element", () => {
 		expect(error.message).toContain('a button named "Portfolios" nowhere');
 		expect(error.message).toContain('"Save"');
 		expect(error.message).toContain("That name is carried by: heading");
+	});
+
+	/**
+	 * A password input exposes no role, so no role lookup reaches it; the miss names the
+	 * `field` lookup that does, by the control's `name` attribute.
+	 */
+	test("a miss on a role-less control names the field lookup that reaches it", async () => {
+		let error = await err("element", word("textbox"), value("PIN"));
+		expect(error.message).toContain(
+			'That name labels a control with no role, reached as field "pin"',
+		);
+		expect(await ok("element", word("field"), value("pin"), word("exists"))).toBe(true);
 	});
 
 	test("`count` accepts any number of matches", async () => {
