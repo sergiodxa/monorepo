@@ -211,20 +211,21 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 
 ### Jobs, Messaging and Product Infrastructure
 
-| Package                                     | Description                                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| [@sdxc/attribution](packages/attribution)   | Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch               |
-| [@sdxc/backoff](packages/backoff)           | Retry delay schedules with growth, a ceiling, free attempts and seedable jitter                              |
-| [@sdxc/billing](packages/billing)           | Vendor-neutral billing with pluggable providers and a webhook endpoint                                       |
-| [@sdxc/cron](packages/cron)                 | Cron schedules with zone-aware occurrences and descriptors                                                   |
-| [@sdxc/expression](packages/expression)     | Boolean conditions over a context, stored as typed JSON or written as text, with operators you add           |
-| [@sdxc/flags](packages/flags)               | Feature flag evaluation implementing the OpenFeature specification                                           |
-| [@sdxc/flags-engine](packages/flags-engine) | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                        |
-| [@sdxc/jobs](packages/jobs)                 | Declared background jobs dispatched over a pluggable queue backend                                           |
-| [@sdxc/logger](packages/logger)             | One wide event per Worker invocation, attached at the router and the job dispatcher                          |
-| [@sdxc/mail](packages/mail)                 | Transactional email with pluggable transports                                                                |
-| [@sdxc/messaging](packages/messaging)       | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more |
-| [@sdxc/newsletter](packages/newsletter)     | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                 |
+| Package                                     | Description                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| [@sdxc/attribution](packages/attribution)   | Campaign parameters, click identifiers and referrers, kept as a visitor's first and last touch                |
+| [@sdxc/backoff](packages/backoff)           | Retry delay schedules with growth, a ceiling, free attempts and seedable jitter                               |
+| [@sdxc/billing](packages/billing)           | Vendor-neutral billing with pluggable providers and a webhook endpoint                                        |
+| [@sdxc/cron](packages/cron)                 | Cron schedules with zone-aware occurrences and descriptors                                                    |
+| [@sdxc/expression](packages/expression)     | Boolean conditions over a context, stored as typed JSON or written as text, with operators you add            |
+| [@sdxc/flags](packages/flags)               | Feature flag evaluation implementing the OpenFeature specification                                            |
+| [@sdxc/flags-engine](packages/flags-engine) | Flag evaluation engine: typed targeting rules, percentage splits and pluggable stores                         |
+| [@sdxc/jobs](packages/jobs)                 | Declared background jobs dispatched over a pluggable queue backend                                            |
+| [@sdxc/logger](packages/logger)             | One wide event per Worker invocation, attached at the router and the job dispatcher                           |
+| [@sdxc/mail](packages/mail)                 | Transactional email with pluggable transports                                                                 |
+| [@sdxc/messaging](packages/messaging)       | Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover and more  |
+| [@sdxc/newsletter](packages/newsletter)     | Vendor-neutral newsletter subscriber lists with Buttondown and Kit providers                                  |
+| [@sdxc/web-push](packages/web-push)         | Web Push from Workers: RFC 8291 encryption, VAPID signing, subscription checks and a browser subscribe helper |
 
 ### Content, Feeds and the Social Web
 
@@ -264,6 +265,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                       |
 | [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                   |
 | [@sdxc/zip](packages/zip)                     | Streaming ZIP archive writer with CRC-32, storing every entry uncompressed                          |
+| [@sdxc/zone-file](packages/zone-file)         | Read and write RFC 1035 DNS zone files, with the record data codec for every typed record           |
 
 ### Cloudflare
 
