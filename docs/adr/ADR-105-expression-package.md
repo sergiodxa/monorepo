@@ -133,6 +133,10 @@ flagConditions.schema; // Standard Schema for the JSON form, as CONDITION_SCHEMA
 The JSON form stays canonical for storage. The text form is for people: admin forms, config
 files, logs and error messages.
 
+> [ADR-118](./ADR-118-expression-context-paths.md) roots every path of the text form at `ctx.`:
+> the example below reads `ctx.plan.tier == "pro"` and `semver(ctx.appVersion, ">=", "2.0.0")`
+> today.
+
 ```typescript
 let parsed = flagConditions.parse(
 	`plan.tier == "pro" and (country in ["AR", "UY"] or segment("internal"))

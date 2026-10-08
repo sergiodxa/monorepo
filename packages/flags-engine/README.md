@@ -205,6 +205,10 @@ fails.
 Every operator compares within one type. `eq` on a string field against a number is false rather
 than coerced, and `lt` against a value that is not a number is false.
 
+The comparisons from `eq` to `gte` also accept `path` in place of `value` or `values`, comparing
+the field against another field of the same context: `{ op: "eq", field: "country", path:
+"billing.country" }`.
+
 `matches` compiles its pattern with the `v` flag, and a pattern that compiles elsewhere fails
 its own flag at parse time.
 
@@ -349,12 +353,13 @@ it, and `FlagParseFailure` is a `{ key, message }` pair.
 
 ### `flagConditions`
 
-The targeting dialect itself: every built-in condition, the `semver` operator and references
-spelled `segment`. `flagConditions.compile(condition, { references: segments })` validates and
+The targeting dialect itself: the built-in conditions in the operator table, the `semver`
+operator and references spelled `segment`. `flagConditions.compile(condition, { references: segments })` validates and
 compiles one condition the way `parseFlagSet` does, and `flagConditions.evaluate(compiled,
 context)` answers whether it holds, which is what an editor uses to check a rule before saving it.
 `flagConditions.parse(text)` and `flagConditions.stringify(condition)` convert between the stored
-JSON and a text form such as `plan.tier == "pro" and semver(appVersion, ">=", "2.0.0")`.
+JSON and a text form such as `ctx.plan.tier == "pro" and semver(ctx.appVersion, ">=", "2.0.0")`,
+where every context path starts with `ctx.`.
 
 ### Schemas
 
@@ -626,7 +631,7 @@ import { flagConditions } from "@sdxc/flags-engine";
 import { isFailure } from "@sdxc/result";
 
 flagConditions.stringify(rule.when);
-// `segment("internal") or semver(appVersion, ">=", "2.0.0")`
+// `segment("internal") or semver(ctx.appVersion, ">=", "2.0.0")`
 
 function readCondition(text: string, segments: Record<string, unknown>) {
 	let parsed = flagConditions.parse(text);
