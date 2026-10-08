@@ -10,6 +10,11 @@ npm add @sdxc/jwt
 
 Signing and verification run on [`jose`](https://www.npmjs.com/package/jose), and the duration strings the time claims accept come from [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration). Both install with the package.
 
+Two entry points:
+
+- `@sdxc/jwt` — `JWT`, the `JWK` namespace, and the `KeyStorage` contract.
+- `@sdxc/jwt/r2` — `createR2KeyStorage`, the `KeyStorage` over a Cloudflare R2 bucket.
+
 ## Usage
 
 ### Describing A Kind Of Token
@@ -234,6 +239,22 @@ interface KeyStorageListResult {
 ```
 
 To implement it: `get` answers `null` for a key nothing is stored under; `list` returns the entries whose key starts with `prefix`, at most `limit` of them, resuming from `cursor`, and carries a `cursor` of its own only while further pages remain; `set` replaces whatever is stored under the key. Each method may be synchronous or return a promise, so a plain object satisfies the contract in a test while an object store satisfies it in production. `signingKeys` writes each pair as a JSON `SerializedKeyPair` under the key `signing:key:<id>` and lists with the prefix `signing:key` to find them again, so keep every key ever written and every token it signed stays verifiable.
+
+### `createR2KeyStorage(bucket: R2KeyBucket): KeyStorage`
+
+From `@sdxc/jwt/r2`. Stores key files in a Cloudflare R2 bucket, the place a key outlives every isolate and every Worker issuing tokens for one issuer reads the same set.
+
+```typescript
+import { JWK } from "@sdxc/jwt";
+import { createR2KeyStorage } from "@sdxc/jwt/r2";
+import { env } from "cloudflare:workers";
+
+let keys = await JWK.signingKeys(createR2KeyStorage(env.KEYS));
+```
+
+Each object is written with the file's type as its `Content-Type` and its name and type as custom metadata (`name`, `type`), so `get` hands back the `File` that was stored, its `lastModified` set to the upload time. An object written without that metadata reads back named after its key. `list` carries R2's cursor only while a page is truncated.
+
+`R2KeyBucket` is the part of a bucket binding the storage calls — `get`, `list` and `put` — declared structurally, so an `R2Bucket` satisfies it and importing the module needs no platform types. `R2KeyObject` is what its `get` answers.
 
 ## Rotation, And The Order To Roll It Out In
 

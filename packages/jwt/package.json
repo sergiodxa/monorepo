@@ -6,7 +6,8 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./algorithm": "./src/algorithm.ts"
+		"./algorithm": "./src/algorithm.ts",
+		"./r2": "./src/r2-key-storage.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
