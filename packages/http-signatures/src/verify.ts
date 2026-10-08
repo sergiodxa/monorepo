@@ -215,8 +215,8 @@ function readRfc9421(
 
 /**
  * Reads a draft-cavage-12 signature and builds its signing string. Without `headers`, it
- * covers `(created)` when a `created` parameter is present and `date` otherwise, which is
- * what Mastodon assumes.
+ * covers `(created)` with a `created` parameter and `date` otherwise, as Mastodon assumes.
+ * `created` and `expires` count only when covered, since a relay can rewrite them.
  *
  * @param message - The request.
  * @param text - The `Signature` value.
@@ -234,11 +234,9 @@ function readCavage(message: Message, text: string): Result<ReadSignature, HttpS
 	}
 
 	let covered = signature.headers ?? [signature.created === null ? "date" : "(created)"];
-	let data = signingString(message, covered, {
-		algorithm: declared,
-		created: signature.created,
-		expires: signature.expires,
-	});
+	let created = covered.includes("(created)") ? signature.created : null;
+	let expires = covered.includes("(expires)") ? signature.expires : null;
+	let data = signingString(message, covered, { algorithm: declared, created, expires });
 	if (isFailure(data)) return data;
 
 	return success({
@@ -247,8 +245,8 @@ function readCavage(message: Message, text: string): Result<ReadSignature, HttpS
 		keyId: signature.keyId,
 		declared: signature.algorithm,
 		covered,
-		created: signature.created,
-		expires: signature.expires,
+		created,
+		expires,
 		signature: signature.signature,
 		data: toBytes(data.data),
 		algorithmFor(key) {

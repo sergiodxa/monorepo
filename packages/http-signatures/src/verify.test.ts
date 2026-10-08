@@ -439,6 +439,32 @@ describe("failures", () => {
 		);
 	});
 
+	test("stale-signature: an uncovered cavage created cannot refresh an old Date", async () => {
+		let key = await importPublic(CAVAGE_PUBLIC_PEM, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" });
+		let now = new Date("2026-10-07T12:00:00Z");
+		let replayed = CAVAGE_C3.replace(
+			'algorithm="rsa-sha256",',
+			`algorithm="rsa-sha256",created=${Math.floor(now.getTime() / 1000)},`,
+		);
+		expectCode(
+			await verify(cavageRequest({ signature: replayed }), {
+				key: lookup("Test", key),
+				maxAge: "1 hour",
+				now,
+			}),
+			"stale-signature",
+		);
+	});
+
+	test("malformed: a covered name that is no field name", async () => {
+		let options: VerifyOptions = { key: async () => success(null), maxAge: "1 hour" };
+		let cavage = CAVAGE_C3.replace("content-length", "(content-length)");
+		expectCode(await verify(cavageRequest({ signature: cavage }), options), "malformed");
+
+		let input = B23_INPUT.replace('"content-length"', '"content length"');
+		expectCode(await b23({ "signature-input": input }), "malformed");
+	});
+
 	test("key-unavailable: the lookup fails or finds nothing", async () => {
 		expectCode(await b23({}, { key: async () => success(null) }), "key-unavailable");
 		expectCode(await b23({}, { key: async () => failure(new Error("gone")) }), "key-unavailable");

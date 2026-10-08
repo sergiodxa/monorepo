@@ -31,6 +31,9 @@ const FORM_SAFE = /[A-Za-z0-9*\-._]/;
 /** UTF-8 encoder for percent-encoding query parameter names and values. */
 const ENCODER = new TextEncoder();
 
+/** An HTTP field name (RFC 9110 §5.1), the only text `Headers` looks up without throwing. */
+const FIELD_NAME = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/;
+
 /**
  * Pseudo-headers whose value comes from a signature parameter, which draft-cavage-12 §2.3
  * forbids for the `rsa`, `hmac` and `ecdsa` algorithm names.
@@ -88,7 +91,9 @@ function componentValue(
 	}
 	if (component.name.startsWith("@")) return derivedValue(message, component);
 
-	let value = message.headers.get(component.name);
+	let field = fieldValue(message.headers, component.name);
+	if (isFailure(field)) return field;
+	let value = field.data;
 	if (value === null) return failure(missing(component.name));
 	if (params.key !== undefined) return dictionaryMember(component.name, value, params.key);
 	if (params.sf) return reserialize(component.name, value);
@@ -258,13 +263,29 @@ export function signingString(
 			}
 			lines.push(`${name}: ${Math.floor(time.getTime() / 1000)}`);
 		} else {
-			let value = message.headers.get(name) ?? (name === "host" ? message.url.host : null);
+			let field = fieldValue(message.headers, name);
+			if (isFailure(field)) return field;
+			let value = field.data ?? (name === "host" ? message.url.host : null);
 			if (value === null) return failure(missing(name));
 			lines.push(`${name}: ${value}`);
 		}
 	}
 
 	return success(lines.join("\n"));
+}
+
+/**
+ * A header's value, or `malformed` for a covered name that is no field name, such as a
+ * cavage pseudo-header this package does not know.
+ *
+ * @param headers - The request headers.
+ * @param name - The covered name.
+ */
+function fieldValue(headers: Headers, name: string): Result<string | null, HttpSignatureError> {
+	if (!FIELD_NAME.test(name)) {
+		return failure(new HttpSignatureError("malformed", `${name} is not a field name`));
+	}
+	return success(headers.get(name));
 }
 
 /**
