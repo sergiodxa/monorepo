@@ -254,6 +254,7 @@ function writeInline(node: Markdown.Inline, dialect: Dialect, budget: Budget): s
 		case "hardBreak":
 			return "\n";
 		case "tag":
+		case "element":
 			return writeChildren(node.children, dialect, budget);
 		case "footnoteReference":
 		case "variable":
@@ -268,10 +269,17 @@ function writeChildren(
 	dialect: Dialect,
 	budget: Budget,
 ): string {
-	let first = children.find((child) => child.type !== "comment");
-	if (first === undefined) return "";
-	if (isInline(first)) return writeInlines(children as Markdown.Inline[], dialect, budget);
-	return writeBlocks(children as Markdown.Block[], dialect, budget);
+	if (children.length === 0) return "";
+	if (children.some(isBlock)) return writeBlocks(children as Markdown.Block[], dialect, budget);
+	return writeInlines(children as Markdown.Inline[], dialect, budget);
+}
+
+/**
+ * Whether a node only ever stands as a block. A tag, an element and a comment stand
+ * in either column, so a run of children is blocks once any one of them says so.
+ */
+function isBlock(node: Markdown.Block | Markdown.Inline): boolean {
+	return !["tag", "element", "comment"].includes(node.type) && !isInline(node);
 }
 
 /** Whether a node belongs inside a sentence. */
@@ -345,6 +353,7 @@ function writeBlock(node: Markdown.Block, dialect: Dialect, budget: Budget): str
 		case "comment":
 			return "";
 		case "tag":
+		case "element":
 			return writeChildren(node.children, dialect, budget);
 	}
 }
