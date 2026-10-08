@@ -66,7 +66,7 @@ export const PUBLIC_MESSAGE: Record<InboxErrorCode, string> = {
  */
 export class InboxError extends ActivityPubError<InboxErrorCode> {
 	override name = "InboxError";
-	/** The HTTP status `rejected` answers with. */
+	/** The HTTP status `toResponse` answers with. */
 	readonly status: number;
 
 	/**
@@ -77,5 +77,21 @@ export class InboxError extends ActivityPubError<InboxErrorCode> {
 	constructor(code: InboxErrorCode, message: string, options: { cause?: unknown } = {}) {
 		super(code, message, { cause: options.cause });
 		this.status = STATUS[code];
+	}
+
+	/**
+	 * The response that refuses the request: the error's status and a fixed text per code,
+	 * so a sender sees which rule failed and never how the verifier failed. `ignored`
+	 * answers an empty `202`.
+	 *
+	 * @example if (isFailure(verified)) return verified.error.toResponse();
+	 */
+	toResponse(): Response {
+		let text = PUBLIC_MESSAGE[this.code];
+		if (text === "") return new Response(null, { status: this.status });
+		return new Response(text, {
+			status: this.status,
+			headers: { "content-type": "text/plain; charset=utf-8" },
+		});
 	}
 }

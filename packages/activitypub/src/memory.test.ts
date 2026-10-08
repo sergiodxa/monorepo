@@ -10,22 +10,20 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { ActorKeys } from "./keys.js";
-import type { ActivityPub } from "./lib/types.js";
-
 import {
 	followerStoreConformance,
 	keyProviderConformance,
 	localObjectsConformance,
-	seenActivitiesConformance,
-} from "./conformance.js";
-import { parseObject } from "./lib/parse.js";
-import {
 	MemoryFollowerStore,
 	MemoryKeyProvider,
 	MemoryLocalObjects,
 	MemorySeenActivities,
-} from "./memory.js";
+	seenActivitiesConformance,
+} from "./testing.js";
+
+import type { ActivityPub } from "./index.js";
+
+import { ActorKeys, parseObject } from "./index.js";
 
 /** Milliseconds the injectable clock starts at, fixed so a test reads the same time twice. */
 const EPOCH = 1_757_203_200_000;
@@ -47,11 +45,10 @@ async function actorKeys(actor: string): Promise<ActorKeys> {
 		false,
 		["sign", "verify"],
 	);
-	return {
+	return new ActorKeys({
 		actor,
 		rsa: { id: `${actor}#main-key`, privateKey: pair.privateKey, publicKeyPem: "" },
-		ed25519: null,
-	};
+	});
 }
 
 /** An Article the app serves, read through `parseObject` so every member is present. */

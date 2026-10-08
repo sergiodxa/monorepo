@@ -7,9 +7,10 @@
  */
 import { describe, expect, test } from "vitest";
 
+import { ACTIVITY_ACCEPT } from "./constants.js";
+import { parseObject } from "./parse.js";
 import { respond, wantsActivity } from "./response.js";
-
-import { ACTIVITY_ACCEPT, parseObject, tombstone } from "./index.js";
+import { tombstone } from "./tombstone.js";
 
 /** The URL every request here asks for. */
 const URL = "https://letters.blog/articles/remix-v3";

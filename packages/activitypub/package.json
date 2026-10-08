@@ -7,15 +7,7 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts",
-		"./keys": "./src/keys.ts",
-		"./discovery": "./src/discovery.ts",
-		"./response": "./src/response.ts",
-		"./collections": "./src/collections.ts",
-		"./remote": "./src/remote.ts",
-		"./inbox": "./src/inbox.ts",
-		"./outbox": "./src/outbox.ts",
-		"./memory": "./src/memory.ts",
-		"./conformance": "./src/conformance.ts"
+		"./testing": "./src/testing.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"

@@ -16,12 +16,10 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { ActorKeys } from "./keys.js";
-
 import { MASTODON_ACTOR } from "./fixtures/index.js";
-import { generateActorKeys, importActorKeys, importPublicKey, publicKeyOf } from "./keys.js";
+import { ActorKeys, importPublicKey } from "./keys.js";
 import { ACTIVITY_ACCEPT } from "./lib/constants.js";
-import { createResolver } from "./remote.js";
+import { RemoteResolver } from "./remote.js";
 
 const LOCAL_ACTOR = "https://letters.blog/activitypub/actor";
 const REMOTE_ACTOR = "https://mastodon.social/users/alice";
@@ -36,13 +34,13 @@ let requests: Request[];
 
 beforeAll(async () => {
 	server.listen({ onUnhandledRequest: "error" });
-	let local = unwrap(await generateActorKeys());
+	let local = unwrap(await ActorKeys.generate());
 	localKeys = unwrap(
-		await importActorKeys({ actor: LOCAL_ACTOR, privateKeyPem: local.privateKeyPem }),
+		await ActorKeys.import({ actor: LOCAL_ACTOR, privateKeyPem: local.privateKeyPem }),
 	);
-	let remote = unwrap(await generateActorKeys());
+	let remote = unwrap(await ActorKeys.generate());
 	remoteKeys = unwrap(
-		await importActorKeys({ actor: REMOTE_ACTOR, privateKeyPem: remote.privateKeyPem }),
+		await ActorKeys.import({ actor: REMOTE_ACTOR, privateKeyPem: remote.privateKeyPem }),
 	);
 });
 
@@ -76,7 +74,7 @@ function publicDns() {
 
 /** The remote actor as Mastodon serves it, publishing `remoteKeys`. */
 function remoteActor(): Record<string, unknown> {
-	return { ...MASTODON_ACTOR, publicKey: publicKeyOf(remoteKeys) };
+	return { ...MASTODON_ACTOR, publicKey: remoteKeys.publicKey };
 }
 
 /** Serves `json` at `url` as ActivityStreams. */
@@ -88,7 +86,7 @@ function serve(url: string, json: Record<string, unknown>) {
 
 /** A resolver over a fresh memory cache unless one is given. */
 function resolverWith(options: { cache?: Cache; signed?: boolean; maxBytes?: number } = {}) {
-	return createResolver({
+	return new RemoteResolver({
 		cache: options.cache ?? new MemoryCache(),
 		userAgent: USER_AGENT,
 		...(options.signed ? { signer: { actor: LOCAL_ACTOR, keys: localKeys } } : {}),
@@ -338,7 +336,7 @@ describe("key", () => {
 		server.use(
 			serve(REMOTE_ACTOR, {
 				...remoteActor(),
-				publicKey: { ...publicKeyOf(remoteKeys), owner: "https://mastodon.social/users/bob" },
+				publicKey: { ...remoteKeys.publicKey, owner: "https://mastodon.social/users/bob" },
 			}),
 		);
 
@@ -353,7 +351,7 @@ describe("key", () => {
 		server.use(
 			serve(REMOTE_ACTOR, {
 				...remoteActor(),
-				publicKey: { ...publicKeyOf(remoteKeys), id: `${REMOTE_ACTOR}#old-key` },
+				publicKey: { ...remoteKeys.publicKey, id: `${REMOTE_ACTOR}#old-key` },
 			}),
 		);
 		unwrap(await resolver.actor(REMOTE_ACTOR));
@@ -371,7 +369,7 @@ describe("key", () => {
 			serve(REMOTE_ACTOR, {
 				...remoteActor(),
 				publicKey: {
-					...publicKeyOf(remoteKeys),
+					...remoteKeys.publicKey,
 					publicKeyPem: "-----BEGIN PUBLIC KEY-----\nAAAA\n-----END PUBLIC KEY-----\n",
 				},
 			}),

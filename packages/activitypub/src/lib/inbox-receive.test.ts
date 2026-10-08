@@ -1,5 +1,5 @@
 /**
- * `receive`, `verifyFetch`, `accepted` and `rejected` against requests signed with real
+ * `receive`, `verifyFetch` and `InboxError#toResponse` against requests signed with real
  * keys in both schemes, a resolver over MSW servers, and every refusal in the order the
  * inbox checks them, including forwarded replies, key rotation and deleted accounts.
  *
@@ -16,14 +16,17 @@ import { setupServer } from "msw/node";
 import * as s from "remix/data-schema";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { InboxErrorCode, ReceiveOptions } from "./inbox.js";
-import type { ActorKeys } from "./keys.js";
+import { MASTODON_ACTOR, MASTODON_CREATE_NOTE, MASTODON_DELETE_ACTOR } from "../fixtures/index.js";
+import { ActorKeys } from "../keys.js";
+import { RemoteResolver } from "../remote.js";
 
-import { MASTODON_ACTOR, MASTODON_CREATE_NOTE, MASTODON_DELETE_ACTOR } from "./fixtures/index.js";
-import { accepted, INBOX_INPUT, InboxError, receive, rejected, verifyFetch } from "./inbox.js";
-import { generateActorKeys, importActorKeys, publicKeyOf } from "./keys.js";
-import { recordFailure } from "./lib/availability.js";
-import { createResolver } from "./remote.js";
+import type { InboxErrorCode } from "./inbox-error.js";
+import type { ReceiveOptions } from "./inbox-receive.js";
+
+import { recordFailure } from "./availability.js";
+import { InboxError } from "./inbox-error.js";
+import { receive, verifyFetch } from "./inbox-receive.js";
+import { MESSAGE } from "./messages.js";
 
 const INBOX = "https://letters.blog/activitypub/inbox";
 const LOCAL_ACTOR = "https://letters.blog/activitypub/actor";
@@ -62,8 +65,8 @@ afterAll(() => server.close());
 
 /** A fresh RSA key pair for an actor. */
 async function keysFor(actor: string): Promise<ActorKeys> {
-	let generated = unwrap(await generateActorKeys());
-	return unwrap(await importActorKeys({ actor, privateKeyPem: generated.privateKeyPem }));
+	let generated = unwrap(await ActorKeys.generate());
+	return unwrap(await ActorKeys.import({ actor, privateKeyPem: generated.privateKeyPem }));
 }
 
 /** Every name resolves to one public address, so the resolver's DoH check lets requests through. */
@@ -88,7 +91,7 @@ function serve(url: string, json: Record<string, unknown>) {
 
 /** Alice's actor document, publishing `keys`. */
 function alice(keys: ActorKeys = aliceKeys): Record<string, unknown> {
-	return { ...MASTODON_ACTOR, publicKey: publicKeyOf(keys) };
+	return { ...MASTODON_ACTOR, publicKey: keys.publicKey };
 }
 
 /** Bob's actor document on another server. */
@@ -98,7 +101,7 @@ function bob(): Record<string, unknown> {
 		id: BOB,
 		inbox: `${BOB}/inbox`,
 		preferredUsername: "bob",
-		publicKey: publicKeyOf(bobKeys),
+		publicKey: bobKeys.publicKey,
 	};
 }
 
@@ -142,7 +145,7 @@ async function post(activity: unknown, options: PostOptions = {}): Promise<Reque
 /** The options every test starts from: an MSW-backed resolver and nothing blocked. */
 function options(overrides: Partial<ReceiveOptions> = {}): ReceiveOptions {
 	return {
-		resolver: createResolver({ cache: new MemoryCache(), userAgent: USER_AGENT }),
+		resolver: new RemoteResolver({ cache: new MemoryCache(), userAgent: USER_AGENT }),
 		blocked: () => false,
 		...overrides,
 	};
@@ -173,13 +176,13 @@ describe("receive", () => {
 		expect(Date.parse(received.receivedAt)).not.toBeNaN();
 	});
 
-	test("answers plain JSON that INBOX_INPUT reads back unchanged", async () => {
+	test("answers plain JSON that MESSAGE reads back unchanged as an inbox message", async () => {
 		server.use(serve(ALICE, alice()));
 		let received = unwrap(await receive(await post(MASTODON_CREATE_NOTE), options()));
 
-		let roundTrip = JSON.parse(JSON.stringify(received));
+		let roundTrip = JSON.parse(JSON.stringify({ kind: "inbox", ...received }));
 
-		expect(s.parse(INBOX_INPUT, roundTrip)).toEqual(received);
+		expect(s.parse(MESSAGE, roundTrip)).toEqual({ kind: "inbox", ...received });
 	});
 
 	test("accepts application/ld+json with a profile", async () => {
@@ -263,7 +266,7 @@ describe("receive", () => {
 		let relayKeys = await keysFor(relay);
 		server.use(
 			http.get(relay, () => HttpResponse.redirect(BOB, 302)),
-			serve(BOB, { ...bob(), publicKey: { ...publicKeyOf(relayKeys), owner: BOB } }),
+			serve(BOB, { ...bob(), publicKey: { ...relayKeys.publicKey, owner: BOB } }),
 			serve(MASTODON_CREATE_NOTE.id, MASTODON_CREATE_NOTE),
 		);
 		let request = await post(MASTODON_CREATE_NOTE, { keys: relayKeys });
@@ -317,7 +320,7 @@ describe("receive", () => {
 	});
 
 	test("verifies a rotated key by refetching the cached actor once", async () => {
-		let resolver = createResolver({ cache: new MemoryCache(), userAgent: USER_AGENT });
+		let resolver = new RemoteResolver({ cache: new MemoryCache(), userAgent: USER_AGENT });
 		server.use(serve(ALICE, alice()));
 		unwrap(await resolver.actor(ALICE));
 		server.use(serve(ALICE, alice(rotatedKeys)));
@@ -410,16 +413,9 @@ describe("receive", () => {
 	});
 });
 
-describe("accepted and rejected", () => {
-	test("accepted answers 202 with no body", async () => {
-		let response = accepted();
-
-		expect(response.status).toBe(202);
-		expect(await response.text()).toBe("");
-	});
-
-	test("rejected answers the status with a fixed text", async () => {
-		let response = rejected(new InboxError("invalid-signature", "RSA verify failed for key k"));
+describe("InboxError#toResponse", () => {
+	test("answers the status with a fixed text", async () => {
+		let response = new InboxError("invalid-signature", "RSA verify failed for key k").toResponse();
 
 		expect(response.status).toBe(401);
 		let text = await response.text();
@@ -427,8 +423,8 @@ describe("accepted and rejected", () => {
 		expect(text).not.toContain("RSA");
 	});
 
-	test("rejected answers an ignored Delete with an empty 202", async () => {
-		let response = rejected(new InboxError("ignored", "gone"));
+	test("answers an ignored Delete with an empty 202", async () => {
+		let response = new InboxError("ignored", "gone").toResponse();
 
 		expect(response.status).toBe(202);
 		expect(await response.text()).toBe("");

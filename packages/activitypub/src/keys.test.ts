@@ -9,19 +9,17 @@ import { sign, verify } from "@sdxc/http-signatures";
 import { isFailure, success, unwrap } from "@sdxc/result";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import type { GeneratedActorKeys } from "./keys.js";
-
-import { generateActorKeys, importActorKeys, importPublicKey, publicKeyOf } from "./keys.js";
+import { ActorKeys, importPublicKey } from "./keys.js";
 
 const ACTOR = "https://letters.blog/activitypub/actor";
 
-let generated: GeneratedActorKeys;
+let generated: ActorKeys.Generated;
 
 beforeAll(async () => {
-	generated = unwrap(await generateActorKeys());
+	generated = unwrap(await ActorKeys.generate());
 });
 
-describe("generateActorKeys", () => {
+describe("ActorKeys.generate", () => {
 	test("armors a PKCS#8 private key and an SPKI public key", () => {
 		expect(generated.privateKeyPem).toMatch(
 			/^-----BEGIN PRIVATE KEY-----\n[\s\S]+-----END PRIVATE KEY-----\n$/,
@@ -41,10 +39,10 @@ describe("generateActorKeys", () => {
 	});
 });
 
-describe("importActorKeys", () => {
+describe("ActorKeys.import", () => {
 	test("derives the same public key the pair was generated with", async () => {
 		let keys = unwrap(
-			await importActorKeys({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
+			await ActorKeys.import({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
 		);
 
 		expect(keys.actor).toBe(ACTOR);
@@ -56,9 +54,9 @@ describe("importActorKeys", () => {
 
 	test("signs requests that verify against the published key", async () => {
 		let keys = unwrap(
-			await importActorKeys({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
+			await ActorKeys.import({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
 		);
-		let publicKey = unwrap(await importPublicKey(publicKeyOf(keys).publicKeyPem));
+		let publicKey = unwrap(await importPublicKey(keys.publicKey.publicKeyPem));
 		let body = new TextEncoder().encode('{"type":"Follow"}');
 
 		let signed = unwrap(
@@ -82,14 +80,14 @@ describe("importActorKeys", () => {
 
 	test("refuses a PKCS#1 key, which Mastodon stores, with the PEM label to convert to", async () => {
 		let pkcs1 = generated.privateKeyPem.replaceAll("PRIVATE KEY", "RSA PRIVATE KEY");
-		let result = await importActorKeys({ actor: ACTOR, privateKeyPem: pkcs1 });
+		let result = await ActorKeys.import({ actor: ACTOR, privateKeyPem: pkcs1 });
 
 		expect(isFailure(result) && result.error.name).toBe("InvalidKeyError");
 		expect(isFailure(result) && result.error.message).toContain("PKCS#8");
 	});
 
 	test("refuses a PEM whose body is not a private key", async () => {
-		let result = await importActorKeys({
+		let result = await ActorKeys.import({
 			actor: ACTOR,
 			privateKeyPem: generated.publicKeyPem.replaceAll("PUBLIC KEY", "PRIVATE KEY"),
 		});
@@ -98,13 +96,14 @@ describe("importActorKeys", () => {
 	});
 });
 
-describe("publicKeyOf", () => {
+describe("ActorKeys#publicKey", () => {
 	test("publishes the key under #main-key, owned by the actor", async () => {
 		let keys = unwrap(
-			await importActorKeys({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
+			await ActorKeys.import({ actor: ACTOR, privateKeyPem: generated.privateKeyPem }),
 		);
 
-		expect(publicKeyOf(keys)).toEqual({
+		expect(keys.id).toBe(`${ACTOR}#main-key`);
+		expect(keys.publicKey).toEqual({
 			id: `${ACTOR}#main-key`,
 			owner: ACTOR,
 			publicKeyPem: generated.publicKeyPem,

@@ -11,10 +11,10 @@ import type { PolicyOptions } from "@sdxc/http/cache";
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { accepts } from "@sdxc/http/negotiate";
 
-import type { ActivityPub } from "./lib/types.js";
+import type { ActivityPub } from "./types.js";
 
-import { ACTIVITY_CONTENT_TYPE, ACTIVITY_JSON, LD_JSON } from "./lib/constants.js";
-import { stringify } from "./lib/stringify.js";
+import { ACTIVITY_CONTENT_TYPE, ACTIVITY_JSON, LD_JSON } from "./constants.js";
+import { stringify } from "./stringify.js";
 
 /**
  * The cache policy a document gets unless the caller states one: short enough that an

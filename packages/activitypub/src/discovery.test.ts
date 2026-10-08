@@ -14,7 +14,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import { actorLink, lookup } from "./discovery.js";
 import { MASTODON_ACTOR } from "./fixtures/index.js";
-import { createResolver } from "./remote.js";
+import { RemoteResolver } from "./remote.js";
 
 const ACTOR = "https://mastodon.social/users/alice";
 const OTHER_ACTOR = "https://mastodon.social/users/bob";
@@ -83,7 +83,7 @@ function actor(json: Record<string, unknown> = MASTODON_ACTOR) {
 
 /** A resolver over a fresh memory cache. */
 function resolver() {
-	return createResolver({ cache: new MemoryCache(), userAgent: USER_AGENT });
+	return new RemoteResolver({ cache: new MemoryCache(), userAgent: USER_AGENT });
 }
 
 test("actorLink is a self link typed as ActivityStreams", () => {

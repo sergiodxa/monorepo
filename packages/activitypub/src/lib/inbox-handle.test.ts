@@ -11,7 +11,6 @@ import type { Result } from "@sdxc/result";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { DeleteInbound, HandleOptions, Inbound } from "../inbox.js";
 import type { ResolvedKey, Resolver, ResolveOptions } from "../remote.js";
 import type { Follower } from "../store.js";
 
@@ -31,7 +30,6 @@ import {
 	MISSKEY_ACTOR,
 	MISSKEY_REACTION,
 } from "../fixtures/index.js";
-import { handle } from "../inbox.js";
 import {
 	MemoryFollowerStore,
 	MemoryKeyProvider,
@@ -39,8 +37,10 @@ import {
 	MemorySeenActivities,
 } from "../memory.js";
 
+import type { DeleteInbound, HandleOptions, Inbound } from "./inbox-handle.js";
 import type { ActivityPub } from "./types.js";
 
+import { handle } from "./inbox-handle.js";
 import { parseActivity, parseActor, parseObject } from "./parse.js";
 
 const ALICE = MASTODON_ACTOR.id;

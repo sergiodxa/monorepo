@@ -9,8 +9,6 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { Inbound } from "../inbox.js";
-
 import {
 	LOCAL_ACTOR,
 	LOCAL_ARTICLE,
@@ -23,8 +21,10 @@ import {
 	MISSKEY_ACTOR,
 	MISSKEY_REACTION,
 } from "../fixtures/index.js";
-import { summarize } from "../inbox.js";
 
+import type { Inbound } from "./inbox-handle.js";
+
+import { summarize } from "./inbox-summarize.js";
 import { parseActivity, parseActor } from "./parse.js";
 
 const ALICE = unwrap(parseActor(MASTODON_ACTOR));

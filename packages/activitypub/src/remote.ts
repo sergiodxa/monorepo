@@ -17,6 +17,7 @@ import { failure, isFailure, isSuccess, success } from "@sdxc/result";
 import type { ActorKeys } from "./keys.js";
 import type { FetchTextOptions } from "./lib/fetch.js";
 import type { ActivityPub } from "./lib/types.js";
+import type { KeyProvider } from "./store.js";
 
 import { ActivityPubFetchError } from "./errors.js";
 import { importPublicKey } from "./keys.js";
@@ -39,10 +40,13 @@ const DEFAULT_OBJECT_TTL: DurationInput = "1 hour";
 /** The namespace of every cache entry, so the resolver shares a store with anything else. */
 const CACHE_PREFIX = "activitypub:doc:";
 
-/** Who signs the resolver's GETs: a local actor and its keys. */
+/**
+ * Who signs the resolver's GETs: a local actor and its keys, or the provider that holds
+ * them, read on each request; a provider holding no keys for the actor leaves GETs unsigned.
+ */
 export interface ResolverSigner {
 	actor: string;
-	keys: ActorKeys;
+	keys: ActorKeys | KeyProvider;
 }
 
 /** How long a fetched document is reused, by what it was fetched as. */
@@ -53,7 +57,7 @@ export interface ResolverTtl {
 	object?: DurationInput;
 }
 
-/** What `createResolver` needs. */
+/** What a `RemoteResolver` is built from. */
 export interface ResolverOptions {
 	/** Remote documents, kept as JSON under `activitypub:doc:<iri>`; a failing store is a miss. */
 	cache: Cache;
@@ -86,7 +90,8 @@ export interface ResolvedKey {
 /**
  * Reads remote ActivityPub documents. Every method answers an `ActivityPubFetchError`
  * rather than throwing, and `gone` means the resource was deleted: its cache entry is
- * already evicted, so the caller forgets it too. Tests and the inbox may supply their own.
+ * already evicted, so the caller forgets it too. `RemoteResolver` is the implementation;
+ * a test may supply its own.
  */
 export interface Resolver {
 	/** An actor, fetched at its id. */
@@ -115,38 +120,166 @@ export interface Resolver {
 }
 
 /**
- * Creates the resolver an app keeps for the life of its Worker. A document is accepted
- * only when its `id` has the origin the redirect chain ended at, so only that origin can
- * speak for an id, and a `410` or a `Tombstone` answers `gone`.
+ * Reads remote documents through `@sdxc/outbound` and the app's cache. A document is
+ * accepted only when its `id` has the origin the redirect chain ended at, so only that
+ * origin can speak for an id, and a `410` or a `Tombstone` answers `gone`.
  *
- * @param options - The cache, the optional signer, the `User-Agent`, and the bounds.
- * @example let resolver = createResolver({ cache, signer: { actor: ACTOR_ID, keys }, userAgent: USER_AGENT });
+ * @example let resolver = new RemoteResolver({ cache, signer: { actor: ACTOR_ID, keys }, userAgent: USER_AGENT });
  */
-export function createResolver(options: ResolverOptions): Resolver {
-	let actorTtl = options.ttl?.actor ?? DEFAULT_ACTOR_TTL;
-	let objectTtl = options.ttl?.object ?? DEFAULT_OBJECT_TTL;
-	let timeout = options.timeout ?? DEFAULT_TIMEOUT;
-	let maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+export class RemoteResolver implements Resolver {
+	#options: ResolverOptions;
+	#actorTtl: DurationInput;
+	#objectTtl: DurationInput;
+	#timeout: DurationInput;
+	#maxBytes: number;
+
+	/** @param options - The cache, the optional signer, the `User-Agent`, and the bounds. */
+	constructor(options: ResolverOptions) {
+		this.#options = options;
+		this.#actorTtl = options.ttl?.actor ?? DEFAULT_ACTOR_TTL;
+		this.#objectTtl = options.ttl?.object ?? DEFAULT_OBJECT_TTL;
+		this.#timeout = options.timeout ?? DEFAULT_TIMEOUT;
+		this.#maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
+	}
+
+	/** An actor, fetched at its id. */
+	async actor(
+		iri: string,
+		options?: ResolveOptions,
+	): Promise<Result<ActivityPub.Actor, ActivityPubFetchError>> {
+		let json = await this.#load(iri, this.#actorTtl, options);
+		if (isFailure(json)) return json;
+		return readActor(iri, json.data);
+	}
+
+	/**
+	 * The key a signature's `keyId` names, resolved to the actor that publishes it. The
+	 * key's `owner` must be that actor and the actor must list the key, so a key document
+	 * cannot claim an actor that never vouched for it.
+	 */
+	async key(
+		keyId: string,
+		options?: ResolveOptions,
+	): Promise<Result<ResolvedKey, ActivityPubFetchError>> {
+		let json = await this.#load(keyId, this.#actorTtl, options);
+		if (isFailure(json)) return json;
+
+		let actor: ActivityPub.Actor;
+		let asActor = parseActor(json.data);
+		if (isSuccess(asActor)) {
+			actor = asActor.data;
+		} else {
+			let owner = claimedOwner(json.data, keyId);
+			if (owner === null) {
+				return failure(
+					new ActivityPubFetchError(
+						"invalid-document",
+						keyId,
+						`${keyId} is neither an actor nor a key with an owner`,
+					),
+				);
+			}
+			let fetched = await this.actor(owner, options);
+			if (isFailure(fetched)) return fetched;
+			actor = fetched.data;
+		}
+
+		let publicKey = actor.publicKey;
+		if (publicKey === null || publicKey.id !== keyId) {
+			return failure(
+				new ActivityPubFetchError("not-found", keyId, `${actor.id} does not publish ${keyId}`),
+			);
+		}
+		if (publicKey.owner !== actor.id) {
+			return failure(
+				new ActivityPubFetchError(
+					"id-mismatch",
+					keyId,
+					`${keyId} is owned by ${publicKey.owner}, not by ${actor.id}`,
+				),
+			);
+		}
+
+		let imported = await importPublicKey(publicKey.publicKeyPem);
+		if (isFailure(imported)) {
+			return failure(
+				new ActivityPubFetchError("invalid-document", keyId, imported.error.message, {
+					cause: imported.error,
+				}),
+			);
+		}
+		return success({ owner: actor.id, publicKey: imported.data, actor });
+	}
+
+	/** An object or an activity; one with an `actor` member reads as an activity. */
+	async object(
+		iri: string,
+		options?: ResolveOptions,
+	): Promise<Result<ActivityPub.Object | ActivityPub.Activity, ActivityPubFetchError>> {
+		let json = await this.#load(iri, this.#objectTtl, options);
+		if (isFailure(json)) return json;
+		let parsed = "actor" in json.data ? parseActivity(json.data) : parseObject(json.data);
+		if (isFailure(parsed)) return failure(invalidDocument(iri, parsed.error));
+		return parsed;
+	}
+
+	/** The decoded document at `iri` after the same checks, for a shape no reader models. */
+	document(
+		iri: string,
+		options?: ResolveOptions,
+	): Promise<Result<Record<string, unknown>, ActivityPubFetchError>> {
+		return this.#load(iri, this.#objectTtl, options);
+	}
 
 	/** Drops both spellings of the entry, so a fragment never keeps a deleted copy alive. */
-	async function evict(iri: string): Promise<void> {
+	async evict(iri: string): Promise<void> {
+		let cache = this.#options.cache;
 		await Promise.all([
-			options.cache.delete(cacheKey(iri)).catch(() => undefined),
-			options.cache.delete(cacheKey(withoutFragment(iri))).catch(() => undefined),
+			cache.delete(cacheKey(iri)).catch(() => undefined),
+			cache.delete(cacheKey(withoutFragment(iri))).catch(() => undefined),
 		]);
+	}
+
+	/**
+	 * The signer's keys, read from its provider when it names one: `null` when the provider
+	 * holds none for the signer, which sends the GET unsigned, and a retryable
+	 * `unauthorized` when the provider fails.
+	 */
+	async #signingKeys(
+		url: string,
+		signer: ResolverSigner,
+	): Promise<Result<ActorKeys | null, ActivityPubFetchError>> {
+		if (!("keysOf" in signer.keys)) return success(signer.keys);
+		let found = await signer.keys.keysOf(signer.actor);
+		if (isFailure(found)) {
+			return failure(
+				new ActivityPubFetchError(
+					"unauthorized",
+					url,
+					`Could not read the keys of ${signer.actor}: ${found.error.message}`,
+					{ retryable: true, cause: found.error },
+				),
+			);
+		}
+		return success(found.data);
 	}
 
 	/**
 	 * The headers of one GET, signed with draft-cavage over `(request-target) host date`
 	 * when a signer is set, the scheme every server that requires signed GETs accepts.
 	 */
-	async function headersFor(url: string): Promise<Result<Headers, ActivityPubFetchError>> {
-		let headers = new Headers({ accept: ACTIVITY_ACCEPT, "user-agent": options.userAgent });
-		if (options.signer === undefined) return success(headers);
+	async #headersFor(url: string): Promise<Result<Headers, ActivityPubFetchError>> {
+		let headers = new Headers({ accept: ACTIVITY_ACCEPT, "user-agent": this.#options.userAgent });
+		let signer = this.#options.signer;
+		if (signer === undefined) return success(headers);
+
+		let keys = await this.#signingKeys(url, signer);
+		if (isFailure(keys)) return keys;
+		if (keys.data === null) return success(headers);
 
 		let signed = await sign(new Request(url, { headers }), {
 			scheme: "draft-cavage",
-			key: { id: options.signer.keys.rsa.id, privateKey: options.signer.keys.rsa.privateKey },
+			key: { id: keys.data.rsa.id, privateKey: keys.data.rsa.privateKey },
 		});
 		if (isFailure(signed)) {
 			return failure(
@@ -168,21 +301,26 @@ export function createResolver(options: ResolverOptions): Resolver {
 	 * the first URL, so when the end of the chain refuses it, it is signed for that URL
 	 * and asked once more.
 	 */
-	async function fetchDocument(
+	async #fetchDocument(
 		url: string,
 	): Promise<Result<Record<string, unknown>, ActivityPubFetchError>> {
-		let headers = await headersFor(url);
+		let headers = await this.#headersFor(url);
 		if (isFailure(headers)) return headers;
-		let fetchOptions: FetchTextOptions = { headers: headers.data, timeout, maxBytes };
+		let maxBytes = this.#maxBytes;
+		let fetchOptions: FetchTextOptions = {
+			headers: headers.data,
+			timeout: this.#timeout,
+			maxBytes,
+		};
 
 		let answered = await request(url, fetchOptions);
 		if (isFailure(answered)) return answered;
 
 		let refused = answered.data.response.status === 401 || answered.data.response.status === 403;
-		if (refused && options.signer !== undefined && answered.data.url.href !== url) {
+		if (refused && this.#options.signer !== undefined && answered.data.url.href !== url) {
 			release(answered.data.response.body);
 			let final = answered.data.url.href;
-			let resigned = await headersFor(final);
+			let resigned = await this.#headersFor(final);
 			if (isFailure(resigned)) return resigned;
 			answered = await request(final, { ...fetchOptions, headers: resigned.data });
 			if (isFailure(answered)) return answered;
@@ -214,7 +352,7 @@ export function createResolver(options: ResolverOptions): Resolver {
 	 * The document at `iri`, from the cache unless `fresh`, else fetched and stored. A
 	 * Tombstone, cached or fetched, answers `gone` and evicts the entry.
 	 */
-	async function load(
+	async #load(
 		iri: string,
 		ttl: DurationInput,
 		resolveOptions: ResolveOptions | undefined,
@@ -224,112 +362,39 @@ export function createResolver(options: ResolverOptions): Resolver {
 			return failure(new ActivityPubFetchError("refused-url", iri, `${iri} is not a URL`));
 		}
 
+		let cache = this.#options.cache;
 		let key = cacheKey(url);
 		let json: Record<string, unknown> | null = null;
 		if (resolveOptions?.fresh !== true) {
-			let cached = await options.cache.read<Record<string, unknown>>(key).catch(() => null);
+			let cached = await cache.read<Record<string, unknown>>(key).catch(() => null);
 			if (cached !== null && isSuccess(cached) && isRecord(cached.data)) json = cached.data;
 		}
 
 		if (json === null) {
-			let fetched = await fetchDocument(url);
+			let fetched = await this.#fetchDocument(url);
 			if (isFailure(fetched)) {
-				if (fetched.error.code === "gone") await evict(url);
+				if (fetched.error.code === "gone") await this.evict(url);
 				return fetched;
 			}
 			json = fetched.data;
 			if (json.type !== "Tombstone") {
-				await options.cache.write(key, json, { ttl }).catch(() => undefined);
+				await cache.write(key, json, { ttl }).catch(() => undefined);
 			}
 		}
 
 		if (json.type === "Tombstone") {
-			await evict(url);
+			await this.evict(url);
 			return failure(new ActivityPubFetchError("gone", url, `${url} was deleted`));
 		}
 		return success(json);
 	}
+}
 
-	/** Reads `json` as an actor, failing `invalid-document` with the parser's explanation. */
-	function readActor(url: string, json: unknown): Result<ActivityPub.Actor, ActivityPubFetchError> {
-		let actor = parseActor(json);
-		if (isFailure(actor)) return failure(invalidDocument(url, actor.error));
-		return actor;
-	}
-
-	let resolver: Resolver = {
-		async actor(iri, resolveOptions) {
-			let json = await load(iri, actorTtl, resolveOptions);
-			if (isFailure(json)) return json;
-			return readActor(iri, json.data);
-		},
-
-		async key(keyId, resolveOptions) {
-			let json = await load(keyId, actorTtl, resolveOptions);
-			if (isFailure(json)) return json;
-
-			let actor: ActivityPub.Actor;
-			let asActor = parseActor(json.data);
-			if (isSuccess(asActor)) {
-				actor = asActor.data;
-			} else {
-				let owner = claimedOwner(json.data, keyId);
-				if (owner === null) {
-					return failure(
-						new ActivityPubFetchError(
-							"invalid-document",
-							keyId,
-							`${keyId} is neither an actor nor a key with an owner`,
-						),
-					);
-				}
-				let fetched = await resolver.actor(owner, resolveOptions);
-				if (isFailure(fetched)) return fetched;
-				actor = fetched.data;
-			}
-
-			let publicKey = actor.publicKey;
-			if (publicKey === null || publicKey.id !== keyId) {
-				return failure(
-					new ActivityPubFetchError("not-found", keyId, `${actor.id} does not publish ${keyId}`),
-				);
-			}
-			if (publicKey.owner !== actor.id) {
-				return failure(
-					new ActivityPubFetchError(
-						"id-mismatch",
-						keyId,
-						`${keyId} is owned by ${publicKey.owner}, not by ${actor.id}`,
-					),
-				);
-			}
-
-			let imported = await importPublicKey(publicKey.publicKeyPem);
-			if (isFailure(imported)) {
-				return failure(
-					new ActivityPubFetchError("invalid-document", keyId, imported.error.message, {
-						cause: imported.error,
-					}),
-				);
-			}
-			return success({ owner: actor.id, publicKey: imported.data, actor });
-		},
-
-		async object(iri, resolveOptions) {
-			let json = await load(iri, objectTtl, resolveOptions);
-			if (isFailure(json)) return json;
-			let parsed = "actor" in json.data ? parseActivity(json.data) : parseObject(json.data);
-			if (isFailure(parsed)) return failure(invalidDocument(iri, parsed.error));
-			return parsed;
-		},
-
-		document(iri, resolveOptions) {
-			return load(iri, objectTtl, resolveOptions);
-		},
-
-		evict,
-	};
-	return resolver;
+/** Reads `json` as an actor, failing `invalid-document` with the parser's explanation. */
+function readActor(url: string, json: unknown): Result<ActivityPub.Actor, ActivityPubFetchError> {
+	let actor = parseActor(json);
+	if (isFailure(actor)) return failure(invalidDocument(url, actor.error));
+	return actor;
 }
 
 /** The cache entry of a document. */

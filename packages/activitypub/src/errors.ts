@@ -1,7 +1,8 @@
 /**
  * The failures this package answers inside a `Result`: a base with a code and a retry
  * verdict that a job consumer acts on, the parse failure every `parse*` returns, and the
- * fetch failure discovery and the remote resolver return.
+ * fetch failure discovery and the remote resolver return, and the failure a queued
+ * federation message ends with.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -154,4 +155,31 @@ function isRetryableFetch(code: ActivityPubFetchErrorCode, status: number | null
 	if (RETRYABLE_FETCH_CODES.has(code)) return true;
 	if (code !== "http" || status === null) return false;
 	return status === 429 || status >= 500;
+}
+
+/**
+ * Why `Federation#process` could not finish a queued message. `retryable` and `delay` are
+ * all a job needs (retry after `delay` milliseconds, or acknowledge); `code` and `cause`
+ * keep the failure underneath, such as a `DeliveryError` or an `ActivityPubFetchError`.
+ */
+export class FederationError extends ActivityPubError {
+	override name = "FederationError";
+	/** Which kind of message failed. */
+	readonly kind: "inbox" | "fanOut" | "deliver";
+	/**
+	 * Milliseconds to wait before the retry: the backoff step for this attempt, or longer
+	 * when the inbox named a `Retry-After`. `0` when the failure is not retryable.
+	 */
+	readonly delay: number;
+
+	/**
+	 * @param kind - Which kind of message failed.
+	 * @param cause - The failure underneath, whose code, message and verdict this one keeps.
+	 * @param delay - The wait before a retry, in milliseconds.
+	 */
+	constructor(kind: FederationError["kind"], cause: ActivityPubError, delay: number) {
+		super(cause.code, cause.message, { retryable: cause.retryable, cause });
+		this.kind = kind;
+		this.delay = cause.retryable ? delay : 0;
+	}
 }

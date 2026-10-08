@@ -11,6 +11,7 @@ import type { DurationInput } from "@sdxc/duration";
 import type { AcceptSignature, Component, Scheme, SignOptions } from "@sdxc/http-signatures";
 import type { Result } from "@sdxc/result";
 
+import { createBackoff } from "@sdxc/backoff";
 import { toMs } from "@sdxc/duration";
 import { parseAcceptSignature, sign } from "@sdxc/http-signatures";
 import { checkUrl, release, resolveHost } from "@sdxc/outbound";
@@ -23,6 +24,18 @@ import { ActivityPubError } from "../errors.js";
 
 import { recordFailure, recordSuccess } from "./availability.js";
 import { ACTIVITY_ACCEPT, ACTIVITY_JSON } from "./constants.js";
+
+/**
+ * Waits after each failed delivery, about 21 hours over five retries, so a server down
+ * for a day still receives the activity. A delivery whose inbox names `Retry-After` waits
+ * at least that long.
+ *
+ * @example let delay = DELIVERY_BACKOFF.delay(attempts);
+ */
+export const DELIVERY_BACKOFF = createBackoff({
+	steps: ["5 minutes", "30 minutes", "2 hours", "6 hours", "12 hours"],
+	jitter: 0.2,
+});
 
 /** Long enough for a busy instance to answer a POST, short enough to keep a consumer moving. */
 const DEFAULT_TIMEOUT: DurationInput = "15 seconds";

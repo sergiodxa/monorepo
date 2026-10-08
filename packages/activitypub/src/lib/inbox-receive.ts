@@ -9,11 +9,9 @@
 import type { Cache } from "@sdxc/cache";
 import type { DurationInput } from "@sdxc/duration";
 import type { Result } from "@sdxc/result";
-import type { Schema } from "remix/data-schema";
 
 import { readBytes } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
-import * as s from "remix/data-schema";
 
 import type { Resolver } from "../remote.js";
 
@@ -73,7 +71,7 @@ export interface ReceiveOptions {
 
 /**
  * A verified activity, ready to enqueue: plain JSON that survives a queue round trip, and
- * what `handle` reads back through `INBOX_INPUT`.
+ * what `handle` reads back from the queued inbox message.
  */
 export interface Received {
 	/** The activity as received, or as refetched from its actor's origin, undecoded. */
@@ -90,30 +88,6 @@ export interface Received {
 	receivedAt: string;
 }
 
-/** A decoded JSON object, as `Received.activity` carries one. */
-const JSON_OBJECT: Schema<unknown, Record<string, unknown>> = s.createSchema<
-	unknown,
-	Record<string, unknown>
->((value, context) =>
-	isObject(value) ? { value } : s.fail("The activity must be a JSON object.", context.path),
-);
-
-/**
- * The job input schema of a `Received`, a Standard Schema `job({ input })` accepts, so the
- * inbox job reads back exactly what the route enqueued.
- *
- * @example inbox: job({ input: INBOX_INPUT })
- */
-export const INBOX_INPUT: Schema<unknown, Received> = s.object({
-	activity: JSON_OBJECT,
-	actor: s.string(),
-	signer: s.string(),
-	keyId: s.string(),
-	origin: s.string(),
-	verification: s.enum_(VERIFICATIONS),
-	receivedAt: s.string(),
-});
-
 /**
  * Verifies a POST to an inbox. The steps run in order and stop at the first failure: the
  * media type, the size, the activity's shape, the blocked hosts of the key and the actor,
@@ -122,14 +96,14 @@ export const INBOX_INPUT: Schema<unknown, Received> = s.object({
  * A forwarded activity, signed by someone other than its actor, is accepted when its id is
  * on the actor's origin and a fresh copy fetched from there names the same actor; that copy
  * is what `Received` carries. A `Delete` of an account whose key now answers `410` fails
- * `ignored`, which `rejected` answers with `202` so the sender stops retrying.
+ * `ignored`, which `toResponse` answers with `202` so the sender stops retrying.
  *
  * @param request - The inbox request, its body unread.
  * @param options - The resolver, the blocked check, the limits and the cache.
  * @returns The verified activity, or an `InboxError` whose `status` is the response's.
  * @example
  * let received = await receive(ctx.request, { resolver, blocked });
- * if (isFailure(received)) return rejected(received.error);
+ * if (isFailure(received)) return received.error.toResponse();
  */
 export async function receive(
 	request: Request,
@@ -262,7 +236,7 @@ export interface VerifiedFetch {
  * @returns The signer, or an `InboxError` whose `status` is the response's.
  * @example
  * let fetched = await verifyFetch(ctx.request, { resolver, blocked, actors: [ACTOR_ID] });
- * if (isFailure(fetched)) return rejected(fetched.error);
+ * if (isFailure(fetched)) return fetched.error.toResponse();
  */
 export async function verifyFetch(
 	request: Request,

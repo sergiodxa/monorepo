@@ -136,7 +136,7 @@ export interface HandleOutcome {
  * origin embeds is fetched from its own origin (FEP-c7d3). A failure is retryable when a
  * remote server, a store, a handler or `send` failed transiently; any other is acknowledged.
  *
- * @param input - What `receive` answered, as the job read it through `INBOX_INPUT`.
+ * @param input - What `receive` answered, as the job read it back from the queue.
  * @param options - The local actor, the stores, the resolver, `send` and the handlers.
  * @returns What happened to the activity.
  * @example

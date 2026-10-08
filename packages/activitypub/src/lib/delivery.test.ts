@@ -16,25 +16,20 @@ import { delay, http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { ActorKeys } from "./keys.js";
-import type { DeliveryInput, FanOutOptions } from "./outbox.js";
-import type { Follower } from "./store.js";
+import type { Follower } from "../store.js";
 
-import { generateActorKeys, importActorKeys, importPublicKey } from "./keys.js";
-import { isUnavailable, recordFailure, UNAVAILABLE_AFTER } from "./lib/availability.js";
-import { PUBLIC } from "./lib/constants.js";
-import { MemoryFollowerStore, MemoryKeyProvider } from "./memory.js";
-import {
-	DELIVERY_BACKOFF,
-	DELIVERY_INPUT,
-	DeliveryError,
-	FAN_OUT_INPUT,
-	MAX_ACTIVITY_BYTES,
-	deliver,
-	fanOut,
-	parseRetryAfter,
-} from "./outbox.js";
-import { createResolver } from "./remote.js";
+import { ActorKeys, importPublicKey } from "../keys.js";
+import { MemoryFollowerStore, MemoryKeyProvider } from "../memory.js";
+import { RemoteResolver } from "../remote.js";
+
+import type { FanOutOptions } from "./delivery-fan-out.js";
+import type { DeliveryInput } from "./delivery-post.js";
+
+import { isUnavailable, recordFailure, UNAVAILABLE_AFTER } from "./availability.js";
+import { PUBLIC } from "./constants.js";
+import { fanOut, MAX_ACTIVITY_BYTES } from "./delivery-fan-out.js";
+import { DELIVERY_BACKOFF, DeliveryError, deliver, parseRetryAfter } from "./delivery-post.js";
+import { MESSAGE } from "./messages.js";
 
 const ACTOR_ID = "https://letters.blog/activitypub/actor";
 const FOLLOWERS_ID = "https://letters.blog/activitypub/followers";
@@ -77,8 +72,10 @@ interface Received {
 
 beforeAll(async () => {
 	server.listen({ onUnhandledRequest: "error" });
-	let generated = unwrap(await generateActorKeys());
-	keys = unwrap(await importActorKeys({ actor: ACTOR_ID, privateKeyPem: generated.privateKeyPem }));
+	let generated = unwrap(await ActorKeys.generate());
+	keys = unwrap(
+		await ActorKeys.import({ actor: ACTOR_ID, privateKeyPem: generated.privateKeyPem }),
+	);
 	publicKey = unwrap(await importPublicKey(keys.rsa.publicKeyPem));
 });
 
@@ -541,7 +538,7 @@ function fanOutOptions(overrides: Partial<FanOutOptions> = {}) {
 	let options: FanOutOptions = {
 		actor: { id: ACTOR_ID, followers: FOLLOWERS_ID },
 		followers: followers(),
-		resolver: createResolver({ cache: new MemoryCache(), userAgent: USER_AGENT }),
+		resolver: new RemoteResolver({ cache: new MemoryCache(), userAgent: USER_AGENT }),
 		blocked: () => false,
 		cache: new MemoryCache(),
 		enqueue: async (deliveries) => {
@@ -834,21 +831,29 @@ describe("fanOut", () => {
 	});
 });
 
-describe("job inputs", () => {
-	test("FAN_OUT_INPUT accepts an actor URL and activity text", () => {
-		let valid = FAN_OUT_INPUT["~standard"].validate({ actor: ACTOR_ID, activity: ACTIVITY });
-		let invalid = FAN_OUT_INPUT["~standard"].validate({ actor: "nobody", activity: 1 });
+describe("MESSAGE", () => {
+	test("accepts a fan-out of an actor URL and activity text", () => {
+		let valid = MESSAGE["~standard"].validate({
+			kind: "fanOut",
+			actor: ACTOR_ID,
+			activity: ACTIVITY,
+		});
+		let invalid = MESSAGE["~standard"].validate({ kind: "fanOut", actor: "nobody", activity: 1 });
 
-		expect(valid).toEqual({ value: { actor: ACTOR_ID, activity: ACTIVITY } });
+		expect(valid).toEqual({ value: { kind: "fanOut", actor: ACTOR_ID, activity: ACTIVITY } });
 		expect(invalid).toHaveProperty("issues");
 	});
 
-	test("DELIVERY_INPUT requires the inbox to be a URL", () => {
-		let valid = DELIVERY_INPUT["~standard"].validate(input());
-		let invalid = DELIVERY_INPUT["~standard"].validate({ ...input(), inbox: "inbox" });
+	test("requires a delivery's inbox to be a URL", () => {
+		let valid = MESSAGE["~standard"].validate({ kind: "deliver", ...input() });
+		let invalid = MESSAGE["~standard"].validate({ kind: "deliver", ...input(), inbox: "inbox" });
 
-		expect(valid).toEqual({ value: input() });
+		expect(valid).toEqual({ value: { kind: "deliver", ...input() } });
 		expect(invalid).toHaveProperty("issues");
+	});
+
+	test("refuses a message of no known kind", () => {
+		expect(MESSAGE["~standard"].validate({ ...input(), kind: "other" })).toHaveProperty("issues");
 	});
 });
 
