@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Middleware, RequestContext } from "remix/router";
+import type { ContextValue, Middleware, RequestContext } from "remix/router";
 
 import { forbidden, notFound } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
@@ -82,7 +82,9 @@ export interface AccessOptions<P extends AnyPolicy = RegisteredPolicy> {
 }
 
 /**
- * Binds the request's principal as `ctx.access`. A later install replaces it,
+ * Binds the request's principal as `ctx.access`, typed on every request context
+ * by this module's augmentation, so a controller's context stays assignable to
+ * helpers taking a plain `RequestContext`. A later install replaces it,
  * so the pages, the API and the MCP endpoint each bind their own principal;
  * nothing loads until a check needs it.
  *
@@ -94,7 +96,7 @@ export interface AccessOptions<P extends AnyPolicy = RegisteredPolicy> {
 export function access<P extends AnyPolicy = RegisteredPolicy>(
 	policy: P,
 	options: AccessOptions<P> = {},
-): Middleware<{ key: typeof CurrentAccess; value: RegisteredAccess; property: "access" }> {
+): Middleware {
 	return async (ctx, next) => {
 		let facts: Record<string, unknown> = {};
 		for (let [root, source] of Object.entries(options.facts ?? {})) {
@@ -149,7 +151,8 @@ export type RequireAbilityOptions<A extends AnyAbility> = ([ContextOf<A>] extend
 /**
  * Loads what an ability needs and decides before the handler runs, so a
  * refused request is never validated or acted on. The loaded context is
- * published under the ability itself, read with `ctx.get(ability)`; a loader
+ * published under the ability itself, read with `ctx.get(ability)` (typed
+ * through the ability, `undefined` before this middleware ran); a loader
  * answering `null` answers exactly like a `notFound` refusal.
  *
  * @param ability The ability the route performs.
@@ -162,7 +165,7 @@ export function requireAbility<A extends AnyAbility>(
 	...[options]: [ContextOf<A>] extends [undefined]
 		? [options?: RequireAbilityOptions<A>]
 		: [options: RequireAbilityOptions<A>]
-): Middleware<{ key: A; value: ContextOf<A> }> {
+): Middleware {
 	return async (ctx, next) => {
 		let access = ctx.get(CurrentAccess);
 		if (access === undefined) {
@@ -191,7 +194,7 @@ export function requireAbility<A extends AnyAbility>(
 		setDecision(decision);
 		if (!decision.allowed) return respond(ctx, decision);
 
-		ctx.set(ability, loaded as ContextOf<A> & {});
+		ctx.set(ability, loaded as ContextValue<A>);
 		return next();
 	};
 }

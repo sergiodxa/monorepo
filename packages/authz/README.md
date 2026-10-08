@@ -106,6 +106,7 @@ Every check is synchronous. Facts given as functions or promises load through `l
 
 ```typescript
 import { access, requireAbility } from "@sdxc/authz/middleware/router";
+import { notFound } from "@sdxc/http/response/html";
 
 router.map(routes.articles.update, {
 	middleware: [
@@ -123,7 +124,9 @@ router.map(routes.articles.update, {
 		}),
 	],
 	handler(ctx) {
-		let { article } = ctx.get(abilities.article.update);
+		let loaded = ctx.get(abilities.article.update);
+		if (loaded === undefined) return notFound("Not Found");
+		let { article } = loaded;
 		let fields = ctx.access.permittedFields(abilities.article.update, { article });
 		// …
 	},
@@ -214,7 +217,7 @@ A `Decision` is `{ ability, allowed: true, grants }`, or a refusal whose `cause`
 
 ### `@sdxc/authz/middleware/router`
 
-`access(policy, options)` publishes `ctx.access` through the `CurrentAccess` key, binding `roles`, `within` and `facts` from the request, loading the abilities in `load` before the handler, and keeping `onDenied` for `requireAbility`. `requireAbility(ability, { context?, field?, onDenied? })` loads the context, decides before the handler, and publishes what it loaded under the ability, read with `ctx.get(ability)`. Without a responder a refusal answers a bare `403` or `404`. Decisions count on the invocation's log, and an undecidable one fails it.
+`access(policy, options)` publishes `ctx.access` through the `CurrentAccess` key, binding `roles`, `within` and `facts` from the request, loading the abilities in `load` before the handler, and keeping `onDenied` for `requireAbility`. `requireAbility(ability, { context?, field?, onDenied? })` loads the context, decides before the handler, and publishes what it loaded under the ability, read with `ctx.get(ability)`, typed `undefined` until it ran. Both return a plain `Middleware`, so a controller's context stays assignable to helpers taking a `RequestContext`. Without a responder a refusal answers a bare `403` or `404`. Decisions count on the invocation's log, and an undecidable one fails it.
 
 Register the policy once to type `ctx.access`:
 
