@@ -47,10 +47,29 @@ Every response on this resource carries the standard envelope — `data` alongsi
 	"isEnabled": true,
 	"lastCheckedAt": 1786430000000,
 	"lastStatus": "ok",
+	"registrationStatus": "valid",
+	"registrationExpiresAt": 1820000000000,
+	"registrar": "Example Registrar, LLC",
+	"registrationEppStatuses": ["clientTransferProhibited"],
+	"registrationWarningDays": 30,
+	"registrationCheckedAt": 1786420000000,
+	"registrationError": null,
 	"createdAt": 1786300000000,
 	"updatedAt": 1786400000000
 }
 ```
+
+The `registration*` members and `registrar` describe the domain's registration, which the monitor looks up at the domain's registry over RDAP once a day:
+
+| Field                     | Type            | Description                                                                                                                                                                                          |
+| ------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `registrationStatus`      | string          | `unknown` until the first lookup, then `valid`, `expiring`, `expired`, `unavailable` (the registry has no record, or no RDAP service) or `error` (no lookup has succeeded within the warning window) |
+| `registrationExpiresAt`   | integer \| null | When the registration expires, in milliseconds; `null` until looked up, or when the registry publishes no date                                                                                       |
+| `registrar`               | string \| null  | The registrar's name                                                                                                                                                                                 |
+| `registrationEppStatuses` | string[]        | The registry's EPP statuses from the last successful lookup, such as `clientTransferProhibited` or `serverHold`                                                                                      |
+| `registrationWarningDays` | integer         | Days before expiry the registration counts as `expiring` and starts alerting                                                                                                                         |
+| `registrationCheckedAt`   | integer \| null | When a lookup last succeeded                                                                                                                                                                         |
+| `registrationError`       | string \| null  | Why the last lookup failed, such as `not-found`, `unsupported-tld` or `rate-limited`; `null` after a success                                                                                         |
 
 ## List All DNS Monitors
 
@@ -129,13 +148,14 @@ POST /api/v1/dns-monitors
 
 ### Request Body
 
-| Field             | Type    | Required | Description                                                                |
-| ----------------- | ------- | -------- | -------------------------------------------------------------------------- |
-| `name`            | string  | Yes      | Monitor name (1-255 characters)                                            |
-| `domain`          | string  | Yes      | The domain to cover (1-255 characters)                                     |
-| `zoneFile`        | string  | No       | A BIND zone file, up to 262144 bytes. Read once, parsed, and never stored. |
-| `intervalSeconds` | integer | No       | Check interval in seconds (900-86400, default: 86400)                      |
-| `isEnabled`       | boolean | No       | Whether the monitor is checked on its interval (default: true)             |
+| Field                     | Type    | Required | Description                                                                        |
+| ------------------------- | ------- | -------- | ---------------------------------------------------------------------------------- |
+| `name`                    | string  | Yes      | Monitor name (1-255 characters)                                                    |
+| `domain`                  | string  | Yes      | The domain to cover (1-255 characters)                                             |
+| `zoneFile`                | string  | No       | A BIND zone file, up to 262144 bytes. Read once, parsed, and never stored.         |
+| `intervalSeconds`         | integer | No       | Check interval in seconds (900-86400, default: 86400)                              |
+| `isEnabled`               | boolean | No       | Whether the monitor is checked on its interval (default: true)                     |
+| `registrationWarningDays` | integer | No       | Days before the domain registration expires to start alerting (1-365, default: 30) |
 
 The parser reads standard RFC 1035 zone-file syntax: `<owner> [<ttl>] [IN] <TYPE> <rdata>` records, `;` comments, absolute and relative names, `@` for the apex, `$ORIGIN` and `$TTL`, parenthesised multi-line records, owner-inheriting continuation lines, and quoted TXT character-strings. Anything it cannot use — `$INCLUDE`, `$GENERATE`, non-`IN` classes, untracked types, names outside the domain — is **reported, never silently dropped**, in `discovery.rejectedLines`, with the line the entry starts on.
 
@@ -237,14 +257,17 @@ PATCH /api/v1/dns-monitors/:dnsMonitorId
 
 ### Request Body
 
-| Field             | Type    | Required | Description                                       |
-| ----------------- | ------- | -------- | ------------------------------------------------- |
-| `name`            | string  | No       | Monitor name (1-255 characters)                   |
-| `domain`          | string  | No       | The domain this monitor covers (1-255 characters) |
-| `intervalSeconds` | integer | No       | Check interval in seconds (900-86400)             |
-| `isEnabled`       | boolean | No       | Whether the monitor is checked on its interval    |
+| Field                     | Type    | Required | Description                                                           |
+| ------------------------- | ------- | -------- | --------------------------------------------------------------------- |
+| `name`                    | string  | No       | Monitor name (1-255 characters)                                       |
+| `domain`                  | string  | No       | The domain this monitor covers (1-255 characters)                     |
+| `intervalSeconds`         | integer | No       | Check interval in seconds (900-86400)                                 |
+| `isEnabled`               | boolean | No       | Whether the monitor is checked on its interval                        |
+| `registrationWarningDays` | integer | No       | Days before the domain registration expires to start alerting (1-365) |
 
-The limits are the ones [Create a DNS Monitor](#create-a-dns-monitor) applies. `null` resets `intervalSeconds` to `86400` and `isEnabled` to `true`; `name` and `domain` cannot be removed, so `null` on either is a `400` `validation-error`.
+The limits are the ones [Create a DNS Monitor](#create-a-dns-monitor) applies. `null` resets `intervalSeconds` to `86400`, `isEnabled` to `true` and `registrationWarningDays` to `30`; `name` and `domain` cannot be removed, so `null` on either is a `400` `validation-error`.
+
+A new `registrationWarningDays` makes the registration due for a lookup on the next hourly sweep, so `registrationStatus` reflects the new window within the hour.
 
 Changing `domain` does not re-run discovery: the records already tracked stay as they are, so point a monitor at a different domain only if you also mean to review its records.
 

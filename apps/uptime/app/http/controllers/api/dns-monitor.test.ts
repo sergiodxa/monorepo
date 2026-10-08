@@ -169,6 +169,107 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId", () => {
 	});
 });
 
+describe("registration in the DNS monitor representation", () => {
+	test("returns the registration the last lookup stored", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id, {
+			registration_status: "expiring",
+			registration_expires_at: Date.UTC(2026, 10, 1),
+			registrar: "Example Registrar, LLC",
+			registration_epp_statuses: ["clientTransferProhibited"],
+			registration_checked_at: Date.UTC(2026, 9, 8),
+		});
+
+		let response = await dispatch(db, showRequest(monitor.id, { Authorization: `Bearer ${key}` }));
+
+		let body = (await response.json()) as { data: { dnsMonitor: Record<string, unknown> } };
+		expect(body.data.dnsMonitor).toMatchObject({
+			registrationStatus: "expiring",
+			registrationExpiresAt: Date.UTC(2026, 10, 1),
+			registrar: "Example Registrar, LLC",
+			registrationEppStatuses: ["clientTransferProhibited"],
+			registrationWarningDays: 30,
+			registrationCheckedAt: Date.UTC(2026, 9, 8),
+			registrationError: null,
+		});
+	});
+
+	test("a monitor never looked up reads unknown with no statuses", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(db, showRequest(monitor.id, { Authorization: `Bearer ${key}` }));
+
+		let body = (await response.json()) as { data: { dnsMonitor: Record<string, unknown> } };
+		expect(body.data.dnsMonitor).toMatchObject({
+			registrationStatus: "unknown",
+			registrationExpiresAt: null,
+			registrationEppStatuses: [],
+		});
+	});
+
+	test("PUT saves a new warning window and makes the registration due on the next sweep", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id, {
+			registration_next_check_at: Date.now() + 1000,
+		});
+
+		let response = await dispatch(
+			db,
+			updateRequest(
+				monitor.id,
+				{ registrationWarningDays: 60 },
+				{ Authorization: `Bearer ${key}` },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(updated?.registration_warning_days).toBe(60);
+		expect(updated?.registration_next_check_at).toBeNull();
+	});
+
+	test("PUT re-sending the current window leaves the lookup schedule alone", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let nextCheck = Date.now() + 1000;
+		let monitor = await createDnsMonitorRow(db, team.id, { registration_next_check_at: nextCheck });
+
+		await dispatch(
+			db,
+			updateRequest(
+				monitor.id,
+				{ registrationWarningDays: 30 },
+				{ Authorization: `Bearer ${key}` },
+			),
+		);
+
+		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(updated?.registration_next_check_at).toBe(nextCheck);
+	});
+
+	test("PUT rejects a warning window outside 1 to 365 days", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			updateRequest(monitor.id, { registrationWarningDays: 0 }, { Authorization: `Bearer ${key}` }),
+		);
+
+		expect(response.status).toBe(400);
+	});
+});
+
 describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 	test("updates the DNS monitor's editable fields", async () => {
 		let { db } = createTestDatabase();
@@ -502,6 +603,25 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
 		expect(updated?.name).toBe("Patched");
 		expect(updated?.domain).toBe("example.com");
 		expect(updated?.interval_seconds).toBe(3600);
+	});
+
+	test("a new warning window makes the registration due, and null resets it to 30 days", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+		let monitor = await createDnsMonitorRow(db, team.id, {
+			registration_warning_days: 45,
+			registration_next_check_at: Date.now() + 1000,
+		});
+
+		await dispatch(db, mergePatch(monitor.id, { registrationWarningDays: 90 }, { key }));
+		let widened = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(widened?.registration_warning_days).toBe(90);
+		expect(widened?.registration_next_check_at).toBeNull();
+
+		await dispatch(db, mergePatch(monitor.id, { registrationWarningDays: null }, { key }));
+		let reset = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		expect(reset?.registration_warning_days).toBe(30);
 	});
 
 	test("null resets a member to its default", async () => {

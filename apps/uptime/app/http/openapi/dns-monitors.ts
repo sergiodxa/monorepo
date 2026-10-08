@@ -22,11 +22,14 @@ import {
 } from "~/app/http/validators/dns-monitor";
 import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
 import { typedId } from "~/app/services/typed-id";
-import { dnsRecordStates } from "~/database/schema";
+import { dnsRecordStates, registrationStatuses } from "~/database/schema";
 import routes from "~/routes/web";
 
 const CHECK_STATUSES = ["ok", "changed", "error"] as const;
 const DNS_RECORD_SOURCES = ["resolver", "zone_file"] as const;
+
+/** The warning window a monitor gets when none is given, matching the column's default. */
+const DEFAULT_REGISTRATION_WARNING_DAYS = 30;
 
 /** Why a pasted zone-file line was left out of an import, as the parser reports it. */
 const ZONE_FILE_REJECTION_REASONS = [
@@ -65,6 +68,27 @@ const DNS_MONITOR = s
 		isEnabled: s.boolean(),
 		lastCheckedAt: s.nullable(epochMs()),
 		lastStatus: s.nullable(s.enum_(CHECK_STATUSES)),
+		registrationStatus: s.enum_(registrationStatuses).meta({
+			description:
+				"The domain registration's state from the last RDAP lookup; `unavailable` when the registry has no record or no RDAP service, `error` when no lookup has succeeded within the warning window",
+		}),
+		registrationExpiresAt: s.nullable(epochMs()).meta({
+			description:
+				"When the registration expires; null until looked up or when the registry publishes none",
+		}),
+		registrar: s.nullable(s.string()),
+		registrationEppStatuses: s.array(s.string()).meta({
+			description:
+				"EPP status codes from the last successful lookup, such as `clientTransferProhibited`",
+		}),
+		registrationWarningDays: s.integer(),
+		registrationCheckedAt: s.nullable(epochMs()).meta({
+			description: "When a registration lookup last succeeded",
+		}),
+		registrationError: s.nullable(s.string()).meta({
+			description:
+				"Why the last lookup failed, such as `not-found` or `rate-limited`; null after a success",
+		}),
 		createdAt: epochMs(),
 		updatedAt: epochMs(),
 	})
@@ -138,12 +162,24 @@ function dnsInterval() {
 		.pipe(checks.min(MIN_DNS_INTERVAL_SECONDS), checks.max(MAX_DNS_INTERVAL_SECONDS));
 }
 
+/** Days before expiry a registration alerts from, the same bounds on create and update. */
+function registrationWarningDays() {
+	return s
+		.integer()
+		.pipe(checks.min(1), checks.max(365))
+		.meta({ description: "Days before the domain registration expires to start alerting" });
+}
+
 /** The members a DNS monitor is created with and keeps; omitted ones take their defaults. */
 const DNS_MONITOR_FIELDS = {
 	name: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	domain: s.string().pipe(checks.minLength(1), checks.maxLength(255)),
 	intervalSeconds: s.defaulted(dnsInterval(), DEFAULT_DNS_INTERVAL_SECONDS),
 	isEnabled: s.defaulted(s.boolean(), true),
+	registrationWarningDays: s.defaulted(
+		registrationWarningDays(),
+		DEFAULT_REGISTRATION_WARNING_DAYS,
+	),
 };
 
 /** The body `POST /api/v1/dns-monitors` accepts. */
@@ -171,6 +207,7 @@ export const UPDATE_DNS_MONITOR_BODY = s.object({
 	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	intervalSeconds: s.optional(dnsInterval()),
 	isEnabled: s.optional(s.boolean()),
+	registrationWarningDays: s.optional(registrationWarningDays()),
 });
 
 /**
@@ -183,6 +220,7 @@ const DNS_MONITOR_PATCH = s.object({
 	domain: s.optional(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 	intervalSeconds: s.optional(s.nullable(dnsInterval())),
 	isEnabled: s.optional(s.nullable(s.boolean())),
+	registrationWarningDays: s.optional(s.nullable(registrationWarningDays())),
 });
 
 /**

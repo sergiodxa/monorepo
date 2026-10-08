@@ -3185,6 +3185,7 @@ export default {
 					domain: "ドメイン",
 					records: "レコード",
 					status: "ステータス",
+					registration: "ドメイン登録",
 					lastChecked: "最終チェック",
 					actions: "アクション",
 				},

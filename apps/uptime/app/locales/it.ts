@@ -3239,6 +3239,7 @@ export default {
 					domain: "Dominio",
 					records: "Record",
 					status: "Stato",
+					registration: "Registrazione",
 					lastChecked: "Ultimo Controllo",
 					actions: "Azioni",
 				},

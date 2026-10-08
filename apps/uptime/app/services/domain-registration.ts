@@ -9,6 +9,7 @@
 
 import type { RDAPError } from "@sdxc/rdap";
 import type { Result } from "@sdxc/result";
+import type { Database } from "remix/data-table";
 
 import { createBackoff } from "@sdxc/backoff";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
@@ -17,8 +18,10 @@ import { RDAP } from "@sdxc/rdap";
 import { isSuccess } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
+import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { RegistrationStatus, SelectDnsMonitor } from "~/database/schema";
 
+import DnsMonitor from "~/app/data/dns-monitor";
 import { absoluteUrl } from "~/app/lib/origin";
 import { classifyExpiry, shouldRemindOfExpiry } from "~/app/services/expiry";
 
@@ -176,4 +179,59 @@ export function registrationIsDown(
 	eppStatuses: readonly string[],
 ): boolean {
 	return status === "expired" || eppStatuses.some((value) => STOPS_RESOLVING.has(value));
+}
+
+/** What one lookup reads about its monitor, beside the stored registration fields. */
+export type RegistrationTarget = RegistrationState & Pick<SelectDnsMonitor, "id" | "domain">;
+
+/** One looked-up monitor: the alert it warrants, if any, and the error code when the lookup failed. */
+export interface RegistrationCheck {
+	notification: NotifyMessage | null;
+	error: string | null;
+}
+
+/**
+ * Looks one monitor's domain up, persists the outcome, and builds the notification it
+ * warrants, for the sweep and "Check now" alike. The days left are counted from the stored
+ * date after the write, so a failed lookup inside the warning window still reminds.
+ *
+ * @param db - The database the monitor lives in.
+ * @param monitor - The monitor's id, domain and stored registration fields.
+ * @returns The `notify` message to send, if any, and the failed lookup's error code.
+ */
+export async function checkRegistration(
+	db: Database,
+	monitor: RegistrationTarget,
+): Promise<RegistrationCheck> {
+	let now = Date.now();
+	let lookup = await rdapClient().domain(monitor.domain);
+	let patch = registrationOutcome(monitor, lookup, now);
+
+	await DnsMonitor.recordRegistration(db, monitor.id, patch);
+
+	let expiresAt =
+		patch.registration_expires_at === undefined
+			? monitor.registration_expires_at
+			: patch.registration_expires_at;
+	let { daysUntilExpiry } = classifyExpiry(expiresAt, monitor.registration_warning_days);
+	let eppStatuses = isSuccess(lookup) ? lookup.data.status : [];
+
+	let alert = shouldAlertOnRegistration(
+		monitor.registration_status,
+		patch.registration_status,
+		daysUntilExpiry,
+		eppStatuses,
+	);
+
+	return {
+		error: isSuccess(lookup) ? null : lookup.error.code,
+		notification: alert
+			? {
+					monitorType: "registration",
+					monitorId: monitor.id,
+					previousStatus: monitor.registration_status,
+					newStatus: patch.registration_status,
+				}
+			: null,
+	};
 }

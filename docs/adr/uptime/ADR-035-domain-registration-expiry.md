@@ -79,10 +79,18 @@ A registration lookup is not a ping: it is a daily read of public data, like the
 re-check, so it is never metered. Its share of the sweep's cost is apportioned to the teams whose
 monitors it took, as every sweep's is.
 
-### 6. The detail page shows it
+### 6. Where it shows
 
-The DNS monitor page gains a Registration panel: status, expiry date, registrar, the EPP statuses,
-and why a lookup is unavailable or failing, with the time of the last successful lookup.
+- The DNS monitor page has a Registration panel: status, expiry date, registrar, the EPP
+  statuses, and why a lookup is unavailable or failing, with the time of the last successful
+  lookup. The DNS monitors list shows the status and expiry date in its own column.
+- "Check now" looks the registration up beside the DNS sweep, so a renewal shows at once.
+  Its alert goes through the same `notify` queue the sweep uses.
+- The API's DNS monitor object carries `registrationStatus`, `registrationExpiresAt`,
+  `registrar`, `registrationEppStatuses`, `registrationWarningDays`, `registrationCheckedAt`
+  and `registrationError`; `registrationWarningDays` is writable on create, `PUT` and `PATCH`.
+- A new warning window makes the registration due on the next sweep, so its classification
+  follows within the hour. `DnsMonitor.updateById` owns that rule for every write path.
 
 ## Consequences
 
@@ -96,3 +104,4 @@ and why a lookup is unavailable or failing, with the time of the last successful
 - [x] `checkDomainRegistrations` job and the shared expiry classification
 - [x] `registration` alerts, snapshot, email and message rows
 - [x] Registration panel on the detail page, warning days on the edit page, locale keys in every locale
+- [x] Registration in the API, "Check now" and the DNS monitors list

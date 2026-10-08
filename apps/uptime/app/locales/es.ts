@@ -3234,6 +3234,7 @@ export default {
 					domain: "Dominio",
 					records: "Registros",
 					status: "Estado",
+					registration: "Registro del dominio",
 					lastChecked: "Última verificación",
 					actions: "Acciones",
 				},
@@ -3442,10 +3443,10 @@ export default {
 
 			/** The domain's registration as its registry publishes it (ADR-035). */
 			registration: {
-				title: "Registro",
+				title: "Registro del dominio",
 				description:
 					"Se consulta en el registro del dominio una vez al día. Recibirás alertas desde {$days} días antes de que venza el registro.",
-				status: "Registro",
+				status: "Registro del dominio",
 				expiresAt: "Vence",
 				registrar: "Registrador",
 				checkedAt: "Última consulta",

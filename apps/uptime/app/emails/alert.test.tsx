@@ -465,6 +465,50 @@ describe("AlertEmail", () => {
 		expect(instants(text)).toContain("Expires at Aug 20, 2026 at 12:00 AM UTC");
 	});
 
+	test("reports a domain registration's own detail", async () => {
+		let email = await makeEmail({
+			monitorType: "registration",
+			eventType: "down",
+			snapshot: {
+				type: "registration",
+				status: "valid",
+				domain: "example.com",
+				expiresAt: "2027-03-11T00:00:00.000Z",
+				daysUntilExpiry: 154,
+				registrar: "Example Registrar, LLC",
+				eppStatuses: ["clientTransferProhibited", "serverHold"],
+			},
+		});
+
+		let { text } = await render(email.body());
+
+		expect(text).toContain("Domain example.com");
+		expect(text).toContain("Registrar Example Registrar, LLC");
+		expect(text).toContain("Registry statuses clientTransferProhibited, serverHold");
+		expect(instants(text)).toContain("Expires at Mar 11, 2027 at 12:00 AM UTC");
+	});
+
+	test("writes a dash for a registration the registry published no detail for", async () => {
+		let email = await makeEmail({
+			monitorType: "registration",
+			eventType: "down",
+			snapshot: {
+				type: "registration",
+				status: "error",
+				domain: "example.com",
+				expiresAt: null,
+				daysUntilExpiry: null,
+				registrar: null,
+				eppStatuses: [],
+			},
+		});
+
+		let { text } = await render(email.body());
+
+		expect(text).toContain("Registrar —");
+		expect(text).toContain("Registry statuses —");
+	});
+
 	test("writes the copy in the language it was constructed for", async () => {
 		let { locale, t } = emailTranslator("de");
 		let email = await makeEmail({ locale, t });

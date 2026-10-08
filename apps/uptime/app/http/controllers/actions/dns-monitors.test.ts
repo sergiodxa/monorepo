@@ -13,7 +13,7 @@
 import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import billing from "@sdxc/billing/middleware";
-import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { CLOUDFLARE } from "@sdxc/doh";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
@@ -56,7 +56,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
 /** `waitUntil` collects deferred work so a test can await it once the response returns. */
 vi.doMock("cloudflare:workers", () => ({
-	env: createEnv<Env>({ PING_RESULTS: pingResults }),
+	env: createEnv<Env>({ PING_RESULTS: pingResults, KV: createKVNamespace() }),
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
@@ -75,7 +75,33 @@ let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/data/dns-monitor");
 
 const DOH_URL = CLOUDFLARE.url;
 
-let server = setupServer();
+/** The expiry every registry answer below carries, far outside any warning window. */
+const REGISTRY_EXPIRY = "2030-01-01T00:00:00.000Z";
+
+/**
+ * The RDAP bootstrap file and a `.com` registry, kept across `resetHandlers()`: "Check now"
+ * looks the registration up beside every sweep, so each check test reaches both.
+ */
+let server = setupServer(
+	http.get("https://data.iana.org/rdap/dns.json", () =>
+		HttpResponse.json({
+			version: "1.0",
+			publication: "2026-10-01T00:00:00Z",
+			services: [[["com"], ["https://rdap.verisign.com/com/v1/"]]],
+		}),
+	),
+	http.get("https://rdap.verisign.com/com/v1/domain/:name", ({ params }) =>
+		HttpResponse.json({
+			objectClassName: "domain",
+			ldhName: String(params.name).toUpperCase(),
+			status: ["client transfer prohibited"],
+			events: [{ eventAction: "expiration", eventDate: REGISTRY_EXPIRY }],
+			entities: [
+				{ roles: ["registrar"], vcardArray: ["vcard", [["fn", {}, "text", "Example Registrar"]]] },
+			],
+		}),
+	),
+);
 
 /** How many DoH queries the request under test sent — zero is the assertion that matters. */
 let queries = 0;
@@ -604,6 +630,31 @@ describe("DELETE /actions/:team/delete-dns-monitor", () => {
 });
 
 describe("POST /actions/:team/check-dns-monitor", () => {
+	test("refreshes the domain's registration beside the sweep", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id);
+		await createRecordRow(db, monitor.id);
+
+		await postDnsMonitorAction(
+			checkDnsMonitor,
+			routes.actions.monitor.dns.check,
+			team,
+			membership,
+			db,
+			{ monitor_id: monitor.id },
+		);
+
+		let checked = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(checked?.registration_status).toBe("valid");
+		expect(checked?.registration_expires_at).toBe(Date.parse(REGISTRY_EXPIRY));
+		expect(checked?.registrar).toBe("Example Registrar");
+		expect(checked?.registration_epp_statuses).toEqual(["clientTransferProhibited"]);
+		expect(checked?.registration_checked_at).not.toBeNull();
+	});
+
 	/** One name, every supported record type: seven DoH queries per domain. */
 	test("sweeps every tracked name, records the result, and redirects to the monitor", async () => {
 		stubResolver();

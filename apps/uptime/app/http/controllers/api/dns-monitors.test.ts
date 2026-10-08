@@ -441,6 +441,33 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.dnsMonitor.intervalSeconds).toBe(86_400);
 	});
 
+	test("creates with a registration warning window, defaulting to 30 days", async () => {
+		stubResolver();
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
+
+		let defaulted = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody(), { Authorization: `Bearer ${key}` }),
+		);
+		let custom = await dispatch(
+			db,
+			createRequest(validDnsMonitorBody({ domain: "example.org", registrationWarningDays: 60 }), {
+				Authorization: `Bearer ${key}`,
+			}),
+		);
+
+		let read = async (response: Response) =>
+			((await response.json()) as { data: { dnsMonitor: Record<string, unknown> } }).data
+				.dnsMonitor;
+		expect(await read(defaulted)).toMatchObject({
+			registrationWarningDays: 30,
+			registrationStatus: "unknown",
+		});
+		expect(await read(custom)).toMatchObject({ registrationWarningDays: 60 });
+	});
+
 	test("returns 400 for a validation failure (blank domain)", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

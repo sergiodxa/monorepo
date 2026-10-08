@@ -97,6 +97,11 @@ describe("encodeMonitorId", () => {
 		expect(encodeMonitorId("ssl", id)).toBe(encodeId("mon", id));
 	});
 
+	test("reports a registration event through its DNS monitor's prefix", () => {
+		let id = generateUUID();
+		expect(encodeMonitorId("registration", id)).toBe(encodeId("dns", id));
+	});
+
 	test("reads a row stored without a type as an HTTP monitor", () => {
 		let id = generateUUID();
 		expect(encodeMonitorId(null, id)).toBe(encodeId("mon", id));

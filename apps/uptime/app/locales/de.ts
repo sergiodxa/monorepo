@@ -3254,6 +3254,7 @@ export default {
 					domain: "Domain",
 					records: "Einträge",
 					status: "Status",
+					registration: "Registrierung",
 					lastChecked: "Zuletzt geprüft",
 					actions: "Aktionen",
 				},

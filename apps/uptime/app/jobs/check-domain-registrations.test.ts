@@ -10,14 +10,12 @@
 
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
-import { MemoryCache } from "@sdxc/cache/memory";
-import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { createEnv, createKVNamespace, createQueue } from "@sdxc/cloudflare-mocks";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { RDAP } from "@sdxc/rdap";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -43,16 +41,8 @@ const VERISIGN = "https://rdap.verisign.com/com/v1/domain";
  */
 let queue: QueueMock<NotifyEnvelope> = createQueue<NotifyEnvelope>({ name: "notify" });
 
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
-
-let realRegistration = await import("~/app/services/domain-registration");
-
-/** The client the sweep looks up through, with its bootstrap copy kept in memory per test. */
-let rdap = new RDAP({ cache: new MemoryCache(), userAgent: "UptimeTest/1.0" });
-
-vi.doMock("~/app/services/domain-registration", () => ({
-	...realRegistration,
-	rdapClient: () => rdap,
+vi.doMock("cloudflare:workers", () => ({
+	env: createEnv<Env>({ QUEUE: queue, KV: createKVNamespace() }),
 }));
 
 let jobs = (await import("~/app/jobs")).default;
@@ -69,7 +59,6 @@ afterAll(() => server.close());
 
 beforeEach(() => {
 	queue.reset();
-	rdap = new RDAP({ cache: new MemoryCache(), userAgent: "UptimeTest/1.0" });
 	server.use(
 		http.get("https://data.iana.org/rdap/dns.json", () =>
 			HttpResponse.json({

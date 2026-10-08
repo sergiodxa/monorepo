@@ -22,11 +22,7 @@ import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type {
-	RegistrationStatus,
-	SelectDnsMonitor,
-	SelectDnsMonitorRecord,
-} from "~/database/schema";
+import type { SelectDnsMonitor, SelectDnsMonitorRecord } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -35,6 +31,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
+import RegistrationBadge from "~/resources/components/registration-badge";
 import StatCard from "~/resources/components/stat-card";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
@@ -44,16 +41,6 @@ import routes from "~/routes/web";
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	ok: "up",
 	changed: "degraded",
-	error: "down",
-};
-
-/** `unavailable` reads neutral: the registry has nothing to say, which is no fault of the domain. */
-const REGISTRATION_BADGE_TONE: Record<RegistrationStatus, BadgeTone> = {
-	unknown: "neutral",
-	valid: "up",
-	expiring: "degraded",
-	expired: "down",
-	unavailable: "neutral",
 	error: "down",
 };
 
@@ -202,13 +189,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 							<div mix={[flex(), flexWrap(), gap("16px")]}>
 								<StatCard
 									label={ctx.intl.t("page.dnsMonitorDetail.registration.status")}
-									value={
-										<Badge {...badgeVariant(REGISTRATION_BADGE_TONE[monitor.registration_status])}>
-											{ctx.intl.t(
-												`page.dnsMonitorDetail.registration.statuses.${monitor.registration_status}`,
-											)}
-										</Badge>
-									}
+									value={<RegistrationBadge status={monitor.registration_status} intl={ctx.intl} />}
 								/>
 								<StatCard
 									label={ctx.intl.t("page.dnsMonitorDetail.registration.expiresAt")}

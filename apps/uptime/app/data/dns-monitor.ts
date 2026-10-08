@@ -149,15 +149,24 @@ export default class DnsMonitor {
 	/**
 	 * Updates a DNS monitor's editable fields, keeping `next_due_at` consistent with them:
 	 * scheduling lives entirely in that column, so an update that changes whether or how
-	 * often a monitor should be checked has to move it in the same write.
+	 * often a monitor should be checked has to move it in the same write. A new registration
+	 * warning window reclassifies the stored expiry date, so it also makes the registration
+	 * due on the next sweep; callers pass the window only when it differs from the stored one.
 	 */
 	static async updateById(db: Database, monitorId: string, changes: Partial<InsertDnsMonitor>) {
 		let patch = await nextDueAtPatch(db, dnsMonitors, monitorId, {
 			enabled: changes.is_enabled,
 			intervalSeconds: changes.interval_seconds,
 		});
+		let registration =
+			changes.registration_warning_days === undefined ? {} : { registration_next_check_at: null };
 
-		return await db.update(dnsMonitors, monitorId, { ...changes, ...patch }, { touch: true });
+		return await db.update(
+			dnsMonitors,
+			monitorId,
+			{ ...changes, ...patch, ...registration },
+			{ touch: true },
+		);
 	}
 
 	/**

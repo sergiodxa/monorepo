@@ -19,6 +19,7 @@ import { createController } from "remix/router";
 import type { InsertDnsMonitor, SelectDnsMonitor } from "~/database/schema";
 
 import DnsMonitor from "~/app/data/dns-monitor";
+import { serializeDnsMonitor } from "~/app/http/controllers/api/dns-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -33,22 +34,6 @@ import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRoutes } from "~/routes/api-groups";
 
-/** Maps a DNS monitor row to its public camelCase JSON shape. */
-function serializeDnsMonitor(monitor: SelectDnsMonitor) {
-	return {
-		id: encodeId("dns", monitor.id),
-		name: monitor.name,
-		domain: monitor.domain,
-		zoneFileImportedAt: monitor.zone_file_imported_at,
-		intervalSeconds: monitor.interval_seconds,
-		isEnabled: monitor.is_enabled,
-		lastCheckedAt: monitor.last_checked_at,
-		lastStatus: monitor.last_status,
-		createdAt: monitor.created_at,
-		updatedAt: monitor.updated_at,
-	};
-}
-
 /**
  * The DNS monitor's writable members as the API reads them, the target an update's merge
  * patch applies to.
@@ -59,6 +44,7 @@ function writableDnsMonitor(monitor: SelectDnsMonitor) {
 		domain: monitor.domain,
 		intervalSeconds: monitor.interval_seconds,
 		isEnabled: monitor.is_enabled,
+		registrationWarningDays: monitor.registration_warning_days,
 	};
 }
 
@@ -84,6 +70,9 @@ async function patchDnsMonitor(ctx: RequestContext): Promise<Response> {
 	if (changed.has("domain")) changes.domain = value.domain;
 	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
 	if (changed.has("isEnabled")) changes.is_enabled = value.isEnabled;
+	if (changed.has("registrationWarningDays")) {
+		changes.registration_warning_days = value.registrationWarningDays;
+	}
 
 	let monitor = await DnsMonitor.updateById(ctx.db, dnsMonitorId, changes);
 	return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });
@@ -139,6 +128,10 @@ export default createController(dnsMonitorRoutes, {
 				if (result.data.intervalSeconds !== undefined)
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
+				let warningDays = result.data.registrationWarningDays;
+				if (warningDays !== undefined && warningDays !== existing.registration_warning_days) {
+					changes.registration_warning_days = warningDays;
+				}
 
 				let monitor = await DnsMonitor.updateById(ctx.db, dnsMonitorId, changes);
 				return apiSuccess({ dnsMonitor: serializeDnsMonitor(monitor) });

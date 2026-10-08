@@ -131,6 +131,34 @@ describe("dnsMonitors", () => {
 		expect(body).toContain("example.com");
 	});
 
+	test("shows each monitor's registration status and expiry date", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Expiring DNS",
+				domain: "example.com",
+				registration_status: "expiring",
+				registration_expires_at: Date.UTC(2026, 10, 1),
+			},
+			{ touch: true, returnRow: true },
+		);
+		await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "New DNS", domain: "example.org" },
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+
+		expect(body).toContain("Registration");
+		expect(body).toContain("Expiring");
+		expect(body).toContain("Nov 1, 2026");
+		expect(body).toContain("Not looked up yet");
+	});
+
 	/**
 	 * A monitor is a domain, so what a row has to say about size is how many records it
 	 * tracks and how many of those a deviation would alert on — the two numbers the old

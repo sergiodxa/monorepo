@@ -37,8 +37,12 @@ import { encodeId } from "~/app/services/typed-id";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 import { dnsMonitorsRoutes } from "~/routes/api-groups";
 
-/** Maps a DNS monitor row to its public camelCase JSON shape. */
-function serializeDnsMonitor(monitor: SelectDnsMonitor) {
+/**
+ * Maps a DNS monitor row to its public camelCase JSON shape, the one every DNS monitor
+ * endpoint answers with. The registration members read as the last lookup left them; the
+ * EPP statuses are the last successful lookup's, so they stand while a lookup is failing.
+ */
+export function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 	return {
 		id: encodeId("dns", monitor.id),
 		name: monitor.name,
@@ -48,6 +52,13 @@ function serializeDnsMonitor(monitor: SelectDnsMonitor) {
 		isEnabled: monitor.is_enabled,
 		lastCheckedAt: monitor.last_checked_at,
 		lastStatus: monitor.last_status,
+		registrationStatus: monitor.registration_status,
+		registrationExpiresAt: monitor.registration_expires_at,
+		registrar: monitor.registrar,
+		registrationEppStatuses: monitor.registration_epp_statuses ?? [],
+		registrationWarningDays: monitor.registration_warning_days,
+		registrationCheckedAt: monitor.registration_checked_at,
+		registrationError: monitor.registration_error,
 		createdAt: monitor.created_at,
 		updatedAt: monitor.updated_at,
 	};
@@ -178,6 +189,7 @@ export default createController(dnsMonitorsRoutes, {
 					zone_file_imported_at: zoneFile === null ? null : Date.now(),
 					interval_seconds: result.data.intervalSeconds,
 					is_enabled: result.data.isEnabled,
+					registration_warning_days: result.data.registrationWarningDays,
 				});
 
 				/**

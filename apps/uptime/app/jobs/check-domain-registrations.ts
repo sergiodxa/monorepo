@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createJobHandler } from "@sdxc/jobs";
 import { isSuccess } from "@sdxc/result";
 
@@ -20,12 +18,7 @@ import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { apportionCostByTeam } from "~/app/services/cost";
-import {
-	rdapClient,
-	registrationOutcome,
-	shouldAlertOnRegistration,
-} from "~/app/services/domain-registration";
-import { classifyExpiry } from "~/app/services/expiry";
+import { checkRegistration, rdapClient } from "~/app/services/domain-registration";
 
 /**
  * The most monitors one delivery looks up. Each costs one or two registry requests and a D1
@@ -36,12 +29,6 @@ const MAX_LOOKUPS_PER_SWEEP = 200;
 
 /** Lookups in flight against one registry, which rate-limits without saying where its limit is. */
 const LOOKUPS_PER_REGISTRY = 2;
-
-/** One looked-up monitor: the alert it warrants, if any, and the error code when the lookup failed. */
-interface LookedUp {
-	notification: NotifyMessage | null;
-	error: string | null;
-}
 
 export default createJobHandler(jobs.checkDomainRegistrations, async (ctx) => {
 	let monitors = await DnsMonitor.claimRegistrationDue(
@@ -57,7 +44,11 @@ export default createJobHandler(jobs.checkDomainRegistrations, async (ctx) => {
 	let settled = (
 		await Promise.all(
 			groups.map((group) =>
-				mapWithConcurrency(group, (monitor) => check(ctx.database, monitor), LOOKUPS_PER_REGISTRY),
+				mapWithConcurrency(
+					group,
+					(monitor) => checkRegistration(ctx.database, monitor),
+					LOOKUPS_PER_REGISTRY,
+				),
 			),
 		)
 	).flat();
@@ -108,43 +99,4 @@ async function groupByRegistry(monitors: ClaimedRegistration[]): Promise<Claimed
 	}
 
 	return [...groups.values()];
-}
-
-/**
- * Looks one monitor's domain up, persists the outcome, and builds the notification it
- * warrants. The days left are counted from the stored date after the write, so a failed
- * lookup inside the warning window still reminds.
- */
-async function check(db: Database, monitor: ClaimedRegistration): Promise<LookedUp> {
-	let now = Date.now();
-	let lookup = await rdapClient().domain(monitor.domain);
-	let patch = registrationOutcome(monitor, lookup, now);
-
-	await DnsMonitor.recordRegistration(db, monitor.id, patch);
-
-	let expiresAt =
-		patch.registration_expires_at === undefined
-			? monitor.registration_expires_at
-			: patch.registration_expires_at;
-	let { daysUntilExpiry } = classifyExpiry(expiresAt, monitor.registration_warning_days);
-	let eppStatuses = isSuccess(lookup) ? lookup.data.status : [];
-
-	let alert = shouldAlertOnRegistration(
-		monitor.registration_status,
-		patch.registration_status,
-		daysUntilExpiry,
-		eppStatuses,
-	);
-
-	return {
-		error: isSuccess(lookup) ? null : lookup.error.code,
-		notification: alert
-			? {
-					monitorType: "registration",
-					monitorId: monitor.id,
-					previousStatus: monitor.registration_status,
-					newStatus: patch.registration_status,
-				}
-			: null,
-	};
 }

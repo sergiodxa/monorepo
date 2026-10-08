@@ -34,6 +34,7 @@ import {
 	ToggleDnsMonitorRecordSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
+import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import {
@@ -42,6 +43,7 @@ import {
 	importDiscovery,
 	runDnsCheck,
 } from "~/app/services/dns-discovery";
+import { checkRegistration } from "~/app/services/domain-registration";
 import { ingestPings } from "~/app/services/ping-meter";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 import routes from "~/routes/web";
@@ -186,17 +188,13 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 	let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	/**
-	 * A new warning window reclassifies the stored expiry date, so the registration is looked
-	 * up again on the next sweep rather than keeping the old classification for up to a day.
-	 */
 	let windowChanged =
 		registration_warning_days !== undefined &&
 		registration_warning_days !== existing.registration_warning_days;
 
 	await DnsMonitor.updateById(ctx.db, monitor_id, {
 		...values,
-		...(windowChanged ? { registration_warning_days, registration_next_check_at: null } : {}),
+		...(windowChanged ? { registration_warning_days } : {}),
 	});
 
 	session?.flash("toast", {
@@ -268,7 +266,16 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 		);
 	}
 
-	let check = await runDnsCheck(ctx.db, monitor.id, monitor.domain);
+	/**
+	 * The registration is looked up beside the sweep, so a visitor who just renewed sees the
+	 * new date on the page this redirects to. The lookup is free, so nothing below meters it,
+	 * and its alert goes through the queue the scheduled lookup uses.
+	 */
+	let [check, registration] = await Promise.all([
+		runDnsCheck(ctx.db, monitor.id, monitor.domain),
+		checkRegistration(ctx.db, monitor),
+	]);
+	if (registration.notification) await enqueueNotifications([registration.notification]);
 
 	/**
 	 * Written between the history row and the meter, exactly where the scheduled sweep writes

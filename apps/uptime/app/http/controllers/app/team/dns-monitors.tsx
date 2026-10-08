@@ -12,10 +12,12 @@
 
 import type { Database } from "remix/data-table";
 
+import { formatDate } from "@sdxc/dates";
 import { GlobeIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
+import { flex, flexWrap, gap, items } from "@sdxc/u/layout";
 import { hover } from "@sdxc/u/state";
-import { textDecoration } from "@sdxc/u/typography";
+import { fontSize, textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
 import { getTableName } from "remix/data-table";
 import { createAction } from "remix/router";
@@ -28,6 +30,7 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { dnsMonitorRecords } from "~/database/schema";
 import { badgeVariant } from "~/resources/components/badge";
+import RegistrationBadge from "~/resources/components/registration-badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -153,6 +156,9 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 											<Table.Column>
 												{ctx.intl.t("page.dnsMonitors.table.columns.status")}
 											</Table.Column>
+											<Table.Column>
+												{ctx.intl.t("page.dnsMonitors.table.columns.registration")}
+											</Table.Column>
 										</Table.Row>
 									</Table.Header>
 									<Table.Body>
@@ -201,6 +207,22 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 															{monitor.last_status ??
 																ctx.intl.t("page.dnsMonitors.table.notChecked")}
 														</Badge>
+													</Table.Cell>
+													<Table.Cell>
+														<div mix={[flex(), flexWrap(), items("center"), gap("8px")]}>
+															<RegistrationBadge
+																status={monitor.registration_status}
+																intl={ctx.intl}
+															/>
+															{monitor.registration_expires_at !== null && (
+																<span mix={[fontSize("sm"), fg("neutral.muted")]}>
+																	{formatDate(new Date(monitor.registration_expires_at), {
+																		locale: ctx.locale,
+																		timeZone: "UTC",
+																	})}
+																</span>
+															)}
+														</div>
 													</Table.Cell>
 												</Table.Row>
 											);
