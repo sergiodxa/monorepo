@@ -83,6 +83,17 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   entry and an MCP resource URI are identities rather than links, so they name one origin
   regardless of which host answered.
 
+- **Link assets through the manifest.** The document's stylesheets and client entry come
+  from `documentAssets()` in `app/services/assets.ts`, which reads the manifest
+  `@pitlane/vite-plugin-remix` writes; a build hashes every file, so a hand-written
+  `/assets/...` URL names a file the next build renames. A stylesheet joins by a side-effect
+  `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
+- **Keep only islands in the browser entry.** `bootstrap/browser.ts` globs
+  `resources/components/previews/` and names each other `clientEntry()` module; a new island
+  elsewhere is one more line there, and `bootstrap/browser.test.ts` fails until it is added.
+  A layout or view in the client bundle compiles the document's stylesheets a second time,
+  and every page would link both copies.
+
 ## Reference files
 
 | Concern                                               | File                                                            |
@@ -101,6 +112,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 | The `@sdxc/ui` subpath pages and how a module is read | `app/services/ui-exports.ts`, `scripts/ui-exports.ts`           |
 | The components per tag                                | `resources/components/`                                         |
 | The palette the theme reads                           | `resources/css/colors.css`                                      |
+| Built asset URLs (manifest)                           | `app/services/assets.ts`                                        |
 | The site's one origin, and its head metadata          | `app/services/site.ts`                                          |
 | The search corpus and its ranking                     | `app/services/search.ts`, `app/services/search-query.ts`        |
 | What the `Open` menu offers                           | `app/services/open-links.ts`                                    |

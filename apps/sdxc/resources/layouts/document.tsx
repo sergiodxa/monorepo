@@ -1,8 +1,7 @@
 /**
- * Root HTML document layout. Renders the html/head/body shell: the fixed head tags,
- * the page title and description, every stylesheet the site ships, and the client
- * runtime entry. Every server-rendered page composes into it, so a page decides only
- * its own content.
+ * Root HTML document layout. Renders the html/head/body shell: the fixed head tags, the
+ * page title and description, the stylesheets imported below in cascade order (reset,
+ * palette, the tokens reading it, code highlighting), and the client runtime entry.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,7 +9,6 @@
 
 import type { Handle, RemixNode } from "remix/component";
 
-import highlightStyles from "@sdxc/highlight/styles.css?url";
 import { Seo } from "@sdxc/seo";
 import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
@@ -18,21 +16,28 @@ import { overflow } from "@sdxc/u/overflow";
 import { m, minBs } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { font } from "@sdxc/u/typography";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/component/server";
 
+import type { DocumentAssets as Assets } from "~/app/services/assets";
 import type { OptionSelections } from "~/app/services/option-groups";
 
 import { seo, SITE_URL } from "~/app/services/site";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
-import colorStyles from "~/resources/css/colors.css?url";
+
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
+import "@sdxc/highlight/styles.css";
 
 /**
- * The dev server serves the entry from source; the built client writes it to a stable
- * name, so the tag can name the file rather than resolve it through a manifest.
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
  */
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 namespace DocumentLayout {
 	export interface Props {
@@ -62,6 +67,7 @@ namespace DocumentLayout {
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 	return () => {
 		let { canonical, children, description, og, selections, title } = handle.props;
+		let { script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html
@@ -92,18 +98,20 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 						site={seo.site}
 						og={og}
 					/>
-					{/* Reset first, then the palette, then the semantic tokens that read it through `var()`. */}
-					<link rel="stylesheet" href={resetStyles} data-rmx-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-rmx-key="style-palette" />
-					<link rel="stylesheet" href={themeStyles} data-rmx-key="style-theme" />
-					<link rel="stylesheet" href={highlightStyles} data-rmx-key="style-highlight" />
+					<ImportMap value={script.importMap} />
+					{script.preloads.map((href) => (
+						<link key={href} rel="modulepreload" href={href} data-rmx-key={href} />
+					))}
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} data-rmx-key={href} />
+					))}
 				</head>
 				<body mix={[m(0), vstack({ align: "center" }), minBs("100dvh"), font("sans"), bg(), fg()]}>
 					<OptionGroupScope selections={selections}>
 						{children}
 						<SiteFooter />
 					</OptionGroupScope>
-					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+					<script type="module" async src={script.href}></script>
 				</body>
 			</html>
 		);

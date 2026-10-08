@@ -51,6 +51,8 @@ import sitemap from "~/app/http/controllers/sitemap";
 import sponsors from "~/app/http/controllers/sponsors";
 import uiExportShow from "~/app/http/controllers/ui-export-show";
 import utilityShow from "~/app/http/controllers/utility-show";
+import { documentAssets } from "~/app/services/assets";
+import { DocumentAssets } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -120,12 +122,16 @@ export default function application() {
  * Creates the request-scoped renderer controllers reach through `ctx.render`.
  * `createHtmlResponse` prepends `<!DOCTYPE html>` to the stream's first chunk, the
  * only point JSX rendering leaves to add it; without it every page parses in quirks
- * mode.
+ * mode. The document's asset URLs are looked up on each render and handed down as context.
  */
-function createHtmlRenderer(_ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
+export function createHtmlRenderer(_ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		return createHtmlResponse(renderToStream(node), { ...init, headers });
+
+		let assets = await documentAssets();
+		let stream = renderToStream(<DocumentAssets value={assets}>{node}</DocumentAssets>);
+
+		return createHtmlResponse(stream, { ...init, headers });
 	};
 }

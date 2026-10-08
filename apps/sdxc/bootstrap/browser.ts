@@ -9,10 +9,20 @@
 
 import { run } from "remix/component";
 
-const clientModules = import.meta.glob([
-	"!../**/*.server.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+/**
+ * Modules the runtime may hydrate: the islands, each a `clientEntry()` module under
+ * `resources/components/`. Layouts, views and the server-rendered components stay out, since
+ * bundling them would compile the document's stylesheets a second time, a copy every page
+ * would then link, and give each its own chunk in the import map every page carries.
+ */
+const CLIENT_MODULES = import.meta.glob([
+	"../resources/components/previews/*.tsx",
+	"../resources/components/copy-button.tsx",
+	"../resources/components/copy-markdown.tsx",
+	"../resources/components/drawer-dismiss.tsx",
+	"../resources/components/option-groups.tsx",
+	"../resources/components/search-palette.tsx",
+	"../resources/components/table-of-contents.tsx",
 ]);
 
 /**
@@ -21,7 +31,7 @@ const clientModules = import.meta.glob([
 run({
 	async loadModule(moduleUrl, exportName) {
 		let pathname = new URL(moduleUrl, location.origin).pathname;
-		let load = clientModules[`..${pathname}`];
+		let load = CLIENT_MODULES[`..${pathname}`];
 		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
 
 		let mod = await load();

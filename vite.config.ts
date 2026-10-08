@@ -350,7 +350,12 @@ export default defineConfig({
 			{
 				root: "apps/sdxc",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "sdxc",
 					include: ["**/*.test.ts?(x)"],
