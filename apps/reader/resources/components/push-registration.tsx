@@ -13,7 +13,9 @@
 
 import type { Handle } from "remix/component";
 
+import { isFailure } from "@sdxc/result";
 import { Button } from "@sdxc/ui";
+import { isSupported, subscribe } from "@sdxc/web-push/browser";
 import { clientEntry, on, ref } from "remix/component";
 
 /**
@@ -40,26 +42,6 @@ type PushRegistrationProps = {
 	allow: string;
 };
 
-/** The bytes an `applicationServerKey` is given as, decoded from the page's base64url. */
-function decodeKey(value: string): ArrayBuffer {
-	let padded = value.replace(/-/g, "+").replace(/_/g, "/");
-	let binary = atob(padded.padEnd(Math.ceil(padded.length / 4) * 4, "="));
-
-	let bytes = new Uint8Array(new ArrayBuffer(binary.length));
-	for (let index = 0; index < binary.length; index++) bytes[index] = binary.charCodeAt(index);
-
-	return bytes.buffer;
-}
-
-/** One of a subscription's keys as base64url, which is the form the server stores it in. */
-function encodeKey(buffer: ArrayBuffer | null): string {
-	if (buffer === null) return "";
-
-	let binary = String.fromCharCode(...new Uint8Array(buffer));
-
-	return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
 export const PushRegistration = clientEntry(
 	"/resources/components/push-registration.tsx#PushRegistration",
 	function PushRegistration(handle: Handle<PushRegistrationProps>) {
@@ -82,34 +64,28 @@ export const PushRegistration = clientEntry(
 		}
 
 		/**
-		 * Subscribes this browser and hands the endpoint over.
+		 * Subscribes this browser and hands the subscription over, asking for permission first
+		 * when it has not been granted. A browser subscribed under a previous key is moved to
+		 * the page's current one.
 		 *
 		 * Re-subscribing answers with the endpoint the browser already had, which is why the
 		 * server takes registration as an upsert: a reader signing in twice on one device ends
 		 * with one row rather than two notifications.
 		 */
 		async function registerDevice(signal: AbortSignal) {
-			let registration = await navigator.serviceWorker.register(handle.props.worker, {
+			let subscribed = await subscribe({
+				worker: handle.props.worker,
 				scope: "/",
+				applicationServerKey: handle.props.vapidPublicKey,
 			});
-
-			let ready = await navigator.serviceWorker.ready.then(() => registration);
-
-			let subscription =
-				(await ready.pushManager.getSubscription()) ??
-				(await ready.pushManager.subscribe({
-					userVisibleOnly: true,
-					applicationServerKey: decodeKey(handle.props.vapidPublicKey),
-				}));
+			if (isFailure(subscribed)) return;
 
 			await fetch(handle.props.devices, {
 				method: "POST",
 				credentials: "same-origin",
 				headers: { "content-type": "application/json" },
 				body: JSON.stringify({
-					endpoint: subscription.endpoint,
-					p256dh: encodeKey(subscription.getKey("p256dh")),
-					auth: encodeKey(subscription.getKey("auth")),
+					subscription: subscribed.data,
 					locale: document.documentElement.lang,
 				}),
 				signal,
@@ -120,17 +96,15 @@ export const PushRegistration = clientEntry(
 		let asking = false;
 
 		/**
-		 * Asks for permission from the press itself, the one moment every browser shows the
-		 * prompt, and registers once it is granted. Either answer retires the button.
+		 * Subscribes from the press itself, the one moment every browser shows the prompt.
+		 * Either answer retires the button.
 		 */
 		async function allow() {
+			asking = false;
+			void handle.update();
+
 			try {
-				let permission = await Notification.requestPermission();
-
-				asking = false;
-				void handle.update();
-
-				if (permission === "granted") await registerDevice(handle.signal);
+				await registerDevice(handle.signal);
 			} catch (error) {
 				console.error("This browser could not be registered for notifications", error);
 			}
@@ -147,7 +121,7 @@ export const PushRegistration = clientEntry(
 					await reportTimeZone(signal);
 
 					if (!handle.props.enabled || handle.props.vapidPublicKey === "") return;
-					if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+					if (!isSupported()) return;
 
 					if (Notification.permission === "granted") {
 						await registerDevice(signal);

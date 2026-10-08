@@ -23,12 +23,19 @@ vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
 
 let { default: devices } = await import("./devices");
 
+/** The key the page handed the browser to subscribe under, from RFC 8291's example sender. */
+const VAPID_KEY =
+	"BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8";
+
 /** A subscription a browser hands over, with RFC 8291's example key material. */
 const SUBSCRIPTION = {
 	endpoint: "https://fcm.googleapis.com/fcm/send/device-1",
-	p256dh: "BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
-	auth: "BTBZMqHH6r4Tts7J_aSIgg",
-	locale: "en",
+	keys: {
+		p256dh:
+			"BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4",
+		auth: "BTBZMqHH6r4Tts7J_aSIgg",
+	},
+	applicationServerKey: VAPID_KEY,
 };
 
 /** A router with the registration route mapped, signed in as the test viewer. */
@@ -39,12 +46,12 @@ function createRouter(): Router {
 }
 
 /** Posts a registration body as the script on the settings page does. */
-function register(body: Record<string, string>): Promise<Response> {
+function register(subscription: Record<string, unknown>): Promise<Response> {
 	return createRouter().fetch(
 		new Request(new URL(routes.notifications.devices.href(), ORIGIN), {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify(body),
+			body: JSON.stringify({ subscription, locale: "en" }),
 		}),
 	);
 }
@@ -54,12 +61,18 @@ beforeEach(() => {
 });
 
 describe("POST /settings/notifications/devices", () => {
-	test("stores a subscription a browser issued", async () => {
+	test("stores a subscription a browser issued, with the key it subscribed under", async () => {
 		let response = await register(SUBSCRIPTION);
 
 		expect(response.status).toBe(200);
 		expect(store.registerDevice).toHaveBeenCalledWith(
-			expect.objectContaining({ endpoint: SUBSCRIPTION.endpoint }),
+			expect.objectContaining({
+				endpoint: SUBSCRIPTION.endpoint,
+				p256dh: SUBSCRIPTION.keys.p256dh,
+				auth: SUBSCRIPTION.keys.auth,
+				vapidKey: VAPID_KEY,
+				locale: "en",
+			}),
 		);
 	});
 
@@ -83,13 +96,16 @@ describe("POST /settings/notifications/devices", () => {
 
 	test.each([
 		["text that is not base64url", { p256dh: "not base64url!" }],
-		["a point that is too short", { p256dh: SUBSCRIPTION.p256dh.slice(0, 40) }],
-		["a point without the uncompressed prefix", { p256dh: `A${SUBSCRIPTION.p256dh.slice(1)}` }],
-		["a point off the curve", { p256dh: `${SUBSCRIPTION.p256dh.slice(0, -2)}AA` }],
+		["a point that is too short", { p256dh: SUBSCRIPTION.keys.p256dh.slice(0, 40) }],
+		[
+			"a point without the uncompressed prefix",
+			{ p256dh: `A${SUBSCRIPTION.keys.p256dh.slice(1)}` },
+		],
+		["a point off the curve", { p256dh: `${SUBSCRIPTION.keys.p256dh.slice(0, -2)}AA` }],
 		["an auth secret that is too short", { auth: "BTBZMqHH6r4Tts7J" }],
-		["an auth secret that is too long", { auth: `${SUBSCRIPTION.auth}AAAA` }],
+		["an auth secret that is too long", { auth: `${SUBSCRIPTION.keys.auth}AAAA` }],
 	])("refuses key material that is %s", async (_case, keys) => {
-		let response = await register({ ...SUBSCRIPTION, ...keys });
+		let response = await register({ ...SUBSCRIPTION, keys: { ...SUBSCRIPTION.keys, ...keys } });
 
 		expect(response.status).toBe(400);
 		expect(store.registerDevice).not.toHaveBeenCalled();

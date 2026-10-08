@@ -1,7 +1,7 @@
 /**
  * Device registration for `POST /settings/notifications/devices`. A browser that has just
- * subscribed to a push service hands over the endpoint and key material it was given, and
- * this records it against the reader.
+ * subscribed to a push service hands over the subscription it was given, and this records
+ * it against the reader.
  *
  * It answers JSON rather than a page: nothing links here, and the only caller is the
  * script that subscribed.
@@ -12,24 +12,23 @@
 
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
+import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { isAuthSecret, isP256PublicKey, isPushEndpoint } from "~/app/push/subscription";
 import { userStore } from "~/database/user-do";
 import routes from "~/routes/web";
 
 /**
- * What a browser's `PushSubscription` reduces to. The endpoint is what the reader's object
- * later signs and `POST`s to, so only a public `https:` host passes; the keys must be what
- * encryption imports, so a delivery never fails on material a browser could not have issued.
+ * The browser's subscription and the language it reads the app in. The endpoint is what the
+ * reader's object later signs and `POST`s to, so only a public `https:` host passes; the keys
+ * must be what encryption imports, so a delivery never fails on material a browser could not
+ * have issued.
  */
 const Registration = s.object({
-	endpoint: s.string().refine(isPushEndpoint, "Expected a public https: push endpoint"),
-	p256dh: s.string().refine(isP256PublicKey, "Expected an uncompressed P-256 public key"),
-	auth: s.string().refine(isAuthSecret, "Expected a 16-byte auth secret"),
+	subscription: SUBSCRIPTION_SCHEMA,
 	locale: s.optional(s.string()),
 });
 
@@ -48,14 +47,15 @@ export default createAction(routes.notifications.devices, {
 			return Response.json({ errors: validated.error.issues }, { status: 400 });
 		}
 
-		let submitted = validated.data;
+		let { subscription, locale } = validated.data;
 
 		let registered = await userStore(viewer.id).registerDevice({
-			endpoint: submitted.endpoint,
-			p256dh: submitted.p256dh,
-			auth: submitted.auth,
+			endpoint: subscription.endpoint,
+			p256dh: subscription.keys.p256dh,
+			auth: subscription.keys.auth,
+			vapidKey: subscription.applicationServerKey ?? null,
 			userAgent: ctx.request.headers.get("user-agent"),
-			locale: submitted.locale ?? ctx.locale,
+			locale: locale ?? ctx.locale,
 		});
 
 		return Response.json(registered);

@@ -81,8 +81,11 @@ const DEVICE_KEYS = {
 	auth: "BTBZMqHH6r4Tts7J_aSIgg",
 };
 
-/** The host every registered endpoint in this file points at. */
-const PUSH_HOST = "https://push.example.test";
+/**
+ * The host every registered endpoint in this file points at. A public name, because a send
+ * refuses an endpoint on a reserved one before any request.
+ */
+const PUSH_HOST = "https://push.example.com";
 
 /** A fixed moment a tier snapshot claims to have been read at. */
 const READ_AT = 1_800_000_000_000;
@@ -91,7 +94,13 @@ const READ_AT = 1_800_000_000_000;
 let feedObjects = new Map<string, Promise<FeedDO>>();
 
 /** Every delivery a push service received, in the order it received them. */
-let deliveries: { url: string; authorization: string; encoding: string; body: string }[] = [];
+let deliveries: {
+	url: string;
+	authorization: string;
+	encoding: string;
+	topic: string;
+	body: string;
+}[] = [];
 
 /** The feed object one id names, built on first use the way the platform builds one. */
 async function feedObject(feedId: string): Promise<FeedDO> {
@@ -167,6 +176,7 @@ function pushAnswers(status: number | ((url: string) => number)): void {
 				url: request.url,
 				authorization: request.headers.get("authorization") ?? "",
 				encoding: request.headers.get("content-encoding") ?? "",
+				topic: request.headers.get("topic") ?? "",
 				body: Buffer.from(await request.arrayBuffer()).toString("base64"),
 			});
 
@@ -398,6 +408,19 @@ describe("what a check notifies about", () => {
 		expect(decoded).not.toContain("A secret author");
 		expect(delivery?.encoding).toBe("aes128gcm");
 		expect(delivery?.authorization).toContain("vapid t=");
+	});
+
+	/** Each summary covers everything since the last, so an offline device needs only the newest. */
+	test("the summary goes out under one topic, so a newer one replaces an undelivered one", async () => {
+		let { state, user } = await createReader();
+		await registerDevice(user);
+
+		seedFeed(state, "feed-a", "Alpha", true);
+		seedItem(state, "i1", "feed-a", 10);
+
+		await wake(state, user);
+
+		expect(deliveries[0]?.topic).toBe("summary");
 	});
 });
 
@@ -633,6 +656,35 @@ describe("what a refusal does to a device", () => {
 		expect(eventsNamed("push.rejected")[0]?.["reason"]).toBe("payload-too-large");
 	});
 
+	/**
+	 * A push service refuses a message signed by any key but the one the browser subscribed
+	 * under, which is our key management being wrong rather than the device being gone.
+	 */
+	test("a device subscribed under a key the deployment no longer holds is kept, uncounted", async () => {
+		let { state, user } = await readerWithSomethingToSay();
+		let endpoint = `${PUSH_HOST}/device-1`;
+		await user.registerDevice({ endpoint, ...DEVICE_KEYS, vapidKey: DEVICE_KEYS.p256dh });
+		await user.setChannels({ push: true, email: false });
+
+		await wake(state, user);
+
+		expect(deliveries).toHaveLength(0);
+		expect(devices(state)[0]?.["failure_count"]).toBe(0);
+		expect(eventsNamed("push.rejected")[0]?.["reason"]).toBe("invalid-subscription");
+	});
+
+	test("a device subscribed under the deployment's key is signed with it", async () => {
+		let { state, user } = await readerWithSomethingToSay();
+		let endpoint = `${PUSH_HOST}/device-1`;
+		await user.registerDevice({ endpoint, ...DEVICE_KEYS, vapidKey: VAPID.publicKey });
+		await user.setChannels({ push: true, email: false });
+
+		await wake(state, user);
+
+		expect(deliveries[0]?.authorization).toContain(`k=${VAPID.publicKey}`);
+		expect(devices(state)[0]?.["vapid_key"]).toBe(VAPID.publicKey);
+	});
+
 	test("ten consecutive transient failures delete the row", async () => {
 		let { state, user } = await readerWithSomethingToSay();
 		await registerDevice(user);
@@ -727,7 +779,7 @@ describe("registering a browser", () => {
 
 		let held = await user.notifications();
 
-		expect(held.devices[0]?.service).toBe("push.example.test");
+		expect(held.devices[0]?.service).toBe("push.example.com");
 		expect(JSON.stringify(held)).not.toContain("/device-1");
 	});
 });

@@ -11,6 +11,8 @@
 
 import type { Mock } from "vitest";
 
+import { Base64Url } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { run } from "remix/component";
@@ -27,6 +29,10 @@ const ALLOW = "Allow notifications in this browser";
 
 /** The endpoint the stand-in push service hands this browser. */
 const ENDPOINT = "https://fcm.googleapis.com/fcm/send/device-1";
+
+/** The application server's public key the page hands the browser to subscribe under. */
+const VAPID_PUBLIC_KEY =
+	"BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4";
 
 let server = setupServer();
 
@@ -57,7 +63,12 @@ beforeEach(() => {
 
 	let subscription = {
 		endpoint: ENDPOINT,
+		options: {
+			applicationServerKey: Uint8Array.from(unwrap(Base64Url.decode(VAPID_PUBLIC_KEY))).buffer,
+		},
+		unsubscribe: async () => true,
 		getKey: (name: string) => new Uint8Array(name === "auth" ? 16 : 65).buffer,
+		toJSON: () => ({ endpoint: ENDPOINT, keys: { p256dh: "p256dh", auth: "auth" } }),
 	};
 	let registration = {
 		pushManager: { getSubscription: async () => subscription, subscribe: async () => subscription },
@@ -89,7 +100,7 @@ async function mount(): Promise<void> {
 			worker="/sw.js"
 			devices={DEVICES}
 			timeZone="/settings/notifications/time-zone"
-			vapidPublicKey="BCVxsr7N_eNgVRqvHtD0zTZsEc6-VV-JvLexhqUzORcxaOzi6-AYWXvTBHm4bjyPjs7Vd8pZGH6SRpkNtoIAiw4"
+			vapidPublicKey={VAPID_PUBLIC_KEY}
 			storedTimeZone={Intl.DateTimeFormat().resolvedOptions().timeZone}
 			enabled
 			allow={ALLOW}
@@ -140,7 +151,9 @@ describe("asking for notification permission", () => {
 
 		expect(requestPermission).toHaveBeenCalledOnce();
 		await vi.waitFor(() => expect(registered).toHaveLength(1));
-		expect(registered[0]).toMatchObject({ endpoint: ENDPOINT });
+		expect(registered[0]).toMatchObject({
+			subscription: { endpoint: ENDPOINT, applicationServerKey: VAPID_PUBLIC_KEY },
+		});
 		await vi.waitFor(() => expect(allowButton()).toBeUndefined());
 	});
 

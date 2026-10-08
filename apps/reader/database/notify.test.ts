@@ -251,15 +251,18 @@ describe("quiet hours", () => {
 
 describe("what a push service's answer means", () => {
 	test("takes an acceptance, a revocation, a refusal and a broken service apart", () => {
-		expect(pushOutcome(201)).toBe("accepted");
-		expect(pushOutcome(202)).toBe("accepted");
-		expect(pushOutcome(410)).toBe("expired");
-		expect(pushOutcome(404)).toBe("expired");
-		expect(pushOutcome(429)).toBe("transient");
-		expect(pushOutcome(503)).toBe("transient");
+		expect(pushOutcome(null)).toBe("accepted");
+		expect(pushOutcome("gone")).toBe("expired");
+		expect(pushOutcome("rate-limited")).toBe("transient");
+		expect(pushOutcome("unavailable")).toBe("transient");
+		expect(pushOutcome("timeout")).toBe("transient");
+		expect(pushOutcome("network")).toBe("transient");
 
-		/** Our own signature being wrong, which no reader's device should be deleted for. */
-		expect(pushOutcome(403)).toBe("rejected");
-		expect(pushOutcome(400)).toBe("rejected");
+		/** Our own signature, row or payload being wrong, which no device should be deleted for. */
+		expect(pushOutcome("unauthorized")).toBe("rejected");
+		expect(pushOutcome("rejected")).toBe("rejected");
+		expect(pushOutcome("invalid-subscription")).toBe("rejected");
+		expect(pushOutcome("invalid-vapid")).toBe("rejected");
+		expect(pushOutcome("payload-too-large")).toBe("rejected");
 	});
 });

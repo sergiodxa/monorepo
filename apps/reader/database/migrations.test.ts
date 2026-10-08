@@ -51,6 +51,7 @@ describe("runMigrations", () => {
 			"0015-presentation",
 			"0016-keep-link-parameters",
 			"0017-agent-tokens",
+			"0018-push-vapid-key",
 		]);
 	});
 

@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { env } from "cloudflare:workers";
+import type { VapidKeys } from "@sdxc/web-push";
 
-import type { VapidKeys } from "~/app/push/web-push";
+import { env } from "cloudflare:workers";
 
 /**
  * The key pair and contact address every delivery is signed with, or `null` when the

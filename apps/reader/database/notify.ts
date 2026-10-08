@@ -9,10 +9,12 @@
 
 import type { Log } from "@sdxc/logger";
 import type { Mailer } from "@sdxc/mail";
+import type { WebPushErrorCode } from "@sdxc/web-push";
 import type { Database } from "remix/data-table";
 
 import { zonedParts } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
+import { WebPush } from "@sdxc/web-push";
 import { and, isNull } from "remix/data-table";
 
 import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
@@ -20,7 +22,6 @@ import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
 import { NotificationEmail, textFrom, translationFor } from "~/app/push/copy";
 import { unsubscribeUrl } from "~/app/push/unsubscribe";
 import { vapidKeys } from "~/app/push/vapid";
-import { payloadFits, pushRequest } from "~/app/push/web-push";
 import {
 	feeds,
 	NOTIFY_FEED_TITLES,
@@ -61,6 +62,12 @@ export const NOTIFY_THRESHOLD = 1;
 
 /** How a notified feed reaches the reader. */
 export type Channel = "push" | "email";
+
+/**
+ * The topic every summary is sent under, so a device that was offline receives only the
+ * newest one: each summary covers everything since the last, so the older says less.
+ */
+export const PUSH_TOPIC = "summary";
 
 /** Why a notification that had something to say did not go out. */
 export type Suppression =
@@ -217,18 +224,25 @@ export function gapFor(channels: readonly Channel[]): number {
 }
 
 /**
- * What a push service's answer means for the device it answered about. A `410` is the
- * browser telling the truth and is acted on; a `403` is our own signature being wrong,
- * which no device should be deleted for.
+ * What a send's failure means for the device it was about, or `accepted` for none. A `gone`
+ * is the browser telling the truth and is acted on; a refused signature, a malformed row or
+ * an oversized payload is our own mistake, which no device should be deleted for.
  *
- * @param status - The HTTP status the push service answered with.
+ * @param code - The failure's code, or `null` when the push service took the message.
  */
-export function pushOutcome(status: number): PushOutcome {
-	if (status === 201 || status === 202 || status === 200) return "accepted";
-	if (status === 404 || status === 410) return "expired";
-	if (status === 400 || status === 403) return "rejected";
+export function pushOutcome(code: WebPushErrorCode | null): PushOutcome {
+	if (code === null) return "accepted";
+	if (code === "gone") return "expired";
+	if (
+		code === "rate-limited" ||
+		code === "unavailable" ||
+		code === "timeout" ||
+		code === "network"
+	) {
+		return "transient";
+	}
 
-	return "transient";
+	return "rejected";
 }
 
 /**
@@ -352,12 +366,14 @@ async function deliverPush(
 	let keys = vapidKeys();
 	if (keys === null) return { accepted: false, devices: 0 };
 
+	/** One sender for the round, so devices on one push service share one VAPID signature. */
+	let push = new WebPush({ vapid: keys });
 	let devices = await input.db.findMany(pushSubscriptions, {});
 	let accepted = 0;
 
 	await Promise.all(
 		devices.map(async (device) => {
-			if (await deliverTo(input, keys, device, summary)) accepted += 1;
+			if (await deliverTo(input, push, device, summary)) accepted += 1;
 		}),
 	);
 
@@ -373,7 +389,7 @@ async function deliverPush(
  */
 async function deliverTo(
 	input: NotifyInput,
-	keys: NonNullable<ReturnType<typeof vapidKeys>>,
+	push: WebPush,
 	device: SelectPushSubscription,
 	summary: Summary,
 ): Promise<boolean> {
@@ -390,28 +406,36 @@ async function deliverTo(
 		url: routes.reading.index.href(),
 	});
 
-	if (!payloadFits(payload)) {
+	let sent = await push.send(
+		{
+			endpoint: device.endpoint,
+			keys: { p256dh: device.p256dh, auth: device.auth },
+			applicationServerKey: device.vapid_key ?? undefined,
+		},
+		payload,
+		{ topic: PUSH_TOPIC },
+	);
+
+	let error = isFailure(sent) ? sent.error : null;
+	let status = isFailure(sent) ? (sent.error.status ?? undefined) : sent.data.status;
+	let outcome = pushOutcome(error?.code ?? null);
+
+	if (error?.code === "payload-too-large") {
 		record("alarm", {
 			event: "push.rejected",
-			reason: "payload-too-large",
+			reason: error.code,
 			failureCount: device.failure_count,
 		});
 
 		return false;
 	}
 
-	let status = 0;
-
-	try {
-		let response = await fetch(await pushRequest(keys, device, payload));
-		status = response.status;
-	} catch {
-		status = 503;
-	}
-
-	let outcome = pushOutcome(status);
-
-	record("alarm", { event: "push.delivered", status, durationMs: Date.now() - started });
+	record("alarm", {
+		event: "push.delivered",
+		status,
+		code: error?.code,
+		durationMs: Date.now() - started,
+	});
 
 	if (outcome === "accepted") {
 		await db.update(
@@ -431,7 +455,12 @@ async function deliverTo(
 	}
 
 	if (outcome === "rejected") {
-		record("alarm", { event: "push.rejected", status, failureCount: device.failure_count });
+		record("alarm", {
+			event: "push.rejected",
+			reason: error?.code,
+			status,
+			failureCount: device.failure_count,
+		});
 		return false;
 	}
 

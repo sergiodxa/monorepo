@@ -979,6 +979,8 @@ export namespace UserStore {
 		p256dh: string;
 		/** The client's auth secret as the Push API hands it over. */
 		auth: string;
+		/** The VAPID public key the browser subscribed under, which delivery signs with. */
+		vapidKey?: string | null;
 		userAgent?: string | null;
 		/** The language that browser is reading the app in, which its copy is written in. */
 		locale?: string;
@@ -2971,6 +2973,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let values = {
 			p256dh: input.p256dh,
 			auth: input.auth,
+			vapid_key: input.vapidKey ?? null,
 			user_agent: input.userAgent ?? null,
 			locale: input.locale ?? "en",
 			failure_count: 0,

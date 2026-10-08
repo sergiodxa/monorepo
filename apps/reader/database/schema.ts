@@ -392,6 +392,11 @@ export const pushSubscriptions = table({
 		endpoint: c.text(),
 		p256dh: c.text(),
 		auth: c.text(),
+		/**
+		 * The VAPID public key the browser subscribed under, which delivery signs with; `null`
+		 * on a row registered before the key was recorded, which signs with the current key.
+		 */
+		vapid_key: c.text().nullable(),
 		user_agent: c.text().nullable(),
 		locale: c.text().default("en"),
 		last_delivered_at: c.integer().nullable(),
