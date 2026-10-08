@@ -129,9 +129,12 @@ Nobody wants to write JSON in a settings page. The text form reads the way the r
 out loud, and `parse` turns it into the same JSON the API accepts:
 
 ```text
-check.environment == "production" and status != "up"
-	and (region in ["eu-west", "eu-central"] or responseMs > 2000)
+ctx.check.environment == "production" and ctx.status != "up"
+	and (ctx.region in ["eu-west", "eu-central"] or ctx.responseMs > 2000)
 ```
+
+Every path into the context starts with `ctx.`, and everything else is a JSON literal, so a
+rule can compare two fields as easily as a field and a value: `ctx.check.ownerId == ctx.user.id`.
 
 `stringify` goes the other way, so the edit page shows the stored rule as text, and the
 action parses what came back:
@@ -389,7 +392,7 @@ test("a rule over a saved filter holds for a matching result", () => {
 		production: { op: "eq", field: "check.environment", value: "production" },
 	};
 	let parsed = unwrap(
-		alertConditions.parse(`filter("production") and status != "up"`),
+		alertConditions.parse(`filter("production") and ctx.status != "up"`),
 	);
 	let when = unwrap(alertConditions.compile(parsed, { references: filters }));
 

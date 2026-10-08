@@ -247,7 +247,7 @@ writes a new set with `store.write(set)`, and validates an edit first against
 
 ## Edit a rule as text
 
-A person editing a rule in an admin page reads `plan.tier == "pro" and segment("staff")` faster
+A person editing a rule in an admin page reads `ctx.plan.tier == "pro" and segment("staff")` faster
 than the JSON it stands for. `flagConditions` is the dialect the engine evaluates with, and it
 converts between the two: `stringify` shows a stored condition as text, and `parse` reads what
 was typed back into JSON, with the line and column where it broke:
