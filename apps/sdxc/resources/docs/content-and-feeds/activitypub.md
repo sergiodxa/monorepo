@@ -171,7 +171,7 @@ import type { JobEnqueuer } from "@sdxc/jobs";
 import type { Result } from "@sdxc/result";
 import type { Database } from "remix/data-table";
 
-import { Federation } from "@sdxc/activitypub";
+import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
@@ -180,7 +180,6 @@ import { USER_AGENT } from "~/app/config/activitypub";
 import jobs from "~/app/jobs";
 import { saveResponse, withdrawResponse } from "~/app/models/responses";
 import { Followers } from "~/app/repositories/followers";
-import { SeenActivities } from "~/app/repositories/seen-activities";
 import { SITE_KEYS } from "~/app/services/actor-keys";
 import { FederatedPosts } from "~/app/services/federated-posts";
 import { siteActor } from "~/app/services/site-actor";
@@ -197,15 +196,16 @@ export function createFederation(
 	if (isFailure(actor)) return actor;
 
 	let { db } = services;
+	let cache = new WorkerKVCache(env.CACHE);
 	let federation = new Federation({
 		actor: actor.data,
 		keys: SITE_KEYS,
 		stores: {
 			followers: new Followers(db),
-			seen: new SeenActivities(env.CACHE),
+			seen: new CacheSeenActivities(cache),
 			objects: new FederatedPosts(db),
 		},
-		cache: new WorkerKVCache(env.CACHE),
+		cache,
 		userAgent: USER_AGENT,
 		queue: {
 			enqueue: (message) =>
@@ -231,12 +231,15 @@ export function createFederation(
 }
 ```
 
-The stores are yours, each a small class over your own tables:
+`followers` and `objects` are yours, each a small class over your own tables, and `seen` comes
+with the package:
 
 - `Followers` implements `FollowerStore`: `put`, `get`, `remove` and `removeInbox` keyed by
   `(actor, id)`, and `list`, `count` and `inboxes` over accepted followers only.
-- `SeenActivities` implements `SeenActivities`: `claim(id, ttl)` answers `true` the first time
-  an activity id is claimed, which spares a redelivered activity a second pass.
+- `CacheSeenActivities` implements `SeenActivities` over the same `Cache`: `claim(id, ttl)`
+  answers `true` the first time an activity id is claimed, which spares a redelivered activity
+  a second pass. Claims live under `activitypub:seen:<id>` and are held for at least a minute,
+  the shortest expiration Workers KV accepts.
 - `FederatedPosts` implements `LocalObjects`: `find(id)` answers the post you serve under `id`,
   which is how the inbox tells a reply to one of your posts from noise. It is built further down.
 
@@ -372,7 +375,7 @@ one message shape, `Federation.MESSAGE`, a schema from `remix/data-schema`. Decl
 it, beside the job that publishes a post:
 
 ```typescript {% title="app/jobs/index.ts" %}
-import { Federation } from "@sdxc/activitypub";
+import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
 import { job, jobs } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
@@ -440,7 +443,7 @@ federation.on("Follow", (inbound) =>
 unless the actor sets `manuallyApprovesFollowers: true`. A pending follower is stored with
 `state: "pending"` and left out of the collection and of deliveries until you decide.
 `federation.approve` accepts it and queues the `Accept` of its stored `Follow`;
-`federation.reject` queues the `Reject` and forgets it:
+`federation.reject`, for a pending or an accepted follower, queues the `Reject` and forgets it:
 
 ```typescript {% title="app/controllers/followers.ts" %}
 let federation = createFederation(ctx);
