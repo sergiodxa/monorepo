@@ -61,7 +61,7 @@ export interface SeoService {
 	readonly schema: SeoSchema;
 	/**
 	 * Resolves a request URL or path to the page's one canonical URL: configured origin,
-	 * no trailing slash outside the root, query string preserved.
+	 * no trailing slash outside the root, tracking parameters removed and the rest of the query kept.
 	 */
 	canonical(url: string | URL): string;
 	/** Resolves an asset path to an absolute URL, leaving already-absolute URLs alone. */

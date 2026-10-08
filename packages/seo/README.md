@@ -41,7 +41,7 @@ let seo = createSeo({
 ```typescript
 seo.canonical("/features/search/"); // "https://example.com/features/search"
 seo.canonical("https://preview.workers.dev/pricing"); // "https://example.com/pricing"
-seo.canonical("/docs?section=api"); // "https://example.com/docs?section=api"
+seo.canonical("/docs?section=api&utm_source=newsletter"); // "https://example.com/docs?section=api"
 seo.absolute("/og/cover.png"); // "https://example.com/og/cover.png"
 ```
 
@@ -101,9 +101,12 @@ origin rather than from the host that served the request.
 Resolves a request URL or a root-relative path to the page's one canonical URL.
 
 The configured origin replaces whatever host served the request, the trailing slash is
-dropped everywhere but the root, the query string is preserved verbatim, and the hash is
-dropped. Because the query string is preserved verbatim, a trailing slash sitting before a
-`?` stays — the slash is only dropped when it is the resolved URL's last character.
+dropped everywhere but the root, and the hash is dropped. Tracking parameters (`utm_*` and
+click identifiers such as `gclid` and `fbclid`, the list
+[@sdxc/attribution](https://www.npmjs.com/package/@sdxc/attribution) keeps) are removed, so a
+page reached from any campaign link names its clean URL; every other parameter is preserved
+verbatim. A trailing slash sitting before a remaining `?` stays — the slash is only dropped
+when it is the resolved URL's last character.
 
 ### `seo.absolute(path: string | URL): string`
 

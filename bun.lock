@@ -1144,6 +1144,7 @@
       "name": "@sdxc/seo",
       "version": "0.0.1",
       "dependencies": {
+        "@sdxc/attribution": "workspace:*",
         "@sdxc/robots": "workspace:*",
         "remix": "3.0.0",
       },
@@ -1949,6 +1950,8 @@
     "@sdxc/api-client": ["@sdxc/api-client@workspace:packages/api-client"],
 
     "@sdxc/atom": ["@sdxc/atom@workspace:packages/atom"],
+
+    "@sdxc/attribution": ["@sdxc/attribution@workspace:packages/attribution"],
 
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
 

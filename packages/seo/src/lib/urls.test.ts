@@ -57,6 +57,18 @@ describe("canonicalUrl", () => {
 		);
 	});
 
+	test("removes campaign parameters and click identifiers, keeping the rest", () => {
+		expect(
+			canonicalUrl(BASE_URL, "https://example.com/docs?utm_source=newsletter&page=2&gclid=abc"),
+		).toBe("https://example.com/docs?page=2");
+	});
+
+	test("drops a trailing slash once a campaign query string is removed", () => {
+		expect(canonicalUrl(BASE_URL, "https://example.com/pricing/?utm_campaign=launch")).toBe(
+			"https://example.com/pricing",
+		);
+	});
+
 	test("keeps a trailing slash that sits before the query string", () => {
 		expect(canonicalUrl(BASE_URL, "https://preview.workers.dev/docs/?section=alerts")).toBe(
 			"https://example.com/docs/?section=alerts",

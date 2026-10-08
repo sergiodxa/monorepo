@@ -8,6 +8,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { withoutTracking } from "@sdxc/attribution/parameters";
+
 /**
  * Reduces a configured base URL to the scheme, host, and port every canonical and
  * absolute URL is built from, with no trailing slash so values concatenate cleanly.
@@ -24,16 +26,18 @@ export function normalizeBaseUrl(baseUrl: string | URL): string {
 /**
  * Resolves any URL or path to the one canonical URL its page advertises, ignoring
  * which host served the request, with the trailing slash dropped everywhere but
- * the root so a page never claims two canonical URLs; query strings stay verbatim.
+ * the root so a page never claims two canonical URLs. Campaign parameters and click
+ * identifiers are removed, so every campaign link names the same page; the rest of the query
+ * string stays verbatim.
  *
  * @param baseUrl - Normalized origin from {@link normalizeBaseUrl}.
  * @param url - Absolute request URL, or a root-relative path.
  * @returns The canonical absolute URL as a string.
  * @example canonicalUrl("https://example.com", "https://preview.workers.dev/features/") // "https://example.com/features"
- * @example canonicalUrl("https://example.com", "/search?q=schema") // "https://example.com/search?q=schema"
+ * @example canonicalUrl("https://example.com", "/search?q=schema&utm_source=x") // "https://example.com/search?q=schema"
  */
 export function canonicalUrl(baseUrl: string, url: string | URL): string {
-	let { pathname, search } = new URL(url, baseUrl);
+	let { pathname, search } = withoutTracking(new URL(url, baseUrl));
 	let canonical = new URL(`${pathname}${search}`, baseUrl).toString();
 	if (canonical !== `${baseUrl}/` && canonical.endsWith("/")) return canonical.slice(0, -1);
 	return canonical;
