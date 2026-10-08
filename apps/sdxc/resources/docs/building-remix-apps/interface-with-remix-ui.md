@@ -311,5 +311,7 @@ script at all.
   that fills `issues`.
 - [Translate your app](/docs/building-remix-apps/translate-your-app) — replacing the literal
   copy above with messages.
+- [Keyboard shortcuts](/docs/building-remix-apps/keyboard-shortcuts) — page-wide keys, a
+  shortcuts panel, and announcing what a key did.
 - [`@sdxc/ui`](/api/ui) — the full component catalog and its mixins.
 - [`@sdxc/u`](/api/u) — every utility, with the CSS each one emits.
