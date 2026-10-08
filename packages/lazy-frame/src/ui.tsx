@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle, RemixElement } from "remix/component";
+import type { EntryComponent, Handle, RemixElement } from "remix/component";
 
 import { clientEntry, Frame, ref } from "remix/component";
 
@@ -358,7 +358,7 @@ function watchApproach(
  * @example <LazyFrame src="/posts?page=2"><a href="/posts?page=2">Older posts</a></LazyFrame>
  * @example <LazyFrame src="/jobs/1?frame" loadOn="open" opener="job-1"><a href="/jobs/1">Read</a></LazyFrame>
  */
-export const LazyFrame = clientEntry(
+export const LazyFrame: EntryComponent<LazyFrameProps> = clientEntry(
 	"@sdxc/lazy-frame/ui#LazyFrame",
 	function LazyFrame(handle: Handle<LazyFrameProps>) {
 		let requested = false;
