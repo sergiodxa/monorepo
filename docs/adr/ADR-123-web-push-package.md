@@ -309,8 +309,8 @@ row policy reads the raw error. `uptime`, which already turns a stored channel c
 - **`@sdxc/outbound` becomes a dependency** of a package that otherwise only does cryptography.
 - **A second error vocabulary** close to `@sdxc/messaging`'s, kept aligned by hand and by the
   provider's mapping test.
-- **`@sdxc/messaging` depends on `@sdxc/web-push`** and through it on `@sdxc/jwt`, for every
-  install, not only apps that send browser push.
+- **An app sending browser push through `@sdxc/messaging` installs `@sdxc/web-push` itself**, as an
+  optional peer.
 
 ### Neutral
 
@@ -429,8 +429,8 @@ Durable Object and `uptime` would keep them in D1 per user; the policy differs w
 
 ### As built
 
-- `@sdxc/messaging` takes `@sdxc/web-push` as a direct dependency (open question 2), keeping one
-  install for every provider. `invalid-vapid` maps to `unauthorized` and `invalid-options` to
+- `@sdxc/messaging` takes `@sdxc/web-push` as an optional peer dependency (open question 2), so
+  only an app importing `@sdxc/messaging/web-push` installs the Web Push, JWT and crypto stack. `invalid-vapid` maps to `unauthorized` and `invalid-options` to
   `invalid-message`. A `key` that is not short base64url is sent as 32 characters of its SHA-256,
   so any key works as a `Topic`. `render` cuts the text, keeping fields, until the JSON fits one
   push, so a long message never fails `invalid-message`.
