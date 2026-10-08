@@ -57,6 +57,22 @@ MIT
 `;
 
 describe("preparePackageReadme", () => {
+	test("keeps the site's own heading ids, so an anchor shared earlier still lands", () => {
+		let document = prepare("# @sdxc/x\n\n## Answer the actor's URLs\n\n## Props\n\n## Props");
+
+		expect(tableOfContents(document).map((anchor) => anchor.id)).toEqual([
+			"answer-the-actor-s-urls",
+			"props",
+			"props-1",
+		]);
+	});
+
+	test("numbers a heading past an id an annotation wrote further down", () => {
+		let document = prepare("# @sdxc/x\n\n## Usage\n\n## Intro {% #usage %}");
+
+		expect(tableOfContents(document).map((anchor) => anchor.id)).toEqual(["usage-1", "usage"]);
+	});
+
 	test("drops the versioning, licence and author sections a README ends on", () => {
 		let text = toPlainText(prepare(WITH_TAIL));
 

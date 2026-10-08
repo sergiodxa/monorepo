@@ -138,5 +138,5 @@ export function readContent(
 	let parsed = Markdown.parse(source, MARKDOWN_OPTIONS);
 	if (isFailure(parsed)) return parsed;
 
-	return prepareArticle(parsed.data.document);
+	return prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
 }

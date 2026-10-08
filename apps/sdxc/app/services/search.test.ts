@@ -45,7 +45,7 @@ describe("buildSearchIndex", () => {
 		expect(isSuccess(parsed)).toBe(true);
 		if (!isSuccess(parsed)) return;
 
-		let prepared = prepareArticle(parsed.data.document);
+		let prepared = prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
 		expect(isSuccess(prepared)).toBe(true);
 		if (!isSuccess(prepared)) return;
 

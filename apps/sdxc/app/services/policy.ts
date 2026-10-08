@@ -60,7 +60,7 @@ export function readPolicy(
 	let parsed = Markdown.parse(source, MARKDOWN_OPTIONS);
 	if (isFailure(parsed)) return parsed;
 
-	let prepared = prepareArticle(parsed.data.document);
+	let prepared = prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
 	if (isFailure(prepared)) return prepared;
 
 	return success({ frontmatter: parsed.data.frontmatter, document: prepared.data });

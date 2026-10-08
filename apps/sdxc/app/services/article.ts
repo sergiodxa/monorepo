@@ -1,8 +1,7 @@
 /**
- * The one pass every long-form page runs its parsed markdown through, and the
- * traversals that read the result. Visitors are plain objects, so the anchor, the
- * counted holes, the syntax painting and — for a package README — the link rewriting
- * all merge into a single walk rather than four passes over the same tree.
+ * The passes every long-form page runs its parsed markdown through, and the traversals
+ * that read the result. The counted holes are filled first; the anchors, the syntax
+ * painting and — for a package README — the link rewriting then merge into one walk.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +13,9 @@ import type { Result } from "@sdxc/result";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
+import { headings } from "@sdxc/markdown/plugin/headings";
+import { variables } from "@sdxc/markdown/plugin/variables";
+import { isFailure } from "@sdxc/result";
 
 import { findPackage, readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";
@@ -76,23 +78,11 @@ export function slugify(text: string): string {
 }
 
 /**
- * Gives every heading an `id` to be linked to, keeping a repeated heading — `Props`
- * appears a dozen times in some READMEs — addressable by suffixing the ones after the
- * first. The counter lives per document, so two pages never influence each other.
+ * Heading ids in this site's own spelling, so an anchor shared before the plugin took
+ * over still lands; each walk takes a fresh visitor, so two pages never share a counter.
  */
-function headingAnchor(): (node: Markdown.Heading) => Markdown.Heading {
-	let taken = new Map<string, number>();
-
-	return (node) => {
-		if (typeof node.attributes.id === "string") return node;
-
-		let base = slugify(toPlainText(node));
-		let seen = taken.get(base) ?? 0;
-		taken.set(base, seen + 1);
-
-		let id = seen === 0 ? base : `${base}-${seen}`;
-		return { ...node, attributes: { ...node.attributes, id } };
-	};
+function headingAnchors() {
+	return headings({ slug: slugify });
 }
 
 /**
@@ -121,24 +111,22 @@ function rewriteHref(href: string, directory: string): string {
 
 /**
  * Prepares a page written for this site: the counted holes resolved, every heading
- * addressable, and code painted. A hole with no number behind it throws, because a
- * sentence quoting a count the manifests cannot supply is a sentence to fix.
+ * addressable, and code painted. A hole with no number behind it fails the walk, because
+ * a sentence quoting a count the manifests cannot supply is a sentence to fix. The holes
+ * are filled first, so a heading quoting a count is slugged from the number it shows.
+ *
+ * @param document - The parsed page
+ * @param options - The options it was parsed with, whose tags check a filled-in attribute
+ * @returns The page ready to render, or the walk failure with the position it stopped at
  */
 export function prepareArticle(
 	document: Markdown.Document,
+	options: Markdown.Options,
 ): Result<Markdown.Document, MarkdownWalkError> {
-	let variables = contentVariables();
-	let anchor = headingAnchor();
+	let filled = Markdown.walk(document, variables(contentVariables(), options));
+	if (isFailure(filled)) return filled;
 
-	return Markdown.walk(document, {
-		...highlight,
-		heading: anchor,
-		variable(node) {
-			let value = variables[node.name];
-			if (value === undefined) throw new Error(`Unresolved variable ${node.name}`);
-			return { type: "text", value, position: node.position };
-		},
-	});
+	return Markdown.walk(filled.data, { ...highlight, ...headingAnchors() });
 }
 
 /**
@@ -181,11 +169,9 @@ export function preparePackageReadme(
 	document: Markdown.Document,
 	directory: string,
 ): Result<Markdown.Document, MarkdownWalkError> {
-	let anchor = headingAnchor();
-
 	return Markdown.walk(withoutBoilerplateTail(withoutTitle(document)), {
 		...highlight,
-		heading: anchor,
+		...headingAnchors(),
 		link(node) {
 			let href = rewriteHref(node.href, directory);
 			if (href === node.href) return;

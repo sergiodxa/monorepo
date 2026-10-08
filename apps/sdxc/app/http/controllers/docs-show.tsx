@@ -49,7 +49,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 		return notFound(ctx, tree);
 	}
 
-	let prepared = prepareArticle(parsed.data.document);
+	let prepared = prepareArticle(parsed.data.document, MARKDOWN_OPTIONS);
 	if (isFailure(prepared)) {
 		ctx.log.fail(prepared.error, { slug, line: prepared.error.position?.start.line ?? null });
 		return notFound(ctx, tree);
