@@ -30,6 +30,7 @@ export * from "./grid-list-keys.js";
 export * from "./heading-level-fallback.js";
 export * from "./hotkey.js";
 export * from "./image-fallback.js";
+export * from "./keymap.js";
 export * from "./listbox-keys.js";
 export * from "./long-press.js";
 export * from "./menu-keys.js";

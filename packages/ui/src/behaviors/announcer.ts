@@ -35,6 +35,18 @@ export namespace Announcer {
 	}
 
 	/**
+	 * Options for constructing an {@link Announcer}.
+	 */
+	export interface Options {
+		/**
+		 * Milliseconds each message stays current before the queue advances on its own: long
+		 * enough for a screen reader to reach it, short enough that a run of quick changes is
+		 * heard one by one. Omitted, the live region advances the queue with `next()`.
+		 */
+		hold?: number;
+	}
+
+	/**
 	 * Events dispatched by {@link Announcer}.
 	 */
 	export interface Events {
@@ -56,6 +68,19 @@ export namespace Announcer {
  */
 export class Announcer extends TypedEventTarget<Announcer.Events> {
 	#queue: Announcer.Message[] = [];
+	#hold: number | undefined;
+	#held: { id: string; timer: ReturnType<typeof setTimeout> } | undefined;
+
+	/**
+	 * Without `hold`, the queue moves only when a caller advances or dismisses it.
+	 *
+	 * @param options How long each message holds before the queue advances on its own.
+	 * @example new Announcer({ hold: 1200 })
+	 */
+	constructor(options: Announcer.Options = {}) {
+		super();
+		this.#hold = options.hold;
+	}
 
 	/**
 	 * The message a live region should currently render, or `undefined` when
@@ -93,7 +118,7 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 			else this.#queue.splice(index, 0, message);
 		} else this.#queue.push(message);
 
-		this.dispatchEvent(new Event("change"));
+		this.#changed();
 
 		return message.id;
 	}
@@ -110,7 +135,7 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 		if (index === -1) return;
 
 		this.#queue.splice(index, 1);
-		this.dispatchEvent(new Event("change"));
+		this.#changed();
 	}
 
 	/**
@@ -122,7 +147,7 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 		if (this.#queue.length === 0) return;
 
 		this.#queue.shift();
-		this.dispatchEvent(new Event("change"));
+		this.#changed();
 	}
 
 	/**
@@ -132,6 +157,24 @@ export class Announcer extends TypedEventTarget<Announcer.Events> {
 		if (this.#queue.length === 0) return;
 
 		this.#queue = [];
+		this.#changed();
+	}
+
+	/**
+	 * Restarts the hold whenever a different message becomes current, so each message is
+	 * held for the full duration once it reaches the front, then dispatches `"change"`.
+	 */
+	#changed(): void {
+		let current = this.current;
+
+		if (this.#hold !== undefined && this.#held?.id !== current?.id) {
+			if (this.#held) clearTimeout(this.#held.timer);
+			this.#held =
+				current === undefined
+					? undefined
+					: { id: current.id, timer: setTimeout(() => this.next(), this.#hold) };
+		}
+
 		this.dispatchEvent(new Event("change"));
 	}
 }

@@ -6,7 +6,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { Announcer } from "./announcer.js";
 
@@ -189,5 +189,82 @@ describe(Announcer.name, () => {
 		announcer.announce("second");
 
 		expect(changeCount).toBe(1);
+	});
+
+	describe("with a hold", () => {
+		afterEach(() => {
+			vi.useRealTimers();
+		});
+
+		test("advances past each message once it has been current for the hold", () => {
+			vi.useFakeTimers();
+			let announcer = new Announcer({ hold: 1000 });
+
+			announcer.announce("first");
+			announcer.announce("second");
+
+			vi.advanceTimersByTime(999);
+			expect(announcer.current?.text).toBe("first");
+
+			vi.advanceTimersByTime(1);
+			expect(announcer.current?.text).toBe("second");
+
+			vi.advanceTimersByTime(1000);
+			expect(announcer.current).toBeUndefined();
+		});
+
+		test("holds a message the full duration from when it reaches the front", () => {
+			vi.useFakeTimers();
+			let announcer = new Announcer({ hold: 1000 });
+
+			announcer.announce("first");
+			vi.advanceTimersByTime(600);
+			announcer.announce("second");
+
+			vi.advanceTimersByTime(400);
+			expect(announcer.current?.text).toBe("second");
+
+			vi.advanceTimersByTime(999);
+			expect(announcer.current?.text).toBe("second");
+		});
+
+		test("an assertive message jumping the queue is held from the moment it is current", () => {
+			vi.useFakeTimers();
+			let announcer = new Announcer({ hold: 1000 });
+
+			announcer.announce("polite");
+			vi.advanceTimersByTime(600);
+			announcer.announce("urgent", "assertive");
+
+			vi.advanceTimersByTime(999);
+			expect(announcer.current?.text).toBe("urgent");
+
+			vi.advanceTimersByTime(1);
+			expect(announcer.current?.text).toBe("polite");
+		});
+
+		test("clearing the queue leaves no hold to fire", () => {
+			vi.useFakeTimers();
+			let announcer = new Announcer({ hold: 1000 });
+			let changes = 0;
+			announcer.addEventListener("change", () => changes++);
+
+			announcer.announce("first");
+			announcer.clear();
+			vi.advanceTimersByTime(5000);
+
+			expect(changes).toBe(2);
+		});
+	});
+
+	test("without a hold, the queue stays put until it is advanced", () => {
+		vi.useFakeTimers();
+		let announcer = new Announcer();
+
+		announcer.announce("first");
+		vi.advanceTimersByTime(60_000);
+
+		expect(announcer.current?.text).toBe("first");
+		vi.useRealTimers();
 	});
 });

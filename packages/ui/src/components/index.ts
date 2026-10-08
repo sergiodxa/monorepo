@@ -91,6 +91,7 @@ export * from "./sentinel-row.js";
 export * from "./separator.js";
 export * from "./shared-element.js";
 export * from "./sheet.js";
+export * from "./shortcut-list.js";
 export * from "./sidebar.js";
 export * from "./skeleton.js";
 export * from "./slider.js";

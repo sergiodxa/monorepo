@@ -303,6 +303,8 @@ positioning, or a custom `--ui-*` command answered by a mixin.
 - `Text`, `Header`, `Keyboard`, `Typeset` — muted body copy, an uppercase section label in a
   `<header>`, a shortcut hint in a `<kbd>`, and a typography layer for already-rendered
   markup with `docs`, `chat` and `reading` presets.
+- `ShortcutList` — a two-column `<dl>` pairing each action with the key caps that run it,
+  for a keyboard-shortcuts panel.
 - `Highlight` — text split into `{ text, match }` segments, each match a tinted `<mark>`
   that keeps the surrounding color and weight, for search results and filtered lists.
 - `HeadingScope`, `Heading` — an ambient heading-depth scope and the heading that reads it.
@@ -341,6 +343,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `gridListKeys(model)`           | `GridList`                 | The ARIA grid keyboard pattern against a `SelectionModel`.                                                       |
 | `headingLevelFallback(options)` | an island's heading root   | Recovers the ambient heading depth from `data-heading-level` at a hydration boundary.                            |
 | `hotkey(combo)`                 | any `<dialog>`/`[popover]` | A document-level shortcut opening or closing its host regardless of focus.                                       |
+| `keymap(bindings)`              | any host                   | Page-wide shortcuts that stand down in fields, IME composition, and dialogs outside the host.                    |
 | `imageFallback()`               | `Avatar` / `Logo` images   | Flags a failed image load, including retroactively for cached images.                                            |
 | `listboxKeys()`                 | `ListBox`                  | Arrow/Home/End/typeahead through `@remix-run/ui/listbox`.                                                        |
 | `longPress(options?)`           | any element                | Fires once a pointer holds still past a duration and movement tolerance.                                         |
@@ -365,7 +368,8 @@ script never runs, so the cost of every behavior stays visible before you apply 
 Headless, DOM-free state models. Each is unit-testable on its own, and an island subscribes
 to it and re-renders.
 
-- `Announcer` — a priority-ordered queue of `aria-live` announcements.
+- `Announcer` — a priority-ordered queue of `aria-live` announcements, optionally advancing
+  on its own once each message has been current for a `hold`.
 - `CalendarModel` — the keyboard-focused day, the visible month, and an in-progress range.
 - `DragSession` — the dragged item, the drop candidate under the pointer, and the computed
   drop position.
@@ -436,6 +440,11 @@ Plain TypeScript with no rendering dependency, importable on its own.
 - **DOM** — `asCommandEvent`, `dispatchChange`, `isNewPrimaryPress`, `isPrintableKey`,
   `focusItem`, `queryItems`, `setRovingTabindex`, `labelFor`, `hasAccessibleText`,
   `mergeStyle`, `prefersReducedMotion`, `writeCookie`, `DISABLED_SELECTOR`.
+- **Keys** — `parseKeyCombo`, `matchesKeyCombo`, `keyComboGlyphs`, `isTypingTarget`,
+  `TYPING_TARGET_SELECTOR`, and the `KeyCombo` interface. A combo is written once
+  (`"mod+k"`, `"escape"`, `"?"`) and both matched and printed from that spelling: `mod` is
+  Command on Apple keyboards and Control elsewhere, and a bare character names the character
+  typed, so `"J"` and `"?"` match whatever Shift produced them.
 - **Types** — `SemanticColor` (the five-tone union every `color` prop resolves to),
   `AnchorPlacement`, `AriaInvalid`, `CSSStyles`, `StyleProp`, `FieldColor`.
 
@@ -478,6 +487,60 @@ export const AppToaster = clientEntry(
 
 Any descendant reaches the queue through context:
 `handle.context.get(AppToaster).toaster.add({ title: t("toasts.saved") })`.
+
+## Pattern: A Keyboard Shortcuts Panel
+
+The bindings, the panel that lists them, and the live region that says what a key did are
+three independent pieces. `keymap()` binds the keys on the island's host, so a panel rendered
+inside that host keeps answering them while any other dialog keeps its own keys; the panel
+is a native `<dialog>` the `?` key opens through the same button a pointer presses; and an
+`Announcer` with a `hold` paces what the live region reads.
+
+```tsx
+import type { Handle } from "remix/component";
+
+import { visuallyHidden } from "@sdxc/u/a11y";
+import { Button, Modal, ShortcutList } from "@sdxc/ui";
+import { Announcer } from "@sdxc/ui/behaviors";
+import { keymap } from "@sdxc/ui/mixins";
+import { keyComboGlyphs } from "@sdxc/ui/utils";
+import { clientEntry } from "remix/component";
+
+type Props = { apple: boolean };
+
+export default clientEntry(
+	"/app/components/shortcuts.tsx#default",
+	function Shortcuts(handle: Handle<Props>) {
+		let announcer = new Announcer({ hold: 1200 });
+		announcer.addEventListener("change", () => handle.update(), { signal: handle.signal });
+
+		let openHelp = () =>
+			document.querySelector<HTMLButtonElement>('[commandfor="shortcuts"]')?.click();
+
+		return () => (
+			<div mix={[keymap({ "mod+s": save, j: next, "?": openHelp })]}>
+				<Button type="button" commandfor="shortcuts" command="show-modal">
+					{t("shortcuts.open")}
+				</Button>
+				<Modal id="shortcuts" aria-label={t("shortcuts.open")}>
+					<ShortcutList>
+						<ShortcutList.Item keys={keyComboGlyphs("mod+s", handle.props.apple)}>
+							{t("shortcuts.save")}
+						</ShortcutList.Item>
+						<ShortcutList.Item keys={["j"]}>{t("shortcuts.next")}</ShortcutList.Item>
+					</ShortcutList>
+				</Modal>
+				<div role="status" aria-live="polite" mix={[visuallyHidden()]}>
+					{announcer.current?.text ?? ""}
+				</div>
+			</div>
+		);
+	},
+);
+```
+
+Where the bindings are installed from a `ref` callback instead of a mixin, `bindKeymap(document,
+bindings, { signal, scope })` takes the same map and the same stand-down rules.
 
 ## Pattern: The Custom Command Trigger Contract
 

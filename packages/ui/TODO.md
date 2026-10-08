@@ -19,6 +19,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] easings moved directly into `animations/tokens.ts` beside `durations`, retiring `src/utils/easings.ts` and the re-export that used to sit between them
 - [x] SentinelRow moved into `src/components/`, backing `ListBox.LoadMoreItem`, `GridList.LoadMoreItem`, and `Tree.LoadMoreItem` as an ordinary sibling component instead of a `src/utils/` export
 - [x] trackHostNode moved into `src/mixins/`, backing the host-node lifecycle cache five mixins (`hotkey`, `listbox-keys`, `range-preview`, `resize-handle`, `view-transition`) share, instead of a `src/utils/` export
+- [x] key-combo.ts — parses, matches, and formats keyboard shortcut combos (`mod` as Command on Apple keyboards and Control elsewhere, a bare character matched as the character typed), plus the typing-target check every page-wide shortcut stands down on; behind `hotkey()` and `keymap()`; lives under `src/utils/`
 - [x] `FOCUS_RING_BY_COLOR`'s last stray `src/utils/` copy retired — `Sidebar.Item` now composes the `focusRingByColor()` factory from `src/styles/` like every other consumer
 
 ## Components — HTML + CSS only (no mixin)
@@ -31,6 +32,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] Spinner — static styling
 - [x] Separator — static styling
 - [x] Keyboard — static styling
+- [x] ShortcutList — static styling; a two-column `<dl>` pairing each action with its key caps, for a keyboard-shortcuts panel
 - [x] Highlight — static styling; `{ text, match }` segments rendered inline, each match a `<mark>` tinted through a semantic color role
 - [x] Header — static styling
 - [x] Heading — static styling
@@ -174,6 +176,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 - [x] `viewTransition()` — SharedElement; same-document transitions require `document.startViewTransition()`
 - [x] `persist(key)` — Sidebar root; handles the `--ui-toggle` command and mirrors collapse state into a cookie so the server renders the next page already collapsed
 - [x] `hotkey(combo)` — Command dialog, any `<dialog>`/popover; global shortcuts (⌘K) have no declarative HTML wiring, shows or toggles the host
+- [x] `keymap(bindings)` — any host; a map of page-wide shortcuts with no declarative HTML wiring, standing down in fields, IME composition, and dialogs outside the host; `bindKeymap()` installs the same map from a `ref` callback
 - [x] `themeToggle()` — Theme switch control; flips `.dark`/`.system` on `<html>` and persists the choice in a cookie so the server renders the next page in the right scheme
 - [x] `messageFollow()` — MessageScroller viewport; native scroll/wheel/touch/keyboard listening is the only way to detect a reader scrolling away, anchor a new turn near the top with a peek of prior content, and hold the reader's position as older history prepends above them
 - [x] `attachmentTrigger()` — Attachment card; telling a click on an action button apart from a click on the rest of the card needs script
@@ -188,7 +191,7 @@ Tracking checklist for the component, mixin, behavior, and animation catalog thi
 ## Behavior classes
 
 - [x] `Toaster` — backs Toast / Toast.Region islands; owns toast queue, auto-dismiss timers, pause-on-hover
-- [x] `Announcer` — backs live-region island (Command counts, drag moves, toasts); owns queue of `aria-live` messages
+- [x] `Announcer` — backs live-region island (Command counts, drag moves, toasts); owns queue of `aria-live` messages, optionally advancing past each one after a `hold`
 - [x] `SelectionModel` — backs GridList, Tree, Table row selection; owns selected keys, toggle/range/select-all semantics
 - [x] `FilterModel` — backs `commandFilter()`; owns query, matched option set, active option, movement across matches
 - [x] `CalendarModel` — backs `calendarKeys()`, `rangePreview()`, the picker family; owns focused date, visible month, range anchor and pending preview

@@ -22,6 +22,7 @@ export * from "./geometry.js";
 export * from "./has-accessible-text.js";
 export * from "./hue-spectrum.js";
 export * from "./is-new-primary-press.js";
+export * from "./key-combo.js";
 export * from "./keyboard-nav.js";
 export * from "./merge-style.js";
 export * from "./paired-range-inputs.js";
