@@ -1056,6 +1056,15 @@
         "@sdxc/xml": "workspace:*",
       },
     },
+    "packages/math": {
+      "name": "@sdxc/math",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0",
+      },
+    },
     "packages/mcp": {
       "name": "@sdxc/mcp",
       "version": "0.0.1",
@@ -2310,6 +2319,8 @@
     "@sdxc/mail": ["@sdxc/mail@workspace:packages/mail"],
 
     "@sdxc/markdown": ["@sdxc/markdown@workspace:packages/markdown"],
+
+    "@sdxc/math": ["@sdxc/math@workspace:packages/math"],
 
     "@sdxc/mcp": ["@sdxc/mcp@workspace:packages/mcp"],
 

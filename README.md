@@ -239,6 +239,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/html](packages/html)                 | Read a served page: fetch or parse HTML, then query it by role and accessible name                     |
 | [@sdxc/json-feed](packages/json-feed)       | JSON Feed 1.1 builder and parser                                                                       |
 | [@sdxc/markdown](packages/markdown)         | GitHub Flavored Markdown: parse to a typed AST, transform it, write it back                            |
+| [@sdxc/math](packages/math)                 | TeX math to MathML Core, with a markdown visitor and a component                                       |
 | [@sdxc/microformats](packages/microformats) | Parse, read and write microformats2                                                                    |
 | [@sdxc/micropub](packages/micropub)         | Read Micropub requests into typed operations and build the spec's responses                            |
 | [@sdxc/opml](packages/opml)                 | Read and write OPML subscription lists                                                                 |

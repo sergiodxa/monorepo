@@ -1,0 +1,20 @@
+{
+	"name": "@sdxc/math",
+	"version": "0.0.1",
+	"description": "TeX math to MathML Core, with a markdown walk visitor and a component",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./markdown": "./src/markdown.ts",
+		"./ui": "./src/ui.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0"
+	}
+}
