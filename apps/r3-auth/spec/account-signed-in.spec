@@ -38,9 +38,7 @@ test "GET /account/profile shows the signed-in subject their own email" {
 # POST /account/profile/edit — a changed display name is saved and shown afterwards.
 # The edit form is pre-filled from the database, so submitting with only the display
 # name changed keeps the other required fields; the save redirects back to the
-# read-only profile, which then renders the new value. The Save button sits at the fold
-# of the browser's default viewport, where a click aimed at its centre lands below the
-# visible page, so it is scrolled into view first.
+# read-only profile, which then renders the new value.
 test "POST /account/profile/edit saves a changed display name and shows it" {
 	given {
 		login "spec-user@spec.test" "correct horse battery"
@@ -48,7 +46,6 @@ test "POST /account/profile/edit saves a changed display name and shows it" {
 	when {
 		browser.navigate "http://localhost:3002/account/profile/edit"
 		browser.fill textbox "Display Name" with "Spec Edited Name"
-		browser.scroll to button "Save Changes"
 		browser.click button "Save Changes"
 	}
 	then {
