@@ -264,6 +264,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | [@sdxc/xml](packages/xml)                     | XML parser and serializer for RSS-style feeds                                                       |
 | [@sdxc/yaml](packages/yaml)                   | YAML reading and writing over a documented subset                                                   |
 | [@sdxc/zip](packages/zip)                     | Streaming ZIP archive writer with CRC-32, storing every entry uncompressed                          |
+| [@sdxc/zone-file](packages/zone-file)         | Read and write RFC 1035 DNS zone files, with the record data codec for every typed record           |
 
 ### Cloudflare
 

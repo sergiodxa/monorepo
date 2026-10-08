@@ -1572,6 +1572,16 @@
         "fflate": "0.8.3",
       },
     },
+    "packages/zone-file": {
+      "name": "@sdxc/zone-file",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@sdxc/random": "workspace:*",
+      },
+    },
   },
   "overrides": {
     "miniflare": "5.20260926.0-alpha",
@@ -2382,6 +2392,8 @@
     "@sdxc/yaml": ["@sdxc/yaml@workspace:packages/yaml"],
 
     "@sdxc/zip": ["@sdxc/zip@workspace:packages/zip"],
+
+    "@sdxc/zone-file": ["@sdxc/zone-file@workspace:packages/zone-file"],
 
     "@sindresorhus/is": ["@sindresorhus/is@7.2.0", "", {}, "sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw=="],
 

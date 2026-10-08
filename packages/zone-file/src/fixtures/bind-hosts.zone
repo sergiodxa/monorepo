@@ -1,0 +1,6 @@
+; Hosts under hosts.example.org., with their own default TTL.
+$TTL 5m
+alpha	A	192.0.2.101
+beta	A	192.0.2.102
+	TXT	"beta's note"
+gamma	30m	A	192.0.2.103

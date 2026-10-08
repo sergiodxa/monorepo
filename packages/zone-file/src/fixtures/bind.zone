@@ -1,0 +1,32 @@
+; A zone using every directive and construct a BIND-compatible server reads.
+$ORIGIN example.org.
+$TTL 1h
+@		IN	SOA	ns1.example.org. hostmaster (
+				2026100801	; serial
+				2h		; refresh
+				1h		; retry
+				2w		; expire
+				5m )		; negative TTL
+		IN	NS	ns1
+		IN	NS	ns2.example.net.
+		IN	MX	10 mail
+		IN	MX	20 mail.backup.example.net.
+		IN	TXT	"v=spf1 mx -all"
+		IN	CAA	0 issue "letsencrypt.org"
+ns1		IN	A	192.0.2.53
+		IN	AAAA	2001:DB8::53
+mail	300	IN	A	192.0.2.25
+www		IN	CNAME	@
+ftp	IN	1800	CNAME	www
+_imaps._tcp	SRV	0 1 993 mail
+_dmarc	TXT	( "v=DMARC1; p=reject; "
+		  "rua=mailto:dmarc@example.org" )
+long	TXT	"part one " "part two"
+$INCLUDE hosts.zone hosts
+$ORIGIN 2.0.192.in-addr.arpa.
+53	PTR	ns1.example.org.
+25	PTR	mail.example.org.
+$ORIGIN example.org.
+legacy	DNAME	example.com.
+svc	HTTPS	1 . alpn="h3,h2" ipv4hint=192.0.2.80
+odd	TYPE65280	\# 3 abcdef

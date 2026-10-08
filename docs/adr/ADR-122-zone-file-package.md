@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-08
+**Accepted** - 2026-10-08
 
 ## Background
 
@@ -87,12 +87,15 @@ cannot use, and the home of the RDATA presentation codec, which moves out of `@s
 
 ### Entry points
 
-| Entry             | Contents                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `@sdxc/zone-file` | `parse`, `stringify`, `parseRecordData`, `formatRecordData`, `ZoneFileError`, `RecordDataError`, `ZoneFile` (types) |
+| Entry             | Contents                                                                                                                                         |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@sdxc/zone-file` | `parse`, `stringify`, `parseRecordData`, `formatRecordData`, `canonicalType`, `typeName`, `ZoneFileError`, `RecordDataError`, `ZoneFile` (types) |
 
 Functions are separate exports named after `JSON`'s, so `import * as ZoneFile from "@sdxc/zone-file"`
-reads as `ZoneFile.parse` and a bundle keeps only what it calls.
+reads as `ZoneFile.parse` and a bundle keeps only what it calls. The types are exported both
+top-level and as the `ZoneFile` type namespace, so a namespace import reads `ZoneFile.Record` and
+`import type { ZoneFile }` reads the same. `canonicalType` and `typeName` (the mnemonic table) are
+exported because `@sdxc/doh` maps the JSON API's numeric types through them.
 
 ### Reading a file
 
@@ -329,7 +332,8 @@ record DNS would serve, and a test pins it.
 
 The reconstructed fixture's "unsupported constructs" section is rewritten: the lines it uses to
 prove `$ORIGIN`, `$TTL`, multi-line and blank-owner rejections become lines proving they import,
-and the Cloudflare export must still yield its 42 records, 2 rejections and 1 duplicate.
+and the Cloudflare export must still yield its 43 records, 1 rejection (the SOA, an untracked
+type) and 1 duplicate — the counts it gave before the migration, CAA being tracked.
 
 ## Consequences
 
@@ -442,10 +446,19 @@ grow with every consumer.
 
 ## Current Progress
 
-- [ ] Phase 1: Move the codec
-- [ ] Phase 2: `parse`
-- [ ] Phase 3: `stringify`
-- [ ] Phase 4: `apps/uptime`
+- [x] Phase 1: Move the codec
+- [x] Phase 2: `parse`
+- [x] Phase 3: `stringify`
+- [x] Phase 4: `apps/uptime` (recorded in [uptime ADR-034](./uptime/ADR-034-zone-file-import-through-sdxc-zone-file.md))
+
+Deviations from the plan:
+
+- The BIND-style fixture's expectations were written by hand: `named-compilezone` was not available
+  when they were committed. Regenerating them with `named-compilezone -s full` remains open.
+- The Route 53 fixture is not committed (open question 4).
+- SOA timers in `parseRecordData` accept BIND TTL units (`2h`, `1w`), which BIND-style zones write.
+- Uptime keeps its list of known untracked types, so a typo's line still reports as `malformed`
+  rather than as an untracked type.
 
 ## Open Questions
 

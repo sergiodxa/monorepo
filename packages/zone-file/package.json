@@ -1,0 +1,19 @@
+{
+	"name": "@sdxc/zone-file",
+	"version": "0.0.1",
+	"description": "Read and write RFC 1035 DNS zone files, with the record data codec for every typed record",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"@sdxc/random": "workspace:*"
+	}
+}
