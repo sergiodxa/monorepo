@@ -438,8 +438,8 @@ splitting them saves a version for some lengths. See [Segmentation](#segmentatio
 ## Current Progress
 
 - [x] Phase 1: The encoder
-- [ ] Phase 2: The component and the guide
-- [ ] Phase 3: `auth-saas`
+- [x] Phase 2: The component and the guide
+- [x] Phase 3: `auth-saas`
 
 ## Notes
 

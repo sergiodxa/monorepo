@@ -47,6 +47,7 @@
 		"@sdxc/passkey": "workspace:*",
 		"@sdxc/password-policy": "workspace:*",
 		"@sdxc/problem": "workspace:*",
+		"@sdxc/qr": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
 		"@sdxc/response": "workspace:*",

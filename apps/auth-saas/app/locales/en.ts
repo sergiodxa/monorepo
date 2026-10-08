@@ -45,6 +45,7 @@ export default {
 		enrol: {
 			title: "Set up two-factor authentication",
 			body: "Your authentication method was reset. Add it to an authenticator app, then enter the code it shows.",
+			qrLabel: "QR code to scan with your authenticator app",
 			setupKeyLabel: "Setup key",
 			uriLabel: "Or open this link on a device with an authenticator app installed",
 			codeLabel: "Authentication code",

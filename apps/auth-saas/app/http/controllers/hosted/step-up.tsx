@@ -9,6 +9,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { encodeQr } from "@sdxc/qr";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import {
@@ -56,6 +58,8 @@ export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
 	if (outcome.kind === "step-up" && !outcome.screen.hasFactor) {
 		let enrolment = await ctx.tenantStub.beginTotpEnrolment({ subjectId: session.subjectId });
 		if (!enrolment.ok) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+		let encoded = encodeQr(enrolment.uri, { level: "M" });
+		if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 		return ctx.render(
 			<HostedDocument title={t("hostedStepUp.enrol.title")} locale={ctx.locale}>
@@ -66,6 +70,7 @@ export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
 					action={actionUrl(ctx, routes.hostedStepUpEnrolSubmit.href(), interactionId)}
 					enrolmentId={enrolment.enrolmentId}
 					uri={enrolment.uri}
+					qr={isSuccess(encoded) ? encoded.data : null}
 					setupKey={enrolment.setupKey}
 					codeLabel={t("hostedStepUp.enrol.codeLabel")}
 					submitLabel={t("hostedStepUp.enrol.submit")}

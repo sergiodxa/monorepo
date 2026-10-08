@@ -1,18 +1,18 @@
 /**
  * The enrolment form both `/u/second-factor` (an administrator reset) and
- * `/u/step-up` (no factor at all) fall back to: the setup key and `otpauth://`
- * link an authenticator app takes, and the code it shows back once added. No QR
- * image is rendered — that needs an encoding library this pass does not pull in —
- * so the setup key and the link stand in for it, both already what
- * `beginTotpEnrolment` hands back to show once.
+ * `/u/step-up` (no factor at all) fall back to: the `otpauth://` URI as a QR code,
+ * the setup key and link that carry the same secret for anyone who cannot scan,
+ * and the code the authenticator app shows back once added.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { Translate } from "@sdxc/i18n";
+import type { QrSymbol } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
+import { QrCode } from "@sdxc/qr/component";
 import { vstack } from "@sdxc/u/layout";
 import { is, maxIs } from "@sdxc/u/size";
 import { Alert, Button, Card, Text, TextField } from "@sdxc/ui";
@@ -27,6 +27,8 @@ export namespace EnrolTotpFactorPage {
 		action: string;
 		enrolmentId: string;
 		uri: string;
+		/** The encoded `uri`, or `null` when encoding failed and the key and link stand alone. */
+		qr: QrSymbol | null;
 		setupKey: string;
 		codeLabel: string;
 		submitLabel: string;
@@ -42,7 +44,7 @@ export namespace EnrolTotpFactorPage {
  */
 export function EnrolTotpFactorPage(handle: Handle<EnrolTotpFactorPage.Props>) {
 	return () => {
-		let { t, title, body, action, enrolmentId, uri, setupKey, codeLabel, submitLabel, error } =
+		let { t, title, body, action, enrolmentId, uri, qr, setupKey, codeLabel, submitLabel, error } =
 			handle.props;
 
 		return (
@@ -57,6 +59,14 @@ export function EnrolTotpFactorPage(handle: Handle<EnrolTotpFactorPage.Props>) {
 						<Alert color="danger">
 							<Alert.Content>{error}</Alert.Content>
 						</Alert>
+					)}
+
+					{qr && (
+						<QrCode
+							symbol={qr}
+							label={t("hostedSecondFactor.enrol.qrLabel")}
+							mix={[css({ alignSelf: "center" })]}
+						/>
 					)}
 
 					<div mix={[vstack({ gap: 1 })]}>

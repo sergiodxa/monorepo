@@ -14,6 +14,8 @@
 
 import type { RequestContext } from "remix/router";
 
+import { encodeQr } from "@sdxc/qr";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -100,6 +102,8 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 	if (mode === "enrol") {
 		let enrolment = await ctx.tenantStub.beginTotpEnrolment({ subjectId: session.subjectId });
 		if (!enrolment.ok) return redirectToErrorPage(ctx, t("hostedError.invalidInteraction"));
+		let encoded = encodeQr(enrolment.uri, { level: "M" });
+		if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 		return ctx.render(
 			<HostedDocument title={t("hostedSecondFactor.enrol.title")} locale={ctx.locale}>
@@ -110,6 +114,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 					action={actionUrl(ctx, routes.hostedSecondFactorEnrolSubmit.href(), value)}
 					enrolmentId={enrolment.enrolmentId}
 					uri={enrolment.uri}
+					qr={isSuccess(encoded) ? encoded.data : null}
 					setupKey={enrolment.setupKey}
 					codeLabel={t("hostedSecondFactor.enrol.codeLabel")}
 					submitLabel={t("hostedSecondFactor.enrol.submit")}

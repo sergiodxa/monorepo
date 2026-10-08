@@ -119,4 +119,45 @@ describe("step-up", () => {
 		expect(finalLocation.origin + finalLocation.pathname).toBe(REDIRECT_URI);
 		expect(finalLocation.searchParams.get("code")).toEqual(expect.any(String));
 	});
+
+	test("a subject with no factor is offered enrolment with the URI drawn as a QR code", async () => {
+		let client = await createTestClient(harness.tenantDO, ["openid"]);
+		let subjectId = await createTestSubjectWithPassword(harness.tenantDO, {
+			email: "ada@example.com",
+			password: "correct horse battery staple",
+		});
+		await harness.tenantDO.recordConsentDecision({
+			subjectId,
+			clientId: client.id,
+			approved: true,
+			scopes: ["openid"],
+		});
+
+		let signedIn = await harness.tenantDO.signInWithPassword({
+			identifier: "ada@example.com",
+			password: "correct horse battery staple",
+			remembered: false,
+		});
+		if (!signedIn.ok) throw new Error("unreachable");
+		let sessionCookie = (await serializeSessionCookie(signedIn, false)).split(";")[0] ?? "";
+
+		let authorize = await harness.router.fetch(
+			harness.request(`/authorize?${authorizeQuery(client.id, { acr_values: "mfa" })}`, {
+				cookie: sessionCookie,
+			}),
+		);
+		let location = new URL(authorize.headers.get("Location") ?? "", REDIRECT_URI);
+		expect(location.pathname).toBe("/u/step-up");
+
+		let page = await harness.router.fetch(
+			harness.request(`${location.pathname}${location.search}`, { cookie: sessionCookie }),
+		);
+		let html = await page.text();
+
+		expect(page.status).toBe(200);
+		expect(html).toMatch(
+			/<svg [^>]*role="img" aria-label="QR code to scan with your authenticator app"/,
+		);
+		expect(html).toContain('href="otpauth://totp/');
+	});
 });
