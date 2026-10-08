@@ -274,21 +274,15 @@ interface SubscriberAttribution {
 ```
 
 The five campaign fields are the names `Utm` uses in `@sdxc/attribution` (ADR-110), and every
-field is an optional string, so a touch's `utm` passes as it is and its extra fields are
-ignored. An app with its own reader (`apps/books/app/lib/attribution.ts`) passes an object
-literal instead. Normalizing the values — slugging them, refusing one that holds an address —
+field is an optional string, so the `Campaign` that package's `toCampaign(touch, url)` answers
+passes as it is: the touch's campaign fields, its referrer's host, and its landing path resolved
+to an absolute URL. An app without that package passes an object literal instead. Normalizing the values — slugging them, refusing one that holds an address —
 is the attribution package's job; this package writes what it is handed.
 
 ```ts
-let touch = ctx.attribution.first ?? ctx.attribution.current;
-
 await ctx.newsletter.subscribers.subscribe({
 	email: payload.email,
-	attribution: {
-		...touch?.utm,
-		referrer: touch?.referrer?.host,
-		landingPage: touch ? new URL(touch.landingPath, ctx.url).href : undefined,
-	},
+	attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
 	metadata: toMetadata(ctx.attribution), // first_* and last_* keys, for a richer record
 	ip: ctx.ip,
 });
@@ -595,7 +589,7 @@ contract has stopped moving; every dependency above is already public.
 ```ts
 let outcome = await ctx.newsletter.subscribers.subscribe({
 	email: payload.email,
-	attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
+	attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
 	ip: ctx.ip,
 });
 

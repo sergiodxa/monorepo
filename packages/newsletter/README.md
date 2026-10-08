@@ -158,6 +158,23 @@ test("a blocked address sees the blocked copy", async () => {
 });
 ```
 
+## Pattern: Crediting the campaign a visitor arrived from
+
+[`@sdxc/attribution`](https://www.npmjs.com/package/@sdxc/attribution) remembers a visitor's touches across pages. Its `toCampaign` flattens one into the fields `attribution` takes, and `toMetadata` keeps the first and last touches as metadata keys:
+
+```typescript
+import { toCampaign, toMetadata } from "@sdxc/attribution";
+
+let outcome = await ctx.newsletter.subscribers.subscribe({
+	email: payload.email,
+	attribution: toCampaign(ctx.attribution.last ?? ctx.attribution.first, ctx.url),
+	metadata: toMetadata(ctx.attribution),
+	ip: ctx.ip,
+});
+```
+
+On Kit, every `toMetadata` key must already exist as a custom field.
+
 ## Pattern: Reacting to confirmations
 
 ```typescript
