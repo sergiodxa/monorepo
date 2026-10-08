@@ -10,19 +10,19 @@
 import { run } from "remix/component";
 
 /**
- * The island modules a hydration record can name. It lists them one by one rather than
- * sweeping a directory, so a server-rendered component never becomes a client chunk by
- * sitting next to one that hydrates.
+ * The island modules a hydration record can name, keyed by the module URL the island
+ * writes. Listed one by one, so a server-rendered component never becomes a client chunk
+ * by sitting next to one that hydrates.
  */
-const CLIENT_MODULES = import.meta.glob(["../resources/components/lazy-frame.tsx"]);
+const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
+	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
+};
 
 /** Boots the client runtime and resolves the island modules the server hydrated. */
 let runtime = run({
 	/** Resolves a hydrated island's module and named export from the URL the server wrote. */
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-
-		let load = CLIENT_MODULES[`..${pathname}`];
+		let load = CLIENT_MODULES[moduleUrl];
 		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
 
 		let mod = await load();

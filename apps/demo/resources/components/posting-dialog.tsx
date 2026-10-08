@@ -13,13 +13,13 @@
 import type { I18n } from "@sdxc/i18n";
 import type { Handle } from "remix/component";
 
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
 import { vstack } from "@sdxc/u/layout";
 import { fontSize } from "@sdxc/u/typography";
 import { Button, Card, Dialog, LinkButton } from "@sdxc/ui";
 
 import type { Posting } from "~/database/schema";
 
-import LazyFrame from "~/resources/components/lazy-frame";
 import { PositionFacts } from "~/resources/components/position-detail";
 import { frameHref } from "~/routes/frames";
 import routes from "~/routes/web";
@@ -69,7 +69,8 @@ export default function PostingDialog(handle: Handle<PostingDialog.Props>) {
 					<div mix={[vstack({ gap: 4 })]}>
 						<LazyFrame
 							src={frameHref(href)}
-							triggerId={triggerId}
+							loadOn="open"
+							opener={triggerId}
 							fallback={intl.t("posting.loading")}
 						>
 							<a href={href}>{intl.t("posting.read")}</a>
