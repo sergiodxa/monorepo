@@ -136,6 +136,7 @@ function textOfNode(node: Ast.Block | Ast.Inline): string {
 		case "footnoteReference":
 			return `[${node.identifier}]`;
 		case "thematicBreak":
+		case "comment":
 			return "";
 		default:
 			return textOf([...node.children]);
@@ -352,6 +353,9 @@ function convert(node: Ast.Block | Ast.Inline, key: number): RemixNode {
 
 		case "variable":
 			return `{% $${node.name} %}`;
+
+		case "comment":
+			return null;
 	}
 }
 

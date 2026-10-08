@@ -129,6 +129,22 @@ describe("Markdown", () => {
 		expect(plain).toBe("Set DEBUG=1 for more, or read the docs (https://example.com).");
 	});
 
+	test("leaves comments out of both parts", async () => {
+		let body = document(
+			{ type: "comment", value: " block note ", position: position() },
+			paragraph(
+				text("Before "),
+				{ type: "comment", value: " inline note ", position: position() },
+				text("after"),
+			),
+		);
+
+		let { html, text: plain } = await render(<Markdown document={body} />);
+
+		expect(html).not.toContain("note");
+		expect(plain).toBe("Before after");
+	});
+
 	test("renders emphasis and strikethrough with the styles a stripped client still reads", async () => {
 		let body = paragraph(
 			{ type: "emphasis", children: [text("soft")], position: position() },
