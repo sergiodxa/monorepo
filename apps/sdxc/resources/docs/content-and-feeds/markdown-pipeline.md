@@ -9,10 +9,10 @@ lastUpdated: 2026-10-08
 ---
 
 This guide builds the path a post takes from a `.md` file in your repository to a rendered
-page: frontmatter validated against a schema, a small vocabulary of custom tags checked at
-parse time, one tree walk that highlights code and anchors headings, and a Remix v3 route that
-renders the result through components you own. It combines
-[`@sdxc/markdown`](/api/markdown), [`@sdxc/highlight`](/api/highlight) and
+page: frontmatter validated against a schema, a small vocabulary of custom tags and HTML
+elements checked at parse time, one tree walk that highlights code, anchors headings and
+resolves links, and a Remix v3 route that renders the result through components you own.
+It combines [`@sdxc/markdown`](/api/markdown), [`@sdxc/highlight`](/api/highlight) and
 [`@sdxc/ui`](/api/ui), with `remix/data-schema` for the schema.
 
 Every step answers with a `Result`, so a post with a typo in its frontmatter becomes a 404 and
@@ -24,9 +24,9 @@ npm add remix @sdxc/markdown @sdxc/highlight @sdxc/ui @sdxc/result @sdxc/http
 
 ## Describe what a post may contain
 
-Start with the two things a post file is allowed to say: the fields its frontmatter carries,
-and the tags its body may use. Both are schemas, and both go in one options object that every
-read of a post shares.
+Start with the three things a post file is allowed to say: the fields its frontmatter
+carries, the tags its body may use, and the HTML elements it may write directly. All three go
+in one options object that every read of a post shares.
 
 ```typescript {% title="app/content/schema.ts" %}
 import type { Markdown } from "@sdxc/markdown";
@@ -54,6 +54,7 @@ export const TAGS = {
 export const MARKDOWN_OPTIONS = {
 	frontmatter: FRONTMATTER,
 	tags: TAGS,
+	html: { details: ["open"], summary: [], kbd: [], sup: [], sub: [] },
 } satisfies Markdown.Options;
 ```
 
@@ -77,53 +78,75 @@ Deleting a workspace also deletes its **history**.
 <video src="/media/tour.mp4" />
 ```
 
+`html` is the allowlist for plain HTML. Each key is an element that renders as itself, and
+its array names the attributes the element may carry, so `<details open>` parses and
+`<details class="x">` is a parse error at the opening tag. An allowlisted element's children
+are markdown, the way a tag's are, and where it stands comes from the element: `details`
+holds blocks, `summary` holds a line of inline content, and `kbd`, `sup` and `sub` sit inside
+a sentence. Event handlers are refused even when named, and `href` and `src` take only
+relative, `http`, `https`, `mailto` and `tel` URLs.
+
+```text
+<details>
+<summary>What does **retry** mean?</summary>
+
+A failed check runs again before it alerts.
+</details>
+
+Press <kbd>Cmd</kbd> then <kbd>K</kbd>, and H<sub>2</sub>O renders as chemistry.
+```
+
+A note for whoever edits the post goes in a `{/* … */}` comment. It may span lines and sit
+inside a paragraph, every renderer leaves it out, and `Markdown.stringify` writes it back, so
+a post an editor parses and saves keeps its notes. A comment missing its `*/}` is a parse error
+at the line it opened on.
+
+```text
+{/* Prices come from the billing page; update both together. */}
+
+Starter costs $9 a month. {/* TODO: confirm the annual discount */}
+```
+
 ## Transform the tree in one walk
 
 `Markdown.walk` is the only transform. A visitor is a plain object with one handler per node
 type, so visitors merge by spread and a whole preparation runs as a single pass. `highlight`
 from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, holding one `code`
-handler that attaches the painted tokens to each fence.
+handler that attaches the painted tokens to each fence, and the plugins that ship with
+`@sdxc/markdown` are built the same way.
 
 ```typescript {% title="app/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
-import { toPlainText } from "@sdxc/markdown/plain";
+import { headings } from "@sdxc/markdown/plugin/headings";
+import { links } from "@sdxc/markdown/plugin/links";
 
-const SITE_ORIGIN = "https://example.com";
-
-function slugify(text: string): string {
-	return text
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "-")
-		.replace(/^-+|-+$/g, "");
-}
+const SITE_ORIGIN = "https://example.com/";
 
 export function preparePost(document: Markdown.Document) {
-	let taken = new Map<string, number>();
-
 	return Markdown.walk(document, {
 		...highlight,
-		heading(node) {
-			if (typeof node.attributes.id === "string") return;
-			let base = slugify(toPlainText(node));
-			let seen = taken.get(base) ?? 0;
-			taken.set(base, seen + 1);
-			let id = seen === 0 ? base : `${base}-${seen}`;
-			return { ...node, attributes: { ...node.attributes, id } };
-		},
-		link(node) {
-			if (!node.href.startsWith("/")) return;
-			return { ...node, href: new URL(node.href, SITE_ORIGIN).href };
-		},
+		...headings(),
+		...links({ base: SITE_ORIGIN }),
 	});
 }
 ```
 
+`headings()` gives every heading an `id` taken from its text, using GitHub's slugs, so a
+`#fragment` copied from a rendered README on GitHub lands on the same heading here. A heading
+an author already named with `{% #install %}` keeps its id, and a generated slug never takes an
+id an author wrote further down; a repeated heading takes a `-1`, `-2` suffix so every one
+stays linkable. `links({ base })` resolves every relative URL against the base the way a
+browser would, for links, images and allowlisted elements alike. Absolute links matter once
+the same document is rendered into a feed, where a reader resolves `/posts/…` against the
+wrong origin.
+
 What a handler returns decides the node's fate: a node replaces it, `null` removes it, and
-returning nothing leaves it alone. A heading an author already gave an id with
-`{% #install %}` keeps it, and a repeated heading gets a suffix so every one stays linkable.
-Absolute links matter once the same document is rendered into a feed, where a reader resolves
-`/posts/…` against the wrong origin.
+returning nothing leaves it alone. The three visitors spread into one object because each
+handles node types the others leave alone.
+[Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) covers the other
+plugins, the order to run them in, and the ones that share a node type and so take a walk of
+their own.
 
 Every handler here is synchronous, so the walk answers with a `Result` rather than a promise.
 A handler that throws lands on the failure branch with the node's position attached, which is
@@ -189,31 +212,37 @@ export async function listPosts() {
 
 ## Read the tree without changing it
 
-A handler that returns nothing changes nothing, so the same walk doubles as a traversal. The
-table of contents reads the ids the preparation pass wrote:
+`tableOfContents` reads the ids the preparation pass wrote back as a tree. Each entry holds
+the heading's `id`, its plain text, its `level` and the deeper headings of its section as
+`children`, so a `##` followed by two `###` is one entry with two children. It lists levels 2
+and 3 unless you pass `{ levels }`, and leaves out a heading with no id, which is why it reads
+the prepared document:
 
-```typescript {% title="app/content/toc.ts" %}
-import { Markdown } from "@sdxc/markdown";
-import { toPlainText } from "@sdxc/markdown/plain";
+```tsx {% title="app/components/toc.tsx" %}
+import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
+import type { Handle } from "remix/component";
 
-export function tableOfContents(document: Markdown.Document) {
-	let entries: Array<{ id: string; text: string; level: number }> = [];
-
-	Markdown.walk(document, {
-		heading(node) {
-			let id = node.attributes.id;
-			if (node.level > 3 || typeof id !== "string") return;
-			entries.push({ id, text: toPlainText(node), level: node.level });
-		},
-	});
-
-	return entries;
+export function TocList(handle: Handle<{ entries: TableOfContentsEntry[] }>) {
+	return () => (
+		<ol>
+			{handle.props.entries.map((entry) => (
+				<li>
+					<a href={`#${entry.id}`}>{entry.text}</a>
+					{entry.children.length > 0 && (
+						<TocList entries={entry.children} />
+					)}
+				</li>
+			))}
+		</ol>
+	);
 }
 ```
 
-`toPlainText` takes any node, which is what makes it usable inside a visitor. Called on the
-whole document it gives you the prose for a word count or a search index; pass
-`{ code: true }` to include the bodies of code blocks.
+A handler that returns nothing changes nothing, so `Markdown.walk` also doubles as a
+traversal for anything the plugins do not read for you. `toPlainText` takes any node, which is
+what makes it usable inside such a visitor. Called on the whole document it gives you the
+prose for a word count or a search index; pass `{ code: true }` to include the bodies of code
+blocks.
 
 ## Render it in a route
 
@@ -262,7 +291,10 @@ import { Typeset } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import { tableOfContents } from "@sdxc/markdown/plugin/headings";
+
 import { Callout } from "~/app/components/callout";
+import { TocList } from "~/app/components/toc";
 import { readPost } from "~/app/content/posts";
 import routes from "~/routes/web";
 
@@ -283,6 +315,9 @@ export default createAction(routes.posts.show, async (ctx) => {
 	return ctx.render(
 		<article>
 			<h1>{frontmatter.title}</h1>
+			<nav aria-label="On this page">
+				<TocList entries={tableOfContents(document)} />
+			</nav>
 			<Typeset preset="reading">
 				{toRemix(document, { components: { callout: Callout } })}
 			</Typeset>
@@ -332,10 +367,32 @@ export function summarize(document: Markdown.Document): string {
 
 Interpolating `attributes.type` is safe only because its schema allows three fixed words; an
 attribute that takes free text has to be escaped before it goes into markup. Raw HTML an author
-typed renders as escaped text in both renderers, so neither one writes markup you did not vet.
+typed renders as escaped text in both renderers, and an element the `html` allowlist let
+through renders as itself, so neither one writes markup you did not vet. Comments render in
+neither.
+
+A consumer that parses the output as XML, such as an EPUB content document built with
+[`@sdxc/epub`](/api/epub), takes `syntax: "xhtml"`. Every void element is then self-closed
+(`<br />`) and every boolean attribute carries its name as its value (`open="open"`); markup a
+tag renderer returns is written as the renderer built it, so a renderer feeding XHTML writes
+XHTML itself:
+
+```typescript {% title="app/content/chapter.ts" %}
+import type { Markdown } from "@sdxc/markdown";
+
+import { toHTML } from "@sdxc/markdown/html";
+
+export function renderChapter(document: Markdown.Document): string {
+	return toHTML(document, { syntax: "xhtml" });
+}
+```
 
 ## Where to go next
 
+- [Anchor, polish and lint markdown](/docs/content-and-feeds/markdown-plugins) — typographic
+  punctuation, embeds from pasted URLs, link rewriting and a content check in CI.
+- [Fill markdown templates with variables](/docs/content-and-feeds/markdown-variables) — one
+  parsed document rendered per tenant, plan or locale.
 - [Publish RSS, Atom and JSON feeds](/docs/content-and-feeds/publish-feeds) — serve these
   posts to feed readers, with `toHTML` supplying each item's body.
 - [Join the IndieWeb](/docs/content-and-feeds/indieweb) — send a Webmention to every page a
