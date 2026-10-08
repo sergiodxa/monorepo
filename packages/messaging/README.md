@@ -1,6 +1,6 @@
 # @sdxc/messaging
 
-Send one portable message to Slack, Discord, Microsoft Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie or a signed webhook.
+Send one portable message to Slack, Discord, Microsoft Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie, a browser through Web Push, or a signed webhook.
 
 A message is plain data: a title, Markdown text, a severity, fields, link buttons, and an optional incident key. Each provider renders it in the platform's native format (Block Kit, a Discord embed, an Adaptive Card, Telegram HTML, a PagerDuty event) and sends it with one call to the global `fetch`. Every send answers a `Result`, never throws, and makes exactly one attempt, so retrying stays with the caller's job queue. No vendor SDK and no Node built-in is involved, so it runs on Cloudflare Workers as is.
 
@@ -104,6 +104,29 @@ await pagerduty.send({ title: "Checkout is failing", severity: "critical", key: 
 await pagerduty.send({ title: "Checkout recovered", key: "checkout", state: "resolved" });
 ```
 
+### Notifying A Browser
+
+`BrowserPush` sends to one browser subscription through [`@sdxc/web-push`](https://www.npmjs.com/package/@sdxc/web-push). Build one `WebPush` sender per batch, so browsers on one push service share one VAPID signature:
+
+```typescript
+import { BrowserPush } from "@sdxc/messaging/web-push";
+import { WebPush } from "@sdxc/web-push";
+
+let push = new WebPush({
+	vapid: {
+		publicKey: env.VAPID_PUBLIC_KEY,
+		privateKey: env.VAPID_PRIVATE_KEY,
+		subject: "mailto:ops@example.com",
+	},
+});
+
+for (let subscription of subscriptions) {
+	await new BrowserPush({ push, subscription }).send(message);
+}
+```
+
+The browser receives JSON its service worker draws: `{ title, body, url?, tag?, severity, timestamp? }`. `body` is the text and fields as plain text, cut so the payload fits one push; `url` is the first link; `tag` is the `key`, so a resolved message replaces the open one. The `key` is also the push `Topic`, so an offline browser receives only the latest message about it, and a `critical` message is sent with high urgency. A `gone` failure means the browser unsubscribed: delete the subscription.
+
 ## API
 
 ### `Message`
@@ -182,6 +205,7 @@ Each provider lives behind its own subpath, and each has a public, pure `render(
 | `@sdxc/messaging/pushover`    | `Pushover`          | `token`, `user`, `emergency?`                    | No                            |
 | `@sdxc/messaging/pagerduty`   | `PagerDuty`         | `routingKey`                                     | Resolves by `key`             |
 | `@sdxc/messaging/opsgenie`    | `Opsgenie`          | `apiKey`, `region?`                              | Closes by `key`               |
+| `@sdxc/messaging/web-push`    | `BrowserPush`       | `push` (a `WebPush`), `subscription`, `ttl?`     | No; `key` replaces            |
 | `@sdxc/messaging/webhook`     | `Webhook`           | `url`, `secret`                                  | No                            |
 
 `SlackWebhook`, `DiscordWebhook` and `GoogleChatWebhook` accept only their platform's own host. `TeamsWorkflow`, `Ntfy` and `Webhook` accept any URL on the public internet, refusing private and reserved hosts, and take `resolve: true` to also refuse a name that resolves to a private address. A redirect is a failure and is never followed.

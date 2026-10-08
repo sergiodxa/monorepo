@@ -425,9 +425,15 @@ Durable Object and `uptime` would keep them in D1 per user; the policy differs w
 - [x] Phase 1: The package
 - [x] Phase 2: The browser entry
 - [x] Phase 3: Migrate `reader`
-- [ ] Phase 4: `@sdxc/messaging` provider — waits for `uptime` to schedule browser alerts
+- [x] Phase 4: `@sdxc/messaging` provider
 
 ### As built
+
+- `@sdxc/messaging` takes `@sdxc/web-push` as a direct dependency (open question 2), keeping one
+  install for every provider. `invalid-vapid` maps to `unauthorized` and `invalid-options` to
+  `invalid-message`. A `key` that is not short base64url is sent as 32 characters of its SHA-256,
+  so any key works as a `Topic`. `render` cuts the text, keeping fields, until the JSON fits one
+  push, so a long message never fails `invalid-message`.
 
 - Subscription checks also test that `p256dh` lies on the P-256 curve (the check `reader` already
   ran at registration), so `invalid-subscription` never waits for the ECDH import to find it.

@@ -1,7 +1,7 @@
 {
 	"name": "@sdxc/messaging",
 	"version": "0.0.1",
-	"description": "Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie or a signed webhook",
+	"description": "Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie, browser push or a signed webhook",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
@@ -17,6 +17,7 @@
 		"./slack": "./src/providers/slack.ts",
 		"./teams": "./src/providers/teams.ts",
 		"./telegram": "./src/providers/telegram.ts",
+		"./web-push": "./src/providers/web-push.ts",
 		"./webhook": "./src/providers/webhook.ts",
 		"./whatsapp": "./src/providers/whatsapp.ts"
 	},
@@ -25,12 +26,14 @@
 	},
 	"dependencies": {
 		"@sdxc/api-client": "workspace:*",
+		"@sdxc/crypto": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/outbound": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/validate": "workspace:*",
+		"@sdxc/web-push": "workspace:*",
 		"@sdxc/webhooks": "workspace:*",
 		"remix": "3.0.0"
 	},
