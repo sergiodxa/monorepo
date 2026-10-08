@@ -125,7 +125,7 @@ Run from the repository root:
 | [hostname](packages/hostname)                                   | Cloudflare for SaaS custom-hostname client: register, poll and delete customer domains                            | ✅  |
 | [html](packages/html)                                           | Read a served page: fetch or parse HTML, then query it by role and accessible name                                | ✅  |
 | [http](packages/http)                                           | Response builders, content negotiation and HTTP caching                                                           | ✅  |
-| [http-signatures](packages/http-signatures)                     | Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12                                 |     |
+| [http-signatures](packages/http-signatures)                     | Sign and verify HTTP requests with RFC 9421 message signatures or draft-cavage-12                                 | ✅  |
 | [i18n](packages/i18n)                                           | Language detection and MessageFormat 2 translators for Remix routers and remix/component                          | ✅  |
 | [icalendar](packages/icalendar)                                 | Read and write iCalendar documents, with recurrence rules and time zones                                          | ✅  |
 | [icons](packages/icons)                                         | Lucide icons for Remix UI                                                                                         | ✅  |
