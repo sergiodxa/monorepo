@@ -223,6 +223,8 @@ async function applyFailure(
 - `gone` is a `404` or `410`: the browser unsubscribed, so the row goes now.
 - `unauthorized` is a `401` or `403`, which is your VAPID key being refused, never the
   browser's fault. Keep the row and fix the key.
+- `invalid-vapid` is the same fault caught before any request: keys that do not form a pair,
+  or a `subject` that is neither `mailto:` nor `https:`.
 - `rate-limited`, `unavailable`, `timeout` and `network` are `retryable`; a run of them
   retires the row, since an endpoint refusing for days is not coming back.
 - `invalid-subscription`, `invalid-options` and `payload-too-large` are answered before any
