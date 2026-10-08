@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-08-01. Adds a monitor-less probe endpoint,
+**Implemented** — 2026-08-01. Adds a monitor-less probe endpoint,
 `POST /api/v1/ping`, and closes the gap
 [ADR-007](./ADR-007-report-infrastructure-cost-to-polar-cost-insights.md) §6 recorded in
 passing: the `ping` meter that

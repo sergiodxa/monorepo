@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-30. Follows from
+**Implemented** — 2026-07-30. Follows from
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §16. Should arguably ship **first**: it is what turns that ADR's modelled numbers into measured
 ones.

@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-08-03. The email contract is
+**Implemented** — 2026-08-03. The email contract is
 [ADR-030](../ADR-030-email-classes-as-the-authoring-contract.md); the data these read is written
 by the roll-up described in [ADR-001](./ADR-001-analytics-engine-migration.md) and
 `apps/uptime/docs/analytics.md`.

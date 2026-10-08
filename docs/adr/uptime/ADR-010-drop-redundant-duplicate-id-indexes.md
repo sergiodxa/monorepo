@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-31 (both parts). Follows from
+**Implemented** — 2026-07-31 (both parts). Follows from
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §5 (finding 2) and §17
 (medium). Smallest cost win in the app relative to effort.
 

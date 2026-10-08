@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-31. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Implemented** — 2026-07-31. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §11 and §17 (high). A billing-integrity bug, not a cost optimisation.
 
 ## Context

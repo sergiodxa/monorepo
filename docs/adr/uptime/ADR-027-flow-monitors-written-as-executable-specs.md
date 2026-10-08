@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-08-11. Adds a sixth monitor type whose configuration is a `.spec` file
+**Accepted** — 2026-08-11; phase one (HTTP-only flows) implemented 2026-08-31, the browser phase pending. Adds a sixth monitor type whose configuration is a `.spec` file
 written by the customer, executed server-side against a hosted browser.
 
 **Being built in two phases, and the first one is HTTP-only.** A flow whose steps are requests

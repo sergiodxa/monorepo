@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-30. Follows from
+**Implemented** — 2026-07-30. Follows from
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §12 (storage) and §17 (high).
 
 ## Context

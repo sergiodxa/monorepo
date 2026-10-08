@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** — 2026-08-10. Replaces the per-record-type DNS monitor introduced by
+**Implemented** — verified against the code 2026-10-08 (proposed 2026-08-10). Replaces the per-record-type DNS monitor introduced by
 `database/migrations/20260208160000_dns_monitors.sql` with a domain-level monitor built
 around importing a zone's records and reviewing them. Supersedes the containment matching
 added to `app/services/dns-check.ts` days ago (see
@@ -857,32 +857,32 @@ them first is what makes the rest parallelisable.
 
 **Phase 1 — parallel, no shared files**
 
-- [ ] 1.1 `app/services/zone-file.ts` + tests, driven by the 0.2 fixture. Must cover every
+- [x] 1.1 `app/services/zone-file.ts` + tests, driven by the 0.2 fixture. Must cover every
       "not supported" row of §7 producing a reported line, not a drop.
-- [ ] 1.2 `app/services/dns-check.ts` rewrite + tests: sweep, `NXDOMAIN` vs `SERVFAIL`, CNAME
+- [x] 1.2 `app/services/dns-check.ts` rewrite + tests: sweep, `NXDOMAIN` vs `SERVFAIL`, CNAME
       suppression, TXT chunk joining, value normalization (both input channels agree).
       **`trial-guard.ts`'s use of `resolveDns` must keep working** — run `trial-guard`'s tests
       as part of this task, not later.
-- [ ] 1.3 `app/data/dns-monitor.ts` + `app/data/dns-monitor-record.ts` + tests, including the
+- [x] 1.3 `app/data/dns-monitor.ts` + `app/data/dns-monitor-record.ts` + tests, including the
       diff query and the `missing`/`new`/`changed` classification.
 
 **Phase 2 — depends on Phase 1**
 
-- [ ] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency and a hard query budget
+- [x] 2.1 `app/jobs/check-dns.ts`: sweep with bounded concurrency and a hard query budget
       (§9a), **one ping per check keyed `ping:${resultId}`** — no ordinal, per §9 — and no diff
       applied for a failed query.
-- [ ] 2.2 `app/services/alerts.ts` snapshot + findings, `app/emails/alert.tsx`,
+- [x] 2.2 `app/services/alerts.ts` snapshot + findings, `app/emails/alert.tsx`,
       `app/jobs/notify.ts`, `app/lib/notify-queue.ts` — one agent, since a findings list has to
       survive the queue hop intact.
-- [ ] 2.3 API — create/update/show/index rewrite, validators, and the actions controller
+- [x] 2.3 API — create/update/show/index rewrite, validators, and the actions controller
       (including metering "Check now").
-- [ ] 2.4 API — the records sub-resource.
-- [ ] 2.5 Dashboard — new + review screens, including the unparsed-lines block and the
+- [x] 2.4 API — the records sub-resource.
+- [x] 2.5 Dashboard — new + review screens, including the unparsed-lines block and the
       names-per-monitor cap enforced at import (§9a). No cost projection: per-check billing
       removed the need for one.
-- [ ] 2.6 Dashboard — show / list / edit / results card / `dashboard-panel.tsx` DNS tab /
+- [x] 2.6 Dashboard — show / list / edit / results card / `dashboard-panel.tsx` DNS tab /
       `resources/views/dns-monitors/form.tsx`.
-- [ ] 2.7 `status-page.tsx` labelling and `app/services/account-export.ts`.
+- [x] 2.7 `status-page.tsx` labelling and `app/services/account-export.ts`.
 
 **Phase 3 — copy and cleanup**
 

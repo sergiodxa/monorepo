@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-31. Follows from
+**Implemented** — 2026-07-31. Follows from
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) §17 (medium). Needs a product
 decision before an implementation — see Open question.
 

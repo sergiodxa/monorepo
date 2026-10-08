@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-31. Turns the cost model in
+**Implemented** — 2026-07-31. Turns the cost model in
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md) from a one-off analysis into a
 continuously measured, per-customer figure delivered to Polar.
 

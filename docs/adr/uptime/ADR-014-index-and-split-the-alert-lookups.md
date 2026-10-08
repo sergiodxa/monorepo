@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-30. Follows from
+**Implemented** — 2026-07-30. Follows from
 [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §5 and §17 (medium). Cheap today, linear in total tenants forever.
 

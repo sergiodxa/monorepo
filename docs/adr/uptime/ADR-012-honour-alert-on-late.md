@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** — implemented 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
+**Implemented** — 2026-07-30. Follows from [ADR-002](./ADR-002-infrastructure-cost-per-monitor-type.md)
 §17 (medium). A promise the UI makes and the code does not keep.
 
 ## Context
