@@ -19,8 +19,8 @@ export type Secret = string | (() => string | Promise<string>);
 /** Per-send options every provider reads. */
 export interface SendOptions {
 	/**
-	 * Stable across retries of one delivery: the webhook's `webhook-id`, Opsgenie's
-	 * request id. A provider that needs one and is given none generates its own.
+	 * Stable across retries of one delivery, so a receiver drops a duplicate: the
+	 * webhook's `webhook-id`. A provider that needs one and is given none generates its own.
 	 */
 	id?: string;
 	/** @default "10 seconds" */
