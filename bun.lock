@@ -103,6 +103,7 @@
         "@sdxc/distill": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/email-address": "workspace:*",
+        "@sdxc/epub": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/honeypot": "workspace:*",

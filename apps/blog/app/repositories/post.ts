@@ -150,6 +150,8 @@ export namespace Post {
 					};
 					published_at: string | null;
 					created_at: string;
+					/** When the post or its content last changed, which an EPUB reports as its `modified`. */
+					updated_at: string;
 				};
 				tags: Array<string>;
 		  };
@@ -338,6 +340,7 @@ export class Post {
 				},
 				published_at: post.published_at,
 				created_at: post.created_at,
+				updated_at: post.updated_at,
 			},
 			tags: TutorialPost.tags(post.meta.tags),
 		};

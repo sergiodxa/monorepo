@@ -1,8 +1,8 @@
 /**
  * HTTP action for public article and tutorial post pages. Route params are validated
- * before any lookup, the response format (HTML, Markdown or ActivityStreams) is negotiated
- * from the URL extension and the `Accept` header, unpublished posts stay admin-only behind
- * a 403, and deleted posts answer 410. HTML pages advertise the Webmention endpoint.
+ * before any lookup, the response format (HTML, Markdown, a tutorial's EPUB or ActivityStreams)
+ * is negotiated from the URL extension and the `Accept` header, unpublished posts stay
+ * admin-only behind a 403, and deleted posts answer 410. HTML pages advertise Webmention.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import { wantsActivity } from "@sdxc/activitypub";
 import * as ct from "@sdxc/http/content-type";
 import { accepts } from "@sdxc/http/negotiate";
+import { isFailure } from "@sdxc/result";
 import { advertise } from "@sdxc/webmention/discover";
 import { enum_, optional, parse } from "remix/data-schema";
 import { createAction } from "remix/router";
@@ -25,6 +26,7 @@ import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { article, tombstone } from "~/app/services/federated-posts";
+import { tutorialEpub } from "~/app/services/tutorial-epub";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
@@ -34,7 +36,7 @@ type PostType = Post.PublicTypePath;
 interface ValidPostRequestParams {
 	postType: PostType;
 	postSlug: string;
-	contentType: "html" | "md" | undefined;
+	contentType: "html" | "md" | "epub" | undefined;
 }
 
 type ValidatePostRequestParamsResult =
@@ -44,7 +46,7 @@ type ValidatePostRequestParamsResult =
 	| { kind: "unsupported-post-type" };
 
 let SUPPORTED_POST_TYPES = new Set<string>(["articles", "tutorials"]);
-let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
+let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md", "epub"]);
 
 /**
  * Handles public post requests for articles and tutorials, rejecting unknown collections
@@ -53,10 +55,11 @@ let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md"]);
 export default createAction(
 	routeMap.post,
 	/**
-	 * Serves one post resource in HTML or Markdown.
+	 * Serves one post resource in HTML or Markdown, or a tutorial as an EPUB.
 	 * @returns The post response, or a typed 404 when nothing matches.
 	 * @example URL `/articles/hello-world.md` returns raw markdown when the post exists.
 	 * @example Header `Accept: text/markdown` negotiates markdown for an extensionless URL.
+	 * @example URL `/tutorials/hello-world.epub` downloads the tutorial as an ebook.
 	 */
 	async (ctx) => {
 		let validation = validatePostRequestParams({
@@ -170,11 +173,48 @@ export default createAction(
 			});
 		}
 
+		if (validation.params.contentType === "epub" && post.postType === "tutorials") {
+			let page = PostViewModel.page(post, ctx.request.url, undefined);
+			let built = tutorialEpub({
+				title: page.post.title,
+				excerpt: post.post.meta.excerpt,
+				tags: page.post.tags,
+				document: page.post.document,
+				url: page.post.url,
+				published: page.post.published,
+				publishedLabel: page.post.publishedLabel,
+				modified: new Date(post.post.updated_at),
+			});
+
+			if (isFailure(built)) {
+				ctx.log.fail(built.error, { post: { slug: validation.params.postSlug, format: "epub" } });
+				return renderNotFoundPage(
+					ctx.render,
+					{
+						title: "EPUB Unavailable",
+						description: "This tutorial could not be turned into an ebook. Read it online instead.",
+						emoji: "📚",
+					},
+					500,
+				);
+			}
+
+			if (isPublished) {
+				ctx.cache(PUBLIC_PAGE, TAGS.post(validation.params.postType, validation.params.postSlug));
+			}
+			return new Response(built.data.stream(), {
+				headers: {
+					"Content-Type": "application/epub+zip",
+					"Content-Disposition": `attachment; filename="${validation.params.postSlug}.epub"`,
+				},
+			});
+		}
+
 		let mentions = await Webmention.findApprovedForPost(ctx.db, post.post.id);
 		let viewModel = PostViewModel.page(
 			post,
 			ctx.request.url,
-			validation.params.contentType,
+			validation.params.contentType === "epub" ? undefined : validation.params.contentType,
 			mentions,
 		);
 
@@ -250,13 +290,16 @@ function validatePostRequestParams(params: {
 		return { kind: "unsupported-content-type", contentType };
 	}
 	if (!SUPPORTED_POST_TYPES.has(postType)) return { kind: "unsupported-post-type" };
+	if (contentType === "epub" && postType !== "tutorials") {
+		return { kind: "unsupported-content-type", contentType };
+	}
 
 	return {
 		kind: "valid",
 		params: {
 			postType: postType as PostType,
 			postSlug,
-			contentType: parse(optional(enum_(["html", "md"])), contentType),
+			contentType: parse(optional(enum_(["html", "md", "epub"])), contentType),
 		},
 	};
 }
@@ -278,15 +321,16 @@ function markdown(status: number, body: string): Response {
 
 /**
  * Maps a small semantic payload through `NotFoundViewModel` so every miss in this
- * controller shares one not-found page.
- * @returns HTML 404 response.
+ * controller shares one not-found page; an EPUB that fails to build answers it with 500.
+ * @returns HTML 404 response, or the `status` given.
  */
 async function renderNotFoundPage(
 	render: import("~/app/http/context").BlogRenderer,
 	input: NotFoundViewModel.Input,
+	status = 404,
 ): Promise<Response> {
 	let model = NotFoundViewModel.page(input);
-	return render(NotFoundView, model, { status: 404 });
+	return render(NotFoundView, model, { status });
 }
 
 /**

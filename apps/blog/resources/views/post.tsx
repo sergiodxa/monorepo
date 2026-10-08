@@ -173,16 +173,31 @@ export function PostView() {
 										{model.post.eyebrow}
 									</p>
 
-									<Link
-										href={routes.post.href({
-											postType: model.post.typePath,
-											postSlug: model.post.slug,
-											ext: "md",
-										})}
-										mix={[text("sm"), shrink(0)]}
-									>
-										View as Markdown
-									</Link>
+									<div mix={[hstack({ gap: 3, align: "center" }), shrink(0)]}>
+										<Link
+											href={routes.post.href({
+												postType: model.post.typePath,
+												postSlug: model.post.slug,
+												ext: "md",
+											})}
+											mix={[text("sm")]}
+										>
+											View as Markdown
+										</Link>
+										{model.post.typePath === "tutorials" && (
+											<Link
+												href={routes.post.href({
+													postType: model.post.typePath,
+													postSlug: model.post.slug,
+													ext: "epub",
+												})}
+												download={`${model.post.slug}.epub`}
+												mix={[text("sm")]}
+											>
+												Download EPUB
+											</Link>
+										)}
+									</div>
 								</div>
 
 								<Heading

@@ -540,7 +540,14 @@ NCX that EPUB 2 readers need is written alongside.
   - [x] `books`: `/sample/download` serves the chapter as an EPUB with a cover and
         accessibility metadata, behind a signed link that expires after an hour; the built
         file passes epubcheck 5.4.0 with no errors or warnings
-  - [ ] `blog`, `uptime`, `reader`
+  - [x] `blog`: every tutorial downloads at `/tutorials/:slug.epub`, the post route's existing
+        extension slot beside `.md`, under the same publish, draft and tombstone rules and
+        edge cache tag. Site-relative links and fragments become absolute URLs on the blog,
+        images become links to the online copy (the package embeds only files it is given, and
+        the blog fetches none), and `##`/`###` headings get anchors for a nested table of
+        contents. All 164 published tutorials build and pass epubcheck 5.4.0 with no errors or
+        warnings
+  - [ ] `uptime`, `reader`
 
 ## Notes
 

@@ -143,6 +143,7 @@ describe("article", () => {
 	test("falls back to the summary and a link when the body would outgrow a queue message", async () => {
 		let { db } = await seeded();
 		let post = await found(db, "articles", "hello");
+		if (post.postType !== "articles") throw new Error("Expected the seeded article");
 		let long = {
 			...post,
 			post: { ...post.post, meta: { ...post.post.meta, content: "word ".repeat(30_000) } },
