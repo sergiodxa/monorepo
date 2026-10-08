@@ -492,6 +492,33 @@
         "remix",
       ],
     },
+    "packages/authz": {
+      "name": "@sdxc/authz",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/expression": "workspace:*",
+        "@sdxc/http": "workspace:*",
+        "@sdxc/logger": "workspace:*",
+        "@sdxc/result": "workspace:*",
+      },
+      "devDependencies": {
+        "@sdxc/json-schema": "workspace:*",
+      },
+      "peerDependencies": {
+        "@sdxc/billing": "workspace:*",
+        "@sdxc/flags": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/mcp": "workspace:*",
+        "remix": "3.0.0",
+      },
+      "optionalPeers": [
+        "@sdxc/billing",
+        "@sdxc/flags",
+        "@sdxc/jobs",
+        "@sdxc/mcp",
+        "remix",
+      ],
+    },
     "packages/backoff": {
       "name": "@sdxc/backoff",
       "version": "0.0.1",
@@ -2069,6 +2096,8 @@
     "@sdxc/attribution": ["@sdxc/attribution@workspace:packages/attribution"],
 
     "@sdxc/auth": ["@sdxc/auth@workspace:packages/auth"],
+
+    "@sdxc/authz": ["@sdxc/authz@workspace:packages/authz"],
 
     "@sdxc/backoff": ["@sdxc/backoff@workspace:packages/backoff"],
 

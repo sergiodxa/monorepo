@@ -1,0 +1,52 @@
+{
+	"name": "@sdxc/authz",
+	"version": "0.0.1",
+	"description": "Authorization from a typed catalog of abilities, additive roles and guards, answered synchronously from loaded facts",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./facts/billing": "./src/facts/billing.ts",
+		"./facts/flags": "./src/facts/flags.ts",
+		"./mcp": "./src/mcp.ts",
+		"./middleware/dispatcher": "./src/middleware/dispatcher.ts",
+		"./middleware/router": "./src/middleware/router.ts",
+		"./testing": "./src/testing.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/expression": "workspace:*",
+		"@sdxc/http": "workspace:*",
+		"@sdxc/logger": "workspace:*",
+		"@sdxc/result": "workspace:*"
+	},
+	"devDependencies": {
+		"@sdxc/json-schema": "workspace:*"
+	},
+	"peerDependencies": {
+		"@sdxc/billing": "workspace:*",
+		"@sdxc/flags": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
+		"remix": "3.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/billing": {
+			"optional": true
+		},
+		"@sdxc/flags": {
+			"optional": true
+		},
+		"@sdxc/jobs": {
+			"optional": true
+		},
+		"@sdxc/mcp": {
+			"optional": true
+		},
+		"remix": {
+			"optional": true
+		}
+	}
+}
