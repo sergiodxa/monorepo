@@ -24,6 +24,8 @@ export default route({
 	sponsor: get("/sponsor"),
 	/** The case for sponsoring, and who sponsors the author now and did before. */
 	sponsors: get("/sponsors"),
+	/** Where GitHub reports a sponsorship change, so the roster refreshes without waiting. */
+	sponsorsWebhook: post("/webhooks/sponsors"),
 
 	wellKnown: route({
 		webFinger: get("/.well-known/webfinger"),

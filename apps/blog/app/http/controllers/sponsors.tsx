@@ -1,6 +1,6 @@
 /**
- * HTTP action for the public `/sponsors` page. It reads the sponsor roster the scheduled
- * refresh stored in `CACHE` and renders the pitch around it, so the page never waits on
+ * HTTP action for the public `/sponsors` page. It reads the sponsor roster the refresh
+ * job stored in `CACHE` and renders the pitch around it, so the page never waits on
  * GitHub and still makes its case while the roster is unknown.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

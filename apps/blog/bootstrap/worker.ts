@@ -40,6 +40,7 @@ export default {
 			EMAIL: env.EMAIL,
 			SUPPORT_INBOX: env.SUPPORT_INBOX,
 			SUPPORT_RATE_LIMITER: env.SUPPORT_RATE_LIMITER,
+			GITHUB_SPONSORS_WEBHOOK_SECRET: env.GITHUB_SPONSORS_WEBHOOK_SECRET,
 			waitUntil: (promise) => ctx.waitUntil(promise),
 		});
 

@@ -66,6 +66,11 @@ declare global {
 			 * public sponsor roster, and unset keeps the stored roster unrefreshed.
 			 */
 			GITHUB_TOKEN?: string;
+			/**
+			 * Set with `bunx wrangler secret put GITHUB_SPONSORS_WEBHOOK_SECRET`; unset refuses
+			 * every sponsorship webhook delivery.
+			 */
+			GITHUB_SPONSORS_WEBHOOK_SECRET?: string;
 			CLIENT_ID: SecretsStoreSecret;
 			CLIENT_SECRET: SecretsStoreSecret;
 			COOKIE_SESSION_SECRET: SecretsStoreSecret;

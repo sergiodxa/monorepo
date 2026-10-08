@@ -51,6 +51,7 @@ import auth from "~/app/http/middleware/auth";
 import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
+import githubWebhook from "~/app/http/middleware/github-webhook";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
@@ -81,6 +82,7 @@ const MACHINE_PATHS = new Set<string>([
 	routes.mcp.index.href(),
 	routes.webmention.href(),
 	routes.activityPub.inbox.href(),
+	routes.sponsorsWebhook.href(),
 ]);
 
 /**
@@ -260,6 +262,13 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 	router.map(
 		routes.sponsors,
 		lazy(() => import("~/app/http/controllers/sponsors")),
+	);
+	router.map(
+		routes.sponsorsWebhook,
+		lazy(
+			() => import("~/app/http/controllers/sponsors-webhook"),
+			[githubWebhook(env.GITHUB_SPONSORS_WEBHOOK_SECRET)],
+		),
 	);
 	router.map(
 		routes.sitemap,

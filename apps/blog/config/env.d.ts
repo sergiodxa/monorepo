@@ -36,6 +36,8 @@ declare global {
 			EMAIL?: SendEmailBinding;
 			/** Where Encore support requests are delivered, set as a Worker secret. */
 			SUPPORT_INBOX?: string;
+			/** Signs GitHub's sponsorship webhook; unset refuses every delivery. */
+			GITHUB_SPONSORS_WEBHOOK_SECRET?: string;
 			/** The Encore support form's per-address budget. */
 			SUPPORT_RATE_LIMITER?: RateLimit;
 			/** Lets a deferred write finish after the response has been sent. */

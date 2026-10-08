@@ -1,6 +1,6 @@
 /**
  * The people who sponsor the author on GitHub, now and before, read from GitHub's GraphQL
- * API by a scheduled job and kept in the `CACHE` namespace. `/sponsors` reads the stored
+ * API by a job GitHub's sponsorship webhook queues, and kept in the `CACHE` namespace. `/sponsors` reads the stored
  * roster and nothing else, so it renders at the speed of a KV read whatever GitHub does.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -25,7 +25,7 @@ export const SPONSORS_CACHE_KEY = "sponsors:roster";
  * a missed run leaves the page intact, and expires on its own so a roster nothing refreshes
  * any more stops being presented as current.
  */
-const SPONSORS_TTL = "2 days";
+const SPONSORS_TTL = "3 weeks";
 
 /** How GitHub marks a sponsorship its sponsor chose to show. */
 const PUBLIC_PRIVACY = "PUBLIC";
@@ -216,7 +216,7 @@ export async function readStoredSponsors(cache: Cache): Promise<SponsorRoster> {
 }
 
 /**
- * Reads GitHub and stores what it says, which is what the scheduled job calls. The roster
+ * Reads GitHub and stores what it says, which is what the refresh job calls. The roster
  * is asked for rather than read through the cache, because the point of a refresh is to
  * replace an entry that is still perfectly readable.
  *

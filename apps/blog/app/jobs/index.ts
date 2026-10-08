@@ -61,7 +61,10 @@ export default jobs({
 		scheduled: job({ cron: "*/15 * * * *" }),
 	},
 	sponsors: {
-		/** Stores the public sponsor roster `/sponsors` renders, four times a day. */
-		refresh: job({ cron: "0 */6 * * *" }),
+		/**
+		 * Stores the public sponsor roster `/sponsors` renders. GitHub's sponsorship webhook
+		 * queues it on every change; the Monday run catches a missed delivery.
+		 */
+		refresh: job({ cron: "0 5 * * 1" }),
 	},
 });

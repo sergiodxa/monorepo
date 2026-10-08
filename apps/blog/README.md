@@ -27,6 +27,7 @@ Production URL: https://sergiodxa.com
 | Email       | `EMAIL` (`send_email`)                                | Delivers Encore support requests            |
 | Secret      | `SUPPORT_INBOX`                                       | Inbox Encore support requests go to         |
 | Secret      | `GITHUB_TOKEN`                                        | Reads the public GitHub Sponsors roster     |
+| Secret      | `GITHUB_SPONSORS_WEBHOOK_SECRET`                      | Verifies GitHub's sponsorship webhook       |
 | Secrets     | `CLIENT_ID`, `CLIENT_SECRET`, `COOKIE_SESSION_SECRET` | OIDC and session secrets from Secrets Store |
 | Secrets     | `WAYBACK_ACCESS_KEY`, `WAYBACK_SECRET_KEY`            | archive.org keys from Secrets Store         |
 | Secret      | `ACTIVITYPUB_PRIVATE_KEY`                             | ActivityPub signing key from Secrets Store  |
@@ -123,8 +124,11 @@ with it empty, is answered with a 500.
   stored as `BLOG_WAYBACK_ACCESS_KEY` and `BLOG_WAYBACK_SECRET_KEY` in the Secrets Store.
 - Sponsors page (`/sponsors`): why sponsoring helps, GitHub Sponsors, one-off PayPal ($5,
   $10, $20) and Ko-fi tips, then current sponsors named with large avatars and past ones as
-  a wall of small avatars. A job every six hours stores GitHub's public roster in `CACHE`
-  with `GITHUB_TOKEN` (no scopes needed); each list draws only when it names someone. The
+  a wall of small avatars. The `sponsors.refresh` job stores GitHub's public roster in
+  `CACHE` with `GITHUB_TOKEN` (no scopes needed); GitHub's sponsorship webhook at
+  `POST /webhooks/sponsors`, signed with `GITHUB_SPONSORS_WEBHOOK_SECRET`, queues it on
+  every sponsorship change, and a Monday cron queues it to catch a missed delivery. Each
+  list draws only when it names someone. The
   short `/sponsor` link and the card under every post lead here.
 
 ## Routes

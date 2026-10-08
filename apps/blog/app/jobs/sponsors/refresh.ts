@@ -1,6 +1,6 @@
 /**
- * Refreshes the sponsor roster `/sponsors` renders from GitHub, on a schedule, so a page
- * never waits on GitHub and the roster survives an outage there. A run that cannot reach
+ * Refreshes the sponsor roster `/sponsors` renders from GitHub, when the sponsorship webhook
+ * or the weekly schedule queues it, so a page never waits on GitHub and the roster survives an outage there. A run that cannot reach
  * GitHub, or a worker without `GITHUB_TOKEN`, leaves the stored roster in place.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -16,7 +16,7 @@ import { refreshSponsors } from "~/app/services/sponsors";
 
 /**
  * Records the skip or the counts it stored; a failed read is logged and the run ends
- * there, since the next scheduled run retries it.
+ * there, since the next webhook delivery or scheduled run retries it.
  */
 export default createJobHandler(jobs.sponsors.refresh, async (ctx) => {
 	let token = env.GITHUB_TOKEN;
