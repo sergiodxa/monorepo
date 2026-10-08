@@ -271,9 +271,10 @@ export default createAction(routes.projects.show, {
 
 `can` is typed from the group, `{ create, read, update, delete }`, each a boolean, and each
 ability receives only the context keys it declares. `claims(group)` does the same for a group
-of claims. For a single check, `can` answers a boolean, `check` the full `Decision`, and
-`authorize` a `Result<void, Forbidden>` whose failure carries the refusal, for code that
-already returns Results.
+of claims, and both take the whole catalog too, answering every group in one call:
+`ctx.access.claims(abilities)`. For a single check, `can` answers a boolean, `check` the full
+`Decision`, and `authorize` a `Result<void, Forbidden>` whose failure carries the refusal, for
+code that already returns Results.
 
 A check never waits. One that reads a fact that has not been loaded, or whose source failed,
 refuses with cause `error`, so an outage refuses the abilities that depend on it and nothing
@@ -282,8 +283,10 @@ else. That is why the handler awaits `load` first.
 ## Answer refusals
 
 A refusal is plain data: its `cause` is `ungranted`, `outOfScope`, `denied` (a guard, with its
-`reason`) or `error`, and its `as` is `notFound` or `forbidden`. The `onDenied` responder turns
-it into your app's own page:
+`reason`) or `error` (with `errors`, each naming the grant and the missing fact or mismatched
+type that left it undecided), and its `as` is `notFound` or `forbidden`. Being plain data, a
+refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it into your app's
+own page:
 
 ```tsx {% title="app/http/denied.tsx" %}
 import type { Refusal } from "@sdxc/authz";
