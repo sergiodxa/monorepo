@@ -759,7 +759,7 @@ describe("fanOut", () => {
 		expect(batches).toHaveLength(0);
 	});
 
-	test("keeps each batch within a queue batch's byte limit", async () => {
+	test("batches large activities by count, leaving byte limits to the job writer", async () => {
 		let many = new MemoryFollowerStore(
 			Array.from({ length: 10 }, (_, index) =>
 				follower(`https://s${index}.social/users/u`, `https://s${index}.social/inbox`, null),
@@ -774,7 +774,7 @@ describe("fanOut", () => {
 		);
 
 		expect(planned.inboxes).toBe(10);
-		expect(batches.map((batch) => batch.length)).toEqual([2, 2, 2, 2, 2]);
+		expect(batches.map((batch) => batch.length)).toEqual([10]);
 	});
 
 	test.each([

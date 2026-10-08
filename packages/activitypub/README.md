@@ -641,10 +641,11 @@ Enqueues one delivery per distinct inbox the activity is addressed to, and answe
   addressed on it is never fetched.
 - `cache`: where `deliver` keeps failing origins. An origin failing for more than 7 days is
   skipped until an activity from it verifies in the inbox or a delivery to it lands.
-- `enqueue(deliveries)`: writes one batch of delivery jobs. It may resolve to a `Result` or to
-  nothing; a failure or a rejection fails the fan-out as a retryable `enqueue`.
-- `pageSize`: store page size and largest batch, 100 by default. A batch also closes before
-  its messages reach 240 KB, inside a Cloudflare Queues `sendBatch`.
+- `enqueue(deliveries)`: writes one batch of delivery jobs, whose messages may total more
+  than one queue write carries; `enqueueMany` from `@sdxc/jobs` splits it as the queue needs.
+  It may resolve to a `Result` or to nothing; a failure or a rejection fails the fan-out as a
+  retryable `enqueue`.
+- `pageSize`: store page size and largest batch, 100 by default.
 - `now`: the clock failure windows are measured against.
 
 Targets are deduplicated as URLs, so one server with 400 followers gets one POST. `bto` and

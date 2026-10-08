@@ -27,12 +27,6 @@ import { parseActivity } from "./parse.js";
 /** Leaves room for the inbox, the actor and the job envelope inside a 128 KB queue message. */
 export const MAX_ACTIVITY_BYTES = 120 * 1024;
 
-/** A Cloudflare Queues `sendBatch` carries at most 256 KB, so a batch closes before it. */
-const MAX_BATCH_BYTES = 240 * 1024;
-
-/** What a queue message adds around a delivery's own members. */
-const MESSAGE_OVERHEAD_BYTES = 256;
-
 /** The members ActivityPub §6 strips before delivery, on the activity and its embedded object. */
 const BLIND_MEMBERS = ["bto", "bcc"] as const;
 
@@ -63,7 +57,10 @@ export interface FanOutOptions {
 	blocked: BlockedCheck;
 	/** Where `deliver` keeps each origin's failure window. */
 	cache: Cache;
-	/** Writes one batch of delivery jobs; a failure or rejection fails the fan-out as retryable. */
+	/**
+	 * Writes one batch of delivery jobs, of any total size; a failure or rejection fails the
+	 * fan-out as retryable.
+	 */
 	enqueue: (deliveries: DeliveryInput[]) => Promise<Result<void, Error> | void>;
 	/** Followers' inboxes read per store page, and the most deliveries per batch. @default 100 */
 	pageSize?: number;
@@ -86,8 +83,8 @@ export interface FanOutResult {
  * to its actor's `sharedInbox ?? inbox`, and one that fails to resolve is skipped and
  * counted, so one unreachable mention never holds back delivery to every follower.
  *
- * A batch closes at `pageSize` deliveries or before it outgrows a queue batch. A retried
- * fan-out may enqueue some deliveries twice, which receivers absorb by activity id.
+ * A batch closes at `pageSize` deliveries. A retried fan-out may enqueue some deliveries
+ * twice, which receivers absorb by activity id.
  *
  * @param input - The sending actor and the activity.
  * @param options - The stores, the moderation callback and the job writer.
@@ -128,9 +125,6 @@ export async function fanOut(
 
 	let pageSize = options.pageSize ?? 100;
 	let now = options.now ?? (() => new Date());
-	let messageBytes =
-		size + new TextEncoder().encode(input.actor).byteLength + MESSAGE_OVERHEAD_BYTES;
-	let batchLimit = Math.max(1, Math.min(pageSize, Math.floor(MAX_BATCH_BYTES / messageBytes)));
 
 	let seen = new Set<string>();
 	let hosts = new Map<string, boolean>();
@@ -189,7 +183,7 @@ export async function fanOut(
 		}
 
 		batch.push({ actor: input.actor, activity: payload, inbox: url.href });
-		if (batch.length >= batchLimit) return flush();
+		if (batch.length >= pageSize) return flush();
 		return success(undefined);
 	}
 
