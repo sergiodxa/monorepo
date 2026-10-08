@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 This guide builds the path a post takes from a `.md` file in your repository to a rendered
@@ -297,12 +297,11 @@ The same map takes over built-in nodes when you key it by node type (`code`, `he
 `link`, `alert`).
 
 The painted tokens become `<span class="token …">` runs, and the stylesheet that colours them
-ships with the highlighter. Link it from your document layout:
+ships with the highlighter. Import it from your document layout, after the theme, so the
+build links it with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
 
 ```tsx {% title="app/components/document.tsx" %}
-import highlightStyles from "@sdxc/highlight/styles.css?url";
-
-<link rel="stylesheet" href={highlightStyles} />;
+import "@sdxc/highlight/styles.css";
 ```
 
 ## HTML and plain text for everything else

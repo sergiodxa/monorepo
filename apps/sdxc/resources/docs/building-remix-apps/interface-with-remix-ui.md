@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A page in a Remix v3 app is `remix/component` JSX rendered on the server. This guide builds a
@@ -25,8 +25,9 @@ make where it earns its place.
 ## The stylesheets
 
 Components read semantic `--ui-*` variables, and those derive from five palette scales you
-define: `brand`, `neutral`, `danger`, `warning` and `success`, each from 50 to 950. Load the
-reset, your palette, then the theme, in that order, from the document layout.
+define: `brand`, `neutral`, `danger`, `warning` and `success`, each from 50 to 950. Import the
+reset, your palette, then the theme, in that order, from the document layout: the build keeps
+the import order as the cascade order.
 
 ```css {% title="resources/css/colors.css" %}
 :root {
@@ -40,13 +41,13 @@ reset, your palette, then the theme, in that order, from the document layout.
 ```tsx {% title="resources/layouts/document.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
-
-import colorStyles from "~/resources/css/colors.css?url";
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
 
 interface Props {
 	title: string;
+	stylesheets: string[];
 	children: RemixNode;
 }
 
@@ -56,9 +57,9 @@ export default function DocumentLayout(handle: Handle<Props>) {
 			<head>
 				<meta charSet="utf-8" />
 				<title>{handle.props.title}</title>
-				<link rel="stylesheet" href={resetStyles} />
-				<link rel="stylesheet" href={colorStyles} />
-				<link rel="stylesheet" href={themeStyles} />
+				{handle.props.stylesheets.map((href) => (
+					<link key={href} rel="stylesheet" href={href} />
+				))}
 			</head>
 			<body>{handle.props.children}</body>
 		</html>
@@ -66,7 +67,23 @@ export default function DocumentLayout(handle: Handle<Props>) {
 }
 ```
 
-The `?url` suffix is Vite's: it emits each file and hands you its public path. Put the class
+A build renames those files whenever their contents change, so the document links the names
+the build reports. With [Pitlane's Vite plugin](https://pitlane.tools/guides/assets), they come
+from its asset manifest:
+
+```typescript {% title="app/assets.ts" %}
+import { createAssetResolver } from "@pitlane/assets";
+import manifest from "@pitlane/assets/manifest";
+
+const ASSETS = createAssetResolver(manifest);
+
+export function documentStylesheets() {
+	return ASSETS.getStylesheets("resources/layouts/document.tsx");
+}
+```
+
+Await it where the request renders the document and pass the list as `stylesheets`: a Worker
+runs no async work at module scope, so the lookup belongs to the request. Put the class
 `system` on `<html>` and the theme follows the visitor's `prefers-color-scheme`, with no
 script deciding the scheme and nothing flashing on first paint.
 
