@@ -177,6 +177,12 @@ subtree no handler touched. The result is a `Result<N, MarkdownWalkError>`, or a
 one when a handler is asynchronous. See
 [Pattern: Transform A Document](#pattern-transform-a-document).
 
+##### `Markdown.compose(...visitors)`
+
+Merges visitors into one, so several plugins run in a single walk even when they handle the
+same node type: those handlers run in the order given, each on the node the previous one
+returned. The merged visitor is asynchronous only when one of its handlers is.
+
 #### `namespace Markdown`
 
 The AST. `Markdown.Node` is `Document | Block | Inline`; `document` is the root and belongs
@@ -494,14 +500,31 @@ than escaping as an exception. The `cause` is always the original value, so a ca
 throws on an unfamiliar `cause` and handles a familiar one keeps both.
 
 Being an object makes a visitor a value: it can be named, exported from another package, and
-merged by spread, so a consumer runs one pass instead of three. Syntax highlighting ships that
-way, as the `highlight` visitor in
+merged with `Markdown.compose`, so a consumer runs one pass instead of three. Syntax
+highlighting ships that way, as the `highlight` visitor in
 [`@sdxc/highlight`](https://www.npmjs.com/package/@sdxc/highlight):
 
 ```typescript
 import { highlight } from "@sdxc/highlight/markdown";
+import { headings } from "@sdxc/markdown/plugin/headings";
 
-let result = Markdown.walk(document, { ...highlight, ...anchors });
+let result = Markdown.walk(document, Markdown.compose(highlight, headings()));
+```
+
+`compose` runs every handler for a node type in the order the visitors were given, each on the
+node the one before returned, so two plugins that both handle headings each get their turn
+where a spread would keep only the last. A handler that removes the node, splices it, or
+replaces it with another type ends the chain for that node.
+
+One walk is top-down, so a handler sees a node before its children are rewritten. A pass that
+reads what another pass writes inside the same node — slugging a heading from the variable
+values filled into its text — takes two walks:
+
+```typescript
+let filled = Markdown.walk(document, variables(values, MARKDOWN_OPTIONS));
+if (isFailure(filled)) return filled;
+
+let result = Markdown.walk(filled.data, Markdown.compose(highlight, headings()));
 ```
 
 An exported visitor is declared with `satisfies Markdown.Visitor`, never with a type

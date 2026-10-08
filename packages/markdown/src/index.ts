@@ -9,6 +9,7 @@
 import type { Result } from "@sdxc/result";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
+import { composeVisitors } from "./lib/compose.js";
 import { parseDocument, parseFrontmatter } from "./lib/parse.js";
 import { stringifyDocument } from "./lib/stringify.js";
 import { walkNode } from "./lib/walk.js";
@@ -106,6 +107,19 @@ export class Markdown {
 		visitor: V,
 	): Markdown.Walked<V, N> {
 		return walkNode(node, visitor) as Markdown.Walked<V, N>;
+	}
+
+	/**
+	 * Merges visitors into one for a single walk. Handlers for the same node type run in
+	 * the order given, each on the node the previous one returned; a handler that removes
+	 * the node, splices it, or changes its type ends the chain for that node.
+	 *
+	 * @param visitors - The visitors to merge, in the order their handlers run
+	 * @returns One visitor, asynchronous only when one of the handlers is
+	 * @example Markdown.walk(document, Markdown.compose(variables(values), headings()))
+	 */
+	static compose<V extends Markdown.Visitor[]>(...visitors: V): Markdown.Composed<V> {
+		return composeVisitors(visitors) as Markdown.Composed<V>;
 	}
 }
 
@@ -480,6 +494,27 @@ export namespace Markdown {
 			parent: Parent | null,
 		) => Visited<K> | Promise<Visited<K>>;
 	};
+
+	/**
+	 * The visitor `Markdown.compose` returns: for each node type, a handler whose return
+	 * type joins what every composed handler for that type declares, so the walk is
+	 * asynchronous exactly when one of them is.
+	 */
+	export type Composed<V extends Visitor[]> = {
+		[K in Node["type"]]?: (
+			node: Extract<Node, { type: K }>,
+			parent: Parent | null,
+		) => ComposedReturn<V[number], K>;
+	};
+
+	/** What the handlers for type `K` across a union of visitors may return. */
+	type ComposedReturn<U, K extends Node["type"]> = U extends unknown
+		? K extends keyof U
+			? NonNullable<U[K]> extends (...args: never[]) => infer R
+				? R
+				: never
+			: never
+		: never;
 
 	/** Every return type the visitor's own handlers declare, which is what decides the walk's shape. */
 	type HandlerReturn<V extends Visitor> = {
