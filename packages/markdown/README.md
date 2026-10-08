@@ -298,6 +298,162 @@ included. A block holding no variable is handed back as the same object.
 A text hole whose value is a list, an object or `null` is a failure, because only a string,
 number or boolean has a text form.
 
+### `@sdxc/markdown/plugin/headings`
+
+#### `headings(options?)`
+
+Returns a visitor for `Markdown.walk` that gives every heading an `id` attribute, so in-page
+links have an anchor to land on. A heading with an author-written id (`## Install {% #setup %}`)
+keeps it; every other heading takes a GitHub-compatible slug of its plain text, inline markup
+dropped, so a `#fragment` copied from GitHub resolves here. A repeated slug takes the first
+free `-1`, `-2` suffix.
+
+Walking a document reserves every id an author wrote in it first, on any block and wherever it
+stands, so a generated slug never takes one written further down. Each document walk starts
+with no ids taken; a walk from a subtree keeps the ids of the walks before it, so take a fresh
+`headings()` per subtree. A heading that already carries an `id`, a variable included, and
+every other node are handed back as the same object.
+
+- `options.levels`: The levels that get a generated id (default all, `1`–`6`). Author ids at
+  every level are kept and reserved all the same.
+- `options.slug`: Turns a heading's plain text into its id in place of GitHub's slug; repeated
+  results are still numbered.
+
+A heading whose slug is empty, such as one of punctuation alone, is left without an id.
+
+#### `tableOfContents(node, options?)`
+
+Reads the headings of a walked document back as a tree of `{ id, text, level, children }`:
+each heading holds the deeper ones that follow it until the next heading at its level or
+shallower, so a skipped level (`##` then `####`) nests under the nearest shallower heading.
+Ids are read as present, so it runs after `headings()`; a heading with no id is left out.
+
+- `options.levels`: The levels to list (default `[2, 3]`).
+
+```typescript
+import { headings, tableOfContents } from "@sdxc/markdown/plugin/headings";
+
+let document = unwrap(Markdown.walk(cachedDocument, headings()));
+let toc = tableOfContents(document);
+```
+
+### `@sdxc/markdown/plugin/links`
+
+#### `links(options?)`
+
+Returns a visitor for `Markdown.walk` that rewrites the URLs a document points at: a link's
+`href`, an image's `src`, and the `href` and `src` of an allowlisted element. A node whose URLs
+come out as written is handed back as the same object.
+
+- `options.base`: The absolute URL a relative one resolves against, the way a browser resolves
+  it against a page; `./`, `../` and root-relative paths all resolve, keeping their query and
+  fragment. Absolute URLs, `mailto:`/`tel:` and fragment-only `#id` links, which point inside
+  the page, stay as written.
+- `options.rewrite`: Runs on every URL once `base` has resolved it, absolute ones included,
+  with the node beside it; it returns the URL to write, or `undefined` to keep the one it was
+  given.
+
+An element attribute holding a variable stays as written until the variable is filled. A
+`base` that is no absolute URL fails the walk at the first relative URL.
+
+```typescript
+import { links } from "@sdxc/markdown/plugin/links";
+
+let result = Markdown.walk(
+	document,
+	links({
+		base: "https://github.com/acme/repo/blob/main/docs/",
+		rewrite: (url) => (url.endsWith(".md") ? url.replace(/\.md$/, "") : undefined),
+	}),
+);
+```
+
+### `@sdxc/markdown/plugin/typography`
+
+#### `typography(options?)`
+
+Returns a visitor for `Markdown.walk` that sets prose in typographic punctuation: `"` and `'`
+become curly quotes, `--` an en dash, `---` an em dash and `...` an ellipsis. Only `text` nodes
+change, so code, inline code, raw HTML, attribute values and `code`/`kbd`/`samp`/`var`
+elements keep their ASCII. A text node with nothing to change is handed back as the same
+object.
+
+Each paragraph, heading, table cell, or block-level tag or element holding inline content is
+set as one run, so a quote is decided by the characters around it even when they sit in a
+sibling or a nested node: `"**bold**"` opens before the strong text and closes after it. A
+quote opens after the start of the run, whitespace, a bracket, a dash or another opening
+quote, when something follows it, and closes otherwise; a `'` inside a word (`don't`,
+`Sergio's`) or ahead of an elided year (`'90s`) is an apostrophe, `’`.
+
+- `options.quotes`: `true` (the default), `false`, or the marks a locale writes,
+  `{ double: ["«", "»"], single: ["‹", "›"] }`; the apostrophe stays `’` either way.
+- `options.dashes`: Turns `--` and `---` into dashes; defaults to `true`.
+- `options.ellipses`: Turns `...` into `…`; defaults to `true`.
+
+### `@sdxc/markdown/plugin/embeds`
+
+#### `embeds(providers)`
+
+Returns a visitor for `Markdown.walk` that turns a URL pasted on a line of its own into a
+block `tag` node. The first provider in `providers` that recognises the URL wins. A paragraph
+qualifies when it holds one link and nothing but whitespace around it, and that link shows its
+own URL, whether written bare, as `<https://…>`, or as a `www.` autolink. A link with a label
+of its own, or a URL sharing its line with text, stays a link. A paragraph no provider claims
+is handed back as the same object.
+
+The tag takes the provider's `name`, the paragraph's position and no children. Its attributes
+are the paragraph's annotation, then what the provider matched, then `url` holding the link's
+href, so a renderer can always fall back to a plain link. Matching reads the URL alone, and
+embedding never touches the network.
+
+#### `EmbedProvider`
+
+`{ name: string; match(url: URL): Markdown.Attributes | null }`. `name` is the tag name the
+renderer is registered under; `match` returns the tag's attributes, or `null` for a URL that
+is not the provider's.
+
+#### `youtube(options?)`, `vimeo(options?)`, `gist(options?)`, `x(options?)`
+
+Built-in providers whose tag name defaults to their own name. Pass `options.name` to rename
+it, e.g. `youtube({ name: "video" })`.
+
+| Provider  | Recognises                                                                     | Attributes     |
+| --------- | ------------------------------------------------------------------------------ | -------------- |
+| `youtube` | `youtube.com/watch?v=`, `/shorts/`, `/embed/`, `/live/`, `youtu.be/`, nocookie | `id`, `start?` |
+| `vimeo`   | `vimeo.com/ID`, `vimeo.com/ID/HASH`, `player.vimeo.com/video/ID?h=HASH`        | `id`, `hash?`  |
+| `gist`    | `gist.github.com/USER/ID`                                                      | `user`, `id`   |
+| `x`       | `x.com/USER/status/ID` and `twitter.com/USER/status/ID`                        | `user`, `id`   |
+
+`start` is YouTube's `t` or `start` parameter in seconds (`90`, `90s`, `1m30s`).
+
+### `@sdxc/markdown/plugin/lint`
+
+#### `lint(document, options?)`
+
+Checks a parsed document and returns a `LintProblem[]` (`{ rule, message, position }`),
+ordered by where each problem starts in the source. Problems are data: an empty array means
+the document passed, and the function never fails. Every rule runs by default:
+
+| Rule                | Reports                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------- |
+| `code-language`     | a code block with no language, indented code included                                   |
+| `heading-increment` | a heading more than one level deeper than the one before it; the first may be any level |
+| `single-h1`         | every level-1 heading after the first                                                   |
+| `image-alt`         | an image, or an `img` element, with empty alternative text                              |
+| `empty-link`        | a link, or an `a` element, with an empty `href` or no text                              |
+| `broken-anchor`     | a `#fragment` link that matches no id in the document                                   |
+| `duplicate-id`      | a block whose explicit `id` an earlier block already claimed                            |
+
+A fragment resolves against the ids `headings()` would assign: every explicit `id` an
+annotation wrote, then a GitHub slug for each heading without one, numbered `-1`, `-2` when
+repeated.
+
+- `options.rules`: `{ [rule]: false }` turns a rule off, built-in or custom.
+- `options.ids`: Ids the page has outside the document, such as a layout's `#comments`.
+- `options.custom`: Extra rules keyed by name, each `(node, report) => void`, run once per
+  node in document order. `report(message, position?)` records a problem at the node, or at
+  the position given.
+
 ## Pattern: Transform A Document
 
 `Markdown.walk` is the only transform mechanism. A visitor is a plain object with one optional
@@ -583,20 +739,41 @@ first line of a block quote, and a custom component can take them over:
 toRemix(document, { components: { alert: Alert } });
 ```
 
+## Pattern: Embed Pasted URLs
+
+```tsx
+import { embeds, gist, vimeo, x, youtube } from "@sdxc/markdown/plugin/embeds";
+import { toRemix } from "@sdxc/markdown/remix";
+
+let result = Markdown.walk(document, embeds([youtube(), vimeo(), gist(), x()]));
+if (isFailure(result)) return result;
+
+toRemix(result.data, { components: { youtube: YouTube, vimeo: Vimeo, gist: Gist, x: Post } });
+```
+
+Register a component for every provider you pass. A tag with no component renders its
+children, and an embed has none, so an embed without a component renders nothing. Leave a
+provider out of `embeds` to keep its URLs as links.
+
 ## Pattern: Lint Content In CI
 
 Parsing returns positions, so a check reads like a test:
 
 ```typescript
-let problems: string[] = [];
+import { lint } from "@sdxc/markdown/plugin/lint";
 
-Markdown.walk(document, {
-	code(node) {
-		if (node.language === undefined) {
-			problems.push(`${file}:${node.position.start.line} code block without a language`);
-		}
+let problems = lint(document, {
+	rules: { "single-h1": false },
+	custom: {
+		"no-todo"(node, report) {
+			if (node.type === "text" && node.value.includes("TODO")) report("TODO left in the copy");
+		},
 	},
 });
+
+for (let problem of problems) {
+	console.error(`${file}:${problem.position.start.line} ${problem.message} (${problem.rule})`);
+}
 ```
 
 ## Versioning

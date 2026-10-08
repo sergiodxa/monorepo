@@ -157,3 +157,23 @@ both node unions — which every renderer draws as itself.
   opening tag; `on…` handlers are refused even when listed; URL attributes take only relative,
   `http`, `https`, `mailto` and `tel` URLs. The variables visitor re-checks a URL once filled,
   and both renderers drop an unsafe attribute again, so a hand-built tree cannot bypass it.
+
+## Addendum: Plugins (2026-10-08)
+
+`@sdxc/markdown/plugin/*` holds the transforms a content site would otherwise write itself,
+each a factory returning a `Markdown.walk` visitor with synchronous handlers that hand back
+untouched nodes as the same object: `variables`, `headings` (GitHub-compatible ids and
+`tableOfContents`), `links` (base resolution and a rewrite hook), `typography` (quotes, dashes,
+ellipses) and `embeds` (a URL alone on its line becomes a tag through URL-only providers for
+YouTube, Vimeo, Gist and X). `lint` is read-only, so it is a function returning problems with
+positions rather than a visitor.
+
+- **Dependency-free plugins live in the package; capabilities get their own.** Math needs a
+  TeX parser, so it ships as `@sdxc/math` with a `/markdown` visitor, the way highlighting does.
+- **One slugger for ids.** `headings` and `lint` share `Slugger`, and both reserve every id an
+  author wrote on any block before slugging, so the anchor `lint` checks is the id `headings`
+  assigns.
+- **Typography reads a whole run.** Quotes are decided across the inline nodes of a paragraph,
+  heading or cell, so `"**bold**"` opens and closes correctly; a run ends at its block.
+- **Variables take dotted paths.** `$plan.price` and `$items.0` read own properties and array
+  indexes only; `Variable.name` keeps the path as written so stringify round-trips it.
