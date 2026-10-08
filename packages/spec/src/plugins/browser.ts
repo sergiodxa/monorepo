@@ -1198,9 +1198,9 @@ async function interact(
 }
 
 /**
- * Click where a person would: on the element's centre, scrolled to the middle of the
- * viewport first when that point lies outside it, as for a control straddling the fold.
- * An element whose centre is already visible is clicked in place, keeping the scroll.
+ * Click where a person would: on the element's centre, scrolled into the middle of every
+ * scrolling ancestor first when that point does not hit it — off the viewport, or clipped
+ * by a container such as a modal. An element its centre already hits keeps the scroll.
  */
 async function clickInView(selector: string, session: string): Promise<Result<Value, SpecError>> {
 	let script = [
@@ -1211,7 +1211,9 @@ async function clickInView(selector: string, session: string): Promise<Result<Va
 		"	let x = box.left + box.width / 2;",
 		"	let y = box.top + box.height / 2;",
 		"	let visible = x >= 0 && y >= 0 && x < innerWidth && y < innerHeight;",
-		'	if (!visible) element.scrollIntoView({ block: "center", inline: "center" });',
+		"	let hit = visible ? document.elementFromPoint(x, y) : null;",
+		"	let reachable = hit !== null && (hit === element || element.contains(hit));",
+		'	if (!reachable) element.scrollIntoView({ block: "center", inline: "center" });',
 		"	return true;",
 		"})()",
 	].join("\n");

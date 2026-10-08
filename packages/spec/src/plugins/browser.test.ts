@@ -2216,6 +2216,64 @@ describe("clicks at the viewport's edge against a real browser", () => {
 	);
 });
 
+/**
+ * A page whose "Publish" button sits inside a 200px scroll box, below what the box
+ * shows: its centre is inside the viewport, but the box clips it, so a click at that
+ * point lands on the page under the box.
+ */
+const SCROLL_BOX_PAGE = `<!doctype html>
+<html><head><title>Scroll box</title><style>
+	body { margin: 0 }
+	#box { block-size: 200px; overflow: auto }
+	#filler { block-size: 260px }
+	button { block-size: 40px }
+</style></head><body>
+	<div id="box">
+		<div id="filler"></div>
+		<button type="button" id="publish">Publish</button>
+	</div>
+	<p id="status">untouched</p>
+	<script>
+		document.getElementById("publish").addEventListener("click", function () {
+			document.getElementById("status").textContent = "published";
+		});
+	</script>
+</body></html>`;
+
+/**
+ * A modal taller than the window scrolls its own content, so a control can sit inside
+ * the viewport yet outside the part its container shows. A click has to reach it there.
+ */
+describe("clicks inside a scrolling container against a real browser", () => {
+	let plugin: Plugin;
+	let server: PageServer | undefined;
+	let baseUrl = "";
+	let context: ToolContext;
+
+	beforeAll(async () => {
+		plugin = createBrowserPlugin();
+		server = await servePage(() => ({ html: SCROLL_BOX_PAGE }));
+		baseUrl = `${server.origin}/`;
+		context = buildContext(allowAll(), "/tmp/spec-browser-scroll-box-session");
+	});
+
+	afterAll(async () => {
+		if (plugin.dispose !== undefined) await plugin.dispose();
+		server?.stop();
+	});
+
+	test.skipIf(!AVAILABLE)(
+		"a click reaches a control its container scrolls out of view",
+		async () => {
+			expectSuccess(await plugin.call("open", [value(baseUrl)], context));
+
+			expectSuccess(await plugin.call("click", [word("button"), value("Publish")], context));
+
+			expect(expectSuccess(await plugin.call("text", [value("published")], context))).toBe(true);
+		},
+	);
+});
+
 /** A sign-in form whose password input carries a label and a `name`, but no role. */
 const PASSWORD_PAGE = `<!doctype html>
 <html><head><title>Sign in</title></head><body>
