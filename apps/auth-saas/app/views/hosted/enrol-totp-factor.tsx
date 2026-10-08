@@ -9,7 +9,7 @@
  */
 
 import type { Translate } from "@sdxc/i18n";
-import type { QrSymbol } from "@sdxc/qr";
+import type { QR } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
 import { QrCode } from "@sdxc/qr/component";
@@ -28,7 +28,7 @@ export namespace EnrolTotpFactorPage {
 		enrolmentId: string;
 		uri: string;
 		/** The encoded `uri`, or `null` when encoding failed and the key and link stand alone. */
-		qr: QrSymbol | null;
+		qr: QR | null;
 		setupKey: string;
 		codeLabel: string;
 		submitLabel: string;
