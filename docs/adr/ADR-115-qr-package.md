@@ -180,7 +180,7 @@ let path = symbol.toSVGPath({ margin: 4 });
 ```tsx
 import { QrCode } from "@sdxc/qr/component";
 
-<QrCode symbol={symbol} label={t("enrol.qrLabel")} size="12rem" />;
+<QrCode path={symbol.toSVGPath()} label={t("enrol.qrLabel")} size="12rem" />;
 ```
 
 It renders:
@@ -200,19 +200,23 @@ It renders:
 </svg>
 ```
 
-| Prop     | Default  | Notes                                                                           |
-| -------- | -------- | ------------------------------------------------------------------------------- |
-| `symbol` | Required | A `QR` from `QR.encode`                                                         |
-| `label`  | Required | The accessible name, which says what the code is for; the package ships no copy |
-| `size`   | `12rem`  | A CSS length for the rendered width and height                                  |
-| `margin` | `4`      | Quiet zone in modules                                                           |
-| `dark`   | `#000`   | Module color                                                                    |
-| `light`  | `#fff`   | Background and quiet zone color                                                 |
-| `mix`    | None     | Passed through to the `<svg>`                                                   |
+| Prop    | Default  | Notes                                                                           |
+| ------- | -------- | ------------------------------------------------------------------------------- |
+| `path`  | Required | Path data from `qr.toSVGPath()`, which sets the quiet zone                      |
+| `label` | Required | The accessible name, which says what the code is for; the package ships no copy |
+| `size`  | `12rem`  | A CSS length for the rendered width and height                                  |
+| `dark`  | `#000`   | Module color                                                                    |
+| `light` | `#fff`   | Background and quiet zone color                                                 |
+| `mix`   | None     | Passed through to the `<svg>`                                                   |
 
-**It takes a `QR`, not the text.** Encoding answers a `Result`, and a render function has
+**It takes path data, not the text.** Encoding answers a `Result`, and a render function has
 no way to return one. The controller encodes, logs a failure, and renders the page without the
 code, which works because every page that shows a QR also shows its text alternative.
+
+**The path data is plain JSON.** A `QR` instance is a class with methods, which does not
+survive serialization into a hydrated component's props; `{ d, viewBox, size }` does, so the
+same component renders on the server and inside a hydrated tree. The quiet zone is fixed when
+the path is built, so the component has no `margin` prop.
 
 **Colors are fixed, dark on light.** A scanner needs a dark symbol on a light quiet zone; many
 readers reject an inverted code. `currentColor` would invert it under a dark theme, where the
@@ -282,7 +286,7 @@ return ctx.render(
 );
 ```
 
-The page draws `<QrCode symbol={qr} label={t("hostedSecondFactor.enrol.qrLabel")} />` above the
+The page draws `<QrCode path={qr.toSVGPath()} label={t("hostedSecondFactor.enrol.qrLabel")} />` above the
 setup key when `qr` is present, keeps the key and the link, and its module header drops the
 sentence about the missing image. The label is a new locale key.
 
@@ -334,8 +338,8 @@ rather than a fixed set of renderers.
 
 - **Optimal segmentation produces different matrices than single-mode generators** for mixed
   input. Both are valid; the known-answer fixtures record which reference produced each one.
-- **The component's input is a `QR`,** so a page encodes in its controller before it
-  renders.
+- **The component's input is path data,** so a page encodes in its controller and calls
+  `toSVGPath` before it renders.
 
 ## Implementation Plan
 

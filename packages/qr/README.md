@@ -33,10 +33,10 @@ if (isSuccess(encoded)) {
 ```tsx
 import { QrCode } from "@sdxc/qr/component";
 
-<QrCode symbol={qr} label="Scan to add this account to your authenticator app" />;
+<QrCode path={qr.toSVGPath()} label="Scan to add this account to your authenticator app" />;
 ```
 
-The component takes an encoded `QR`, so the handler that has the text encodes it and decides what to render when encoding fails.
+The component takes path data, so the handler that has the text encodes it and decides what to render when encoding fails. The path data is plain JSON, so it also works as a prop of a hydrated component.
 
 ### Drawing Into Your Own Markup
 
@@ -89,15 +89,14 @@ Path data for one `<path>`: each horizontal run of dark modules is one rectangle
 
 An inline `<svg role="img">` with a light background rectangle and one dark path.
 
-| Prop     | Default  | Notes                                                    |
-| -------- | -------- | -------------------------------------------------------- |
-| `symbol` | Required | A `QR` from `QR.encode`                                  |
-| `label`  | Required | The accessible name, saying what the code is for         |
-| `size`   | `12rem`  | A CSS length for the rendered width and height           |
-| `margin` | `4`      | Quiet zone in modules                                    |
-| `dark`   | `#000`   | Module color                                             |
-| `light`  | `#fff`   | Background and quiet zone color                          |
-| `mix`    | None     | Mixins applied to the `<svg>`, after the component's own |
+| Prop    | Default  | Notes                                                    |
+| ------- | -------- | -------------------------------------------------------- |
+| `path`  | Required | Path data from `qr.toSVGPath()`, quiet zone included     |
+| `label` | Required | The accessible name, saying what the code is for         |
+| `size`  | `12rem`  | A CSS length for the rendered width and height           |
+| `dark`  | `#000`   | Module color                                             |
+| `light` | `#fff`   | Background and quiet zone color                          |
+| `mix`   | None     | Mixins applied to the `<svg>`, after the component's own |
 
 The colors stay as given under a dark theme, and the SVG sets `forced-color-adjust: none` so a high-contrast theme keeps them too: scanners need a dark code on a light margin. A brand pair passed through `dark` and `light` needs the same strong contrast. The payload stays out of the accessibility tree, so show the text the code carries, or an equivalent, beside it.
 
@@ -128,7 +127,7 @@ function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QR | null
 		return (
 			<main>
 				<h1>Set up your authenticator app</h1>
-				{qr && <QrCode symbol={qr} label="QR code for your authenticator app" />}
+				{qr && <QrCode path={qr.toSVGPath()} label="QR code for your authenticator app" />}
 				<p>
 					Or enter this key: <code>{setupKey}</code>
 				</p>

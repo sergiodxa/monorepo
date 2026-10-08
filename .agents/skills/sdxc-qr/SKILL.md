@@ -5,7 +5,7 @@ description: "@sdxc/qr encodes text or bytes as a QR Code Model 2 symbol — `QR
 
 # @sdxc/qr
 
-`QR.encode` picks the smallest version that holds the optimally segmented data (numeric, alphanumeric and UTF-8 byte runs), adds Reed–Solomon correction, and chooses the lowest-penalty mask. It answers a `Result` holding a `QR` instance with `version`, `level`, `mask`, `size` and `isDark(x, y)`, which answers `false` outside the symbol; `qr.toSVGPath()` turns it into `{ d, viewBox, size }` with the quiet zone included. `QrCode` (from `@sdxc/qr/component`, needs `remix`) renders an inline `<svg role="img">` with fixed dark-on-light colors and `forced-color-adjust: none`. The main entry depends only on `@sdxc/result` and does no work at import time, so it runs in a Worker.
+`QR.encode` picks the smallest version that holds the optimally segmented data (numeric, alphanumeric and UTF-8 byte runs), adds Reed–Solomon correction, and chooses the lowest-penalty mask. It answers a `Result` holding a `QR` instance with `version`, `level`, `mask`, `size` and `isDark(x, y)`, which answers `false` outside the symbol; `qr.toSVGPath()` turns it into `{ d, viewBox, size }` with the quiet zone included. `QrCode` (from `@sdxc/qr/component`, needs `remix`) renders that path data as an inline `<svg role="img">` with fixed dark-on-light colors and `forced-color-adjust: none`. The main entry depends only on `@sdxc/result` and does no work at import time, so it runs in a Worker.
 
 Full API, options and examples: [packages/qr/README.md](packages/qr/README.md)
 
@@ -33,12 +33,13 @@ if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.cod
 <Page qr={isSuccess(encoded) ? encoded.data : null} />;
 
 // in the view
-{qr && <QrCode symbol={qr} label={t("enrol.qrLabel")} />}
+{qr && <QrCode path={qr.toSVGPath()} label={t("enrol.qrLabel")} />}
 ```
 
 ## Suggestions
 
 - Encode in the controller, never inside a render function: a render cannot answer the `Result`.
+- Pass `qr.toSVGPath()` (plain JSON) to `QrCode` or into a hydrated component's props, never the `QR` instance.
 - Keep the text alternative (setup key, link) on the page; the code's payload is not in the accessibility tree.
 - `label` is required and says what the code is for; take it from the app's locales.
 - Leave `dark`/`light` at black on white unless a brand pair has strong contrast; never derive them from `currentColor` or theme variables.
