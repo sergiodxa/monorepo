@@ -198,7 +198,7 @@ import { unwrap } from "@sdxc/result";
 
 function normalize(text: string, origin: string): string {
 	let zone = unwrap(ZoneFile.parse(text, { origin }));
-	let records = zone.records.toSorted((a, b) => a.name.localeCompare(b.name));
+	let records = [...zone.records].sort((a, b) => a.name.localeCompare(b.name));
 	return ZoneFile.stringify({ origin, records }, { relative: true });
 }
 ```
