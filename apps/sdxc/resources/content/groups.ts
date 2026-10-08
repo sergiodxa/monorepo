@@ -63,7 +63,19 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	},
 	{
 		title: "Content & formats",
-		packages: ["markdown", "yaml", "xml", "html", "csv", "icalendar", "distill", "jsdoc"],
+		packages: [
+			"markdown",
+			"math",
+			"yaml",
+			"xml",
+			"html",
+			"csv",
+			"icalendar",
+			"epub",
+			"zip",
+			"distill",
+			"jsdoc",
+		],
 	},
 	{
 		title: "Feeds & publishing",
@@ -127,6 +139,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"hostname",
 			"doh",
 			"zone-file",
+			"rdap",
 			"mcp",
 			"cloudflare-pricing",
 		],
