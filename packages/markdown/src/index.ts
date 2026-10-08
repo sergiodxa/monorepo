@@ -347,8 +347,9 @@ export namespace Markdown {
 	}
 
 	/**
-	 * A `{% $name %}` hole in text, or a `{$name}` one in an attribute value. Nothing is
-	 * substituted at parse time, so one parse serves every render.
+	 * A `{% $name %}` hole in text, or a `{$name}` one in an attribute value. `name` is the
+	 * path as written, dots included (`"plan.price"`), so a stringify writes it back as is.
+	 * Nothing is substituted at parse time, so one parse serves every render.
 	 */
 	export interface Variable {
 		type: "variable";

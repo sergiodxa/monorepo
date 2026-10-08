@@ -470,6 +470,7 @@ else goes in braces, and braces hold data and names, never code:
 | `wide`                                             | `true`                                  |
 | `count={3}`, `open={false}`, `empty={null}`        | the number, boolean or `null`           |
 | `src={$cdn}`                                       | a `variable` node, filled in per render |
+| `price={$plan.price}`, `first={$items.0}`          | a `variable` node with a dotted path    |
 | `data={[1, 2, $three]}`                            | an array                                |
 | `options={{ stacked: true, "max-width": $width }}` | an object                               |
 
@@ -485,8 +486,9 @@ braced spelling the source used.
 ## Pattern: Variables Resolved Per Render
 
 `{% $name %}` in text and `{$name}` in an attribute value parse to a `variable` node carrying
-that name. Nothing is substituted at parse time, so one parsed document serves every render, and
-filling it is a walk:
+that name. A name may continue as a dotted path — `{% $plan.price %}`, `{$items.0}` — whose
+segments are names or array indexes, and the node keeps the path exactly as written. Nothing is
+substituted at parse time, so one parsed document serves every render, and filling it is a walk:
 
 ```typescript
 import { variables } from "@sdxc/markdown/plugin/variables";
@@ -496,6 +498,12 @@ let result = Markdown.walk(
 	variables({ product: "Acme", plan: team.plan, cdn: env.CDN_URL }, MARKDOWN_OPTIONS),
 );
 ```
+
+A dotted path is filled by walking the value one segment at a time: a name reads an object's
+own property and a number indexes an array. A path that runs off its data at any segment is a
+missing variable, and the failure names the full path (`No value for $plan.price`). A path is
+data access only: `$a.b[0]` and `$a.b()` stay text, and a trailing dot or empty segment is not
+a variable.
 
 What a missing name _means_ is the consumer's: documentation fails loudly on one, which is the
 default, and a preview passes `{ missing: "keep" }` to leave the hole for the renderer to show.

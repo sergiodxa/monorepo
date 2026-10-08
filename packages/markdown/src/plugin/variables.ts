@@ -1,7 +1,8 @@
 /**
  * A `Markdown.walk` visitor that fills a document's variables from one set of values:
- * the `{% $name %}` holes in text and the `{$name}` ones in attribute values. A tag
- * whose schema waited on a variable is checked here, once the value is known.
+ * the `{% $name %}` holes in text and the `{$name}` ones in attribute values, a dotted
+ * `$plan.price` read through objects and arrays. A tag whose schema waited on a
+ * variable is checked here, once the value is known.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -67,11 +68,15 @@ export function variables(
 	}
 
 	/**
+	 * Walks the variable's dotted path one segment at a time, so a path that runs off
+	 * its data at any segment counts as missing as a whole and names the full path.
+	 *
 	 * @returns The variable's value, or `undefined` when the caller asked to keep a missing one
-	 * @throws {Error} When the name has no value and missing names fail
+	 * @throws {Error} When the path has no value and missing names fail
 	 */
 	function lookup(variable: Markdown.Variable): Markdown.AttributeValue | undefined {
-		if (Object.hasOwn(values, variable.name)) return values[variable.name];
+		let value = resolve(values, variable.name.split("."));
+		if (value !== undefined) return value;
 		if (keep) return undefined;
 		throw new Error(`No value for $${variable.name}`);
 	}
@@ -145,4 +150,28 @@ export function variables(
 		element: fillTag,
 		variable: fillText,
 	} satisfies Markdown.Visitor;
+}
+
+/**
+ * Reads only data the caller put there: own properties of an object and numeric
+ * indexes of an array, so a path like `$plan.toString` or `$items.length` is missing.
+ *
+ * @param values - The values the path starts from
+ * @param segments - The path's segments still to follow
+ * @returns The value at the end of the path, or `undefined` when a segment is missing
+ */
+function resolve(
+	values: Record<string, Markdown.AttributeValue>,
+	segments: string[],
+): Markdown.AttributeValue | undefined {
+	let current: unknown = values;
+
+	for (let segment of segments) {
+		if (current === null || typeof current !== "object") return undefined;
+		if (Array.isArray(current) !== /^\d+$/.test(segment)) return undefined;
+		if (!Object.hasOwn(current, segment)) return undefined;
+		current = (current as Record<string, unknown>)[segment];
+	}
+
+	return current as Markdown.AttributeValue | undefined;
 }

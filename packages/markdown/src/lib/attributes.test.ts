@@ -130,6 +130,18 @@ describe("readVariableName", () => {
 	test("reads nothing when anything follows the name", () => {
 		expect(readVariableName("$title extra")).toBeNull();
 	});
+
+	test("reads a dotted path as written, numeric segments included", () => {
+		expect(readVariableName("$plan.price")).toBe("plan.price");
+		expect(readVariableName("$items.0.my-name")).toBe("items.0.my-name");
+	});
+
+	test("reads nothing from a path with a trailing dot or an empty segment", () => {
+		expect(readVariableName("$plan.")).toBeNull();
+		expect(readVariableName("$a..b")).toBeNull();
+		expect(readVariableName("$a.b[0]")).toBeNull();
+		expect(readVariableName("$a.b()")).toBeNull();
+	});
 });
 
 describe("scanTagOpen", () => {
@@ -346,6 +358,35 @@ describe("attribute expressions", () => {
 				},
 			},
 		});
+	});
+
+	test("reads a dotted variable path, located from its marker to its last segment", () => {
+		expect(read("src={$user.links.0}")).toEqual({
+			src: {
+				type: "variable",
+				name: "user.links.0",
+				position: {
+					start: { line: 1, column: 6, offset: 5 },
+					end: { line: 1, column: 19, offset: 18 },
+				},
+			},
+		});
+	});
+
+	test("reads dotted paths inside arrays and objects", () => {
+		expect(shape(read("data={[$items.0, $a.b.c]} options={{ max: $plan.limit }}"))).toEqual({
+			data: [
+				{ type: "variable", name: "items.0" },
+				{ type: "variable", name: "a.b.c" },
+			],
+			options: { max: { type: "variable", name: "plan.limit" } },
+		});
+	});
+
+	test("rejects a path with a trailing dot or an empty segment", () => {
+		expect(rejected("src={$a.}").message).toBe('Expected a value for "src"');
+		expect(rejected("src={$a..b}").message).toBe('Expected a value for "src"');
+		expect(rejected("src={[$a.]}").message).toBe('Expected a value for "src"');
 	});
 
 	test("locates a variable through the caller's mapping", () => {

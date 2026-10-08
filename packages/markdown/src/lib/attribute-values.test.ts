@@ -126,6 +126,23 @@ describe("parsing", () => {
 		expect(tag).toMatchObject({ attributes: { src: { type: "variable", name: "cdn" } } });
 	});
 
+	test("a dotted variable attribute is located from its marker to its last segment", () => {
+		let [tag] = parse("<video src={$cdn.url} />").children;
+
+		expect(tag).toMatchObject({
+			attributes: {
+				src: {
+					type: "variable",
+					name: "cdn.url",
+					position: {
+						start: { line: 1, column: 13, offset: 12 },
+						end: { line: 1, column: 21, offset: 20 },
+					},
+				},
+			},
+		});
+	});
+
 	test("a variable nested in an array defers the schema check too", () => {
 		let [tag] = parse("<video src={[$cdn]} />").children;
 
@@ -137,6 +154,12 @@ describe("stringify", () => {
 	test("writes variables, arrays and objects back as they were spelled", () => {
 		let source =
 			'<chart data={[1, "two", $three]} options={{ stacked: true, "max-width": $width }} />\n';
+
+		expect(unwrap(Markdown.stringify(parse(source)))).toBe(source);
+	});
+
+	test("writes dotted variable paths back as they were spelled", () => {
+		let source = "<chart data={[$items.0, $a.b.c]} title={$user.name} />\n";
 
 		expect(unwrap(Markdown.stringify(parse(source)))).toBe(source);
 	});
@@ -165,6 +188,14 @@ describe("toHTML", () => {
 		let html = toHTML(parse("{% plan={$plan} %}\nText"));
 
 		expect(html).toBe('<p data-plan="{$plan}">Text</p>');
+	});
+
+	test("writes an unresolved dotted variable as the spelling the source used", () => {
+		let html = toHTML(parse("{% plan={$plan.price} %}\nText {% $plan.name %}"));
+
+		expect(html).toBe(
+			'<p data-plan="{$plan.price}">Text <span class="md-variable">{% $plan.name %}</span></p>',
+		);
 	});
 
 	test("hands a tag renderer the structured values", () => {

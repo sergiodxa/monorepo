@@ -138,6 +138,73 @@ describe("variables", () => {
 		);
 	});
 
+	test("fills a dotted path by walking objects and indexing arrays", () => {
+		let document = parse(
+			"Plan {% $plan.name %} costs {% $plan.price %}\n\n<chart data={[$items.1.n, $plan.tags]} />",
+		);
+		let result = unwrap(
+			Markdown.walk(
+				document,
+				variables({
+					plan: { name: "Pro", price: 12, tags: ["a"] },
+					items: [{ n: 1 }, { n: 2 }],
+				}),
+			),
+		);
+
+		expect(result.children[0]).toMatchObject({
+			children: [
+				{ type: "text", value: "Plan " },
+				{ type: "text", value: "Pro" },
+				{ type: "text", value: " costs " },
+				{ type: "text", value: "12" },
+			],
+		});
+		expect(result.children[1]).toMatchObject({ attributes: { data: [2, ["a"]] } });
+	});
+
+	test("fails naming the full path when a segment is missing", () => {
+		let result = Markdown.walk(parse("x {% $plan.price %}"), variables({ plan: { name: "Pro" } }));
+
+		if (!isFailure(result)) throw new Error("Expected the walk to fail");
+		expect((result.error.cause as Error).message).toBe("No value for $plan.price");
+	});
+
+	test("reads only own properties and array indexes along a path", () => {
+		let cases: [string, Record<string, MarkdownTypes.AttributeValue>, string][] = [
+			["x {% $plan.toString %}", { plan: {} }, "No value for $plan.toString"],
+			["x {% $plan.__proto__ %}", { plan: {} }, "No value for $plan.__proto__"],
+			["x {% $items.length %}", { items: [1] }, "No value for $items.length"],
+			["x {% $items.3 %}", { items: [1] }, "No value for $items.3"],
+			["x {% $name.0 %}", { name: "Ada" }, "No value for $name.0"],
+			["x {% $none.x %}", { none: null }, "No value for $none.x"],
+		];
+
+		for (let [source, values, message] of cases) {
+			let result = Markdown.walk(parse(source), variables(values));
+			if (!isFailure(result)) throw new Error(`Expected ${source} to fail`);
+			expect((result.error.cause as Error).message).toBe(message);
+		}
+	});
+
+	test("keeps a dotted variable whose path is missing when asked to", () => {
+		let document = parse("x {% $plan.price %}");
+		let result = unwrap(Markdown.walk(document, variables({ plan: {} }, { missing: "keep" })));
+
+		expect(result.children[0]).toMatchObject({
+			children: [{}, { type: "variable", name: "plan.price" }],
+		});
+	});
+
+	test("fails when a dotted text hole ends on a value with no text form", () => {
+		let result = Markdown.walk(parse("x {% $plan.tags %}"), variables({ plan: { tags: [] } }));
+
+		if (!isFailure(result)) throw new Error("Expected the walk to fail");
+		expect((result.error.cause as Error).message).toBe(
+			"$plan.tags holds a list, and only a string, number or boolean can stand in text",
+		);
+	});
+
 	test("hands back the node itself when it holds no variable", () => {
 		let document = parse("# Plain\n\n<chart data={[1]} />");
 		let result = unwrap(Markdown.walk(document, variables({})));

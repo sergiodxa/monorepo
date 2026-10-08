@@ -15,6 +15,12 @@ import type { Markdown } from "../index.js";
 /** The name a tag or an attribute may take: an identifier, hyphens allowed after the first character. */
 const NAME = /^[A-Za-z_][A-Za-z0-9_-]*/;
 
+/**
+ * What follows a variable's `$`: a name, then dotted segments that are names or array
+ * indexes. Data access is all it spells, so a value never runs code while it is filled in.
+ */
+const PATH = /^[A-Za-z_][A-Za-z0-9_-]*(?:\.(?:[A-Za-z_][A-Za-z0-9_-]*|\d+))*(?![.A-Za-z0-9_-])/;
+
 /** The three bare words a braced value may hold, each ending where a name could not continue. */
 const KEYWORD = /^(?:true|false|null)(?![A-Za-z0-9_-])/;
 
@@ -81,12 +87,12 @@ export function scanAnnotation(text: string, start: number): Annotation | null {
  * there is the boolean attribute `wide`.
  *
  * @param body - The text between `{%` and `%}`, already trimmed
- * @returns The variable's name, or `null` when the body is an attribute list
+ * @returns The variable's dotted path as written, or `null` when the body is an attribute list
  */
 export function readVariableName(body: string): string | null {
 	if (!body.startsWith("$")) return null;
 
-	let name = NAME.exec(body.slice(1))?.[0];
+	let name = PATH.exec(body.slice(1))?.[0];
 	if (!name) return null;
 
 	return body.slice(1 + name.length).trim() === "" ? name : null;
@@ -420,9 +426,9 @@ function readObject(text: string, start: number, locate: Locate): ValueRead {
 	return { value: entries, end: index + 1 };
 }
 
-/** `$name`, located so a value that fails once filled in points back at it. */
+/** `$name` or `$a.b.0`, located so a value that fails once filled in points back at it. */
 function readVariable(text: string, start: number, locate: Locate): ValueRead {
-	let name = NAME.exec(text.slice(start + 1))?.[0];
+	let name = PATH.exec(text.slice(start + 1))?.[0];
 	if (!name) return null;
 
 	let end = start + 1 + name.length;

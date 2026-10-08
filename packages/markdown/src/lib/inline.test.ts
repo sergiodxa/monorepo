@@ -765,6 +765,20 @@ describe("positions", () => {
 		expect(link?.position.end).toEqual({ line: 1, column: 8, offset: 7 });
 	});
 
+	test("reads a dotted variable path as written", () => {
+		expect(shape(nodes("{% $plan.price %} or {% $items.0 %}"))).toEqual([
+			{ type: "variable", name: "plan.price" },
+			{ type: "text", value: " or " },
+			{ type: "variable", name: "items.0" },
+		]);
+	});
+
+	test("a path with a trailing dot or an empty segment is text", () => {
+		expect(shape(nodes("{% $plan. %} {% $a..b %}"))).toEqual([
+			{ type: "text", value: "{% $plan. %} {% $a..b %}" },
+		]);
+	});
+
 	test("a variable spans its delimiters", () => {
 		let [, variable] = nodes("x {% $name %}");
 
