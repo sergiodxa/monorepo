@@ -17,11 +17,11 @@
 import type { RateLimitKVNamespace } from "@sdxc/rate-limit";
 import type { Middleware } from "remix/router";
 
-import { KVAdapter } from "@sdxc/rate-limit";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { addressKey, KVAdapter } from "@sdxc/rate-limit";
 import { createContextKey } from "remix/router";
 
 import { CREDENTIAL_LIMIT, CREDENTIAL_WINDOW } from "~/app/http/middleware/tenant-rate-limit";
-import { clientAddressKey } from "~/app/lib/client-address";
 
 export const TurnstileChallengeContext = createContextKey<boolean>();
 
@@ -65,7 +65,7 @@ export async function shouldChallengeWithTurnstile(
 		prefix: CHALLENGE_PREFIX,
 	});
 
-	let decision = await adapter.consume(clientAddressKey(request));
+	let decision = await adapter.consume(addressKey(getClientIP(request)));
 
 	return (
 		decision.status === "success" &&

@@ -18,7 +18,8 @@
 import type { Adapter, RateLimiterBinding, RateLimitKVNamespace } from "@sdxc/rate-limit";
 import type { Middleware, RequestContext } from "remix/router";
 
-import { CloudflareAdapter, KVAdapter } from "@sdxc/rate-limit";
+import { getClientIP } from "@sdxc/get-client-ip";
+import { addressKey, CloudflareAdapter, KVAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { createContextKey } from "remix/router";
 
@@ -28,7 +29,6 @@ import { renderRateLimitedPage } from "~/app/http/controllers/hosted/rate-limite
 import { resolveClientAuth } from "~/app/http/controllers/oauth/token";
 import { activeSessionId } from "~/app/http/middleware/hosted-session";
 import { recordAttackSignal } from "~/app/lib/attack-signals";
-import { clientAddressKey } from "~/app/lib/client-address";
 import { requestOrigin } from "~/app/lib/request-origin";
 import { foldIdentifier } from "~/database/subject-identifiers";
 
@@ -137,13 +137,13 @@ export function interactiveCredentialRateLimit(
 	let limited = rateLimit({
 		adapter,
 		prefix: CREDENTIAL_PREFIX,
-		key: (context) => clientAddressKey(context.request),
+		key: (context) => addressKey(getClientIP(context.request)),
 		failurePolicy: "closed",
 		onLimit: (context) => renderRateLimitedPage(context),
 	});
 
 	let guarded: Middleware = (context, next) => {
-		let key = `${CREDENTIAL_PREFIX}:${clientAddressKey(context.request)}`;
+		let key = `${CREDENTIAL_PREFIX}:${addressKey(getClientIP(context.request))}`;
 		context.set(CredentialRateLimitContext, { adapter, key }, { property: "credentialRateLimit" });
 		return limited(context, next);
 	};
@@ -221,7 +221,7 @@ export function mailSendingRateLimit(
 		prefix: MAIL_PREFIX,
 		key: (context) => {
 			let identifier = firstFormValue(context.formData, MAIL_IDENTIFIER_FIELDS);
-			return identifier ? foldedMailKey(identifier) : clientAddressKey(context.request);
+			return identifier ? foldedMailKey(identifier) : addressKey(getClientIP(context.request));
 		},
 		skip: options.skip,
 		failurePolicy: "closed",
@@ -261,7 +261,7 @@ export function tokenRateLimit(
 		prefix: TOKEN_PREFIX,
 		key: (context) => {
 			let resolved = resolveClientAuth(context.request, context.formData);
-			return resolved.ok ? resolved.auth.clientId : clientAddressKey(context.request);
+			return resolved.ok ? resolved.auth.clientId : addressKey(getClientIP(context.request));
 		},
 		failurePolicy: "open",
 	});
@@ -299,7 +299,7 @@ export function authorizationRateLimit(
 	let limited = rateLimit({
 		adapter,
 		prefix: AUTHORIZATION_PREFIX,
-		key: (context) => clientAddressKey(context.request),
+		key: (context) => addressKey(getClientIP(context.request)),
 		failurePolicy: "open",
 	});
 
@@ -334,7 +334,7 @@ export function protocolRateLimit(
 	let limited = rateLimit({
 		adapter,
 		prefix: PROTOCOL_PREFIX,
-		key: (context) => clientAddressKey(context.request),
+		key: (context) => addressKey(getClientIP(context.request)),
 		failurePolicy: "open",
 	});
 
@@ -376,7 +376,7 @@ export function deviceAuthorizationRateLimit(
 			let clientId = context.formData.get("client_id");
 			return typeof clientId === "string" && clientId.length > 0
 				? clientId
-				: clientAddressKey(context.request);
+				: addressKey(getClientIP(context.request));
 		},
 		failurePolicy: "open",
 	});
@@ -432,7 +432,8 @@ export function deviceApprovalRateLimit(
 			window: DEVICE_APPROVAL_SESSION_WINDOW,
 		}),
 		prefix: DEVICE_APPROVAL_SESSION_PREFIX,
-		key: async (context) => (await activeSessionId(context)) ?? clientAddressKey(context.request),
+		key: async (context) =>
+			(await activeSessionId(context)) ?? addressKey(getClientIP(context.request)),
 		skip,
 		failurePolicy: "closed",
 		onLimit: (context) => renderRateLimitedPage(context),
@@ -444,7 +445,7 @@ export function deviceApprovalRateLimit(
 			window: DEVICE_APPROVAL_ADDRESS_WINDOW,
 		}),
 		prefix: DEVICE_APPROVAL_ADDRESS_PREFIX,
-		key: (context) => clientAddressKey(context.request),
+		key: (context) => addressKey(getClientIP(context.request)),
 		skip,
 		failurePolicy: "closed",
 		onLimit: (context) => renderRateLimitedPage(context),
@@ -488,7 +489,7 @@ export function magicLinkRateLimit(
 	let limited = rateLimit({
 		adapter: new KVAdapter(kv, { limit: MAGIC_LINK_LIMIT, window: MAGIC_LINK_WINDOW }),
 		prefix: MAGIC_LINK_PREFIX,
-		key: (context) => clientAddressKey(context.request),
+		key: (context) => addressKey(getClientIP(context.request)),
 		failurePolicy: "closed",
 		onLimit: (context) => renderRateLimitedPage(context),
 	});
