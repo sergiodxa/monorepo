@@ -1,8 +1,7 @@
 /**
- * Homepage controller. Renders the pitch and the early-access subscribe form, carrying
- * the request's UTM parameters into the form as hidden fields. Also exports the render
- * itself, because a failed subscribe reuses it to re-render this page with the error
- * shown inline, keeping the failure response an HTML page with a 400 status.
+ * Homepage controller. Renders the pitch and the early-access subscribe form. Also exports
+ * the render itself, because a failed subscribe reuses it to re-render this page with the
+ * error shown inline, keeping the failure response an HTML page with a 400 status.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +11,6 @@ import type { RequestContext } from "remix/router";
 
 import { createAction } from "remix/router";
 
-import { readAttribution } from "~/app/lib/attribution";
 import { seo } from "~/app/lib/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import HomeView from "~/resources/views/home";
@@ -43,7 +41,6 @@ export function renderHome(
 		>
 			<HomeView
 				subscribeAction={routes.api.subscribe.href()}
-				attribution={readAttribution(ctx.url.searchParams)}
 				error={options.error}
 				confirmEmail={options.confirmEmail}
 			/>

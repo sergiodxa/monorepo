@@ -37,17 +37,6 @@ export namespace SubscribeForm {
 		title?: string;
 		/** Accessible label for the email field. Visually hidden, like the original. */
 		label?: string;
-		/**
-		 * UTM attribution to carry through as hidden fields, read from the query string of
-		 * the page this form is rendered on. Attribution is preserved across the redirect
-		 * to the subscriber's destination this way.
-		 */
-		attribution?: {
-			source?: string;
-			campaign?: string;
-			medium?: string;
-			referral?: string;
-		};
 		/** A server-rendered error to show under the field, replacing the client-side one. */
 		error?: string;
 		/**
@@ -73,7 +62,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 	return () => {
 		let {
 			action,
-			attribution = {},
 			confirmEmail,
 			error,
 			label = "Email address",
@@ -84,10 +72,6 @@ export default function SubscribeForm(handle: Handle<SubscribeForm.Props>) {
 
 		return (
 			<form method="post" action={action} mix={[vstack({ gap: 2.5 }), is("100%"), maxIs("36rem")]}>
-				<input type="hidden" name="source" value={attribution.source ?? ""} />
-				<input type="hidden" name="campaign" value={attribution.campaign ?? ""} />
-				<input type="hidden" name="medium" value={attribution.medium ?? ""} />
-				<input type="hidden" name="referral" value={attribution.referral ?? ""} />
 				{confirmEmail && <input type="hidden" name="confirmed" value={confirmEmail} />}
 
 				{title && <h2 mix={[pi(5), text("base"), weight("semibold")]}>{title}</h2>}

@@ -1,9 +1,9 @@
 /**
  * Application bootstrap that assembles the books fetch-router. It registers the
- * global middleware stack (async context, request logging and tracing, form data, cross-origin
- * protection, HTML rendering), maps the funnel's routes onto their controllers, and
- * wires the request-scoped renderer. It exists as the composition root shared by the
- * worker and by the router-level tests.
+ * global middleware stack (async context, request logging and tracing, campaign attribution,
+ * form data, cross-origin protection, HTML rendering), maps the funnel's routes onto their
+ * controllers, and wires the request-scoped renderer. It exists as the composition root
+ * shared by the worker and by the router-level tests.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +14,7 @@ import type { Newsletter } from "@sdxc/newsletter";
 import type { RemixNode } from "remix/component";
 import type { Middleware, RequestContext } from "remix/router";
 
+import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
@@ -38,6 +39,7 @@ import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
 import { polar } from "~/app/lib/billing";
+import { attributionCookie } from "~/app/lib/cookies";
 import { buttondown } from "~/app/lib/newsletter";
 import routes from "~/routes/web";
 
@@ -61,6 +63,13 @@ export default function application(provider: Billing = polar, list: Newsletter 
 		log(logger) as Middleware,
 		getClientIP(),
 		trace() as Middleware,
+
+		/**
+		 * Remembers the campaign a visitor landed from in a signed cookie, so the subscribe
+		 * forms and the checkouts credit it as `ctx.attribution` however many pages later
+		 * the visitor converts.
+		 */
+		attribution({ store: attributionCookie() }),
 		formData() as Middleware,
 
 		/**

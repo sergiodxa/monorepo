@@ -1,7 +1,7 @@
 /**
- * Validator for the newsletter, sample-chapter and upgrade forms: an email address plus the
- * optional UTM attribution the pages carry through as hidden fields, and the screening the
- * two list-joining forms run on top: disposable domains and mistyped providers.
+ * Validator for the newsletter, sample-chapter and upgrade forms: an email address, and the
+ * screening the two list-joining forms run on top of it: disposable domains and mistyped
+ * providers.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -30,16 +30,13 @@ export const DISPOSABLE_EMAIL_MESSAGE =
 	"Temporary inboxes can't receive the newsletter.\nPlease use an email address you'll keep.";
 
 /**
- * The shape the forms post: the address, the UTM fields the pages carry through, and
- * `confirmed`, the address a typo suggestion was last shown for.
+ * The shape the forms post: the address, and `confirmed`, the address a typo suggestion was
+ * last shown for. The campaign a visitor came from arrives with the request's attribution
+ * cookie, so a posted field can never claim one.
  */
 export const SubscribeSchema = f.object({
 	email: f.field(emailAddress()),
 	confirmed: f.field(s.optional(s.string())),
-	source: f.field(s.optional(s.string())),
-	campaign: f.field(s.optional(s.string())),
-	medium: f.field(s.optional(s.string())),
-	referral: f.field(s.optional(s.string())),
 });
 
 /** The validated subscribe payload, as controllers and use cases receive it. */

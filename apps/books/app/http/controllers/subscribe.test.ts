@@ -12,53 +12,66 @@
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { describe, expect, test } from "vitest";
 
+import { landFrom } from "~/app/lib/test/attribution";
 import { subscribed } from "~/app/lib/test/newsletter";
 import { fetchApp } from "~/app/lib/test/router";
 
 /**
- * Posts the subscribe form against an in-memory newsletter. The body is
- * url-encoded, matching what a browser sends for a form built only from text
- * fields.
+ * Posts the subscribe form against an in-memory newsletter, sending the attribution cookie a
+ * landing set when one is given. The body is url-encoded, matching what a browser sends for a
+ * form built only from text fields.
  */
 function submit(
 	newsletter: MemoryNewsletter,
 	email: string,
-	attribution: Record<string, string> = {},
+	fields: Record<string, string> = {},
+	cookie?: string,
 ) {
-	let body = new URLSearchParams({ email, ...attribution });
+	let body = new URLSearchParams({ email, ...fields });
+	let headers: Record<string, string> = cookie ? { cookie } : {};
 
-	return fetchApp("/api/subscribe", { method: "POST", body, newsletter });
+	return fetchApp("/api/subscribe", { method: "POST", body, headers, newsletter });
 }
 
 describe("POST /api/subscribe", () => {
 	test("subscribes a new address and redirects to the sales page", async () => {
 		let newsletter = new MemoryNewsletter();
 
-		let response = await submit(newsletter, "reader@example.com", {
-			source: "newsletter",
-			campaign: "launch",
-			medium: "email",
-		});
+		let cookie = await landFrom(
+			"/sample?utm_source=Newsletter&utm_campaign=Launch&utm_medium=email",
+		);
+
+		let response = await submit(newsletter, "reader@example.com", {}, cookie);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe("/release");
 		/**
-		 * Attribution has to reach the newsletter, since that is the only place
-		 * it is stored.
+		 * The campaign is read from the cookie the landing page set, on a later page than the
+		 * one the visitor arrived on, and has to reach the newsletter, the only place it is stored.
 		 */
 		expect(await subscribed(newsletter)).toEqual(["reader@example.com"]);
 		expect(newsletter.attribution("reader@example.com")).toEqual({
 			source: "newsletter",
 			campaign: "launch",
 			medium: "email",
+			landingPage: "https://books.test/sample",
 		});
+	});
+
+	test("ignores campaign fields posted with the form", async () => {
+		let newsletter = new MemoryNewsletter();
+
+		await submit(newsletter, "reader@example.com", { source: "forged", campaign: "forged" });
+
+		expect(newsletter.attribution("reader@example.com")).toBeNull();
 	});
 
 	test("treats an address already on the list as success without re-subscribing", async () => {
 		let newsletter = new MemoryNewsletter();
 		newsletter.seed([{ email: "reader@example.com" }]);
 
-		let response = await submit(newsletter, "reader@example.com", { source: "later" });
+		let cookie = await landFrom("/?utm_source=later");
+		let response = await submit(newsletter, "reader@example.com", {}, cookie);
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe("/release");

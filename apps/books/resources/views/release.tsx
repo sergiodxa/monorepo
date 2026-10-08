@@ -30,7 +30,6 @@ import {
 } from "@sdxc/u/typography";
 import { css } from "remix/component";
 
-import type { SubscribeForm } from "~/resources/components/subscribe-form";
 import type { PackageCopy } from "~/resources/content/release";
 
 import SampleChapterSection from "~/resources/components/sample-chapter-section";
@@ -77,8 +76,6 @@ export namespace ReleaseView {
 		prices: Record<PackageCopy["type"], PriceView>;
 		/** The links the page points at. */
 		links: Links;
-		/** UTM attribution carried through from this page's query string. */
-		attribution: SubscribeForm.Props["attribution"];
 	}
 }
 
@@ -272,7 +269,7 @@ function PurchaseButton(handle: Handle<{ href: string; price: PriceView }>) {
  * call-out. Its radius and inline margin use raw lengths, keeping the corner
  * rounded and the panel overhanging the section on wide viewports.
  */
-function Pricing(handle: Handle<Omit<ReleaseView.Props, "attribution">>) {
+function Pricing(handle: Handle<ReleaseView.Props>) {
 	return () => {
 		let { links, prices } = handle.props;
 
@@ -468,7 +465,7 @@ function FrequentQuestions() {
 /** Renders the sales page. */
 export default function ReleaseView(handle: Handle<ReleaseView.Props>) {
 	return () => {
-		let { attribution, links, prices } = handle.props;
+		let { links, prices } = handle.props;
 
 		return (
 			<div
@@ -484,7 +481,7 @@ export default function ReleaseView(handle: Handle<ReleaseView.Props>) {
 				<SectionRule />
 				<Description />
 				<SectionRule />
-				<SampleChapterSection action={links.sample} attribution={attribution} />
+				<SampleChapterSection action={links.sample} />
 				<SectionRule />
 				<Testimonial />
 				<SectionRule />

@@ -3,7 +3,8 @@
  * redirects to it: list price for Essentials, the current launch campaign for
  * Complete. Because the URL is a shareable GET, `:type` is checked against the
  * published package names before any billing call, keeping every checkout tied
- * to a package the visitor actually chose.
+ * to a package the visitor actually chose. The visitor's first and last touch ride
+ * along as checkout metadata, so the paid order names the campaign that sold it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +12,7 @@
 
 import type { Discount } from "@sdxc/billing";
 
+import { toMetadata } from "@sdxc/attribution";
 import { redirect } from "@sdxc/http/response";
 import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
@@ -75,6 +77,7 @@ export default createAction(routes.api.checkout, async (ctx) => {
 		 * is the only discount there is.
 		 */
 		allowDiscountCodes: product !== Product.Complete,
+		metadata: toMetadata(ctx.attribution),
 	});
 
 	if (isFailure(checkout)) {

@@ -77,6 +77,10 @@ breaks something you cannot see from here:
   `app/lib/newsletter.ts` and published as `ctx.newsletter` by the middleware. Controllers
   branch on `NewsletterError.code` (`suppressed`, `invalid_address`), never on a vendor's
   own error codes, and the Buttondown API version is pinned by the package.
+- **Attribution** is `@sdxc/attribution`: its middleware keeps the visitor's first and last
+  touch in the cookie `app/lib/cookies.ts` builds, signed with `COOKIE_SECRET`, and publishes
+  them as `ctx.attribution`. Forms render no hidden campaign fields; the subscribe service
+  reads the touch through `subscriberAttribution`, and checkouts pass `toMetadata`.
 - **Logging** is `@sdxc/logger`, one wide event per request: controllers write through
   `ctx.log`, services through `currentLog()?.`. Keep the existing field and note names
   (`subscribe.result`, `checkout.id`, `discount.id`, `order.tagged`, `checkout.started`,

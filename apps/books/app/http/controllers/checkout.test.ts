@@ -1,8 +1,8 @@
 /**
  * Tests for `GET /api/checkout/:type` — the published, shareable link that turns a
  * pricing-page click into a hosted checkout. Covers both packages, the `?email=`
- * pass-through, the discount application, and the refusal to bill for an unrecognized
- * package name.
+ * pass-through, the discount application, the campaign carried as checkout metadata, and
+ * the refusal to bill for an unrecognized package name.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +15,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
+import { landFrom } from "~/app/lib/test/attribution";
 import { COMPLETE_CENTS, ESSENTIALS_CENTS, memoryBilling } from "~/app/lib/test/billing";
 import { fetchApp } from "~/app/lib/test/router";
 
@@ -162,5 +163,29 @@ describe("GET /api/checkout/:type", () => {
 		let checkout = await openedCheckout(billing, response);
 
 		expect(checkout.providerData.email).toBe("Reader@example.com");
+	});
+
+	test("records the campaign the buyer landed from as checkout metadata", async () => {
+		let billing = memoryBilling();
+		let cookie = await landFrom("/release?utm_source=newsletter&utm_campaign=launch");
+
+		let response = await fetchApp("/api/checkout/essentials", { billing, headers: { cookie } });
+		let checkout = await openedCheckout(billing, response);
+
+		expect(checkout.providerData.metadata).toMatchObject({
+			first_source: "newsletter",
+			first_campaign: "launch",
+			first_landing: "/release",
+			last_campaign: "launch",
+		});
+	});
+
+	test("opens a checkout with no attribution metadata for a visitor who arrived directly", async () => {
+		let billing = memoryBilling();
+
+		let response = await start(billing, "/api/checkout/essentials");
+		let checkout = await openedCheckout(billing, response);
+
+		expect(checkout.providerData.metadata).toEqual({});
 	});
 });

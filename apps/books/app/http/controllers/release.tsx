@@ -19,7 +19,6 @@ import { createAction } from "remix/router";
 import type { PriceView, ReleaseView as ReleaseViewTypes } from "~/resources/views/release";
 
 import { Discounts, Product } from "~/app/data/product";
-import { readAttribution } from "~/app/lib/attribution";
 import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
 import { findApplicableDiscount } from "~/app/services/discount";
 import DocumentLayout from "~/resources/layouts/document";
@@ -160,11 +159,7 @@ export default createAction(routes.release, async (ctx) => {
 			})}
 			head={ppp ? <script defer src="https://cdn.paritydeals.com/banner.js" /> : undefined}
 		>
-			<ReleaseView
-				prices={prices}
-				links={links}
-				attribution={readAttribution(ctx.url.searchParams)}
-			/>
+			<ReleaseView prices={prices} links={links} />
 		</DocumentLayout>,
 	);
 });

@@ -26,8 +26,6 @@ export namespace SampleChapterSection {
 	export interface Props {
 		/** Where the form posts — the sample page unlocks the chapter on POST. */
 		action: string;
-		/** UTM attribution carried through from the page's query string. */
-		attribution: SubscribeForm.Props["attribution"];
 		/** A server-rendered error to show under the field. */
 		error?: string;
 		/** The address a typo suggestion was just shown for, kept as typed on resubmit. */
@@ -40,7 +38,7 @@ export namespace SampleChapterSection {
  */
 export default function SampleChapterSection(handle: Handle<SampleChapterSection.Props>) {
 	return () => {
-		let { action, attribution, confirmEmail, error } = handle.props;
+		let { action, confirmEmail, error } = handle.props;
 
 		return (
 			<section id="sample" mix={[vstack({ gap: 10 }), is("100%"), maxIs("64rem"), pb(5)]}>
@@ -64,7 +62,6 @@ export default function SampleChapterSection(handle: Handle<SampleChapterSection
 
 				<SubscribeFormComponent
 					action={action}
-					attribution={attribution}
 					confirmEmail={confirmEmail}
 					error={error}
 					label="Email address"

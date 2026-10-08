@@ -13,6 +13,7 @@ import type { Billing } from "@sdxc/billing";
 import type { Log } from "@sdxc/logger";
 import type { RequestContext } from "remix/router";
 
+import { toMetadata } from "@sdxc/attribution";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { isFailure } from "@sdxc/result";
@@ -21,7 +22,6 @@ import { createAction } from "remix/router";
 
 import { Discounts, Product } from "~/app/data/product";
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
-import { readAttribution } from "~/app/lib/attribution";
 import { seo } from "~/app/lib/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import UpgradeView from "~/resources/views/upgrade";
@@ -48,11 +48,7 @@ const MAX_ORDER_PAGES = 5;
 function renderUpgrade(ctx: RequestContext, options: { error?: string; status?: number } = {}) {
 	return ctx.render(
 		<DocumentLayout title={TITLE} description={DESCRIPTION} canonical={seo.canonical(ctx.url)}>
-			<UpgradeView
-				action={routes.upgrade.action.href()}
-				attribution={readAttribution(ctx.url.searchParams)}
-				error={options.error}
-			/>
+			<UpgradeView action={routes.upgrade.action.href()} error={options.error} />
 		</DocumentLayout>,
 		options.status ? { status: options.status } : undefined,
 	);
@@ -154,6 +150,7 @@ export const action = createAction(routes.upgrade.action, async (ctx) => {
 		discount: Discounts.UPGRADE,
 		/** The upgrade price is already a discount, so the hosted page collects no code on top. */
 		allowDiscountCodes: false,
+		metadata: toMetadata(ctx.attribution),
 	});
 
 	if (isFailure(checkout)) {

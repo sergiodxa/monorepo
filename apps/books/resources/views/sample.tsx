@@ -24,8 +24,6 @@ export namespace SampleView {
 	export interface Props {
 		/** Where the form posts. */
 		action: string;
-		/** UTM attribution carried through from this page's query string. */
-		attribution: SubscribeForm.Props["attribution"];
 		/** The rendered chapter. Given only on the response that unlocks it. */
 		chapter?: RemixNode;
 		/** A server-rendered error to show under the email field. */
@@ -42,7 +40,7 @@ export namespace SampleView {
  */
 export default function SampleView(handle: Handle<SampleView.Props>) {
 	return () => {
-		let { action, attribution, chapter, confirmEmail, error } = handle.props;
+		let { action, chapter, confirmEmail, error } = handle.props;
 
 		if (chapter) {
 			return (
@@ -52,13 +50,6 @@ export default function SampleView(handle: Handle<SampleView.Props>) {
 			);
 		}
 
-		return (
-			<SampleChapterSection
-				action={action}
-				attribution={attribution}
-				confirmEmail={confirmEmail}
-				error={error}
-			/>
-		);
+		return <SampleChapterSection action={action} confirmEmail={confirmEmail} error={error} />;
 	};
 }

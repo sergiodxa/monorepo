@@ -14,12 +14,17 @@ this worker is reachable on its `workers.dev` subdomain in the meantime)
 ## Cloudflare Services
 
 None. The worker has no D1, KV, R2, queue, cron, or Durable Object binding — the only
-state the app has lives in Buttondown and Polar.
+state the app has lives in Buttondown and Polar, plus a signed `attribution` cookie in the
+visitor's browser.
 
 ## Features
 
-- **Email capture** on the homepage, with UTM attribution carried through from the query
-  string and stored on the newsletter subscriber (Buttondown).
+- **Email capture** on the homepage and sample-chapter forms, credited to the campaign the
+  visitor arrived from and stored on the newsletter subscriber (Buttondown).
+- **Campaign attribution**: a signed `attribution` cookie, signed with `COOKIE_SECRET`, keeps
+  the first and latest campaign a visitor arrived from for 90 days, so a visitor who browses
+  before subscribing or buying is still credited. Polar checkouts carry both touches as
+  `first_*`/`last_*` metadata. A visitor sending Global Privacy Control is not tracked.
 - **Address screening** on the homepage and sample-chapter forms: addresses on throwaway-inbox
   domains are refused, and a mistyped provider (`gnail.com`) gets a "did you mean" prompt
   that submitting the same address again dismisses.

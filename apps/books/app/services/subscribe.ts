@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Attribution } from "@sdxc/attribution";
 import type {
 	Newsletter,
 	NewsletterError,
@@ -19,6 +20,32 @@ import { currentLog } from "@sdxc/logger";
 import { isSuccess } from "@sdxc/result";
 
 import type { SubscribeInput } from "~/app/http/validators/subscribe";
+
+/**
+ * The campaign a new reader is credited to: the visitor's latest non-direct touch, or their
+ * first when every later visit was direct, with the landing page resolved to an absolute URL.
+ * A visitor with no stored touch, such as one sending Global Privacy Control, has none.
+ *
+ * @param attribution - The request's `ctx.attribution`.
+ * @param url - The request URL the landing path is resolved against.
+ * @example subscriberAttribution(ctx.attribution, ctx.url)
+ */
+export function subscriberAttribution(
+	attribution: Pick<Attribution, "first" | "last">,
+	url: URL,
+): SubscriberAttribution | undefined {
+	let touch = attribution.last ?? attribution.first;
+	if (!touch) return undefined;
+	return {
+		source: touch.utm?.source,
+		medium: touch.utm?.medium,
+		campaign: touch.utm?.campaign,
+		term: touch.utm?.term,
+		content: touch.utm?.content,
+		referrer: touch.referrer?.host,
+		landingPage: new URL(touch.landingPath, url).href,
+	};
+}
 
 /** Who is subscribing, beyond the address the form posted. */
 export interface SubscribeContext {

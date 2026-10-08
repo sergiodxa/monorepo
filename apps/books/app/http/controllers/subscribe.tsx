@@ -19,7 +19,7 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
-import { subscribe } from "~/app/services/subscribe";
+import { subscribe, subscriberAttribution } from "~/app/services/subscribe";
 import routes from "~/routes/web";
 
 /**
@@ -55,7 +55,7 @@ export default createAction(routes.api.subscribe, async (ctx) => {
 	}
 
 	let result = await subscribe(ctx.newsletter, payload, {
-		attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
+		attribution: subscriberAttribution(ctx.attribution, ctx.url),
 		ipAddress: ctx.ip?.toString() ?? null,
 	});
 

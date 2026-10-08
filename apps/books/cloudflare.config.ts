@@ -33,11 +33,14 @@ export default defineConfig({
 		domains: ["books.sergiodxa.com"],
 		/**
 		 * The worker keeps no storage of its own; its state lives in Buttondown and Polar.
+		 * `COOKIE_SECRET` signs the attribution cookie, so a visitor cannot forge the
+		 * campaign a subscriber or a checkout is credited to.
 		 */
 		env: {
 			BUTTONDOWN_API_KEY: bindings.secret(),
 			POLAR_ACCESS_TOKEN: bindings.secret(),
 			POLAR_WEBHOOK_SECRET: bindings.secret(),
+			COOKIE_SECRET: bindings.secret(),
 		},
 	},
 });

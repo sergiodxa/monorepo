@@ -147,6 +147,7 @@
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
+        "@sdxc/attribution": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/email-address": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",

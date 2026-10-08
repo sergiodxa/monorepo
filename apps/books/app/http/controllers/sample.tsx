@@ -24,9 +24,8 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
-import { readAttribution } from "~/app/lib/attribution";
 import { seo } from "~/app/lib/seo";
-import { subscribe } from "~/app/services/subscribe";
+import { subscribe, subscriberAttribution } from "~/app/services/subscribe";
 import chapterSource from "~/resources/content/sample.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
 import SampleView from "~/resources/views/sample";
@@ -96,7 +95,6 @@ function renderForm(
 		<DocumentLayout title={TITLE} description={DESCRIPTION} canonical={seo.canonical(ctx.url)}>
 			<SampleView
 				action={routes.sample.action.href()}
-				attribution={readAttribution(ctx.url.searchParams)}
 				confirmEmail={options.confirmEmail}
 				error={options.error}
 			/>
@@ -135,11 +133,7 @@ function renderChapter(ctx: RequestContext) {
 			canonical={seo.canonical(ctx.url)}
 			robots={seo.robotsTag({ index: false, follow: true })}
 		>
-			<SampleView
-				action={routes.sample.action.href()}
-				attribution={readAttribution(ctx.url.searchParams)}
-				chapter={toRemix(parsed.data)}
-			/>
+			<SampleView action={routes.sample.action.href()} chapter={toRemix(parsed.data)} />
 		</DocumentLayout>,
 	);
 }
@@ -174,7 +168,7 @@ export const action = createAction(routes.sample.action, async (ctx) => {
 	 * month is exactly the reader this page is for.
 	 */
 	let result = await subscribe(ctx.newsletter, payload, {
-		attribution: { source: payload.source, campaign: payload.campaign, medium: payload.medium },
+		attribution: subscriberAttribution(ctx.attribution, ctx.url),
 		ipAddress: ctx.ip?.toString() ?? null,
 	});
 

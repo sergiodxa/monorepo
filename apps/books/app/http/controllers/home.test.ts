@@ -1,7 +1,7 @@
 /**
  * Tests for `GET /` — the landing page renders the pitch and a subscribe form that posts
- * to the subscribe endpoint, carrying the request's UTM parameters through as hidden
- * fields so attribution survives the redirect into the funnel.
+ * to the subscribe endpoint, and remembers the campaign a visitor landed from in a signed
+ * cookie so the form's action can credit it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { BROWSER } from "~/app/lib/test/attribution";
 import { fetchApp } from "~/app/lib/test/router";
 
 describe("GET /", () => {
@@ -39,13 +40,18 @@ describe("GET /", () => {
 		expect(body).toContain('content="https://books.sergiodxa.com/og.jpg"');
 	});
 
-	test("carries UTM parameters into the form as hidden fields", async () => {
-		let body = await fetchApp("/?utm_source=newsletter&utm_campaign=launch").then((response) =>
-			response.text(),
-		);
+	test("remembers the campaign in a cookie and renders the same form for every visitor", async () => {
+		let response = await fetchApp("/?utm_source=newsletter&utm_campaign=launch", {
+			headers: { accept: "text/html", "user-agent": BROWSER },
+		});
+		let body = await response.text();
 
-		expect(body).toContain('name="source" value="newsletter"');
-		expect(body).toContain('name="campaign" value="launch"');
+		expect(
+			response.headers.getSetCookie().some((header) => header.startsWith("attribution=")),
+		).toBe(true);
+		expect(response.headers.get("cache-control")).toContain("private");
+		expect(body).not.toContain('name="source"');
+		expect(body).not.toContain('name="campaign"');
 	});
 
 	test("loads no first-party JavaScript", async () => {
