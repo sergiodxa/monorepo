@@ -112,6 +112,30 @@ Encodes bytes as standard base64 with `=` padding, over the `A-Z`, `a-z`, `0-9`,
 
 Decodes standard base64 text carrying its full padding. One byte string has exactly one accepted spelling.
 
+#### `Pem.encode(der: BinaryLike, label: string): Result<string, InvalidEncodingError>`
+
+Armors DER bytes as PEM ([RFC 7468](https://www.rfc-editor.org/rfc/rfc7468)): a `-----BEGIN <label>-----` line, base64 wrapped at 64 columns, and the matching end line. `PUBLIC KEY` labels SPKI and `PRIVATE KEY` labels PKCS#8. A label RFC 7468 does not allow fails instead of producing armor no parser reads.
+
+```typescript
+let spki = await crypto.subtle.exportKey("spki", publicKey);
+let publicKeyPem = unwrap(Pem.encode(spki, "PUBLIC KEY"));
+```
+
+#### `Pem.decode(text: string, label: string): Result<Bytes, InvalidEncodingError>`
+
+Reads the first PEM block in `text` and answers its DER bytes, ready for `crypto.subtle.importKey`. CRLF line endings, indentation and explanatory text around the block are accepted. A block under any other label fails, so a private key pasted where a public key belongs never imports.
+
+```typescript
+let der = unwrap(Pem.decode(actor.publicKeyPem, "PUBLIC KEY"));
+let key = await crypto.subtle.importKey(
+	"spki",
+	der,
+	{ name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+	false,
+	["verify"],
+);
+```
+
 ### Bytes
 
 #### `concatBytes(...parts: BinaryLike[]): Bytes`
@@ -315,15 +339,15 @@ let plaintext = new TextDecoder().decode(
 
 Every failure extends `CryptoError`, so one `instanceof` check covers the package while the subclasses let callers branch on the cause. Messages carry only the shape of the problem, and algorithm identifiers read back from stored values are sanitized to a short tag first.
 
-| Error                       | Raised when                                                |
-| --------------------------- | ---------------------------------------------------------- |
-| `CryptoError`               | Base class, and unexpected WebCrypto failures              |
-| `InvalidEncodingError`      | A string is not valid hex, base64, base64url, or base32    |
-| `MalformedHashError`        | A stored password hash follows another format              |
-| `UnsupportedAlgorithmError` | An algorithm identifier is valid but unsupported here      |
-| `InvalidKeyError`           | Key material is the wrong size or rejected by the runtime  |
-| `InvalidEnvelopeError`      | A sealed value diverges from the versioned envelope        |
-| `DecryptionError`           | Authenticated decryption failed for a well-formed envelope |
+| Error                       | Raised when                                                 |
+| --------------------------- | ----------------------------------------------------------- |
+| `CryptoError`               | Base class, and unexpected WebCrypto failures               |
+| `InvalidEncodingError`      | A string is not valid hex, base64, base64url, base32 or PEM |
+| `MalformedHashError`        | A stored password hash follows another format               |
+| `UnsupportedAlgorithmError` | An algorithm identifier is valid but unsupported here       |
+| `InvalidKeyError`           | Key material is the wrong size or rejected by the runtime   |
+| `InvalidEnvelopeError`      | A sealed value diverges from the versioned envelope         |
+| `DecryptionError`           | Authenticated decryption failed for a well-formed envelope  |
 
 ### Types
 
