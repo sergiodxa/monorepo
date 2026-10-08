@@ -472,14 +472,14 @@ copy needs an owner whose lifetime the caller controls.
 - [x] Phase 2: The model (the npm bootstrap, `bun run release:bootstrap @sdxc/rdap`, runs from a developer machine)
 - [x] Phase 3: `apps/uptime` ([uptime ADR-035](./uptime/ADR-035-domain-registration-expiry.md))
 
-## Open Questions
+## Resolved Questions
 
-1. **Subdomain input.** Should `domain` walk up the labels on `404` (`a.example.co.uk` →
-   `example.co.uk`) instead of requiring the registration? It costs a request per extra label at
-   a rate-limited server, and the one consumer already holds the apex.
+1. **Subdomain input.** `domain` takes the registered name and answers `not-found` for a name
+   below it. Walking up the labels would cost a request per extra label at a rate-limited
+   server, and the caller already holds the registration (uptime's monitor holds the apex).
 2. **Metering.** Settled by uptime ADR-035: a lookup is free, like the certificate re-check.
-3. **Registrar expiry on thin registries.** When `related: true` returns a registrar expiry that
-   differs from the registry's, should the model expose both?
-4. **Fixture licensing.** Registry responses carry terms-of-use notices; confirm committing
-   redacted captures as test fixtures is acceptable, or synthesize them from the RFC 9083
-   examples.
+3. **Registrar expiry on thin registries.** The model exposes the registry's `expiresAt` only.
+   It is the date the registration lapses, and `related: true` fills registrar fields without
+   adding a second expiry date that could disagree with it.
+4. **Fixture licensing.** Test fixtures are synthesized in the shape real registries answer,
+   with fictional names and contacts, so no registry's terms of use apply to them.
