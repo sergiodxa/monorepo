@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@sdxc/result": "workspace:*",
+		"@sdxc/zone-file": "workspace:*",
 		"remix": "3.0.0"
 	}
 }

@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { unwrap } from "@sdxc/result";
+import { parseRecordData } from "@sdxc/zone-file";
 import { describe, expect, test } from "vitest";
-
-import { parseRecordData } from "../parse-record-data.js";
 
 import type { CAA } from "./types.js";
 

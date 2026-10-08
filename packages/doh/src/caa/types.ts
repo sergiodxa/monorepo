@@ -1,3 +1,5 @@
+import type { ZoneFile } from "@sdxc/zone-file";
+
 /**
  * The types of the CAA policy reading: what one record asks of a CA, the RRset RFC 8659
  * applies to a name, the certificate request to decide, and the verdict, every one plain
@@ -14,7 +16,7 @@ import type { DoH } from "../types.js";
  */
 export namespace CAA {
 	/** One CAA record's data, from an answer or from `parseRecordData("CAA", …)` on a zone-file line. */
-	export type Record = DoH.RecordData<"CAA">;
+	export type Record = ZoneFile.CAAData;
 
 	/** One `key=value` from an `issue` or `issuewild` value, in published order. */
 	export interface Parameter {

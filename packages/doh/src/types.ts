@@ -6,23 +6,14 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
+import type { ZoneFile } from "@sdxc/zone-file";
 
 /**
  * Groups the DNS-over-HTTPS types under a single import surface.
  */
 export namespace DoH {
-	/** A record type by mnemonic; the nine typed ones autocomplete, any other name is accepted. */
-	export type RecordType =
-		| "A"
-		| "AAAA"
-		| "CNAME"
-		| "TXT"
-		| "MX"
-		| "NS"
-		| "CAA"
-		| "SOA"
-		| "SRV"
-		| (string & {});
+	/** A record type by mnemonic; the typed ones autocomplete, any other name is accepted. */
+	export type RecordType = ZoneFile.RecordType;
 
 	/**
 	 * A DoH endpoint and the encoding it answers in. `format` leaves room for an RFC 8484
@@ -41,112 +32,44 @@ export namespace DoH {
 		ttl: number;
 	}
 
-	/** An IPv4 address, in dotted-quad form. */
-	export interface ARecord extends RecordBase {
-		type: "A";
-		address: string;
-	}
+	/** The record a query for `Type` returns: its typed data, owner and TTL. */
+	export type RecordFor<Type extends RecordType> = ZoneFile.RecordData<Type> & RecordBase;
 
-	/** An IPv6 address. */
-	export interface AAAARecord extends RecordBase {
-		type: "AAAA";
-		/** In RFC 5952 canonical form: lowercase, zero runs compressed. */
-		address: string;
-	}
+	/** An IPv4 address. */
+	export type ARecord = RecordFor<"A">;
+
+	/** An IPv6 address, in RFC 5952 canonical form. */
+	export type AAAARecord = RecordFor<"AAAA">;
 
 	/** An alias: `name` resolves as `target` does. */
-	export interface CNAMERecord extends RecordBase {
-		type: "CNAME";
-		target: string;
-	}
+	export type CNAMERecord = RecordFor<"CNAME">;
 
 	/** A name server authoritative for the zone at `name`. */
-	export interface NSRecord extends RecordBase {
-		type: "NS";
-		host: string;
-	}
+	export type NSRecord = RecordFor<"NS">;
+
+	/** A pointer to another name, the answer to a reverse lookup. */
+	export type PTRRecord = RecordFor<"PTR">;
+
+	/** An alias for every name below `name`. */
+	export type DNAMERecord = RecordFor<"DNAME">;
 
 	/** A mail exchanger; lower `preference` values are tried first. */
-	export interface MXRecord extends RecordBase {
-		type: "MX";
-		preference: number;
-		/** The mail host; `"."` is an RFC 7505 null MX, a domain that accepts no mail. */
-		exchange: string;
-	}
+	export type MXRecord = RecordFor<"MX">;
 
 	/** Free text, such as SPF policies, DKIM keys and verification tokens. */
-	export interface TXTRecord extends RecordBase {
-		type: "TXT";
-		/** The character-strings concatenated with nothing between them, as SPF and DKIM read it. */
-		text: string;
-		/** The character-strings as published, for the rare record whose boundaries matter. */
-		strings: string[];
-	}
+	export type TXTRecord = RecordFor<"TXT">;
 
 	/** Which certificate authorities may issue for the name (RFC 8659). */
-	export interface CAARecord extends RecordBase {
-		type: "CAA";
-		/** The flags octet as published, reserved bits included, so the record prints back unchanged. */
-		flags: number;
-		/** Bit 128 of `flags`: a CA that does not understand `tag` must refuse to issue. */
-		critical: boolean;
-		/** Lowercased, since tags match case-insensitively. */
-		tag: string;
-		value: string;
-	}
+	export type CAARecord = RecordFor<"CAA">;
 
-	/** Where a service runs; lower `priority` first, `weight` spreads load within one priority. */
-	export interface SRVRecord extends RecordBase {
-		type: "SRV";
-		priority: number;
-		weight: number;
-		port: number;
-		target: string;
-	}
+	/** Where a service runs. */
+	export type SRVRecord = RecordFor<"SRV">;
 
 	/** The zone's start of authority, found at its apex and in negative answers. */
-	export interface SOARecord extends RecordBase {
-		type: "SOA";
-		primary: string;
-		/** The responsible mailbox in DNS form: its first label is the local part. */
-		mailbox: string;
-		serial: number;
-		refresh: number;
-		retry: number;
-		expire: number;
-		/** Bounds how long a negative answer may be cached (RFC 2308). */
-		minimum: number;
-	}
+	export type SOARecord = RecordFor<"SOA">;
 
 	/** A record of a type without a typed reading, or one whose data failed to parse, with its raw RDATA. */
-	export interface UnknownRecord extends RecordBase {
-		type: string;
-		data: string;
-	}
-
-	/** The record a query for `Type` returns. */
-	export type RecordFor<Type extends RecordType> = Type extends "A"
-		? ARecord
-		: Type extends "AAAA"
-			? AAAARecord
-			: Type extends "CNAME"
-				? CNAMERecord
-				: Type extends "TXT"
-					? TXTRecord
-					: Type extends "MX"
-						? MXRecord
-						: Type extends "NS"
-							? NSRecord
-							: Type extends "CAA"
-								? CAARecord
-								: Type extends "SOA"
-									? SOARecord
-									: Type extends "SRV"
-										? SRVRecord
-										: UnknownRecord;
-
-	/** A record's type-specific fields, what `parseRecordData` reads out of RDATA. */
-	export type RecordData<Type extends RecordType> = Omit<RecordFor<Type>, "name" | "ttl">;
+	export type UnknownRecord = ZoneFile.UnknownData & RecordBase;
 
 	/** A successful (NOERROR) answer to one query. */
 	export interface Answer<Type extends RecordType> {

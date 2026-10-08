@@ -8,8 +8,9 @@ Typed DNS over HTTPS lookups.
 npm add @sdxc/doh
 ```
 
-Every lookup returns a [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value, which
-installs alongside this package.
+Every lookup returns a [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) value, and
+records are read by [`@sdxc/zone-file`](https://www.npmjs.com/package/@sdxc/zone-file)'s record data
+codec; both install alongside this package.
 
 A runtime with no DNS socket, such as a Cloudflare Worker, resolves names through DNS over HTTPS:
 a `fetch` to a public resolver. This package speaks the DoH JSON API (`application/dns-json`)
@@ -48,15 +49,6 @@ let verified = await verifyTxtRecord("_verify.example.com", "token_abc123"); // 
 let pointed = await checkCname("shop.example.com", "custom.hosting.example"); // Result<boolean>
 ```
 
-### Read Record Data From Anywhere
-
-```typescript
-import { parseRecordData } from "@sdxc/doh";
-
-let data = parseRecordData("MX", "10 mail.example.com.");
-// success({ type: "MX", preference: 10, exchange: "mail.example.com" })
-```
-
 ## API
 
 ### `@sdxc/doh`
@@ -66,7 +58,9 @@ let data = parseRecordData("MX", "10 mail.example.com.");
 Looks up `name`'s records of `type`. The name is sent as written, so an internationalized name must
 already be in its ASCII (punycode) form. The answer holds:
 
-- `records` - the records of the asked type, typed by `DoH.RecordFor<Type>`
+- `records` - the records of the asked type, typed by `DoH.RecordFor<Type>`: the
+  `ZoneFile.RecordData<Type>` fields plus `name` and `ttl`, so a resolved record and one read from a
+  zone file share every type-specific field
 - `unparsed` - records of the asked type whose data did not parse, as `{ name, ttl, type, data }`,
   so one odd record never fails the whole answer
 - `chain` - the CNAME records followed before reaching `records`
@@ -86,35 +80,12 @@ back lowercased without the trailing dot; an AAAA address comes back in RFC 5952
 - `signal`: aborts the request
 - `timeoutMs`: abandons the request as a `TransportError`, default `5000`
 
-Typed record types: `A` (`address`), `AAAA` (`address`), `CNAME` (`target`), `NS` (`host`), `MX`
-(`preference`, `exchange`), `TXT` (`text`, `strings`), `CAA` (`flags`, `critical`, `tag`, `value`), `SRV`
-(`priority`, `weight`, `port`, `target`), `SOA` (`primary`, `mailbox`, `serial`, `refresh`,
-`retry`, `expire`, `minimum`). Any other type returns records with a raw `data` string.
-
-#### `parseRecordData(type, data): Result<DoH.RecordData<Type>, RecordDataError>`
-
-The presentation-format reader `resolve` uses, for RDATA from anywhere else, such as a zone file.
-Reads RFC 3597 generic data (`\# 4 0A000001`) for the typed types too, which is how Cloudflare
-answers CAA. TXT bare words are separate character-strings, per RFC 1035.
-
-```typescript
-parseRecordData("TXT", '"v=DKIM1; p=AAA" "BBB"');
-// success({ type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] })
-```
-
-#### `formatRecordData(data): string`
-
-Prints record data in canonical presentation format, the inverse of `parseRecordData`: names
-absolute with the trailing dot (the root stays `"."`), TXT strings and the CAA value quoted with `"`
-and `\` escaped and every octet outside printable ASCII as `\DDD`, the CAA tag lowercased. Untyped
-records print their raw `data`. For any `data` that `parseRecordData` produced,
-`parseRecordData(data.type, formatRecordData(data))` gives back `data`, so two spellings of one
-record print to one string.
-
-```typescript
-formatRecordData(unwrap(parseRecordData("CAA", '0 ISSUE "comodoca.com"'))); // '0 issue "comodoca.com"'
-formatRecordData({ type: "MX", preference: 10, exchange: "mx.example.com" }); // "10 mx.example.com."
-```
+Typed record types: `A` (`address`), `AAAA` (`address`), `CNAME`, `PTR` and `DNAME` (`target`), `NS`
+(`host`), `MX` (`preference`, `exchange`), `TXT` (`text`, `strings`), `CAA` (`flags`, `critical`,
+`tag`, `value`), `SRV` (`priority`, `weight`, `port`, `target`), `SOA` (`primary`, `mailbox`,
+`serial`, `refresh`, `retry`, `expire`, `minimum`). Any other type returns records with a raw `data`
+string. To read or print RDATA outside a lookup, use `parseRecordData` and `formatRecordData` from
+`@sdxc/zone-file`.
 
 #### `verifyTxtRecord(name, expected, options?): Promise<Result<boolean, DoHError>>`
 
@@ -142,13 +113,12 @@ a loop), so it holds even when the target resolves to nothing. NXDOMAIN is `succ
 | `ServerFailureError` | RCODE 2, SERVFAIL, DNSSEC validation failures included                     |                                                                                                           |
 | `ResponseCodeError`  | Any other non-zero RCODE (FORMERR, NOTIMP, REFUSED)                        | `rcode`                                                                                                   |
 | `TransportError`     | Network error, timeout, abort, non-2xx, or a body that is not the envelope | `status`: the HTTP status, `null` when none arrived                                                       |
-| `RecordDataError`    | `parseRecordData` on data that does not fit the type                       |                                                                                                           |
 
 #### `DoH` namespace
 
 Types only: `RecordType`, `Resolver`, `ResolveOptions`, `Answer<Type>`, `RecordFor<Type>`,
-`RecordData<Type>`, `RecordBase`, the nine record interfaces (`ARecord` through `SOARecord`), and
-`UnknownRecord`.
+`RecordBase`, one alias per typed record (`ARecord` through `SOARecord`, `PTRRecord` and
+`DNAMERecord` included), and `UnknownRecord`.
 
 ### `@sdxc/doh/caa`
 
@@ -257,8 +227,9 @@ RFC 3597 generic data (`\# 15 00 05 69 73 73 75 65 …`) in the other. Parse bot
 equal records give equal strings.
 
 ```typescript
-import { formatRecordData, parseRecordData, resolve } from "@sdxc/doh";
+import { resolve } from "@sdxc/doh";
 import { isSuccess } from "@sdxc/result";
+import { formatRecordData, parseRecordData } from "@sdxc/zone-file";
 
 let published = parseRecordData("CAA", zoneLine.data);
 let answer = await resolve("example.com", "CAA");

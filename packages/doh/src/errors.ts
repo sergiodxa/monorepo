@@ -79,8 +79,3 @@ export class TransportError extends DoHError {
 		this.status = status;
 	}
 }
-
-/** RDATA that does not parse for its type; `resolve` keeps such a record in `unparsed`. */
-export class RecordDataError extends Error {
-	override name = "RecordDataError";
-}

@@ -9,6 +9,7 @@
 import type { Result } from "@sdxc/result";
 
 import { failure, isSuccess, success } from "@sdxc/result";
+import { canonicalType, parseRecordData, typeName } from "@sdxc/zone-file";
 import * as s from "remix/data-schema";
 
 import type { DoHError } from "./errors.js";
@@ -20,8 +21,6 @@ import {
 	ServerFailureError,
 	TransportError,
 } from "./errors.js";
-import { parseRecordData } from "./parse-record-data.js";
-import { canonicalType, typeName } from "./record-types.js";
 import { CLOUDFLARE } from "./resolvers.js";
 
 /** One resource record as the JSON API writes it. */
@@ -106,13 +105,14 @@ export async function resolve<Type extends DoH.RecordType>(
 		if (recordType !== asked && recordType !== "CNAME") continue;
 
 		let base = { name: normalizeName(record.name), ttl: record.TTL };
-		let data = parseRecordData(recordType, record.data);
 
 		if (recordType === asked) {
-			if (isSuccess(data)) records.push({ ...base, ...data.data } as DoH.RecordFor<Type>);
+			let data = parseRecordData(recordType as Type, record.data);
+			if (isSuccess(data)) records.push({ ...base, ...data.data });
 			else unparsed.push({ ...base, type: recordType, data: record.data });
-		} else if (isSuccess(data)) {
-			chain.push({ ...base, ...(data.data as DoH.RecordData<"CNAME">) });
+		} else {
+			let data = parseRecordData("CNAME", record.data);
+			if (isSuccess(data)) chain.push({ ...base, ...data.data });
 		}
 	}
 

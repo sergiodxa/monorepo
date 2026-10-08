@@ -705,6 +705,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/result": "workspace:*",
+        "@sdxc/zone-file": "workspace:*",
         "remix": "3.0.0",
       },
     },
