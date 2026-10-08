@@ -315,6 +315,25 @@ already serialized. An activity over 120 KB (`MAX_ACTIVITY_BYTES`) fails `too-la
 delivery message could carry it, and a failing queue fails a retryable `enqueue`. A retried
 fan-out may queue some deliveries twice, which receivers absorb by activity id.
 
+#### `federation.approve(follower: string): Promise<Result<void, ActivityPubError>>`
+
+Accepts a follower a `"pending"` decision held back: it is stored as `accepted`, so it joins the
+followers collection and every later fan-out, and an `Accept` of its stored Follow is queued to
+its inbox. Approving an accepted follower sends the same Accept again, so a retry is safe.
+
+#### `federation.reject(follower: string): Promise<Result<void, ActivityPubError>>`
+
+Refuses a follower, pending or accepted: a `Reject` of its stored Follow is queued to its inbox,
+then the follower is removed. It stays stored until the Reject is queued, so retrying a failed
+call still sends it.
+
+Both answer `not-found` for an actor that does not follow the local actor, and a retryable
+`store` or `enqueue` failure when the store or the queue fails.
+
+```typescript
+let approved = await federation.approve("https://mastodon.social/users/alice");
+```
+
 #### `federation.lookup(handle: string): Promise<Result<ActivityPub.Actor, ActivityPubFetchError>>`
 
 Resolves `@user@host`, `user@host` or `acct:user@host` the way Mastodon does: WebFinger on the
@@ -637,8 +656,8 @@ export default createJobHandler(definitions.federation, async (ctx) => {
 	let processed = await federationFor(storesOf(ctx)).process(ctx.input, { attempts: ctx.attempts });
 	if (isFailure(processed)) {
 		if (processed.error.retryable)
-			ctx.retry({ delay: processed.error.delay, cause: processed.error });
-		ctx.ack(processed.error.message);
+			return ctx.retry({ delay: processed.error.delay, cause: processed.error });
+		return ctx.ack(processed.error.message);
 	}
 });
 ```

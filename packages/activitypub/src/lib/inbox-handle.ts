@@ -669,7 +669,7 @@ class Run {
  * @param local - The local actor answering.
  * @param follow - The Follow answered.
  */
-function answerTo(
+export function answerTo(
 	type: "Accept" | "Reject",
 	local: string,
 	follow: ActivityPub.Draft<ActivityPub.Activity>,
@@ -710,7 +710,7 @@ async function settle<T>(
  * @param result - What the store answered.
  * @template T - What the store answers.
  */
-function store<T>(result: Result<T, Error>): Result<T, ActivityPubError> {
+export function store<T>(result: Result<T, Error>): Result<T, ActivityPubError> {
 	if (!isFailure(result)) return result;
 	return failure(
 		new ActivityPubError("store", result.error.message, { retryable: true, cause: result.error }),

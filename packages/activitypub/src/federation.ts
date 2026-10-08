@@ -38,14 +38,20 @@ import type {
 import type { RespondOptions as DocumentRespondOptions } from "./lib/response.js";
 import type { ActivityPub } from "./lib/types.js";
 import type { ResolverTtl } from "./remote.js";
-import type { FollowerStore, KeyProvider, LocalObjects, SeenActivities } from "./store.js";
+import type {
+	Follower,
+	FollowerStore,
+	KeyProvider,
+	LocalObjects,
+	SeenActivities,
+} from "./store.js";
 
 import { orderedCollection, orderedCollectionPage } from "./collections.js";
 import { lookup } from "./discovery.js";
 import { ActivityPubError, FederationError } from "./errors.js";
 import { fanOut, MAX_ACTIVITY_BYTES } from "./lib/delivery-fan-out.js";
 import { deliver, DELIVERY_BACKOFF } from "./lib/delivery-post.js";
-import { handle } from "./lib/inbox-handle.js";
+import { answerTo, handle, store } from "./lib/inbox-handle.js";
 import { receive, verifyFetch } from "./lib/inbox-receive.js";
 import { summarize } from "./lib/inbox-summarize.js";
 import { MESSAGE } from "./lib/messages.js";
@@ -282,6 +288,43 @@ export class Federation {
 	}
 
 	/**
+	 * Accepts a follower held `pending` by a manual-approval decision: it joins the
+	 * followers collection and fan-outs, and an `Accept` of its stored Follow is queued to
+	 * its inbox. Approving an accepted follower re-sends the same Accept, so a retry is safe.
+	 *
+	 * @param follower - The remote actor's id.
+	 * @returns `not-found` when the actor does not follow the local actor, or a retryable
+	 *   `store` or `enqueue` failure.
+	 * @example let approved = await federation.approve("https://mastodon.social/users/alice");
+	 */
+	async approve(follower: string): Promise<Result<void, ActivityPubError>> {
+		let found = await this.#follower(follower);
+		if (isFailure(found)) return found;
+		let put = store(await this.#options.stores.followers.put({ ...found.data, state: "accepted" }));
+		if (isFailure(put)) return put;
+		return this.#answer("Accept", found.data);
+	}
+
+	/**
+	 * Refuses a follower, pending or accepted: a `Reject` of its stored Follow is queued to
+	 * its inbox, then the follower is forgotten. The follower stays stored until the Reject
+	 * is queued, so retrying a failed call still sends it.
+	 *
+	 * @param follower - The remote actor's id.
+	 * @returns `not-found` when the actor does not follow the local actor, or a retryable
+	 *   `store` or `enqueue` failure.
+	 * @example let rejected = await federation.reject("https://mastodon.social/users/alice");
+	 */
+	async reject(follower: string): Promise<Result<void, ActivityPubError>> {
+		let found = await this.#follower(follower);
+		if (isFailure(found)) return found;
+		let answered = await this.#answer("Reject", found.data);
+		if (isFailure(answered)) return answered;
+		let actor = this.#options.actor.id;
+		return store(await this.#options.stores.followers.remove(actor, follower));
+	}
+
+	/**
 	 * Resolves a handle to its actor the way Mastodon does: WebFinger on the handle's host,
 	 * the `self` link typed as ActivityStreams, then the actor, whose own host must confirm
 	 * the handle when it differs from the actor's canonical one.
@@ -504,6 +547,27 @@ export class Federation {
 	): Result<never, FederationError> {
 		let delay = Math.max(retryAfter ?? 0, this.#backoff.delay(attempts));
 		return failure(new FederationError(kind, error, delay));
+	}
+
+	/** The local actor's stored follower `id`, or `not-found`. */
+	async #follower(id: string): Promise<Result<Follower, ActivityPubError>> {
+		let found = store(await this.#options.stores.followers.get(this.#options.actor.id, id));
+		if (isFailure(found)) return found;
+		if (found.data === null) {
+			return failure(new ActivityPubError("not-found", `${id} does not follow the local actor`));
+		}
+		return success(found.data);
+	}
+
+	/** Queues an answer to the follower's stored Follow, delivered to its own inbox. */
+	async #answer(
+		type: "Accept" | "Reject",
+		follower: Follower,
+	): Promise<Result<void, ActivityPubError>> {
+		let actor = this.#options.actor.id;
+		let follow = { id: follower.followId, type: "Follow", actor: follower.id, object: actor };
+		let activity = stringify(answerTo(type, actor, follow));
+		return this.#enqueue([{ kind: "deliver", actor, activity, inbox: follower.inbox }]);
 	}
 
 	/**

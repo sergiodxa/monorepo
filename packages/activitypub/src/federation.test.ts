@@ -363,6 +363,72 @@ describe("Follow", () => {
 			type: "Reject",
 		});
 	});
+
+	test("approve accepts a pending follower and queues the Accept of its Follow", async () => {
+		let federated = federation();
+		federated.on("Follow", () => "pending");
+		await federated.fetch(await post(MASTODON_FOLLOW));
+		unwrap(await federated.process(queuedAt(0)));
+		expect(queued).toHaveLength(1);
+
+		unwrap(await federated.approve(ALICE));
+
+		expect(unwrap(await followers.get(LOCAL_ACTOR, ALICE))).toMatchObject({ state: "accepted" });
+		let reply = queued[1];
+		expect(reply).toMatchObject({ kind: "deliver", inbox: MASTODON_ACTOR.inbox });
+		expect(JSON.parse(reply?.kind === "deliver" ? reply.activity : "{}")).toMatchObject({
+			type: "Accept",
+			actor: LOCAL_ACTOR,
+			to: [ALICE],
+			object: { id: MASTODON_FOLLOW.id, type: "Follow", actor: ALICE, object: LOCAL_ACTOR },
+		});
+	});
+
+	test("reject forgets a pending follower and queues the Reject of its Follow", async () => {
+		let federated = federation();
+		federated.on("Follow", () => "pending");
+		await federated.fetch(await post(MASTODON_FOLLOW));
+		unwrap(await federated.process(queuedAt(0)));
+
+		unwrap(await federated.reject(ALICE));
+
+		expect(unwrap(await followers.get(LOCAL_ACTOR, ALICE))).toBeNull();
+		let reply = queued[1];
+		expect(JSON.parse(reply?.kind === "deliver" ? reply.activity : "{}")).toMatchObject({
+			type: "Reject",
+			object: { id: MASTODON_FOLLOW.id, type: "Follow" },
+		});
+	});
+
+	test("approve and reject answer not-found for an actor that never followed", async () => {
+		let federated = federation();
+
+		let approved = await federated.approve(ALICE);
+		let rejected = await federated.reject(ALICE);
+
+		expect(isFailure(approved) && approved.error.code).toBe("not-found");
+		expect(isFailure(rejected) && rejected.error.code).toBe("not-found");
+		expect(queued).toHaveLength(0);
+	});
+
+	test("reject keeps the follower when the Reject cannot be queued, so a retry sends it", async () => {
+		await followers.put({ ...follower(ALICE, MASTODON_ACTOR.inbox, null), state: "pending" });
+		let federated = federation({
+			queue: {
+				async enqueue() {
+					return failure(new Error("queue down"));
+				},
+			},
+		});
+
+		let rejected = await federated.reject(ALICE);
+
+		expect(isFailure(rejected) && rejected.error).toMatchObject({
+			code: "enqueue",
+			retryable: true,
+		});
+		expect(unwrap(await followers.get(LOCAL_ACTOR, ALICE))).not.toBeNull();
+	});
 });
 
 describe("publish and delivery", () => {
