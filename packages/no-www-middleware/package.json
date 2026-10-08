@@ -1,0 +1,16 @@
+{
+	"name": "@sdxc/no-www-middleware",
+	"version": "0.0.1",
+	"description": "Router middleware that permanently redirects a www. hostname to the apex domain",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"remix": "3.0.0"
+	}
+}
