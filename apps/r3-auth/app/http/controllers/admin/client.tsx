@@ -13,17 +13,20 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import abilities from "~/app/authz/abilities";
 import Client from "~/app/data/client";
 import Grant from "~/app/data/grant";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireClientAbility from "~/app/http/middleware/require-client-ability";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { ClientIntentSchema } from "~/app/http/validators/admin";
 import { toChrome, toClientDetail } from "~/app/http/view-models/admin";
 import ClientDetailView from "~/resources/views/admin/client-detail";
 import routes from "~/routes/web";
 
 export default createController(routes.admin.client, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	actions: {
 		/** GET /admin/clients/:clientId — renders the registration and its consent count. */
 		index: async (ctx) => {
@@ -59,6 +62,7 @@ export default createController(routes.admin.client, {
 					client={toClientDetail(client, ctx.locale)}
 					authorizedUsers={authorizedUsers}
 					editHref={routes.admin.clientEdit.index.href({ clientId })}
+					actions={ctx.access.decide(abilities.admin.client, { client })}
 					labels={{
 						id: ctx.intl.t("admin.clients.detail.id"),
 						name: ctx.intl.t("admin.clients.detail.name"),
@@ -92,22 +96,26 @@ export default createController(routes.admin.client, {
 		 * Grants go first, so a deletion interrupted halfway leaves every remaining grant
 		 * pointing at a client that still exists.
 		 */
-		action: async (ctx) => {
-			let clientId = ctx.params.clientId!;
-			ctx.log.set({ client: { id: clientId } });
+		action: {
+			middleware: [requireClientAbility(abilities.admin.client.delete)],
+			/** Deletes the client once the intent validates. */
+			handler: async (ctx) => {
+				let clientId = ctx.params.clientId!;
+				ctx.log.set({ client: { id: clientId } });
 
-			let result = await validate(ctx.formData, ClientIntentSchema);
-			if (isFailure(result)) {
-				ctx.log.warn("admin.client.intent_invalid");
-				return badRequest({ error: "invalid_intent" });
-			}
+				let result = await validate(ctx.formData, ClientIntentSchema);
+				if (isFailure(result)) {
+					ctx.log.warn("admin.client.intent_invalid");
+					return badRequest({ error: "invalid_intent" });
+				}
 
-			await Grant.deleteByClientId(ctx.db, clientId);
-			await Client.delete(ctx.db, clientId);
+				await Grant.deleteByClientId(ctx.db, clientId);
+				await Client.delete(ctx.db, clientId);
 
-			ctx.log.note("admin.client.deleted");
+				ctx.log.note("admin.client.deleted");
 
-			return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
+				return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
+			},
 		},
 	},
 });

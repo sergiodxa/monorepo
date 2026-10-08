@@ -15,7 +15,8 @@ import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import Client from "~/app/data/client";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { CreateClientSchema } from "~/app/http/validators/admin";
 import { toChrome } from "~/app/http/view-models/admin";
 import ClientNewView from "~/resources/views/admin/client-new";
@@ -80,7 +81,7 @@ function labels(ctx: RequestContext) {
 }
 
 export default createController(routes.admin.clientNew, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	actions: {
 		/** GET /admin/clients/new — renders the empty registration form. */
 		index() {

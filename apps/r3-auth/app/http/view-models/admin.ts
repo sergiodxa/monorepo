@@ -83,6 +83,16 @@ export namespace AdminView {
 		createdAt: string;
 		href: string;
 		editHref: string;
+		actions: ClientActions;
+	}
+
+	/**
+	 * Which changes the viewer may make to a client, as the policy decides them, so a page
+	 * offers only the controls whose action would succeed.
+	 */
+	export interface ClientActions {
+		update: boolean;
+		delete: boolean;
 	}
 
 	/** A client as the detail page shows it, again limited to fields safe to display. */
@@ -272,8 +282,15 @@ function toInitials(displayName: string): string {
 	return displayName.slice(0, 2).toUpperCase();
 }
 
-/** Shapes a client row for the list, resolving its own links so the view renders ready-made hrefs. */
-export function toClientRow(client: SelectClient, locale: string): AdminView.ClientRow {
+/**
+ * Shapes a client row for the list, resolving its own links so the view renders ready-made
+ * hrefs, beside the actions the viewer may take on it.
+ */
+export function toClientRow(
+	client: SelectClient,
+	locale: string,
+	actions: AdminView.ClientActions,
+): AdminView.ClientRow {
 	return {
 		id: client.id,
 		name: client.name,
@@ -281,6 +298,7 @@ export function toClientRow(client: SelectClient, locale: string): AdminView.Cli
 		createdAt: toDateTime(client.created_at, locale) ?? "",
 		href: routes.admin.client.index.href({ clientId: client.id }),
 		editHref: routes.admin.clientEdit.index.href({ clientId: client.id }),
+		actions,
 	};
 }
 

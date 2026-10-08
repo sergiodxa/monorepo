@@ -15,7 +15,9 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import abilities from "~/app/authz/abilities";
 import Session from "~/app/data/session";
+import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { destroySession, getRefreshToken, unsetTokens } from "~/app/http/middleware/session";
 import { SessionsIntentSchema } from "~/app/http/validators/account";
@@ -50,7 +52,6 @@ async function sessionsPage(ctx: RequestContext): Promise<Response> {
 				current: "sessions",
 				heading: ctx.intl.t("sessions.title"),
 				documentTitle: ctx.intl.t("sessions.title"),
-				isAdmin: subject.role === "admin",
 			})}
 		>
 			<SessionsView
@@ -128,7 +129,7 @@ function signOut(): Response {
 }
 
 export default createController(routes.account.sessions, {
-	middleware: [requireSubject],
+	middleware: [requireSubject, subjectAccess],
 	actions: {
 		/** GET /account/sessions — lists the subject's live sessions. */
 		index: async (ctx) => {
@@ -137,8 +138,8 @@ export default createController(routes.account.sessions, {
 
 		/**
 		 * POST /account/sessions — revokes one session, or every session but this one. Both
-		 * branches touch only the guard's subject's rows; any other id gets the same answer
-		 * a stale one does. The browser signs out once no row is left that can refresh.
+		 * touch only the subject's own rows: the policy refuses another's session as not
+		 * found, answered as a stale id is. The browser signs out once no row can refresh.
 		 */
 		action: async (ctx) => {
 			let subject = ctx.subject;
@@ -152,9 +153,9 @@ export default createController(routes.account.sessions, {
 			}
 
 			let submitted = result.data;
-			let owned = await Session.findBySubjectId(ctx.db, subject.id);
 
 			if (submitted.intent === "revoke-all") {
+				let owned = await Session.findBySubjectId(ctx.db, subject.id);
 				let others = owned.filter((session) => session.id !== currentSessionId);
 				for (let session of others) await Session.deleteById(ctx.db, session.id);
 
@@ -166,9 +167,12 @@ export default createController(routes.account.sessions, {
 				return backToList();
 			}
 
-			let target = owned.find((session) => session.id === submitted.sessionId);
+			let target = await Session.findById(ctx.db, submitted.sessionId);
 
-			if (!target) {
+			if (
+				!target ||
+				isFailure(ctx.access.authorize(abilities.account.session.revoke, { session: target }))
+			) {
 				ctx.log.note("session.revoke_not_found");
 				return backToList();
 			}

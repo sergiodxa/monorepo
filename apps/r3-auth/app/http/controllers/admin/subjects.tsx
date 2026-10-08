@@ -10,7 +10,8 @@
 import { createAction } from "remix/router";
 
 import Subject from "~/app/data/subject";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import {
 	PAGE_SIZE,
 	readPageNumber,
@@ -22,7 +23,7 @@ import SubjectsView from "~/resources/views/admin/subjects";
 import routes from "~/routes/web";
 
 export default createAction(routes.admin.subjects, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	/** Renders one page of subjects with links to each account's detail and edit pages. */
 	handler: async (ctx) => {
 		let page = readPageNumber(ctx.url);

@@ -194,6 +194,32 @@ describe("POST /account/sessions intent=revoke", () => {
 		let response = await post({ intent: "revoke", sessionId: victimSession.id });
 
 		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
+		expect(await Session.findById(app.db, victimSession.id)).not.toBeNull();
+	});
+
+	test("refuses another subject's session to an admin as well", async () => {
+		let victim = await Subject.create(app.db, {
+			email_address: "victim@example.com",
+			display_name: "Victim",
+			username: "victim",
+			avatar: "https://example.com/victim.png",
+		});
+		let victimSession = await Session.create(
+			app.db,
+			victim.id,
+			fixtures.clientId,
+			"192.0.2.1",
+			"Mozilla/5.0",
+		);
+		await Subject.update(app.db, fixtures.subjectId, { role: "admin" });
+
+		await signIn(app, fixtures);
+
+		let response = await post({ intent: "revoke", sessionId: victimSession.id });
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
 		expect(await Session.findById(app.db, victimSession.id)).not.toBeNull();
 	});
 

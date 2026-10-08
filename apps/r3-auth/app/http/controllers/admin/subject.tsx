@@ -19,7 +19,8 @@ import Grant from "~/app/data/grant";
 import Session from "~/app/data/session";
 import Subject from "~/app/data/subject";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { SubjectIntentSchema } from "~/app/http/validators/admin";
 import {
 	toChrome,
@@ -31,7 +32,7 @@ import SubjectDetailView from "~/resources/views/admin/subject-detail";
 import routes from "~/routes/web";
 
 export default createController(routes.admin.subject, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	actions: {
 		/** GET /admin/subjects/:subjectId — renders the profile, sessions and links. */
 		index: async (ctx) => {

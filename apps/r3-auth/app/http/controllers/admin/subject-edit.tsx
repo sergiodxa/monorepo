@@ -17,7 +17,8 @@ import { createController } from "remix/router";
 
 import Subject from "~/app/data/subject";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { UpdateSubjectSchema } from "~/app/http/validators/admin";
 import { toChrome, toSubjectDetail } from "~/app/http/view-models/admin";
 import SubjectEditView from "~/resources/views/admin/subject-edit";
@@ -73,7 +74,7 @@ function labels(ctx: RequestContext) {
 }
 
 export default createController(routes.admin.subjectEdit, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	actions: {
 		/** GET /admin/subjects/:subjectId/edit — renders the form filled from the stored row. */
 		index: async (ctx) => {

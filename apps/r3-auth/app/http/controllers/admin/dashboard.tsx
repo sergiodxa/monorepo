@@ -12,13 +12,14 @@ import { createAction } from "remix/router";
 import Client from "~/app/data/client";
 import Session from "~/app/data/session";
 import Subject from "~/app/data/subject";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { toChrome } from "~/app/http/view-models/admin";
 import DashboardView from "~/resources/views/admin/dashboard";
 import routes from "~/routes/web";
 
 export default createAction(routes.admin.dashboard, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	/**
 	 * Renders the three aggregate counts that describe the server's size and liveness.
 	 * The dashboard is the root of the admin area, so its breadcrumb trail is empty and

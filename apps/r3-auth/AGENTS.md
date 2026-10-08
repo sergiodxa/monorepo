@@ -99,6 +99,10 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   MUST NOT hardcode English copy in a view.
 - MUST NOT use `as any`, and MUST NOT call `getContext()` inside a controller when `ctx` is
   available.
+- MUST decide authorization through the policy in `app/authz/policy.ts`: `subjectAccess`
+  after `requireSubject`, then `requireAdminArea` or `requireAbility(...)` for a check whose
+  context the route names, or `ctx.access.authorize(...)` in the handler once a body
+  validates. MUST NOT compare `subject.role` or a client id to decide what someone may do.
 
 ## Security
 
@@ -219,6 +223,10 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - HTTP layer
   - `app/http/controllers/oauth/token.ts` <- Grant handling, client auth, error envelopes
   - `app/http/middleware/require-subject.ts` <- Session guard with silent token refresh
+  - `app/http/middleware/access.ts` <- Binds the subject as `ctx.access`; the admin-area guard
+- Authorization
+  - `app/authz/abilities.ts` <- Every ability, with the context its check passes
+  - `app/authz/policy.ts` <- Roles from the `role` column, and the own-client guard
   - `app/http/middleware/require-api-client.ts` <- JWKS-verified machine API guard
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
 - Data layer

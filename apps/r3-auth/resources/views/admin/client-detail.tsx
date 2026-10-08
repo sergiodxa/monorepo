@@ -50,6 +50,7 @@ namespace ClientDetailView {
 		/** How many subjects have consented to this client. */
 		authorizedUsers: number;
 		editHref: string;
+		actions: AdminView.ClientActions;
 	}
 }
 
@@ -84,10 +85,10 @@ function Field(
 	};
 }
 
-/** Renders a client's full registration with its edit and delete actions. */
+/** Renders a client's full registration with the edit and delete actions the viewer may take. */
 export default function ClientDetailView(handle: Handle<ClientDetailView.Props>) {
 	return () => {
-		let { chrome, labels, client, authorizedUsers, editHref } = handle.props;
+		let { chrome, labels, client, authorizedUsers, editHref, actions } = handle.props;
 
 		return (
 			<AdminLayout chrome={chrome}>
@@ -147,16 +148,18 @@ export default function ClientDetailView(handle: Handle<ClientDetailView.Props>)
 					</Card.Content>
 
 					<Card.Footer mix={[flex(), gap(2)]}>
-						<LinkButton href={editHref}>{labels.edit}</LinkButton>
-						<ConfirmAction
-							id={`delete-client-${client.id}`}
-							trigger={labels.delete}
-							title={labels.confirm.title}
-							description={labels.confirm.description}
-							confirmLabel={labels.confirm.confirm}
-							cancelLabel={labels.confirm.cancel}
-							fields={{ intent: "delete" }}
-						/>
+						{actions.update && <LinkButton href={editHref}>{labels.edit}</LinkButton>}
+						{actions.delete && (
+							<ConfirmAction
+								id={`delete-client-${client.id}`}
+								trigger={labels.delete}
+								title={labels.confirm.title}
+								description={labels.confirm.description}
+								confirmLabel={labels.confirm.confirm}
+								cancelLabel={labels.confirm.cancel}
+								fields={{ intent: "delete" }}
+							/>
+						)}
 					</Card.Footer>
 				</Card>
 			</AdminLayout>

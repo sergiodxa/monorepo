@@ -15,9 +15,11 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import abilities from "~/app/authz/abilities";
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
 import Grant from "~/app/data/grant";
 import Session from "~/app/data/session";
+import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { GrantsIntentSchema } from "~/app/http/validators/account";
 import { accountChrome } from "~/app/http/view-models/account-chrome";
@@ -36,7 +38,6 @@ async function grantsPage(ctx: RequestContext): Promise<Response> {
 				current: "grants",
 				heading: ctx.intl.t("grants.title"),
 				documentTitle: ctx.intl.t("grants.title"),
-				isAdmin: subject.role === "admin",
 			})}
 		>
 			<GrantsView
@@ -73,7 +74,7 @@ async function grantsPage(ctx: RequestContext): Promise<Response> {
 }
 
 export default createController(routes.account.grants, {
-	middleware: [requireSubject],
+	middleware: [requireSubject, subjectAccess],
 	actions: {
 		/** GET /account/grants — lists the clients this subject has authorized. */
 		index: async (ctx) => {
@@ -98,7 +99,11 @@ export default createController(routes.account.grants, {
 			let clientId = result.data.clientId;
 			ctx.log.set({ client: { id: clientId } });
 
-			if (clientId === AUTH_SERVER_CLIENT_ID) {
+			if (
+				isFailure(
+					ctx.access.authorize(abilities.account.grant.revoke, { client: { id: clientId } }),
+				)
+			) {
 				ctx.log.note("grant.revoke_refused");
 				return backToList();
 			}

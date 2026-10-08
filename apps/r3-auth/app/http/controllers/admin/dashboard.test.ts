@@ -89,7 +89,7 @@ describe("GET /admin", () => {
 	});
 });
 
-describe("requireAdmin", () => {
+describe("the admin area's authorization", () => {
 	test("redirects a signed-in non-admin subject to /account/sessions", async () => {
 		await signIn(app, fixtures);
 

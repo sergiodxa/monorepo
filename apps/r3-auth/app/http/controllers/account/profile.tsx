@@ -10,6 +10,7 @@
 
 import { createAction } from "remix/router";
 
+import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { accountChrome } from "~/app/http/view-models/account-chrome";
 import EmailVerificationViewModel, {
@@ -20,7 +21,7 @@ import ProfileView from "~/resources/views/account/profile";
 import routes from "~/routes/web";
 
 export default createAction(routes.account.profile, {
-	middleware: [requireSubject],
+	middleware: [requireSubject, subjectAccess],
 	handler(ctx) {
 		let subject = ctx.subject;
 
@@ -37,7 +38,6 @@ export default createAction(routes.account.profile, {
 					current: "profile",
 					heading: ctx.intl.t("profile.title"),
 					documentTitle: ctx.intl.t("profile.title"),
-					isAdmin: subject.role === "admin",
 				})}
 			>
 				<ProfileView

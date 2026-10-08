@@ -15,9 +15,12 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import abilities from "~/app/authz/abilities";
 import Client from "~/app/data/client";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireClientAbility from "~/app/http/middleware/require-client-ability";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { UpdateClientSchema } from "~/app/http/validators/admin";
 import { toChrome, toClientDetail } from "~/app/http/view-models/admin";
 import ClientEditView from "~/resources/views/admin/client-edit";
@@ -92,7 +95,12 @@ function labels(ctx: RequestContext) {
 }
 
 export default createController(routes.admin.clientEdit, {
-	middleware: [requireAdmin],
+	middleware: [
+		requireSubject,
+		subjectAccess,
+		requireAdminArea,
+		requireClientAbility(abilities.admin.client.update),
+	],
 	actions: {
 		/** GET /admin/clients/:clientId/edit — renders the form filled from the stored row. */
 		index: async (ctx) => {

@@ -108,6 +108,10 @@ written inside the shared card in `app/emails/layout.tsx`.
   rendered as hidden iframes.
 - **Admin area** for clients and subjects, with a one-time reveal of a newly generated
   client secret.
+- **Authorization** through `@sdxc/authz`: the catalog in `app/authz/abilities.ts` and the
+  policy in `app/authz/policy.ts`, whose roles are the subject's `role` column (`user`,
+  and `admin`, which adds the admin area). A subject revokes only their own sessions, and
+  this server's own client registration can be neither edited, deleted, nor withdrawn.
 - **Machine-to-machine API**: `client_credentials` token plus `GET /api/subjects/:id`,
   answering a client about the subjects who authorized it.
 - **New-sign-in notice**: every authentication that opens a session mails the subject the
@@ -174,7 +178,9 @@ discovery.
 
 ### Admin
 
-Every route requires the `admin` role; anyone else is redirected to `/account/sessions`.
+Every route requires the `admin.access` ability, which only the `admin` role holds; anyone
+else is redirected to `/account/sessions`. This server's own client offers no edit or delete
+control, and a request to edit or delete it returns to its detail page unchanged.
 
 | Route                             | Methods | Description                                                |
 | --------------------------------- | ------- | ---------------------------------------------------------- |

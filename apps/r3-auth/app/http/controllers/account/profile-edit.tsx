@@ -20,6 +20,7 @@ import { createController } from "remix/router";
 import type { SelectSubject } from "~/database/schema";
 
 import Subject from "~/app/data/subject";
+import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { UpdateProfileSchema } from "~/app/http/validators/account";
 import { accountChrome } from "~/app/http/view-models/account-chrome";
@@ -68,7 +69,6 @@ function fieldError(issues: ValidationError["issues"], field: string): string | 
  */
 function editPage(
 	ctx: RequestContext,
-	subject: SelectSubject,
 	values: ProfileValues,
 	issues: ValidationError["issues"] = [],
 	error: string | null = null,
@@ -79,7 +79,6 @@ function editPage(
 				current: "profile",
 				heading: ctx.intl.t("profile.edit.title"),
 				documentTitle: ctx.intl.t("profile.edit.title"),
-				isAdmin: subject.role === "admin",
 				parents: [{ label: ctx.intl.t("profile.title"), href: routes.account.profile.href() }],
 			})}
 		>
@@ -118,12 +117,12 @@ function editPage(
 }
 
 export default createController(routes.account.profileEdit, {
-	middleware: [requireSubject],
+	middleware: [requireSubject, subjectAccess],
 	actions: {
 		/** GET /account/profile/edit — the form, pre-filled from the stored row. */
 		index() {
 			let ctx = getContext();
-			return editPage(ctx, ctx.subject, storedValues(ctx.subject));
+			return editPage(ctx, storedValues(ctx.subject));
 		},
 
 		/**
@@ -140,7 +139,6 @@ export default createController(routes.account.profileEdit, {
 				ctx.log.note("profile.update_invalid");
 				return editPage(
 					ctx,
-					subject,
 					{
 						displayName: readField(ctx.formData, "displayName", subject.display_name),
 						username: readField(ctx.formData, "username", subject.username),
@@ -162,13 +160,7 @@ export default createController(routes.account.profileEdit, {
 					error: error instanceof Error ? error.message : "Unknown error",
 				});
 
-				return editPage(
-					ctx,
-					subject,
-					result.data,
-					[],
-					ctx.intl.t("profile.edit.errors.usernameTaken"),
-				);
+				return editPage(ctx, result.data, [], ctx.intl.t("profile.edit.errors.usernameTaken"));
 			}
 
 			ctx.log.note("profile.updated");

@@ -1,7 +1,7 @@
 /**
  * Router-level tests of the session guards. A stub page is mapped onto test-only URLs
  * and protected by the real middleware, exercising the redirects, the silent
- * access-token refresh, and the role check through the whole middleware chain while
+ * access-token refresh, and the admin-area ability check through the whole chain while
  * observing only the guard's own behavior at each URL.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -26,7 +26,7 @@ import routes from "~/routes/web";
  * own stubs from the start.
  */
 let { default: requireSubject } = await import("~/app/http/middleware/require-subject");
-let { default: requireAdmin } = await import("~/app/http/middleware/require-admin");
+let { requireAdminArea, subjectAccess } = await import("~/app/http/middleware/access");
 
 /**
  * Dedicated routes for these tests isolate each test's observation to the guard's own
@@ -51,7 +51,10 @@ beforeEach(async () => {
 	fixtures = await seed(app);
 
 	app.router.map(guarded.subject, { middleware: [requireSubject], handler: whoami });
-	app.router.map(guarded.admin, { middleware: [requireAdmin], handler: whoami });
+	app.router.map(guarded.admin, {
+		middleware: [requireSubject, subjectAccess, requireAdminArea],
+		handler: whoami,
+	});
 });
 
 describe("requireSubject", () => {
@@ -174,7 +177,7 @@ describe("requireSubject", () => {
 	});
 });
 
-describe("requireAdmin", () => {
+describe("requireAdminArea", () => {
 	test("redirects an unauthenticated request to /authorize", async () => {
 		let response = await app.fetch(
 			new Request(`${ORIGIN}${guarded.admin.href()}`, { redirect: "manual" }),

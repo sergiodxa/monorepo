@@ -42,7 +42,7 @@ namespace ClientsView {
 	}
 }
 
-/** Renders the paginated client list with its per-row actions. */
+/** Renders the paginated client list with the per-row actions the viewer may take. */
 export default function ClientsView(handle: Handle<ClientsView.Props>) {
 	return () => {
 		let { chrome, labels, clients, pagination, createHref } = handle.props;
@@ -90,24 +90,28 @@ export default function ClientsView(handle: Handle<ClientsView.Props>) {
 													>
 														{labels.actions.view}
 													</LinkButton>
-													<LinkButton
-														href={client.editHref}
-														size="sm"
-														color="neutral"
-														variant="outline"
-													>
-														{labels.actions.edit}
-													</LinkButton>
-													<ConfirmAction
-														id={`delete-client-${client.id}`}
-														size="sm"
-														trigger={labels.actions.delete}
-														title={labels.confirm.title}
-														description={labels.confirm.description}
-														confirmLabel={labels.confirm.confirm}
-														cancelLabel={labels.confirm.cancel}
-														fields={{ intent: "delete", clientId: client.id }}
-													/>
+													{client.actions.update && (
+														<LinkButton
+															href={client.editHref}
+															size="sm"
+															color="neutral"
+															variant="outline"
+														>
+															{labels.actions.edit}
+														</LinkButton>
+													)}
+													{client.actions.delete && (
+														<ConfirmAction
+															id={`delete-client-${client.id}`}
+															size="sm"
+															trigger={labels.actions.delete}
+															title={labels.confirm.title}
+															description={labels.confirm.description}
+															confirmLabel={labels.confirm.confirm}
+															cancelLabel={labels.confirm.cancel}
+															fields={{ intent: "delete", clientId: client.id }}
+														/>
+													)}
 												</div>
 											</Table.Cell>
 										</Table.Row>

@@ -14,9 +14,11 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import abilities from "~/app/authz/abilities";
 import Client from "~/app/data/client";
 import Grant from "~/app/data/grant";
-import requireAdmin from "~/app/http/middleware/require-admin";
+import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
+import requireSubject from "~/app/http/middleware/require-subject";
 import { ClientsIntentSchema } from "~/app/http/validators/admin";
 import {
 	PAGE_SIZE,
@@ -29,7 +31,7 @@ import ClientsView from "~/resources/views/admin/clients";
 import routes from "~/routes/web";
 
 export default createController(routes.admin.clients, {
-	middleware: [requireAdmin],
+	middleware: [requireSubject, subjectAccess, requireAdminArea],
 	actions: {
 		/** GET /admin/clients — renders one page of clients with their row actions. */
 		index: async (ctx) => {
@@ -56,7 +58,9 @@ export default createController(routes.admin.clients, {
 				<ClientsView
 					chrome={chrome}
 					createHref={routes.admin.clientNew.index.href()}
-					clients={clients.map((client) => toClientRow(client, ctx.locale))}
+					clients={clients.map((client) =>
+						toClientRow(client, ctx.locale, ctx.access.decide(abilities.admin.client, { client })),
+					)}
 					pagination={toPagination(ctx.url, page, totalCount, {
 						label: ctx.intl.t("admin.pagination.label"),
 						previous: ctx.intl.t("admin.pagination.previous"),
@@ -89,7 +93,11 @@ export default createController(routes.admin.clients, {
 			);
 		},
 
-		/** POST /admin/clients — deletes the client a row's confirmation named. */
+		/**
+		 * POST /admin/clients — deletes the client a row's confirmation named. The id comes
+		 * from the body, so the check runs here once it validates; a refused one changes
+		 * nothing and lands back on the list.
+		 */
 		action: async (ctx) => {
 			let result = await validate(ctx.formData, ClientsIntentSchema);
 			if (isFailure(result)) {
@@ -99,6 +107,13 @@ export default createController(routes.admin.clients, {
 
 			let { clientId } = result.data;
 			ctx.log.set({ client: { id: clientId } });
+
+			let allowed = ctx.access.authorize(abilities.admin.client.delete, {
+				client: { id: clientId },
+			});
+			if (isFailure(allowed)) {
+				return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
+			}
 
 			await Grant.deleteByClientId(ctx.db, clientId);
 			await Client.delete(ctx.db, clientId);

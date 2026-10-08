@@ -14,6 +14,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
+import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
 import Client from "~/app/data/client";
 import Grant from "~/app/data/grant";
 import Subject from "~/app/data/subject";
@@ -384,5 +385,87 @@ describe("/admin/clients/:clientId/edit", () => {
 		);
 
 		expect(response.status).toBe(404);
+	});
+});
+
+/**
+ * The account area signs in through this registration, so editing or deleting it would
+ * lock every subject out of their own account. The policy guards it from every role, and
+ * each page offers only what its action would carry out.
+ */
+describe("this server's own client", () => {
+	beforeEach(async () => {
+		await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
+	});
+
+	test("its detail page offers neither edit nor delete", async () => {
+		let response = await get(routes.admin.client.index.href({ clientId: AUTH_SERVER_CLIENT_ID }));
+		let html = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(html).not.toContain(
+			routes.admin.clientEdit.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+		);
+		expect(html).not.toContain(`delete-client-${AUTH_SERVER_CLIENT_ID}`);
+	});
+
+	test("the list offers edit and delete on every row but its own", async () => {
+		let html = await (await get(routes.admin.clients.index.href())).text();
+
+		expect(html).toContain(routes.admin.clientEdit.index.href({ clientId: fixtures.clientId }));
+		expect(html).toContain(`delete-client-${fixtures.clientId}`);
+		expect(html).not.toContain(
+			routes.admin.clientEdit.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+		);
+		expect(html).not.toContain(`delete-client-${AUTH_SERVER_CLIENT_ID}`);
+	});
+
+	test("GET edit sends the admin back to its detail page", async () => {
+		let response = await get(
+			routes.admin.clientEdit.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(
+			routes.admin.client.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+		);
+	});
+
+	test("POST edit changes nothing", async () => {
+		let response = await post(
+			routes.admin.clientEdit.action.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+			{ ...VALID_CLIENT, regenerateSecret: "true" },
+		);
+		let client = await Client.findById(app.db, AUTH_SERVER_CLIENT_ID);
+
+		expect(response.status).toBe(303);
+		expect(client?.name).toBe(AUTH_SERVER_NAME);
+	});
+
+	test("POST delete on its detail page leaves it registered", async () => {
+		let response = await post(
+			routes.admin.client.action.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+			{ intent: "delete" },
+		);
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(
+			routes.admin.client.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
+		);
+		expect(await Client.findById(app.db, AUTH_SERVER_CLIENT_ID)).not.toBeNull();
+	});
+
+	test("POST delete from the list leaves it and its consents in place", async () => {
+		await Grant.findOrCreate(app.db, fixtures.subjectId, AUTH_SERVER_CLIENT_ID);
+
+		let response = await post(routes.admin.clients.action.href(), {
+			intent: "delete",
+			clientId: AUTH_SERVER_CLIENT_ID,
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe(routes.admin.clients.index.href());
+		expect(await Client.findById(app.db, AUTH_SERVER_CLIENT_ID)).not.toBeNull();
+		expect(await Grant.countByClientId(app.db, AUTH_SERVER_CLIENT_ID)).toBe(1);
 	});
 });
