@@ -74,3 +74,12 @@ export interface Interval {
 	/** Last instant of the range. */
 	end: Date;
 }
+
+/**
+ * An inclusive run of calendar days as `"YYYY-MM-DD"` keys, both ends included. Keys
+ * carry no zone, so a range reads the same in a URL, a form and a query string.
+ */
+export interface DayRange {
+	from: string;
+	to: string;
+}

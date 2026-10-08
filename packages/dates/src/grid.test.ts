@@ -1,7 +1,7 @@
 /**
  * Tests for the day grids: that a year enumerates every day including leap day, that a
- * rolling window is exactly as long as asked, and that week bucketing keeps every day in
- * its partial week at both ends of a range.
+ * rolling window is exactly as long as asked, that week bucketing keeps every day in its
+ * partial week at both ends of a range, and that a month grid pads to six full weeks.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { daysOfYear, groupByWeek, lastNDays } from "./grid.js";
+import { daysOfYear, groupByWeek, lastNDays, monthGrid } from "./grid.js";
 
 /** Zone whose DST transitions make a naive 24-hour step drift. */
 const NEW_YORK = "America/New_York";
@@ -145,5 +145,56 @@ describe("groupByWeek", () => {
 
 	test("returns nothing for an empty day list", () => {
 		expect(groupByWeek([], { weekStartsOn: 0, timeZone: "UTC" })).toEqual([]);
+	});
+});
+
+describe("monthGrid", () => {
+	let sundayFirst = { weekStartsOn: 0, timeZone: "UTC" } as const;
+
+	test("lays six weeks of seven days out", () => {
+		let weeks = monthGrid(new Date("2026-06-15T12:00:00Z"), sundayFirst);
+		expect(weeks).toHaveLength(6);
+		for (let week of weeks) expect(week).toHaveLength(7);
+	});
+
+	test("starts on the week's first day on or before the 1st", () => {
+		let june = new Date("2026-06-15T12:00:00Z");
+		expect(monthGrid(june, sundayFirst).at(0)?.at(0)?.key).toBe("2026-05-31");
+		expect(monthGrid(june, { weekStartsOn: 1, timeZone: "UTC" }).at(0)?.at(0)?.key).toBe(
+			"2026-06-01",
+		);
+	});
+
+	test("starts on the 1st itself when the month opens on the week's first day", () => {
+		expect(monthGrid(new Date("2026-03-10T12:00:00Z"), sundayFirst).at(0)?.at(0)?.key).toBe(
+			"2026-03-01",
+		);
+	});
+
+	test("marks the padding days from the months either side", () => {
+		let weeks = monthGrid(new Date("2026-06-15T12:00:00Z"), sundayFirst);
+		expect(weeks.at(0)?.at(0)?.inMonth).toBe(false);
+		expect(weeks.at(0)?.at(1)?.inMonth).toBe(true);
+		expect(weeks.at(5)?.at(6)?.inMonth).toBe(false);
+	});
+
+	test("runs one day at a time across month and year boundaries", () => {
+		let keys = monthGrid(new Date("2026-12-01T12:00:00Z"), sundayFirst)
+			.flat()
+			.map((day) => day.key);
+		expect(keys).toHaveLength(42);
+		expect(new Set(keys).size).toBe(42);
+		expect(keys).toContain("2026-12-31");
+		expect(keys).toContain("2027-01-01");
+	});
+
+	test("reads the month and starts each day in the zone asked for", () => {
+		let weeks = monthGrid(new Date("2026-07-01T02:00:00Z"), {
+			weekStartsOn: 0,
+			timeZone: NEW_YORK,
+		});
+		let first = weeks.flat().find((day) => day.inMonth);
+		expect(first?.key).toBe("2026-06-01");
+		expect(first?.date.toISOString()).toBe("2026-06-01T04:00:00.000Z");
 	});
 });

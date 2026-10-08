@@ -1,6 +1,6 @@
 /**
- * Day grids: the day lists a heatmap or calendar renders, and the week bucketing
- * that lays them out in columns. They return plain descriptors so the calendar math
+ * Day grids: the day lists a heatmap or calendar renders, the week bucketing that
+ * lays them out in columns, and the six-week month a calendar pages through. They return plain descriptors so the calendar math
  * is shared while every UI layer keeps its own markup.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -33,6 +33,15 @@ export interface GroupByWeekOptions {
 	weekStartsOn: Weekday;
 	/** IANA zone whose calendar weeks the days are grouped by. */
 	timeZone: TimeZone;
+}
+
+/** Weeks a month grid always holds, so a calendar keeps its height as it pages. */
+const WEEKS_PER_MONTH_GRID = 6;
+
+/** One cell of a month grid: a day descriptor plus whether the month being laid out owns it. */
+export interface MonthGridDay extends Day {
+	/** `false` for the padding days borrowed from the months either side. */
+	inMonth: boolean;
 }
 
 /**
@@ -126,4 +135,36 @@ export function groupByWeek(days: Day[], options: GroupByWeekOptions): Day[][] {
 	}
 
 	return Array.from(weeks.values());
+}
+
+/**
+ * The six weeks a calendar lays a month out as, starting on the `weekStartsOn` day on or
+ * before the 1st. Padding days from the neighbouring months fill both ends, so every
+ * month gets the same 6 × 7 grid and the calendar's height holds as it pages.
+ *
+ * @param date - Any instant in the month to lay out.
+ * @param options - Which weekday starts a row, and the zone whose calendar to read.
+ * @returns Six weeks of seven days each, in calendar order.
+ *
+ * @example
+ * monthGrid(new Date("2026-06-15T12:00:00Z"), { weekStartsOn: 0, timeZone: "UTC" })[0]?.[0]?.key; // "2026-05-31"
+ */
+export function monthGrid(date: Date, options: GroupByWeekOptions): MonthGridDay[][] {
+	let { year, month } = calendarDayAt(date.getTime(), options.timeZone);
+	let first = { year, month, day: 1 };
+	let start = epochDayOf(first) - ((weekdayOf(first) - options.weekStartsOn + 7) % 7);
+
+	let weeks: MonthGridDay[][] = [];
+	for (let week = 0; week < WEEKS_PER_MONTH_GRID; week++) {
+		let days: MonthGridDay[] = [];
+		for (let offset = 0; offset < 7; offset++) {
+			let day = calendarDayFromEpochDay(start + week * 7 + offset);
+			days.push({
+				...describeDay(day, options.timeZone),
+				inMonth: day.year === year && day.month === month,
+			});
+		}
+		weeks.push(days);
+	}
+	return weeks;
 }

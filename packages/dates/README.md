@@ -89,6 +89,28 @@ for (let week of weeks) {
 }
 ```
 
+### A Month Calendar
+
+```typescript
+import { monthGrid, systemTimeZone } from "@sdxc/dates";
+
+let weeks = monthGrid(new Date(), { weekStartsOn: 0, timeZone: systemTimeZone() });
+
+for (let week of weeks) {
+	for (let day of week) render(day.key, day.date.getDate(), { muted: !day.inMonth });
+}
+```
+
+### A Report Range
+
+```typescript
+import { monthRange, quarterRange, validateDayRange } from "@sdxc/dates";
+
+monthRange(new Date("2026-08-15T12:00:00Z"), "UTC"); // { from: "2026-08-01", to: "2026-08-31" }
+quarterRange(new Date("2026-05-15T12:00:00Z"), "UTC"); // { from: "2026-04-01", to: "2026-06-30" }
+validateDayRange({ from: "2026-09-10", to: "2026-09-01" }); // failure, error.problem "reversed"
+```
+
 ## API
 
 ### Formatting
@@ -410,6 +432,101 @@ Buckets a chronological day list into weeks, one array per week. The first and l
 groupByWeek(daysOfYear(2026, "UTC"), { weekStartsOn: 0, timeZone: "UTC" }).length; // 53
 ```
 
+#### `monthGrid(date: Date, options: GroupByWeekOptions): MonthGridDay[][]`
+
+The six weeks a calendar lays the month of `date` out as, starting on the `weekStartsOn` day on or before the 1st. Days borrowed from the neighbouring months pad both ends and carry `inMonth: false`, so every month is the same 6 × 7 grid and a calendar keeps its height as it pages.
+
+```typescript
+let weeks = monthGrid(new Date("2026-06-15T12:00:00Z"), { weekStartsOn: 0, timeZone: "UTC" });
+weeks[0]?.[0]; // { key: "2026-05-31", inMonth: false, ... }
+```
+
+### Day Ranges
+
+A `DayRange` is two day keys, both ends included, so it travels through a URL or form as written.
+
+#### `monthRange(date: Date, timeZone: TimeZone): DayRange`
+
+The whole calendar month `date` falls in. Combine it with `addMonths()` for the previous month.
+
+```typescript
+monthRange(addMonths(new Date(), -1, "UTC"), "UTC"); // last month, first day through last
+```
+
+#### `quarterRange(date: Date, timeZone: TimeZone): DayRange`
+
+The whole calendar quarter `date` falls in; quarters open in January, April, July and October.
+
+#### `yearToDateRange(date: Date, timeZone: TimeZone): DayRange`
+
+January 1st through the day `date` falls on. Given yesterday on January 1st, it is the whole previous year.
+
+#### `lastNDaysRange(count: number, options: LastNDaysOptions): DayRange`
+
+The last `count` calendar days, ending on the day `options.from` falls on and including it, as a range instead of a day list.
+
+```typescript
+lastNDaysRange(30, { from: new Date("2026-09-28T12:00:00Z"), timeZone: "UTC" }); // { from: "2026-08-30", to: "2026-09-28" }
+```
+
+#### `dayRangeLength(range: DayRange): number`
+
+The days a range covers, both ends counted, or `NaN` when either end names no calendar day.
+
+```typescript
+dayRangeLength({ from: "2026-02-01", to: "2026-02-28" }); // 28
+```
+
+#### `isWholeMonth(range: DayRange): boolean`
+
+Whether a range is exactly one month, first day through last: the case where a label or filename can name the month alone.
+
+#### `validateDayRange(range: DayRange, options?: ValidateDayRangeOptions): Result<DayRange, InvalidDayRangeError>`
+
+Checks a submitted range and reports the first rule it breaks, as `error.problem`:
+
+- `"invalid"`: an end is not an exact `"YYYY-MM-DD"` key naming a real day
+- `"reversed"`: `from` comes after `to`
+- `"tooLate"`: `to` comes after `options.latest`, a day key
+- `"tooLong"`: the range covers more than `options.maxDays` days
+
+```typescript
+validateDayRange({ from: "2026-09-01", to: "2026-09-29" }, { latest: "2026-09-28" }); // failure, "tooLate"
+```
+
+#### `InvalidDayRangeError`
+
+The error `validateDayRange()` reports, with the broken rule on `error.problem` and the submitted ends on `error.range`.
+
+### Time Zones
+
+#### `supportedTimeZones(): readonly TimeZone[]`
+
+Every zone the runtime's IANA database lists through `Intl.supportedValuesOf("timeZone")`, `"UTC"` first and each zone once. `"UTC"` is added by name because some runtimes, Cloudflare Workers among them, omit it. The list is computed on first call and cached, and it follows the runtime's ICU build.
+
+#### `isSupportedTimeZone(value: string): boolean`
+
+Whether a value is in `supportedTimeZones()`. Aliases `Intl` also accepts, such as `"Etc/UTC"`, fail it, so a stored zone keeps one spelling; `isValidTimeZone()` accepts every name `Intl` takes.
+
+```typescript
+isSupportedTimeZone("Europe/Madrid"); // true
+isSupportedTimeZone("Etc/UTC"); // false
+```
+
+#### `timeZonesByRegion(): readonly TimeZoneGroup[]`
+
+The supported zones grouped by IANA area (`"America"`, `"Europe"`, ...), in the order the areas first appear. `"UTC"` has no area and sits in no group.
+
+#### `systemTimeZone(): TimeZone`
+
+The zone the runtime's clock runs in: the browser's setting on a page, usually `"UTC"` on a server.
+
+```typescript
+systemTimeZone();
+// same as
+Intl.DateTimeFormat().resolvedOptions().timeZone;
+```
+
 ### Day Keys
 
 #### `toDayKey(date: Date, timeZone: TimeZone): string`
@@ -615,17 +732,57 @@ interface Interval {
 
 A closed range of instants. Both ends are inclusive for day enumeration.
 
+#### `DayRange`
+
+```typescript
+interface DayRange {
+	from: string; // "YYYY-MM-DD", included
+	to: string; // "YYYY-MM-DD", included
+}
+```
+
+An inclusive run of calendar days as day keys.
+
+#### `MonthGridDay`
+
+```typescript
+interface MonthGridDay extends Day {
+	inMonth: boolean;
+}
+```
+
+One cell of `monthGrid()`, with `inMonth: false` on the padding days from the neighbouring months.
+
+#### `TimeZoneGroup`
+
+```typescript
+interface TimeZoneGroup {
+	region: string; // the IANA area, e.g. "Europe"
+	zones: readonly TimeZone[];
+}
+```
+
+One area's zones, as a picker renders them in an `<optgroup>`.
+
+#### `DayRangeProblem`
+
+```typescript
+type DayRangeProblem = "invalid" | "reversed" | "tooLate" | "tooLong";
+```
+
+The rule `validateDayRange()` reports a range breaking.
+
 #### `DateStyle`, `TimeStyle`
 
 The `dateStyle` and `timeStyle` lengths from `Intl.DateTimeFormat`: `"full" | "long" | "medium" | "short"`.
 
 #### Options
 
-`FormatDateOptions`, `FormatTimeOptions`, `FormatDateTimeOptions`, `FormatRangeOptions`, `FormatRelativeOptions`, `FormatDurationOptions`, `FormatPartsOptions`, `FormatWeekdayOptions`, `StartOfWeekOptions`, `LastNDaysOptions` and `GroupByWeekOptions` are exported for callers that pass options through their own signatures.
+`FormatDateOptions`, `FormatTimeOptions`, `FormatDateTimeOptions`, `FormatRangeOptions`, `FormatRelativeOptions`, `FormatDurationOptions`, `FormatPartsOptions`, `FormatWeekdayOptions`, `StartOfWeekOptions`, `LastNDaysOptions`, `GroupByWeekOptions` and `ValidateDayRangeOptions` are exported for callers that pass options through their own signatures.
 
 #### Errors
 
-`InvalidDateError`, `InvalidDayKeyError` and `InvalidDateTimeLocalError` are the classes the parsers return inside a `Failure`, each carrying the rejected input.
+`InvalidDateError`, `InvalidDayKeyError`, `InvalidDateTimeLocalError` and `InvalidDayRangeError` are the classes the parsers and validators return inside a `Failure`, each carrying the rejected input.
 
 ## Pattern: One Zone Per Request
 
@@ -716,6 +873,72 @@ function stackedDate(date: Date, locale: string, timeZone: string) {
 	let read = (type: string) => parts.find((part) => part.type === type)?.value ?? "";
 
 	return { month: read("month"), day: read("day") };
+}
+```
+
+## Pattern: A Report Range From The Query String
+
+Offer presets over completed days and check a hand-picked range against the same rules. Data that rolls up nightly is complete through yesterday, so yesterday is the latest day a range may name, and the month and quarter presets step back from today.
+
+```typescript
+import {
+	addMonths,
+	lastNDaysRange,
+	monthRange,
+	quarterRange,
+	subDays,
+	toDayKey,
+	validateDayRange,
+	yearToDateRange,
+} from "@sdxc/dates";
+import { success } from "@sdxc/result";
+
+type Preset = "lastMonth" | "last30Days" | "lastQuarter" | "yearToDate";
+
+function presetRange(preset: Preset, now = new Date()) {
+	let yesterday = subDays(now, 1);
+	switch (preset) {
+		case "lastMonth":
+			return monthRange(addMonths(now, -1, "UTC"), "UTC");
+		case "last30Days":
+			return lastNDaysRange(30, { from: yesterday, timeZone: "UTC" });
+		case "lastQuarter":
+			return quarterRange(addMonths(now, -3, "UTC"), "UTC");
+		case "yearToDate":
+			return yearToDateRange(yesterday, "UTC");
+	}
+}
+
+function readRange(url: URL, now = new Date()) {
+	let from = url.searchParams.get("from");
+	let to = url.searchParams.get("to");
+	if (from === null || to === null) return success(presetRange("lastMonth", now));
+
+	let latest = toDayKey(subDays(now, 1), "UTC");
+	return validateDayRange({ from, to }, { latest, maxDays: 366 });
+}
+```
+
+## Pattern: A Time-Zone Picker
+
+List UTC first, the areas as option groups, and validate the submitted value against the same list, so the form and the validator never disagree.
+
+```typescript
+import { isSupportedTimeZone, timeZonesByRegion } from "@sdxc/dates";
+
+function timeZoneOptions(selected: string) {
+	return [
+		{ label: "UTC", options: [{ value: "UTC", selected: selected === "UTC" }] },
+		...timeZonesByRegion().map((group) => ({
+			label: group.region,
+			options: group.zones.map((zone) => ({ value: zone, selected: zone === selected })),
+		})),
+	];
+}
+
+function readTimeZone(form: FormData) {
+	let value = String(form.get("timeZone") ?? "UTC");
+	return isSupportedTimeZone(value) ? value : null;
 }
 ```
 

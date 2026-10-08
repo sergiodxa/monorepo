@@ -34,7 +34,17 @@ const DAY_KEY_PATTERN = /^(?<year>\d{4})-(?<month>\d{2})-(?<day>\d{2})$/;
  * toDayKey(new Date("2026-07-29T02:00:00Z"), "America/New_York"); // "2026-07-28"
  */
 export function toDayKey(date: Date, timeZone: TimeZone): string {
-	let day = calendarDayAt(date.getTime(), timeZone);
+	return formatDayKey(calendarDayAt(date.getTime(), timeZone));
+}
+
+/**
+ * The day key naming a calendar day, with no zone involved because the day is
+ * already a wall-calendar date.
+ *
+ * @param day - Calendar day to name.
+ * @returns The `"YYYY-MM-DD"` key, zero padded.
+ */
+export function formatDayKey(day: CalendarDay): string {
 	let year = String(day.year).padStart(4, "0");
 	let month = String(day.month).padStart(2, "0");
 	return `${year}-${month}-${String(day.day).padStart(2, "0")}`;
