@@ -33,17 +33,15 @@ if (isSuccess(encoded)) {
 ```tsx
 import { QrCode } from "@sdxc/qr/component";
 
-<QrCode symbol={symbol} label="Scan to add this account to your authenticator app" />;
+<QrCode symbol={qr} label="Scan to add this account to your authenticator app" />;
 ```
 
-The component takes an encoded `QrSymbol`, so the handler that has the text encodes it and decides what to render when encoding fails.
+The component takes an encoded `QR`, so the handler that has the text encodes it and decides what to render when encoding fails.
 
 ### Drawing Into Your Own Markup
 
 ```typescript
-import { QR } from "@sdxc/qr";
-
-let { d, viewBox } = QR.toSVGPath(symbol, { margin: 4 });
+let { d, viewBox } = qr.toSVGPath({ margin: 4 });
 // <svg viewBox={viewBox}><path d={d} /></svg>
 ```
 
@@ -52,16 +50,20 @@ let { d, viewBox } = QR.toSVGPath(symbol, { margin: 4 });
 `isDark` answers `false` outside the symbol, so a loop that runs one module past each edge draws the quiet zone without bounds checks:
 
 ```typescript
-for (let y = -1; y <= symbol.size; y++) {
+for (let y = -1; y <= qr.size; y++) {
 	let line = "";
-	for (let x = -1; x <= symbol.size; x++) line += symbol.isDark(x, y) ? "██" : "  ";
+	for (let x = -1; x <= qr.size; x++) line += qr.isDark(x, y) ? "██" : "  ";
 	console.log(line);
 }
 ```
 
 ## API
 
-### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QrSymbol, QrError>`
+### `QR`
+
+One encoded symbol. `QR.encode` is the only way to get one, so every instance holds a valid symbol: `version` (1–40), `level` (the level applied, after any boost), `mask` (0–7) and `size` (`17 + 4 * version` modules a side, quiet zone excluded).
+
+#### `QR.encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrError>`
 
 Encode text or bytes as the smallest symbol that holds them. A string is split into numeric, alphanumeric and byte segments with the fewest total bits, so a URI around an upper-case token takes fewer modules than it would as bytes alone. A `Uint8Array` is encoded as bytes as given.
 
@@ -75,7 +77,11 @@ Encode text or bytes as the smallest symbol that holds them. A string is split i
 
 Text goes into byte segments as UTF-8, with no ECI designator. Phone scanners read UTF-8 this way, and ASCII, which covers every URI, reads the same under any interpretation.
 
-### `QR.toSVGPath(symbol: QrSymbol, options?: SvgPathOptions): SvgPath`
+#### `qr.isDark(x: number, y: number): boolean`
+
+Whether a module is dark. Coordinates outside the symbol answer `false`, so a renderer draws the quiet zone by reading past the edge.
+
+#### `qr.toSVGPath(options?: SvgPathOptions): SvgPath`
 
 Path data for one `<path>`: each horizontal run of dark modules is one rectangle, one unit per module. `viewBox` and `size` include the quiet zone, which `margin` sets in modules and defaults to the standard's 4; a smaller margin suits a code inside a light container that already provides one.
 
@@ -85,7 +91,7 @@ An inline `<svg role="img">` with a light background rectangle and one dark path
 
 | Prop     | Default  | Notes                                                    |
 | -------- | -------- | -------------------------------------------------------- |
-| `symbol` | Required | A `QrSymbol` from `QR.encode`                            |
+| `symbol` | Required | A `QR` from `QR.encode`                                  |
 | `label`  | Required | The accessible name, saying what the code is for         |
 | `size`   | `12rem`  | A CSS length for the rendered width and height           |
 | `margin` | `4`      | Quiet zone in modules                                    |
@@ -94,10 +100,6 @@ An inline `<svg role="img">` with a light background rectangle and one dark path
 | `mix`    | None     | Mixins applied to the `<svg>`, after the component's own |
 
 The colors stay as given under a dark theme, and the SVG sets `forced-color-adjust: none` so a high-contrast theme keeps them too: scanners need a dark code on a light margin. A brand pair passed through `dark` and `light` needs the same strong contrast. The payload stays out of the accessibility tree, so show the text the code carries, or an equivalent, beside it.
-
-### `QrSymbol`
-
-`version` (1–40), `level` (the level applied, after any boost), `mask` (0–7), `size` (`17 + 4 * version` modules a side, quiet zone excluded) and `isDark(x, y)`.
 
 ### `QrError`
 
@@ -115,14 +117,12 @@ An `Error` with a `code`:
 Encode in the handler, which can log a failure, and render the code above the setup key, which stays as the text alternative.
 
 ```tsx
-import type { QrSymbol } from "@sdxc/qr";
-
 import { QR } from "@sdxc/qr";
 import { QrCode } from "@sdxc/qr/component";
 import { isSuccess } from "@sdxc/result";
 import type { Handle } from "remix/component";
 
-function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QrSymbol | null }>) {
+function EnrolPage(handle: Handle<{ uri: string; setupKey: string; qr: QR | null }>) {
 	return () => {
 		let { uri, setupKey, qr } = handle.props;
 		return (

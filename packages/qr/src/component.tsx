@@ -10,16 +10,14 @@ import type { Handle, Props as TagProps } from "remix/component";
 
 import { css } from "remix/component";
 
-import type { QrSymbol } from "./encode.js";
-
-import { QR } from "./encode.js";
+import type { QR } from "./encode.js";
 
 /** The props {@link QrCode} accepts. */
 export namespace QrCode {
 	/** A symbol to draw and the accessible name that says what it is for. */
 	export interface Props {
 		/** A symbol from `QR.encode`. */
-		symbol: QrSymbol;
+		symbol: QR;
 		/** The image's accessible name; the payload itself stays out of the accessibility tree. */
 		label: string;
 		/**
@@ -71,7 +69,7 @@ export function QrCode(handle: Handle<QrCode.Props>) {
 			light = "#fff",
 			mix,
 		} = handle.props;
-		let path = QR.toSVGPath(symbol, { margin });
+		let path = symbol.toSVGPath({ margin });
 
 		return (
 			<svg

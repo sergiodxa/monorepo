@@ -66,19 +66,6 @@ export interface QrOptions {
 	boostLevel?: boolean;
 }
 
-/** One complete QR code, the matrix a renderer draws. */
-export interface QrSymbol {
-	/** 1–40; the symbol is `17 + 4 * version` modules a side. */
-	readonly version: number;
-	/** The level actually applied, which `boostLevel` may have raised. */
-	readonly level: QrLevel;
-	readonly mask: number;
-	/** Modules a side, quiet zone excluded. */
-	readonly size: number;
-	/** Coordinates outside the symbol answer `false`, so a renderer draws the quiet zone by reading past the edge. */
-	isDark(x: number, y: number): boolean;
-}
-
 /**
  * Why `QR.encode` produced no symbol. A `too-long` error carries `bits`, the data's length
  * and the capacity at `maxVersion`, so a caller can say how much to cut.
@@ -112,8 +99,28 @@ export namespace QrError {
 	}
 }
 
-/** Encodes QR Code Model 2 symbols; every failure is a `Result`, so a caller decides what to render. */
+/**
+ * One complete QR Code Model 2 symbol, the matrix a renderer draws. `QR.encode` is the only
+ * way to get one, so every instance holds a valid symbol.
+ */
 export class QR {
+	/** 1–40; the symbol is `17 + 4 * version` modules a side. */
+	readonly version: number;
+	/** The level actually applied, which `boostLevel` may have raised. */
+	readonly level: QrLevel;
+	readonly mask: number;
+	/** Modules a side, quiet zone excluded. */
+	readonly size: number;
+	#dark: Uint8Array;
+
+	private constructor(version: number, level: QrLevel, mask: number, matrix: Matrix) {
+		this.version = version;
+		this.level = level;
+		this.mask = mask;
+		this.size = matrix.size;
+		this.#dark = matrix.dark;
+	}
+
 	/**
 	 * Encode `data` as a QR symbol. A string is split into numeric, alphanumeric and UTF-8
 	 * byte segments with the fewest bits; a `Uint8Array` is one byte-mode run.
@@ -124,7 +131,7 @@ export class QR {
 	 * @example QR.encode("https://example.com/device?user_code=WDJB-MJHT")
 	 * @example QR.encode(uri, { level: "Q", maxVersion: 10 })
 	 */
-	static encode(data: string | Uint8Array, options: QrOptions = {}): Result<QrSymbol, QrError> {
+	static encode(data: string | Uint8Array, options: QrOptions = {}): Result<QR, QrError> {
 		let { level = "M", minVersion = 1, maxVersion = 40, mask, boostLevel = true } = options;
 
 		if (!isVersion(minVersion) || !isVersion(maxVersion) || minVersion > maxVersion) {
@@ -181,30 +188,29 @@ export class QR {
 		applyMask(matrix, chosen);
 		drawFormatBits(matrix, level, chosen);
 
-		let { size, dark } = matrix;
-		return success({
-			version,
-			level,
-			mask: chosen,
-			size,
-			isDark(x, y) {
-				return x >= 0 && x < size && y >= 0 && y < size && dark[y * size + x] === 1;
-			},
-		});
+		return success(new QR(version, level, chosen, matrix));
 	}
 
 	/**
-	 * Path data for `symbol`: one rectangle per horizontal run of dark modules, one unit per
+	 * Whether the module at (x, y) is dark. Coordinates outside the symbol answer `false`, so
+	 * a renderer draws the quiet zone by reading past the edge.
+	 */
+	isDark(x: number, y: number): boolean {
+		let { size } = this;
+		return x >= 0 && x < size && y >= 0 && y < size && this.#dark[y * size + x] === 1;
+	}
+
+	/**
+	 * Path data for this symbol: one rectangle per horizontal run of dark modules, one unit per
 	 * module, offset by `margin` so the viewBox includes the quiet zone. It returns attribute
 	 * values, so the caller's renderer owns the markup.
 	 *
-	 * @param symbol - A symbol from `QR.encode`
 	 * @param options - The quiet zone width
 	 * @returns The path, its viewBox and its side length in modules
-	 * @example let { d, viewBox } = QR.toSVGPath(symbol);
+	 * @example let { d, viewBox } = qr.toSVGPath();
 	 */
-	static toSVGPath(symbol: QrSymbol, options: SvgPathOptions = {}): SvgPath {
-		return svgPath(symbol, options);
+	toSVGPath(options: SvgPathOptions = {}): SvgPath {
+		return svgPath(this, options);
 	}
 }
 

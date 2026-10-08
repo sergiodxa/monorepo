@@ -37,7 +37,7 @@ test("draws dark modules over a light background at the given size", async () =>
 	expect(html).toContain('height="10rem"');
 	expect(html).toContain('shape-rendering="crispEdges"');
 	expect(html).toContain('<rect width="100%" height="100%" fill="#fff"');
-	expect(html).toContain(`<path d="${QR.toSVGPath(SYMBOL).d}" fill="#000"`);
+	expect(html).toContain(`<path d="${SYMBOL.toSVGPath().d}" fill="#000"`);
 });
 
 test("defaults to 12rem and accepts brand colors", async () => {

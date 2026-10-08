@@ -9,7 +9,7 @@
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { QrLevel, QrOptions, QrSymbol } from "./encode.js";
+import type { QrLevel, QrOptions } from "./encode.js";
 
 import { dataCodewords, QR, interleave, QrError } from "./encode.js";
 import FIXTURES from "./fixtures/nayuki.json" with { type: "json" };
@@ -17,7 +17,7 @@ import { textSegments, totalBits } from "./segment.js";
 import { dataCodewordCount } from "./tables.js";
 
 /** A symbol as `#` (dark) and `.` (light) rows, the fixtures' notation. */
-function rows(symbol: QrSymbol): string[] {
+function rows(symbol: QR): string[] {
 	let result: string[] = [];
 	for (let y = 0; y < symbol.size; y++) {
 		let row = "";
@@ -112,6 +112,12 @@ describe("version selection", () => {
 				dataCodewordCount(below, level) * 8,
 			);
 		}
+	});
+
+	test("answers a QR instance", () => {
+		let symbol = unwrap(QR.encode("HELLO"));
+		expect(symbol).toBeInstanceOf(QR);
+		expect(symbol.toSVGPath().size).toBe(symbol.size + 8);
 	});
 
 	test("an empty string is a version 1 symbol", () => {

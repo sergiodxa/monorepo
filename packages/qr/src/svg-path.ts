@@ -6,9 +6,9 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { QrSymbol } from "./encode.js";
+import type { QR } from "./encode.js";
 
-/** How `QR.toSVGPath` frames the symbol. */
+/** How `toSVGPath` frames the symbol. */
 export interface SvgPathOptions {
 	/**
 	 * Light modules around the symbol. The standard asks for 4; a smaller value suits a code
@@ -30,7 +30,10 @@ export interface SvgPath {
 }
 
 /** Path data for `symbol`, offset by `margin` so the viewBox includes the quiet zone. */
-export function svgPath(symbol: QrSymbol, options: SvgPathOptions = {}): SvgPath {
+export function svgPath(
+	symbol: Pick<QR, "size" | "isDark">,
+	options: SvgPathOptions = {},
+): SvgPath {
 	let { margin = 4 } = options;
 	let commands: string[] = [];
 

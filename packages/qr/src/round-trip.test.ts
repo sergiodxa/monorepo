@@ -13,7 +13,7 @@ import { unwrap } from "@sdxc/result";
 import jsQR from "jsqr";
 import { describe, expect, test } from "vitest";
 
-import type { QrLevel, QrSymbol } from "./encode.js";
+import type { QrLevel } from "./encode.js";
 
 import { QR } from "./encode.js";
 
@@ -32,7 +32,7 @@ const POOLS = [
 ];
 
 /** The symbol as an RGBA image with its quiet zone, as a camera frame would hold it. */
-function decode(symbol: QrSymbol) {
+function decode(symbol: QR) {
 	let side = (symbol.size + MARGIN * 2) * SCALE;
 	let pixels = new Uint8ClampedArray(side * side * 4);
 	for (let py = 0; py < side; py++) {

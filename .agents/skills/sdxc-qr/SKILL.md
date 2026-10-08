@@ -1,11 +1,11 @@
 ---
 name: sdxc-qr
-description: "@sdxc/qr encodes text or bytes as a QR Code Model 2 symbol — `QR.encode(data, { level, minVersion, maxVersion, mask, boostLevel })` answering `Result<QrSymbol, QrError>` — builds SVG path data with `QR.toSVGPath(symbol, { margin })`, and renders it with the `QrCode` component from `@sdxc/qr/component`. Use when a page must show a QR code: an `otpauth://` URI during TOTP enrolment, a device-grant `verification_uri_complete`, any link a phone should scan; or when drawing a code in a terminal or custom renderer from `isDark(x, y)`."
+description: "@sdxc/qr encodes text or bytes as a QR Code Model 2 symbol — `QR.encode(data, { level, minVersion, maxVersion, mask, boostLevel })` answering `Result<QR, QrError>` — builds SVG path data with the instance's `toSVGPath({ margin })`, and renders it with the `QrCode` component from `@sdxc/qr/component`. Use when a page must show a QR code: an `otpauth://` URI during TOTP enrolment, a device-grant `verification_uri_complete`, any link a phone should scan; or when drawing a code in a terminal or custom renderer from `isDark(x, y)`."
 ---
 
 # @sdxc/qr
 
-`QR.encode` picks the smallest version that holds the optimally segmented data (numeric, alphanumeric and UTF-8 byte runs), adds Reed–Solomon correction, and chooses the lowest-penalty mask. It answers a `Result`; the symbol exposes `version`, `level`, `mask`, `size` and `isDark(x, y)`, which answers `false` outside the symbol. `QR.toSVGPath` turns a symbol into `{ d, viewBox, size }` with the quiet zone included. `QrCode` (from `@sdxc/qr/component`, needs `remix`) renders an inline `<svg role="img">` with fixed dark-on-light colors and `forced-color-adjust: none`. The main entry depends only on `@sdxc/result` and does no work at import time, so it runs in a Worker.
+`QR.encode` picks the smallest version that holds the optimally segmented data (numeric, alphanumeric and UTF-8 byte runs), adds Reed–Solomon correction, and chooses the lowest-penalty mask. It answers a `Result` holding a `QR` instance with `version`, `level`, `mask`, `size` and `isDark(x, y)`, which answers `false` outside the symbol; `qr.toSVGPath()` turns it into `{ d, viewBox, size }` with the quiet zone included. `QrCode` (from `@sdxc/qr/component`, needs `remix`) renders an inline `<svg role="img">` with fixed dark-on-light colors and `forced-color-adjust: none`. The main entry depends only on `@sdxc/result` and does no work at import time, so it runs in a Worker.
 
 Full API, options and examples: [packages/qr/README.md](packages/qr/README.md)
 

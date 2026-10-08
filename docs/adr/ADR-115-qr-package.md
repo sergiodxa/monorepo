@@ -87,7 +87,7 @@ Add `@sdxc/qr`: a QR Code Model 2 encoder in plain TypeScript, an SVG path build
 import { QR } from "@sdxc/qr";
 
 let encoded = QR.encode("otpauth://totp/Acme:ada%40example.com?secret=…", { level: "M" });
-// Result<QrSymbol, QrError>
+// Result<QR, QrError>
 ```
 
 | Option       | Default  | Meaning                                                                                      |
@@ -104,7 +104,9 @@ one byte-mode segment, for a caller encoding something that is not text.
 ```typescript
 export type QrLevel = "L" | "M" | "Q" | "H";
 
-export interface QrSymbol {
+export class QR {
+	static encode(data: string | Uint8Array, options?: QrOptions): Result<QR, QrError>;
+
 	/** 1–40; the symbol is `17 + 4 * version` modules a side. */
 	readonly version: number;
 	/** The level actually applied, which `boostLevel` may have raised. */
@@ -114,11 +116,13 @@ export interface QrSymbol {
 	readonly size: number;
 	/** Coordinates outside the symbol answer `false`, so a renderer draws the quiet zone by reading past the edge. */
 	isDark(x: number, y: number): boolean;
+	toSVGPath(options?: { margin?: number }): { d: string; viewBox: string; size: number };
 }
 ```
 
-The encoded value is named `QrSymbol`, the standard's word for one complete code, which leaves
-`QrCode` free for the component; an app imports both on one page.
+The encoded value is a `QR` instance, and `QR.encode` is the only way to get one, so every
+instance holds a valid symbol and carries its own renderers; the component is `QrCode`, and an
+app imports both on one page.
 
 ### Segmentation
 
@@ -160,9 +164,7 @@ capping `maxVersion` to keep a code small on screen is the one that sees it.
 ### SVG path data
 
 ```typescript
-import { QR } from "@sdxc/qr";
-
-let path = QR.toSVGPath(symbol, { margin: 4 });
+let path = symbol.toSVGPath({ margin: 4 });
 // { d: "M4 4h7v1h-7zM12 4h1v1h-1z…", viewBox: "0 0 53 53", size: 53 }
 ```
 
@@ -200,7 +202,7 @@ It renders:
 
 | Prop     | Default  | Notes                                                                           |
 | -------- | -------- | ------------------------------------------------------------------------------- |
-| `symbol` | Required | A `QrSymbol` from `QR.encode`                                                   |
+| `symbol` | Required | A `QR` from `QR.encode`                                                         |
 | `label`  | Required | The accessible name, which says what the code is for; the package ships no copy |
 | `size`   | `12rem`  | A CSS length for the rendered width and height                                  |
 | `margin` | `4`      | Quiet zone in modules                                                           |
@@ -208,7 +210,7 @@ It renders:
 | `light`  | `#fff`   | Background and quiet zone color                                                 |
 | `mix`    | None     | Passed through to the `<svg>`                                                   |
 
-**It takes a `QrSymbol`, not the text.** Encoding answers a `Result`, and a render function has
+**It takes a `QR`, not the text.** Encoding answers a `Result`, and a render function has
 no way to return one. The controller encodes, logs a failure, and renders the page without the
 code, which works because every page that shows a QR also shows its text alternative.
 
@@ -332,7 +334,7 @@ rather than a fixed set of renderers.
 
 - **Optimal segmentation produces different matrices than single-mode generators** for mixed
   input. Both are valid; the known-answer fixtures record which reference produced each one.
-- **The component's input is a `QrSymbol`,** so a page encodes in its controller before it
+- **The component's input is a `QR`,** so a page encodes in its controller before it
   renders.
 
 ## Implementation Plan
@@ -342,7 +344,7 @@ rather than a fixed set of renderers.
 **Priority:** High
 **Estimated Effort:** 6 hours
 
-1. Create `packages/qr`, public, with `QR.encode`, `QR.toSVGPath`, `QrSymbol`, `QrLevel` and `QrError`.
+1. Create `packages/qr`, public, with `QR` (`encode`, `isDark`, `toSVGPath`), `QrLevel` and `QrError`.
 2. Known-answer tests under `src/`:
    - The ISO/IEC 18004 annex example, `"01234567"` at 1-M with `boostLevel: false`: the data
      codewords `10 20 0C 56 61 80 EC 11 …`, the error correction codewords, and the matrix.
