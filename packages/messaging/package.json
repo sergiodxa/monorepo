@@ -1,7 +1,6 @@
 {
 	"name": "@sdxc/messaging",
 	"version": "0.0.1",
-	"private": true,
 	"description": "Send one portable message to Slack, Discord, Teams, Google Chat, Telegram, WhatsApp, ntfy, Pushover, PagerDuty, Opsgenie or a signed webhook",
 	"license": "MIT",
 	"type": "module",
