@@ -126,6 +126,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"web-push",
 			"hostname",
 			"doh",
+			"zone-file",
 			"mcp",
 			"cloudflare-pricing",
 		],
