@@ -1534,7 +1534,7 @@ hierarchy, and leaves MCP's synchronous `available` and server-rendered pages un
 - [x] Phase 3: Core
 - [x] Phase 4: Testing helpers
 - [x] Phase 5: Adapters
-- [ ] Phase 6: First consumers
+- [x] Phase 6: First consumers
 
 ## Notes
 
