@@ -30,8 +30,16 @@ The account also needs:
 
 ## 2. Register the app with its outside services
 
-- **Sign-in.** Register an OAuth client at `auth.sergiodxa.com` whose redirect URI is
-  `https://reader.sergiodxa.com/auth`. Its id and secret are `CLIENT_ID` and `CLIENT_SECRET`.
+- **Sign-in.** In the admin area of `auth.sergiodxa.com`, create a confidential client:
+  - **Redirect URI** `https://reader.sergiodxa.com/auth`, where sign-in returns.
+  - **Logout URI** `https://reader.sergiodxa.com/`, where signing out returns. The provider
+    redirects back only to a client's registered logout URI, so without it a reader who signs
+    out is left on the provider's page.
+  - The scopes `openid`, `profile`, `email` and `offline_access`; the last earns the refresh
+    token that keeps a reader signed in past the access token's hour.
+
+  The id and the secret it reveals once are `CLIENT_ID` and `CLIENT_SECRET`.
+
 - **Billing.** In Polar, create the paid and premium products, and add a webhook endpoint at
   `https://reader.sergiodxa.com/webhooks/billing` delivering `checkout.completed`,
   `subscription.activated`, `subscription.updated`, `subscription.canceled`,
