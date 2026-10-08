@@ -165,10 +165,14 @@ The other providers follow the same shape:
 | `@sdxc/messaging/whatsapp`    | `WhatsAppCloud`     | `accessToken`, `phoneNumberId`, `to`, `template` |
 | `@sdxc/messaging/ntfy`        | `Ntfy`              | `topic`, `server?`, `token?`                     |
 | `@sdxc/messaging/pushover`    | `Pushover`          | `token`, `user`, `emergency?`                    |
+| `@sdxc/messaging/web-push`    | `BrowserPush`       | `push`, `subscription`, `ttl?`                   |
 
 `WhatsAppCloud` sends approved templates only, since WhatsApp accepts free-form text only in
 the 24 hours after the recipient last wrote; `template.parameters(message)` maps the message
 onto the template's body parameters. Google Chat threads every message with the same `key`.
+`BrowserPush` notifies one browser and needs `@sdxc/web-push` installed beside it; [Send
+browser push notifications](/docs/data-and-background-work/browser-push) covers subscribing
+and storing the browser.
 
 ## Check a pasted URL before saving it
 
@@ -597,4 +601,6 @@ ships from its own subpath.
 - [Receive and send webhooks](/docs/identity-and-security/webhooks) — the receiving side of a
   signed delivery, with replay protection.
 - [Send email](/docs/data-and-background-work/send-email) — the same job shape for mail.
+- [Send browser push notifications](/docs/data-and-background-work/browser-push) — subscribing
+  a browser, and the `BrowserPush` destination.
 - [`@sdxc/messaging`](/api/messaging) — every provider's options and error codes.

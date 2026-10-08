@@ -123,6 +123,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 			"attribution",
 			"mail",
 			"messaging",
+			"web-push",
 			"hostname",
 			"doh",
 			"mcp",
