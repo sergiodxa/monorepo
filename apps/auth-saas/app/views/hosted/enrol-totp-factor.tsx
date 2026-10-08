@@ -63,7 +63,7 @@ export function EnrolTotpFactorPage(handle: Handle<EnrolTotpFactorPage.Props>) {
 
 					{qr && (
 						<QrCode
-							symbol={qr}
+							path={qr.toSVGPath()}
 							label={t("hostedSecondFactor.enrol.qrLabel")}
 							mix={[css({ alignSelf: "center" })]}
 						/>
