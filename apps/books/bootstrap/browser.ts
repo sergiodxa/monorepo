@@ -1,8 +1,7 @@
 /**
- * Client runtime entry point. Every page today is server-rendered HTML with
- * native form validation, and this file stays wired into the Vite build so
- * linking it from the document layout is the only step adding an island
- * would need.
+ * Client runtime entry point. Every page is server-rendered HTML with native
+ * form validation, and this file stays wired into the Vite build so a page
+ * carrying an island needs only to pass `hydrates` to the document layout.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,10 +9,16 @@
 
 import { run } from "remix/component";
 
+/**
+ * Modules the runtime may hydrate: the islands, which belong in `resources/components/`.
+ * Layouts and views stay out, since bundling them would ship their stylesheets twice, once
+ * with the server's document and once in a chunk no page asks for. Tests reach for the
+ * server application, so they stay out too.
+ */
 const clientModules = import.meta.glob([
 	"!../**/*.server.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+	"!../**/*.test.*",
+	"../resources/components/**/*.{ts,tsx}",
 ]);
 
 /**

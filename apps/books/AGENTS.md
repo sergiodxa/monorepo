@@ -96,7 +96,21 @@ submitting states, on purpose — the browser's own progress indication covers a
 navigation, and reintroducing them would mean shipping this site's only client bundle.
 
 `bootstrap/browser.ts` stays wired into the Vite build so an island can be added later,
-but nothing links it.
+but nothing links it: the document layout writes the import map, the module preloads and
+the entry script only for a page that passes `hydrates`, and no page does. An island goes
+in `resources/components/`, the only directory the entry's `import.meta.glob` reads; a
+layout or view in the client bundle compiles its stylesheets a second time, and every page
+would link both copies.
+
+## Assets
+
+The document links its stylesheets and the client entry through `documentAssets()` in
+`app/lib/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes. A build
+hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a
+file the next build renames. A stylesheet joins by a side-effect `import "….css"` in
+`resources/layouts/document.tsx`, in cascade order. The renderer looks the assets up per
+render, since a Worker may not await at module scope; tests read the fixed manifest in
+`app/lib/test/assets-manifest.ts`, aliased in the root Vitest config.
 
 ## Cross-origin protection
 

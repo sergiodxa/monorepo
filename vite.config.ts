@@ -319,7 +319,12 @@ export default defineConfig({
 			{
 				root: "apps/books",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/books/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "books",
 					include: ["**/*.test.ts?(x)"],

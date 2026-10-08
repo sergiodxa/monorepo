@@ -13,6 +13,7 @@ import type { MemoryDiscountSeed } from "@sdxc/billing/providers/memory";
 import { describe, expect, test } from "vitest";
 
 import { Discounts, Product } from "~/app/data/product";
+import { CLIENT_ENTRY_HREF } from "~/app/lib/test/assets-manifest";
 import { memoryBilling, withUnreadableDiscounts } from "~/app/lib/test/billing";
 import { fetchApp } from "~/app/lib/test/router";
 
@@ -111,6 +112,8 @@ describe("GET /release", () => {
 	test("loads no first-party JavaScript", async () => {
 		let body = await load(memoryBilling()).then((response) => response.text());
 
-		expect(body).not.toContain("clientEntry");
+		expect(body).not.toContain(CLIENT_ENTRY_HREF);
+		expect(body).not.toContain('type="importmap"');
+		expect(body).not.toContain('rel="modulepreload"');
 	});
 });

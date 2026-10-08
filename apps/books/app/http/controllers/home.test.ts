@@ -9,6 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
 import { BROWSER } from "~/app/lib/test/attribution";
 import { fetchApp } from "~/app/lib/test/router";
 
@@ -57,7 +58,15 @@ describe("GET /", () => {
 	test("loads no first-party JavaScript", async () => {
 		let body = await fetchApp("/").then((response) => response.text());
 
-		expect(body).not.toContain("clientEntry");
+		expect(body).not.toContain(CLIENT_ENTRY_HREF);
+		expect(body).not.toContain('type="importmap"');
+		expect(body).not.toContain('rel="modulepreload"');
 		expect(body).toContain("static.cloudflareinsights.com");
+	});
+
+	test("links the stylesheet the asset manifest names", async () => {
+		let body = await fetchApp("/").then((response) => response.text());
+
+		expect(body).toContain(`<link rel="stylesheet" href="${STYLESHEET_HREF}"`);
 	});
 });

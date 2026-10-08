@@ -154,6 +154,7 @@
     "apps/books": {
       "name": "@apps/books",
       "dependencies": {
+        "@pitlane/assets": "0.1.0",
         "@sdxc/attribution": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/email-address": "workspace:*",
@@ -176,6 +177,7 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "2.0.0-beta.sha-ad79608dd",
+        "@pitlane/vite-plugin-remix": "0.8.0",
         "cf": "1.0.0-beta.5",
         "vite": "^8.2.2",
       },

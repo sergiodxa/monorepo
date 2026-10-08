@@ -38,9 +38,11 @@ import * as sample from "~/app/http/controllers/sample";
 import subscribe from "~/app/http/controllers/subscribe";
 import * as upgrade from "~/app/http/controllers/upgrade";
 import polarWebhook from "~/app/http/controllers/webhooks/polar";
+import { documentAssets } from "~/app/lib/assets";
 import { polar } from "~/app/lib/billing";
 import { attributionCookie } from "~/app/lib/cookies";
 import { buttondown } from "~/app/lib/newsletter";
+import { DocumentAssets } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
@@ -105,13 +107,18 @@ export default function application(provider: Billing = polar, list: Newsletter 
 
 /**
  * Creates the request-scoped renderer reached through `ctx.render` for a
- * fully server-rendered site. `createHtmlResponse` prepends `<!DOCTYPE html>`
- * to the stream's first chunk, the only point JSX rendering leaves to add it.
+ * fully server-rendered site. It looks the document's assets up per render and
+ * hands them to the layout; `createHtmlResponse` prepends `<!DOCTYPE html>` to
+ * the stream's first chunk, the only point JSX rendering leaves to add it.
  */
-function createHtmlRenderer(_ctx: RequestContext) {
-	return function render(node: RemixNode, init?: ResponseInit) {
+export function createHtmlRenderer(_ctx: RequestContext) {
+	return async function render(node: RemixNode, init?: ResponseInit) {
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
-		return createHtmlResponse(renderToStream(node), { ...init, headers });
+
+		let assets = await documentAssets();
+		let stream = renderToStream(<DocumentAssets value={assets}>{node}</DocumentAssets>);
+
+		return createHtmlResponse(stream, { ...init, headers });
 	};
 }
