@@ -410,6 +410,21 @@ export class AlertEmail implements Email {
 						value: snapshotDateTime(snapshot.expiresAt, locale, none),
 					},
 				];
+
+			case "registration":
+				return [
+					{ label: t("emails.alert.fields.domain"), value: snapshot.domain },
+					{ label: t("emails.alert.fields.status"), value: snapshot.status },
+					{
+						label: t("emails.alert.fields.expiresAt"),
+						value: snapshotDateTime(snapshot.expiresAt, locale, none),
+					},
+					{ label: t("emails.alert.fields.registrar"), value: snapshot.registrar ?? none },
+					{
+						label: t("emails.alert.fields.eppStatuses"),
+						value: snapshot.eppStatuses.length === 0 ? none : snapshot.eppStatuses.join(", "),
+					},
+				];
 		}
 	}
 }

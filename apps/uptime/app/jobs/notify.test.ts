@@ -26,7 +26,7 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
 interface NotifyCall {
-	helper: "tcp" | "dns" | "cron" | "flow" | "ssl";
+	helper: "tcp" | "dns" | "cron" | "flow" | "ssl" | "registration";
 	monitorId: string;
 	monitorName: string;
 	previousStatus: unknown;
@@ -58,6 +58,7 @@ let notifyDnsResultMock = vi.fn(recordCall("dns"));
 let notifyCronJobResultMock = vi.fn(recordCall("cron"));
 let notifyFlowResultMock = vi.fn(recordCall("flow"));
 let notifySslResultMock = vi.fn(recordCall("ssl"));
+let notifyRegistrationResultMock = vi.fn(recordCall("registration"));
 
 /**
  * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and this
@@ -75,6 +76,7 @@ vi.doMock("~/app/services/alerts", () => ({
 	notifyCronJobResult: notifyCronJobResultMock,
 	notifyFlowResult: notifyFlowResultMock,
 	notifySslResult: notifySslResultMock,
+	notifyRegistrationResult: notifyRegistrationResultMock,
 }));
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
@@ -125,6 +127,8 @@ beforeEach(() => {
 	notifyFlowResultMock.mockImplementation(recordCall("flow"));
 	notifySslResultMock.mockReset();
 	notifySslResultMock.mockImplementation(recordCall("ssl"));
+	notifyRegistrationResultMock.mockReset();
+	notifyRegistrationResultMock.mockImplementation(recordCall("registration"));
 	notifyCalls = [];
 });
 
@@ -345,6 +349,43 @@ describe("notify", () => {
 		/** `notifySslResult` takes the status where the other helpers take a result object. */
 		expect(notifyCalls[0]!.previousStatus).toBe("expiring");
 		expect(notifyCalls[0]!.payload).toBe(5);
+	});
+
+	test("dispatches a registration transition against the DNS monitor it belongs to", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await DnsMonitor.create(db, "team-1", { name: "Acme", domain: "acme.com" });
+
+		await runJob(db, {
+			monitorType: "registration",
+			monitorId: monitor.id,
+			previousStatus: "valid",
+			newStatus: "expiring",
+		});
+
+		expect(notifyCalls).toEqual([
+			{
+				helper: "registration",
+				monitorId: monitor.id,
+				monitorName: "Acme",
+				previousStatus: "valid",
+				payload: "expiring",
+			},
+		]);
+	});
+
+	test("finishes a registration transition naming a status registrations never have", async () => {
+		let { db } = createTestDatabase();
+		let monitor = await DnsMonitor.create(db, "team-1", { name: "Acme", domain: "acme.com" });
+
+		await expect(
+			runJob(db, {
+				monitorType: "registration",
+				monitorId: monitor.id,
+				previousStatus: "valid",
+				newStatus: "down",
+			}),
+		).rejects.toBeInstanceOf(Job.NonRetriable);
+		expect(notifyCalls).toHaveLength(0);
 	});
 
 	test("acknowledges a monitor that no longer exists", async () => {

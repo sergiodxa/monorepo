@@ -11,12 +11,43 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@sdxc/uuid";
+import { getTableName } from "remix/data-table";
 
+import type { RegistrationPatch } from "~/app/services/domain-registration";
 import type { InsertDnsMonitor, SelectDnsMonitor, SelectDnsMonitorResult } from "~/database/schema";
 
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { dnsMonitorResults, dnsMonitors } from "~/database/schema";
+
+/**
+ * How long a claimed registration lookup holds its monitor before another sweep may take it:
+ * the lookup writes its real next time well within this, so the lease only matters when a
+ * sweep dies mid-batch or a delivery is replayed.
+ */
+const REGISTRATION_LEASE_MS = 60 * 60 * 1000;
+
+/**
+ * What a registration lookup reads, projected so `team_id` (whose cost) and `name` (the alert
+ * body) cost no second read. Only non-boolean, non-JSON columns, which arrive as stored.
+ */
+const REGISTRATION_CLAIM_COLUMNS = [
+	"id",
+	"team_id",
+	"name",
+	"domain",
+	"registration_status",
+	"registration_expires_at",
+	"registration_warning_days",
+	"registration_checked_at",
+	"registration_failures",
+] as const;
+
+/** A DNS monitor claimed for a registration lookup, projected to the columns it reads. */
+export type ClaimedRegistration = Pick<
+	SelectDnsMonitor,
+	(typeof REGISTRATION_CLAIM_COLUMNS)[number]
+>;
 
 /** Per-team limit from `docs/dns-monitors.md`. */
 export const MAX_DNS_MONITORS_PER_TEAM = 20;
@@ -202,5 +233,37 @@ export default class DnsMonitor {
 		);
 
 		return id;
+	}
+
+	/**
+	 * Claims up to `limit` enabled monitors whose registration lookup is due, oldest due first,
+	 * leasing each for an hour so an overlapping sweep cannot look the same domain up twice.
+	 * A monitor never looked up (`NULL`) is due at once.
+	 */
+	static async claimRegistrationDue(
+		db: Database,
+		now: number,
+		limit: number,
+	): Promise<ClaimedRegistration[]> {
+		let table = getTableName(dnsMonitors);
+		let claimed = await db.exec(
+			`UPDATE ${table}
+			    SET registration_next_check_at = ?
+			  WHERE id IN (
+			        SELECT id FROM ${table}
+			         WHERE is_enabled = 1
+			           AND (registration_next_check_at IS NULL OR registration_next_check_at <= ?)
+			         ORDER BY coalesce(registration_next_check_at, 0)
+			         LIMIT ?)
+			RETURNING ${REGISTRATION_CLAIM_COLUMNS.join(", ")}`,
+			[now + REGISTRATION_LEASE_MS, now, limit],
+		);
+
+		return (claimed.rows ?? []) as unknown as ClaimedRegistration[];
+	}
+
+	/** Writes one lookup's outcome, its next lookup time included. */
+	static async recordRegistration(db: Database, monitorId: string, patch: RegistrationPatch) {
+		await db.update(dnsMonitors, monitorId, patch, { touch: true });
 	}
 }

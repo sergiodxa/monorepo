@@ -330,6 +330,68 @@ describe("dnsMonitorShow", () => {
 		expect(dangerCount(withWatched)).toBe(baseline + 1);
 	});
 
+	test("shows the registration the registry last published", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Production DNS",
+				domain: "example.com",
+				registration_status: "expiring",
+				registration_expires_at: Date.UTC(2026, 10, 1),
+				registrar: "Example Registrar, LLC",
+				registration_epp_statuses: ["clientTransferProhibited"],
+				registration_checked_at: Date.UTC(2026, 9, 8),
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Registration");
+		expect(body).toContain("Expiring");
+		expect(body).toContain("Example Registrar, LLC");
+		expect(body).toContain("clientTransferProhibited");
+		expect(body).toContain("2026");
+	});
+
+	test("explains a registration the registry cannot publish", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Swiss DNS",
+				domain: "example.ch",
+				registration_status: "unavailable",
+				registration_error: "unsupported-tld",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Unavailable");
+		expect(body).toContain("does not publish registration data over RDAP");
+	});
+
+	test("reads a monitor never looked up as not looked up yet", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = await db.create(
+			dnsMonitors,
+			{ id: crypto.randomUUID(), team_id: team.id, name: "New DNS", domain: "example.com" },
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership, monitor.id)).text();
+
+		expect(body).toContain("Not looked up yet");
+		expect(body).not.toContain("does not publish registration data");
+	});
+
 	test("404s for a monitor that doesn't belong to the team", async () => {
 		let { db, team, membership } = await createFixture();
 

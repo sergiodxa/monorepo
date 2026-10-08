@@ -182,11 +182,22 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 		);
 	}
 
-	let { monitor_id, ...values } = result.data;
+	let { monitor_id, registration_warning_days, ...values } = result.data;
 	let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await DnsMonitor.updateById(ctx.db, monitor_id, values);
+	/**
+	 * A new warning window reclassifies the stored expiry date, so the registration is looked
+	 * up again on the next sweep rather than keeping the old classification for up to a day.
+	 */
+	let windowChanged =
+		registration_warning_days !== undefined &&
+		registration_warning_days !== existing.registration_warning_days;
+
+	await DnsMonitor.updateById(ctx.db, monitor_id, {
+		...values,
+		...(windowChanged ? { registration_warning_days, registration_next_check_at: null } : {}),
+	});
 
 	session?.flash("toast", {
 		intent: "success",

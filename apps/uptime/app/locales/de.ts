@@ -1355,6 +1355,8 @@ export default {
 				failedTest: "Fehlgeschlagener Test",
 				failureDetail: "Was fehlgeschlagen ist",
 				duration: "Dauer",
+				registrar: "Registrar",
+				eppStatuses: "Registry-Status",
 			},
 
 			values: {
@@ -3360,6 +3362,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "Registrierungswarnung (Tage)",
+						description:
+							"Wie viele Tage vor Ablauf der Registrierung die Benachrichtigungen beginnen. Erinnerungen folgen nach 30, 14, 7 und 1 Tag.",
+						decrement: "Weniger Tage",
+						increment: "Mehr Tage",
+					},
+
 					name: {
 						label: "Monitor-Name",
 						placeholder: "Produktions-DNS",
@@ -3445,6 +3455,39 @@ export default {
 				recordsWatchedValue: "{$enabled} von {$total}",
 				zoneFileImported: "Zonendatei importiert",
 				zoneFileNeverImported: "Nie – nur Apex",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Registrierung",
+				description:
+					"Wird einmal täglich bei der Registry der Domain abgefragt. Du wirst ab {$days} Tagen vor Ablauf der Registrierung benachrichtigt.",
+				status: "Registrierung",
+				expiresAt: "Läuft ab",
+				registrar: "Registrar",
+				checkedAt: "Zuletzt abgefragt",
+				eppStatuses: "Registry-Status",
+				never: "Nie",
+				notPublished: "Nicht veröffentlicht",
+
+				statuses: {
+					unknown: "Noch nicht abgefragt",
+					valid: "Gültig",
+					expiring: "Läuft bald ab",
+					expired: "Abgelaufen",
+					unavailable: "Nicht verfügbar",
+					error: "Abfrage schlägt fehl",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"Die Registry kennt diese Domain nicht. Prüfe, ob es der registrierte Name und keine Subdomain ist.",
+					unsupportedTld:
+						"Die Registry dieser Domain veröffentlicht keine Registrierungsdaten über RDAP, daher kann das Ablaufdatum nicht gelesen werden.",
+					failing:
+						"Die letzte Abfrage ist fehlgeschlagen ({$code}). Sie wird automatisch wiederholt, und das zuletzt bekannte Ablaufdatum löst bis dahin weiter Benachrichtigungen aus.",
+				},
 			},
 
 			stats: {

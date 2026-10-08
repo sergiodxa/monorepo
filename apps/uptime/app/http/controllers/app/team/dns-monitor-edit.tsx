@@ -28,6 +28,7 @@ import requireUser from "~/app/http/middleware/require-user";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
+import StepperField from "~/resources/components/stepper-field";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import DnsMonitorFormFields from "~/resources/views/dns-monitors/form";
@@ -35,6 +36,9 @@ import routes from "~/routes/web";
 
 /** `id` shared between the danger-zone trigger and its confirmation `AlertDialog`. */
 const DELETE_DIALOG_ID = "delete-dns-monitor";
+
+/** `id` linking the warning-window input to its label and its step buttons. */
+const REGISTRATION_WARNING_DAYS_INPUT_ID = "dns-monitor-registration-warning-days";
 
 /**
  * GET /app/:team/dns/:monitorId/edit — a DNS monitor's edit form; importing a
@@ -93,6 +97,25 @@ export default createAction(routes.app.team.dnsMonitors.edit, {
 												monitor={monitor}
 												intl={ctx.intl}
 												page="editDnsMonitor"
+											/>
+											<StepperField
+												id={REGISTRATION_WARNING_DAYS_INPUT_ID}
+												name="registration_warning_days"
+												label={ctx.intl.t(
+													"page.editDnsMonitor.form.fields.registrationWarningDays.label",
+												)}
+												description={ctx.intl.t(
+													"page.editDnsMonitor.form.fields.registrationWarningDays.description",
+												)}
+												decrementLabel={ctx.intl.t(
+													"page.editDnsMonitor.form.fields.registrationWarningDays.decrement",
+												)}
+												incrementLabel={ctx.intl.t(
+													"page.editDnsMonitor.form.fields.registrationWarningDays.increment",
+												)}
+												min={1}
+												max={365}
+												defaultValue={monitor.registration_warning_days}
 											/>
 										</SettingsSection.Body>
 										<SettingsSection.Footer>

@@ -1322,6 +1322,8 @@ export default {
 				failedTest: "失敗したテスト",
 				failureDetail: "失敗の内容",
 				duration: "所要時間",
+				registrar: "レジストラ",
+				eppStatuses: "レジストリのステータス",
 			},
 
 			values: {
@@ -3291,6 +3293,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "登録期限の通知（日数）",
+						description:
+							"ドメイン登録の期限切れの何日前から通知を始めるか。リマインダーは30日、14日、7日、1日前に繰り返されます。",
+						decrement: "日数を減らす",
+						increment: "日数を増やす",
+					},
+
 					name: {
 						label: "モニター名",
 						placeholder: "本番DNS",
@@ -3374,6 +3384,39 @@ export default {
 				recordsWatchedValue: "{$total}件中{$enabled}件",
 				zoneFileImported: "ゾーンファイルのインポート",
 				zoneFileNeverImported: "なし — Apexのみ",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "ドメイン登録",
+				description:
+					"1日に1回、ドメインのレジストリから取得します。登録の期限切れの{$days}日前から通知します。",
+				status: "登録状態",
+				expiresAt: "有効期限",
+				registrar: "レジストラ",
+				checkedAt: "最終取得",
+				eppStatuses: "レジストリのステータス",
+				never: "なし",
+				notPublished: "公開されていません",
+
+				statuses: {
+					unknown: "未取得",
+					valid: "有効",
+					expiring: "期限間近",
+					expired: "期限切れ",
+					unavailable: "利用不可",
+					error: "取得に失敗",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"レジストリにこのドメインの記録がありません。サブドメインではなく登録済みのドメイン名か確認してください。",
+					unsupportedTld:
+						"このドメインのレジストリはRDAPで登録データを公開していないため、有効期限を取得できません。",
+					failing:
+						"前回の取得に失敗しました（{$code}）。自動的に再試行され、その間は最後に確認した有効期限に基づいて通知が続きます。",
+				},
 			},
 
 			stats: {

@@ -1354,6 +1354,8 @@ export default {
 				failedTest: "Test fallito",
 				failureDetail: "Che cosa è fallito",
 				duration: "Durata",
+				registrar: "Registrar",
+				eppStatuses: "Stati del registro",
 			},
 
 			values: {
@@ -3345,6 +3347,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "Avviso di registrazione (giorni)",
+						description:
+							"Quanti giorni prima della scadenza della registrazione iniziano gli avvisi. I promemoria si ripetono a 30, 14, 7 e 1 giorno.",
+						decrement: "Meno giorni",
+						increment: "Più giorni",
+					},
+
 					name: {
 						label: "Nome Monitor",
 						placeholder: "DNS Produzione",
@@ -3429,6 +3439,39 @@ export default {
 				recordsWatchedValue: "{$enabled} di {$total}",
 				zoneFileImported: "File di Zona Importato",
 				zoneFileNeverImported: "Mai — solo apice",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Registrazione",
+				description:
+					"Letta dal registro del dominio una volta al giorno. Ricevi avvisi a partire da {$days} giorni prima della scadenza della registrazione.",
+				status: "Registrazione",
+				expiresAt: "Scade il",
+				registrar: "Registrar",
+				checkedAt: "Ultima consultazione",
+				eppStatuses: "Stati del registro",
+				never: "Mai",
+				notPublished: "Non pubblicato",
+
+				statuses: {
+					unknown: "Non ancora consultato",
+					valid: "Valida",
+					expiring: "In scadenza",
+					expired: "Scaduta",
+					unavailable: "Non disponibile",
+					error: "Consultazione non riuscita",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"Il registro non ha traccia di questo dominio. Verifica che sia il nome registrato e non un sottodominio.",
+					unsupportedTld:
+						"Il registro di questo dominio non pubblica i dati di registrazione tramite RDAP, quindi la scadenza non può essere letta.",
+					failing:
+						"L'ultima consultazione non è riuscita ({$code}). Viene ripetuta automaticamente e nel frattempo l'ultima data di scadenza nota continua a generare avvisi.",
+				},
 			},
 
 			stats: {

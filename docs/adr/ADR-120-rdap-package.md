@@ -470,15 +470,14 @@ copy needs an owner whose lifetime the caller controls.
 
 - [x] Phase 1: Bootstrap and lookup
 - [x] Phase 2: The model (the npm bootstrap, `bun run release:bootstrap @sdxc/rdap`, runs from a developer machine)
-- [ ] Phase 3: `apps/uptime`
+- [x] Phase 3: `apps/uptime` ([uptime ADR-035](./uptime/ADR-035-domain-registration-expiry.md))
 
 ## Open Questions
 
 1. **Subdomain input.** Should `domain` walk up the labels on `404` (`a.example.co.uk` →
    `example.co.uk`) instead of requiring the registration? It costs a request per extra label at
    a rate-limited server, and the one consumer already holds the apex.
-2. **Metering.** Is a daily RDAP lookup a ping under uptime's metering, or free like the
-   certificate re-check?
+2. **Metering.** Settled by uptime ADR-035: a lookup is free, like the certificate re-check.
 3. **Registrar expiry on thin registries.** When `related: true` returns a registrar expiry that
    differs from the registry's, should the model expose both?
 4. **Fixture licensing.** Registry responses carry terms-of-use notices; confirm committing

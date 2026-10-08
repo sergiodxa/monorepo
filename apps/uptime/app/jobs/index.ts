@@ -25,7 +25,7 @@ interface Monitored {
  */
 const NotifySchema = s.object({
 	monitorId: s.string(),
-	monitorType: s.enum_(["dns", "tcp", "cron", "flow", "ssl"]),
+	monitorType: s.enum_(["dns", "tcp", "cron", "flow", "ssl", "registration"]),
 	previousStatus: s.nullable(s.string()),
 	newStatus: s.string(),
 });
@@ -139,6 +139,12 @@ export default jobs({
 		meta: { monitorId: "2140cbc2-e18e-441c-9ef9-3d516a9e3a19" } satisfies Monitored,
 	}),
 	sendTrialDigests: job({ cron: "0 6 * * *" }),
+	/**
+	 * Hourly: looks up the registrations of the DNS monitors that are due (ADR-035). Each
+	 * monitor is looked up daily; the hourly delivery lets a failed lookup retry within the
+	 * hour instead of waiting a whole day.
+	 */
+	checkDomainRegistrations: job({ cron: "0 * * * *" }),
 	sendFunnelReport: job({
 		cron: "0 7 * * *",
 		meta: { monitorId: "b6f2e0a4-9c31-4d58-a0e7-5f8c1b2d47a9" } satisfies Monitored,

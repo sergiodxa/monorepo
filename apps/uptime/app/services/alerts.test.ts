@@ -126,6 +126,7 @@ let {
 	notifyDnsResult,
 	notifyFlowResult,
 	notifyHttpResult,
+	notifyRegistrationResult,
 	notifySslResult,
 	notifyTcpResult,
 	shouldNotifyCronJobResult,
@@ -1336,6 +1337,15 @@ function makeDnsMonitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMon
 		last_checked_at: null,
 		last_status: null,
 		zone_file_imported_at: null,
+		registration_status: "unknown",
+		registration_expires_at: null,
+		registration_epp_statuses: null,
+		registrar: null,
+		registration_warning_days: 30,
+		registration_checked_at: null,
+		registration_error: null,
+		registration_failures: 0,
+		registration_next_check_at: null,
 		...overrides,
 	};
 }
@@ -2172,5 +2182,69 @@ describe("shouldNotifyCronJobResult", () => {
 	test("alerts recovering from missed whether or not late warnings were declined", () => {
 		expect(shouldNotifyCronJobResult("missed", "healthy", silent)).toBe(true);
 		expect(shouldNotifyCronJobResult("missed", "healthy", alerting)).toBe(true);
+	});
+});
+
+describe("notifyRegistrationResult", () => {
+	test("dispatches through the DNS monitor's alerts, recorded as a registration warning", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyRegistrationResult(
+			db,
+			makeMailer(),
+			makeDnsMonitor({
+				registration_expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000 + 60_000,
+				registrar: "Example Registrar, LLC",
+				registration_epp_statuses: ["clientTransferProhibited"],
+			}),
+			"valid",
+			"expiring",
+		);
+
+		expect(listForMonitorMock.mock.calls[0]?.[2]).toBe("dns");
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("degraded");
+		expect(call.monitor_type).toBe("registration");
+		expect(call.snapshot).toMatchObject({
+			type: "registration",
+			status: "expiring",
+			daysUntilExpiry: 7,
+			registrar: "Example Registrar, LLC",
+			eppStatuses: ["clientTransferProhibited"],
+		});
+	});
+
+	test("dispatches a 'down' event while the registry holds the domain out of resolution", async () => {
+		let { db } = createTestDatabase();
+		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+
+		await notifyRegistrationResult(
+			db,
+			makeMailer(),
+			makeDnsMonitor({ registration_epp_statuses: ["serverHold"] }),
+			"valid",
+			"valid",
+		);
+
+		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		expect(call.event_type).toBe("down");
+	});
+
+	test("reads no EPP statuses from a monitor whose last lookup failed", async () => {
+		let { db } = createTestDatabase();
+
+		await notifyRegistrationResult(
+			db,
+			makeMailer(),
+			makeDnsMonitor({
+				registration_epp_statuses: ["serverHold"],
+				registration_error: "server-error",
+			}),
+			"valid",
+			"valid",
+		);
+
+		expect(listForMonitorMock).not.toHaveBeenCalled();
 	});
 });

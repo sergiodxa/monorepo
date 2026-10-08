@@ -1385,6 +1385,8 @@ export default {
 				failedTest: "Failed test",
 				failureDetail: "What failed",
 				duration: "Duration",
+				registrar: "Registrar",
+				eppStatuses: "Registry statuses",
 			},
 
 			values: {
@@ -3366,6 +3368,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "Registration warning (days)",
+						description:
+							"How many days before the domain's registration lapses to start alerting. Reminders repeat at 30, 14, 7 and 1 days.",
+						decrement: "Fewer days",
+						increment: "More days",
+					},
+
 					name: {
 						label: "Monitor Name",
 						placeholder: "Production DNS",
@@ -3448,6 +3458,39 @@ export default {
 				recordsWatchedValue: "{$enabled} of {$total}",
 				zoneFileImported: "Zone File Imported",
 				zoneFileNeverImported: "Never — apex only",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Registration",
+				description:
+					"Read from the domain's registry once a day. You are alerted from {$days} days before the registration lapses.",
+				status: "Registration",
+				expiresAt: "Expires",
+				registrar: "Registrar",
+				checkedAt: "Last looked up",
+				eppStatuses: "Registry statuses",
+				never: "Never",
+				notPublished: "Not published",
+
+				statuses: {
+					unknown: "Not looked up yet",
+					valid: "Valid",
+					expiring: "Expiring",
+					expired: "Expired",
+					unavailable: "Unavailable",
+					error: "Lookup failing",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"The registry has no record of this domain. Check that it is the registered name rather than a subdomain.",
+					unsupportedTld:
+						"This domain's registry does not publish registration data over RDAP, so its expiry cannot be read.",
+					failing:
+						"The last lookup failed ({$code}). It is retried automatically, and the last known expiry date keeps alerting meanwhile.",
+				},
 			},
 
 			stats: {

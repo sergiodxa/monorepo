@@ -108,6 +108,10 @@ dispatcher.map(jobs.reconcileSubscriptions, () => import("~/app/jobs/reconcile-s
 dispatcher.map(jobs.reportCosts, () => import("~/app/jobs/report-costs"));
 dispatcher.map(jobs.deleteAccounts, () => import("~/app/jobs/delete-accounts"));
 dispatcher.map(jobs.checkSsl, () => import("~/app/jobs/check-ssl"));
+dispatcher.map(
+	jobs.checkDomainRegistrations,
+	() => import("~/app/jobs/check-domain-registrations"),
+);
 dispatcher.map(jobs.sendTrialDigests, () => import("~/app/jobs/send-trial-digests"));
 dispatcher.map(jobs.sendFunnelReport, () => import("~/app/jobs/send-funnel-report"));
 dispatcher.map(jobs.sendTeamDailyDigests, () => import("~/app/jobs/send-team-daily-digests"));

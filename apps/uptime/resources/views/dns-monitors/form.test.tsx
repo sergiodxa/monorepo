@@ -41,6 +41,15 @@ function monitor(overrides: Partial<SelectDnsMonitor> = {}): SelectDnsMonitor {
 		last_checked_at: null,
 		last_status: null,
 		zone_file_imported_at: null,
+		registration_status: "unknown",
+		registration_expires_at: null,
+		registration_epp_statuses: null,
+		registrar: null,
+		registration_warning_days: 30,
+		registration_checked_at: null,
+		registration_error: null,
+		registration_failures: 0,
+		registration_next_check_at: null,
 		...overrides,
 	};
 }

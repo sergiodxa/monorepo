@@ -172,6 +172,26 @@ DNS results reach every alert whose scope covers the monitor: your team-wide ale
 
 Notification is edge-triggered on the monitor's status. If a second record is discovered while the monitor is already reporting **Changed**, that discovery does not produce its own immediate email; it appears in the next repeat, whose body lists everything currently outstanding.
 
+## Domain Registration
+
+Every DNS monitor also watches when its domain's registration expires. Once a day the monitor asks the domain's registry over RDAP, the public protocol registries publish registration data through, and shows the expiry date, the registrar and the registry's statuses on the monitor's page. There is nothing to enter, and the lookup costs **no pings**.
+
+| Status             | Description                                                                                                      |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Valid**          | The registration expires after the warning window.                                                               |
+| **Expiring**       | The registration expires within the warning window, 30 days by default.                                          |
+| **Expired**        | The expiry date has passed.                                                                                      |
+| **Unavailable**    | The registry has no record of the domain, or publishes no registration data over RDAP. It is asked again weekly. |
+| **Lookup failing** | No lookup has succeeded within the warning window. Lookups retry on their own, from hourly up to daily.          |
+
+Alerts reach the same alerts as the monitor's DNS results:
+
+- **Expiring** alerts 30, 14, 7 and 1 days before expiry, and every day within the window from there on; **Expired** alerts every day.
+- A registry status of `redemptionPeriod`, `pendingDelete`, `clientHold` or `serverHold` alerts every day whatever the date says: each means the domain has stopped resolving, or is about to.
+- **Lookup failing** alerts once when it begins. While the registry is unreachable, the last expiry date we read keeps alerting as it approaches.
+
+Set the warning window on the monitor's edit page, from 1 to 365 days. The domain must be the registered name, `example.co.uk` rather than `www.example.co.uk`: a registry holds no record for a name below it.
+
 ## Best Practices
 
 ### Paste the zone file

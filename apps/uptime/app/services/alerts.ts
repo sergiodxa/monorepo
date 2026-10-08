@@ -34,6 +34,7 @@ import type {
 	SelectFlowMonitorResult,
 	SelectMonitor,
 	SelectTcpMonitor,
+	RegistrationStatus,
 } from "~/database/schema";
 
 import Alert from "~/app/data/alert";
@@ -48,6 +49,8 @@ import { absoluteUrl } from "~/app/lib/origin";
 import { enqueue } from "~/app/lib/queue";
 import { alertMessage } from "~/app/services/alert-message";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
+import { registrationIsDown, shouldAlertOnRegistration } from "~/app/services/domain-registration";
+import { classifyExpiry } from "~/app/services/expiry";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
 
@@ -76,11 +79,19 @@ export function dashboardUrl(path: string): string {
 
 export type { AlertEventType };
 /**
- * `"ssl"` names a virtual monitor type: SSL checks run against an HTTP monitor's own
- * row, so it resolves and suppresses like `"http"` while recording its own
+ * `"ssl"` and `"registration"` name virtual monitor types: an SSL check runs against an
+ * HTTP monitor's own row and a registration lookup against a DNS monitor's, so each
+ * resolves and suppresses like the monitor it belongs to while recording its own
  * `alert_events.monitor_type` for accurate history.
  */
-export type AlertMonitorKind = MonitorScopeType | "ssl";
+export type AlertMonitorKind = MonitorScopeType | "ssl" | "registration";
+
+/** The monitor type a kind resolves alerts and maintenance windows as. */
+function scopeOf(kind: AlertMonitorKind): MonitorScopeType {
+	if (kind === "ssl") return "http";
+	if (kind === "registration") return "dns";
+	return kind;
+}
 
 export interface DispatchAlertsParams {
 	db: Database;
@@ -107,12 +118,11 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 	apportionCostByTeam([params.teamId]);
 
 	/**
-	 * SSL collapses to `"http"` for both lookups below: a certificate check runs against an
-	 * HTTP monitor's own row, so the windows that cover that monitor and the alerts that
-	 * watch it are the same ones. It stays `"ssl"` everywhere it is recorded.
+	 * A virtual kind collapses to the monitor it belongs to for both lookups below, so the
+	 * windows that cover that monitor and the alerts that watch it are the same ones. It
+	 * keeps its own kind everywhere it is recorded.
 	 */
-	let scopeMonitorType: MonitorScopeType =
-		params.monitorType === "ssl" ? "http" : params.monitorType;
+	let scopeMonitorType = scopeOf(params.monitorType);
 
 	let suppressed = await MaintenanceWindow.isSuppressing(params.db, {
 		teamId: params.teamId,
@@ -714,6 +724,53 @@ export async function notifySslResult(
 		},
 		dashboardUrl: dashboardUrl(
 			routes.app.team.monitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
+		),
+	});
+}
+
+/**
+ * Sends the alert a registration lookup warrants (ADR-035), re-deciding it from the stored
+ * row so a redelivered message answers the same. The EPP statuses count only while the last
+ * lookup succeeded, matching the sweep, which has none to read from a failed one.
+ */
+export async function notifyRegistrationResult(
+	db: Database,
+	mailer: Mailer,
+	monitor: SelectDnsMonitor,
+	previous: RegistrationStatus | null,
+	status: RegistrationStatus,
+): Promise<void> {
+	let { daysUntilExpiry } = classifyExpiry(
+		monitor.registration_expires_at,
+		monitor.registration_warning_days,
+	);
+	let eppStatuses =
+		monitor.registration_error === null ? (monitor.registration_epp_statuses ?? []) : [];
+
+	if (!shouldAlertOnRegistration(previous, status, daysUntilExpiry, eppStatuses)) return;
+
+	await dispatchAlerts({
+		db,
+		mailer,
+		teamId: monitor.team_id,
+		monitorId: monitor.id,
+		monitorType: "registration",
+		monitorName: monitor.name,
+		eventType: registrationIsDown(status, eppStatuses) ? "down" : "degraded",
+		snapshot: {
+			type: "registration",
+			status,
+			domain: monitor.domain,
+			expiresAt:
+				monitor.registration_expires_at === null
+					? null
+					: new Date(monitor.registration_expires_at).toISOString(),
+			daysUntilExpiry,
+			registrar: monitor.registrar,
+			eppStatuses,
+		},
+		dashboardUrl: dashboardUrl(
+			routes.app.team.dnsMonitors.show.href({ team: monitor.team_id, monitorId: monitor.id }),
 		),
 	});
 }

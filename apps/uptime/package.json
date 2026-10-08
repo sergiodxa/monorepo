@@ -53,6 +53,7 @@
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/random": "workspace:*",
 		"@sdxc/rate-limit": "workspace:*",
+		"@sdxc/rdap": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/security-headers": "workspace:*",
 		"@sdxc/seo": "workspace:*",

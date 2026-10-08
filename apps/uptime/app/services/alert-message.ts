@@ -148,6 +148,14 @@ export function snapshotLines(snapshot: AlertEventSnapshot): string[] {
 				`Status: ${snapshot.status}`,
 				`Expires at: ${snapshot.expiresAt ?? "—"}`,
 			];
+		case "registration":
+			return [
+				`Domain: ${snapshot.domain}`,
+				`Status: ${snapshot.status}`,
+				`Expires at: ${snapshot.expiresAt ?? "—"}`,
+				`Registrar: ${snapshot.registrar ?? "—"}`,
+				`Registry statuses: ${snapshot.eppStatuses.length === 0 ? "—" : snapshot.eppStatuses.join(", ")}`,
+			];
 	}
 }
 

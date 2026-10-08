@@ -447,6 +447,52 @@ describe("POST /actions/:team/update-dns-monitor", () => {
 		expect(updated?.name).toBe("New name");
 	});
 
+	test("saves a new registration warning window and looks the domain up again on the next sweep", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id, { name: "Acme" });
+		await db.update(dnsMonitors, monitor.id, { registration_next_check_at: Date.now() + 1000 });
+
+		await postDnsMonitorAction(
+			updateDnsMonitor,
+			routes.actions.monitor.dns.update,
+			team,
+			membership,
+			db,
+			dnsMonitorBody({ monitor_id: monitor.id, registration_warning_days: "60" }),
+		);
+
+		let updated = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(updated?.registration_warning_days).toBe(60);
+		expect(updated?.registration_next_check_at).toBeNull();
+	});
+
+	test("keeps the stored warning window and lookup schedule when the body leaves the window out", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+		let monitor = await createMonitorRow(db, team.id, { name: "Acme" });
+		let nextCheck = Date.now() + 1000;
+		await db.update(dnsMonitors, monitor.id, {
+			registration_warning_days: 45,
+			registration_next_check_at: nextCheck,
+		});
+
+		await postDnsMonitorAction(
+			updateDnsMonitor,
+			routes.actions.monitor.dns.update,
+			team,
+			membership,
+			db,
+			dnsMonitorBody({ monitor_id: monitor.id, name: "Renamed" }),
+		);
+
+		let updated = await db.findOne(dnsMonitors, { where: { id: monitor.id } });
+		expect(updated?.registration_warning_days).toBe(45);
+		expect(updated?.registration_next_check_at).toBe(nextCheck);
+	});
+
 	test("404s when the monitor doesn't belong to the team", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);

@@ -310,6 +310,19 @@ export const monitorContentChecks = table({
 export type SelectMonitorContentCheck = TableRow<typeof monitorContentChecks>;
 export type InsertMonitorContentCheck = InsertRow<typeof monitorContentChecks>;
 
+/** What a DNS monitor's registration lookup can conclude (ADR-035). */
+export const registrationStatuses = [
+	"unknown",
+	"valid",
+	"expiring",
+	"expired",
+	"unavailable",
+	"error",
+] as const;
+
+/** One registration status. */
+export type RegistrationStatus = (typeof registrationStatuses)[number];
+
 export const dnsMonitors = table({
 	name: "dns_monitors",
 	timestamps: { createdAt: "created_at", updatedAt: "updated_at" },
@@ -341,6 +354,26 @@ export const dnsMonitors = table({
 		is_enabled: c.boolean().default(true),
 		last_checked_at: c.integer().nullable(),
 		last_status: c.enum(["ok", "changed", "error"]).nullable(),
+		/**
+		 * The registration's state from the last RDAP lookup (ADR-035). `unavailable` means
+		 * the registry has no record or no RDAP service; `error` means no lookup has succeeded
+		 * within the warning window.
+		 */
+		registration_status: c.enum(registrationStatuses).default("unknown"),
+		/** The registry's expiration date; `null` when it publishes none. */
+		registration_expires_at: c.integer().nullable(),
+		/** EPP statuses from the last successful lookup, such as `clientTransferProhibited`. */
+		registration_epp_statuses: (c.json() as ColumnBuilder<Array<string>>).nullable(),
+		registrar: c.text().nullable(),
+		registration_warning_days: c.integer().default(30),
+		/** When a lookup last succeeded; a failure leaves it, so its age measures the outage. */
+		registration_checked_at: c.integer().nullable(),
+		/** The `RDAPError` code of the last failed lookup, cleared by a success. */
+		registration_error: c.text().nullable(),
+		/** Consecutive failed lookups, which the retry backoff counts. */
+		registration_failures: c.integer().default(0),
+		/** When the next lookup is due; `null` means the next sweep. */
+		registration_next_check_at: c.integer().nullable(),
 	},
 });
 
@@ -657,6 +690,16 @@ export type AlertEventSnapshot =
 			expiresAt: string | null;
 			daysUntilExpiry: number | null;
 			hostname: string;
+	  }
+	/** A domain's registration as the registry last published it (ADR-035). */
+	| {
+			type: "registration";
+			status: string;
+			domain: string;
+			expiresAt: string | null;
+			daysUntilExpiry: number | null;
+			registrar: string | null;
+			eppStatuses: string[];
 	  };
 
 /**
@@ -696,7 +739,7 @@ export const alertEvents = table({
 		event_type: c.enum(["down", "up", "degraded"]),
 		status: c.enum(alertEventStatuses),
 		error_message: c.text().nullable(),
-		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow", "ssl"]).nullable(),
+		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow", "ssl", "registration"]).nullable(),
 		monitor_name: c.text().nullable(),
 		snapshot: (c.json() as ColumnBuilder<AlertEventSnapshot>).nullable(),
 		delivery_ref: (c.json() as ColumnBuilder<AlertDeliveryRef>).nullable(),

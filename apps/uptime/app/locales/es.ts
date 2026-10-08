@@ -1350,6 +1350,8 @@ export default {
 				failedTest: "Prueba fallida",
 				failureDetail: "Qué falló",
 				duration: "Duración",
+				registrar: "Registrador",
+				eppStatuses: "Estados del registro",
 			},
 
 			values: {
@@ -3342,6 +3344,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "Aviso de registro (días)",
+						description:
+							"Cuántos días antes de que venza el registro del dominio empiezan las alertas. Los recordatorios se repiten a los 30, 14, 7 y 1 días.",
+						decrement: "Menos días",
+						increment: "Más días",
+					},
+
 					name: {
 						label: "Nombre del Monitor",
 						placeholder: "DNS de producción",
@@ -3428,6 +3438,39 @@ export default {
 				recordsWatchedValue: "{$enabled} de {$total}",
 				zoneFileImported: "Archivo de zona importado",
 				zoneFileNeverImported: "Nunca — solo el ápex",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Registro",
+				description:
+					"Se consulta en el registro del dominio una vez al día. Recibirás alertas desde {$days} días antes de que venza el registro.",
+				status: "Registro",
+				expiresAt: "Vence",
+				registrar: "Registrador",
+				checkedAt: "Última consulta",
+				eppStatuses: "Estados del registro",
+				never: "Nunca",
+				notPublished: "No publicado",
+
+				statuses: {
+					unknown: "Aún sin consultar",
+					valid: "Vigente",
+					expiring: "Por vencer",
+					expired: "Vencido",
+					unavailable: "No disponible",
+					error: "La consulta falla",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"El registro no tiene constancia de este dominio. Comprueba que sea el nombre registrado y no un subdominio.",
+					unsupportedTld:
+						"El registro de este dominio no publica datos de registro por RDAP, así que no se puede leer su vencimiento.",
+					failing:
+						"La última consulta falló ({$code}). Se reintenta automáticamente y, mientras tanto, la última fecha de vencimiento conocida sigue generando alertas.",
+				},
 			},
 
 			stats: {

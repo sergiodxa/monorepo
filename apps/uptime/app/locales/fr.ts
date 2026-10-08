@@ -1362,6 +1362,8 @@ export default {
 				failedTest: "Test en échec",
 				failureDetail: "Ce qui a échoué",
 				duration: "Durée",
+				registrar: "Bureau d'enregistrement",
+				eppStatuses: "Statuts du registre",
 			},
 
 			values: {
@@ -3361,6 +3363,14 @@ export default {
 				},
 
 				fields: {
+					registrationWarningDays: {
+						label: "Avertissement d'enregistrement (jours)",
+						description:
+							"Combien de jours avant l'expiration de l'enregistrement les alertes commencent. Les rappels se répètent à 30, 14, 7 et 1 jours.",
+						decrement: "Moins de jours",
+						increment: "Plus de jours",
+					},
+
 					name: {
 						label: "Nom du moniteur",
 						placeholder: "DNS de production",
@@ -3445,6 +3455,39 @@ export default {
 				recordsWatchedValue: "{$enabled} sur {$total}",
 				zoneFileImported: "Fichier de zone importé",
 				zoneFileNeverImported: "Jamais — apex uniquement",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Enregistrement",
+				description:
+					"Lu auprès du registre du domaine une fois par jour. Vous êtes alerté dès {$days} jours avant l'expiration de l'enregistrement.",
+				status: "Enregistrement",
+				expiresAt: "Expire le",
+				registrar: "Bureau d'enregistrement",
+				checkedAt: "Dernière consultation",
+				eppStatuses: "Statuts du registre",
+				never: "Jamais",
+				notPublished: "Non publié",
+
+				statuses: {
+					unknown: "Pas encore consulté",
+					valid: "Valide",
+					expiring: "Expire bientôt",
+					expired: "Expiré",
+					unavailable: "Indisponible",
+					error: "Consultation en échec",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"Le registre n'a aucune trace de ce domaine. Vérifiez qu'il s'agit du nom enregistré et non d'un sous-domaine.",
+					unsupportedTld:
+						"Le registre de ce domaine ne publie pas de données d'enregistrement via RDAP, sa date d'expiration ne peut donc pas être lue.",
+					failing:
+						"La dernière consultation a échoué ({$code}). Elle est relancée automatiquement, et la dernière date d'expiration connue continue de déclencher des alertes en attendant.",
+				},
 			},
 
 			stats: {

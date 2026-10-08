@@ -74,6 +74,13 @@ export const UpdateDnsMonitorSchema = f.object({
 	monitor_id: f.field(s.string()),
 	...dnsMonitorFields,
 	is_enabled: f.field(s.defaulted(coerce.boolean(), false)),
+	/**
+	 * Days before the registration lapses that it counts as expiring (ADR-035). Optional, so
+	 * a body that leaves it out keeps the stored window rather than resetting it.
+	 */
+	registration_warning_days: f.field(
+		s.optional(coerce.number().pipe(checks.min(1), checks.max(365))),
+	),
 });
 
 export type UpdateDnsMonitorValues = s.InferOutput<typeof UpdateDnsMonitorSchema>;

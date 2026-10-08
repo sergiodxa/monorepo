@@ -27,6 +27,7 @@ import {
 	notifyCronJobResult,
 	notifyDnsResult,
 	notifyFlowResult,
+	notifyRegistrationResult,
 	notifySslResult,
 	notifyTcpResult,
 } from "~/app/services/alerts";
@@ -38,6 +39,7 @@ import {
 	flowMonitors,
 	flowStatuses,
 	monitors,
+	registrationStatuses,
 	tcpMonitors,
 } from "~/database/schema";
 
@@ -192,6 +194,15 @@ async function dispatch(
 			);
 
 			await notifySslResult(db, mailer, monitor, current, daysUntilExpiry);
+			return true;
+		}
+
+		case "registration": {
+			let monitor = await db.findOne(dnsMonitors, { where: { id: job.monitorId } });
+			if (!monitor) return false;
+
+			let { previous, current } = parseStatuses(ctx, job, registrationStatuses);
+			await notifyRegistrationResult(db, mailer, monitor, previous, current);
 			return true;
 		}
 	}

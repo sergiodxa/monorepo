@@ -110,14 +110,16 @@ export function decodeIdOrUUID(prefix: Prefix, value: string): string | null {
 
 /**
  * The prefix a monitor id carries, chosen by the `monitor_type` stored beside it. An
- * SSL event reports through the HTTP monitor whose certificate it watched, so it
- * shares that monitor's prefix.
+ * SSL event reports through the HTTP monitor whose certificate it watched, and a
+ * registration event through the DNS monitor whose domain it looked up, so each shares
+ * that monitor's prefix.
  */
 const MONITOR_TYPE_PREFIXES = {
 	cron: "cron",
 	dns: "dns",
 	flow: "flow",
 	http: "mon",
+	registration: "dns",
 	ssl: "mon",
 	tcp: "tcpm",
 } as const satisfies Record<string, Prefix>;

@@ -22,7 +22,11 @@ import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { SelectDnsMonitorRecord } from "~/database/schema";
+import type {
+	RegistrationStatus,
+	SelectDnsMonitor,
+	SelectDnsMonitorRecord,
+} from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
 import DnsMonitor from "~/app/data/dns-monitor";
@@ -42,6 +46,28 @@ const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	changed: "degraded",
 	error: "down",
 };
+
+/** `unavailable` reads neutral: the registry has nothing to say, which is no fault of the domain. */
+const REGISTRATION_BADGE_TONE: Record<RegistrationStatus, BadgeTone> = {
+	unknown: "neutral",
+	valid: "up",
+	expiring: "degraded",
+	expired: "down",
+	unavailable: "neutral",
+	error: "down",
+};
+
+/**
+ * The sentence explaining why there is no current registration data, keyed by the last
+ * lookup's error: the two answers about the name each name their own fix, and every other
+ * failure is an outage retried on its own. `null` when the last lookup succeeded.
+ */
+function registrationReasonKey(monitor: SelectDnsMonitor): string | null {
+	if (monitor.registration_error === null) return null;
+	if (monitor.registration_error === "not-found") return "notFound";
+	if (monitor.registration_error === "unsupported-tld") return "unsupportedTld";
+	return "failing";
+}
 
 /**
  * A disabled record reads neutral, since nobody has committed to watching it, so
@@ -75,6 +101,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 
 		let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
 		let watchedCount = records.filter((record) => record.is_enabled).length;
+		let registrationReason = registrationReasonKey(monitor);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
@@ -161,6 +188,80 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 								}
 							/>
 						</div>
+
+						<section mix={[vstack({ gap: 3 }), mbe("24px")]}>
+							<div mix={[vstack({ gap: 1 })]}>
+								<h2 mix={[m(0)]}>{ctx.intl.t("page.dnsMonitorDetail.registration.title")}</h2>
+								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
+									{ctx.intl.t("page.dnsMonitorDetail.registration.description", {
+										days: monitor.registration_warning_days,
+									})}
+								</p>
+							</div>
+
+							<div mix={[flex(), flexWrap(), gap("16px")]}>
+								<StatCard
+									label={ctx.intl.t("page.dnsMonitorDetail.registration.status")}
+									value={
+										<Badge {...badgeVariant(REGISTRATION_BADGE_TONE[monitor.registration_status])}>
+											{ctx.intl.t(
+												`page.dnsMonitorDetail.registration.statuses.${monitor.registration_status}`,
+											)}
+										</Badge>
+									}
+								/>
+								<StatCard
+									label={ctx.intl.t("page.dnsMonitorDetail.registration.expiresAt")}
+									value={
+										monitor.registration_expires_at === null
+											? ctx.intl.t("page.dnsMonitorDetail.registration.notPublished")
+											: formatDateTime(new Date(monitor.registration_expires_at), {
+													locale: ctx.locale,
+													timeZone: "UTC",
+												})
+									}
+								/>
+								<StatCard
+									label={ctx.intl.t("page.dnsMonitorDetail.registration.registrar")}
+									value={
+										monitor.registrar ??
+										ctx.intl.t("page.dnsMonitorDetail.registration.notPublished")
+									}
+								/>
+								<StatCard
+									label={ctx.intl.t("page.dnsMonitorDetail.registration.checkedAt")}
+									value={
+										monitor.registration_checked_at === null
+											? ctx.intl.t("page.dnsMonitorDetail.registration.never")
+											: formatDateTime(new Date(monitor.registration_checked_at), {
+													locale: ctx.locale,
+													timeZone: "UTC",
+												})
+									}
+								/>
+							</div>
+
+							{monitor.registration_epp_statuses && monitor.registration_epp_statuses.length > 0 ? (
+								<div mix={[flex(), flexWrap(), items("center"), gap("8px")]}>
+									<span mix={[fontSize("sm"), fg("neutral.muted")]}>
+										{ctx.intl.t("page.dnsMonitorDetail.registration.eppStatuses")}
+									</span>
+									{monitor.registration_epp_statuses.map((status) => (
+										<Badge key={status} {...badgeVariant("neutral")}>
+											<code>{status}</code>
+										</Badge>
+									))}
+								</div>
+							) : null}
+
+							{registrationReason === null ? null : (
+								<p mix={[m(0), fontSize("sm"), fg("neutral.muted")]}>
+									{ctx.intl.t(`page.dnsMonitorDetail.registration.reasons.${registrationReason}`, {
+										code: monitor.registration_error ?? "",
+									})}
+								</p>
+							)}
+						</section>
 
 						<Frame
 							name="dns-monitor-card-results"

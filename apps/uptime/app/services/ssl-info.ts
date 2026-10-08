@@ -10,12 +10,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { DAY_MS } from "@sdxc/dates/zone";
-
 import type { SelectMonitor } from "~/database/schema";
 
-/** Days-until-expiry thresholds `shouldAlertOnSslStatus` treats as alert-worthy. */
-const WARNING_THRESHOLDS_DAYS = [30, 14, 7, 1];
+import { classifyExpiry, shouldRemindOfExpiry } from "~/app/services/expiry";
 
 /** SSL status enum values, matching `monitors.ssl_status`. */
 export type SslStatus = NonNullable<SelectMonitor["ssl_status"]>;
@@ -30,24 +27,13 @@ export function calculateSslStatus(
 	expiresAt: number | null,
 	warningDays: number,
 ): { status: SslStatus; daysUntilExpiry: number | null } {
-	if (expiresAt === null) return { status: "unknown", daysUntilExpiry: null };
-
-	let daysUntilExpiry = Math.floor((expiresAt - Date.now()) / DAY_MS);
-
-	if (daysUntilExpiry < 0) return { status: "expired", daysUntilExpiry };
-	if (daysUntilExpiry <= warningDays) return { status: "expiring", daysUntilExpiry };
-	return { status: "valid", daysUntilExpiry };
+	return classifyExpiry(expiresAt, warningDays);
 }
 
 /**
- * Whether a status warrants an alert today. `expired` always does; `expiring`
- * does every day within {@link WARNING_THRESHOLDS_DAYS} of expiry, repeating
- * daily until renewal. Per-alert cooldown (`docs/alerts.md`) prevents spam.
+ * Whether a status warrants an alert today, on the reminder schedule every expiry date
+ * shares. Per-alert cooldown (`docs/alerts.md`) prevents spam.
  */
 export function shouldAlertOnSslStatus(status: SslStatus, daysUntilExpiry: number | null): boolean {
-	if (status === "expired") return true;
-	if (status === "expiring" && daysUntilExpiry !== null) {
-		return WARNING_THRESHOLDS_DAYS.some((threshold) => daysUntilExpiry <= threshold);
-	}
-	return false;
+	return shouldRemindOfExpiry(status, daysUntilExpiry);
 }
