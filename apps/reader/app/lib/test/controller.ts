@@ -27,7 +27,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import { resolveFrame } from "~/app/http/render";
+import { resolveFrame, withDocumentAssets } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
@@ -55,7 +55,7 @@ export const VIEWER: Viewer = {
  */
 export function createTestRenderer(ctx: RequestContext): Renderer<RemixNode> {
 	return async (node, init) => {
-		let stream = renderToStream(node, {
+		let stream = renderToStream(await withDocumentAssets(ctx, node), {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);

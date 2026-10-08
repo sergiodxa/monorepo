@@ -17,7 +17,11 @@ export const SECURITY_POLICY: SecurityHeaders.Policy = {
 	contentSecurityPolicy: {
 		/** A fetch type nobody thought about fails closed; permitting one is a deliberate edit. */
 		defaultSrc: ["none"],
-		scriptSrc: ["self"],
+		/**
+		 * The document's import map is the one inline script, admitted by this response's
+		 * nonce; a response that renders no document advertises none.
+		 */
+		scriptSrc: ["self", "nonce"],
 		/**
 		 * The renderer emits each page's rules as `<style>` elements while it streams, where no
 		 * hash or nonce is available; the sanitizer's attribute allow-list names no `style`.

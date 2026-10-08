@@ -1,8 +1,7 @@
 /**
- * Root HTML document layout. It renders the outer html/head/body shell — charset and
- * viewport meta, the page title and description, the design-system stylesheets in
- * derivation order, and the client entry script. Every server-rendered page composes into
- * it, so a page decides only its own content.
+ * Root HTML document layout: the html/head/body shell with charset and viewport meta, the
+ * title and description, and the stylesheets, import map and client entry the asset manifest
+ * names. Every server-rendered page composes into it, so a page decides only its content.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,13 +13,15 @@ import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { raw } from "@sdxc/u/general";
 import { m, minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
-import resetStyles from "@sdxc/ui/reset.css?url";
-import themeStyles from "@sdxc/ui/theme.css?url";
+import { ImportMap } from "remix/component/server";
 import { getContext } from "remix/middleware/async-context";
 
+import type { DocumentAssets as Assets } from "~/app/lib/assets";
 import type { Theme } from "~/database/schema";
 
-import colorStyles from "~/resources/css/colors.css?url";
+import "@sdxc/ui/reset.css";
+import "~/resources/css/colors.css";
+import "@sdxc/ui/theme.css";
 
 /**
  * What the browser is told each scheme paints its own chrome in. `system` declares both so
@@ -33,11 +34,27 @@ const CHROME_SCHEME: Record<Theme, string> = {
 	dark: "only dark",
 };
 
+namespace DocumentAssets {
+	/** The assets the renderer looked up, and the nonce this response's policy admits. */
+	export interface Value extends Assets {
+		/**
+		 * The nonce the inline import map carries, which is the one script the policy admits
+		 * by nonce; absent where no policy is installed, as in a test router without one.
+		 */
+		nonce?: string;
+	}
+}
+
 /**
- * The dev server serves the entry from source while the build emits it under a pinned
- * name, so the tag resolves without reading a manifest at render time.
+ * Hands the document the assets the renderer looked up, which it reads where a component
+ * cannot await them itself.
  */
-const CLIENT_ENTRY_SRC = import.meta.env.DEV ? "/bootstrap/browser.ts" : "/assets/clientEntry.js";
+export function DocumentAssets(
+	handle: Handle<{ value: DocumentAssets.Value; children: RemixNode }, DocumentAssets.Value>,
+) {
+	handle.context.set(handle.props.value);
+	return () => handle.props.children;
+}
 
 namespace DocumentLayout {
 	export interface Props {
@@ -68,6 +85,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 		 * decided by the time the first byte is written.
 		 */
 		let { face, theme } = getContext().presentation;
+		let { nonce, script, stylesheets } = handle.context.get(DocumentAssets);
 
 		return (
 			<html
@@ -99,10 +117,13 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					 * under and the page a notification opens into.
 					 */}
 					<link rel="manifest" href="/manifest.webmanifest" data-key="manifest" />
-					<link rel="modulepreload" href={CLIENT_ENTRY_SRC} data-key="entry-preload" />
-					<link rel="stylesheet" href={resetStyles} data-key="style-reset" />
-					<link rel="stylesheet" href={colorStyles} data-key="style-colors" />
-					<link rel="stylesheet" href={themeStyles} data-key="style-theme" />
+					<ImportMap value={script.importMap} nonce={nonce} />
+					{script.preloads.map((href) => (
+						<link key={href} rel="modulepreload" href={href} data-key={href} />
+					))}
+					{stylesheets.map((href) => (
+						<link key={href} rel="stylesheet" href={href} data-key={href} />
+					))}
 				</head>
 				<body
 					mix={[
@@ -123,7 +144,7 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 					]}
 				>
 					{children}
-					<script type="module" async src={CLIENT_ENTRY_SRC}></script>
+					<script type="module" async src={script.href}></script>
 				</body>
 			</html>
 		);

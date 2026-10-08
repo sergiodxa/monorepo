@@ -22,9 +22,12 @@ import type { ResolveFrameContext } from "remix/component/server";
 import type { RequestContext, Router } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
+import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 import { renderToStream, renderToString } from "remix/component/server";
 import { createHtmlResponse } from "remix/response/html";
 
+import { documentAssets } from "~/app/lib/assets";
+import { DocumentAssets } from "~/resources/layouts/document";
 import FrameFallback from "~/resources/views/frame-fallback";
 
 /** How many redirects a frame's sub-request may follow before it is treated as a loop. */
@@ -69,6 +72,25 @@ export function isFrameRequest(request: Request): boolean {
 	return new URL(request.url).searchParams.has(FRAME_PARAM);
 }
 
+/**
+ * Wraps `node` in what the document shell reads: the asset manifest's stylesheets and client
+ * entry, looked up per render, and the response's nonce for the inline import map. The nonce
+ * is read here, before the stream starts, because the policy header is written ahead of the
+ * body; a fragment renders no shell, so its response advertises none.
+ *
+ * @param ctx - The request being answered, whose security headers hold the nonce.
+ * @param node - The page to render.
+ */
+export async function withDocumentAssets(ctx: RequestContext, node: RemixNode): Promise<RemixNode> {
+	let assets = await documentAssets();
+	let nonce =
+		isFrameRequest(ctx.request) || !ctx.has(SecurityHeadersKey)
+			? undefined
+			: ctx.get(SecurityHeadersKey)?.nonce;
+
+	return <DocumentAssets value={{ ...assets, nonce }}>{node}</DocumentAssets>;
+}
+
 /** Creates a request-scoped renderer for server-side HTML responses. */
 export function createHtmlRenderer(ctx: RequestContext) {
 	/**
@@ -76,8 +98,8 @@ export function createHtmlRenderer(ctx: RequestContext) {
 	 * discards the default console-based error hook, and prepending `<!DOCTYPE html>` via
 	 * `createHtmlResponse` since JSX cannot express a doctype directly.
 	 */
-	return function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(node, {
+	return async function render(node: RemixNode, init?: ResponseInit) {
+		let stream = renderToStream(await withDocumentAssets(ctx, node), {
 			frameSrc: ctx.request.url,
 			resolveFrame(src, target, context) {
 				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);

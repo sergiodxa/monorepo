@@ -272,6 +272,7 @@
     "apps/reader": {
       "name": "@apps/reader",
       "dependencies": {
+        "@pitlane/assets": "0.1.0",
         "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
         "@sdxc/authz": "workspace:*",
@@ -320,6 +321,7 @@
       },
       "devDependencies": {
         "@cloudflare/vite-plugin": "^1.54.2",
+        "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/messageformat": "workspace:*",
         "vite": "^8.2.2",

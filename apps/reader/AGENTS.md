@@ -80,6 +80,16 @@ indicate requirement levels.
   derives as the role; numbers a tier caps stay in `TIER_LIMITS`, keyed by the same names.
   A refusal crosses RPC as `not-entitled` or `switched-off`, never as a raw decision.
 - MUST build markup from `@sdxc/ui` components styled with `@sdxc/u` mixins through `mix`.
+- MUST link the document's stylesheets and client entry through `documentAssets()` in
+  `app/lib/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes:
+  a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet
+  import names a file the next build renames. A stylesheet joins by a side-effect
+  `import "….css"` in `resources/layouts/document.tsx`, in cascade order. Every renderer
+  wraps the page through `withDocumentAssets()` in `app/http/render.tsx`, which also hands
+  the shell the nonce its inline import map is admitted by under `script-src`.
+- MUST keep the `bootstrap/browser.ts` glob to `resources/components/`, where the islands
+  live: a layout or view in the client bundle compiles its stylesheets a second time, and
+  every page would link both copies. A package's island goes in its `PACKAGE_MODULES` map.
 - MUST let `worker-configuration.d.ts` be the only declaration of a binding's type; run
   `bun run cf:typegen` after every change to `wrangler.jsonc`.
 
@@ -131,6 +141,8 @@ indicate requirement levels.
   - `database/schema.ts` <- The reader's tables, mirroring `database/migrations/` exactly
   - `database/feed-schema.ts` <- A feed's tables, mirroring `database/feed-migrations/` exactly
 - Rendering
+  - `app/lib/assets.ts` <- The stylesheets and client entry the asset manifest names
+  - `app/http/render.tsx` <- The renderer, which hands the shell its assets and nonce
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render

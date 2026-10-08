@@ -172,17 +172,23 @@ describe("GET /reading/:feed/:item", () => {
 		store.openPost.mockResolvedValue(opened());
 		peek.mockResolvedValue(extracted());
 
-		let body = await (await get(PATH)).text();
+		let response = await get(PATH);
+		let policy = response.headers.get("content-security-policy") ?? "";
+		let body = await response.text();
 
 		/**
-		 * Every executable script on the page is a file of this app's own. The one element
-		 * carrying a body is a JSON data block, which a browser reads rather than runs and
-		 * which `script-src` therefore says nothing about.
+		 * Every executable script on the page is a file of this app's own. The elements carrying
+		 * a body are JSON data blocks, which a browser reads rather than runs, and the import
+		 * map, which runs nothing and is admitted by the nonce the policy names.
 		 */
 		let scripts = [...body.matchAll(/<script([^>]*)>/gu)].map((match) => match[1] ?? "");
 		expect(scripts.length).toBeGreaterThan(0);
 		for (let attributes of scripts) {
-			expect(attributes.includes("src=") || attributes.includes(`"application/json"`)).toBe(true);
+			let nonce = /type="importmap" nonce="([^"]+)"/u.exec(attributes)?.[1];
+			let admitted = nonce !== undefined && policy.includes(`'nonce-${nonce}'`);
+			expect(
+				attributes.includes("src=") || attributes.includes(`"application/json"`) || admitted,
+			).toBe(true);
 		}
 		/** Every image is fetched from this origin, which is what `img-src 'self'` permits. */
 		expect(body).not.toMatch(/<img[^>]+src="https?:\/\//u);

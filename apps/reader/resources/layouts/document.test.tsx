@@ -15,6 +15,7 @@
 
 import type { Middleware } from "remix/router";
 
+import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
@@ -25,6 +26,9 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import { writePresentation } from "~/app/http/cookies";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
+import { createHtmlRenderer } from "~/app/http/render";
+import { SECURITY_POLICY } from "~/app/http/security-policy";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
 import { createTestRenderer, ORIGIN } from "~/app/lib/test/controller";
 
 /**
@@ -50,6 +54,25 @@ async function render(cookie?: string): Promise<string> {
 	);
 
 	return await response.text();
+}
+
+/**
+ * A page served the way the worker serves it: through the app's own renderer, under the
+ * app's own policy, so the asset tags and the nonce are the ones a browser receives.
+ */
+async function serve(): Promise<Response> {
+	let router = createRouter({
+		middleware: [
+			asyncContext(),
+			i18n,
+			presentation,
+			securityHeaders(SECURITY_POLICY) as Middleware,
+			renderWith(createHtmlRenderer) as Middleware,
+		],
+		defaultHandler,
+	});
+
+	return await router.fetch(new Request(new URL("/nowhere", ORIGIN)));
 }
 
 /**
@@ -118,8 +141,11 @@ describe("DocumentLayout", () => {
 		expect(html.indexOf("<html")).toBeLessThan(html.indexOf("<body"));
 		expect(shell(html).theme).toBe("dark");
 
-		/** Every script on the page is a file this app serves, and none of them is inline. */
-		expect(html).not.toMatch(/<script(?![^>]*\bsrc=)/);
+		/**
+		 * Every script on the page is a file this app serves; the import map is the one inline
+		 * block, and it only says where those files are.
+		 */
+		expect(html).not.toMatch(/<script(?![^>]*\bsrc=)(?![^>]*type="importmap")/);
 	});
 
 	/** What bounds a publisher's host to the origin when this page fetches from it. */
@@ -128,5 +154,45 @@ describe("DocumentLayout", () => {
 
 		expect(html).toContain(`name="referrer"`);
 		expect(html).toContain("strict-origin-when-cross-origin");
+	});
+});
+
+/**
+ * A build renames every file whenever its contents change, so the document links what the
+ * asset manifest names rather than a path written into the shell.
+ */
+describe("the document's asset tags", () => {
+	test("links the stylesheet the asset manifest names", async () => {
+		let html = await (await serve()).text();
+
+		expect(html).toContain(`<link rel="stylesheet" href="${STYLESHEET_HREF}"`);
+	});
+
+	test("preloads the client entry and loads it as an async module", async () => {
+		let html = await (await serve()).text();
+
+		expect(html).toContain(`<link rel="modulepreload" href="${CLIENT_ENTRY_HREF}"`);
+		expect(html).toContain(`<script type="module" async src="${CLIENT_ENTRY_HREF}">`);
+	});
+
+	test("declares the import map before any module loads", async () => {
+		let html = await (await serve()).text();
+		let importMap = html.indexOf('type="importmap"');
+
+		expect(importMap).toBeGreaterThan(-1);
+		expect(importMap).toBeLessThan(html.indexOf('rel="modulepreload"'));
+		expect(importMap).toBeLessThan(html.indexOf('<script type="module"'));
+	});
+
+	/** The import map is inline, so a policy admitting only this origin would refuse it. */
+	test("admits the import map by the nonce the policy names", async () => {
+		let response = await serve();
+		let html = await response.text();
+		let nonce = /<script data-rmx-import-map type="importmap" nonce="([^"]+)">/.exec(html)?.[1];
+
+		expect(nonce).toBeDefined();
+		expect(response.headers.get("content-security-policy")).toContain(
+			`script-src 'self' 'nonce-${nonce}'`,
+		);
 	});
 });

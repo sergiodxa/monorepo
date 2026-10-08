@@ -1,8 +1,7 @@
 /**
  * Browser entry point. It registers a module-scoped translator so any independently
  * hydrated island can translate without an `IntlProvider` above it, then runs remix/component's
- * client runtime against the globbed resource and route modules and reports whatever fails
- * to come up.
+ * client runtime against the island modules and reports whatever fails to come up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -58,15 +57,14 @@ let { intl } = createTranslator({
 setIntl(intl);
 
 /**
- * Every module an island can hydrate from. Server-only modules and tests stay out: a test
- * reaches for the handlers and helpers it exercises, which pulls worker-only imports such as
- * `cloudflare:workers` into a bundle the browser has to resolve.
+ * Every module an island can hydrate from: the islands, which all live in
+ * `resources/components/`. A layout or view in the bundle would compile its stylesheets a
+ * second time, so every page would link both copies; a test pulls worker-only imports.
  */
 const CLIENT_MODULES = import.meta.glob([
 	"!../**/*.server.*",
 	"!../**/*.test.*",
-	"../resources/**/*.{ts,tsx}",
-	"../routes/**/*.{ts,tsx}",
+	"../resources/components/**/*.{ts,tsx}",
 ]);
 
 /**

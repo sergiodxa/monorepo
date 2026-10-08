@@ -126,7 +126,12 @@ const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 			remoteBindings: false,
 		}),
 	],
-	resolve: { tsconfigPaths: true },
+	resolve: {
+		tsconfigPaths: true,
+		alias: {
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/lib/test/assets-manifest.ts`,
+		},
+	},
 	test: {
 		name: "reader-workers",
 		include: ["**/*.workers.test.ts?(x)"],
@@ -383,7 +388,12 @@ export default defineConfig({
 			{
 				root: "apps/reader",
 				plugins: [cloudflareWorkersStub()],
-				resolve: { tsconfigPaths: true },
+				resolve: {
+					tsconfigPaths: true,
+					alias: {
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/lib/test/assets-manifest.ts`,
+					},
+				},
 				test: {
 					name: "reader",
 					include: ["**/*.test.ts?(x)"],
