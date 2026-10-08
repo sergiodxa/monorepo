@@ -5,7 +5,7 @@ section:
     title: Building Remix apps
     order: 3
 order: 6
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 Every app handles the same handful of values: the ids its records carry, the slugs and
@@ -226,8 +226,10 @@ export function viewerOf(request: Request, saved: Partial<Viewer> = {}): Viewer 
 
 A signed-in person's saved preference wins. Otherwise Cloudflare's `request.cf.timezone`
 names the zone the request came from, which is right for most readers on the first visit.
-Validate a zone a person picks against `Intl.supportedValuesOf("timeZone")` before saving it,
-since `Intl` throws on a name it does not know. For the locale,
+Check a zone a person picks with `isSupportedTimeZone` before saving it, so the stored value
+is one the runtime's own zone list offers;
+[Calendars, date ranges and time zones](/docs/building-remix-apps/calendars-and-date-ranges)
+builds that picker. For the locale,
 [Translate your app](/docs/building-remix-apps/translate-your-app) already negotiates one.
 
 The page handler passes `viewerOf(ctx.request)` down to the component that renders the date:
@@ -333,4 +335,6 @@ range when a rule lives in data an operator edits.
   the formatters take.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the tables
   behind `Posts`.
+- [Calendars, date ranges and time zones](/docs/building-remix-apps/calendars-and-date-ranges)
+  — a month grid, a report's day range, and a time-zone picker.
 - [`@sdxc/dates`](/api/dates) — day grids, week boundaries and the zone math underneath.
