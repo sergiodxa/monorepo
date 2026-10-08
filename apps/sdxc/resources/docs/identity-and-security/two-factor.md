@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 8
-lastUpdated: 2026-09-30
+lastUpdated: 2026-10-07
 ---
 
 A time-based one-time password, the six digits an authenticator app shows, is a second thing
@@ -18,9 +18,10 @@ a lost phone, and turning two-factor off.
 secret with AES-GCM and mints the recovery codes. [`@sdxc/auth`](/api/auth) reads the session
 the sign-in is held in, [`@sdxc/validate`](/api/validate) checks the submitted code, and
 [`@sdxc/result`](/api/result) and [`@sdxc/http`](/api/http) carry the outcomes.
+[`@sdxc/qr`](/api/qr) draws the code the authenticator app scans.
 
 ```bash
-npm add @sdxc/crypto @sdxc/auth @sdxc/validate @sdxc/result @sdxc/http
+npm add @sdxc/crypto @sdxc/auth @sdxc/validate @sdxc/result @sdxc/http @sdxc/qr
 ```
 
 ## Three tables
@@ -107,11 +108,11 @@ The setup route is a `POST`, since it writes, and renders the page:
 
 ```tsx {% title="app/http/controllers/two-factor/setup.tsx" %}
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { encodeQr } from "@sdxc/qr";
+import { isFailure, isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { currentUser } from "~/app/auth/current-user";
-import { qrCodeDataUrl } from "~/app/lib/qr-code";
 import { beginEnrollment } from "~/app/services/two-factor/enroll";
 import { EnrollTwoFactorPage } from "~/resources/views/enroll-two-factor";
 import routes from "~/routes/web";
@@ -124,22 +125,34 @@ export default createAction(routes.twoFactor.setup, async (ctx) => {
 	}
 
 	let { uri, setupKey } = started.data;
-	let qrCode = await qrCodeDataUrl(uri);
+	let encoded = encodeQr(uri, { level: "M" });
+	if (isFailure(encoded)) {
+		ctx.log.warn("two_factor.qr_failed", { code: encoded.error.code });
+	}
+
 	return ctx.render(
-		<EnrollTwoFactorPage uri={uri} setupKey={setupKey} qrCode={qrCode} />,
+		<EnrollTwoFactorPage
+			uri={uri}
+			setupKey={setupKey}
+			qr={isSuccess(encoded) ? encoded.data : null}
+		/>,
 	);
 });
 ```
 
 `currentUser` is your own lookup of the signed-in account, behind whatever middleware protects
-the route. No `@sdxc` package draws QR codes, so `qrCodeDataUrl` is a small wrapper around the
-QR library of your choice that turns the URI into an SVG or PNG data URL. The page shows the
-image, the setup key for anyone who cannot scan, and the URI as a link, which opens the app
+the route. `encodeQr` turns the URI into a QR symbol and answers a `Result`, so the action
+encodes before rendering and logs the rare failure, such as a URI too long for any symbol;
+the page then renders without the code. `QrCode` draws the symbol as an inline SVG, which needs
+no `img-src data:` in your CSP and stays dark on light under a dark theme. The page shows the
+code, the setup key for anyone who cannot scan, and the URI as a link, which opens the app
 directly on a phone:
 
 ```tsx {% title="resources/views/enroll-two-factor.tsx" %}
+import type { QrSymbol } from "@sdxc/qr";
 import type { Handle } from "remix/component";
 
+import { QrCode } from "@sdxc/qr/component";
 import { Button, TextField } from "@sdxc/ui";
 
 import routes from "~/routes/web";
@@ -147,19 +160,17 @@ import routes from "~/routes/web";
 interface EnrollTwoFactorProps {
 	uri: string;
 	setupKey: string;
-	qrCode: string;
+	qr: QrSymbol | null;
 }
 
 export function EnrollTwoFactorPage(handle: Handle<EnrollTwoFactorProps>) {
 	return () => {
-		let { uri, setupKey, qrCode } = handle.props;
+		let { uri, setupKey, qr } = handle.props;
 		return (
 			<form method="post" action={routes.twoFactor.confirm.href()}>
-				<img
-					src={qrCode}
-					alt="QR code for your authenticator app"
-					width={200}
-				/>
+				{qr && (
+					<QrCode symbol={qr} label="QR code for your authenticator app" />
+				)}
 				<p>
 					Can't scan it? <a href={uri}>Open it in your app</a> or enter the
 					key <code>{setupKey}</code>.
