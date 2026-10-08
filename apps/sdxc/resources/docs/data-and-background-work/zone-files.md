@@ -289,6 +289,8 @@ CI and a typo in a zone fails the build with its file and line, before a provide
   customer owns a domain with a TXT lookup.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron): running the DNS
   comparison off the request.
+- [Watch when a domain expires](/docs/data-and-background-work/domain-expiry): the registration
+  date that takes every record in the zone down with it.
 - [Import and export CSV](/docs/data-and-background-work/csv): the same import shape for
   spreadsheets.
 - [`@sdxc/zone-file`](/api/zone-file): every option, record field and rejection reason.
