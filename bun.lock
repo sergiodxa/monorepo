@@ -343,6 +343,7 @@
       "dependencies": {
         "@sdxc/attribution": "workspace:*",
         "@sdxc/auth": "workspace:*",
+        "@sdxc/backoff": "workspace:*",
         "@sdxc/billing": "workspace:*",
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
@@ -373,6 +374,7 @@
         "@sdxc/mail": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/merge-patch": "workspace:*",
+        "@sdxc/messaging": "workspace:*",
         "@sdxc/openapi": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/pagination": "workspace:*",

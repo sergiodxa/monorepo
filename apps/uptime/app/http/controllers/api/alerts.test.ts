@@ -1,7 +1,7 @@
 /**
  * Tests the `/api/v1/alerts` collection endpoints: `GET` lists only the calling
- * team's alerts with channel config stripped, and `POST` creates one for the
- * email/webhook/slack/discord strategy, enforcing the per-team alert cap. Every
+ * team's alerts with channel config stripped, and `POST` creates one for any
+ * channel strategy, enforcing the per-team alert cap. Every
  * action is guarded by `requireApiKey`, so each test authenticates with a real
  * bearer key minted through `ApiKey.create`, exercising that same middleware.
  *
@@ -128,6 +128,31 @@ describe("GET /api/v1/alerts", () => {
 		expect(body.data.alerts[0]?.name).toBe("Mine");
 	});
 
+	test("reports a pagerduty alert by its strategy alone, keeping its integration key out", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:read"]);
+		await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "On-call",
+				notify_on_recovery: true,
+				cooldown_minutes: 0,
+				config: { strategy: "pagerduty", config: { routingKey: "0123456789abcdef" } },
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await dispatch(db, get(key));
+		expect(response.status).toBe(200);
+
+		let body = (await response.json()) as { data: { alerts: Array<{ config: unknown }> } };
+		expect(body.data.alerts.map((alert) => alert.config)).toEqual([{ strategy: "pagerduty" }]);
+	});
+
 	test("serves one page and a cursor that walks to the next", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
@@ -238,6 +263,87 @@ describe("POST /api/v1/alerts", () => {
 			strategy: "email",
 			config: { to: "ops@example.com", subjectPrefix: "" },
 		});
+	});
+
+	test("creates a pagerduty alert, storing the trimmed key and answering without it", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, {
+				name: "On-call",
+				strategy: "pagerduty",
+				routingKey: " 0123456789abcdef0123456789abcdef ",
+			}),
+		);
+		expect(response.status).toBe(201);
+		expect(await response.text()).not.toContain("0123456789abcdef0123456789abcdef");
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "pagerduty",
+			config: { routingKey: "0123456789abcdef0123456789abcdef" },
+		});
+	});
+
+	test("refuses a blank pagerduty integration key", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, { name: "On-call", strategy: "pagerduty", routingKey: "   " }),
+		);
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/routingKey"]);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
+	test("creates a slack alert from a hooks.slack.com URL", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, {
+				name: "Slack",
+				strategy: "slack",
+				webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXX",
+			}),
+		);
+
+		expect(response.status).toBe(201);
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "slack",
+			config: { webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXX" },
+		});
+	});
+
+	test("refuses a slack webhook URL on another host", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+
+		let response = await dispatch(
+			db,
+			post(key, {
+				name: "Slack",
+				strategy: "slack",
+				webhookUrl: "https://hooks.slack.example/services/T000/B000/XXXX",
+			}),
+		);
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/webhookUrl"]);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
 	});
 
 	test("returns 400 naming the recipient when its domain receives no mail", async () => {

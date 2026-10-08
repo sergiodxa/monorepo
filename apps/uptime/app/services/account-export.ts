@@ -85,8 +85,8 @@ export interface ExportedAlert {
 	strategy: AlertConfig["strategy"];
 	/**
 	 * Where the alert goes, when that is configuration rather than a credential: a webhook's
-	 * URL, an email's address, a Slack channel. `null` for a strategy whose only destination is
-	 * a secret URL, which is not exported.
+	 * URL or an email's address. `null` for a strategy whose only destination is a credential
+	 * (a Slack or Discord webhook URL, a PagerDuty routing key), which is not exported.
 	 */
 	destination: string | null;
 }
@@ -135,7 +135,7 @@ export interface AccountExportDocument {
  */
 const EXCLUSIONS = [
 	"API keys: the stored hash of a key is a credential's shadow and cannot be turned back into a usable key, so no key material or prefix is included.",
-	"Alert secrets: webhook signing secrets and Slack/Discord webhook URLs are credentials for the channel itself and are omitted; the alert's strategy and its non-secret destination are included.",
+	"Alert secrets: webhook signing secrets, Slack/Discord webhook URLs and PagerDuty routing keys are credentials for the channel itself and are omitted; the alert's strategy and its non-secret destination are included.",
 	"Other people: no other member's identity, no invitee addresses, and no per-member email stamps. Teams report a member count instead.",
 	"Session and sign-in data: nothing from the session store and no identity token. Your sign-in identity itself is held by the identity provider that signs you in, not by this app.",
 	"Check history: individual monitor results, cron-job pings and daily roll-ups are not included. They are produced by the configuration above rather than supplied by you, and the authoritative stream is an append-only analytics dataset.",
@@ -304,14 +304,14 @@ async function exportOwnedTeam(
 }
 
 /**
- * The part of an alert's configuration that is a setting rather than a credential. Slack
- * and Discord return `null` because their configuration is itself a webhook URL — the
- * credential — while an HTTP webhook exports its URL and keeps its `secret` out of the file.
+ * The part of an alert's configuration that is a setting rather than a credential. Slack,
+ * Discord and PagerDuty return `null` because their configuration is itself the credential
+ * — a webhook URL or a routing key — while an HTTP webhook exports its URL and keeps its
+ * `secret` out of the file.
  */
 function alertDestination(config: AlertConfig): string | null {
 	if (config.strategy === "webhook") return config.config.url;
 	if (config.strategy === "email") return config.config.to;
-	if (config.strategy === "slack") return config.config.channel ?? null;
 	return null;
 }
 

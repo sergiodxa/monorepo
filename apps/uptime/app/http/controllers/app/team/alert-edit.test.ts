@@ -216,11 +216,42 @@ describe("alertEdit", () => {
 		expect(body).toContain('value="webhook" selected');
 		expect(body).toContain('value="shh"');
 
-		for (let channel of ["email", "webhook", "slack", "discord"]) {
+		for (let channel of ["email", "webhook", "slack", "discord", "pagerduty"]) {
 			expect(body).toContain(`data-channel="${channel}"`);
 			expect(body).toContain(
 				`&:has(select[name="strategy"] option:checked:not([value="${channel}"]))`,
 			);
 		}
+	});
+
+	test("renders a stored slack row that still carries a channel, without showing it", async () => {
+		let { db, team, membership } = await createFixture();
+		/** A row saved with the former channel override keeps it in its stored JSON. */
+		let legacy = {
+			strategy: "slack" as const,
+			config: { webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXX", channel: "#ops" },
+		};
+		let config: AlertConfig = legacy;
+		let alert = await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "Slack Alert",
+				notify_on_recovery: true,
+				cooldown_minutes: 30,
+				config,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let response = await send(db, team, membership, alert.id);
+		expect(response.status).toBe(200);
+		let body = await response.text();
+		expect(body).toContain('value="slack" selected');
+		expect(body).toContain('value="https://hooks.slack.com/services/T000/B000/XXXX"');
+		expect(body).not.toContain("#ops");
+		expect(body).not.toContain('name="slack_channel"');
 	});
 });

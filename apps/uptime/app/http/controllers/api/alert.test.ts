@@ -679,20 +679,92 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["alerts:write"]);
 		let alert = await createAlertRow(db, team.id, {
-			config: {
-				strategy: "slack",
-				config: { webhookUrl: "https://hooks.slack.test/a", channel: "#ops" },
-			},
+			config: { strategy: "webhook", config: { url: "https://example.com/hook", secret: "shh" } },
 		});
 
-		let response = await dispatch(db, mergePatch(alert.id, { channel: null }, { key }));
+		let response = await dispatch(db, mergePatch(alert.id, { secret: null }, { key }));
+
+		expect(response.status).toBe(200);
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "webhook",
+			config: { url: "https://example.com/hook", secret: "" },
+		});
+	});
+
+	test("saving a slack row that still carries a channel stores only its webhook URL", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		/** A row saved with the former channel override keeps it in its stored JSON. */
+		let legacy = {
+			strategy: "slack" as const,
+			config: { webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXX", channel: "#ops" },
+		};
+		let alert = await createAlertRow(db, team.id, { config: legacy });
+
+		let response = await dispatch(
+			db,
+			mergePatch(
+				alert.id,
+				{ webhookUrl: "https://hooks.slack.com/services/T000/B000/YYYY" },
+				{ key },
+			),
+		);
 
 		expect(response.status).toBe(200);
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.config).toEqual({
 			strategy: "slack",
-			config: { webhookUrl: "https://hooks.slack.test/a" },
+			config: { webhookUrl: "https://hooks.slack.com/services/T000/B000/YYYY" },
 		});
+	});
+
+	test("switches to pagerduty with its integration key", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(
+				alert.id,
+				{ strategy: "pagerduty", routingKey: "0123456789abcdef0123456789abcdef" },
+				{ key },
+			),
+		);
+
+		expect(response.status).toBe(200);
+		let body = await response.json();
+		expect(JSON.stringify(body)).not.toContain("0123456789abcdef0123456789abcdef");
+		let updated = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(updated?.config).toEqual({
+			strategy: "pagerduty",
+			config: { routingKey: "0123456789abcdef0123456789abcdef" },
+		});
+	});
+
+	test("refuses a discord webhook URL on another host at its pointer", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let key = await createApiKey(db, team.id, ["alerts:write"]);
+		let alert = await createAlertRow(db, team.id);
+
+		let response = await dispatch(
+			db,
+			mergePatch(
+				alert.id,
+				{ strategy: "discord", webhookUrl: "https://discord.example/api/webhooks/123/abc" },
+				{ key },
+			),
+		);
+
+		expect(response.status).toBe(400);
+		let problem = await expectProblem(response, "validationError");
+		expect(problem.extensions.errors.map((issue) => issue.pointer)).toEqual(["/webhookUrl"]);
+		let unchanged = await db.findOne(alerts, { where: { id: alert.id } });
+		expect(unchanged?.config).toEqual(alert.config);
 	});
 
 	test("switches strategy when the patch carries the new strategy's settings", async () => {
@@ -705,7 +777,7 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 			db,
 			mergePatch(
 				alert.id,
-				{ strategy: "discord", webhookUrl: "https://discord.test/hook" },
+				{ strategy: "discord", webhookUrl: "https://discord.com/api/webhooks/123/abc" },
 				{ key },
 			),
 		);
@@ -714,7 +786,7 @@ describe("PATCH /api/v1/alerts/:alertId", () => {
 		let updated = await db.findOne(alerts, { where: { id: alert.id } });
 		expect(updated?.config).toEqual({
 			strategy: "discord",
-			config: { webhookUrl: "https://discord.test/hook" },
+			config: { webhookUrl: "https://discord.com/api/webhooks/123/abc" },
 		});
 	});
 

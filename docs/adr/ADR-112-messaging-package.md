@@ -742,7 +742,7 @@ escapes.
 
 - [x] Phase 1: Core
 - [x] Phase 2: What `uptime` needs
-- [ ] Phase 3: `uptime` adoption
+- [x] Phase 3: `uptime` adoption (`MAX_ATTEMPTS` is 4, the queue's `max_retries` plus one)
 - [x] Phase 4: More providers (provider classes; `uptime` strategies follow Phase 3)
 - [ ] Phase 5: On demand (`WhatsAppCloud` and `Opsgenie` are built; the package stays private
       until two apps use it)

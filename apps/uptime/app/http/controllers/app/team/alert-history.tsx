@@ -29,9 +29,9 @@ import routes from "~/routes/web";
 const HISTORY_LIMIT = 100;
 
 /**
- * Only the two statuses that aren't neutral are listed: every suppression reason
- * (`skipped_cooldown`, `skipped_cap`, and whichever `skipped_*` comes next) falls through
- * to the neutral default, so adding one doesn't need an edit here.
+ * Only the two settled outcomes carry a tone: `pending` and every suppression reason
+ * (`skipped_cooldown`, `skipped_cap`, and whichever `skipped_*` comes next) take the
+ * neutral default, so adding one needs no edit here.
  */
 const STATUS_BADGE_TONE: Record<string, BadgeTone> = {
 	sent: "up",

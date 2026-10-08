@@ -262,20 +262,36 @@ describe("buildAccountExport", () => {
 		expect(serialized).not.toContain("signing-secret-must-not-leak");
 	});
 
-	test("drops a Slack alert's webhook URL, which is the credential, and keeps the channel", async () => {
+	test("drops a Slack alert's webhook URL, which is the credential, and reports no destination", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, SUBJECT.id);
 		await addAlert(db, team.id, {
 			strategy: "slack",
-			config: { webhookUrl: "https://hooks.slack.com/services/must-not-leak", channel: "#ops" },
+			config: { webhookUrl: "https://hooks.slack.com/services/must-not-leak" },
 		});
 
 		let document = await buildAccountExport(db, SUBJECT);
 		let serialized = JSON.stringify(document);
 
-		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBe("#ops");
+		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBeNull();
 		expect(serialized).not.toContain("must-not-leak");
+	});
+
+	test("drops a PagerDuty alert's routing key, which is the credential", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		await addMember(db, team.id, SUBJECT.id);
+		await addAlert(db, team.id, {
+			strategy: "pagerduty",
+			config: { routingKey: "routing-key-must-not-leak" },
+		});
+
+		let document = await buildAccountExport(db, SUBJECT);
+
+		expect(document.ownedTeams[0]?.alerts[0]?.strategy).toBe("pagerduty");
+		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBeNull();
+		expect(JSON.stringify(document)).not.toContain("must-not-leak");
 	});
 
 	test("drops a Discord alert's webhook URL and reports no destination for it", async () => {

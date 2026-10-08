@@ -1,8 +1,8 @@
 /**
  * Shared alert-dispatch pipeline used by every check path. For each qualifying event
- * it skips monitors under an active maintenance window, resolves the alerts that
- * apply, skips any repeat still inside its cooldown, delivers the rest, and records
- * every outcome to `alert_events`.
+ * it skips monitors under an active maintenance window, resolves the alerts that apply,
+ * skips any repeat still inside its cooldown, sends email inline and queues every other
+ * channel for the delivery job, recording each outcome to `alert_events`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +16,7 @@ import { isFailure, wrap } from "@sdxc/result";
 
 import type { DnsRecordDiff } from "~/app/data/dns-monitor-record";
 import type { MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { AlertEventType, IncidentSummary } from "~/app/services/alert-message";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
@@ -40,9 +41,12 @@ import AlertEvent from "~/app/data/alert-event";
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
+import jobs from "~/app/jobs";
 import { repeatCooldownMinutes } from "~/app/lib/alert-policy";
-import { hasRecordSetEdit, sortDnsFindings } from "~/app/lib/dns-findings";
+import { sortDnsFindings } from "~/app/lib/dns-findings";
 import { absoluteUrl } from "~/app/lib/origin";
+import { enqueue } from "~/app/lib/queue";
+import { alertMessage } from "~/app/services/alert-message";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
@@ -70,7 +74,7 @@ export function dashboardUrl(path: string): string {
 	return absoluteUrl(path);
 }
 
-export type AlertEventType = SelectAlertEvent["event_type"];
+export type { AlertEventType };
 /**
  * `"ssl"` names a virtual monitor type: SSL checks run against an HTTP monitor's own
  * row, so it resolves and suppresses like `"http"` while recording its own
@@ -177,8 +181,12 @@ async function suppressionReason(
 	return inCooldown ? "skipped_cooldown" : null;
 }
 
+/**
+ * Settles one alert for one transition: a suppression is recorded as skipped, an email
+ * is sent inline, and every other channel is recorded `pending` and queued for the
+ * delivery job, which retries it and settles the row. Every exit records exactly one row.
+ */
 async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Promise<void> {
-	/** Every exit from here records one outcome for this alert, and only one. */
 	function record(status: SelectAlertEvent["status"], errorMessage: string | null) {
 		return AlertEvent.record(params.db, {
 			alert_id: alert.id,
@@ -198,198 +206,57 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 		return;
 	}
 
-	let message = buildMessage(params);
-
 	/** Without this a throttled incident is indistinguishable from alerts having been dropped. */
+	let incident: IncidentSummary | null = null;
 	if (params.eventType === "up") {
 		let summary = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
-		if (summary.suppressed > 0) {
-			message.incident = summary;
-			message.text += `\n\nNotifications for this incident: ${summary.sent} sent, ${summary.suppressed} held back by the alert's cooldown.`;
-		}
+		if (summary.suppressed > 0) incident = summary;
 	}
 
-	let outcome = await deliver(alert, message, params);
-	if (isFailure(outcome)) {
-		await record("failed", outcome.error.message);
+	let config = alert.config;
+	if (config.strategy === "email") {
+		let outcome = await deliverEmail(config.config, incident, params);
+		if (isFailure(outcome)) await record("failed", outcome.error.message);
+		else await record("sent", null);
 		return;
 	}
 
-	await record("sent", null);
-}
+	let message = alertMessage({
+		monitorId: params.monitorId,
+		monitorType: params.monitorType,
+		monitorName: params.monitorName,
+		eventType: params.eventType,
+		snapshot: params.snapshot,
+		dashboardUrl: params.dashboardUrl,
+		incident,
+		occurredAt: new Date(),
+	});
 
-/**
- * The notification as the channel-agnostic pipeline builds it. `subject` and `text`
- * go on the wire verbatim for the chat and webhook strategies; the email strategy
- * renders its own translated body and reads only {@link AlertMessage.incident} here.
- */
-interface AlertMessage {
-	subject: string;
-	text: string;
-	/** Incident totals to report, set only on a recovery that suppressed something. */
-	incident?: AlertEmail.Incident;
-}
-
-function statusWord(eventType: AlertEventType): string {
-	if (eventType === "up") return "RECOVERED";
-	if (eventType === "degraded") return "DEGRADED";
-	return "DOWN";
-}
-
-/**
- * How each finding is named in the plain-text body. `missing` reports what a sweep
- * observes — a record stopped resolving — since a sweep can't see what caused that.
- * Only email translates these words; webhook, Slack, and Discord readers have no locale.
- */
-const DNS_FINDING_WORDS: Record<DnsFinding["kind"], string> = {
-	missing: "no longer resolving",
-	changed: "changed to",
-	new: "newly seen",
-};
-
-/** See {@link hasRecordSetEdit} — said in words wherever the shape appears. */
-const RECORD_SET_EDIT_NOTE =
-	"Note: a record set holding several values has no per-record identity in DNS, so a value edited inside one is reported as one record no longer resolving plus one new record.";
-
-/** Newly seen records are imported disabled, so the alert has to say what to do with them. */
-const NEW_RECORDS_NOTE =
-	"Newly seen records are not being watched yet. Open the dashboard to accept the ones you expected, or fix your DNS.";
-
-function snapshotLines(snapshot: AlertEventSnapshot): string[] {
-	switch (snapshot.type) {
-		case "http":
-			return [
-				`URL: ${snapshot.url}`,
-				`Response status: ${snapshot.responseStatus} (expected ${snapshot.expectedStatus})`,
-				`Response time: ${snapshot.responseTimeMs}ms`,
-			];
-		case "dns": {
-			let lines = [
-				`Domain: ${snapshot.domain}`,
-				`Status: ${snapshot.status}`,
-				`Records: ${snapshot.recordsMissing} missing, ${snapshot.recordsChanged} changed, ${snapshot.recordsNew} newly seen`,
-				...snapshot.findings.map(
-					(finding) =>
-						`- ${DNS_FINDING_WORDS[finding.kind]}: ${finding.name} ${finding.recordType} ${finding.value}`,
-				),
-			];
-
-			/**
-			 * The counters count every finding while `findings` holds only a capped sample
-			 * of them, so this gap is exactly how many are hidden here.
-			 */
-			let hidden =
-				snapshot.recordsMissing +
-				snapshot.recordsChanged +
-				snapshot.recordsNew -
-				snapshot.findings.length;
-			if (hidden > 0) lines.push(`- and ${hidden} more`);
-
-			if (hasRecordSetEdit(snapshot.findings)) lines.push(RECORD_SET_EDIT_NOTE);
-			if (snapshot.recordsNew > 0) lines.push(NEW_RECORDS_NOTE);
-
-			return lines;
-		}
-		case "tcp":
-			return [
-				`Endpoint: ${snapshot.host}:${snapshot.port}`,
-				`Status: ${snapshot.status}`,
-				`Response time: ${snapshot.responseTimeMs === null ? "—" : `${snapshot.responseTimeMs}ms`}`,
-			];
-		case "cron":
-			return [
-				`Schedule: ${snapshot.cronExpression} (${snapshot.timezone})`,
-				`Status: ${snapshot.status}`,
-				`Last ping: ${snapshot.lastPingAt ?? "never"}`,
-				`Next expected: ${snapshot.nextExpectedAt ?? "—"}`,
-			];
-		case "flow": {
-			let lines = [
-				`Status: ${snapshot.status}`,
-				`Tests: ${snapshot.testsPassed} of ${snapshot.testsTotal} passed`,
-			];
-
-			/**
-			 * The failing assertion is the incident (ADR-027 §8), quoted here as the run
-			 * reported it. A recovery carries none, so each line is written only when the
-			 * run actually produced it.
-			 */
-			if (snapshot.failedTest !== null) {
-				lines.push(
-					snapshot.failedAtLine === null
-						? `Failed test: ${snapshot.failedTest}`
-						: `Failed test: ${snapshot.failedTest} (line ${snapshot.failedAtLine})`,
-				);
-			}
-			if (snapshot.failureDetail !== null) lines.push(snapshot.failureDetail);
-
-			lines.push(`Duration: ${snapshot.durationMs === null ? "—" : `${snapshot.durationMs}ms`}`);
-
-			return lines;
-		}
-		case "ssl":
-			return [
-				`Hostname: ${snapshot.hostname}`,
-				`Status: ${snapshot.status}`,
-				`Expires at: ${snapshot.expiresAt ?? "—"}`,
-			];
-	}
-}
-
-function buildMessage(params: DispatchAlertsParams): AlertMessage {
-	let word = statusWord(params.eventType);
-	let subject = `[Uptime Alert] ${params.monitorName} is ${word}`;
-	let lines = [
-		`Monitor: ${params.monitorName} (${params.monitorType})`,
-		`Status: ${word}`,
-		...snapshotLines(params.snapshot),
-		`Time: ${new Date().toISOString()}`,
-		`Dashboard: ${params.dashboardUrl}`,
-	];
-	return { subject, text: lines.join("\n") };
-}
-
-/**
- * Runs one alert's configured strategy and reports the outcome as a `Result`, so the
- * caller records `sent` or `failed` by checking it. The three HTTP-based strategies
- * signal failure by throwing, so `wrap` turns that into the same `Result` shape.
- */
-async function deliver(
-	alert: SelectAlert,
-	message: AlertMessage,
-	params: DispatchAlertsParams,
-): Promise<Result<unknown, Error>> {
-	/**
-	 * Each case reads its config into a local first: the discriminated union narrows
-	 * the property there, but a closure passed to `wrap` would widen it back to the
-	 * whole union.
-	 */
-	switch (alert.config.strategy) {
-		case "email":
-			return await deliverEmail(alert.config.config, message, params);
-		case "webhook": {
-			let config = alert.config.config;
-			return await wrap(() => deliverWebhook(config, message, params));
-		}
-		case "slack": {
-			let config = alert.config.config;
-			return await wrap(() => deliverSlack(config, message));
-		}
-		case "discord": {
-			let config = alert.config.config;
-			return await wrap(() => deliverDiscord(config, message));
-		}
+	let event = await record("pending", null);
+	let queued = await wrap(() =>
+		enqueue(jobs.deliverAlert, {
+			alertId: alert.id,
+			eventId: event.id,
+			message: { ...message, timestamp: message.timestamp?.toISOString() },
+		}),
+	);
+	if (isFailure(queued)) {
+		await AlertEvent.markFailed(
+			params.db,
+			event.id,
+			`Could not queue the delivery: ${queued.error.message}`,
+		);
 	}
 }
 
 /**
  * Sends one alert email and awaits the outcome for the pipeline to record. Cost is
- * counted before the send since even a rejected send is billed, and email costs far
- * more than the check that triggered it; language falls back to the app default since an alert addresses a mailbox with no stored locale to read.
+ * counted before the send since even a rejected send is billed; language falls back to
+ * the app default since an alert addresses a mailbox with no stored locale to read.
  */
 async function deliverEmail(
 	config: { to: string; subjectPrefix: string },
-	message: AlertMessage,
+	incident: IncidentSummary | null,
 	params: DispatchAlertsParams,
 ): Promise<Result<SentMessage, Error>> {
 	recordCost("emailSent");
@@ -407,75 +274,11 @@ async function deliverEmail(
 			snapshot: params.snapshot,
 			dashboardUrl: params.dashboardUrl,
 			occurredAt: new Date(),
-			incident: message.incident ?? null,
+			incident,
 			locale: translation.data.locale,
 			t: translation.data.t,
 		}),
 	);
-}
-
-async function deliverWebhook(
-	config: { url: string; secret: string },
-	message: AlertMessage,
-	params: DispatchAlertsParams,
-): Promise<void> {
-	let body = JSON.stringify({
-		monitorId: params.monitorId,
-		monitorType: params.monitorType,
-		monitorName: params.monitorName,
-		eventType: params.eventType,
-		snapshot: params.snapshot,
-		message: message.text,
-		timestamp: new Date().toISOString(),
-	});
-
-	let headers = new Headers({ "Content-Type": "application/json" });
-	if (config.secret)
-		headers.set("Webhook-Signature", `sha256=${await hmacSha256Hex(config.secret, body)}`);
-
-	let response = await fetch(config.url, { method: "POST", headers, body });
-	if (!response.ok) throw new Error(`Webhook failed with status ${response.status}`);
-}
-
-async function deliverSlack(
-	config: { webhookUrl: string; channel?: string },
-	message: AlertMessage,
-): Promise<void> {
-	let body: { text: string; channel?: string } = { text: `*${message.subject}*\n${message.text}` };
-	if (config.channel) body.channel = config.channel;
-
-	let response = await fetch(config.webhookUrl, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(body),
-	});
-	if (!response.ok) throw new Error(`Slack webhook failed with status ${response.status}`);
-}
-
-async function deliverDiscord(
-	config: { webhookUrl: string },
-	message: AlertMessage,
-): Promise<void> {
-	let response = await fetch(config.webhookUrl, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify({ content: `**${message.subject}**\n${message.text}` }),
-	});
-	if (!response.ok) throw new Error(`Discord webhook failed with status ${response.status}`);
-}
-
-/** Signs `payload` with HMAC-SHA256 using `secret`, returning a lowercase hex digest. */
-async function hmacSha256Hex(secret: string, payload: string): Promise<string> {
-	let encoder = new TextEncoder();
-	let key = await crypto.subtle.importKey(
-		"raw",
-		encoder.encode(secret),
-		{ name: "HMAC", hash: "SHA-256" },
-		false,
-		["sign"],
-	);
-	let signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
-	return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /**

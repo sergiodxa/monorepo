@@ -70,8 +70,8 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchM
  */
 let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 
-/** The queue, watched so a stray send from the check would be caught here. */
-let queue: QueueMock = createQueue();
+/** The queue, watched so the alert delivery a check queues is read off it here. */
+let queue: QueueMock<{ job: string; body?: unknown }> = createQueue();
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({
@@ -236,24 +236,19 @@ function derivedObjectNames(): string[] {
 /** The Analytics Engine SQL API endpoint, served as a default handler for any query landing there. */
 let SQL_URL = "https://api.cloudflare.com/client/v4/accounts/test-account/analytics_engine/sql";
 
-/** The endpoint {@link seedAlert}'s webhook alert delivers to. */
-let WEBHOOK_URL = "https://hooks.test/alert";
+/** The endpoint {@link seedAlert}'s webhook alert delivers to, from the delivery job. */
+let WEBHOOK_URL = "https://hooks.acme-receiver.com/alert";
 
-/** The endpoint each webhook delivery the alert dispatch made went to, in order. */
-let deliveries: string[] = [];
+/** The jobs every queued send was addressed to, in order. */
+function queuedJobs(): string[] {
+	return queue.sent.map((sent) => sent.body.job);
+}
 
 /**
- * MSW serving the two endpoints the pipeline reaches for, as default handlers so every
- * check can touch either one; `onUnhandledRequest: "error"` turns any third destination
- * into a failure.
+ * MSW serving the Analytics Engine endpoint the pipeline reaches for, as a default handler;
+ * `onUnhandledRequest: "error"` turns any other destination into a failure.
  */
-let server = setupServer(
-	http.post(SQL_URL, () => HttpResponse.json({ data: [] })),
-	http.post(WEBHOOK_URL, ({ request }) => {
-		deliveries.push(request.url);
-		return HttpResponse.text("ok");
-	}),
-);
+let server = setupServer(http.post(SQL_URL, () => HttpResponse.json({ data: [] })));
 
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
 afterEach(() => server.resetHandlers());
@@ -268,7 +263,7 @@ beforeEach(() => {
 	geoFetch.reset();
 	ingestMock.mockClear();
 	ingestMock.mockImplementation(realIngest);
-	deliveries.length = 0;
+	queue.reset();
 });
 
 describe("checkHttp classification", () => {
@@ -889,7 +884,8 @@ describe("checkHttp alerting", () => {
 		let events = await db.findMany(alertEvents, { where: { monitor_id: monitor.id } });
 		expect(events).toHaveLength(1);
 		expect(events[0]?.event_type).toBe("up");
-		expect(deliveries).toEqual([WEBHOOK_URL]);
+		expect(events[0]?.status).toBe("pending");
+		expect(queuedJobs()).toEqual(["deliverAlert"]);
 	});
 });
 

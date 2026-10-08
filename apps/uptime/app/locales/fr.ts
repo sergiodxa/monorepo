@@ -2814,6 +2814,7 @@ export default {
 							email: "E-mail",
 							slack: "Slack",
 							discord: "Discord",
+							pagerduty: "PagerDuty",
 						},
 					},
 
@@ -2854,12 +2855,6 @@ export default {
 								description:
 									"L'URL du webhook entrant Slack. Créez-en un sur api.slack.com/apps > Incoming Webhooks.",
 							},
-							channel: {
-								label: "Canal personnalisé (optionnel)",
-								placeholder: "#alertes",
-								description:
-									"Canal optionnel où publier au lieu de la valeur par défaut du webhook. Incluez le préfixe #.",
-							},
 						},
 						discord: {
 							webhookUrl: {
@@ -2867,6 +2862,14 @@ export default {
 								placeholder: "https://discord.com/api/webhooks/...",
 								description:
 									"L'URL du webhook Discord. Créez-en un dans Paramètres du serveur > Intégrations > Webhooks.",
+							},
+						},
+						pagerduty: {
+							routingKey: {
+								label: "Clé d'intégration",
+								placeholder: "0123456789abcdef0123456789abcdef",
+								description:
+									"La clé d'intégration Events API v2 d'un service PagerDuty. Vous la trouverez sous Service > Integrations > Events API V2.",
 							},
 						},
 					},
@@ -2908,6 +2911,7 @@ export default {
 						webhook: "Paramètres du webhook",
 						slack: "Paramètres Slack",
 						discord: "Paramètres Discord",
+						pagerduty: "Paramètres PagerDuty",
 					},
 				},
 
@@ -2955,6 +2959,13 @@ export default {
 					email: "E-mail",
 					slack: "Slack",
 					discord: "Discord",
+					pagerduty: "PagerDuty",
+				},
+
+				broken: {
+					label: "Cassée",
+					description:
+						"La destination a répondu qu'elle n'existe plus : {$reason}. Enregistrez à nouveau le canal pour effacer ce message.",
 				},
 
 				notifyOnRecovery: {
@@ -3972,6 +3983,7 @@ export default {
 				},
 
 				status: {
+					pending: "En attente",
 					sent: "Envoyé",
 					skipped_cooldown: "Ignoré (Délai)",
 					skipped_cap: "Ignoré (Limite de répétitions)",
@@ -4027,6 +4039,7 @@ export default {
 							email: "E-mail",
 							slack: "Slack",
 							discord: "Discord",
+							pagerduty: "PagerDuty",
 						},
 					},
 
@@ -4064,12 +4077,6 @@ export default {
 								placeholder: "https://hooks.slack.com/services/...",
 								description:
 									"L'URL du webhook entrant Slack. Créez-en un sur api.slack.com/apps > Incoming Webhooks.",
-							},
-							channel: {
-								label: "Canal personnalisé",
-								placeholder: "#alertes",
-								description:
-									"Canal optionnel où publier au lieu de la valeur par défaut du webhook. Incluez le préfixe #.",
 							},
 						},
 						discord: {

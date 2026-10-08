@@ -60,9 +60,29 @@ export default class Alert {
 		return await db.findOne(alerts, { where: { id: alertId, team_id: teamId } });
 	}
 
-	/** Updates an alert's editable fields. */
+	/**
+	 * Updates an alert's editable fields. Saving a `config` clears the broken mark, since
+	 * a channel saved again is the owner's answer to it; the next delivery confirms it.
+	 */
 	static async updateById(db: Database, alertId: string, changes: Partial<InsertAlert>) {
-		return await db.update(alerts, alertId, changes, { touch: true });
+		let cleared: Partial<InsertAlert> =
+			changes.config === undefined ? {} : { broken_at: null, broken_reason: null };
+		return await db.update(alerts, alertId, { ...changes, ...cleared }, { touch: true });
+	}
+
+	/** Finds an alert by id alone, for the delivery job, which runs outside any team's request. */
+	static async findById(db: Database, alertId: string) {
+		return await db.findOne(alerts, { where: { id: alertId } });
+	}
+
+	/**
+	 * Marks the alert's destination as gone, so the alert list tells its owner the channel
+	 * stopped existing; `updated_at` stays, since nobody edited the alert.
+	 *
+	 * @param reason - The platform's own words, shown beside the badge.
+	 */
+	static async markBroken(db: Database, alertId: string, reason: string) {
+		await db.update(alerts, alertId, { broken_at: Date.now(), broken_reason: reason });
 	}
 
 	/** Deletes an alert. */

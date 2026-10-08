@@ -14,13 +14,15 @@ import { defineOperation } from "@sdxc/openapi";
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
 import { ALERT_EVENT } from "~/app/http/openapi/monitors";
+import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
 import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
+import { discordWebhookUrl, slackWebhookUrl } from "~/app/http/validators/webhook-url";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 
-const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord"] as const;
+const ALERT_STRATEGIES = ["email", "webhook", "slack", "discord", "pagerduty"] as const;
 
 /** The tag grouping every operation in this module. */
 const TAGS = ["Alerts"];
@@ -45,13 +47,26 @@ const SCOPE_FIELDS = {
 		.meta({ description: "The one monitor the alert covers; null covers the whole type" }),
 };
 
-/** An alert's channel as a read returns it: webhook URLs and secrets stay server-side. */
+/**
+ * An alert's channel as a read returns it: webhook URLs, signing secrets and PagerDuty
+ * integration keys stay server-side.
+ */
 const ALERT_CHANNEL = s.variant("strategy", {
 	email: s.object({ strategy: s.literal("email"), to: s.string(), subjectPrefix: s.string() }),
 	webhook: s.object({ strategy: s.literal("webhook") }),
-	slack: s.object({ strategy: s.literal("slack"), channel: s.optional(s.string()) }),
+	slack: s.object({ strategy: s.literal("slack") }),
 	discord: s.object({ strategy: s.literal("discord") }),
+	pagerduty: s.object({ strategy: s.literal("pagerduty") }),
 });
+
+/**
+ * A PagerDuty Events API v2 integration key: any text with a non-space character, stored
+ * trimmed, since a key pasted from PagerDuty's settings page often carries whitespace.
+ */
+const ROUTING_KEY = s
+	.string()
+	.pipe(checks.pattern(/\S/), checks.maxLength(MAX_ROUTING_KEY_LENGTH))
+	.transform((value) => value.trim());
 
 /** An alert as `serializeAlertSafe` writes it, for the list and show endpoints. */
 const ALERT = s
@@ -127,13 +142,25 @@ export const CREATE_ALERT_BODY = s.variant("strategy", {
 	}),
 	slack: s.object({
 		strategy: s.literal("slack"),
-		webhookUrl: s.string().pipe(checks.url()),
-		channel: s.optional(s.string().pipe(checks.maxLength(100))),
+		webhookUrl: s
+			.string()
+			.pipe(slackWebhookUrl())
+			.meta({ description: "A Slack incoming webhook URL on `https://hooks.slack.com/`" }),
 		...COMMON_ALERT_FIELDS,
 	}),
 	discord: s.object({
 		strategy: s.literal("discord"),
-		webhookUrl: s.string().pipe(checks.url()),
+		webhookUrl: s
+			.string()
+			.pipe(discordWebhookUrl())
+			.meta({ description: "A Discord webhook URL on `https://discord.com/api/webhooks/`" }),
+		...COMMON_ALERT_FIELDS,
+	}),
+	pagerduty: s.object({
+		strategy: s.literal("pagerduty"),
+		routingKey: ROUTING_KEY.meta({
+			description: "The integration key of a PagerDuty service's Events API v2 integration",
+		}),
 		...COMMON_ALERT_FIELDS,
 	}),
 });
@@ -179,7 +206,7 @@ const ALERT_PATCH = s.object({
 	webhookUrl: s.optional(
 		s.string().pipe(checks.url()).meta({ description: "`slack` and `discord` strategies" }),
 	),
-	channel: s.optional(s.nullable(s.string().pipe(checks.maxLength(100)))),
+	routingKey: s.optional(ROUTING_KEY.meta({ description: "`pagerduty` strategy" })),
 });
 
 const ALERTS_INDEX = defineOperation("alertsIndex", routes.api.v1.alerts.index, {

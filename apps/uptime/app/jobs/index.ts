@@ -10,6 +10,7 @@
  */
 
 import { job, jobs } from "@sdxc/jobs";
+import { MESSAGE_SCHEMA } from "@sdxc/messaging";
 import * as s from "remix/data-schema";
 
 /** What a job a cron monitor watches declares, so every one of them spells it the same way. */
@@ -39,6 +40,20 @@ const CheckHttpSchema = s.object({
 	/** When the check was scheduled; the run itself may happen later. */
 	scheduledAt: s.number(),
 });
+
+/**
+ * One alert delivery: which alert, the `alert_events` row it settles, and the message.
+ * The destination is read from the alert's row when the job runs, so a webhook URL or a
+ * routing key stays in the database and out of the queue.
+ */
+const DeliverAlertSchema = s.object({
+	alertId: s.string(),
+	eventId: s.string(),
+	message: MESSAGE_SCHEMA,
+});
+
+/** What one `deliverAlert` message carries. */
+export type DeliverAlertInput = s.InferOutput<typeof DeliverAlertSchema>;
 
 /** The transition one `notify` message carries. */
 export type NotifyInput = s.InferOutput<typeof NotifySchema>;
@@ -142,4 +157,9 @@ export default jobs({
 		meta: { monitorId: "4715a9ac-7fe6-4423-816c-b4a711b00dda" } satisfies Monitored,
 	}),
 	notify: job({ input: NotifySchema }),
+	/**
+	 * Sends one alert to its chat, paging or webhook channel, retried with backoff on its
+	 * own delivery, so a slow or rate-limited channel never holds up the check that fired it.
+	 */
+	deliverAlert: job({ input: DeliverAlertSchema }),
 });

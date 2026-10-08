@@ -153,6 +153,67 @@ describe("POST /actions/:team/create-alert", () => {
 		});
 	});
 
+	test("creates a pagerduty-strategy alert storing its trimmed integration key", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(createAlert, routes.actions.alert.create, team, membership, db, {
+			name: "On-call",
+			strategy: "pagerduty",
+			pagerduty_routing_key: " 0123456789abcdef0123456789abcdef ",
+		});
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "pagerduty",
+			config: { routingKey: "0123456789abcdef0123456789abcdef" },
+		});
+	});
+
+	test("stores a slack alert with only its webhook URL", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		await postAlertAction(createAlert, routes.actions.alert.create, team, membership, db, {
+			name: "Slack",
+			strategy: "slack",
+			slack_webhook_url: "https://hooks.slack.com/services/T000/B000/XXXX",
+			slack_channel: "#ops",
+		});
+
+		let created = await db.findOne(alerts, { where: { team_id: team.id } });
+		expect(created?.config).toEqual({
+			strategy: "slack",
+			config: { webhookUrl: "https://hooks.slack.com/services/T000/B000/XXXX" },
+		});
+	});
+
+	test("refuses a slack webhook URL outside hooks.slack.com, creating no row", async () => {
+		let { db } = createTestDatabase();
+		let team = await createTeamRow(db);
+		let membership = await createMembershipRow(db, team.id);
+
+		let response = await postAlertAction(
+			createAlert,
+			routes.actions.alert.create,
+			team,
+			membership,
+			db,
+			{
+				name: "Slack",
+				strategy: "slack",
+				slack_webhook_url: "https://hooks.slack.example/services/T000/B000/XXXX",
+			},
+		);
+
+		expect(response.headers.get("Location")).toBe(
+			routes.app.team.alerts.new.href({ team: team.slug }),
+		);
+		expect(await db.count(alerts, { where: { team_id: team.id } })).toBe(0);
+	});
+
 	test("refuses a recipient whose domain receives no mail, creating no row", async () => {
 		dns.answer("nomail.example", "no-mail-server");
 		let { db } = createTestDatabase();
@@ -685,7 +746,6 @@ describe("create-alert funnel event", () => {
 				name: "Slack",
 				strategy: "slack",
 				slack_webhook_url: "https://hooks.slack.com/services/T000/B000/XXXXXXXXXXXX",
-				slack_channel: "#ops",
 			},
 			{},
 			records,

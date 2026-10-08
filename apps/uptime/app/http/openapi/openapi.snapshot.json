@@ -5706,11 +5706,8 @@
                       },
                       "webhookUrl": {
                         "type": "string",
-                        "format": "uri"
-                      },
-                      "channel": {
-                        "type": "string",
-                        "maxLength": 100
+                        "format": "uri",
+                        "description": "A Slack incoming webhook URL on `https://hooks.slack.com/`"
                       },
                       "name": {
                         "type": "string",
@@ -5757,7 +5754,8 @@
                       },
                       "webhookUrl": {
                         "type": "string",
-                        "format": "uri"
+                        "format": "uri",
+                        "description": "A Discord webhook URL on `https://discord.com/api/webhooks/`"
                       },
                       "name": {
                         "type": "string",
@@ -5792,6 +5790,55 @@
                     "required": [
                       "strategy",
                       "webhookUrl",
+                      "name"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "const": "pagerduty"
+                      },
+                      "routingKey": {
+                        "type": "string",
+                        "pattern": "\\S",
+                        "maxLength": 255,
+                        "description": "The integration key of a PagerDuty service's Events API v2 integration"
+                      },
+                      "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 255
+                      },
+                      "notifyOnRecovery": {
+                        "type": "boolean",
+                        "default": true
+                      },
+                      "cooldownMinutes": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1440,
+                        "default": 60
+                      },
+                      "monitorType": {
+                        "type": "string",
+                        "enum": [
+                          "http",
+                          "dns",
+                          "tcp",
+                          "cron",
+                          "flow"
+                        ],
+                        "description": "Defaults to `http` beside a `monitorId`"
+                      },
+                      "monitorId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "strategy",
+                      "routingKey",
                       "name"
                     ]
                   }
@@ -6049,7 +6096,8 @@
                       "email",
                       "webhook",
                       "slack",
-                      "discord"
+                      "discord",
+                      "pagerduty"
                     ],
                     "description": "Switching strategy requires the new strategy's settings"
                   },
@@ -6082,12 +6130,11 @@
                     "format": "uri",
                     "description": "`slack` and `discord` strategies"
                   },
-                  "channel": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "maxLength": 100
+                  "routingKey": {
+                    "type": "string",
+                    "pattern": "\\S",
+                    "maxLength": 255,
+                    "description": "`pagerduty` strategy"
                   }
                 }
               }
@@ -6143,7 +6190,8 @@
                       "email",
                       "webhook",
                       "slack",
-                      "discord"
+                      "discord",
+                      "pagerduty"
                     ],
                     "description": "Switching strategy requires the new strategy's settings"
                   },
@@ -6176,12 +6224,11 @@
                     "format": "uri",
                     "description": "`slack` and `discord` strategies"
                   },
-                  "channel": {
-                    "type": [
-                      "string",
-                      "null"
-                    ],
-                    "maxLength": 100
+                  "routingKey": {
+                    "type": "string",
+                    "pattern": "\\S",
+                    "maxLength": 255,
+                    "description": "`pagerduty` strategy"
                   }
                 }
               }
@@ -11262,6 +11309,7 @@
           "status": {
             "type": "string",
             "enum": [
+              "pending",
               "sent",
               "skipped_cooldown",
               "skipped_cap",
@@ -12022,9 +12070,6 @@
                   "strategy": {
                     "type": "string",
                     "const": "slack"
-                  },
-                  "channel": {
-                    "type": "string"
                   }
                 },
                 "required": [
@@ -12037,6 +12082,18 @@
                   "strategy": {
                     "type": "string",
                     "const": "discord"
+                  }
+                },
+                "required": [
+                  "strategy"
+                ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "strategy": {
+                    "type": "string",
+                    "const": "pagerduty"
                   }
                 },
                 "required": [
@@ -12138,7 +12195,8 @@
                   "email",
                   "webhook",
                   "slack",
-                  "discord"
+                  "discord",
+                  "pagerduty"
                 ]
               }
             },

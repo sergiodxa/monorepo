@@ -1,22 +1,21 @@
 /**
  * Unit tests for the alert-dispatch pipeline: maintenance suppression, candidate
- * resolution, the repeat policy, recovery suppression totals, delivery outcome
- * recording, and per-strategy delivery (email/webhook/Slack/Discord). `Alert` and
- * `AlertEvent` are mocked because this harness's SQLite adapter can't bind their JSON
- * `config`/`snapshot` columns; webhook endpoints are intercepted with MSW.
+ * resolution, the repeat policy, recovery suppression totals, outcome recording, inline
+ * email, and the message queued for every other channel. `Alert` and `AlertEvent` are
+ * mocked so each test states the history it needs; the queue is an in-memory binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { Transport } from "@sdxc/mail";
 
+import { createQueue } from "@sdxc/cloudflare-mocks";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { failure } from "@sdxc/result";
-import { http, HttpResponse } from "msw";
-import { setupServer } from "msw/node";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type {
 	AlertEventSnapshot,
@@ -33,8 +32,44 @@ import type {
 import { AlertEmail } from "~/app/emails/alert";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
+/** The JSON form of a queued message, as the delivery job receives it. */
+interface QueuedMessage {
+	title: string;
+	text?: string;
+	severity?: string;
+	fields?: { label: string; value: string; inline?: boolean }[];
+	links?: { label: string; url: string }[];
+	timestamp?: string;
+	key?: string;
+	state?: string;
+	data?: Record<string, unknown>;
+}
+
+/** One envelope `enqueue` writes to the queue. */
+interface Envelope {
+	job: string;
+	body: { alertId: string; eventId: string; message: QueuedMessage };
+}
+
+/** The queue `enqueue` writes to, at module scope because the module captures `env` on import. */
+let queue: QueueMock<Envelope> = createQueue<Envelope>({ name: "ping" });
+
+/** Every other binding keeps the placeholder the workers stub answers. */
+vi.doMock("cloudflare:workers", () => ({
+	env: new Proxy(
+		{},
+		{ get: (_target, property) => (property === "QUEUE" ? queue : `test-${String(property)}`) },
+	),
+}));
+
+/** Ids `AlertEvent.record` hands out, so a test can match a queued delivery to its row. */
+let recordedIds = 0;
+
 let listForMonitorMock = vi.fn(async (..._args: unknown[]) => [] as SelectAlert[]);
-let recordMock = vi.fn(async (..._args: unknown[]) => ({}) as unknown);
+let recordMock = vi.fn(
+	async (..._args: unknown[]) => ({ id: `event-${++recordedIds}` }) as unknown,
+);
+let markFailedMock = vi.fn(async (..._args: unknown[]) => {});
 let isInCooldownMock = vi.fn(async (..._args: unknown[]) => false);
 let countSentSinceRecoveryMock = vi.fn(async (..._args: unknown[]) => 0);
 let summarizeIncidentMock = vi.fn(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
@@ -66,13 +101,14 @@ class FakeAlert extends realAlertModule.default {
 	static override listForMonitor = listForMonitorMock;
 }
 
-/** See `FakeAlert`: the four history statics `dispatchAlerts` calls, and nothing else. */
+/** See `FakeAlert`: the history statics `dispatchAlerts` calls, and nothing else. */
 class FakeAlertEvent extends realAlertEventModule.default {
 	static override record =
 		recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
 	static override isInCooldown = isInCooldownMock;
 	static override countSentSinceRecovery = countSentSinceRecoveryMock;
 	static override summarizeIncident = summarizeIncidentMock;
+	static override markFailed = markFailedMock;
 }
 
 vi.doMock("~/app/data/alert", () => ({ default: FakeAlert }));
@@ -113,6 +149,8 @@ function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
 		notify_on_recovery: true,
 		cooldown_minutes: 0,
 		config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "" } },
+		broken_at: null,
+		broken_reason: null,
 		...overrides,
 	};
 }
@@ -136,54 +174,15 @@ function failingTransport(message: string): Transport {
 
 const WEBHOOK_URL = "https://hooks.example.com/uptime";
 
-const SLACK_URL = "https://hooks.slack.example/abc";
+const SLACK_URL = "https://hooks.slack.com/services/T000/B000/XXXX";
 
-const DISCORD_URL = "https://discord.example/webhooks/abc";
-
-/** One webhook delivery as it went on the wire. */
-interface Delivery {
-	url: string;
-	method: string;
-	headers: Headers;
-	body: string;
-}
-
-/** Every delivery that left over the three webhook channels, in order. */
-let deliveries: Delivery[] = [];
-
-/**
- * Records what a channel POSTs and answers with `status`. Registered at 200 for all three
- * endpoints, since an accepted delivery is what most tests need; a test that wants an
- * endpoint to refuse re-registers that one endpoint through `server.use`.
- */
-function webhookHandler(url: string, status = 200) {
-	return http.post(url, async ({ request }) => {
-		deliveries.push({
-			url: request.url,
-			method: request.method,
-			headers: request.headers,
-			body: await request.text(),
-		});
-		return new HttpResponse(null, { status });
-	});
-}
-
-let server = setupServer(
-	webhookHandler(WEBHOOK_URL),
-	webhookHandler(SLACK_URL),
-	webhookHandler(DISCORD_URL),
-);
-
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
-afterAll(() => server.close());
-
-/** The one delivery a single-alert dispatch is expected to have made. */
-function onlyDelivery(): Delivery {
-	expect(deliveries).toHaveLength(1);
-	let [delivery] = deliveries;
-	if (!delivery) throw new Error("expected exactly one webhook delivery");
-	return delivery;
+/** The one delivery a single-alert dispatch is expected to have queued. */
+function onlyQueued(): Envelope["body"] {
+	expect(queue.sent).toHaveLength(1);
+	let [sent] = queue.sent;
+	if (!sent) throw new Error("expected exactly one queued delivery");
+	expect(sent.body.job).toBe("deliverAlert");
+	return sent.body.body;
 }
 
 let httpSnapshot: AlertEventSnapshot = {
@@ -213,15 +212,16 @@ function makeDnsSnapshot(
 beforeEach(() => {
 	listForMonitorMock.mockClear();
 	recordMock.mockClear();
+	markFailedMock.mockClear();
 	isInCooldownMock.mockClear();
 	countSentSinceRecoveryMock.mockClear();
 	summarizeIncidentMock.mockClear();
 	listForMonitorMock.mockImplementation(async () => []);
-	recordMock.mockImplementation(async () => ({}));
+	recordMock.mockImplementation(async () => ({ id: `event-${++recordedIds}` }));
 	isInCooldownMock.mockImplementation(async () => false);
 	countSentSinceRecoveryMock.mockImplementation(async () => 0);
 	summarizeIncidentMock.mockImplementation(async () => ({ sent: 0, suppressed: 0 }));
-	deliveries = [];
+	queue.reset();
 });
 
 describe("dashboardUrl", () => {
@@ -761,9 +761,9 @@ describe("dispatchAlerts — repeat policy", () => {
 
 describe("dispatchAlerts — recovery reports what was suppressed", () => {
 	/**
-	 * Asserted on the webhook channel, which puts the pipeline's own `text` on the wire
-	 * verbatim; the email channel renders the same totals through a locale key, so
-	 * asserting there would check the translation instead of the sentence this pipeline writes.
+	 * Asserted on the queued message, which carries the pipeline's own `text`; the email
+	 * channel renders the same totals through a locale key, so asserting there would check
+	 * the translation instead of the sentence this pipeline writes.
 	 */
 	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
 		let { db } = createTestDatabase();
@@ -788,10 +788,11 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 		});
 
 		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
-		let parsed = JSON.parse(onlyDelivery().body) as { message: string };
-		expect(parsed.message).toContain(
+		let { message } = onlyQueued();
+		expect(message.text).toContain(
 			"Notifications for this incident: 10 sent, 300 held back by the alert's cooldown.",
 		);
+		expect(message.data?.["incident"]).toEqual({ sent: 10, suppressed: 300 });
 	});
 
 	test("leaves a recovery message alone when nothing was suppressed", async () => {
@@ -908,7 +909,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 
 		expect(recordMock).toHaveBeenCalledTimes(2);
 		let statuses = recordMock.mock.calls.map((call) => (call[1] as { status: string }).status);
-		expect(statuses.sort((a, b) => a.localeCompare(b))).toEqual(["failed", "sent"]);
+		expect(statuses.sort((a, b) => a.localeCompare(b))).toEqual(["failed", "pending"]);
 	});
 
 	test("email subject is prefixed with the alert's configured subjectPrefix", async () => {
@@ -982,9 +983,9 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 });
 
 /**
- * The plain-text body every non-email channel puts on the wire, asserted on the Slack
- * strategy because it sends that text verbatim. A DNS snapshot's body explains itself
- * with counters, findings, and the sentences that keep a true report from reading as a bug.
+ * The text every non-email channel sends, read off the queued message. A DNS snapshot's
+ * body explains itself with counters, findings, and the sentences that keep a true report
+ * from reading as a bug.
  */
 describe("dispatchAlerts — the DNS body", () => {
 	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
@@ -1005,7 +1006,7 @@ describe("dispatchAlerts — the DNS body", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		return (JSON.parse(onlyDelivery().body) as { text: string }).text;
+		return onlyQueued().message.text ?? "";
 	}
 
 	test("lists the counters and quotes every finding", async () => {
@@ -1076,229 +1077,135 @@ describe("dispatchAlerts — the DNS body", () => {
 	});
 });
 
-describe("dispatchAlerts — webhook delivery", () => {
-	async function computeHmacSha256Hex(secret: string, payload: string): Promise<string> {
-		let encoder = new TextEncoder();
-		let key = await crypto.subtle.importKey(
-			"raw",
-			encoder.encode(secret),
-			{ name: "HMAC", hash: "SHA-256" },
-			false,
-			["sign"],
-		);
-		let signature = await crypto.subtle.sign("HMAC", key, encoder.encode(payload));
-		return [...new Uint8Array(signature)]
-			.map((byte) => byte.toString(16).padStart(2, "0"))
-			.join("");
+describe("dispatchAlerts — queued delivery", () => {
+	async function dispatchDown(eventType: "down" | "degraded" | "up" = "down") {
+		let { db } = createTestDatabase();
+		await dispatchAlerts({
+			db,
+			mailer: makeMailer(),
+			teamId: "team-1",
+			monitorId: "monitor-1",
+			monitorType: "http",
+			monitorName: "Homepage",
+			eventType,
+			snapshot: httpSnapshot,
+			dashboardUrl: "https://uptime.sergiodxa.com/x",
+		});
 	}
 
-	test("POSTs a JSON body and signs it with a real HMAC-SHA256 signature when a secret is configured", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "shh" } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
+	test("records a messaging channel as pending and queues its delivery with that event", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({
+				id: "alert-slack",
+				config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
+			}),
+		]);
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
+		await dispatchDown();
 
-		let delivery = onlyDelivery();
-		expect(delivery.url).toBe(WEBHOOK_URL);
-		expect(delivery.method).toBe("POST");
-		expect(delivery.headers.get("Content-Type")).toBe("application/json");
-
-		let expectedSignature = `sha256=${await computeHmacSha256Hex("shh", delivery.body)}`;
-		expect(delivery.headers.get("Webhook-Signature")).toBe(expectedSignature);
-
-		let parsed = JSON.parse(delivery.body) as Record<string, unknown>;
-		expect(parsed.monitorId).toBe("monitor-1");
-		expect(parsed.monitorType).toBe("http");
-		expect(parsed.eventType).toBe("down");
-		expect(parsed.snapshot).toEqual(httpSnapshot);
-	});
-
-	test("omits the Webhook-Signature header when no secret is configured", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
-
-		expect(onlyDelivery().headers.has("Webhook-Signature")).toBe(false);
-	});
-
-	test("records 'failed' when the webhook endpoint responds with a non-2xx status", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-		server.use(webhookHandler(WEBHOOK_URL, 500));
-
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
-
+		expect(recordMock).toHaveBeenCalledTimes(1);
 		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("failed");
-		expect(call.error_message).toBe("Webhook failed with status 500");
-	});
-});
+		expect(call.status).toBe("pending");
+		expect(call.error_message).toBeNull();
 
-describe("dispatchAlerts — Slack delivery", () => {
-	test("POSTs a formatted message to the Slack webhook URL, including an optional channel", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "slack", config: { webhookUrl: SLACK_URL, channel: "#alerts" } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
-
-		let delivery = onlyDelivery();
-		expect(delivery.url).toBe(SLACK_URL);
-		let body = JSON.parse(delivery.body) as { text: string; channel?: string };
-		expect(body.channel).toBe("#alerts");
-		expect(body.text).toContain("[Uptime Alert] Homepage is DOWN");
+		let queued = onlyQueued();
+		expect(queued.alertId).toBe("alert-slack");
+		expect(queued.eventId).toBe(`event-${recordedIds}`);
 	});
 
-	test("omits the channel field when the alert has no channel configured", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
+	test("keeps every credential out of the queue payload", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
+			makeAlert({
+				config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "shh-secret" } },
+			}),
+			makeAlert({ config: { strategy: "pagerduty", config: { routingKey: "routing-key-123" } } }),
+		]);
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
+		await dispatchDown();
 
-		let body = JSON.parse(onlyDelivery().body) as Record<string, unknown>;
-		expect("channel" in body).toBe(false);
+		let payload = JSON.stringify(queue.sent.map((sent) => sent.body));
+		expect(queue.sent).toHaveLength(3);
+		expect(payload).not.toContain(SLACK_URL);
+		expect(payload).not.toContain(WEBHOOK_URL);
+		expect(payload).not.toContain("shh-secret");
+		expect(payload).not.toContain("routing-key-123");
 	});
 
-	test("records 'failed' when the Slack webhook responds with a non-2xx status", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-		server.use(webhookHandler(SLACK_URL, 404));
+	test("marks the event failed when the delivery cannot be queued", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
+		]);
+		let sendBatch = vi.spyOn(queue, "sendBatch").mockRejectedValueOnce(new Error("queue down"));
+		let send = vi.spyOn(queue, "send").mockRejectedValueOnce(new Error("queue down"));
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
+		await dispatchDown();
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("failed");
-		expect(call.error_message).toBe("Slack webhook failed with status 404");
-	});
-});
-
-describe("dispatchAlerts — Discord delivery", () => {
-	test("POSTs a formatted `content` field to the Discord webhook URL", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "discord", config: { webhookUrl: DISCORD_URL } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
-
-		let delivery = onlyDelivery();
-		expect(delivery.url).toBe(DISCORD_URL);
-		let body = JSON.parse(delivery.body) as { content: string };
-		expect(body.content).toContain("[Uptime Alert] Homepage is DOWN");
+		expect(markFailedMock).toHaveBeenCalledTimes(1);
+		expect(markFailedMock.mock.calls[0]?.[1]).toBe(`event-${recordedIds}`);
+		expect(String(markFailedMock.mock.calls[0]?.[2])).toContain("Could not queue the delivery");
+		sendBatch.mockRestore();
+		send.mockRestore();
 	});
 
-	test("records 'failed' when the Discord webhook responds with a non-2xx status", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({
-			config: { strategy: "discord", config: { webhookUrl: DISCORD_URL } },
-		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
-		server.use(webhookHandler(DISCORD_URL, 503));
+	test("titles the message with the transition and links the dashboard", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({
+				config: {
+					strategy: "discord",
+					config: { webhookUrl: "https://discord.com/api/webhooks/1/abc" },
+				},
+			}),
+		]);
 
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
-			teamId: "team-1",
+		await dispatchDown();
+
+		let { message } = onlyQueued();
+		expect(message.title).toBe("Homepage is DOWN");
+		expect(message.severity).toBe("critical");
+		expect(message.state).toBe("open");
+		expect(message.key).toBe("http:monitor-1");
+		expect(message.fields).toEqual([{ label: "Type", value: "http", inline: true }]);
+		expect(message.links).toEqual([
+			{ label: "Open dashboard", url: "https://uptime.sergiodxa.com/x" },
+		]);
+		expect(message.text).toBe(
+			"URL: https://example.com\nResponse status: 500 (expected 200)\nResponse time: 1200ms",
+		);
+		expect(message.timestamp).toEqual(expect.any(String));
+		expect(message.data).toMatchObject({
 			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
 			eventType: "down",
 			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
+	});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("failed");
-		expect(call.error_message).toBe("Discord webhook failed with status 503");
+	test("reads a degraded transition as a warning", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
+		]);
+
+		await dispatchDown("degraded");
+
+		expect(onlyQueued().message).toMatchObject({
+			title: "Homepage is DEGRADED",
+			severity: "warning",
+		});
+	});
+
+	test("resolves the incident on a recovery, under the same key", async () => {
+		listForMonitorMock.mockImplementation(async () => [
+			makeAlert({ config: { strategy: "pagerduty", config: { routingKey: "rk" } } }),
+		]);
+
+		await dispatchDown("up");
+
+		expect(onlyQueued().message).toMatchObject({
+			title: "Homepage is RECOVERED",
+			severity: "success",
+			state: "resolved",
+			key: "http:monitor-1",
+		});
 	});
 });
 
@@ -2072,10 +1979,10 @@ describe("notifyFlowResult", () => {
 			flowAlertResultFromResult("down", makeFlowResult()),
 		);
 
-		let body = JSON.parse(onlyDelivery().body) as { message: string };
-		expect(body.message).toContain("Tests: 2 of 4 passed");
-		expect(body.message).toContain("Failed test: checkout accepts the coupon (line 27)");
-		expect(body.message).toContain("expected status 200, got 500");
+		let text = onlyQueued().message.text;
+		expect(text).toContain("Tests: 2 of 4 passed");
+		expect(text).toContain("Failed test: checkout accepts the coupon (line 27)");
+		expect(text).toContain("expected status 200, got 500");
 	});
 });
 

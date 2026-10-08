@@ -1,16 +1,16 @@
 ---
 title: Alerts
-description: Create and manage alerts for email, Slack, Discord, and webhook notifications. Maximum 10 per team.
+description: Create and manage alerts for email, Slack, Discord, PagerDuty, and webhook notifications. Maximum 10 per team.
 section:
   title: API Resources
   order: 5
 order: 7
-lastUpdated: 2026-09-05
+lastUpdated: 2026-10-07
 ---
 
-Alerts notify you when monitors detect issues. Each team can have up to 10 alerts with different notification strategies: email, webhook, Slack, or Discord.
+Alerts notify you when monitors detect issues. Each team can have up to 10 alerts with different notification strategies: email, webhook, Slack, Discord, or PagerDuty.
 
-Sensitive data such as webhook URLs and secrets are never returned in API responses for security.
+Sensitive data such as webhook URLs, signing secrets and PagerDuty integration keys are never returned in API responses for security.
 
 ## Repeat Behaviour
 
@@ -73,8 +73,7 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts?perPage=25" \
 				"notifyOnRecovery": true,
 				"cooldownMinutes": 0,
 				"config": {
-					"strategy": "slack",
-					"channel": "#incidents"
+					"strategy": "slack"
 				},
 				"monitorType": "http",
 				"monitorId": "mon_abc123",
@@ -96,7 +95,7 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts?perPage=25" \
 }
 ```
 
-Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert reports only its `strategy`.
+Webhook URLs, secrets and integration keys stay out of `config`, so a webhook, Slack, Discord or PagerDuty alert reports only its `strategy`.
 
 ## POST /api/v1/alerts
 
@@ -109,7 +108,7 @@ Creates a new alert. The request body varies based on the notification strategy.
 | Field              | Type    | Required | Description                                                                                                                                                                                                                                                                                      |
 | ------------------ | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `name`             | string  | Yes      | Display name for the alert, 1-255 characters                                                                                                                                                                                                                                                     |
-| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`                                                                                                                                                                                                                                                   |
+| `strategy`         | string  | Yes      | One of: `email`, `webhook`, `slack`, `discord`, `pagerduty`                                                                                                                                                                                                                                      |
 | `notifyOnRecovery` | boolean | No       | Send notification when monitor recovers (default: `true`)                                                                                                                                                                                                                                        |
 | `cooldownMinutes`  | integer | No       | Minutes between repeat notifications while a monitor stays broken, 0-1440 (default: `60`; repeats are floored at 5 minutes, and the first notification of an outage is never delayed — see [Repeat Behaviour](#repeat-behaviour))                                                                |
 | `monitorType`      | string  | No       | Limit the alert to one kind of monitor: `http`, `dns`, `tcp`, `cron` or `flow`. Sent on its own, the alert covers every monitor of that kind, including ones created later.                                                                                                                      |
@@ -131,16 +130,23 @@ Creates a new alert. The request body varies based on the notification strategy.
 
 ### Strategy: Slack
 
-| Field        | Type   | Required | Description                                        |
-| ------------ | ------ | -------- | -------------------------------------------------- |
-| `webhookUrl` | string | Yes      | Slack incoming webhook URL                         |
-| `channel`    | string | No       | Override the default channel, up to 100 characters |
+| Field        | Type   | Required | Description                                                     |
+| ------------ | ------ | -------- | --------------------------------------------------------------- |
+| `webhookUrl` | string | Yes      | Slack incoming webhook URL, starting `https://hooks.slack.com/` |
+
+The incoming webhook posts to the channel it was created for in Slack.
 
 ### Strategy: Discord
 
-| Field        | Type   | Required | Description         |
-| ------------ | ------ | -------- | ------------------- |
-| `webhookUrl` | string | Yes      | Discord webhook URL |
+| Field        | Type   | Required | Description                                                       |
+| ------------ | ------ | -------- | ----------------------------------------------------------------- |
+| `webhookUrl` | string | Yes      | Discord webhook URL, starting `https://discord.com/api/webhooks/` |
+
+### Strategy: PagerDuty
+
+| Field        | Type   | Required | Description                                                                                       |
+| ------------ | ------ | -------- | ------------------------------------------------------------------------------------------------- |
+| `routingKey` | string | Yes      | Integration key of a PagerDuty service's Events API v2 integration, up to 255 characters, trimmed |
 
 ### Example Request (Email)
 
@@ -169,9 +175,9 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -H "Authorization: Bearer uptime_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "PagerDuty Integration",
+    "name": "Incident Webhook",
     "strategy": "webhook",
-    "url": "https://events.pagerduty.com/integration/abc123/enqueue",
+    "url": "https://example.com/hooks/uptime",
     "secret": "whsec_your_secret_key"
   }'
 ```
@@ -187,8 +193,7 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
   -d '{
     "name": "Slack #incidents",
     "strategy": "slack",
-    "webhookUrl": "https://hooks.slack.com/services/T00/B00/xxx",
-    "channel": "#incidents"
+    "webhookUrl": "https://hooks.slack.com/services/T00/B00/xxx"
   }'
 ```
 
@@ -204,6 +209,21 @@ curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
     "name": "Discord Server Alert",
     "strategy": "discord",
     "webhookUrl": "https://discord.com/api/webhooks/123/abc"
+  }'
+```
+
+### Example Request (PagerDuty)
+
+#### cURL
+
+```bash
+curl -X POST https://uptime.sergiodxa.com/api/v1/alerts \
+  -H "Authorization: Bearer uptime_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "On-call Pager",
+    "strategy": "pagerduty",
+    "routingKey": "0123456789abcdef0123456789abcdef"
   }'
 ```
 
@@ -276,7 +296,7 @@ curl https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123 \
 }
 ```
 
-Webhook URLs and secrets stay out of `config`, so a webhook or Discord alert reports only its `strategy`.
+Webhook URLs, secrets and integration keys stay out of `config`, so a webhook, Slack, Discord or PagerDuty alert reports only its `strategy`.
 
 ## PATCH /api/v1/alerts/:id
 
@@ -288,8 +308,8 @@ Updates an existing alert with a [JSON merge patch](/docs/api/overview#updating-
 
 Every field `POST /api/v1/alerts` accepts is accepted here, with the same limits. Include only the fields you want to change:
 
-- `null` resets `notifyOnRecovery` and `cooldownMinutes` to their defaults, and clears `subjectPrefix`, `secret` and `channel`.
-- `name`, `strategy` and a strategy's required setting (`email`, `url` or `webhookUrl`) cannot be removed.
+- `null` resets `notifyOnRecovery` and `cooldownMinutes` to their defaults, and clears `subjectPrefix` and `secret`.
+- `name`, `strategy` and a strategy's required setting (`email`, `url`, `webhookUrl` or `routingKey`) cannot be removed.
 - A channel setting changes on its own, keeping the others: `{"email": "oncall@example.com"}` keeps the alert's `subjectPrefix`.
 - Switching `strategy` needs the new strategy's required setting in the same patch, `{"strategy": "discord", "webhookUrl": "..."}`, and drops the previous strategy's settings.
 
@@ -444,13 +464,13 @@ curl "https://uptime.sergiodxa.com/api/v1/alerts/alt_abc123/events?perPage=10" \
 
 ### Event Fields
 
-| Field          | Type           | Description                                                              |
-| -------------- | -------------- | ------------------------------------------------------------------------ |
-| `id`           | string         | Unique event identifier                                                  |
-| `alertId`      | string         | The alert the event belongs to                                           |
-| `monitorId`    | string         | The monitor that caused the event                                        |
-| `eventType`    | string         | What the monitor did: `down`, `up`, or `degraded`                        |
-| `status`       | string         | Delivery outcome: `sent`, `skipped_cooldown`, `skipped_cap`, or `failed` |
-| `sentAt`       | integer        | Unix timestamp in milliseconds of when the notification was sent         |
-| `errorMessage` | string \| null | Why delivery failed, or `null` when it succeeded                         |
-| `createdAt`    | integer        | Unix timestamp in milliseconds of when the event was recorded            |
+| Field          | Type           | Description                                                                                                        |
+| -------------- | -------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `id`           | string         | Unique event identifier                                                                                            |
+| `alertId`      | string         | The alert the event belongs to                                                                                     |
+| `monitorId`    | string         | The monitor that caused the event                                                                                  |
+| `eventType`    | string         | What the monitor did: `down`, `up`, or `degraded`                                                                  |
+| `status`       | string         | Delivery outcome: `pending` while it waits to be sent, then `sent`, `skipped_cooldown`, `skipped_cap`, or `failed` |
+| `sentAt`       | integer        | Unix timestamp in milliseconds of when the notification was sent                                                   |
+| `errorMessage` | string \| null | Why delivery failed, or `null` when it succeeded                                                                   |
+| `createdAt`    | integer        | Unix timestamp in milliseconds of when the event was recorded                                                      |

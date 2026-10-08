@@ -150,6 +150,50 @@ describe("alerts", () => {
 		expect(body).toContain("Fastest allowed");
 	});
 
+	test("marks an alert whose destination no longer exists, with the reason", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "Gone Channel",
+				notify_on_recovery: true,
+				cooldown_minutes: 60,
+				config: { strategy: "pagerduty", config: { routingKey: "0123456789abcdef" } },
+				broken_at: Date.now(),
+				broken_reason: "PagerDuty refused the integration key",
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+		expect(body).toContain("PagerDuty");
+		expect(body).toContain("Broken");
+		expect(body).toContain("PagerDuty refused the integration key");
+	});
+
+	test("shows no broken mark on a working alert", async () => {
+		let { db, team, membership } = await createFixture();
+		await db.create(
+			alerts,
+			{
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				monitor_id: null,
+				name: "CTO Alert",
+				notify_on_recovery: true,
+				cooldown_minutes: 60,
+				config: WEBHOOK_CONFIG,
+			},
+			{ touch: true, returnRow: true },
+		);
+
+		let body = await (await send(db, team, membership)).text();
+		expect(body).not.toContain("Broken");
+	});
+
 	test("resolves a monitor-scoped alert's monitor name", async () => {
 		let { db, team, membership } = await createFixture();
 		let monitor = await db.create(

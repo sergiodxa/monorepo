@@ -1,7 +1,6 @@
 /**
  * Unit tests for the alert create/update/delete form validators: the shared
- * per-strategy `.refine()` gates (email/webhook/slack/discord each require their own
- * destination field) and the basic field constraints.
+ * per-strategy `.refine()` gates (every strategy requires its own destination field) and the basic field constraints.
  *
  * Exercises the schemas directly via `remix/data-schema`'s `parseSafe()` with real
  * `FormData`, not `@sdxc/validate`'s `validate()`: `validate()` normalizes `FormData`
@@ -59,7 +58,7 @@ describe("CreateAlertSchema", () => {
 	test("accepts a valid slack-strategy alert", () => {
 		let formData = baseFormData({
 			strategy: "slack",
-			slack_webhook_url: "https://hooks.slack.com/services/x",
+			slack_webhook_url: "https://hooks.slack.com/services/T000/B000/XXXX",
 		});
 		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(true);
 	});
@@ -72,13 +71,49 @@ describe("CreateAlertSchema", () => {
 	test("accepts a valid discord-strategy alert", () => {
 		let formData = baseFormData({
 			strategy: "discord",
-			discord_webhook_url: "https://discord.com/api/webhooks/x",
+			discord_webhook_url: "https://discord.com/api/webhooks/123/abc",
 		});
 		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(true);
 	});
 
 	test("rejects a discord strategy without a valid discord_webhook_url", () => {
 		let formData = baseFormData({ strategy: "discord", discord_webhook_url: "" });
+		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(false);
+	});
+
+	test("rejects a slack strategy whose URL is not on hooks.slack.com", () => {
+		let formData = baseFormData({
+			strategy: "slack",
+			slack_webhook_url: "https://hooks.slack.example/services/T000/B000/XXXX",
+		});
+		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(false);
+	});
+
+	test("rejects a discord strategy whose URL is not a Discord webhook", () => {
+		let formData = baseFormData({
+			strategy: "discord",
+			discord_webhook_url: "https://example.com/api/webhooks/123/abc",
+		});
+		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(false);
+	});
+
+	test("accepts a pagerduty-strategy alert and trims its integration key", () => {
+		let formData = baseFormData({
+			strategy: "pagerduty",
+			pagerduty_routing_key: "  0123456789abcdef0123456789abcdef \n",
+		});
+		let result = s.parseSafe(CreateAlertSchema, formData);
+		if (!result.success) expect.unreachable("expected the pagerduty alert to validate");
+		expect(result.value.pagerduty_routing_key).toBe("0123456789abcdef0123456789abcdef");
+	});
+
+	test("rejects a pagerduty strategy with a blank integration key", () => {
+		let formData = baseFormData({ strategy: "pagerduty", pagerduty_routing_key: "   " });
+		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(false);
+	});
+
+	test("rejects a pagerduty integration key longer than 255 characters", () => {
+		let formData = baseFormData({ strategy: "pagerduty", pagerduty_routing_key: "k".repeat(256) });
 		expect(s.parseSafe(CreateAlertSchema, formData).success).toBe(false);
 	});
 

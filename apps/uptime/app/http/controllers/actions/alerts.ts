@@ -46,15 +46,14 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
 				config: { url: values.webhook_url ?? "", secret: values.webhook_secret ?? "" },
 			};
 		case "slack":
-			return {
-				strategy: "slack",
-				config: {
-					webhookUrl: values.slack_webhook_url ?? "",
-					channel: values.slack_channel || undefined,
-				},
-			};
+			return { strategy: "slack", config: { webhookUrl: values.slack_webhook_url ?? "" } };
 		case "discord":
 			return { strategy: "discord", config: { webhookUrl: values.discord_webhook_url ?? "" } };
+		case "pagerduty":
+			return {
+				strategy: "pagerduty",
+				config: { routingKey: values.pagerduty_routing_key ?? "" },
+			};
 	}
 }
 

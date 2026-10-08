@@ -133,15 +133,16 @@ describe("alertNew", () => {
 			"webhook_url",
 			"webhook_secret",
 			"slack_webhook_url",
-			"slack_channel",
 			"discord_webhook_url",
+			"pagerduty_routing_key",
 		]) {
 			expect(body).toContain(`name="${name}"`);
 		}
+		expect(body).not.toContain('name="slack_channel"');
 
 		expect(body).toContain("Webhook-Signature");
 
-		for (let channel of ["email", "webhook", "slack", "discord"]) {
+		for (let channel of ["email", "webhook", "slack", "discord", "pagerduty"]) {
 			expect(body).toContain(`data-channel="${channel}"`);
 			expect(body).toContain(
 				`&:has(select[name="strategy"] option:checked:not([value="${channel}"]))`,

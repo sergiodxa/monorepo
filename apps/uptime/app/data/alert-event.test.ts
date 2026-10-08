@@ -1,8 +1,7 @@
 /**
- * Unit tests for the `AlertEvent` data-access model: recording delivery outcomes, the
- * cooldown check `app/services/alerts.ts` uses to gate re-firing, the per-incident send
- * count and totals that bound and explain that repetition, and the recent-events listing
- * used by the alerts UI.
+ * Unit tests for the `AlertEvent` data-access model: recording and settling delivery
+ * outcomes, the cooldown check and per-incident counts that gate re-firing (a queued
+ * `pending` delivery counting as notified), the ref a recovery edits, and the listing.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -88,7 +87,7 @@ let db: Database;
 beforeEach(() => {
 	let database = createTestDatabase();
 	db = database.db;
-	patchJsonColumns(database.adapter, ["snapshot"]);
+	patchJsonColumns(database.adapter, ["snapshot", "delivery_ref"]);
 });
 
 /**
@@ -99,7 +98,7 @@ async function recordAt(
 	agoMs: number,
 	event_type: SelectAlertEvent["event_type"],
 	status: SelectAlertEvent["status"],
-): Promise<void> {
+): Promise<SelectAlertEvent> {
 	let row = await AlertEvent.record(db, {
 		alert_id: "alert-1",
 		monitor_id: "monitor-1",
@@ -109,7 +108,9 @@ async function recordAt(
 		monitor_type: "http",
 		monitor_name: "My site",
 	});
-	await db.update(alertEvents, row.id, { sent_at: Date.now() - agoMs });
+	let sentAt = Date.now() - agoMs;
+	await db.update(alertEvents, row.id, { sent_at: sentAt });
+	return { ...row, sent_at: sentAt };
 }
 
 describe("AlertEvent.record", () => {
@@ -396,5 +397,82 @@ describe("AlertEvent.summarizeIncident", () => {
 			sent: 1,
 			suppressed: 3,
 		});
+	});
+});
+
+describe("pending deliveries count as notified", () => {
+	test("a queued delivery holds the alert in its cooldown", async () => {
+		await recordAt(1000, "down", "pending");
+
+		expect(await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30)).toBe(true);
+	});
+
+	test("a queued delivery makes the next check a repeat rather than the incident's first", async () => {
+		await recordAt(1000, "down", "pending");
+
+		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 1)).toBe(1);
+	});
+
+	test("a recovery reports a queued delivery among the incident's sent notifications", async () => {
+		await recordAt(3000, "down", "pending");
+		await recordAt(2000, "down", "sent");
+		await recordAt(1000, "down", "skipped_cooldown");
+
+		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+			sent: 2,
+			suppressed: 1,
+		});
+	});
+});
+
+describe("AlertEvent.markSent / markFailed", () => {
+	test("settles a pending delivery as sent and keeps the platform's ref", async () => {
+		let event = await recordAt(0, "down", "pending");
+
+		await AlertEvent.markSent(db, event.id, { provider: "discord-webhook", id: "m-1" });
+
+		let settled = await AlertEvent.findById(db, event.id);
+		expect(settled?.status).toBe("sent");
+		expect(settled?.delivery_ref).toEqual({ provider: "discord-webhook", id: "m-1" });
+	});
+
+	test("settles a pending delivery as failed with the reason", async () => {
+		let event = await recordAt(0, "down", "pending");
+
+		await AlertEvent.markFailed(db, event.id, "Slack answered no_service (gone)");
+
+		let settled = await AlertEvent.findById(db, event.id);
+		expect(settled?.status).toBe("failed");
+		expect(settled?.error_message).toBe("Slack answered no_service (gone)");
+	});
+});
+
+describe("AlertEvent.refForRecovery", () => {
+	test("answers the ref of the newest delivered notification of the incident", async () => {
+		let first = await recordAt(5000, "down", "pending");
+		await AlertEvent.markSent(db, first.id, { provider: "memory", id: "1" });
+		let repeat = await recordAt(4000, "down", "pending");
+		await AlertEvent.markSent(db, repeat.id, { provider: "memory", id: "2" });
+		let recovery = await recordAt(1000, "up", "pending");
+
+		expect(await AlertEvent.refForRecovery(db, recovery)).toEqual({ provider: "memory", id: "2" });
+	});
+
+	test("answers null when the incident's notifications landed with no ref", async () => {
+		let down = await recordAt(5000, "down", "pending");
+		await AlertEvent.markSent(db, down.id, null);
+		let recovery = await recordAt(1000, "up", "pending");
+
+		expect(await AlertEvent.refForRecovery(db, recovery)).toBeNull();
+	});
+
+	test("never reaches back into an incident a previous recovery closed", async () => {
+		let old = await recordAt(9000, "down", "pending");
+		await AlertEvent.markSent(db, old.id, { provider: "memory", id: "old" });
+		await recordAt(8000, "up", "sent");
+		await recordAt(5000, "down", "failed");
+		let recovery = await recordAt(1000, "up", "pending");
+
+		expect(await AlertEvent.refForRecovery(db, recovery)).toBeNull();
 	});
 });

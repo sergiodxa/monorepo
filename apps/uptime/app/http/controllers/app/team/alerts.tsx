@@ -7,10 +7,11 @@
 
 import { BellIcon, BellPlusIcon, HistoryIcon, PlusIcon } from "@sdxc/icons";
 import { fg } from "@sdxc/u/color";
-import { hstack } from "@sdxc/u/layout";
+import { hstack, vstack } from "@sdxc/u/layout";
+import { m } from "@sdxc/u/size";
 import { hover } from "@sdxc/u/state";
 import { fontSize, textDecoration } from "@sdxc/u/typography";
-import { Empty, LinkButton, Table } from "@sdxc/ui";
+import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import type { SelectAlert } from "~/database/schema";
@@ -21,6 +22,7 @@ import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -133,7 +135,25 @@ export default createAction(routes.app.team.alerts.index, {
 									<Table.Body>
 										{alerts.map((alert) => (
 											<Table.Row key={alert.id}>
-												<Table.Cell>{alert.name}</Table.Cell>
+												<Table.Cell>
+													{alert.name}
+													{/**
+													 * A destination that answered it no longer exists stops receiving
+													 * deliveries, so the row says why until the channel is saved again.
+													 */}
+													{alert.broken_at !== null && (
+														<div mix={[vstack({ gap: 1, align: "start" })]}>
+															<Badge {...badgeVariant("down")}>
+																{ctx.intl.t("page.alerts.table.broken.label")}
+															</Badge>
+															<p mix={[m(0), fontSize("0.8125rem"), fg("neutral.muted")]}>
+																{ctx.intl.t("page.alerts.table.broken.description", {
+																	reason: alert.broken_reason ?? "",
+																})}
+															</p>
+														</div>
+													)}
+												</Table.Cell>
 												<Table.Cell>{scopeLabel(alert)}</Table.Cell>
 												<Table.Cell>
 													{ctx.intl.t(`page.alerts.table.types.${alert.config.strategy}`)}

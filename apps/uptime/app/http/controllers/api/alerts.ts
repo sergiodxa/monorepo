@@ -1,7 +1,7 @@
 /**
  * API v1 collection endpoints for alerts: `GET /api/v1/alerts` lists a team's alerts
- * with sensitive channel config (webhook URLs, secrets) stripped, and
- * `POST /api/v1/alerts` creates one for the email/webhook/slack/discord strategy,
+ * with sensitive channel config (webhook URLs, secrets, integration keys) stripped, and
+ * `POST /api/v1/alerts` creates one for any channel strategy,
  * enforcing the per-team limit. Requires `alerts:read`/`alerts:write` via
  * `requireApiKey`.
  *
@@ -56,7 +56,7 @@ export function apiScopeFrom(input: {
 	return { monitorType, monitorId };
 }
 
-/** Maps an alert row to a list/get response, stripping webhook URLs and secrets. */
+/** Maps an alert row to a list/get response, stripping webhook URLs, secrets and integration keys. */
 export function serializeAlertSafe(alert: SelectAlert) {
 	let scope = storedMonitorScope(alert);
 	return {
@@ -70,7 +70,6 @@ export function serializeAlertSafe(alert: SelectAlert) {
 				to: alert.config.config.to,
 				subjectPrefix: alert.config.config.subjectPrefix,
 			}),
-			...(alert.config.strategy === "slack" && { channel: alert.config.config.channel }),
 		},
 		monitorType: scope.monitorType,
 		monitorId:
@@ -105,8 +104,9 @@ export function serializeAlertStrategyOnly(alert: SelectAlert) {
 export type CreateAlertValues =
 	| { strategy: "email"; email: string; subjectPrefix?: string; monitorId?: string }
 	| { strategy: "webhook"; url: string; secret?: string; monitorId?: string }
-	| { strategy: "slack"; webhookUrl: string; channel?: string; monitorId?: string }
-	| { strategy: "discord"; webhookUrl: string; monitorId?: string };
+	| { strategy: "slack"; webhookUrl: string; monitorId?: string }
+	| { strategy: "discord"; webhookUrl: string; monitorId?: string }
+	| { strategy: "pagerduty"; routingKey: string; monitorId?: string };
 
 /** Builds the strategy-specific `AlertConfig` JSON column from validated input. */
 export function buildConfig(values: CreateAlertValues): AlertConfig {
@@ -122,12 +122,11 @@ export function buildConfig(values: CreateAlertValues): AlertConfig {
 				config: { url: values.url, secret: values.secret ?? "" },
 			};
 		case "slack":
-			return {
-				strategy: "slack",
-				config: { webhookUrl: values.webhookUrl, channel: values.channel },
-			};
+			return { strategy: "slack", config: { webhookUrl: values.webhookUrl } };
 		case "discord":
 			return { strategy: "discord", config: { webhookUrl: values.webhookUrl } };
+		case "pagerduty":
+			return { strategy: "pagerduty", config: { routingKey: values.routingKey } };
 	}
 }
 

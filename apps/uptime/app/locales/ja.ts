@@ -2746,6 +2746,7 @@ export default {
 							email: "メール",
 							slack: "Slack",
 							discord: "Discord",
+							pagerduty: "PagerDuty",
 						},
 					},
 
@@ -2786,12 +2787,6 @@ export default {
 								description:
 									"Slackの受信Webhook URL。api.slack.com/apps > 受信Webhookで作成できます。",
 							},
-							channel: {
-								label: "チャンネルの上書き（任意）",
-								placeholder: "#alerts",
-								description:
-									"Webhookのデフォルトの代わりに投稿するオプションのチャンネル。#プレフィックスを含めてください。",
-							},
 						},
 						discord: {
 							webhookUrl: {
@@ -2799,6 +2794,14 @@ export default {
 								placeholder: "https://discord.com/api/webhooks/...",
 								description:
 									"DiscordのWebhook URL。サーバー設定 > 連携サービス > Webhookで作成できます。",
+							},
+						},
+						pagerduty: {
+							routingKey: {
+								label: "インテグレーションキー",
+								placeholder: "0123456789abcdef0123456789abcdef",
+								description:
+									"PagerDutyサービスのEvents API v2インテグレーションのキーです。Service > Integrations > Events API V2 で確認できます。",
 							},
 						},
 					},
@@ -2840,6 +2843,7 @@ export default {
 						webhook: "Webhook設定",
 						slack: "Slack設定",
 						discord: "Discord設定",
+						pagerduty: "PagerDuty設定",
 					},
 				},
 
@@ -2887,6 +2891,13 @@ export default {
 					email: "メール",
 					slack: "Slack",
 					discord: "Discord",
+					pagerduty: "PagerDuty",
+				},
+
+				broken: {
+					label: "無効",
+					description:
+						"送信先がもう存在しないと応答しました: {$reason}。チャネルを保存し直すとこの表示は消えます。",
 				},
 
 				notifyOnRecovery: {
@@ -3894,6 +3905,7 @@ export default {
 				},
 
 				status: {
+					pending: "保留中",
 					sent: "送信済み",
 					skipped_cooldown: "スキップ（クールダウン）",
 					skipped_cap: "スキップ（繰り返し上限）",
@@ -3948,6 +3960,7 @@ export default {
 							email: "メール",
 							slack: "Slack",
 							discord: "Discord",
+							pagerduty: "PagerDuty",
 						},
 					},
 
@@ -3985,12 +3998,6 @@ export default {
 								placeholder: "https://hooks.slack.com/services/...",
 								description:
 									"Slackの受信Webhook URL。api.slack.com/apps > 受信Webhookで作成できます。",
-							},
-							channel: {
-								label: "チャンネルの上書き",
-								placeholder: "#alerts",
-								description:
-									"Webhookのデフォルトの代わりに投稿するオプションのチャンネル。#プレフィックスを含めてください。",
 							},
 						},
 						discord: {

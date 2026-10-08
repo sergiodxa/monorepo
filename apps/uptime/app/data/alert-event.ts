@@ -1,8 +1,8 @@
 /**
- * Data-access model for alert delivery history (`alert_events`): recording outcomes,
- * the cooldown check `app/services/alerts.ts` uses to decide whether an alert may fire
- * again yet, and the per-incident send count that tells it whether the notification it is
- * about to make is the incident's first one, which always goes out, or a repeat.
+ * Data-access model for alert delivery history (`alert_events`): recording outcomes and
+ * settling queued ones, the cooldown and per-incident counts that decide whether an alert
+ * fires, and the delivery ref a recovery edits. A `pending` row counts as notified, so a
+ * delivery still queued is never duplicated by the next check.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,14 +11,25 @@
 import type { Database } from "remix/data-table";
 
 import { generateUUID } from "@sdxc/uuid";
-import { and, eq, gt, gte, inList, ne } from "remix/data-table";
+import { and, eq, gt, gte, inList, lt, lte, ne, notNull } from "remix/data-table";
 
-import type { AlertEventSnapshot, InsertAlertEvent, SelectAlertEvent } from "~/database/schema";
+import type {
+	AlertDeliveryRef,
+	AlertEventSnapshot,
+	InsertAlertEvent,
+	SelectAlertEvent,
+} from "~/database/schema";
 
 import { alertEvents } from "~/database/schema";
 
+/** The statuses that mean the alert notified, or will once its queued delivery runs. */
+const NOTIFIED_STATUSES = ["sent", "pending"] as const;
+
 export default class AlertEvent {
-	/** Records a delivery outcome (sent, skipped for one of the `skipped_*` reasons, or failed). */
+	/**
+	 * Records an outcome: `pending` for a queued delivery, `sent` or `failed` for one made
+	 * inline, or one of the `skipped_*` reasons.
+	 */
 	static async record(
 		db: Database,
 		input: Omit<InsertAlertEvent, "id" | "created_at" | "sent_at"> & {
@@ -51,7 +62,7 @@ export default class AlertEvent {
 				eq("alert_id", alertId),
 				eq("monitor_id", monitorId),
 				eq("event_type", eventType),
-				eq("status", "sent"),
+				inList("status", NOTIFIED_STATUSES),
 				gte("sent_at", since),
 			),
 			limit: 1,
@@ -97,7 +108,7 @@ export default class AlertEvent {
 				eq("alert_id", alertId),
 				eq("monitor_id", monitorId),
 				eq("event_type", eventType),
-				eq("status", "sent"),
+				inList("status", NOTIFIED_STATUSES),
 				gt("sent_at", since),
 			),
 			limit,
@@ -126,13 +137,75 @@ export default class AlertEvent {
 		);
 
 		let [sent, suppressed] = await Promise.all([
-			db.count(alertEvents, { where: and(incident, eq("status", "sent")) }),
+			db.count(alertEvents, { where: and(incident, inList("status", NOTIFIED_STATUSES)) }),
 			db.count(alertEvents, {
 				where: and(incident, inList("status", ["skipped_cooldown", "skipped_cap"])),
 			}),
 		]);
 
 		return { sent, suppressed };
+	}
+
+	/** Finds one event, for the delivery job settling the row it was queued with. */
+	static async findById(db: Database, eventId: string) {
+		return await db.findOne(alertEvents, { where: { id: eventId } });
+	}
+
+	/**
+	 * Settles a queued delivery as delivered, keeping where the platform put the message so
+	 * a recovery can edit it.
+	 *
+	 * @param ref - The platform's ref, or `null` when it answers no message id.
+	 */
+	static async markSent(db: Database, eventId: string, ref: AlertDeliveryRef | null) {
+		await db.update(alertEvents, eventId, {
+			status: "sent",
+			error_message: null,
+			delivery_ref: ref,
+		});
+	}
+
+	/** Settles a queued delivery as failed for good, with the reason the history view shows. */
+	static async markFailed(db: Database, eventId: string, errorMessage: string) {
+		await db.update(alertEvents, eventId, { status: "failed", error_message: errorMessage });
+	}
+
+	/**
+	 * The ref of the newest delivered notification of the incident `recovery` closes: after
+	 * the previous recovery and before this one. `null` when none landed with a ref, which
+	 * sends the recovery as a message of its own.
+	 */
+	static async refForRecovery(
+		db: Database,
+		recovery: Pick<SelectAlertEvent, "id" | "alert_id" | "monitor_id" | "sent_at">,
+	): Promise<AlertDeliveryRef | null> {
+		let [previous] = await db.findMany(alertEvents, {
+			where: and(
+				eq("alert_id", recovery.alert_id),
+				eq("monitor_id", recovery.monitor_id),
+				eq("event_type", "up"),
+				ne("id", recovery.id),
+				lt("sent_at", recovery.sent_at),
+			),
+			orderBy: ["sent_at", "desc"],
+			limit: 1,
+		});
+
+		let [notified] = await db.findMany(alertEvents, {
+			where: and(
+				eq("alert_id", recovery.alert_id),
+				eq("monitor_id", recovery.monitor_id),
+				ne("event_type", "up"),
+				eq("status", "sent"),
+				notNull("delivery_ref"),
+				gt("sent_at", previous?.sent_at ?? 0),
+				lte("sent_at", recovery.sent_at),
+			),
+			orderBy: ["sent_at", "desc"],
+			limit: 1,
+		});
+
+		return notified?.delivery_ref ?? null;
 	}
 
 	/** Lists the most recent alert-delivery events for a team's alerts, newest first. */

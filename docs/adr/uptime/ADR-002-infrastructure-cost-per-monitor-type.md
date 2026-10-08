@@ -626,9 +626,16 @@ Other email-generating paths:
   for 30 days sends 30 emails per alert.
 - **Status-page subscribers** — not implemented. There is no subscriber table and no
   status-page notification path, so this cost is zero today.
-- **Duplicate prevention** — the only mechanism is `cooldown_minutes`. Delivery failures
-  are recorded to `alert_events` with `status: "failed"` and **never retried**, so there is
-  no retry amplification.
+- **Duplicate prevention** — the only mechanism is `cooldown_minutes`, and a delivery still
+  queued (`status: "pending"`) counts as notified for it. Email failures are recorded to
+  `alert_events` as `failed` and not retried. Slack, Discord, PagerDuty and webhook alerts are
+  delivered by the `deliverAlert` job, which retries a rate-limited, unavailable, timed-out or
+  unreachable destination with backoff (30 s base, 30 min cap, ±20 % jitter, or the platform's
+  `Retry-After`), bounded by `MAX_ATTEMPTS` (4: the first delivery plus the queue's three
+  redeliveries) per delivery. Retry amplification is therefore at most 4× the outbound requests
+  and queue operations of a failing destination, plus one `alert_events` update per delivery to
+  settle the row. Chat platforms have no idempotency key, so a retry after a timeout whose
+  request did land posts the message twice.
 
 ---
 

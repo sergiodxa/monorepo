@@ -1,5 +1,5 @@
 /**
- * The channel `<select>` and its four per-channel fieldsets, shared by the
+ * The channel `<select>` and one fieldset per channel, shared by the
  * create and edit alert pages. `:has()` on the checked option shows only
  * the chosen fieldset in CSS alone, so the form works without JavaScript,
  * and hidden fieldsets still post their (empty) values for schemas that
@@ -22,11 +22,12 @@ import { Select, TextField } from "@sdxc/ui";
 
 import type { AlertConfig } from "~/database/schema";
 
+import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
 import { withPrefix } from "~/app/lib/prefixed-translate";
 import Field from "~/resources/components/field";
 import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
 
-const CHANNELS = ["email", "webhook", "slack", "discord"] as const;
+const CHANNELS = ["email", "webhook", "slack", "discord", "pagerduty"] as const;
 
 namespace AlertChannelFields {
 	export interface Props {
@@ -57,9 +58,9 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 			<div
 				mix={[
 					/**
-					 * A hidden flex item produces no gap, so the four fieldsets stacking on
-					 * the same rhythm as the picker above them cost nothing while three
-					 * stay `display: none` — the usual case, since only one channel shows.
+					 * A hidden flex item produces no gap, so the fieldsets stacking on the
+					 * same rhythm as the picker above them cost nothing while every other
+					 * one stays `display: none` — the usual case, since only one channel shows.
 					 */
 					vstack({ gap: SETTINGS_FIELD_GAP }),
 					...CHANNELS.map((channel) =>
@@ -134,12 +135,6 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							name="slack_webhook_url"
 							defaultValue={config?.strategy === "slack" ? config.config.webhookUrl : ""}
 						/>
-						<TextField
-							label={t("config.slack.channel.label")}
-							name="slack_channel"
-							placeholder="#incidents"
-							defaultValue={config?.strategy === "slack" ? (config.config.channel ?? "") : ""}
-						/>
 					</div>
 				</fieldset>
 
@@ -151,6 +146,21 @@ export default function AlertChannelFields(handle: Handle<AlertChannelFields.Pro
 							type="url"
 							name="discord_webhook_url"
 							defaultValue={config?.strategy === "discord" ? config.config.webhookUrl : ""}
+						/>
+					</div>
+				</fieldset>
+
+				<fieldset data-channel="pagerduty">
+					<legend>{t("legends.pagerduty")}</legend>
+					<div mix={[vstack({ gap: SETTINGS_FIELD_GAP })]}>
+						<TextField
+							label={t("config.pagerduty.routingKey.label")}
+							name="pagerduty_routing_key"
+							placeholder={t("config.pagerduty.routingKey.placeholder")}
+							description={t("config.pagerduty.routingKey.description")}
+							autoComplete="off"
+							maxLength={MAX_ROUTING_KEY_LENGTH}
+							defaultValue={config?.strategy === "pagerduty" ? config.config.routingKey : ""}
 						/>
 					</div>
 				</fieldset>

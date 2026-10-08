@@ -534,11 +534,20 @@ export const cronJobPings = table({
 export type SelectCronJobPing = TableRow<typeof cronJobPings>;
 export type InsertCronJobPing = InsertRow<typeof cronJobPings>;
 
+/**
+ * Where an alert notifies. Rows saved while Slack still offered a `channel` override keep
+ * it in their JSON; Slack app webhooks post to the channel they were created for, so the
+ * stored value is read as absent.
+ */
 export type AlertConfig =
 	| { strategy: "webhook"; config: { url: string; secret: string } }
 	| { strategy: "email"; config: { to: string; subjectPrefix: string } }
-	| { strategy: "slack"; config: { webhookUrl: string; channel?: string } }
-	| { strategy: "discord"; config: { webhookUrl: string } };
+	| { strategy: "slack"; config: { webhookUrl: string } }
+	| { strategy: "discord"; config: { webhookUrl: string } }
+	| { strategy: "pagerduty"; config: { routingKey: string } };
+
+/** The strategies delivered as a portable message by the delivery job; email has its own templates. */
+export type MessagingAlertConfig = Exclude<AlertConfig, { strategy: "email" }>;
 
 export const alerts = table({
 	name: "alerts",
@@ -566,6 +575,13 @@ export const alerts = table({
 		 */
 		cooldown_minutes: c.integer().default(60),
 		config: c.json() as ColumnBuilder<AlertConfig>,
+		/**
+		 * When the destination answered that it no longer exists; deliveries keep being
+		 * attempted, and saving the alert's channel again clears it.
+		 */
+		broken_at: c.integer().nullable(),
+		/** The platform's own words for why the destination is gone, shown beside the badge. */
+		broken_reason: c.text().nullable(),
 	},
 });
 
@@ -647,8 +663,24 @@ export type AlertEventSnapshot =
  * What became of one alert delivery attempt. Every reason an alert was recorded without
  * being delivered is named `skipped_*`, so the pipeline and history view treat suppressions
  * as a group; `skipped_cap` stays for rows written while that ceiling still existed.
+ * `pending` is a delivery queued for the delivery job, which settles it to `sent` or `failed`.
  */
-export const alertEventStatuses = ["sent", "skipped_cooldown", "skipped_cap", "failed"] as const;
+export const alertEventStatuses = [
+	"pending",
+	"sent",
+	"skipped_cooldown",
+	"skipped_cap",
+	"failed",
+] as const;
+
+/**
+ * Where a platform put a delivered message, as `@sdxc/messaging` answers it: a flat string
+ * map tagged with its provider, which a recovery hands back to edit the message in place.
+ */
+export interface AlertDeliveryRef {
+	provider: string;
+	[field: string]: string;
+}
 
 export type AlertEventStatus = (typeof alertEventStatuses)[number];
 
@@ -667,6 +699,7 @@ export const alertEvents = table({
 		monitor_type: c.enum(["http", "dns", "tcp", "cron", "flow", "ssl"]).nullable(),
 		monitor_name: c.text().nullable(),
 		snapshot: (c.json() as ColumnBuilder<AlertEventSnapshot>).nullable(),
+		delivery_ref: (c.json() as ColumnBuilder<AlertDeliveryRef>).nullable(),
 	},
 });
 

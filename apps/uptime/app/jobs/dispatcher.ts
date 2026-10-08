@@ -20,6 +20,7 @@ import jobs from "~/app/jobs";
 import { admin } from "~/app/jobs/middleware/admin";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
+import { destinations } from "~/app/jobs/middleware/destinations";
 import { mailer } from "~/app/jobs/middleware/mailer";
 import { flags } from "~/app/lib/flags";
 import { jobQueue } from "~/app/lib/queue";
@@ -85,6 +86,7 @@ export const dispatcher = createJobDispatcher({
 		costLedger(),
 		database(),
 		mailer(),
+		destinations(),
 		admin(),
 		featureFlags(flags, { context: (ctx) => ({ targetingKey: ctx.name }) }),
 	],
@@ -111,6 +113,7 @@ dispatcher.map(jobs.sendFunnelReport, () => import("~/app/jobs/send-funnel-repor
 dispatcher.map(jobs.sendTeamDailyDigests, () => import("~/app/jobs/send-team-daily-digests"));
 dispatcher.map(jobs.sendTeamWeeklyDigests, () => import("~/app/jobs/send-team-weekly-digests"));
 dispatcher.map(jobs.notify, () => import("~/app/jobs/notify"));
+dispatcher.map(jobs.deliverAlert, () => import("~/app/jobs/deliver-alert"));
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {

@@ -249,6 +249,49 @@ describe("Alert.updateById", () => {
 	});
 });
 
+describe("broken destinations", () => {
+	test("marks an alert broken with the platform's reason", async () => {
+		let alert = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "A",
+			config: emailConfig,
+		});
+
+		await Alert.markBroken(db, alert.id, "Slack answered no_service");
+
+		let found = await Alert.findById(db, alert.id);
+		expect(found?.broken_at).toEqual(expect.any(Number));
+		expect(found?.broken_reason).toBe("Slack answered no_service");
+	});
+
+	test("clears the broken mark when the alert's channel is saved again", async () => {
+		let alert = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "A",
+			config: emailConfig,
+		});
+		await Alert.markBroken(db, alert.id, "gone");
+
+		let updated = await Alert.updateById(db, alert.id, { config: emailConfig });
+
+		expect(updated.broken_at).toBeNull();
+		expect(updated.broken_reason).toBeNull();
+	});
+
+	test("keeps the broken mark when only the alert's name changes", async () => {
+		let alert = await Alert.create(db, "team-1", {
+			monitor_id: null,
+			name: "A",
+			config: emailConfig,
+		});
+		await Alert.markBroken(db, alert.id, "gone");
+
+		let updated = await Alert.updateById(db, alert.id, { name: "Renamed" });
+
+		expect(updated.broken_reason).toBe("gone");
+	});
+});
+
 describe("Alert.deleteById", () => {
 	test("deletes an alert", async () => {
 		let alert = await Alert.create(db, "team-1", {
