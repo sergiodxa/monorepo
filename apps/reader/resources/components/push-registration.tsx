@@ -3,8 +3,9 @@
  * it registers the service worker, reports the zone quiet hours are computed in, and hands
  * the endpoint a push service gave this browser back to the reader's own object.
  *
- * It draws nothing. Everything it does is a capability the server cannot reach for, and a
- * browser that runs no script simply never registers a device.
+ * It draws one button, shown only while the browser has not been asked: Safari and Firefox
+ * show a notification prompt only from a user gesture. A browser that runs no script never
+ * sees it and never registers a device.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +13,8 @@
 
 import type { Handle } from "remix/component";
 
-import { clientEntry, ref } from "remix/component";
+import { Button } from "@sdxc/ui";
+import { clientEntry, on, ref } from "remix/component";
 
 /**
  * Declared as a `type` to satisfy the serializable-props constraint a client entry's props
@@ -34,6 +36,8 @@ type PushRegistrationProps = {
 	storedTimeZone: string;
 	/** Whether the reader turned the push channel on, which is what earns a prompt. */
 	enabled: boolean;
+	/** The button's label, which is what the reader presses for the browser to ask. */
+	allow: string;
 };
 
 /** The bytes an `applicationServerKey` is given as, decoded from the page's base64url. */
@@ -112,9 +116,30 @@ export const PushRegistration = clientEntry(
 			});
 		}
 
+		/** Whether the button is offered: push is on and this browser has not been asked. */
+		let asking = false;
+
 		/**
-		 * A browser that refuses any of this leaves the page exactly as the server drew it,
-		 * which is the same page somebody running no script at all is reading.
+		 * Asks for permission from the press itself, the one moment every browser shows the
+		 * prompt, and registers once it is granted. Either answer retires the button.
+		 */
+		async function allow() {
+			try {
+				let permission = await Notification.requestPermission();
+
+				asking = false;
+				void handle.update();
+
+				if (permission === "granted") await registerDevice(handle.signal);
+			} catch (error) {
+				console.error("This browser could not be registered for notifications", error);
+			}
+		}
+
+		/**
+		 * A browser that already granted permission registers without a prompt, and one that
+		 * has not been asked is offered the button. A browser that refuses any of this leaves
+		 * the page exactly as the server drew it.
 		 */
 		let start = ref((_node, signal) => {
 			void (async () => {
@@ -123,16 +148,35 @@ export const PushRegistration = clientEntry(
 
 					if (!handle.props.enabled || handle.props.vapidPublicKey === "") return;
 					if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
-					if ((await Notification.requestPermission()) !== "granted") return;
 
-					await registerDevice(signal);
+					if (Notification.permission === "granted") {
+						await registerDevice(signal);
+					} else if (Notification.permission === "default") {
+						asking = true;
+						void handle.update();
+					}
 				} catch (error) {
 					console.error("This browser could not be registered for notifications", error);
 				}
 			})();
 		});
 
-		return () => <span mix={[start]} hidden />;
+		/**
+		 * The button is drawn on the server inside a hidden wrapper, so a page without script
+		 * shows nothing and the island only has to reveal it.
+		 */
+		return () => (
+			<span mix={[start]} hidden={!asking}>
+				<Button
+					type="button"
+					color="neutral"
+					variant="outline"
+					mix={[on("click", () => void allow())]}
+				>
+					{handle.props.allow}
+				</Button>
+			</span>
+		);
 	},
 );
 

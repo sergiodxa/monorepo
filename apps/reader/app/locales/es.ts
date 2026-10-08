@@ -128,6 +128,7 @@ export default {
 			legend: "Navegadores",
 			description: "Cada navegador que permitiste. Olvidar uno deja de notificarlo.",
 			none: "Todavía no hay ningún navegador registrado.",
+			allow: "Permitir notificaciones en este navegador",
 			added: "Agregado el {$date}",
 			never: "Todavía no se entregó nada",
 			delivered: "Última entrega el {$date}",

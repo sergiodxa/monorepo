@@ -474,8 +474,8 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 
 			{/**
 			 * The zone and the endpoint are both things only a browser knows, so this is where
-			 * they are asked for. It draws nothing, and a browser running no script simply never
-			 * registers a device.
+			 * they are asked for. It draws only the button that asks for permission, and a
+			 * browser running no script never sees it and never registers a device.
 			 */}
 			<PushRegistration
 				worker="/sw.js"
@@ -484,6 +484,7 @@ function notificationsSection(ctx: RequestContext, notifications: UserStore.Noti
 				vapidPublicKey={vapidPublicKey() ?? ""}
 				storedTimeZone={notifications.timeZone}
 				enabled={notifications.push}
+				allow={ctx.intl.t("notifications.devices.allow")}
 			/>
 		</section>
 	);

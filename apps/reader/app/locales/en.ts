@@ -864,6 +864,7 @@ export default {
 			legend: "Browsers",
 			description: "Every browser you allowed. Forgetting one stops it being notified.",
 			none: "No browser is registered yet.",
+			allow: "Allow notifications in this browser",
 			added: "Added {$date}",
 			never: "Nothing delivered yet",
 			delivered: "Last delivered {$date}",
