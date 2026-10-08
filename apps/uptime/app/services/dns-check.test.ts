@@ -152,6 +152,42 @@ describe("queryDnsRecords", () => {
 		expect(outcome.suppressedByCname).toBe(true);
 	});
 
+	test("suppresses CAA reached through a CNAME, which is the target's issuance policy", async () => {
+		respondWith({
+			Status: 0,
+			Answer: [
+				{ name: "www.sergiodxa.com", type: 5, TTL: 300, data: "gh-ds9.pages.dev." },
+				{ name: "gh-ds9.pages.dev", type: 257, TTL: 300, data: '0 issue "pki.goog"' },
+			],
+		});
+
+		let outcome = await queryDnsRecords("www.sergiodxa.com", "CAA");
+
+		expect(outcome.values).toEqual([]);
+		expect(outcome.suppressedByCname).toBe(true);
+		expect(outcome.errorMessage).toBeNull();
+	});
+
+	/**
+	 * The `sergiodxa.com` zone export writes `0 issue "letsencrypt.org"`; a resolver may answer
+	 * the same record in RFC 3597 generic form. Both must store the export's value, or an
+	 * imported CAA record reads as removed-and-re-added on the first check.
+	 */
+	test.each([
+		'0 issue "letsencrypt.org"',
+		"\\# 22 00 05 69 73 73 75 65 6c 65 74 73 65 6e 63 72 79 70 74 2e 6f 72 67",
+	])("stores the apex CAA answered as %j as the export's value", async (data) => {
+		respondWith({
+			Status: 0,
+			Answer: [{ name: "sergiodxa.com", type: 257, TTL: 300, data }],
+		});
+
+		let outcome = await queryDnsRecords("sergiodxa.com", "CAA");
+
+		expect(outcome.values).toEqual(['0 issue "letsencrypt.org"']);
+		expect(outcome.suppressedByCname).toBe(false);
+	});
+
 	test("still tracks the CNAME itself, which is the record that lives at the name", async () => {
 		respondWith({
 			Status: 0,
@@ -247,7 +283,7 @@ describe("sweepDnsName", () => {
 
 		let sweep = await sweepDnsName("sergiodxa.com");
 
-		expect(requested.sort()).toEqual(["A", "AAAA", "CNAME", "MX", "NS", "TXT"]);
+		expect(requested.sort()).toEqual(["A", "AAAA", "CAA", "CNAME", "MX", "NS", "TXT"]);
 		expect(sweep.outcomes).toHaveLength(QUERIES_PER_NAME);
 		expect(sweep.queriesFailed).toBe(0);
 	});

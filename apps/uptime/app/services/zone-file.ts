@@ -38,14 +38,13 @@ const RECORD_CLASSES = new Set(["IN", "CH", "HS", "CS"]);
 
 /**
  * Record types this parser recognises without tracking. Telling them apart from a typo
- * gives a `CAA` line its own reported reason, since a real gap in coverage and a genuine
+ * gives an `SRV` line its own reported reason, since a real gap in coverage and a genuine
  * typo call for different fixes from the user.
  */
 const KNOWN_UNTRACKED_TYPES = new Set([
 	"AFSDB",
 	"ALIAS",
 	"APL",
-	"CAA",
 	"CDNSKEY",
 	"CDS",
 	"CERT",
@@ -290,7 +289,8 @@ function qualifyRecordData(
 		return `${preference.value} ${qualifyName(host.value, domain)}`;
 	}
 
-	if (type === "TXT") return tokens.map((token) => token.value).join(" ");
+	/** Rejoined as written, so a quoted value keeps its `;` and spaces for the type's own reader. */
+	if (type === "TXT" || type === "CAA") return tokens.map((token) => token.value).join(" ");
 
 	/** Address types take exactly one literal; a second field means the line is malformed. */
 	if (tokens.length !== 1) return null;

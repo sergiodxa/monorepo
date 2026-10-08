@@ -15,12 +15,12 @@
 
 import type { DoH } from "@sdxc/doh";
 
-import { parseRecordData } from "@sdxc/doh";
+import { formatRecordData, parseRecordData } from "@sdxc/doh";
 import { IP } from "@sdxc/ip";
 import { isSuccess } from "@sdxc/result";
 
 /** The record types tracked by a domain monitor, and the only ones normalized here. */
-export const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
+export const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA"] as const;
 
 /** One tracked record type. */
 export type DnsRecordType = (typeof DNS_RECORD_TYPES)[number];
@@ -161,7 +161,8 @@ function readTxtText(data: string): string | null {
 /**
  * The value stored for a record a resolver answered with, by the same identity rules
  * {@link parseDnsRecordValue} applies to presentation data: MX as `preference host`, names
- * folded, TXT joined. The resolver's reader has already canonicalized AAAA and the names.
+ * folded, TXT joined, CAA printed as `flags tag "value"`. The resolver's reader has already
+ * canonicalized AAAA and the names.
  */
 export function storedRecordValue(record: DoH.RecordFor<DnsRecordType>): string {
 	switch (record.type) {
@@ -176,6 +177,8 @@ export function storedRecordValue(record: DoH.RecordFor<DnsRecordType>): string 
 			return `${record.preference} ${record.exchange}`;
 		case "TXT":
 			return record.text;
+		case "CAA":
+			return formatRecordData(record);
 	}
 }
 
@@ -228,6 +231,15 @@ export function parseDnsRecordValue(type: DnsRecordType, data: string): string |
 		 */
 		case "TXT":
 			return value.includes('"') ? readTxtText(value) : value;
+
+		/**
+		 * Parsed and printed back, so a zone file's `0 issue "letsencrypt.org"`, an uppercased
+		 * tag and a resolver's RFC 3597 `\# 22 00 05 …` all store one string.
+		 */
+		case "CAA": {
+			let parsed = parseRecordData("CAA", value);
+			return isSuccess(parsed) ? formatRecordData(parsed.data) : null;
+		}
 	}
 }
 
@@ -281,5 +293,8 @@ export function normalizeDnsRecordValue(type: DnsRecordType, data: string): stri
 		/** An unclosed final quote is the usual failure, so closing it recovers what was published. */
 		case "TXT":
 			return readTxtText(`${value}"`) ?? value;
+
+		case "CAA":
+			return value;
 	}
 }

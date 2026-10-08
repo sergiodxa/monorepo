@@ -3536,7 +3536,7 @@ export default {
 					multiLineRecord: "Réparti sur plusieurs lignes avec des parenthèses",
 					blankOwnerContinuation: "Commence par une espace et hérite du nom de la ligne précédente",
 					nonInternetClass: "Ce n'est pas un enregistrement de classe internet",
-					unsupportedType: "Ce n'est pas l'un des six types d'enregistrement que nous surveillons",
+					unsupportedType: "Ce n'est pas l'un des sept types d'enregistrement que nous surveillons",
 					outOfZone: "Appartient à un autre domaine",
 					malformed: "Nous n'avons pas pu lire ceci comme un enregistrement",
 				},

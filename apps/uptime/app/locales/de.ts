@@ -3536,7 +3536,7 @@ export default {
 					blankOwnerContinuation:
 						"Beginnt mit einem Leerzeichen und übernimmt den Namen der vorherigen Zeile",
 					nonInternetClass: "Kein Eintrag der Klasse Internet",
-					unsupportedType: "Keiner der sechs Eintragstypen, die wir überwachen",
+					unsupportedType: "Keiner der sieben Eintragstypen, die wir überwachen",
 					outOfZone: "Gehört zu einer anderen Domain",
 					malformed: "Wir konnten dies nicht als Eintrag lesen",
 				},

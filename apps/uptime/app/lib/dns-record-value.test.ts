@@ -29,8 +29,8 @@ import {
 } from "~/app/lib/dns-record-value";
 
 describe("DNS_RECORD_TYPES", () => {
-	test("covers the six types a domain monitor sweeps, and no more", () => {
-		expect([...DNS_RECORD_TYPES]).toEqual(["A", "AAAA", "CNAME", "MX", "TXT", "NS"]);
+	test("covers the seven types a domain monitor sweeps, and no more", () => {
+		expect([...DNS_RECORD_TYPES]).toEqual(["A", "AAAA", "CNAME", "MX", "TXT", "NS", "CAA"]);
 	});
 });
 
@@ -39,11 +39,8 @@ describe("isDnsRecordType", () => {
 		expect(isDnsRecordType("A")).toBe(true);
 		expect(isDnsRecordType("TXT")).toBe(true);
 		expect(isDnsRecordType("MX")).toBe(true);
+		expect(isDnsRecordType("CAA")).toBe(true);
 		expect(isDnsRecordType("a")).toBe(false);
-	});
-
-	test("does not admit CAA or SOA, which need a decoder before they can be an identity", () => {
-		expect(isDnsRecordType("CAA")).toBe(false);
 		expect(isDnsRecordType("SOA")).toBe(false);
 	});
 });
@@ -149,6 +146,14 @@ describe("parseDnsRecordValue", () => {
 		 * while the resolver's own quoted answer keeps the space.
 		 */
 		["TXT", "  v=spf1 -all  ", "v=spf1 -all"],
+		["CAA", '0 issue "letsencrypt.org"', '0 issue "letsencrypt.org"'],
+		/** Tags match case-insensitively and a value may be written bare; both print one way. */
+		["CAA", "0 ISSUE letsencrypt.org", '0 issue "letsencrypt.org"'],
+		[
+			"CAA",
+			'0 issuewild "digicert.com; cansignhttpexchanges=yes"',
+			'0 issuewild "digicert.com; cansignhttpexchanges=yes"',
+		],
 	] as const)("reads a %s of %j as %j", (type, data, expected) => {
 		expect(parseDnsRecordValue(type, data)).toBe(expected);
 	});
@@ -164,6 +169,7 @@ describe("parseDnsRecordValue", () => {
 		["MX", "high aspmx.l.google.com."],
 		["MX", "10"],
 		["TXT", '"unterminated'],
+		["CAA", "issue letsencrypt.org"],
 	] as const)("refuses a %s of %j", (type, data) => {
 		expect(parseDnsRecordValue(type, data)).toBeNull();
 	});
@@ -196,6 +202,8 @@ describe("normalizeDnsRecordValue", () => {
 		/** A non-numeric preference like `high` is kept exactly as written. */
 		["MX", "high mx.example.com.", "high mx.example.com"],
 		["TXT", '"open', "open"],
+		/** CAA has no partial reading to fold toward, so the trimmed text is its identity. */
+		["CAA", "  issue letsencrypt.org  ", "issue letsencrypt.org"],
 	] as const)("carries an unparseable %s of %j through as %j", (type, data, expected) => {
 		expect(parseDnsRecordValue(type, data)).toBeNull();
 		expect(normalizeDnsRecordValue(type, data)).toBe(expected);
@@ -207,11 +215,7 @@ describe("the two input channels agree", () => {
 	 * Left is the presentation a zone-file export writes, right is the `data` field the DoH
 	 * API answers with. Every pair is a record that exists, read off both channels.
 	 */
-	let pairs: [
-		type: "A" | "AAAA" | "CNAME" | "MX" | "TXT" | "NS",
-		zoneFile: string,
-		resolver: string,
-	][] = [
+	let pairs: [type: DnsRecordType, zoneFile: string, resolver: string][] = [
 		["CNAME", "dkim.dm-0m73q9wy.sg2.convertkit.com.", "dkim.dm-0m73q9wy.sg2.convertkit.com."],
 		["NS", "dora.ns.cloudflare.com.", "dora.ns.cloudflare.com."],
 		["MX", "10 mx.example.com.", "10 mx.example.com."],
@@ -224,6 +228,16 @@ describe("the two input channels agree", () => {
 		],
 		["AAAA", "2606:4700:3037:0:0:0:AC43:A682", "2606:4700:3037::ac43:a682"],
 		["A", "104.21.58.249", "104.21.58.249"],
+		/**
+		 * The `sergiodxa.com` export's CAA line against the resolver's two answers for it:
+		 * presentation form, and the RFC 3597 generic form some resolvers send for CAA.
+		 */
+		["CAA", '0 issue "letsencrypt.org"', '0 issue "letsencrypt.org"'],
+		[
+			"CAA",
+			'0 issue "letsencrypt.org"',
+			"\\# 22 00 05 69 73 73 75 65 6c 65 74 73 65 6e 63 72 79 70 74 2e 6f 72 67",
+		],
 	];
 
 	for (let [recordType, zoneFile, resolver] of pairs) {
@@ -282,6 +296,10 @@ describe("storedRecordValue", () => {
 		[
 			{ ...base, type: "TXT", text: "v=DKIM1; p=AAABBB", strings: ["v=DKIM1; p=AAA", "BBB"] },
 			'"v=DKIM1; p=AAA" "BBB"',
+		],
+		[
+			{ ...base, type: "CAA", flags: 0, critical: false, tag: "issue", value: "letsencrypt.org" },
+			'0 issue "letsencrypt.org"',
 		],
 	];
 

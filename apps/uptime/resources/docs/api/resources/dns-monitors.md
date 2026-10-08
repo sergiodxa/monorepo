@@ -8,7 +8,7 @@ order: 3
 lastUpdated: 2026-09-05
 ---
 
-A DNS monitor watches a **domain**, not a single record. One monitor covers a domain's apex — plus every name declared by a zone file you paste — and sweeps six record types (`A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`) at each of them on every check. What it expects is the set of records it discovered, held one row per `(name, type, value)`, so a record appearing beside the ones you already have is reported as an addition rather than hidden inside a changed string.
+A DNS monitor watches a **domain**, not a single record. One monitor covers a domain's apex — plus every name declared by a zone file you paste — and sweeps seven record types (`A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, `CAA`) at each of them on every check. What it expects is the set of records it discovered, held one row per `(name, type, value)`, so a record appearing beside the ones you already have is reported as an addition rather than hidden inside a changed string.
 
 ## Breaking change
 
@@ -28,8 +28,8 @@ The single-probe DNS check on `POST /api/v1/ping` is **unchanged**: it still tak
 
 - **We cannot list your DNS records.** DNS does not allow it. Without a zone file, a monitor covers your domain's apex and nothing else — a record at `staging.example.com` is invisible unless that name was in a zone file you pasted.
 - **The zone file is a snapshot.** It is read once, parsed, and **never stored**. Names added to your zone afterwards are not tracked until you paste again.
-- **One monitor may track at most 100 names.** A create carrying more is refused, because a check sweeps every tracked name in one go.
-- **Six record types.** `CAA`, `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
+- **One monitor may track at most 85 names.** A create carrying more is refused, because a check sweeps every tracked name in one go.
+- **Seven record types.** `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
 - **Detection latency is floored by your records' TTL**, not by the check interval.
 - **One check is one ping**, however many names and types it swept.
 
@@ -471,16 +471,16 @@ curl -i "https://uptime.sergiodxa.com/api/v1/dns-monitors/dns_abc123/records?per
 
 ### Field Meanings
 
-| Field           | Type                                   | Description                                                                                                           |
-| --------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `name`          | string                                 | Absolute owner name, lowercased, no trailing dot. The apex is the monitor's `domain`.                                 |
-| `recordType`    | `A` `AAAA` `CNAME` `MX` `TXT` `NS`     | The six types checked in v1.                                                                                          |
-| `value`         | string                                 | Normalized RDATA. Together with `name` and `recordType` it is the record's identity, and it is never client-writable. |
-| `source`        | `resolver` `zone_file`                 | How the record first entered the table.                                                                               |
-| `isEnabled`     | boolean                                | Whether a deviation from this record alerts. The only writable field.                                                 |
-| `status`        | `ok` `changed` `missing` `new` `error` | What the last check found. `new` and `missing` are states of the record, not of a check.                              |
-| `lastSeenAt`    | integer \| null                        | Last check at which this exact record resolved. `null` for a zone-file record that has never resolved.                |
-| `lastCheckedAt` | integer \| null                        | Last check that had an answer about this record. `null` until the first check.                                        |
+| Field           | Type                                     | Description                                                                                                           |
+| --------------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `name`          | string                                   | Absolute owner name, lowercased, no trailing dot. The apex is the monitor's `domain`.                                 |
+| `recordType`    | `A` `AAAA` `CNAME` `MX` `TXT` `NS` `CAA` | The seven types checked.                                                                                              |
+| `value`         | string                                   | Normalized RDATA. Together with `name` and `recordType` it is the record's identity, and it is never client-writable. |
+| `source`        | `resolver` `zone_file`                   | How the record first entered the table.                                                                               |
+| `isEnabled`     | boolean                                  | Whether a deviation from this record alerts. The only writable field.                                                 |
+| `status`        | `ok` `changed` `missing` `new` `error`   | What the last check found. `new` and `missing` are states of the record, not of a check.                              |
+| `lastSeenAt`    | integer \| null                          | Last check at which this exact record resolved. `null` for a zone-file record that has never resolved.                |
+| `lastCheckedAt` | integer \| null                          | Last check that had an answer about this record. `null` until the first check.                                        |
 
 Timestamps are epoch milliseconds.
 

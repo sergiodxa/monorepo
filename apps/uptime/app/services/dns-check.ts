@@ -56,9 +56,9 @@ export interface DnsQueryOutcome {
 	 */
 	errorMessage: string | null;
 	/**
-	 * Whether A/AAAA answers were dropped because the same response carried a CNAME. The
-	 * answer itself is the trigger, so a CDN-proxied name — CNAME in the zone, plain A records
-	 * at the edge — keeps its edge addresses, since its answers carry no CNAME.
+	 * Whether A/AAAA/CAA answers were dropped because the same response carried a CNAME. A CAA
+	 * answer reached that way is the target's policy, a hosting provider's to change. The answer
+	 * itself is the trigger, so a CDN-proxied name keeps its edge addresses, since those answers carry no CNAME.
 	 */
 	suppressedByCname: boolean;
 }
@@ -101,8 +101,8 @@ export async function queryDnsRecords(
 		};
 	}
 
-	let isAddressQuery = recordType === "A" || recordType === "AAAA";
-	let suppressedByCname = isAddressQuery && answer.data.chain.length > 0;
+	let followsCname = recordType === "A" || recordType === "AAAA" || recordType === "CAA";
+	let suppressedByCname = followsCname && answer.data.chain.length > 0;
 
 	return {
 		name: owner,

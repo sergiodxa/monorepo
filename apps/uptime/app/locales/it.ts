@@ -3519,7 +3519,7 @@ export default {
 					multiLineRecord: "Distribuito su più righe con le parentesi",
 					blankOwnerContinuation: "Inizia con uno spazio ed eredita il nome della riga precedente",
 					nonInternetClass: "Non è un record di classe internet",
-					unsupportedType: "Non è uno dei sei tipi di record che monitoriamo",
+					unsupportedType: "Non è uno dei sette tipi di record che monitoriamo",
 					outOfZone: "Appartiene a un altro dominio",
 					malformed: "Non siamo riusciti a leggerlo come record",
 				},

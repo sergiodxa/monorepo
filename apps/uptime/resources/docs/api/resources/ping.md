@@ -143,7 +143,7 @@ Resolve a DNS record once and optionally compare it against an expected value.
 | `recordType`    | string | No       | Record type (default: `A`)                                                                |
 | `expectedValue` | string | No       | Value the record must resolve to (up to 1000 characters); comma-separated for multi-value |
 
-Valid record types are `A`, `AAAA`, `CNAME`, `MX`, `TXT`, and `NS`.
+Valid record types are `A`, `AAAA`, `CNAME`, `MX`, `TXT`, `NS`, and `CAA`.
 
 Without `expectedValue` there is nothing to compare against, so a successful resolution is always `ok` and the `changed` status cannot occur.
 

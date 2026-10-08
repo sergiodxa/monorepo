@@ -3538,7 +3538,7 @@ export default {
 					multiLineRecord: "Spread over several lines with parentheses",
 					blankOwnerContinuation: "Starts with a space, inheriting the previous line's name",
 					nonInternetClass: "Not an internet-class record",
-					unsupportedType: "Not one of the six record types we watch",
+					unsupportedType: "Not one of the seven record types we watch",
 					outOfZone: "Belongs to a different domain",
 					malformed: "We could not read this as a record",
 				},

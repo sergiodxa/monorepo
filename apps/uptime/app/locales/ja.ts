@@ -3463,7 +3463,7 @@ export default {
 					multiLineRecord: "括弧で複数行に分かれています",
 					blankOwnerContinuation: "空白で始まり、前の行の名前を引き継いでいます",
 					nonInternetClass: "インターネットクラスのレコードではありません",
-					unsupportedType: "監視対象の 6 種類のレコードタイプに含まれません",
+					unsupportedType: "監視対象の 7 種類のレコードタイプに含まれません",
 					outOfZone: "別のドメインに属しています",
 					malformed: "レコードとして読み取れませんでした",
 				},

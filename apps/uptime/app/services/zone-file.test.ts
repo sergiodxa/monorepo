@@ -132,7 +132,16 @@ describe("parseZoneFile", () => {
 		test("reports the records it does not track", () => {
 			/** A real export writes SOA on one line, with no parentheses, and it is still not tracked. */
 			expect(reasonForLineContaining(imported, "IN\tSOA")).toBe("unsupportedType");
-			expect(reasonForLineContaining(imported, "IN\tCAA")).toBe("unsupportedType");
+		});
+
+		test("tracks the apex CAA record in its printed form", () => {
+			expect(imported.records).toContainEqual({
+				line: 34,
+				name: "sergiodxa.com",
+				type: "CAA",
+				value: '0 issue "letsencrypt.org"',
+			});
+			expect(reasonForLineContaining(imported, "IN\tCAA")).toBeUndefined();
 		});
 	});
 
@@ -235,6 +244,19 @@ describe("parseZoneFile", () => {
 			let imported = parse('@\t1\tIN\tTXT\t"v=DMARC1;  p=none;"');
 			expect(imported.records[0]?.value).toBe("v=DMARC1;  p=none;");
 		});
+
+		test("keeps a `;` inside a CAA value, which a comment would otherwise cut", () => {
+			let imported = parse('@\t1\tIN\tCAA\t0 issuewild "digicert.com; cansignhttpexchanges=yes"');
+			expect(imported.records[0]?.value).toBe(
+				'0 issuewild "digicert.com; cansignhttpexchanges=yes"',
+			);
+			expect(imported.rejected).toHaveLength(0);
+		});
+
+		test("folds a CAA tag's case and quotes a bare value", () => {
+			let imported = parse("@\t1\tIN\tCAA\t0 ISSUE letsencrypt.org");
+			expect(imported.records[0]?.value).toBe('0 issue "letsencrypt.org"');
+		});
 	});
 
 	describe("blank lines and comments", () => {
@@ -256,7 +278,6 @@ describe("parseZoneFile", () => {
 			["IN\tSOA", "multiLineRecord"],
 			["inherits the owner above", "blankOwnerContinuation"],
 			["CH\tTXT", "nonInternetClass"],
-			["IN\tCAA", "unsupportedType"],
 			["IN\tSRV", "unsupportedType"],
 			["IN\tPTR", "unsupportedType"],
 			["IN\tDS", "unsupportedType"],

@@ -20,12 +20,12 @@ import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
+import { DNS_RECORD_TYPES } from "~/app/lib/dns-record-value";
 import { typedId } from "~/app/services/typed-id";
 import { dnsRecordStates } from "~/database/schema";
 import routes from "~/routes/web";
 
 const CHECK_STATUSES = ["ok", "changed", "error"] as const;
-const DNS_RECORD_TYPES = ["A", "AAAA", "CNAME", "MX", "TXT", "NS"] as const;
 const DNS_RECORD_SOURCES = ["resolver", "zone_file"] as const;
 
 /** Why a pasted zone-file line was left out of an import, as the parser reports it. */

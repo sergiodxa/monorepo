@@ -534,10 +534,10 @@ describe("checkDns query budget", () => {
 
 		let result = await onlyResult(db, monitor.id);
 		/**
-		 * Six names left unswept (105 tracked plus the apex, capped at 100), six types each:
+		 * The names past the cap (105 tracked plus the apex) count every type as unanswered:
 		 * partial, and reported as partial.
 		 */
-		expect(result.queries_failed).toBe(6 * QUERIES_PER_NAME);
+		expect(result.queries_failed).toBe((106 - MAX_NAMES_PER_CHECK) * QUERIES_PER_NAME);
 		expect(result.status).toBe("error");
 		expect(result.records_missing).toBe(0);
 
@@ -558,10 +558,10 @@ describe("checkDns query budget", () => {
 		let record = await runJob(db);
 
 		/**
-		 * 600 queries is 100 names: three monitors are swept, two in full and one truncated,
-		 * and the fourth waits for the next delivery.
+		 * 600 queries buy {@link MAX_NAMES_PER_CHECK} names: three monitors are swept, two in
+		 * full and one truncated, and the fourth waits for the next delivery.
 		 */
-		expect(sweepDnsNameMock).toHaveBeenCalledTimes(100);
+		expect(sweepDnsNameMock).toHaveBeenCalledTimes(MAX_NAMES_PER_CHECK);
 
 		let deferred = notesOf(record, "checks.deferred");
 		expect(deferred).toHaveLength(1);

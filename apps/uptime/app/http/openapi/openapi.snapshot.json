@@ -10269,7 +10269,8 @@
                           "CNAME",
                           "MX",
                           "TXT",
-                          "NS"
+                          "NS",
+                          "CAA"
                         ],
                         "default": "A"
                       },
@@ -11552,7 +11553,8 @@
               "CNAME",
               "MX",
               "TXT",
-              "NS"
+              "NS",
+              "CAA"
             ]
           },
           "value": {

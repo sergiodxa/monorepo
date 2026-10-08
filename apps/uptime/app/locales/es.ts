@@ -3518,7 +3518,7 @@ export default {
 					multiLineRecord: "Repartido en varias líneas con paréntesis",
 					blankOwnerContinuation: "Empieza con un espacio y hereda el nombre de la línea anterior",
 					nonInternetClass: "No es un registro de la clase internet",
-					unsupportedType: "No es ninguno de los seis tipos de registro que vigilamos",
+					unsupportedType: "No es ninguno de los siete tipos de registro que vigilamos",
 					outOfZone: "Pertenece a otro dominio",
 					malformed: "No pudimos leer esto como un registro",
 				},

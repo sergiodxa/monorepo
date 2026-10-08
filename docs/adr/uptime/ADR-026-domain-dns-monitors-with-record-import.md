@@ -662,6 +662,12 @@ domain-hijack story**, because a rogue CAA record is how an attacker gets a cert
 issued. Shipping DNS-change monitoring without it is shipping the second-best version of the
 headline use case. It is the first thing in v1.1, not a someday.
 
+> **Resolved by [ADR-113](../ADR-113-doh-caa-records.md).** `CAA` is a tracked type. Both
+> channels reach the stored value through `@sdxc/doh`'s `parseRecordData` and
+> `formatRecordData`, so a zone file's `0 issue "letsencrypt.org"` and a resolver's
+> `\# 22 00 05 69 73 73 75 65 …` store one string. A CAA answer that arrives through a CNAME
+> is suppressed like A and AAAA, and a sweep is seven queries per name.
+
 Also out of v1: `SOA` (its serial increments on every zone edit, so it would alert on every
 legitimate change — permanent noise), and `SRV`/`PTR`/`DS`/`DNSKEY`/`HTTPS`/`SVCB` (reachable
 only via zone-file names, and sweeping them at every name is a query per name for types almost
@@ -993,8 +999,8 @@ Each of these is the owner's call, and none is invented here.
 7. **The during-incident notification gap** ([§11](#11-alerting-reuses-the-existing-event-types)).
    Accepted for v1; whether a second discovery deserves its own immediate notification is a
    policy question adjacent to ADR-025's.
-8. **CAA timing.** Named as v1.1 here. If the domain-hijack story is the headline, it may
-   belong in v1 and this ADR should be re-scoped rather than followed.
+8. **CAA timing.** Resolved by [ADR-113](../ADR-113-doh-caa-records.md): CAA is a tracked
+   type ([§12](#12-caa-is-out-of-scope-for-v1)).
 9. **What a domain monitor promises about proxied records.** Discovered while parsing a real
    export, and it is a product question rather than a parser one. A Cloudflare-proxied record
    does not appear in the zone export at all, and resolves as the proxy's own address: the

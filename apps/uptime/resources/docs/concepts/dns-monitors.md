@@ -5,10 +5,10 @@ section:
   title: Concepts
   order: 2
 order: 3
-lastUpdated: 2026-08-11
+lastUpdated: 2026-10-07
 ---
 
-A DNS monitor watches a **domain**, not a single record. One monitor covers your domain's apex — plus every name a zone file you paste declares — and on each check it queries six record types at each of those names.
+A DNS monitor watches a **domain**, not a single record. One monitor covers your domain's apex — plus every name a zone file you paste declares — and on each check it queries seven record types at each of those names.
 
 What the monitor expects is the set of records it discovered, held one row per `(name, type, value)`. Nothing is transcribed into an expected-value box, and nothing is compared as one joined blob, so a record appearing beside the ones you already have is reported as an addition rather than hidden inside a string that changed.
 
@@ -25,7 +25,7 @@ These limits come from DNS itself, and they shape everything below. They are sta
 - **We cannot list your DNS records.** There is no query that answers "what records exist for this domain": `ANY` queries are answered `NOTIMP`, and zone transfer is disabled on every public nameserver worth the name. A zone file you paste is the only channel through which the _names_ in your zone can reach us.
 - **Without a zone file, a monitor covers one name — your domain itself.** A record at `staging.example.com` or `_dmarc.example.com` is invisible to us unless that name was in a zone file you pasted.
 - **The zone file is a snapshot.** It is read once, parsed, and never stored. Names added to your zone afterwards are not tracked until you paste again.
-- **Six record types**, listed below. `CAA`, `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
+- **Seven record types**, listed below. `SOA`, `SRV`, `PTR`, `DS`, `DNSKEY`, `HTTPS` and `SVCB` are not checked.
 - **We resolve through one recursive resolver.** We do not query each of your authoritative nameservers, so we do not detect disagreement between them and we do not detect regional differences.
 - **Detection latency is floored by your record's TTL, not by your check interval.** A recursive resolver serves a cached answer, so a 15-minute check against a 24-hour TTL does not find out fifteen minutes after a change.
 - **We do not report DNSSEC validation state.**
@@ -34,7 +34,7 @@ Additions _inside_ a tracked name are detected, because a DNS query returns the 
 
 ## Supported Record Types
 
-Every check queries all six types at every tracked name.
+Every check queries all seven types at every tracked name.
 
 ### A Records
 
@@ -60,7 +60,7 @@ CNAME (Canonical Name) records create an alias from one domain name to another. 
 blog.example.com.  CNAME  example.netlify.app.
 ```
 
-A CNAME at a name suppresses A and AAAA tracking at that name. The addresses a resolver returns for an aliased name belong to the alias _target_, not to your zone, and tracking them would alert you every time an unrelated third party rotated an address.
+A CNAME at a name suppresses A, AAAA and CAA tracking at that name. The addresses and issuance policy a resolver returns for an aliased name belong to the alias _target_, not to your zone, and tracking them would alert you every time an unrelated third party rotated an address or changed its certificate authority.
 
 ### MX Records
 
@@ -86,6 +86,16 @@ NS (Name Server) records specify which DNS servers are authoritative for your do
 example.com.  NS  ns1.example-dns.com.
 ```
 
+### CAA Records
+
+CAA (Certification Authority Authorization) records name the certificate authorities allowed to issue certificates for your domain. A CAA record appearing or changing decides who can get a certificate for your name, which makes it a finding worth reading. Each record is stored in its published form — flags, tag and quoted value — whichever form a resolver answers it in.
+
+```
+example.com.  CAA  0 issue "letsencrypt.org"
+```
+
+**A Cloudflare-hosted zone lists Cloudflare's own CAA records at the first review.** Cloudflare publishes CAA records for the certificate authorities its edge certificates use, and its zone export leaves them out. The review screen shows them beside the ones your export declares, so you choose at import whether each one alerts.
+
 ## Configuration Options
 
 ### Domain
@@ -96,9 +106,9 @@ The domain the monitor covers. Every check queries this name, and it is the orig
 
 Optional, and the only way to cover names other than the domain itself. Paste a BIND-format zone file — the export button in your DNS provider's dashboard produces one — and every name it declares is added to the set the monitor sweeps.
 
-The parser reads one record per line, `<owner> [<ttl>] [IN] <TYPE> <rdata>`, with `;` comments, blank lines, absolute and relative owners, `@` for the apex, and quoted TXT character-strings.
+The parser reads one record per line, `<owner> [<ttl>] [IN] <TYPE> <rdata>`, with `;` comments, blank lines, absolute and relative owners, `@` for the apex, and quoted TXT character-strings and CAA values.
 
-**A line the parser cannot use is never silently dropped.** `$ORIGIN`, `$TTL`, `$INCLUDE` and `$GENERATE` directives, parenthesised multi-line records, owner-inheriting continuation lines, classes other than `IN`, and record types outside the six above are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
+**A line the parser cannot use is never silently dropped.** `$ORIGIN`, `$TTL`, `$INCLUDE` and `$GENERATE` directives, parenthesised multi-line records, owner-inheriting continuation lines, classes other than `IN`, and record types outside the seven above are all reported back on the review screen with their line number and a reason. An import that decides what you monitor is the worst possible place for a silent drop.
 
 The pasted text is **never stored**. It is parsed on submit; the records and the import date are kept, and the text is discarded. Re-importing later means pasting again.
 

@@ -837,12 +837,12 @@ export const features: Record<string, MarketingContent.Page> = {
 		slug: "dns",
 		metaTitle: "DNS Monitoring | Uptime",
 		metaDescription:
-			"Monitor a domain for unexpected DNS changes. One monitor covers six record types — A, AAAA, CNAME, MX, TXT and NS — to catch hijacking attempts.",
+			"Monitor a domain for unexpected DNS changes. One monitor covers seven record types — A, AAAA, CNAME, MX, TXT, NS and CAA — to catch hijacking attempts.",
 		badge: "DNS Monitors",
 		title: "Catch DNS changes",
 		highlight: "before they cause an outage",
 		description:
-			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT and NS — so hijacking and misconfiguration surface as findings rather than outages.",
+			"One monitor watches a whole domain, across every record type it checks — A, AAAA, CNAME, MX, TXT, NS and CAA — so hijacking and misconfiguration surface as findings rather than outages.",
 		highlights: ["A/AAAA/CNAME/MX/TXT/NS", "Change detection", "One monitor per domain"],
 		trustIndicators: [
 			{ icon: "layers", value: "6", label: "Record types" },
@@ -860,7 +860,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				title: "Every record type in one monitor",
 				description:
-					"One monitor checks A, AAAA, CNAME, MX, TXT and NS records at every name it tracks.",
+					"One monitor checks A, AAAA, CNAME, MX, TXT, NS and CAA records at every name it tracks.",
 				icon: "database",
 			},
 			{
@@ -896,7 +896,7 @@ export const features: Record<string, MarketingContent.Page> = {
 			{
 				question: "Which record types can I monitor?",
 				answer:
-					"Six: A, AAAA, CNAME, MX, TXT and NS. CAA, SOA, SRV and the rest aren't checked yet.",
+					"Seven: A, AAAA, CNAME, MX, TXT, NS and CAA. SOA, SRV and the rest aren't checked yet.",
 			},
 			{
 				question: "Does one monitor cover my subdomains?",

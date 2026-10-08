@@ -20,7 +20,7 @@ import * as f from "remix/data-schema/form-data";
 
 /**
  * Shortest interval a domain monitor may be configured with (ADR-026 §2), set well above
- * other monitor types' 60-second floor: a DNS monitor sweeps six record types per tracked
+ * other monitor types' 60-second floor: a DNS monitor sweeps seven record types per tracked
  * name, and this floor also reconciles the form's old 300s with the API's 60s.
  */
 export const MIN_DNS_INTERVAL_SECONDS = 900;
