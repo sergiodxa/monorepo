@@ -12,7 +12,7 @@ import { describe, expect, test } from "vitest";
 
 import DocumentLayout from "~/resources/layouts/document";
 
-import { createHtmlRenderer } from "./app";
+import { htmlRenderer } from "./app";
 
 function TestView() {
 	return function TestPage({ model }: { model: { title: string } }) {
@@ -29,14 +29,14 @@ function TestView() {
  * handed the same `RequestContext` production gives it.
  */
 async function renderDocument() {
-	let router = createRouter();
+	let router = createRouter({ middleware: htmlRenderer() });
 
-	router.get("/", (ctx) => createHtmlRenderer(ctx)(TestView, { title: "Test" }));
+	router.get("/", (ctx) => ctx.render(TestView, { title: "Test" }));
 
 	return await router.fetch(new Request("https://blog.test/"));
 }
 
-describe("createHtmlRenderer", () => {
+describe("htmlRenderer", () => {
 	test("the document starts with the doctype, before anything else", async () => {
 		let response = await renderDocument();
 		let html = await response.text();

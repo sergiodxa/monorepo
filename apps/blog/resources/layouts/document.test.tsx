@@ -11,15 +11,15 @@ import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
-import { createHtmlRenderer } from "~/bootstrap/app";
+import { htmlRenderer } from "~/bootstrap/app";
 import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 
 /** Renders a page composed into the document through the renderer production uses. */
 async function renderPage() {
-	let router = createRouter();
+	let router = createRouter({ middleware: htmlRenderer() });
 
 	router.get("/cms", (ctx) =>
-		createHtmlRenderer(ctx)(CMSDashboardView, {
+		ctx.render(CMSDashboardView, {
 			stats: { articles: 0, likes: 0, tutorials: 0, glossary: 0 },
 		}),
 	);

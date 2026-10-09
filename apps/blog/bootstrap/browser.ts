@@ -1,8 +1,8 @@
 /**
- * Client-side entrypoint for the blog browser bundle. Boots the Remix UI runtime,
- * lazily resolving client modules from resources and routes via a glob map, and fetches
- * frames over the network as islands reload them. Pages stay server-rendered documents:
- * only the components marked with `clientEntry()` hydrate.
+ * Client-side entrypoint for the blog browser bundle. Boots the Remix UI runtime, loading
+ * each island from the chunk the renderer named for its `clientEntry(import.meta.url)`
+ * identity, and fetches frames over the network as islands reload them. Pages stay
+ * server-rendered documents: only the components marked with `clientEntry()` hydrate.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -23,26 +23,9 @@ function keepDocumentNavigations() {
 
 keepDocumentNavigations();
 
-/**
- * Modules the runtime may hydrate: the islands, which all live in `resources/components/`.
- * Layouts and views stay out, since bundling them would ship their stylesheets twice, once
- * with the server's document and once in a chunk no page asks for. Tests reach for the
- * server application, so they stay out too.
- */
-const clientModules = import.meta.glob([
-	"!../**/*.server.*",
-	"!../**/*.test.*",
-	"../resources/components/**/*.{ts,tsx}",
-]);
-
 run({
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-
-		let load = clientModules[`..${pathname}`];
-		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
-
-		let mod = await load();
+		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

@@ -12,7 +12,6 @@ import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { setupServer } from "msw/node";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
@@ -20,9 +19,10 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type * as schema from "~/database/schema";
 
 import createEnvMiddleware from "~/app/http/middleware/env";
+import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
 
-import { createHtmlRenderer } from "../../../bootstrap/app";
+import { htmlRenderer } from "../../../bootstrap/app";
 
 import { logoutController } from "./auth";
 
@@ -117,10 +117,11 @@ function createTestRouter(session: Session, viewer: schema.SelectUser | null) {
 				);
 				return next();
 			},
-			renderWith(createHtmlRenderer),
+			...htmlRenderer(),
 		],
 	});
 
+	router.map(routes.searchFrame, blankSearchFrame);
 	router.map(routes.auth.logout, logoutController);
 
 	return router;

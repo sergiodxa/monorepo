@@ -11,22 +11,23 @@
  */
 
 import { walk, walkResources } from "@sdxc/mcp";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import { MCP_RATE_LIMIT } from "~/app/mcp/rate-limit";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
+import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
 
-import { createHtmlRenderer } from "../../../bootstrap/app";
+import { htmlRenderer } from "../../../bootstrap/app";
 
 import mcpPage, { mcpMarkdownPage } from "./mcp";
 
 /** Fetches a page through a router carrying only what the controllers need. */
 async function fetchPage(url: string, headers: Record<string, string> = {}): Promise<Response> {
-	let router = createRouter({ middleware: [renderWith(createHtmlRenderer)] });
+	let router = createRouter({ middleware: htmlRenderer() });
+	router.map(routes.searchFrame, blankSearchFrame);
 	router.map(routes.mcp.index, mcpPage);
 	router.map(routes.mcpMarkdown, mcpMarkdownPage);
 

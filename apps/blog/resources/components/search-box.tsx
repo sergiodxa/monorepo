@@ -105,7 +105,7 @@ function resize(dialog: HTMLDialogElement | null, from: number): void {
  * own state. Being the island every page hydrates, it also attaches the dialog's page keys.
  */
 export const SearchBox = clientEntry(
-	"/resources/components/search-box.tsx#SearchBox",
+	import.meta.url,
 	function SearchBox(handle: Handle<SearchBoxProps>) {
 		let debounce: ReturnType<typeof setTimeout> | undefined;
 		let spinnerDelay: ReturnType<typeof setTimeout> | undefined;

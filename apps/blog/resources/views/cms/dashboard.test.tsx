@@ -11,7 +11,7 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { createHtmlRenderer } from "~/bootstrap/app";
+import { htmlRenderer } from "~/bootstrap/app";
 import routes from "~/routes/web";
 
 import { CMSDashboardView } from "./dashboard";
@@ -20,11 +20,9 @@ const STATS = { articles: 1, likes: 2, tutorials: 3, glossary: 4 };
 
 /** Renders the dashboard through the renderer production hands the controller. */
 async function renderDashboard(purgeResult?: CMSDashboardView.PurgeResult) {
-	let router = createRouter();
+	let router = createRouter({ middleware: htmlRenderer() });
 
-	router.get("/cms", (ctx) =>
-		createHtmlRenderer(ctx)(CMSDashboardView, { stats: STATS, purgeResult }),
-	);
+	router.get("/cms", (ctx) => ctx.render(CMSDashboardView, { stats: STATS, purgeResult }));
 
 	let response = await router.fetch(new Request("https://blog.test/cms"));
 	return await response.text();

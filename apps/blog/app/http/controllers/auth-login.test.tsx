@@ -17,7 +17,6 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
-import { renderWith } from "remix/middleware/render";
 import { session } from "remix/middleware/session";
 import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
@@ -28,9 +27,10 @@ import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import { User } from "~/app/repositories/user";
 import { testDatabase } from "~/app/test/database";
+import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
 
-import { createHtmlRenderer } from "../../../bootstrap/app";
+import { htmlRenderer } from "../../../bootstrap/app";
 
 import { callbackAction, loginController } from "./auth";
 
@@ -157,10 +157,11 @@ function openBrowser(db: Database): Browser {
 			),
 			database(() => db),
 			auth,
-			renderWith(createHtmlRenderer),
+			...htmlRenderer(),
 		],
 	});
 
+	router.map(routes.searchFrame, blankSearchFrame);
 	router.map(routes.auth.login, loginController);
 	router.map(routes.auth.callback, callbackAction);
 
@@ -183,9 +184,11 @@ function openBrowser(db: Database): Browser {
 
 		async signIn(loginPath, claims = {}) {
 			let screen = await visit(loginPath);
-			let action = /<form[^>]*\saction="([^"]*)"/.exec(await screen.text())?.[1] ?? "";
+			let action = formActions(await screen.text()).find((it) =>
+				it.startsWith(routes.auth.login.action.href()),
+			);
 
-			let started = await visit(action.replaceAll("&amp;", "&"), {
+			let started = await visit((action ?? "").replaceAll("&amp;", "&"), {
 				method: routes.auth.login.action.method,
 			});
 			let authorization = new URL(started.headers.get("location") ?? APP_ORIGIN);
@@ -195,6 +198,11 @@ function openBrowser(db: Database): Browser {
 			return visit(`${routes.auth.callback.href()}?code=auth-code&state=${state}`);
 		},
 	};
+}
+
+/** Every form target a page holds, the search dialog's included, in document order. */
+function formActions(html: string): string[] {
+	return [...html.matchAll(/<form[^>]*\saction="([^"]*)"/g)].map((match) => match[1] ?? "");
 }
 
 /** The login screen asking to come back to `next`, as the CMS guard links to it. */

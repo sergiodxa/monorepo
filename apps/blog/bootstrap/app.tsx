@@ -1,7 +1,7 @@
 /**
  * Assembles the blog HTTP application. Wires global middleware, maps public,
  * RSS, auth, admin-guarded CMS, and MCP routes onto the fetch router, and provides
- * the streaming HTML renderer and SSR frame resolver used by controllers.
+ * the streaming HTML renderer controllers reach through `ctx.render`.
  *
  * Every route is mapped through `lazy()`, so the URL surface is complete at startup
  * while each controller is imported by the first request that reaches it. A cold
@@ -13,7 +13,7 @@
 
 import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
-import type { ResolveFrameContext } from "remix/component/server";
+import type { RenderFunction } from "remix/middleware/render";
 import type { Middleware, RequestContext } from "remix/router";
 
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -33,13 +33,11 @@ import { NODEINFO_2_1, nodeInfoLinks } from "@sdxc/well-known/nodeinfo";
 import { securityTxt } from "@sdxc/well-known/security-txt";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
-import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { renderWith } from "remix/middleware/render";
-import { createHtmlResponse } from "remix/response/html";
+import { Renderer, render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
@@ -63,7 +61,7 @@ import { loginFor } from "~/app/http/return-path";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { jobQueue } from "~/app/jobs/queue";
 import mcpRateLimit from "~/app/mcp/rate-limit";
-import { documentAssets } from "~/app/services/assets";
+import { assets, documentAssets } from "~/app/services/assets";
 import { createDatabase } from "~/app/services/database";
 import { PROFILE } from "~/config/profile";
 import { SECURITY_TXT } from "~/config/security-txt";
@@ -226,7 +224,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		htmlOnly(redirects),
 		htmlOnly(auth),
 		securityHeaders(SECURITY_POLICY),
-		renderWith(createHtmlRenderer),
+		...htmlRenderer(),
 	];
 	let router = createRouter<AppContext>({
 		middleware: globalMiddleware,
@@ -468,52 +466,36 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 }
 
 /**
- * Creates the request-scoped renderer used by controllers via `ctx.render`,
- * exported so its guarantees can be asserted directly. `createHtmlResponse`
- * leads the stream with `<!DOCTYPE html>`, keeping every page in standards mode.
+ * The middleware that publishes the blog's `ctx.render`: `render()` streams the document,
+ * resolves each `<Frame>` through this same router with the visitor's headers, and maps every
+ * island to its built chunk; the blog's renderer then lays the view and its assets over it.
+ *
+ * @returns The two middleware, in the order they must run.
  */
-export function createHtmlRenderer(ctx: RequestContext): BlogRenderer {
-	return async function render(ViewComponent, viewModel, options?: RenderOptions) {
-		let renderView = ViewComponent();
-		let assets = await documentAssets();
-		let page = <DocumentAssets value={assets}>{renderView({ model: viewModel })}</DocumentAssets>;
-		let stream = renderToStream(page, {
-			frameSrc: ctx.request.url,
-			resolveFrame(src, target, context) {
-				return resolveSsrFrame(ctx, src, target, context);
-			},
-		});
-		let headers = new Headers(options?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		return createHtmlResponse(stream, {
-			status: options?.status ?? 200,
-			headers,
-		});
-	};
+export function htmlRenderer() {
+	return [
+		render({ assets }),
+		renderWith((ctx) => createHtmlRenderer(ctx.get(Renderer) as RenderFunction)),
+	] as const;
 }
 
 /**
- * Renders a page's `<Frame>` by dispatching its source through this same router, with the
- * page request's headers (cookies included) so the frame sees the same visitor. In process,
- * a frame resolves wherever the page renders, at no subrequest; a non-2xx renders nothing.
+ * Creates the request-scoped renderer used by controllers via `ctx.render`, rendering a
+ * view with its model inside the document's assets through the request's `render()`, which
+ * leads the stream with `<!DOCTYPE html>` and keeps every page in standards mode.
+ *
+ * @param renderPage The renderer `render()` published for this request.
  */
-async function resolveSsrFrame(
-	ctx: RequestContext,
-	src: string,
-	target: string | undefined,
-	context?: ResolveFrameContext,
-) {
-	let frameUrl = new URL(src, context?.currentFrameSrc ?? ctx.request.url);
-	let headers = new Headers(ctx.request.headers);
-	headers.set("accept", "text/html");
-	headers.delete("x-remix-target");
-	if (target) headers.set("x-remix-target", target);
+function createHtmlRenderer(renderPage: RenderFunction): BlogRenderer {
+	return async function renderView(ViewComponent, viewModel, options?: RenderOptions) {
+		let View = ViewComponent();
+		let pageAssets = await documentAssets();
+		let headers = new Headers(options?.headers);
+		headers.set("content-type", "text/html; charset=utf-8");
 
-	let response = await ctx.router.fetch(
-		new Request(frameUrl, { method: "GET", headers, signal: ctx.request.signal }),
-	);
-	if (response.ok) return response.body ?? (await response.text());
-	await response.body?.cancel();
-	return "";
+		return renderPage(
+			<DocumentAssets value={pageAssets}>{View({ model: viewModel })}</DocumentAssets>,
+			{ status: options?.status ?? 200, headers },
+		);
+	};
 }

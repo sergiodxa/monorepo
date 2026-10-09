@@ -116,7 +116,7 @@ describe("GET /frames/search", () => {
 		expect(html).toMatch(
 			new RegExp(`<input type="search" id="site-search-q" name="q"[^>]*value="${TOKEN}"`),
 		);
-		expect(html).toContain('"moduleUrl":"/resources/components/search-box.tsx"');
+		expect(html).toContain('"moduleUrl":"/assets/resources/components/search-box.js"');
 	});
 
 	test("renders the box alone for a blank query, its status empty", async () => {

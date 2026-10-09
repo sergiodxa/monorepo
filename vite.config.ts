@@ -92,6 +92,7 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 const BLOG_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	root: "apps/blog",
 	plugins: [
+		clientEntryIdentity() as ReturnType<typeof cloudflareTest>,
 		cloudflareTest({
 			wrangler: { configPath: "./wrangler.jsonc" },
 			/**
@@ -265,7 +266,7 @@ export default defineConfig({
 			},
 			{
 				root: "apps/blog",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

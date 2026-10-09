@@ -27,11 +27,11 @@ import { BlogLayout } from "~/resources/layouts/blog";
 import { SEARCH_DIALOG_INPUT_ID, SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
 
-import { createHtmlRenderer } from "../../bootstrap/app";
+import { htmlRenderer } from "../../bootstrap/app";
 
-/** The modules the runtime is asked for while the page hydrates. */
+/** The modules the runtime is asked for while the page hydrates, by the chunk the manifest names. */
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {
-	"/resources/components/search-box.tsx": () => import("~/resources/components/search-box"),
+	"/assets/resources/components/search-box.js": () => import("~/resources/components/search-box"),
 };
 
 /** One request the runtime sent for frame content, with the signal it was sent under. */
@@ -79,10 +79,10 @@ function suggestionsFor(query: string): SearchViewModel.Suggestions {
 
 /** A page wearing the blog layout, with the dialog's frame served by the same router. */
 function application() {
-	let router = createRouter();
+	let router = createRouter({ middleware: htmlRenderer() });
 
 	router.get("/", (ctx) =>
-		createHtmlRenderer(ctx)(
+		ctx.render(
 			() => () => (
 				<BlogLayout title="Home" description="Home">
 					<main id="page">Page</main>
@@ -93,7 +93,7 @@ function application() {
 	);
 
 	router.get(routes.search.href(), (ctx) =>
-		createHtmlRenderer(ctx)(
+		ctx.render(
 			() => () => (
 				<BlogLayout
 					title="Search"
@@ -110,7 +110,7 @@ function application() {
 	router.get(routes.searchFrame.href(), async (ctx) => {
 		let query = ctx.url.searchParams.get("q") ?? "";
 		await held.get(query)?.promise;
-		return createHtmlRenderer(ctx)(SearchFrameView, suggestionsFor(query));
+		return ctx.render(SearchFrameView, suggestionsFor(query));
 	});
 
 	return router;
