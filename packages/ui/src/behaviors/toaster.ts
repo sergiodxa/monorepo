@@ -106,7 +106,7 @@ function toPublicToast<Data>(entry: Entry<Data>): Toaster.Toast<Data> {
  * {@link Toaster.resume} so a toast under the cursor stays readable.
  *
  * @example
- * handle.queueTask(() => toaster.addEventListener("change", () => handle.update(), { signal: handle.signal }));
+ * whileLive(handle, (model: Toaster, signal) => model.addEventListener("change", () => handle.update(), { signal }))(toaster);
  */
 export class Toaster<Data = unknown> extends TypedEventTarget<Toaster.Events> {
 	#toasts = new Map<string, Entry<Data>>();

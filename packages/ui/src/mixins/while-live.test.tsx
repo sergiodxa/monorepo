@@ -1,14 +1,15 @@
 // @vitest-environment happy-dom
 
 /**
- * Tests for {@link "./while-live"} against a real document: a probe mixin counts the change
- * events it hears from whichever target it was last rendered with, across mounting,
+ * Tests for {@link "./while-live"} against a real document: a probe mixin and a probe island
+ * count the change events they hear from the target they follow, across mounting,
  * re-rendering with a replacement target, and unmounting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Handle } from "remix/component";
 import type { RenderResult } from "remix/component/test";
 
 import { createElement, createMixin } from "remix/component";
@@ -52,6 +53,15 @@ const probe = createMixin<HTMLElement, [target: Target]>((handle) => {
 	};
 });
 
+/** Records every change from the target it is given, the way an island follows its model. */
+function Island(handle: Handle<{ target: Target }>) {
+	whileLive(handle, (target: Target, signal) => {
+		target.addEventListener("change", () => heard.push(target.label), { signal });
+	})(handle.props.target);
+
+	return () => <div />;
+}
+
 describe(whileLive.name, () => {
 	test("hears a change dispatched the moment the host mounts", () => {
 		let target = new Target("a");
@@ -78,6 +88,26 @@ describe(whileLive.name, () => {
 	test("stops hearing its target once the host unmounts", () => {
 		let target = new Target("a");
 		mounted = render(<div mix={[probe(target)]} />);
+
+		mounted.cleanup();
+		mounted = undefined;
+		target.change();
+
+		expect(heard).toEqual([]);
+	});
+
+	test("hears an island's target once the island has rendered", () => {
+		let target = new Target("a");
+		mounted = render(<Island target={target} />);
+
+		target.change();
+
+		expect(heard).toEqual(["a"]);
+	});
+
+	test("stops hearing an island's target once the island unmounts", () => {
+		let target = new Target("a");
+		mounted = render(<Island target={target} />);
 
 		mounted.cleanup();
 		mounted = undefined;

@@ -64,7 +64,7 @@ export namespace Announcer {
  * `aria-live` element, and calls {@link Announcer.next} once it has been read.
  *
  * @example
- * handle.queueTask(() => announcer.addEventListener("change", () => handle.update(), { signal: handle.signal }));
+ * whileLive(handle, (model: Announcer, signal) => model.addEventListener("change", () => handle.update(), { signal }))(announcer);
  */
 export class Announcer extends TypedEventTarget<Announcer.Events> {
 	#queue: Announcer.Message[] = [];

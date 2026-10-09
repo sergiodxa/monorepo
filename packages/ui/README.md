@@ -362,7 +362,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `validate(schema)`              | a native form control      | Applies a `remix/data-schema` schema through `setCustomValidity()`, mirrored into a `FieldError`.                |
 | `viewTransition()`              | a `SharedElement` island   | Bridges a same-document reload to the View Transition API.                                                       |
 | `trackHostNode(handle)`         | inside a mixin             | Caches a mixin's live host node across insert and remove, for the mixins above that read the DOM outside render. |
-| `whileLive(handle, subscribe)`  | inside a mixin             | Subscribes to a mixin's latest model, session or frame only while its host is live in a document.                |
+| `whileLive(handle, subscribe)`  | inside a mixin             | Subscribes a mixin or island to a model, session or frame only while it is live in a document.                   |
 
 ### Behavior Classes
 
@@ -462,15 +462,16 @@ import { clientEntry } from "remix/component";
 
 import { Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
+import { whileLive } from "@sdxc/ui/mixins";
 
 export const AppToaster = clientEntry(
 	"/app/components/app-toaster.tsx#AppToaster",
 	function AppToaster(handle: Handle) {
 		let toaster = new Toaster<{ title: string; color?: Toast.Color }>();
 
-		handle.queueTask(() =>
-			toaster.addEventListener("change", () => handle.update(), { signal: handle.signal }),
-		);
+		whileLive(handle, (model: Toaster, signal) =>
+			model.addEventListener("change", () => handle.update(), { signal }),
+		)(toaster);
 		handle.context.set({ toaster });
 
 		return () => (
@@ -505,7 +506,7 @@ import type { Handle } from "remix/component";
 import { visuallyHidden } from "@sdxc/u/a11y";
 import { Button, Modal, ShortcutList } from "@sdxc/ui";
 import { Announcer } from "@sdxc/ui/behaviors";
-import { keymap } from "@sdxc/ui/mixins";
+import { keymap, whileLive } from "@sdxc/ui/mixins";
 import { keyComboGlyphs } from "@sdxc/ui/utils";
 import { clientEntry } from "remix/component";
 
@@ -515,9 +516,9 @@ export default clientEntry(
 	"/app/components/shortcuts.tsx#default",
 	function Shortcuts(handle: Handle<Props>) {
 		let announcer = new Announcer({ hold: 1200 });
-		handle.queueTask(() =>
-			announcer.addEventListener("change", () => handle.update(), { signal: handle.signal }),
-		);
+		whileLive(handle, (model: Announcer, signal) =>
+			model.addEventListener("change", () => handle.update(), { signal }),
+		)(announcer);
 
 		let openHelp = () =>
 			document.querySelector<HTMLButtonElement>('[commandfor="shortcuts"]')?.click();

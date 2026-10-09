@@ -1,29 +1,30 @@
 /**
- * Ties a mixin's subscription to a model, session or frame to the time its host is live in a
- * document, so a mixin that renders on a server as well as in a browser subscribes only where
- * a node exists to update, with a real signal that detaches the listeners again.
+ * Ties a subscription to a model, session, frame or global to the time a mixin's host or an
+ * island component is live in a document, so code that renders on a server as well as in a
+ * browser subscribes only in the browser, with a real signal that detaches the listeners.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MixinHandle } from "remix/component";
+import type { Handle, MixinHandle } from "remix/component";
 
 /**
  * Keeps `subscribe` bound to the latest target handed to the returned function while the host
- * is inserted: binding waits for insertion, so server rendering never subscribes, and a new
- * target detaches the previous one's listeners. Call it during setup, before `insert` listeners.
+ * is inserted, or once an island component's first render commits: server rendering never
+ * subscribes, and a new target detaches the previous one's listeners. Call it during setup.
  *
- * @param handle Handle of the mixin whose host lifetime bounds every subscription.
+ * @param handle Handle of the mixin or island component whose lifetime bounds every subscription.
  * @param subscribe Registers listeners on `target` with `signal`, which aborts once that target
- * is replaced or the mixin slot is disposed.
- * @returns A function the render callback calls with its current target.
- * @template target The model, session or frame the mixin listens to.
- * @template node The host element the mixin is applied to.
+ * is replaced or the mixin slot or component is disposed.
+ * @returns A function to call with the current target, from render or straight after setup.
+ * @template target The model, session, frame or global being listened to.
+ * @template node The host element a mixin is applied to.
  * @example let follow = whileLive(handle, (model, signal) => model.addEventListener("change", sync, { signal }));
+ * @example whileLive(handle, (model: Toaster, signal) => model.addEventListener("change", () => void handle.update(), { signal }))(toaster);
  */
 export function whileLive<target extends object, node extends EventTarget = Element>(
-	handle: MixinHandle<node>,
+	handle: MixinHandle<node> | Pick<Handle, "signal" | "queueTask">,
 	subscribe: (target: target, signal: AbortSignal) => void,
 ): (target: target) => void {
 	let lifetime = handle.signal;
@@ -42,13 +43,20 @@ export function whileLive<target extends object, node extends EventTarget = Elem
 		subscribe(latest, AbortSignal.any([lifetime, binding.signal]));
 	}
 
-	handle.addEventListener("insert", () => {
+	/** Marks the host or component live and binds whatever target arrived before it was. */
+	function goLive(): void {
 		live = true;
 		bind();
-	});
-	handle.addEventListener("remove", () => {
-		live = false;
-	});
+	}
+
+	if ("addEventListener" in handle) {
+		handle.addEventListener("insert", goLive);
+		handle.addEventListener("remove", () => {
+			live = false;
+		});
+	} else {
+		handle.queueTask(goLive);
+	}
 
 	return (target) => {
 		latest = target;

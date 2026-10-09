@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/component";
+import type { Handle, RemixNode } from "remix/component";
 
 import { renderToStream } from "remix/component/server";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -30,6 +30,17 @@ import { rangePreview } from "./range-preview.js";
 import { resizeHandle } from "./resize-handle.js";
 import { treeKeys } from "./treeKeys.js";
 import { viewTransition } from "./view-transition.js";
+import { whileLive } from "./while-live.js";
+
+/** An island following a behavior-class instance the way an app's island follows its model. */
+function Island(handle: Handle) {
+	let model = new SelectionModel();
+	whileLive(handle, (target: SelectionModel, signal) => {
+		target.addEventListener("change", () => void handle.update(), { signal });
+	})(model);
+
+	return () => <div />;
+}
 
 /** Each mixin applied to the host it ships on, keyed by the mixin's name. */
 const CASES: [name: string, node: () => RemixNode][] = [
@@ -44,6 +55,7 @@ const CASES: [name: string, node: () => RemixNode][] = [
 	["messageFollow", () => <div mix={[messageFollow(new ScrollFollowModel())]} />],
 	["resizeHandle", () => <div mix={[resizeHandle("horizontal", new ResizeSession())]} />],
 	["viewTransition", () => <div mix={[viewTransition()]} />],
+	["whileLive in an island", () => <Island />],
 ];
 
 afterEach(() => {
