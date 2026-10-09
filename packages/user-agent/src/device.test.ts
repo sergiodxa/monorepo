@@ -67,6 +67,17 @@ describe("detectDevice", () => {
 		});
 	});
 
+	test("reads a model padded with thousands of tabs in linear time", () => {
+		let padding = "\t".repeat(50_000);
+		let userAgent = `Mozilla/5.0 (Linux; Android 13; SM-S918B${padding}x Build/TP1A) Mobile Safari/537.36`;
+
+		let started = performance.now();
+		let device = detectDevice(userAgent);
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(device.model).toBe(`SM-S918B${padding}x`);
+	});
+
 	test.each([
 		"Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Mobile Safari/537.36",
 		"Mozilla/5.0 (Android 13; Mobile; rv:124.0) Gecko/124.0 Firefox/124.0",

@@ -96,7 +96,8 @@ function readAndroidModel(userAgent: string): string | null {
 	if (match?.[1] === undefined) return null;
 
 	for (let segment of match[1].split(";")) {
-		let model = segment.replace(/\s*Build\/.*$/, "").trim();
+		let build = segment.indexOf("Build/");
+		let model = (build === -1 ? segment : segment.slice(0, build)).trim();
 		if (model === "" || PLACEHOLDER_SEGMENTS.has(model)) continue;
 		if (LOCALE_SEGMENT.test(model) || REVISION_SEGMENT.test(model)) continue;
 		return model;
