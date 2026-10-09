@@ -44,11 +44,11 @@ const SHARED_MAX_AGE = "1 hour";
  */
 /**
  * Names the build every page was rendered from. The bundler stamps it in; a runner that
- * evaluates this module without that step, such as the test environment, gets a constant
- * instead, which keeps the validator well-formed wherever the module runs.
+ * evaluates this module without that step, such as the test environment, gets a constant.
+ * The dev server stamps `null`: its code changes under one process, so no name covers it.
  */
-function buildId(): string {
-	return typeof __BUILD_ID__ === "string" ? __BUILD_ID__ : "development";
+function buildId(): string | null {
+	return typeof __BUILD_ID__ === "undefined" ? "development" : __BUILD_ID__;
 }
 
 export async function withBundleCache(
@@ -87,10 +87,13 @@ export async function withBundleCache(
 	headers.set("Cache-Control", stored.toString());
 	vary(headers, "Cookie");
 
-	let tag = await etag(`${buildId()}:${new URL(request.url).pathname}:${selections}:${variant}`, {
-		weak: true,
-	});
-	if (isSuccess(tag)) headers.set("ETag", tag.data);
+	let build = buildId();
+	if (build !== null) {
+		let tag = await etag(`${build}:${new URL(request.url).pathname}:${selections}:${variant}`, {
+			weak: true,
+		});
+		if (isSuccess(tag)) headers.set("ETag", tag.data);
+	}
 
 	return await conditional(request, new Response(body, { status: response.status, headers }));
 }

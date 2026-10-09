@@ -6,5 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Identifier stamped on the build by Vite, which the cache validator is derived from. */
-declare const __BUILD_ID__: string;
+/**
+ * Identifier stamped on the build by Vite, which the cache validator is derived from;
+ * `null` under the dev server, whose pages carry no validator.
+ */
+declare const __BUILD_ID__: string | null;
