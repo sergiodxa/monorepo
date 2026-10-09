@@ -280,11 +280,13 @@ function rowsMarkdown(first: string, rows: PropRow[]): string {
 }
 
 /**
- * A GitHub-flavored table. A cell's pipes are escaped and its line breaks folded, since
- * either one would end the cell early and shift every column after it.
+ * A GitHub-flavored table. A cell's pipes are escaped, together with any backslashes right
+ * before them, and its line breaks folded, since any of these would end the cell early and
+ * shift every column after it.
  */
 function table(columns: string[], rows: string[][]): string {
-	let cell = (value: string) => oneLine(value).replace(/\|/g, "\\|");
+	let cell = (value: string) =>
+		oneLine(value).replace(/(\\*)\|/g, (_, slashes: string) => `${slashes}${slashes}\\|`);
 
 	return [
 		`| ${columns.join(" | ")} |`,

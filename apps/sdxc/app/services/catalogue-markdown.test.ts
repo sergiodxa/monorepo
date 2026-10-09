@@ -42,6 +42,34 @@ describe("componentMarkdown", () => {
 		expect(body).toContain('| `variant?` | `"solid" \\| "outline"` | How loud it is. |');
 		expect(body).toContain('Also accepts everything in `ElementProps<"span">`.');
 	});
+
+	test("keeps a backslash before a pipe from unescaping it", () => {
+		let body = componentMarkdown({
+			name: "Field",
+			slug: "field",
+			definition: "A field.",
+			summary: "A field.",
+			description: "Renders a field.",
+			examples: [],
+			props: {
+				rows: [
+					{
+						name: "pattern",
+						type: "string",
+						description: "Matches a\\|b.",
+						optional: false,
+						values: [],
+					},
+				],
+				inherits: [],
+			},
+			parts: [],
+			types: [],
+			related: [],
+		});
+
+		expect(body).toContain("| `pattern` | `string` | Matches a\\\\\\|b. |");
+	});
 });
 
 describe("uiExportMarkdown", () => {
