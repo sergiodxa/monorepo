@@ -661,6 +661,28 @@ send mail or read the request's services.
 arguments, and the middleware would still have to bind them to offer `ctx.models`. `bind(db,
 context)` keeps the "database first" order those apps use while supplying it once.
 
+### 5. Model middleware around every query
+
+A chain that runs before any query a model makes, able to query other models or do anything
+else first.
+
+**Rejected because**: scopes return real data-table queries that `@sdxc/pagination`, `@sdxc/search`
+and eager loading execute themselves, so a middleware would run for `users.find(id)` and not for
+a paged listing unless the model wrapped every execution path. Each need it would serve already
+has a home:
+
+| Need                                       | Where it lives                                                             |
+| ------------------------------------------ | -------------------------------------------------------------------------- |
+| Work before a write, querying other models | `validate` and `before*` callbacks, which receive `ctx.db` and `ctx.get()` |
+| A filter every read applies (soft deletes) | A `defaultScope` option, applied in `query()`, added when a port needs it  |
+| Per-tenant isolation                       | The tenant's database, bound by the models middleware                      |
+| Authorization                              | The route, job or tool boundary that receives the traffic                  |
+| Logging or timing every query              | The database adapter, or the host's own middleware                         |
+| Caching a read                             | A custom method that consults the cache first                              |
+
+A middleware that queries other models would also trigger theirs, which needs ordering rules
+and recursion guards on top.
+
 ## References
 
 - [remix/data-table](../vendor/@remix-run/data-table/README.md)
