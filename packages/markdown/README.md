@@ -287,8 +287,9 @@ content fields and the attributes an annotation wrote, flattened into one bag, p
 
 The component for a [`frame`](#sdxc-markdownpluginframes) tag. It renders a Remix `<Frame>`
 with the tag's `src` and `name`, and the tag's children as its `fallback`: a tag written with
-children streams them first and the frame's content replaces them, while a self-closing tag
-holds the page until the content resolves. The page's renderer resolves the frame, so it needs
+children streams them first and the client runtime swaps in the frame's content when it
+arrives, while a self-closing tag holds the page until the content resolves and inlines it,
+so it reads the same before any script loads. The page's renderer resolves the frame, so it needs
 a `resolveFrame`, which `render()` from `remix/middleware/render` supplies.
 
 ### `@sdxc/markdown/plugin/variables`
