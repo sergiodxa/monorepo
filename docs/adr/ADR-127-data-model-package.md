@@ -143,8 +143,9 @@ let query = users.active().inTeam(teamId).where({ role: "admin" }).with({ posts:
 let page = await Pagination.byOffset(query, { page: 1, perPage: 25 });
 ```
 
-The wrapped value is still a `Query` (`instanceof` holds), so pagination, search refinement and
-eager loading accept it unchanged.
+For a model loaded up front, the wrapped value is still a `Query` (`instanceof` holds), so
+pagination, search refinement and eager loading accept it unchanged. A lazily loaded model hands
+out a deferred query instead, described under [Loading models on demand](#loading-models-on-demand).
 
 ### Bound model surface
 
@@ -158,6 +159,7 @@ eager loading accept it unchanged.
 | `update(id, values)` | `Result<Row, ValidationError \| NotFound>` | Yes       |
 | `delete(id)`         | `Result<Row, NotFound>`                    | Yes       |
 | `transaction(fn)`    | Whatever `fn` returns                      | Defers    |
+| `load()`             | The bound model, once its module loaded    | No        |
 | Custom `methods`     | Whatever each declares                     | —         |
 
 Reads answer `null` for a missing row. Writes answer a `Result` from `@sdxc/result`, because a
@@ -289,26 +291,42 @@ export const models = createModels({
 ```
 
 ```typescript
-let articles = await ctx.models.articles;
-let page = await Pagination.byOffset(articles.published().newest(), { page: 1, perPage: 20 });
-
-let user = await ctx.models.users.findByEmail(email);
+let article = await ctx.models.articles.findBySlug(slug);
+let page = await Pagination.byOffset(ctx.models.articles.published().newest(), {
+	page: 1,
+	perPage: 20,
+});
 ```
+
+A lazy entry reads as a proxy with exactly the bound model's type, so call sites are the same
+whether an entry is lazy or not, and an entry can move between the two without touching them.
 
 - A lazy entry's module default-exports its model, the shape `dispatcher.map(job, () => import(...))`
   already uses for jobs.
-- The registry's type follows each entry: a model is read as the bound model, a loader as a
-  `Promise` of it. Forgetting the `await` on a lazy entry is a type error at the first method
-  call.
-- The import runs on first access and the bound model is kept for the rest of the invocation, so
-  a second `await ctx.models.articles` resolves to the same instance without importing again.
-- Inside `ctx.models.transaction(async (models) => { ... })` the same rule applies:
-  `await models.articles` binds the loaded model to the transaction.
+- An async member, such as `findBySlug()` or `create()`, awaits the import, binds the model, and
+  then calls the member with the same arguments. The returned promise settles with the member's
+  own result, or rejects when the import fails.
+- A member that returns a query, such as `query()`, a scope or `from()`, returns a deferred query
+  synchronously. It records each chained call and replays the chain on the loaded model when a
+  terminal method (`all()`, `first()`, `count()`, a write) runs, so it chains and pages exactly
+  like the eager one.
+- Every member a model exposes therefore returns either a promise or a model query. The type of
+  `methods` enforces it: a custom method returning a plain value fails to type-check, because a
+  proxy could not produce that value before the module loads.
+- The import runs once per invocation, on the first member called, and the bound model is kept
+  for the rest of it.
+- Inside `ctx.models.transaction(async (models) => { ... })` the proxy binds the loaded model to
+  the transaction.
 - Model modules import tables, never other models, so loading one never pulls in another; a
   callback that needs a second model reads the registry with `ctx.get(Models)`.
 - On Workers the bundle still contains every model. What the loader defers is module
   evaluation, which keeps a model's top-level work, such as building a search definition, off
   invocations that never use it.
+
+A deferred query is a data-table `Query` only once replayed. Pagination and search take it,
+since they call query methods and never test its class, but code that needs a real `Query` in
+hand, such as `db.exec(query)` or an `instanceof` check, reads it from the loaded model with
+`await ctx.models.articles.load()`.
 
 ### Package boundaries
 
@@ -625,6 +643,9 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 
 - **Wrapped queries** - scope chaining depends on every data-table `Query` method returning a
   new `Query`. A data-table release that changes this breaks chaining until the wrapper adapts.
+- **Deferred queries** - a query from a lazily loaded model is a recording until it runs, so the
+  rare caller that needs a real `Query` in hand awaits `load()` first, and custom methods are
+  limited to returning promises or model queries.
 - **Two write paths** - model writes run callbacks and query-built bulk writes do not. The
   distinction has to be learned, as with Rails' `update_all`.
 - **D1 weakens `afterCommit`** - without interactive transactions, it runs per write, so a
