@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Base64Url } from "@sdxc/crypto";
+import { Base64Url } from "@sdxc/crypto/encoding";
 import { isFailure } from "@sdxc/result";
 
 /** Bytes of an uncompressed P-256 point: the `0x04` prefix, then 32 bytes each of x and y. */

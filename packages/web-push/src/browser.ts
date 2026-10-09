@@ -9,7 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
-import { Base64Url } from "@sdxc/crypto";
+import { Base64Url } from "@sdxc/crypto/encoding";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Subscription } from "./subscription.js";
