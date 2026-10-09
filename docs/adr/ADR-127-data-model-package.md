@@ -6,18 +6,47 @@
 
 ## Background
 
-Apps in this repo declare tables with `remix/data-table` and query them directly from route
-handlers, jobs and MCP tools. The rules that belong to a table end up spread across every caller:
-normalizing an email before insert, the "active" filter every listing repeats, the welcome job
-enqueued after a signup. Rails and Laravel collect those rules on a model. This repo has no
-equivalent, so each app either repeats them or invents its own repository module.
+Most apps in this repo already wrap their `remix/data-table` tables in a model or repository
+layer: uptime and r3-auth in `app/data/`, auth-saas in `app/models/`, blog in
+`app/repositories/`. Each app wrote its own, so the same pattern exists five times under three
+directory names, with no shared base and different answers to the same questions: where a job is
+enqueued after a write, what a list method returns for pagination, and whether a failure is a
+`Result` or a throw.
 
-This ADR adds `@sdxc/data-model`: models built on a `remix/data-table` table, bound per request to
-the right `Database`, with named scopes, custom methods and async callbacks that reach the app's
-services. It is designed as an official `remix/data-model` would be: it keeps data-table's plain
+This ADR adds `@sdxc/data-model` so that layer is written once: models built on a
+`remix/data-table` table, bound per request to the right `Database`, with named scopes, custom
+methods and async callbacks that reach the app's services. It is designed as an official `remix/data-model` would be: it keeps data-table's plain
 rows and immutable queries, and composes through context keys and middleware.
 
 ## Context
+
+### The model layers apps already have
+
+| App       | Location            | Example                                              |
+| --------- | ------------------- | ---------------------------------------------------- |
+| uptime    | `app/data/`         | `apps/uptime/app/data/monitor.ts` (about 35 modules) |
+| auth-saas | `app/models/`       | `apps/auth-saas/app/models/tenant.ts`                |
+| blog      | `app/repositories/` | `apps/blog/app/repositories/post.ts`                 |
+| r3-auth   | `app/data/`         | `apps/r3-auth/app/data/client.ts`                    |
+| demo      | `app/data/`         | `apps/demo/app/data/posting.ts`                      |
+
+The dominant shape is a class of static methods taking the database first:
+`Monitor.create(ctx.db, teamId, ...)`, `Tenant.findBySlug(db, slug)`. auth-saas models also hold
+their table as `static table`. Instance classes appear only where a package interface has to be
+implemented, such as `FollowerRepository implements FollowerStore`, which takes the database in
+its constructor. Nothing publishes models on the context; handlers import the class and pass
+`ctx.db` on every call.
+
+Where the layers disagree:
+
+| Question                       | Answers found                                                                                                                                                                                    |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Who enqueues after a write     | The model (`Monitor.ping` enqueues `checkHttp`, `apps/uptime/app/data/monitor.ts`); the caller (`ArticlePost.create` then `ctx.jobs.enqueue`, `apps/blog/app/http/controllers/cms/articles.tsx`) |
+| What a list returns for paging | Rows; a separate `*Query` variant for `Pagination.byKeyset` (about 13 uptime modules); a paged result built inside the model (`Tenant.listProvisioned`, `PostSearch.page`)                       |
+| How a failure is reported      | `null` and the occasional throw in most modules; `Result` in `FollowerRepository`, blog's `user.ts` and `PostSearch`                                                                             |
+| Naming                         | `findById` / `findBy<Field>` / `listBy<X>` / `listBy<X>Query`; `update` / `updateById`; `delete` / `deleteById` / `destroy`                                                                      |
+
+The same entity is sometimes modelled twice, as `customer` is in uptime and auth-saas.
 
 ### What data-table already provides
 
@@ -507,8 +536,11 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 
 ### Positive
 
-- **One home for table rules** - normalization, validation, default filters and side effects
-  live on the model instead of in every route, job and tool that writes the table.
+- **One model layer instead of five** - apps stop hand-writing the static-class pattern, and the
+  questions they answer differently today (side-effect placement, paging, failures, naming) get
+  one answer.
+- **Paging without `*Query` twins** - every scope already returns a pageable query, so a model
+  no longer needs a rows method and a query method for the same list.
 - **Side effects after commit** - `afterCommit` gives job and mail dispatch the timing that
   avoids sending work for a rolled-back write.
 - **No new query vocabulary** - scopes return data-table queries, so pagination, search, eager
@@ -557,7 +589,9 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 ### Phase 4: Package chores
 
 1. README, LICENSE, root README row, `apps/sdxc` group and guide, npm bootstrap.
-2. Adopt it in one app to validate the API before wider use.
+2. Port one existing model layer to validate the API, starting with a module where the model
+   already dispatches side effects (uptime's `Monitor`) and one that pairs rows with a `*Query`
+   variant, then migrate the remaining apps' `data/`, `models/` and `repositories/` modules.
 
 ## Alternatives Considered
 
@@ -586,12 +620,13 @@ Put model behavior into `table({ beforeWrite, afterWrite })`.
 **Rejected because**: those hooks are synchronous and context-free, so they cannot enqueue jobs,
 send mail or read the request's services.
 
-### 4. Functions that take `db` on every call
+### 4. Keep the static-class pattern apps use today
 
-`Users.find(db, id)`, `Users.create(db, values)`.
+`Users.find(db, id)`, `Users.create(db, values)`, as uptime, auth-saas and blog do now.
 
 **Rejected because**: callbacks also need the host context, so every call would take two leading
-arguments, and the middleware would still have to bind them to offer `ctx.models`.
+arguments, and the middleware would still have to bind them to offer `ctx.models`. `bind(db,
+context)` keeps the "database first" order those apps use while supplying it once.
 
 ## References
 
