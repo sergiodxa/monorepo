@@ -305,7 +305,7 @@ let user = await ctx.models.users.findByEmail(email);
 - Inside `ctx.models.transaction(async (models) => { ... })` the same rule applies:
   `await models.articles` binds the loaded model to the transaction.
 - Model modules import tables, never other models, so loading one never pulls in another; a
-  callback that needs a second model reads it through the host's `ctx.models`.
+  callback that needs a second model reads the registry with `ctx.get(Models)`.
 - On Workers the bundle still contains every model. What the loader defers is module
   evaluation, which keeps a model's top-level work, such as building a search definition, off
   invocations that never use it.
