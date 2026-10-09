@@ -33,12 +33,13 @@ export const expression: Rule[] = [
 	/**
 	 * A `/` opens a regular expression only where a value can start, which is
 	 * what the lookbehind checks: after an operator, an opening bracket, or a
-	 * keyword like `return`. Anywhere else it divides.
+	 * keyword like `return`. Anywhere else it divides. A backslash or a `[`
+	 * reads one way only, as an escape or a class, so a scan stays linear.
 	 */
 	{
 		type: "regex",
 		match:
-			/(?<=(?:^|[([{,;:=!&|?+\-*/%~^<>]|\breturn|\btypeof|\bcase)\s*)\/(?:\\.|\[(?:\\.|[^\]\n])*\]|[^/\\\n])+\/[dgimsuvy]*/y,
+			/(?<=(?:^|[([{,;:=!&|?+\-*/%~^<>]|\breturn|\btypeof|\bcase)\s*)\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\[\n])+\/[dgimsuvy]*/y,
 	},
 
 	{

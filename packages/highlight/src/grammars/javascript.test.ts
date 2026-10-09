@@ -69,6 +69,24 @@ describe("javascript", () => {
 		]);
 	});
 
+	test("reads slashes and brackets inside a character class", () => {
+		expect(painted("x = /[/\\]]+/g")).toEqual(["operator:=", "regex:/[/\\]]+/g"]);
+	});
+
+	test.each([
+		["/", "[]"],
+		["/[", "\\\\"],
+	])("scans an unclosed regex %j with a run of %j in linear time", (opening, unit) => {
+		let code = `x = ${opening}${unit.repeat(40)}`;
+		let started = performance.now();
+		expect(
+			scan(code, javascript)
+				.map((token) => token.value)
+				.join(""),
+		).toBe(code);
+		expect(performance.now() - started).toBeLessThan(1_000);
+	});
+
 	test("divides where a value cannot start", () => {
 		expect(painted("a / b / c")).toEqual(["operator:/", "operator:/"]);
 	});
