@@ -93,9 +93,8 @@ export const DOCUMENT_SCHEMA: Schema<unknown, MF2.Document> = object({
 		),
 	),
 }).transform(({ items, rels, "rel-urls": relUrls }) => {
-	let urls: Record<string, MF2.RelUrl> = {};
-	for (let [url, entry] of Object.entries(relUrls ?? {})) urls[url] = withoutUndefined(entry);
-	return { items, rels: rels ?? {}, relUrls: urls };
+	let urls = Object.entries(relUrls ?? {}).map(([url, entry]) => [url, withoutUndefined(entry)]);
+	return { items, rels: rels ?? {}, relUrls: Object.fromEntries(urls) };
 });
 
 /** The fields shared by every item, validated, as an item with no `undefined` members. */

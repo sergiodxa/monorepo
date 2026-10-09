@@ -16,6 +16,8 @@ export const TEXT_NODE = 3;
 /** The characters HTML calls spaces, which is what the parsing rules trim. */
 const HTML_SPACES = /[ \t\n\f\r]+/u;
 
+const HTML_SPACE_CHARACTERS = " \t\n\f\r";
+
 /**
  * An element's children, minus `<template>`, whose content HTML parsing keeps out of
  * the document a browser builds.
@@ -55,7 +57,14 @@ export function attributeOf(
 	return element.getAttribute(name);
 }
 
-/** Removes leading and trailing HTML spaces, leaving non-breaking spaces as authored. */
+/**
+ * Removes leading and trailing HTML spaces, leaving non-breaking spaces as authored.
+ * Walking in from both ends keeps the cost linear however long an inner space run is.
+ */
 export function trimSpaces(value: string): string {
-	return value.replace(/^[ \t\n\f\r]+|[ \t\n\f\r]+$/gu, "");
+	let start = 0;
+	let end = value.length;
+	while (start < end && HTML_SPACE_CHARACTERS.includes(value[start] ?? "")) start++;
+	while (end > start && HTML_SPACE_CHARACTERS.includes(value[end - 1] ?? "")) end--;
+	return value.slice(start, end);
 }

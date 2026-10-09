@@ -17,14 +17,15 @@ const LINK_ATTRIBUTES = ["hreflang", "media", "title", "type"] as const;
 
 /**
  * Reads every `rel` in document order. A URL listed under several links keeps the first
- * text and attributes seen, and its `rels` accumulate, unique and sorted.
+ * text and attributes seen, and its `rels` accumulate, unique and sorted. Keys come from
+ * the page, so a URL or rel such as `__proto__` lands as an own property like any other.
  */
 export function collectRels(
 	document: DOMDocument,
 	base: string,
 ): Pick<MF2.Document, "rels" | "relUrls"> {
-	let rels: Record<string, string[]> = {};
-	let relUrls: Record<string, MF2.RelUrl> = {};
+	let rels = new Map<string, string[]>();
+	let relUrls = new Map<string, MF2.RelUrl>();
 
 	for (let link of Array.from(document.querySelectorAll("a[rel], area[rel], link[rel]"))) {
 		if (link.closest("template") !== null) continue;
@@ -35,11 +36,13 @@ export function collectRels(
 		let url = resolveUrl(link.getAttribute("href") ?? "", base);
 
 		for (let value of values) {
-			let urls = (rels[value] ??= []);
+			let urls = rels.get(value) ?? [];
 			if (!urls.includes(url)) urls.push(url);
+			rels.set(value, urls);
 		}
 
-		let entry = (relUrls[url] ??= { rels: [] });
+		let entry = relUrls.get(url) ?? { rels: [] };
+		relUrls.set(url, entry);
 		for (let name of LINK_ATTRIBUTES) {
 			let attribute = link.getAttribute(name);
 			if (attribute !== null && entry[name] === undefined) entry[name] = attribute;
@@ -49,5 +52,5 @@ export function collectRels(
 		entry.rels = [...new Set([...entry.rels, ...values])].sort();
 	}
 
-	return { rels, relUrls };
+	return { rels: Object.fromEntries(rels), relUrls: Object.fromEntries(relUrls) };
 }

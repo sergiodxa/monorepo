@@ -8,7 +8,7 @@
  */
 import type { DOMElement, DOMNode } from "@sdxc/html/document";
 
-import { ELEMENT_NODE, TEXT_NODE, tagName } from "./tree.js";
+import { ELEMENT_NODE, TEXT_NODE, tagName, trimSpaces } from "./tree.js";
 import { resolveUrl } from "./url.js";
 
 /** Comment nodes, which serialize as themselves. */
@@ -68,7 +68,7 @@ const URL_ATTRIBUTES = new Set([
  * @param base - What relative URLs resolve against
  */
 export function innerHTML(element: DOMElement, base: string): string {
-	return serializeChildren(element, base, false).replace(/^[ \t\n\f\r]+|[ \t\n\f\r]+$/gu, "");
+	return trimSpaces(serializeChildren(element, base, false));
 }
 
 /** Serializes each child node in order. */

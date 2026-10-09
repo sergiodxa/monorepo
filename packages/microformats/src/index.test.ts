@@ -88,6 +88,40 @@ describe(parse, () => {
 		expect(isFailure(result) && result.error).toBeInstanceOf(MicroformatsParseError);
 	});
 
+	test("keeps rel keys such as __proto__ as own entries without touching Object.prototype", () => {
+		let source = '<a rel="__proto__" href="__proto__">x</a><a rel="me" href="constructor">y</a>';
+
+		let document = unwrap(parse(source, "about:blank"));
+
+		expect(Object.keys(document.relUrls)).toEqual(["__proto__", "constructor"]);
+		expect(Object.getOwnPropertyDescriptor(document.relUrls, "__proto__")?.value).toEqual({
+			rels: ["__proto__"],
+			text: "x",
+		});
+		expect(Object.getOwnPropertyDescriptor(document.rels, "__proto__")?.value).toEqual([
+			"__proto__",
+		]);
+		expect(Object.getPrototypeOf(document.relUrls)).toBe(Object.prototype);
+		expect(Object.prototype).not.toHaveProperty("rels");
+		expect(stringify(document)).toContain(
+			'"rel-urls":{"__proto__":{"rels":["__proto__"],"text":"x"}',
+		);
+	});
+
+	test("trims text with long inner space runs in linear time", () => {
+		let gap = "\t".repeat(100_000);
+		let source = `<div class="h-entry"><p class="p-name"> a${gap}b </p><div class="e-content"> a${gap}b </div></div>`;
+		let started = performance.now();
+
+		let document = unwrap(parse(source, "https://example.com/"));
+
+		expect(performance.now() - started).toBeLessThan(1000);
+		expect(document.items[0]?.properties["name"]).toEqual([`a${gap}b`]);
+		expect(document.items[0]?.properties["content"]).toEqual([
+			{ html: `a${gap}b`, value: `a${gap}b` },
+		]);
+	});
+
 	test("resolves against <base href>, itself resolved against the page URL", () => {
 		let source = `<base href="/blog/"><a class="h-card" href="ada">Ada</a>`;
 
