@@ -386,7 +386,7 @@ export default defineConfig({
 			},
 			{
 				root: "apps/auth-saas",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

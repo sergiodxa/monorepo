@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { RemixNode } from "remix/component";
 import type { Middleware } from "remix/router";
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
@@ -18,9 +19,10 @@ import { TENANT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 
 import { HostedDocument } from "./document";
+import { PasskeySignInButton } from "./passkey-button";
 
 /** Renders a hosted page under the tenant policy, answering its HTML and the CSP's nonce. */
-async function renderPage() {
+async function renderPage(content: RemixNode = <p>Hosted screen</p>) {
 	let router = createRouter({
 		middleware: [securityHeaders(TENANT_SECURITY_POLICY) as Middleware, render as Middleware],
 	});
@@ -28,7 +30,7 @@ async function renderPage() {
 	router.get("/", (ctx) =>
 		ctx.render(
 			<HostedDocument title="Sign in" locale="en">
-				<p>Hosted screen</p>
+				{content}
 			</HostedDocument>,
 		),
 	);
@@ -67,5 +69,22 @@ describe("the hosted document's asset tags", () => {
 		expect(/<script[^>]*type="importmap"[^>]*>/.exec(html)?.[0]).toContain(`nonce="${nonce}"`);
 		expect(importMap).toBeLessThan(html.indexOf('rel="modulepreload"'));
 		expect(importMap).toBeLessThan(html.indexOf('<script type="module"'));
+	});
+
+	test("names the chunk the build emitted for each island it hydrates", async () => {
+		let { html } = await renderPage(
+			<PasskeySignInButton
+				optionsAction="/passkey/options"
+				verifyAction="/passkey/verify"
+				label="Sign in with a passkey"
+				pendingLabel="Signing in…"
+				errorMessage="Passkey sign-in failed"
+				unsupportedMessage="Passkeys are unsupported"
+			/>,
+		);
+
+		expect(html).toContain("/assets/app/views/hosted/passkey-button.js");
+		expect(html).toContain("PasskeySignInButton");
+		expect(html).not.toContain("/app/views/hosted/passkey-button.tsx");
 	});
 });

@@ -47,7 +47,7 @@ export type PasskeySignInButtonProps = {
  * assertion back, and follows the redirect the verify endpoint answers with.
  */
 export const PasskeySignInButton = clientEntry(
-	"/app/views/hosted/passkey-button.tsx#PasskeySignInButton",
+	import.meta.url,
 	function PasskeySignInButton(handle: Handle<PasskeySignInButtonProps>) {
 		let pending = false;
 		let error: string | null = null;

@@ -1,21 +1,13 @@
 /**
- * Client-side entry for the platform dashboard. Boots the `remix/component` runtime so
- * server-rendered pages hydrate in the browser, loading `clientEntry()` component
- * modules on demand and resolving `<Frame>` navigations. The hosted document links it
- * through the asset manifest, which names the hashed file a build emits for it.
+ * Client-side entry for the hosted pages. Boots the `remix/component` runtime so
+ * server-rendered pages hydrate their islands, each loaded from the chunk the renderer named
+ * for its `clientEntry(import.meta.url)` identity, and resolves `<Frame>` navigations.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { run } from "remix/component";
-
-/**
- * The islands the runtime may hydrate, keyed by source path: every module that calls
- * `clientEntry()` belongs here, and only those. A view or layout in the client bundle ships
- * as a chunk no page asks for, and its route modules lengthen every page's import map.
- */
-let clientModules = import.meta.glob(["../app/views/hosted/passkey-button.tsx"]);
 
 run({
 	/**
@@ -26,12 +18,7 @@ run({
 	 * @returns The requested export (expected to be a component function).
 	 */
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-
-		let load = clientModules[`..${pathname}`];
-		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
-
-		let mod = await load();
+		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);
