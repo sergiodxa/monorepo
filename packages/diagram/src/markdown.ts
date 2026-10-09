@@ -1,7 +1,7 @@
 /**
  * The walk visitor for diagrams in markdown: a ```mermaid fence becomes a
- * `diagram` tag carrying its source, which the HTML tag renderer here and the
- * component in `./ui` draw as SVG.
+ * `diagram` tag carrying its source and `alt`, which the HTML tag renderer here
+ * and the component in `./ui` draw as SVG.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -46,10 +46,12 @@ export function createDiagramVisitor(options: DiagramVisitorOptions = {}) {
 				if (keep) return node;
 				throw result.error;
 			}
+			let attributes: Markdown.Attributes = { source };
+			if (typeof node.attributes.alt === "string") attributes.alt = node.attributes.alt;
 			return {
 				type: "tag",
 				name: "diagram",
-				attributes: { source },
+				attributes,
 				children: [],
 				position: node.position,
 			};
@@ -58,24 +60,25 @@ export function createDiagramVisitor(options: DiagramVisitorOptions = {}) {
 }
 
 /**
- * Walk a document with this to turn its ```mermaid fences into `diagram` tags.
- * A diagram that does not parse fails the walk, naming the diagram's own line
- * and column.
+ * Walk a document with this to turn its ```mermaid fences into `diagram` tags,
+ * keeping a fence's `{% alt="…" %}` as the tag's `alt`. A diagram that does not
+ * parse fails the walk, naming the diagram's own line and column.
  *
  * @example Markdown.walk(document, diagram)
  */
 export const diagram = createDiagramVisitor();
 
 /**
- * Renders a `diagram` tag for `toHTML`'s `tags` option. A tag whose source does
- * not parse — one built by hand, or walked with `invalid: "keep"` elsewhere —
- * renders as its escaped source in a code block.
+ * Renders a `diagram` tag for `toHTML`'s `tags` option, named by its `alt` when
+ * it has one. A tag whose source does not parse — one built by hand, or walked
+ * with `invalid: "keep"` elsewhere — renders as its escaped source in a code block.
  *
  * @example toHTML(document, { tags: { diagram: renderDiagram } })
  */
 export const renderDiagram: HTMLTagRenderer = (tag) => {
 	let source = typeof tag.attributes.source === "string" ? tag.attributes.source : "";
-	let result = toSVG(source);
+	let alt = typeof tag.attributes.alt === "string" ? tag.attributes.alt : undefined;
+	let result = toSVG(source, { alt });
 	if (result.status === "success") return result.data;
 	return `<pre><code class="language-mermaid">${escapeText(source)}</code></pre>`;
 };

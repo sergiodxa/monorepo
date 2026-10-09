@@ -59,6 +59,16 @@ The visitor turns every fenced block whose language is `mermaid` into a `diagram
 carrying `{ source }`, and leaves every other code block alone, so it composes with a
 highlighter through `Markdown.compose`.
 
+An `alt` annotation on the fence names the drawing for screen readers, in place of the name its
+source gives it, and the tag carries it as `{ source, alt }`:
+
+````markdown
+```mermaid {% alt="The checkout flow: cart, then payment, then confirmation" %}
+flowchart LR
+  Cart --> Payment --> Confirmation
+```
+````
+
 ### Render With Remix
 
 ```tsx
@@ -72,12 +82,12 @@ import { toRemix } from "@sdxc/markdown/remix";
 
 ## API
 
-### `toSVG(source: string): Result<string, DiagramError>`
+### `toSVG(source: string, options?: DiagramOptions): Result<string, DiagramError>`
 
 Draws the diagram as an SVG string, every value escaped. Every element has an explicit closing
 tag, so HTML and XML parsers read it the same way.
 
-### `parseDiagram(source: string): Result<SvgElement, DiagramError>`
+### `parseDiagram(source: string, options?: DiagramOptions): Result<SvgElement, DiagramError>`
 
 Reads the diagram into the tree `toSVG` serializes, rooted at the `svg` element. The tree is
 plain JSON, so it caches and travels in a payload.
@@ -89,7 +99,8 @@ let tree = parseDiagram("flowchart LR\nA --> B");
 
 The root carries `width`, `height` and a matching `viewBox`, with `max-width: 100%` so it
 shrinks to a narrow column. Its first child is a `title` naming the diagram, read out as its
-accessible name, followed by a `desc` when the source has an `accDescr`.
+accessible name, followed by a `desc` when the source has an `accDescr`. The `title` is
+`options.alt` when given, then the source's `title` or `accTitle`, then the diagram's kind.
 
 ### `DiagramError`
 
@@ -101,6 +112,11 @@ parseDiagram("sequenceDiagram\n  A->>B: hi\n  end"); // failure: '"end" without 
 ```
 
 ### Types
+
+#### `DiagramOptions`
+
+`{ alt?: string }`: the drawing's accessible name, written as its `title` over the one the
+source gives it. An empty `alt` keeps the source's name.
 
 #### `SvgNode`, `SvgElement`, `SvgText`
 
@@ -122,14 +138,15 @@ code block it was written as; `invalid: "fail"` is the default.
 
 #### `renderDiagram`
 
-A tag renderer for `toHTML`'s `tags` option. A tag whose source does not parse renders as the
+A tag renderer for `toHTML`'s `tags` option, naming the drawing by the tag's `alt` when it has
+one. A tag whose source does not parse renders as the
 escaped source in `<pre><code class="language-mermaid">`.
 
 ### `@sdxc/diagram/ui`
 
 #### `Diagram`
 
-A `remix/component` component taking `source`. It builds the SVG as elements, and renders the
+A `remix/component` component taking `source` and an optional `alt`. It builds the SVG as elements, and renders the
 source in a code block when it does not parse.
 
 #### `DiagramTag`

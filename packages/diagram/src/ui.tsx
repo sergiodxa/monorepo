@@ -17,9 +17,11 @@ import { parseDiagram } from "./index.js";
 
 /** The props {@link Diagram} accepts. */
 export namespace Diagram {
-	/** `source` is the attribute a walked `diagram` tag carries. */
+	/** `source` and `alt` are the attributes a walked `diagram` tag carries. */
 	export interface Props {
 		source: string;
+		/** The drawing's accessible name, in place of the one its source gives it. */
+		alt?: string;
 	}
 }
 
@@ -31,8 +33,8 @@ export namespace Diagram {
  */
 export function Diagram(handle: Handle<Diagram.Props>) {
 	return () => {
-		let { source } = handle.props;
-		let result = parseDiagram(source);
+		let { source, alt } = handle.props;
+		let result = parseDiagram(source, { alt });
 		if (result.status === "failure") {
 			return (
 				<pre>
@@ -51,8 +53,8 @@ export function Diagram(handle: Handle<Diagram.Props>) {
  *
  * @example toRemix(document, { components: { diagram: DiagramTag } })
  */
-export function DiagramTag(handle: Handle<{ source: string; children: RemixNode }>) {
-	return () => <Diagram source={handle.props.source} />;
+export function DiagramTag(handle: Handle<{ source: string; alt?: string; children: RemixNode }>) {
+	return () => <Diagram source={handle.props.source} alt={handle.props.alt} />;
 }
 
 /** One tree node as a Remix node: an element with its attributes, or its text as a string. */

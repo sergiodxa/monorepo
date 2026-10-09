@@ -84,6 +84,23 @@ describe("parseDiagram", () => {
 		expect(childText(described, "desc")).toBe("Alice greets Bob");
 	});
 
+	test("names it from the alt option over any title the source wrote", () => {
+		let result = parseDiagram("flowchart LR\ntitle Checkout\nA --> B", { alt: "Cart to payment" });
+		if (isFailure(result)) throw result.error;
+
+		expect(childText(result.data, "title")).toBe("Cart to payment");
+		expect(
+			result.data.children.filter((child) => child.type === "element" && child.name === "title"),
+		).toHaveLength(1);
+	});
+
+	test("keeps the source's name when alt is empty", () => {
+		let result = parseDiagram("flowchart LR\nA --> B", { alt: "" });
+		if (isFailure(result)) throw result.error;
+
+		expect(childText(result.data, "title")).toBe("Flowchart");
+	});
+
 	test("skips blank lines and %% comments", () => {
 		let result = toSVG("\n%% a comment\nflowchart LR\n\n  %% another\nA --> B\n");
 
@@ -130,6 +147,14 @@ describe("toSVG", () => {
 		expect(result.data).toMatch(/^<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg"/);
 		expect(result.data).not.toMatch(/\/>/);
 		expect(result.data.endsWith("</svg>")).toBe(true);
+	});
+
+	test("writes the alt option as the title", () => {
+		let result = toSVG("flowchart LR\nA --> B", { alt: "A <leads> to B" });
+
+		expect(result).toMatchObject({ status: "success" });
+		if (isFailure(result)) return;
+		expect(result.data).toContain("<title>A &lt;leads&gt; to B</title>");
 	});
 
 	test("hands back the parse failure", () => {

@@ -39,18 +39,33 @@ const KINDS: {
 	},
 ];
 
+/** Options for {@link parseDiagram} and {@link toSVG}. */
+export interface DiagramOptions {
+	/**
+	 * The drawing's accessible name, written as its `title` in place of the one
+	 * the source's `title` or `accTitle` gives it. An empty string keeps the
+	 * source's name.
+	 */
+	alt?: string;
+}
+
 /**
  * Reads a diagram into an SVG tree rooted at an `svg` element. The drawing uses
  * `currentColor` for lines and text, so it takes the color of the text around
  * it, and names itself through a `title` for assistive technology.
  *
  * @param source - Mermaid source, starting with the keyword that names its kind
+ * @param options - The accessible name to give the drawing
  * @returns The tree, or the first statement outside the supported subset
  * @example parseDiagram("sequenceDiagram\nAlice->>Bob: Hi")
  */
-export function parseDiagram(source: string): Result<SvgElement, DiagramError> {
+export function parseDiagram(
+	source: string,
+	options: DiagramOptions = {},
+): Result<SvgElement, DiagramError> {
 	try {
 		let diagram = readSource(source);
+		if (options.alt) diagram.title = options.alt;
 		for (let entry of KINDS) {
 			let header = entry.pattern.exec(diagram.header.text);
 			if (header) return success(entry.draw(diagram, header));
@@ -74,11 +89,12 @@ export function parseDiagram(source: string): Result<SvgElement, DiagramError> {
  * save as an `.svg` file, as it is.
  *
  * @param source - Mermaid source, starting with the keyword that names its kind
+ * @param options - The accessible name to give the drawing
  * @returns The markup, or the first statement outside the supported subset
  * @example toSVG("flowchart LR\nA --> B") // '<svg xmlns="http://www.w3.org/2000/svg" …'
  */
-export function toSVG(source: string): Result<string, DiagramError> {
-	let result = parseDiagram(source);
+export function toSVG(source: string, options: DiagramOptions = {}): Result<string, DiagramError> {
+	let result = parseDiagram(source, options);
 	if (result.status === "failure") return result;
 	return success(serialize(result.data));
 }

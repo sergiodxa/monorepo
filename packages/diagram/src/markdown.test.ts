@@ -50,6 +50,16 @@ describe("diagram visitor", () => {
 		});
 	});
 
+	test("carries an alt annotation on the fence onto the tag", () => {
+		let walked = walk(parse('```mermaid {% alt="A leads to B" %}\nflowchart LR\nA --> B\n```\n'));
+
+		expect(walked.children[0]).toMatchObject({
+			type: "tag",
+			name: "diagram",
+			attributes: { source: "flowchart LR\nA --> B", alt: "A leads to B" },
+		});
+	});
+
 	test("keeps the fence's position on the tag", () => {
 		let document = parse("Intro\n\n```mermaid\nflowchart LR\nA\n```\n");
 		let walked = walk(document);
@@ -110,6 +120,15 @@ describe("renderDiagram", () => {
 		expect(html).toContain("<p>Before</p>");
 		expect(html).toContain('<svg xmlns="http://www.w3.org/2000/svg"');
 		expect(html).toContain("<title>Flowchart</title>");
+	});
+
+	test("names the SVG from the tag's alt", () => {
+		let html = toHTML(
+			walk(parse('```mermaid {% alt="A leads to B" %}\nflowchart LR\nA --> B\n```\n')),
+			{ tags: { diagram: renderDiagram } },
+		);
+
+		expect(html).toContain("<title>A leads to B</title>");
 	});
 
 	test("renders source that does not parse as an escaped code block", () => {

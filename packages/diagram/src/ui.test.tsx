@@ -45,4 +45,22 @@ describe("Diagram and DiagramTag", () => {
 		expect(html).toContain("<title>State diagram</title>");
 		expect(html).toContain(">Ready</text>");
 	});
+
+	test("names the SVG from alt, through the component and through a walked tag", async () => {
+		let direct = await renderToString(
+			<Diagram source={"flowchart LR\nA --> B"} alt="A leads to B" />,
+		);
+		expect(direct).toContain("<title>A leads to B</title>");
+
+		let parsed = Markdown.parse(
+			'```mermaid {% alt="Ready on start" %}\nstateDiagram-v2\n[*] --> Ready\n```\n',
+		);
+		if (isFailure(parsed)) throw parsed.error;
+		let walked = Markdown.walk(parsed.data.document, diagram);
+		if (isFailure(walked)) throw walked.error;
+
+		let html = await renderToString(toRemix(walked.data, { components: { diagram: DiagramTag } }));
+
+		expect(html).toContain("<title>Ready on start</title>");
+	});
 });
