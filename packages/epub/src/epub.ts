@@ -577,10 +577,7 @@ function checkStylesheet(
 	assets: ReadonlyMap<string, CheckedAsset>,
 ): EpubError | undefined {
 	let css = withoutComments(style.text);
-	let references = [
-		...[...css.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gu)].map((match) => match[2] ?? ""),
-		...[...css.matchAll(/@import\s+(['"])(.*?)\1/gu)].map((match) => match[2] ?? ""),
-	];
+	let references = [...urlReferences(css), ...importReferences(css)];
 	for (let reference of references) {
 		let value = reference.trim();
 		if (value === "" || value.startsWith("data:") || value.startsWith("#")) continue;
@@ -875,4 +872,78 @@ function withoutComments(css: string): string {
 		position = close + 2;
 	}
 	return kept + css.slice(position);
+}
+
+/** Whether a character is whitespace as `\s` defines it. */
+function isCssSpace(char: string | undefined): boolean {
+	return char !== undefined && /\s/u.test(char);
+}
+
+/** Whether a character ends a line, which no `url()` or `@import` value may span. */
+function isLineBreak(char: string | undefined): boolean {
+	return char === "\n" || char === "\r" || char === "\u2028" || char === "\u2029";
+}
+
+/**
+ * The index of the first `target` at or after `from` on the same line, or `-1`. Every
+ * character it passes is one the caller then moves beyond, which keeps the scans linear.
+ */
+function indexOnLine(css: string, target: string, from: number): number {
+	for (let index = from; index < css.length; index++) {
+		let char = css[index];
+		if (char === target) return index;
+		if (isLineBreak(char)) return -1;
+	}
+	return -1;
+}
+
+/**
+ * The value of every `url()` in a stylesheet: quoted with `'` or `"`, or bare up to the
+ * closing parenthesis on the same line. A value whose quote is left open is read bare.
+ */
+function urlReferences(css: string): string[] {
+	let values: string[] = [];
+	let position = css.indexOf("url(");
+	while (position !== -1) {
+		let start = position + 4;
+		while (isCssSpace(css[start])) start++;
+		let end = -1;
+		let quote = css[start];
+		if (quote === "'" || quote === '"') {
+			let close = indexOnLine(css, quote, start + 1);
+			let after = close + 1;
+			while (close !== -1 && isCssSpace(css[after])) after++;
+			if (close !== -1 && css[after] === ")") {
+				values.push(css.slice(start + 1, close));
+				end = after + 1;
+			}
+		}
+		if (end === -1) {
+			let close = indexOnLine(css, ")", start);
+			if (close !== -1) {
+				values.push(css.slice(start, close));
+				end = close + 1;
+			}
+		}
+		position = css.indexOf("url(", end === -1 ? start : end);
+	}
+	return values;
+}
+
+/** The quoted target of every `@import` in a stylesheet, its quotes on the same line. */
+function importReferences(css: string): string[] {
+	let values: string[] = [];
+	let position = css.indexOf("@import");
+	while (position !== -1) {
+		let start = position + 7;
+		while (isCssSpace(css[start])) start++;
+		let quote = css[start];
+		let close = -1;
+		if (start > position + 7 && (quote === "'" || quote === '"')) {
+			close = indexOnLine(css, quote, start + 1);
+			if (close !== -1) values.push(css.slice(start + 1, close));
+		}
+		position = css.indexOf("@import", close === -1 ? start : close + 1);
+	}
+	return values;
 }

@@ -237,6 +237,38 @@ describe("missing-resource", () => {
 		expect(isSuccess(built)).toBe(true);
 	});
 
+	test("reads quoted, bare and spaced url() and @import references", () => {
+		for (let text of [
+			"a { b: url( '../images/x.png' ) }",
+			'a { b: url("../images/x.png") }',
+			"a { b: url(../images/x.png) }",
+			"@import\t'../images/x.png';",
+		]) {
+			let built = EPUB.build(input({ styles: [{ path: "styles/a.css", text }] }));
+			expect(errorOf(built)).toMatchObject({ code: "missing-resource", path: "styles/a.css" });
+		}
+	});
+
+	test("reads a stylesheet of thousands of unclosed url() openers in linear time", () => {
+		let text = `url(${"\t".repeat(50_000)}`;
+
+		let started = performance.now();
+		let built = EPUB.build(input({ styles: [{ path: "styles/a.css", text }] }));
+
+		expect(performance.now() - started).toBeLessThan(2_000);
+		expect(isSuccess(built)).toBe(true);
+	});
+
+	test("reads a stylesheet of thousands of @import openers in linear time", () => {
+		let text = '@import\t"a'.repeat(50_000);
+
+		let started = performance.now();
+		let built = EPUB.build(input({ styles: [{ path: "styles/a.css", text }] }));
+
+		expect(performance.now() - started).toBeLessThan(2_000);
+		expect(errorOf(built)).toMatchObject({ code: "missing-resource", path: "styles/a.css" });
+	});
+
 	test("resolves references from text/ and decodes percent-escapes", () => {
 		let built = EPUB.build(
 			withBody(
