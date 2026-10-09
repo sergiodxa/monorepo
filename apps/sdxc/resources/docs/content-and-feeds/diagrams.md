@@ -98,7 +98,9 @@ stateDiagram-v2
 
 Labels break onto a new line at `<br>`. A `title` or `accTitle:` statement names the drawing
 for screen readers, and `accDescr:` describes it; without one, the drawing is named after its
-kind. The [package reference](/api/diagram) lists every statement each kind reads.
+kind. An `alt` annotation on the fence, `{% alt="Posts move from draft to review to live" %}`
+after `mermaid`, names it from the markdown instead. The [package reference](/api/diagram)
+lists every statement each kind reads.
 
 ## Draw a diagram from a string
 
