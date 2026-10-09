@@ -192,6 +192,14 @@ describe("matching", () => {
 });
 
 describe(parse, () => {
+	test("trims long runs of spaces and tabs in linear time", () => {
+		let started = performance.now();
+		let padding = "\t".repeat(50_000);
+		let document = parse(`User-agent: *\nDisallow:${padding}/private${padding}x\n${padding}\n`);
+		expect(document.groups[0]?.rules).toEqual([{ allow: false, pattern: `/private${padding}x` }]);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
 	test("reads groups, rules, sitemaps and other records", () => {
 		let document = parse(`# comment
 User-agent: FooBot

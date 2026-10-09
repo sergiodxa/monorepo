@@ -16,9 +16,6 @@ export const DEFAULT_MAX_BYTES = 512_000;
 /** Every line end RFC 9309 accepts: CRLF, CR and LF. */
 const LINE_END = /\r\n|\r|\n/;
 
-/** Leading or trailing spaces and tabs, the only whitespace RFC 9309's grammar allows. */
-const EDGE_SPACE = /^[ \t]+|[ \t]+$/g;
-
 /** A non-negative decimal number, as a `Crawl-delay` value is written. */
 const DELAY = /^\d+(?:\.\d+)?$/;
 
@@ -85,9 +82,21 @@ export function parse(source: string, options: Robots.ParseOptions = {}): Robots
 	return document;
 }
 
-/** Trims the whitespace RFC 9309 allows, so a byte order mark inside a line stays in it. */
+/**
+ * Trims the spaces and tabs RFC 9309 allows, so a byte order mark inside a line stays in it. One
+ * scan from each end keeps the cost linear however much whitespace a line carries.
+ */
 function trimSpace(text: string): string {
-	return text.replace(EDGE_SPACE, "");
+	let start = 0;
+	let end = text.length;
+	while (start < end && isSpace(text[start])) start++;
+	while (end > start && isSpace(text[end - 1])) end--;
+	return text.slice(start, end);
+}
+
+/** Whether a character is a space or a tab, the only whitespace RFC 9309's grammar allows. */
+function isSpace(char: string | undefined): boolean {
+	return char === " " || char === "\t";
 }
 
 /**
