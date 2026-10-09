@@ -7,9 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/** Matches every language range (with optional quality) in an Accept-Language header. */
-const ACCEPT_LANGUAGE_REGEX =
-	/[ ]*((([a-zA-Z]+(-[a-zA-Z0-9]+){0,2})|\*)(;[ ]*q=[0-1](\.[0-9]+)?[ ]*)?)*/g;
+/**
+ * One comma-separated language range of an Accept-Language header, trimmed: the tag (or `*`) and
+ * its optional quality. Anchored at both ends, so each range is read once in linear time.
+ */
+const LANGUAGE_RANGE = /^([a-zA-Z]+(?:-[a-zA-Z0-9]+){0,2}|\*)(?:;[ ]*q=([0-1](?:\.[0-9]+)?))?$/;
 
 /** A single language range parsed from an Accept-Language header. */
 export interface Language {
@@ -58,42 +60,26 @@ export function formatLanguageString(
  * @example parse("en-US,en;q=0.9,es;q=0.8") // [{code:"en",region:"US",...}, ...]
  */
 export function parse(acceptLanguage?: string): Language[] {
-	let matches = (acceptLanguage || "").match(ACCEPT_LANGUAGE_REGEX) ?? [];
-
 	let languages: Language[] = [];
 
-	for (let match of matches) {
-		if (!match) continue;
+	for (let range of (acceptLanguage || "").split(",")) {
+		let match = LANGUAGE_RANGE.exec(range.trim());
+		let tag = match?.[1];
+		if (!tag) continue;
 
-		let bits = match.trim().split(";");
-		let ietf = bits[0]?.split("-") ?? [];
+		let ietf = tag.split("-");
 		let hasScript = ietf.length === 3;
-
-		let code = ietf[0];
-		if (!code) continue;
+		let quality = match?.[2];
 
 		languages.push({
-			code,
+			code: ietf[0] ?? tag,
 			script: hasScript ? ietf[1] : null,
 			region: hasScript ? ietf[2] : ietf[1],
-			quality: parseQuality(bits[1]),
+			quality: quality === undefined ? 1.0 : Number.parseFloat(quality),
 		});
 	}
 
 	return languages.sort((a, b) => b.quality - a.quality);
-}
-
-/**
- * Reads the quality value from a `q=<value>` parameter, treating missing or
- * unparsable values as the spec default of `1.0`.
- *
- * @param bit - The raw `q=<value>` segment, if any.
- * @returns The parsed quality value.
- */
-function parseQuality(bit: string | undefined): number {
-	if (!bit) return 1.0;
-	let value = Number.parseFloat(bit.split("=")[1] ?? "");
-	return Number.isNaN(value) ? 1.0 : value;
 }
 
 /**

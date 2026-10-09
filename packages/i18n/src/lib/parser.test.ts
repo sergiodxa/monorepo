@@ -43,6 +43,21 @@ describe(parse, () => {
 		expect(parse("")).toEqual([]);
 		expect(parse("!!!")).toEqual([]);
 	});
+
+	test("trims the space around each range and skips a malformed one", () => {
+		let languages = parse(" es-MX , fr;q=0.8 ,!!, de;q=0.9 ");
+		expect(languages.map((language) => [language.code, language.quality])).toEqual([
+			["es", 1],
+			["de", 0.9],
+			["fr", 0.8],
+		]);
+	});
+
+	test("reads a long run of letters in linear time", () => {
+		let started = performance.now();
+		expect(parse(`${"A".repeat(50_000)}!`)).toEqual([]);
+		expect(performance.now() - started).toBeLessThan(1_000);
+	});
 });
 
 describe(pick, () => {
