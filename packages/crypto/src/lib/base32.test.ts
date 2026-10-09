@@ -48,6 +48,13 @@ describe("base32", () => {
 		expect(unwrap(decode("MZXW-6YTB-OI"))).toEqual(unwrap(decode("MZXW6YTBOI")));
 	});
 
+	test("strips a long padding run, and rejects one before data, in linear time", () => {
+		let started = performance.now();
+		expect(unwrap(decode(`MZXW6YTBOI${"=".repeat(50_000)}`))).toEqual(unwrap(decode("MZXW6YTBOI")));
+		expect(isFailure(decode(`${"=".repeat(50_000)}A`))).toBe(true);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
 	test("fails on characters outside the alphabet", () => {
 		expect(isFailure(decode("MZXW6YTB01"))).toBe(true);
 		expect(isFailure(decode("not base32!"))).toBe(true);

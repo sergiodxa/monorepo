@@ -23,8 +23,78 @@ const LINE_WIDTH = 64;
 /** Labels are printable ASCII without `-`, separated by single spaces or hyphens (RFC 7468 §3). */
 const LABEL_PATTERN = /^(?:[!-,.-~](?:[- ]?[!-,.-~])*)?$/;
 
-/** The armor around a body: any text before it is explanatory text a parser skips. */
-const ARMOR_PATTERN = /-----BEGIN ([^\r\n]*?)-----([\s\S]*?)-----END ([^\r\n]*?)-----/;
+/** The dashes that open and close each armor line. */
+const DASHES = "-----";
+
+/** The opening of a begin line, up to where its label starts. */
+const BEGIN_MARKER = `${DASHES}BEGIN `;
+
+/** The opening of an end line, up to where its label starts. */
+const END_MARKER = `${DASHES}END `;
+
+/** The labels and body of the first PEM block in a text. */
+interface Armor {
+	begin: string;
+	body: string;
+	end: string;
+}
+
+/**
+ * Where the dashes closing a label sit, scanning from `from` to the end of that line.
+ *
+ * @param text Text holding the armor line.
+ * @param from Index where the label starts.
+ * @returns The index of the closing dashes, or `-1` when the line ends first.
+ */
+function closingDashes(text: string, from: number): number {
+	for (let index = from; index < text.length; index++) {
+		if (text.startsWith(DASHES, index)) return index;
+		let char = text[index];
+		if (char === "\r" || char === "\n") return -1;
+	}
+	return -1;
+}
+
+/**
+ * The first block whose begin and end lines are both closed: text before it is explanatory
+ * text a parser skips. Each character is scanned a bounded number of times, so hostile input
+ * such as thousands of unterminated begin lines costs linear time.
+ *
+ * @param text Text holding a PEM block.
+ * @returns The block's labels and raw body, or `null` when the text holds no block.
+ */
+function findArmor(text: string): Armor | null {
+	let from = 0;
+	while (true) {
+		let begin = text.indexOf(BEGIN_MARKER, from);
+		if (begin === -1) return null;
+
+		let labelStart = begin + BEGIN_MARKER.length;
+		let labelEnd = closingDashes(text, labelStart);
+		if (labelEnd === -1) {
+			from = begin + 1;
+			continue;
+		}
+
+		let bodyStart = labelEnd + DASHES.length;
+		let search = bodyStart;
+		while (true) {
+			let end = text.indexOf(END_MARKER, search);
+			if (end === -1) return null;
+
+			let endLabelStart = end + END_MARKER.length;
+			let endLabelEnd = closingDashes(text, endLabelStart);
+			if (endLabelEnd !== -1) {
+				return {
+					begin: text.slice(labelStart, labelEnd),
+					body: text.slice(bodyStart, end),
+					end: text.slice(endLabelStart, endLabelEnd),
+				};
+			}
+			search = end + 1;
+		}
+	}
+}
 
 /**
  * PEM text for DER bytes: `-----BEGIN <label>-----`, base64 wrapped at 64 columns, and
@@ -70,10 +140,10 @@ export class Pem {
 	 * Pem.decode(actor.publicKey.publicKeyPem, "PUBLIC KEY"); // success(spki bytes)
 	 */
 	static decode(text: string, label: string): Result<Bytes, InvalidEncodingError> {
-		let match = ARMOR_PATTERN.exec(text);
-		if (match === null) return failure(new InvalidEncodingError("PEM"));
+		let armor = findArmor(text);
+		if (armor === null) return failure(new InvalidEncodingError("PEM"));
 
-		let [, begin = "", body = "", end = ""] = match;
+		let { begin, body, end } = armor;
 		if (begin !== label || end !== label) {
 			return failure(new InvalidEncodingError(`PEM ${label}`));
 		}

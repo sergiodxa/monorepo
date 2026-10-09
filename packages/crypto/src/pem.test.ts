@@ -117,4 +117,26 @@ describe("Pem.decode", () => {
 		let text = "-----BEGIN PUBLIC KEY-----\n-----END PUBLIC KEY-----";
 		expect(isFailure(Pem.decode(text, "PUBLIC KEY"))).toBe(true);
 	});
+
+	test("skips a begin line left unclosed before the real block", () => {
+		let text = `-----BEGIN PUBLIC KEY\n${ED25519_PUBLIC_PEM}`;
+		expect(unwrap(Pem.decode(text, "PUBLIC KEY"))).toEqual(
+			unwrap(Pem.decode(ED25519_PUBLIC_PEM, "PUBLIC KEY")),
+		);
+	});
+
+	test("reads past an unclosed end line, keeping it in the body", () => {
+		let text = ED25519_PUBLIC_PEM.replace(
+			"-----END PUBLIC KEY-----",
+			"-----END PUBLIC KEY\n-----END PUBLIC KEY-----",
+		);
+		expect(isFailure(Pem.decode(text, "PUBLIC KEY"))).toBe(true);
+	});
+
+	test("rejects thousands of unterminated begin lines in linear time", () => {
+		let started = performance.now();
+		let result = Pem.decode("-----BEGIN -----a".repeat(50_000), "PUBLIC KEY");
+		expect(isFailure(result)).toBe(true);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
 });

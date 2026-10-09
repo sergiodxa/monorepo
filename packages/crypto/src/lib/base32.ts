@@ -55,6 +55,19 @@ export function encode(bytes: Uint8Array): string {
 }
 
 /**
+ * The text without its trailing `=` padding, found by one backward scan so a run of
+ * thousands of `=` before another character costs linear time.
+ *
+ * @param text Base32 text with separators already removed.
+ * @returns The text up to its last non-`=` character.
+ */
+function trimPadding(text: string): string {
+	let end = text.length;
+	while (end > 0 && text[end - 1] === "=") end--;
+	return text.slice(0, end);
+}
+
+/**
  * Decodes base32 text, ignoring case, padding, and separating whitespace.
  *
  * Users retype secrets by hand and apps present them in spaced groups; any other
@@ -64,7 +77,7 @@ export function encode(bytes: Uint8Array): string {
  * @returns Decoded bytes, or `InvalidEncodingError` when a character is invalid.
  */
 export function decode(text: string): Result<Bytes, InvalidEncodingError> {
-	let normalized = text.replaceAll(/[\s-]/g, "").replace(/=+$/, "").toUpperCase();
+	let normalized = trimPadding(text.replaceAll(/[\s-]/g, "")).toUpperCase();
 	let bytes: number[] = [];
 	let buffer = 0;
 	let bits = 0;
