@@ -309,6 +309,132 @@ export const Likes = Posts.extend("like", {});
 - Sub-models register like any model (`articles: Articles`, or a loader), independently of the
   base; registering the base is needed only where something uses it directly.
 
+### Meta tables: typed fields over a key/value companion
+
+Many schemas keep a row's open-ended attributes in a companion key/value table: blog's
+`posts` + `post_meta`, WordPress's `wp_posts` + `wp_postmeta`, `wp_users` + `wp_usermeta`. A model
+names the companion table once and declares typed fields over it; rows then carry a decoded
+`meta` object, and writes take one.
+
+```typescript
+import { field } from "@sdxc/data-model";
+
+export const Posts = createModel(posts, {
+	inheritance: "type",
+	metaTable: {
+		table: postMeta,
+		foreignKey: "post_id",
+		/** Which row wins when a key holds several; defaults to `["updated_at", "id"]`. */
+		latest: ["updated_at", "id"],
+	},
+});
+
+export const Articles = Posts.extend("article", {
+	meta: {
+		slug: field.text().required(),
+		title: field.text().required(),
+		locale: field.enum(["en", "es"]).default("en"),
+		excerpt: field.text(),
+		canonical_url: field.url(),
+		reading_minutes: field.integer(),
+		tags: field.list(field.text()),
+		cover: field.json(s.object({ src: s.string(), alt: s.string() })),
+	},
+});
+```
+
+`metaTable` names the storage: the table, the column pointing at the owner, and optionally the
+`key` and `value` column names, which default to `key` and `value`. `meta` declares the fields.
+A sub-model inherits its base's `metaTable` and declares the fields its type uses, so articles
+and likes keep different metadata in the same table, as they do in blog today.
+
+#### Fields
+
+The value column holds text, so each field is a codec between that text and a typed value,
+validated with `remix/data-schema`:
+
+| Field                         | Stored as        | Read as         |
+| ----------------------------- | ---------------- | --------------- |
+| `field.text()`                | The text         | `string`        |
+| `field.integer()`, `number()` | Decimal text     | `number`        |
+| `field.boolean()`             | `"1"` / `"0"`    | `boolean`       |
+| `field.timestamp()`           | ISO 8601         | `string`        |
+| `field.url()`                 | The URL          | `string`        |
+| `field.enum(values)`          | The value        | The union       |
+| `field.json(schema)`          | JSON             | The schema type |
+| `field.list(field)`           | One row per item | An array        |
+
+- A key/value table can lack any key for any row, so every field reads as `T | undefined`
+  unless it declares `.default(value)`. `.required()` applies to writes: `create` fails without
+  it. A stored value its codec rejects reads as missing.
+- `field.list()` is the multi-valued meta WordPress has, one row per item under the same key,
+  read back in insertion order. Every other field holds one value; when a key holds several
+  rows anyway, the latest by `latest` wins, which is how blog resolves duplicates today.
+- Keys the model does not declare are left alone, in reads and writes, so other code, or a
+  different post type, can keep its own keys in the same table.
+
+#### Reading
+
+```typescript
+let article = await ctx.models.articles.findBySlug(slug);
+article?.meta.title; // string | undefined
+article?.meta.locale; // "en" | "es"
+
+let page = await Pagination.byOffset(ctx.models.articles.published().withMeta(["title", "slug"]), {
+	page: 1,
+	perPage: 20,
+});
+```
+
+- Meta lives under `row.meta`, so a field named like a column (`status`, `title`) never shadows
+  it.
+- The model query eager-loads the declared keys with one extra query per result set
+  (`WHERE post_id IN (...) AND key IN (...)`) and decodes them when the query runs, so a page
+  costs the same two queries whether it comes from `all()` or from `Pagination`.
+- `withMeta(keys)` narrows the keys loaded, and the row type with them; `withMeta([])` loads
+  none. A query with a `select()` projection loads none either.
+
+#### Querying by meta
+
+Meta values are not columns, so they filter through `whereMeta`, which compiles to an `EXISTS`
+over the companion table:
+
+```typescript
+let article = await ctx.models.articles.whereMeta("slug", slug).first();
+let spanish = ctx.models.articles.whereMeta("locale", "es").whereMeta("tags", inList(["remix"]));
+```
+
+- It matches only the latest row of each single-valued key, so a superseded value never
+  matches; for a list field it matches any item.
+- Equality and `inList` are served by an index on `(key, value)`, which blog already has.
+- Ordering by a meta value is out of scope: a value that lists sort or page by belongs in a
+  column, where keyset pagination can seek on it.
+
+#### Writing
+
+```typescript
+let article = await ctx.models.articles.create({
+	author_id: ctx.user.id,
+	meta: { slug: "hello", title: "Hello", tags: ["remix", "data"] },
+});
+
+await ctx.models.articles.update(id, { meta: { title: "Hello, world", excerpt: null } });
+```
+
+- `meta` in a write is a partial: an update touches only the keys it names, and `null` removes a
+  key. Field validation failures come back in the same `ValidationError`, with paths such as
+  `["meta", "title"]`.
+- A write inserts the new rows for every named key in one multi-row statement, then deletes the
+  older rows of those keys in a second. Because reads resolve each key to its latest row, a
+  failure between the two leaves reads correct, and the next write of that key removes the
+  leftovers. On D1, where the two statements commit separately, this ordering is what keeps a
+  post's meta consistent; inside a transaction both run atomically.
+- `create` writes the owner row, then its meta. When the meta statement fails on D1, the model
+  deletes the owner row it just created, and the companion table's `ON DELETE CASCADE` takes
+  any meta rows with it.
+- Callbacks see meta like any other value: `beforeCreate` receives `values.meta`, and
+  `event.changed` names changed keys as `meta.title`.
+
 ### A registry and per-host middleware
 
 ```typescript
@@ -743,6 +869,9 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 - **Deferred queries** - a query from a lazily loaded model is a recording until it runs, so the
   rare caller that needs a real `Query` in hand awaits `load()` first, and custom methods are
   limited to returning promises or model queries.
+- **Meta writes take two statements** - insert-then-prune keeps reads correct on D1, but a
+  failed prune leaves superseded rows until the key is written again, and a list field read
+  between the two statements can briefly show old and new items together.
 - **Two write paths** - model writes run callbacks and query-built bulk writes do not. The
   distinction has to be learned, as with Rails' `update_all`.
 - **D1 weakens `afterCommit`** - without interactive transactions, it runs per write, so a
@@ -772,6 +901,8 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 1. `createModel`, `bind`, scope wrapping, CRUD with callbacks, `ModelContext`.
 2. `createModels`, lazy registry binding, `transaction`.
 3. `constraints` and `extend` sub-models, ported against blog's `posts` types.
+4. `metaTable`, `field.*`, `withMeta` and `whereMeta`, ported against blog's `post_meta`,
+   including a D1 test that fails the prune statement and asserts reads stay correct.
 
 ### Phase 3: Hosts
 
@@ -858,10 +989,8 @@ and recursion guards on top.
 
 ## Notes
 
-- Blog's posts keep typed metadata in the companion `post_meta` key/value table, decoded by a
-  per-type `MetaCodec`. Whether a model should load and write such a table itself (a `meta`
-  option naming the table, foreign key and codec) is open; D1 would make a post and its meta two
-  statements, so the meta write needs to be one multi-row upsert to keep the pair consistent.
+- Meta tables replace blog's per-type `MetaCodec` and its `articleMetaValue` duplicate
+  resolution; the port of blog's posts is the acceptance case for both.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
