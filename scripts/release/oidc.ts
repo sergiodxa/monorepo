@@ -85,7 +85,7 @@ export async function exchangeForPackage(
 	name: string,
 	idToken: string,
 ): Promise<Result<void, Error>> {
-	let body = await requestJson(`${EXCHANGE_URL}${name.replace("/", "%2F")}`, {
+	let body = await requestJson(`${EXCHANGE_URL}${name.replaceAll("/", "%2F")}`, {
 		method: "POST",
 		headers: { Authorization: `Bearer ${idToken}`, Accept: "application/json" },
 	});

@@ -235,7 +235,7 @@ async function registryJson(url: string, absent: number[]): Promise<Result<unkno
 
 /** `@sdxc/result` as the registry spells it in a path, with the scope separator encoded. */
 function registryPath(name: string): string {
-	return name.replace("/", "%2F");
+	return name.replaceAll("/", "%2F");
 }
 
 /**

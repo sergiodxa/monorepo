@@ -115,6 +115,20 @@ describe("highestVersion", () => {
 });
 
 describe("viewPackage", () => {
+	test("requests a scoped package as one path segment with its slash encoded", async () => {
+		let paths: string[] = [];
+		SERVER.use(
+			http.get(`${REGISTRY_URL}/*`, ({ request }) => {
+				paths.push(new URL(request.url).pathname);
+				return HttpResponse.json({ versions: { "2026.9.4": {} } });
+			}),
+		);
+
+		unwrap(await viewPackage("@sdxc/jwt"));
+
+		expect(paths).toEqual(["/@sdxc%2Fjwt"]);
+	});
+
 	test("reads the packument the registry serves for a published package", async () => {
 		registryAnswers(
 			() =>
