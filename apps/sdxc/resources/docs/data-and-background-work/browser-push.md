@@ -293,17 +293,16 @@ unsubscribed, `invalid-destination` for a subscription a send refused.
 
 A push service refuses a message signed by a key other than the one the browser subscribed
 under, so rotating needs both keys for a while. Store each subscription's
-`applicationServerKey`, then:
+`applicationServerKey`, then generate a new pair, deploy it as `vapid`, and keep the old one in
+`previous`:
 
-1. Generate a new pair, deploy it as `vapid`, and keep the old one in `previous`:
+```typescript
+let push = new WebPush({ vapid: current, previous: [old] });
+```
 
-    ```typescript
-    let push = new WebPush({ vapid: current, previous: [old] });
-    ```
-
-2. Pages hand the new public key to `subscribe`, which replaces a subscription made under the
+1. Pages hand the new public key to `subscribe`, which replaces a subscription made under the
    old key the next time it runs; the registration route stores the new one.
-3. Once no stored row names the old key, drop it from `previous`.
+2. Once no stored row names the old key, drop it from `previous`.
 
 A send picks the pair whose public key matches the row's `applicationServerKey`, and the
 current pair for a row with none. A row naming a key the sender no longer holds fails

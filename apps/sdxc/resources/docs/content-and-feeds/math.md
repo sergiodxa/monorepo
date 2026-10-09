@@ -62,13 +62,13 @@ Authors write math in markdown the way GitHub reads it: a fenced block with the 
 language for a display formula, and inline code wrapped in dollar signs for one inside a
 sentence.
 
-````text
+```text
 The sum of the first $`n`$ integers is:
 
-```math
+~~~math
 \sum_{i=1}^n i = \frac{n(n+1)}{2}
+~~~
 ```
-````
 
 `math` from `@sdxc/math/markdown` is a walk visitor. It turns each form into a `math` tag
 carrying `tex` and `display` attributes and leaves every other code block alone. Its handlers
