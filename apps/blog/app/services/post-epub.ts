@@ -1,7 +1,7 @@
 /**
- * Builds a tutorial as an EPUB, the format readers ask for to read one offline or annotate it.
- * The body is the same highlighted document the page renders, adapted to a file that leaves
- * the site: links point back at it, images become links, and sections get anchors.
+ * Builds an article or tutorial as an EPUB, the format readers ask for to read one offline or
+ * annotate it. The body is the same highlighted document the page renders, adapted to a file
+ * that leaves the site: links point back at it, images become links, and sections get anchors.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -19,35 +19,35 @@ import { failure, success } from "@sdxc/result";
 
 import epubCss from "~/resources/css/epub.css?raw";
 
-/** What the EPUB of one tutorial is built from. */
-export interface TutorialEpubInput {
+/** What the EPUB of one post is built from. */
+export interface PostEpubInput {
 	title: string;
 	excerpt?: string;
-	/** The technologies the tutorial uses, written as subjects and under the title. */
+	/** The technologies a tutorial uses, written as subjects and under the title; empty for an article. */
 	tags: string[];
-	/** The highlighted body, as the page renders it; `null` for a tutorial with no content. */
+	/** The highlighted body, as the page renders it; `null` for a post with no content. */
 	document: Markdown.Document | null;
-	/** The tutorial's permalink, which is also the book's identifier and every link's base. */
+	/** The post's permalink, which is also the book's identifier and every link's base. */
 	url: string;
-	/** When the tutorial was published, shown under the title. */
+	/** When the post was published, shown under the title. */
 	published: Date | null;
 	publishedLabel: string;
-	/** When the tutorial last changed, so a reading app sees an edit as an update. */
+	/** When the post last changed, so a reading app sees an edit as an update. */
 	modified: Date;
 }
 
-/** The author every tutorial is credited to. */
+/** The author every post is credited to. */
 const AUTHOR = { name: "Sergio Xalambrí", role: "aut", fileAs: "Xalambrí, Sergio" };
 
 /**
- * Builds the EPUB for one tutorial. The permalink is the identifier, so downloading a
- * tutorial again replaces the copy in a reader's library instead of adding a second book.
+ * Builds the EPUB for one post. The permalink is the identifier, so downloading a post
+ * again replaces the copy in a reader's library instead of adding a second book.
  *
- * @param input - The tutorial's text, metadata and permalink.
+ * @param input - The post's text, metadata and permalink.
  * @returns The publication, or the failure adapting or building it.
- * @example tutorialEpub({ title, tags, document, url, published, publishedLabel, modified })
+ * @example postEpub({ title, tags, document, url, published, publishedLabel, modified })
  */
-export function tutorialEpub(input: TutorialEpubInput): Result<EPUB, EpubError | Error> {
+export function postEpub(input: PostEpubInput): Result<EPUB, EpubError | Error> {
 	let adapted = adaptDocument(input.document, input.url);
 	if (adapted.status === "failure") return adapted;
 
@@ -75,15 +75,15 @@ export function tutorialEpub(input: TutorialEpubInput): Result<EPUB, EpubError |
 			subjects: input.tags,
 			accessibility: {
 				summary:
-					"A text tutorial with structured headings, a table of contents and code samples; images are linked to the online version.",
+					"A text post with structured headings, a table of contents and code samples; images are linked to the online version.",
 				modes: ["textual"],
 				modesSufficient: ["textual"],
 				features: ["structuralNavigation", "tableOfContents"],
 				hazards: ["none"],
 			},
 		},
-		styles: [{ path: "styles/tutorial.css", text: epubCss }],
-		chapters: [{ id: "tutorial", title: input.title, body, sections }],
+		styles: [{ path: "styles/post.css", text: epubCss }],
+		chapters: [{ id: "post", title: input.title, body, sections }],
 	});
 }
 
@@ -130,15 +130,13 @@ function adaptDocument(
 		},
 	});
 	if (walked.status === "failure") {
-		return failure(
-			new Error("The tutorial could not be adapted for an EPUB", { cause: walked.error }),
-		);
+		return failure(new Error("The post could not be adapted for an EPUB", { cause: walked.error }));
 	}
 	return success({ document: walked.data, sections });
 }
 
 /**
- * Resolves a link against the tutorial's permalink, so a site-relative path or a fragment
+ * Resolves a link against the post's permalink, so a site-relative path or a fragment
  * opens the blog; a reference that is no URL at all is left as written.
  */
 function absolute(href: string, base: string): string {

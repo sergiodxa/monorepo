@@ -1,5 +1,5 @@
 /**
- * Tests for the tutorial EPUB: the page's highlighted document adapted for a file read away
+ * Tests for the post EPUB: the page's highlighted document adapted for a file read away
  * from the site — links made absolute, images turned into links, sections anchored and nested
  * — under the permalink as the identifier, so a second download replaces the first.
  *
@@ -12,9 +12,9 @@ import { Markdown } from "@sdxc/markdown";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import type { TutorialEpubInput } from "./tutorial-epub";
+import type { PostEpubInput } from "./post-epub";
 
-import { tutorialEpub } from "./tutorial-epub";
+import { postEpub } from "./post-epub";
 
 /** The permalink every fixture tutorial lives at. */
 const URL_ = "https://sergiodxa.com/tutorials/route-middleware";
@@ -51,7 +51,7 @@ function document(source = SOURCE): Markdown.Document {
 }
 
 /** A complete input for one tutorial, with any field overridden. */
-function input(overrides: Partial<TutorialEpubInput> = {}): TutorialEpubInput {
+function input(overrides: Partial<PostEpubInput> = {}): PostEpubInput {
 	return {
 		title: "Add Route Middleware <Safely>",
 		excerpt: "Learn how middleware runs.",
@@ -66,16 +66,16 @@ function input(overrides: Partial<TutorialEpubInput> = {}): TutorialEpubInput {
 }
 
 /** The text of one file of the built EPUB. */
-function file(built: ReturnType<typeof tutorialEpub>, path: string): string {
+function file(built: ReturnType<typeof postEpub>, path: string): string {
 	if (isFailure(built)) throw built.error;
 	let found = built.data.files.find((candidate) => candidate.path === path);
 	if (!found) throw new Error(`No ${path} in the EPUB`);
 	return new TextDecoder().decode(found.bytes);
 }
 
-describe("tutorialEpub", () => {
+describe("postEpub", () => {
 	test("opens with the title, the technologies used, and a link to read it online", () => {
-		let chapter = file(tutorialEpub(input()), "EPUB/text/tutorial.xhtml");
+		let chapter = file(postEpub(input()), "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain("<h1>Add Route Middleware &lt;Safely&gt;</h1>");
 		expect(chapter).toContain('<p class="used">Used: react-router@7.9.0 · remix</p>');
@@ -83,14 +83,14 @@ describe("tutorialEpub", () => {
 	});
 
 	test("points site-relative links and fragments back at the blog", () => {
-		let chapter = file(tutorialEpub(input()), "EPUB/text/tutorial.xhtml");
+		let chapter = file(postEpub(input()), "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain('<a href="https://sergiodxa.com/articles/middleware">the docs</a>');
 		expect(chapter).toContain(`<a href="${URL_}#later">jump down</a>`);
 	});
 
 	test("turns an image into a link to it, and a linked image into the link's text", () => {
-		let chapter = file(tutorialEpub(input()), "EPUB/text/tutorial.xhtml");
+		let chapter = file(postEpub(input()), "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain(
 			'<a href="https://sergiodxa.com/images/chain.png">Image: A diagram of the middleware chain</a>',
@@ -100,19 +100,19 @@ describe("tutorialEpub", () => {
 	});
 
 	test("anchors each ## and ### and nests the table of contents the same way", () => {
-		let built = tutorialEpub(input());
-		let chapter = file(built, "EPUB/text/tutorial.xhtml");
+		let built = postEpub(input());
+		let chapter = file(built, "EPUB/text/post.xhtml");
 		let nav = file(built, "EPUB/nav.xhtml");
 
 		expect(chapter).toContain('<h2 id="section-add-the-middleware">Add the Middleware</h2>');
 		expect(nav).toMatch(
-			/#section-add-the-middleware">Add the Middleware<\/a>\s*<ol>\s*<li>\s*<a href="text\/tutorial\.xhtml#section-order-matters">Order Matters/,
+			/#section-add-the-middleware">Add the Middleware<\/a>\s*<ol>\s*<li>\s*<a href="text\/post\.xhtml#section-order-matters">Order Matters/,
 		);
 		expect(nav).toContain('#section-final-thoughts">Final Thoughts</a>');
 	});
 
 	test("keeps the highlighted code", () => {
-		let chapter = file(tutorialEpub(input()), "EPUB/text/tutorial.xhtml");
+		let chapter = file(postEpub(input()), "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain(
 			'<pre class="md-code language-typescript" data-path="app/middleware.ts">',
@@ -121,7 +121,7 @@ describe("tutorialEpub", () => {
 	});
 
 	test("uses the permalink as the identifier and the last edit as modified", () => {
-		let opf = file(tutorialEpub(input()), "EPUB/package.opf");
+		let opf = file(postEpub(input()), "EPUB/package.opf");
 
 		expect(opf).toContain(`<dc:identifier id="pub-id">${URL_}</dc:identifier>`);
 		expect(opf).toContain('<meta property="dcterms:modified">2026-07-02T10:00:00Z</meta>');
@@ -131,19 +131,27 @@ describe("tutorialEpub", () => {
 	});
 
 	test("builds a tutorial with no content and no publish date", () => {
-		let built = tutorialEpub(
-			input({ document: null, published: null, publishedLabel: "", tags: [] }),
-		);
+		let built = postEpub(input({ document: null, published: null, publishedLabel: "", tags: [] }));
 
 		expect(isSuccess(built)).toBe(true);
-		let chapter = file(built, "EPUB/text/tutorial.xhtml");
+		let chapter = file(built, "EPUB/text/post.xhtml");
 		expect(chapter).toContain("<p>No content.</p>");
 		expect(chapter).not.toContain('class="used"');
 	});
 
+	test("builds an article, which uses no technologies, without the Used line", () => {
+		let built = postEpub(input({ title: "On Writing", tags: [] }));
+		let chapter = file(built, "EPUB/text/post.xhtml");
+		let opf = file(built, "EPUB/package.opf");
+
+		expect(chapter).toContain("<h1>On Writing</h1>");
+		expect(chapter).not.toContain('class="used"');
+		expect(opf).not.toContain("<dc:subject>");
+	});
+
 	test("gives repeated headings distinct anchors", () => {
-		let built = tutorialEpub(input({ document: document("## Setup\n\nA\n\n## Setup\n\nB\n") }));
-		let chapter = file(built, "EPUB/text/tutorial.xhtml");
+		let built = postEpub(input({ document: document("## Setup\n\nA\n\n## Setup\n\nB\n") }));
+		let chapter = file(built, "EPUB/text/post.xhtml");
 
 		expect(chapter).toContain('<h2 id="section-setup">Setup</h2>');
 		expect(chapter).toContain('<h2 id="section-setup-2">Setup</h2>');

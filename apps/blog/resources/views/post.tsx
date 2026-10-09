@@ -185,19 +185,17 @@ export function PostView() {
 										>
 											View as Markdown
 										</Link>
-										{model.post.typePath === "tutorials" && (
-											<Link
-												href={routes.post.href({
-													postType: model.post.typePath,
-													postSlug: model.post.slug,
-													ext: "epub",
-												})}
-												download={`${model.post.slug}.epub`}
-												mix={[text("sm")]}
-											>
-												Download EPUB
-											</Link>
-										)}
+										<Link
+											href={routes.post.href({
+												postType: model.post.typePath,
+												postSlug: model.post.slug,
+												ext: "epub",
+											})}
+											download={`${model.post.slug}.epub`}
+											mix={[text("sm")]}
+										>
+											Download EPUB
+										</Link>
 									</div>
 								</div>
 

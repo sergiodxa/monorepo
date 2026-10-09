@@ -51,7 +51,7 @@ with it empty, is answered with a 500.
   submitting one from another origin, a `*.sergiodxa.com` sibling included, gets a 403.
   `POST /mcp` and `POST /webmention` take any origin, since they read no cookie.
 - Markdown processing through shared markdown utilities.
-- Every tutorial downloads as an EPUB at `/tutorials/:slug.epub`, linked beside "View as
+- Every article and tutorial downloads as an EPUB at `/:postType/:slug.epub`, linked beside "View as
   Markdown". Links point back at the blog and images become links to the online copy, since
   an ebook embeds only files it carries; the permalink is the book's identifier, so a second
   download replaces the first in a reader's library.
@@ -142,6 +142,7 @@ with it empty, is answered with a 500.
 | `/`                      | Homepage                                              |
 | `/articles`              | Articles listing                                      |
 | `/articles/:slug`        | Article detail page                                   |
+| `/articles/:slug.epub`   | Article as an EPUB ebook                              |
 | `/tutorials`             | Tutorials listing                                     |
 | `/tutorials/:slug`       | Tutorial detail page                                  |
 | `/tutorials/:slug.epub`  | Tutorial as an EPUB ebook                             |

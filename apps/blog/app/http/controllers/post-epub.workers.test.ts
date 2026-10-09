@@ -1,7 +1,7 @@
 /**
- * Tests for a tutorial's EPUB URL, `/tutorials/:slug.epub`, through the real router and D1:
- * a published tutorial downloads as an ebook, while an article, a draft, a missing slug or a
- * deleted tutorial answers the same page the HTML URL would.
+ * Tests for a post's EPUB URL, `/articles/:slug.epub` and `/tutorials/:slug.epub`, through the
+ * real router and D1: a published post downloads as an ebook, while a draft or a missing slug
+ * answers the same page the HTML URL would.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -71,13 +71,13 @@ beforeAll(async () => {
 			slug: `epub-article-${SUFFIX}`,
 			title: "An Article",
 			locale: "en",
-			content: "Words.",
+			content: "## Opening\n\nWords.\n",
 			excerpt: "",
 		},
 	});
 });
 
-describe("GET /tutorials/:slug.epub", () => {
+describe("GET /:postType/:slug.epub", () => {
 	test("downloads a published tutorial as an EPUB", async () => {
 		let response = await fetchPath(`/tutorials/epub-${SUFFIX}.epub`);
 		let bytes = new Uint8Array(await response.arrayBuffer());
@@ -98,13 +98,19 @@ describe("GET /tutorials/:slug.epub", () => {
 		expect(body).toContain("Download EPUB");
 	});
 
-	test("offers no EPUB for an article", async () => {
+	test("downloads a published article as an EPUB, linked from its page", async () => {
 		let response = await fetchPath(`/articles/epub-article-${SUFFIX}.epub`);
+		let bytes = new Uint8Array(await response.arrayBuffer());
 		let page = await fetchPath(`/articles/epub-article-${SUFFIX}`).then((answer) => answer.text());
 
-		expect(response.status).toBe(404);
-		expect(await response.text()).toContain("Unsupported Content Type");
-		expect(page).not.toContain("Download EPUB");
+		expect(response.status).toBe(200);
+		expect(response.headers.get("content-type")).toBe("application/epub+zip");
+		expect(response.headers.get("content-disposition")).toBe(
+			`attachment; filename="epub-article-${SUFFIX}.epub"`,
+		);
+		expect(new TextDecoder().decode(bytes)).toContain('<h2 id="section-opening">Opening</h2>');
+		expect(page).toContain(`href="/articles/epub-article-${SUFFIX}.epub"`);
+		expect(page).toContain("Download EPUB");
 	});
 
 	test("keeps a draft tutorial's EPUB behind the same 403 as its page", async () => {

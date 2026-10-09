@@ -1,5 +1,5 @@
 /*
- * The stylesheet inside a tutorial's EPUB. Reading systems apply a publisher's CSS
+ * The stylesheet inside a post's EPUB. Reading systems apply a publisher's CSS
  * beneath the reader's own font, size and theme choices, so it sets structure only — code
  * blocks that wrap instead of overflowing, quiet tables — and no colors, which would fight a
  * sepia or night theme. Token roles are carried by weight and face, as on the site.

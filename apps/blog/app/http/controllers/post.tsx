@@ -1,6 +1,6 @@
 /**
  * HTTP action for public article and tutorial post pages. Route params are validated
- * before any lookup, the response format (HTML, Markdown, a tutorial's EPUB or ActivityStreams)
+ * before any lookup, the response format (HTML, Markdown, EPUB or ActivityStreams)
  * is negotiated from the URL extension and the `Accept` header, unpublished posts stay
  * admin-only behind a 403, and deleted posts answer 410. HTML pages advertise Webmention.
  *
@@ -26,7 +26,7 @@ import { Post } from "~/app/repositories/post";
 import { Webmention } from "~/app/repositories/webmention";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { article, tombstone } from "~/app/services/federated-posts";
-import { tutorialEpub } from "~/app/services/tutorial-epub";
+import { postEpub } from "~/app/services/post-epub";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
@@ -55,11 +55,11 @@ let SUPPORTED_CONTENT_TYPES = new Set<string>(["html", "md", "epub"]);
 export default createAction(
 	routeMap.post,
 	/**
-	 * Serves one post resource in HTML or Markdown, or a tutorial as an EPUB.
+	 * Serves one post resource in HTML, Markdown or EPUB.
 	 * @returns The post response, or a typed 404 when nothing matches.
 	 * @example URL `/articles/hello-world.md` returns raw markdown when the post exists.
 	 * @example Header `Accept: text/markdown` negotiates markdown for an extensionless URL.
-	 * @example URL `/tutorials/hello-world.epub` downloads the tutorial as an ebook.
+	 * @example URL `/articles/hello-world.epub` downloads the article as an ebook.
 	 */
 	async (ctx) => {
 		let validation = validatePostRequestParams({
@@ -173,9 +173,9 @@ export default createAction(
 			});
 		}
 
-		if (validation.params.contentType === "epub" && post.postType === "tutorials") {
+		if (validation.params.contentType === "epub") {
 			let page = PostViewModel.page(post, ctx.request.url, undefined);
-			let built = tutorialEpub({
+			let built = postEpub({
 				title: page.post.title,
 				excerpt: post.post.meta.excerpt,
 				tags: page.post.tags,
@@ -192,7 +192,7 @@ export default createAction(
 					ctx.render,
 					{
 						title: "EPUB Unavailable",
-						description: "This tutorial could not be turned into an ebook. Read it online instead.",
+						description: "This post could not be turned into an ebook. Read it online instead.",
 						emoji: "📚",
 					},
 					500,
@@ -214,7 +214,7 @@ export default createAction(
 		let viewModel = PostViewModel.page(
 			post,
 			ctx.request.url,
-			validation.params.contentType === "epub" ? undefined : validation.params.contentType,
+			validation.params.contentType,
 			mentions,
 		);
 
@@ -290,9 +290,6 @@ function validatePostRequestParams(params: {
 		return { kind: "unsupported-content-type", contentType };
 	}
 	if (!SUPPORTED_POST_TYPES.has(postType)) return { kind: "unsupported-post-type" };
-	if (contentType === "epub" && postType !== "tutorials") {
-		return { kind: "unsupported-content-type", contentType };
-	}
 
 	return {
 		kind: "valid",
