@@ -576,7 +576,7 @@ function checkStylesheet(
 	style: EPUB.Style,
 	assets: ReadonlyMap<string, CheckedAsset>,
 ): EpubError | undefined {
-	let css = style.text.replaceAll(/\/\*[\s\S]*?\*\//gu, "");
+	let css = withoutComments(style.text);
 	let references = [
 		...[...css.matchAll(/url\(\s*(['"]?)(.*?)\1\s*\)/gu)].map((match) => match[2] ?? ""),
 		...[...css.matchAll(/@import\s+(['"])(.*?)\1/gu)].map((match) => match[2] ?? ""),
@@ -856,4 +856,23 @@ function metadataElements(
 function zipTimestamp(modified: Date): Date | undefined {
 	let year = modified.getUTCFullYear();
 	return year >= 1980 && year <= 2107 ? modified : undefined;
+}
+
+/**
+ * The stylesheet with every closed comment removed, so a `url()` inside one is ignored.
+ * An unclosed `/*` and everything after it stay as written; each comment is found with one
+ * forward search, keeping the cost linear in the stylesheet's length.
+ */
+function withoutComments(css: string): string {
+	let kept = "";
+	let position = 0;
+	while (position < css.length) {
+		let open = css.indexOf("/*", position);
+		if (open === -1) break;
+		let close = css.indexOf("*/", open + 2);
+		if (close === -1) break;
+		kept += css.slice(position, open);
+		position = close + 2;
+	}
+	return kept + css.slice(position);
 }

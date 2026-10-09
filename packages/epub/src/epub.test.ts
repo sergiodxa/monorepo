@@ -209,6 +209,34 @@ describe("missing-resource", () => {
 		expect(errorOf(built)).toMatchObject({ code: "missing-resource", path: "styles/a.css" });
 	});
 
+	test("ignores a url() inside a stylesheet comment and reads one after an unclosed comment", () => {
+		let commented = EPUB.build(
+			input({
+				styles: [
+					{ path: "styles/a.css", text: "/* url('../images/x.png') */ body { color: red; }" },
+				],
+			}),
+		);
+		let unclosed = EPUB.build(
+			input({
+				styles: [{ path: "styles/a.css", text: "body {} /* url('../images/x.png')" }],
+			}),
+		);
+
+		expect(isSuccess(commented)).toBe(true);
+		expect(errorOf(unclosed)).toMatchObject({ code: "missing-resource", path: "styles/a.css" });
+	});
+
+	test("reads a stylesheet of thousands of unclosed comments in linear time", () => {
+		let text = `/*${"a/*".repeat(50_000)}`;
+
+		let started = performance.now();
+		let built = EPUB.build(input({ styles: [{ path: "styles/a.css", text }] }));
+
+		expect(performance.now() - started).toBeLessThan(2_000);
+		expect(isSuccess(built)).toBe(true);
+	});
+
 	test("resolves references from text/ and decodes percent-escapes", () => {
 		let built = EPUB.build(
 			withBody(
