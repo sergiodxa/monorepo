@@ -95,7 +95,7 @@ const ARROWS: Record<string, Pick<Message, "stroke" | "start" | "end">> = {
 /** One message statement: sender, arrow, optional activation mark, receiver, text. */
 const MESSAGE = new RegExp(
 	`^(.+?)\\s*(${Object.keys(ARROWS)
-		.map((arrow) => arrow.replaceAll(/[()]/g, "\\$&"))
+		.map((arrow) => arrow.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&"))
 		.join("|")})\\s*([+-]?)\\s*([^:]+?)\\s*(?::\\s*(.*))?$`,
 );
 

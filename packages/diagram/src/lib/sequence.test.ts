@@ -95,6 +95,13 @@ describe("sequence diagrams", () => {
 		expect(filled("A-)B: x")).toBe(0);
 	});
 
+	test("reads participants whose names hold regular-expression syntax", () => {
+		let markup = svg("a.b(1)->>c*d: x\nc*d--)a.b(1): y");
+
+		expect(markup.match(/>a\.b\(1\)</g)?.length).toBe(2);
+		expect(markup.match(/>c\*d</g)?.length).toBe(2);
+	});
+
 	test("reads a message without text", () => {
 		expect(svg("A->>B")).toContain(">A<");
 	});
