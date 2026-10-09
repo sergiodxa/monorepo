@@ -283,6 +283,14 @@ registered tag.
 The shape of one entry in `options.components`: a component whose props are the node's own
 content fields and the attributes an annotation wrote, flattened into one bag, plus `children`.
 
+#### `FrameTag`
+
+The component for a [`frame`](#sdxc-markdownpluginframes) tag. It renders a Remix `<Frame>`
+with the tag's `src` and `name`, and the tag's children as its `fallback`: a tag written with
+children streams them first and the frame's content replaces them, while a self-closing tag
+holds the page until the content resolves. The page's renderer resolves the frame, so it needs
+a `resolveFrame`, which `render()` from `remix/middleware/render` supplies.
+
 ### `@sdxc/markdown/plugin/variables`
 
 #### `variables(values, options?)`
@@ -431,6 +439,17 @@ it, e.g. `youtube({ name: "video" })`.
 | `x`       | `x.com/USER/status/ID` and `twitter.com/USER/status/ID`                        | `user`, `id`   |
 
 `start` is YouTube's `t` or `start` parameter in seconds (`90`, `90s`, `1m30s`).
+
+### `@sdxc/markdown/plugin/frames`
+
+#### `FRAME_TAG`
+
+The `frame` tag's definition, registered under `options.tags`. It takes `src`, a path on the
+page's own origin, and an optional `name` a client entry finds the frame by through
+`handle.frames.get(name)`. A `src` with a scheme, a host or no leading `/` fails the parse at
+the tag's position, since a frame's HTML is merged into the page. Its children are block
+markdown, which `toHTML` and `toPlainText` render on their own, so a feed or a search index
+reads the fallback.
 
 ### `@sdxc/markdown/plugin/lint`
 
@@ -777,6 +796,35 @@ toRemix(result.data, { components: { youtube: YouTube, vimeo: Vimeo, gist: Gist,
 Register a component for every provider you pass. A tag with no component renders its
 children, and an embed has none, so an embed without a component renders nothing. Leave a
 provider out of `embeds` to keep its URLs as links.
+
+## Pattern: Server-Rendered Regions With Frames
+
+A `frame` tag holds a region a server route renders per request — live data, or an island
+that hydrates on its own — inside prose that is otherwise parsed once and cached:
+
+```typescript
+import { Markdown } from "@sdxc/markdown";
+import { FRAME_TAG } from "@sdxc/markdown/plugin/frames";
+
+let result = Markdown.parse(source, { tags: { frame: FRAME_TAG } });
+```
+
+```text
+The counter below is a live island, served by its own route:
+
+<frame src="/frames/counter">
+Loading the counter…
+</frame>
+```
+
+```tsx
+import { FrameTag, toRemix } from "@sdxc/markdown/remix";
+
+context.render(<article>{toRemix(document, { components: { frame: FrameTag } })}</article>);
+```
+
+The route at `src` answers with an HTML fragment, and any client entry inside it hydrates the
+way it would on a page of its own.
 
 ## Pattern: Lint Content In CI
 

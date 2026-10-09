@@ -11,6 +11,7 @@
 		"./remix": "./src/remix/index.tsx",
 		"./plugin/variables": "./src/plugin/variables.ts",
 		"./plugin/embeds": "./src/plugin/embeds.ts",
+		"./plugin/frames": "./src/plugin/frames.ts",
 		"./plugin/headings": "./src/plugin/headings.ts",
 		"./plugin/lint": "./src/plugin/lint.ts",
 		"./plugin/links": "./src/plugin/links.ts",

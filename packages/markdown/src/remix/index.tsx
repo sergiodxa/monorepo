@@ -20,6 +20,8 @@ import { attributeText } from "../lib/stringify/attributes.js";
 
 import { Fence } from "./fence.js";
 
+export { FrameTag } from "./frame.js";
+
 /** A component a caller supplies for a tag name, or for one of the nodes it may take over. */
 export type MarkdownComponent = {
 	/**
