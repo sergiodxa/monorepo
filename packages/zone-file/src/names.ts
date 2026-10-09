@@ -181,7 +181,9 @@ export function relativeName(name: string, origin: string): string {
  * @example absoluteName("mx.example.com") // "mx.example.com."
  */
 export function absoluteName(name: string): string {
-	let trailing = /(\\*)\.$/.exec(name);
-	let absolute = name === "." || (trailing !== null && (trailing[1] ?? "").length % 2 === 0);
-	return absolute ? name : `${name}.`;
+	if (name === ".") return name;
+	if (!name.endsWith(".")) return `${name}.`;
+	let backslashes = 0;
+	for (let index = name.length - 2; index >= 0 && name[index] === "\\"; index--) backslashes++;
+	return backslashes % 2 === 0 ? name : `${name}.`;
 }

@@ -27,12 +27,24 @@ export function looksLikeTtl(field: string): boolean {
  */
 export function readTtl(field: string): number | null {
 	if (!looksLikeTtl(field)) return null;
-	let seconds = /^\d+$/.test(field)
-		? Number(field)
-		: Array.from(field.matchAll(/(\d+)([smhdw])/gi)).reduce(
-				(total, [, amount, unit]) =>
-					total + Number(amount) * (UNIT_SECONDS[(unit ?? "s").toLowerCase()] ?? 1),
-				0,
-			);
+	let seconds = /^\d+$/.test(field) ? Number(field) : sumUnits(field);
 	return seconds <= MAX_TTL ? seconds : null;
+}
+
+/**
+ * Adds up a unit-form TTL already checked by `looksLikeTtl`, in one pass over the field so its
+ * cost stays linear in the field's length.
+ */
+function sumUnits(field: string): number {
+	let total = 0;
+	let amount = "";
+	for (let char of field) {
+		if (char >= "0" && char <= "9") {
+			amount += char;
+			continue;
+		}
+		total += Number(amount) * (UNIT_SECONDS[char.toLowerCase()] ?? 1);
+		amount = "";
+	}
+	return total;
 }

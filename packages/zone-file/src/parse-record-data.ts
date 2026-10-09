@@ -109,7 +109,7 @@ function parsePresentation(type: string, value: string): Result<ParsedData, Reco
 		}
 
 		case "CAA": {
-			let match = /^(\d+)\s+([A-Za-z0-9]+)\s+(.+)$/.exec(value);
+			let match = /^(\d+)\s+([A-Za-z0-9]+)\s+(\S.*)$/.exec(value);
 			let flags = readNumber(match?.[1], 0xff);
 			if (!match || flags === null || match[2] === undefined || match[3] === undefined)
 				return invalid(type, value);
@@ -176,9 +176,12 @@ function parsePresentation(type: string, value: string): Result<ParsedData, Reco
 	}
 }
 
-/** Decodes RFC 3597 generic data (`\# <length> <hex>`) and reads the octets for the type. */
+/**
+ * Decodes RFC 3597 generic data (`\# <length> <hex>`) and reads the octets for the type. The
+ * length is the whole leading digit run, so the hex after it starts at whitespace or a letter.
+ */
 function parseGeneric(type: string, value: string): Result<ParsedData, RecordDataError> {
-	let match = /^\\#\s+(\d+)((?:\s*[0-9a-fA-F]+)*)\s*$/.exec(value);
+	let match = /^\\#\s+(\d+)((?:[\sa-fA-F][\s0-9a-fA-F]*)?)$/.exec(value);
 	if (!match) return invalid(type, value);
 
 	let hex = (match[2] ?? "").replace(/\s+/g, "");

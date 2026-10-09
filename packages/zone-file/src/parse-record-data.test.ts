@@ -205,4 +205,38 @@ describe("parseRecordData", () => {
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error).toBeInstanceOf(RecordDataError);
 	});
+
+	test("rejects CAA data padded with tabs in linear time", () => {
+		let started = performance.now();
+		expect(isFailure(parseRecordData("CAA", `0\t0\t${"\t\t".repeat(50_000)}b\nc`))).toBe(true);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
+	test("reads CAA data whose value starts after a run of whitespace", () => {
+		expect(unwrap(parseRecordData("CAA", '0 issue \t "ca.example"'))).toEqual({
+			type: "CAA",
+			flags: 0,
+			critical: false,
+			tag: "issue",
+			value: "ca.example",
+		});
+	});
+
+	test("rejects generic data with a long digit run in linear time", () => {
+		let started = performance.now();
+		expect(isFailure(parseRecordData("A", `\\#\t0${"0".repeat(50_000)}x`))).toBe(true);
+		expect(isFailure(parseRecordData("A", `\\#\t0${"0".repeat(50_000)}`))).toBe(true);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
+	test("reads generic data whose hex follows the length with or without spacing", () => {
+		expect(unwrap(parseRecordData("A", "\\# 4 c0 00 02 01 "))).toEqual({
+			type: "A",
+			address: "192.0.2.1",
+		});
+		expect(unwrap(parseRecordData("A", "\\# 4c0000201"))).toEqual({
+			type: "A",
+			address: "192.0.2.1",
+		});
+	});
 });

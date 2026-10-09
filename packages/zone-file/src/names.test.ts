@@ -86,4 +86,11 @@ describe("absoluteName", () => {
 		expect(absoluteName("a\\.")).toBe("a\\..");
 		expect(absoluteName("a\\\\.")).toBe("a\\\\.");
 	});
+
+	test("reads a long run of backslashes in linear time", () => {
+		let started = performance.now();
+		expect(absoluteName("\\".repeat(50_000))).toBe(`${"\\".repeat(50_000)}.`);
+		expect(absoluteName(`${"\\".repeat(50_001)}.`)).toBe(`${"\\".repeat(50_001)}..`);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
 });
