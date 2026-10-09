@@ -13,6 +13,7 @@ import type { MarkdownParseError, MarkdownWalkError } from "@sdxc/markdown";
 import type { Result } from "@sdxc/result";
 
 import { Markdown } from "@sdxc/markdown";
+import { FRAME_TAG } from "@sdxc/markdown/plugin/frames";
 import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
@@ -121,6 +122,9 @@ export const TAGS = {
 	folder: { content: "blocks", attributes: s.object({ name: s.string() }) },
 
 	file: { content: "none", attributes: s.object({ name: s.string() }) },
+
+	/** A region a route of this site renders per request, such as a live component preview. */
+	frame: FRAME_TAG,
 } satisfies Record<string, Markdown.TagDefinition>;
 
 /** Hoisted so every read of a content file is held to the same vocabulary. */

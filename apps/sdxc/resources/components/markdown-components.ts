@@ -10,6 +10,7 @@
 import type { RemixOptions } from "@sdxc/markdown/remix";
 
 import { DiagramTag } from "@sdxc/diagram/ui";
+import { FrameTag } from "@sdxc/markdown/remix";
 import { MathTag } from "@sdxc/math/ui";
 
 import CodeBlock from "~/resources/components/code-block";
@@ -24,6 +25,7 @@ export const DOCS_COMPONENTS: NonNullable<RemixOptions["components"]> = {
 	code: CodeBlock,
 	diagram: DiagramTag,
 	math: MathTag,
+	frame: FrameTag,
 	heading: ProseHeading,
 	paragraph: ProseParagraph,
 	list: ProseList,

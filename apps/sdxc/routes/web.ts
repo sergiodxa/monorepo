@@ -76,6 +76,15 @@ export default route({
 		uiExport: get("/api/ui/:subpath/:slug.md"),
 	},
 
+	/**
+	 * Fragments a page loads through a `<Frame>`, which is how a guide's markdown holds a
+	 * live region: the prose stays static and the region is this route's response.
+	 */
+	frames: {
+		/** One component's live preview, the same one its reference page opens with. */
+		preview: get("/frames/previews/:component"),
+	},
+
 	/** Machine-readable surfaces, each one derived from what is already in the bundle. */
 	llms: get("/llms.txt"),
 	sitemap: get("/sitemap.xml"),
