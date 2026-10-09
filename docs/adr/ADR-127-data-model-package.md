@@ -190,19 +190,52 @@ export async function registerUser(model: UserModel, values: CreateValues<typeof
 await registerUser(ctx.models.users, { email, name });
 ```
 
-| Type                     | Names                                                               |
-| ------------------------ | ------------------------------------------------------------------- |
-| `BoundModel<typeof M>`   | The bound model: built-ins, scopes and custom methods               |
-| `ModelQuery<typeof M>`   | A query from that model, with its scopes chainable                  |
-| `ModelRow<typeof M>`     | A row as reads return it, constraints narrowed and `meta` decoded   |
-| `CreateValues<typeof M>` | What `create()` takes: constrained columns omitted, `meta` included |
-| `UpdateValues<typeof M>` | What `update()` takes, every member optional                        |
+| Type                     | Names                                                                |
+| ------------------------ | -------------------------------------------------------------------- |
+| `BoundModel<typeof M>`   | The bound model: built-ins, scopes and custom methods                |
+| `ModelQuery<typeof M>`   | A query from that model, with its scopes chainable                   |
+| `ModelRow<typeof M>`     | A row as reads return it, constraints narrowed and `meta` decoded    |
+| `CreateValues<typeof M>` | What `create()` takes: constrained columns omitted, `meta` included  |
+| `UpdateValues<typeof M>` | What `update()` takes, every member optional                         |
+| `AnyModel<Shape>`        | Any model definition whose rows have `Shape`; any model when omitted |
 
 - A lazily loaded entry has exactly the bound model's type, so `ctx.models.users` satisfies
   `UserModel` whether the registry imports it up front or on demand, and a test passes
   `Users.bind({ db }, context)` to the same function.
 - The types are plain generics over the definition, so a model module exports its aliases next
   to the model, and callers import the aliases without importing the model's runtime code.
+
+#### Helpers over any model
+
+`AnyModel` is the constraint for a helper written once for every model. Its optional `Shape`
+narrows that to models whose rows have those columns, with those types:
+
+```typescript
+async function findOr404<M extends AnyModel>(model: BoundModel<M>, id: string) {
+	let row = await model.find(id);
+	if (row === null) throw new Response(null, { status: 404 });
+	return row; // ModelRow<M>
+}
+
+async function forPost<M extends AnyModel<{ post_id: string }>>(
+	model: BoundModel<M>,
+	postId: string,
+) {
+	return model.query().where({ post_id: postId }).all();
+}
+
+await forPost(ctx.models.comments, id); // comments has post_id: string
+await forPost(ctx.models.users, id); // type error: users rows have no post_id
+```
+
+- `Shape` is checked against `ModelRow<M>`, the row as reads return it, so it names columns as
+  the table spells them (`post_id`), and a `meta` member constrains decoded meta fields the same
+  way (`AnyModel<{ meta: { slug?: string } }>`).
+- A column must be assignable to the shape's type: a nullable `post_id` does not satisfy
+  `post_id: string`, and a constrained `type: "article"` satisfies `type: string`.
+- Inside the helper, the model is usable through `Shape`: `where()` accepts its columns and
+  reads return at least its members, while the call site keeps the full `ModelRow<M>`. Type
+  tests pin this, since it depends on TypeScript resolving members of a generic model.
 
 ### Callbacks
 
@@ -1027,6 +1060,8 @@ and recursion guards on top.
 
 - Meta tables replace blog's per-type `MetaCodec` and its `articleMetaValue` duplicate
   resolution; the port of blog's posts is the acceptance case for both.
+- Test factories built on `AnyModel` (`defineFactory(Users, () => ({ ... }))`, typed by
+  `CreateValues`) are a likely follow-up, since every app's tests build rows by hand today.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
