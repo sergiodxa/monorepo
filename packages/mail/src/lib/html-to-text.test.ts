@@ -79,4 +79,26 @@ describe("htmlToText", () => {
 	test("returns an empty string for markup with no readable content", () => {
 		expect(htmlToText("<head><style>p{}</style></head>")).toBe("");
 	});
+
+	test("drops comments, the doctype, and elements marked to skip in text", () => {
+		let html =
+			'<!DOCTYPE html><!-- note --><hr data-skip-in-text /><img data-skip-in-text alt="Logo">' +
+			"<div data-skip-in-text>Spacer</div><p>Body<!-- inline -->copy</p>";
+		expect(htmlToText(html)).toBe("Bodycopy");
+	});
+
+	test("leaves no tag or comment behind when removing one would join its neighbours", () => {
+		let html =
+			"<p>a<scr<script>x</script>ipt>alert(1)</script>b</p><!<!-- x -->-- c --><scrip<b>t>d";
+		let text = htmlToText(html);
+		expect(text).toBe("axipt>alert(1)b\n\n-- c -->t>d");
+		expect(text).not.toMatch(/<script|<!--/i);
+	});
+
+	test("converts many unclosed comments and tags in linear time", () => {
+		let started = performance.now();
+		expect(htmlToText("<!--".repeat(50_000))).toBe("");
+		expect(htmlToText(`${"<script>".repeat(50_000)}x`)).toBe("x");
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
 });

@@ -8,31 +8,23 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-/** HTML comments, which never carry reader-visible content. */
-const COMMENT = /<!--[\s\S]*?-->/g;
-
-/** A document type declaration, which describes the document format. */
-const DOCTYPE = /<!doctype[^>]*>/gi;
-
-/**
- * Blocks hidden from sighted readers with `display:none`, such as a preheader.
- * Non-greedy matching closes at the first same-tag closing tag, which is correct
- * for the hidden single-element blocks email layouts use.
- */
-const HIDDEN_BLOCK = /<(div|span|p)\b[^>]*display\s*:\s*none[^>]*>[\s\S]*?<\/\1>/gi;
-
-/**
- * Blocks marked `data-skip-in-text`, the explicit signal an author gives that an
- * element belongs to the HTML part alone, covering visible content such as a
- * decorative rule, a spacer, or a logo's alt text.
- */
-const SKIPPED_BLOCK = /<(\w+)\b[^>]*\bdata-skip-in-text\b[^>]*>[\s\S]*?<\/\1>/gi;
-
-/** The same marker on an element that closes itself, which has nothing to drop between tags. */
-const SKIPPED_VOID = /<\w+\b[^>]*\bdata-skip-in-text\b[^>]*\/?>/gi;
-
 /** Elements whose content belongs to the document structure. */
-const DROPPED_BLOCK = /<(head|script|style|title)\b[^>]*>[\s\S]*?<\/\1>/gi;
+const DROPPED_ELEMENTS = new Set(["head", "script", "style", "title"]);
+
+/** Elements an email layout hides with `display:none`, such as a preheader. */
+const HIDEABLE_ELEMENTS = new Set(["div", "span", "p"]);
+
+/** The name an opening tag starts with, lowercased by the caller. */
+const OPENING_NAME = /^<(\w+)/;
+
+/** An inline style that hides an element from sighted readers. */
+const DISPLAY_NONE = /display\s*:\s*none/i;
+
+/**
+ * The explicit signal an author gives that an element belongs to the HTML part
+ * alone, covering visible content such as a decorative rule, a spacer, or a logo's alt text.
+ */
+const SKIP_IN_TEXT = /\bdata-skip-in-text\b/i;
 
 /** Explicit line breaks, the one inline element that carries layout meaning. */
 const LINE_BREAK = /<br\s*\/?>/gi;
@@ -69,9 +61,6 @@ const CELL_END = /<\/(td|th)\s*>/gi;
 /** End of a table row or definition entry, which ends the line so the next row starts immediately below it. */
 const ROW_END = /<\/(tr|dt|dd|caption)\s*>/gi;
 
-/** Any remaining tag, dropped once its structural meaning has been applied. */
-const TAG = /<[^>]+>/g;
-
 /** A character reference in named, decimal, or hexadecimal form. */
 const ENTITY = /&(#\d+|#x[0-9a-f]+|[a-z]+);/gi;
 
@@ -94,9 +83,91 @@ const HORIZONTAL_WHITESPACE = /[ \t\r\f\v\u00a0]+/g;
 /** Three or more newlines, collapsed so structure never turns into empty screens. */
 const EXTRA_NEWLINES = /\n{3,}/g;
 
-/** Removes markup from a fragment that has already had its structure applied. */
+/**
+ * Removes markup from a fragment that has already had its structure applied. Each
+ * tag runs from a `<` to the next `>`, and a `<` with no `>` after it stays as text,
+ * so one forward pass leaves nothing that reads as a tag.
+ */
 function stripTags(html: string): string {
-	return html.replace(TAG, "");
+	let out = "";
+	let index = 0;
+
+	while (index < html.length) {
+		let open = html.indexOf("<", index);
+		if (open === -1) break;
+		let close = html.indexOf(">", open + 1);
+		if (close === -1) break;
+		out += html.slice(index, open);
+		index = close + 1;
+	}
+
+	return out + html.slice(index);
+}
+
+/**
+ * The element an opening tag starts that the text part drops together with its
+ * content, or `null` when the tag stays. A document type declaration counts as an
+ * element with no content.
+ */
+function droppedElement(tag: string): string | null {
+	let lower = tag.toLowerCase();
+	if (lower.startsWith("<!doctype")) return "";
+	let name = OPENING_NAME.exec(lower)?.[1];
+	if (name === undefined) return null;
+	if (DROPPED_ELEMENTS.has(name) || SKIP_IN_TEXT.test(tag)) return name;
+	if (HIDEABLE_ELEMENTS.has(name) && DISPLAY_NONE.test(tag)) return name;
+	return null;
+}
+
+/**
+ * Drops comments, the doctype, and every element a reader cannot see in one forward
+ * pass, so time stays linear and removing a region never joins its neighbours into a
+ * new tag. An element ends at its first same-name closing tag, or loses only its opening tag.
+ */
+function dropInvisible(html: string): string {
+	let lower = html.toLowerCase();
+	let closings = new Map<string, number>();
+	let out = "";
+	let index = 0;
+
+	while (index < html.length) {
+		let open = html.indexOf("<", index);
+		if (open === -1) break;
+		out += html.slice(index, open);
+
+		if (html.startsWith("<!--", open)) {
+			let end = html.indexOf("-->", open + 4);
+			index = end === -1 ? html.length : end + 3;
+			continue;
+		}
+
+		let close = html.indexOf(">", open + 1);
+		if (close === -1) {
+			index = open;
+			break;
+		}
+
+		let tag = html.slice(open, close + 1);
+		let name = droppedElement(tag);
+		index = close + 1;
+
+		if (name === null) {
+			out += tag;
+			continue;
+		}
+
+		if (name === "" || tag.endsWith("/>")) continue;
+
+		let closing = `</${name}>`;
+		let found = closings.get(name);
+		if (found === undefined || (found !== -1 && found < index)) {
+			found = lower.indexOf(closing, index);
+			closings.set(name, found);
+		}
+		if (found !== -1) index = found + closing.length;
+	}
+
+	return out + html.slice(index);
 }
 
 /** Resolves character references to the characters they stand for, leaving unknown ones intact. */
@@ -138,13 +209,7 @@ function formatLink(href: string, label: string): string {
  * @example htmlToText('<p>Hi <a href="https://x.dev">here</a></p>'); // "Hi here (https://x.dev)"
  */
 export function htmlToText(html: string): string {
-	let text = html
-		.replace(COMMENT, "")
-		.replace(DOCTYPE, "")
-		.replace(HIDDEN_BLOCK, "")
-		.replace(SKIPPED_BLOCK, "")
-		.replace(SKIPPED_VOID, "")
-		.replace(DROPPED_BLOCK, "")
+	let text = dropInvisible(html)
 		.replace(LINE_BREAK, "\n")
 		.replace(
 			ANCHOR,
