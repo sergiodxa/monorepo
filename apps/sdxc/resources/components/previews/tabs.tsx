@@ -79,6 +79,19 @@ let active = sections[activeIndex];
 	</Tabs.Panels>
 </Tabs>`;
 
+/**
+ * Subscribes to the page's `hashchange` in a browser, where the window outlives the island,
+ * so the listener is dropped when the island disconnects. A server render holds no window,
+ * so nothing is added to the global a Worker shares across requests.
+ */
+function followHash(handle: Handle, listener: () => void) {
+	if (typeof document === "undefined") return;
+	globalThis.addEventListener("hashchange", listener);
+	handle.signal.addEventListener("abort", () =>
+		globalThis.removeEventListener("hashchange", listener),
+	);
+}
+
 /** A routing-driven tab strip, hydrated so a tab press re-reads the URL it navigated to. */
 export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(handle: Handle) {
 	let fragment = SECTIONS[0]!.fragment;
@@ -89,13 +102,7 @@ export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(han
 		void handle.update();
 	}
 
-	// The window outlives the island, so the subscription is dropped when the
-	// island disconnects rather than through an options signal, which is an
-	// inert stub during the server render.
-	globalThis.addEventListener("hashchange", readFragment);
-	handle.signal.addEventListener("abort", () =>
-		globalThis.removeEventListener("hashchange", readFragment),
-	);
+	followHash(handle, readFragment);
 
 	return () => {
 		let activeIndex = Math.max(
