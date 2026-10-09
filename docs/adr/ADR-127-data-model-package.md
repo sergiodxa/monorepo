@@ -122,6 +122,7 @@ eager loading accept it unchanged.
 | Member               | Returns                                    | Callbacks |
 | -------------------- | ------------------------------------------ | --------- |
 | `query()`, scopes    | Scoped `Query`                             | No        |
+| `from(query)`        | The given `Query`, scoped                  | No        |
 | `find(id)`           | `Row \| null`                              | No        |
 | `findBy(where)`      | `Row \| null`                              | No        |
 | `create(values)`     | `Result<Row, ValidationError>`             | Yes       |
@@ -132,6 +133,9 @@ eager loading accept it unchanged.
 
 Reads answer `null` for a missing row. Writes answer a `Result` from `@sdxc/result`, because a
 validation failure or a missing row is an expected outcome the caller branches on.
+
+`from(query)` wraps a query some other package built over the same table, such as a search
+query, so the model's scopes chain onto it.
 
 ### Callbacks
 
@@ -193,7 +197,7 @@ let user = await ctx.models.users.findByEmail(email);
 ```typescript
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
 
-createDispatcher(jobs, {
+createJobDispatcher({
 	middleware: [database(), modelsMiddleware(models, { database: Database })],
 });
 ```
@@ -216,6 +220,288 @@ createDispatcher(jobs, {
   `@sdxc/jobs` is a peer of the `./jobs` entry point only.
 - Everything it returns for querying is a data-table `Query`, so `@sdxc/pagination` and
   `@sdxc/search` need no changes and take no dependency on it.
+
+## Usage Examples
+
+The examples follow one blog-like app with `users`, `articles` and `comments` tables. The tables
+are ordinary `remix/data-table` declarations; only the model files are new.
+
+### Defining models
+
+```typescript
+import { createModel } from "@sdxc/data-model";
+import { Jobs } from "@sdxc/jobs";
+import { fail, sql } from "remix/data-table";
+
+import jobs from "~/app/jobs";
+import { Mail } from "~/app/middleware/mail";
+import { articleComments, articles, users } from "~/app/schema";
+
+export const Articles = createModel(articles, {
+	scopes: {
+		published: (query) => query.where(sql`"published_at" <= ${Date.now()}`),
+		drafts: (query) => query.where({ published_at: null }),
+		by: (query, authorId: string) => query.where({ author_id: authorId }),
+		newest: (query) => query.orderBy("published_at", "desc"),
+	},
+
+	methods: (model) => ({
+		findBySlug: (slug: string) => model.published().where({ slug }).first(),
+		withComments: (id: string) =>
+			model
+				.query()
+				.where({ id })
+				.with({ comments: articleComments.orderBy("created_at", "asc") })
+				.first(),
+	}),
+
+	callbacks: {
+		async validate(values, ctx) {
+			if (values.slug === undefined) return;
+			let taken = await ctx.db.findOne(articles, { where: { slug: values.slug } });
+			if (taken !== null && taken.id !== values.id) return fail("Slug already taken", ["slug"]);
+		},
+
+		async beforeCreate(values) {
+			return { ...values, slug: values.slug ?? slugify(values.title) };
+		},
+
+		async afterCommit(event, ctx) {
+			if (event.operation === "update" && event.changed.includes("published_at")) {
+				await ctx.get(Jobs).enqueue(jobs.notifySubscribers, { articleId: event.row.id });
+			}
+		},
+	},
+});
+
+export const Users = createModel(users, {
+	scopes: {
+		active: (query) => query.where({ deleted_at: null }),
+	},
+
+	methods: (model) => ({
+		findByEmail: (email: string) => model.active().where({ email: email.toLowerCase() }).first(),
+	}),
+
+	callbacks: {
+		async beforeCreate(values) {
+			return { ...values, email: values.email.toLowerCase() };
+		},
+
+		async afterCommit(event, ctx) {
+			if (event.operation !== "create") return;
+			await ctx.get(Mail).send({ to: event.row.email, template: "welcome" });
+		},
+	},
+});
+```
+
+`event` names the operation, the row after the write, the row before it for updates and deletes,
+and `changed`, the columns an update actually altered.
+
+### Registering and wiring
+
+```typescript
+import { createModels } from "@sdxc/data-model";
+
+export const models = createModels({
+	articles: Articles,
+	comments: Comments,
+	users: Users,
+});
+```
+
+```typescript
+import { models as modelsMiddleware } from "@sdxc/data-model/router";
+
+export const router = createRouter({
+	middleware: [
+		log(logger),
+		database(),
+		jobsMiddleware(queue),
+		mail(),
+		modelsMiddleware(models, { database: Database }),
+	],
+});
+```
+
+`modelsMiddleware` runs after the middleware that publish the database and the services the
+callbacks read, so every `ctx.get(...)` in a callback finds its value.
+
+### Listing with pagination
+
+```typescript
+router.map(routes.articles.index, async (ctx) => {
+	let params = PAGING.parse(ctx.url.searchParams);
+	if (isFailure(params)) return redirect(ctx.url.pathname);
+
+	let page = await Pagination.byOffset(ctx.models.articles.published().newest(), {
+		page: params.data.page,
+		perPage: params.data.perPage,
+	});
+	if (isFailure(page)) throw page.error;
+
+	return ctx.render(<ArticleList articles={page.data.items} pagination={page.data.pagination} />);
+});
+```
+
+Keyset paging takes the scoped query the same way, minus the ordering scope, because `byKeyset`
+owns the sort:
+
+```typescript
+let page = await Pagination.byKeyset(ctx.models.articles.published().by(authorId), {
+	orderBy: [
+		["published_at", "desc"],
+		["id", "desc"],
+	],
+	cursor: params.data.cursor,
+	limit: 50,
+});
+```
+
+### Searching within a scope
+
+```typescript
+router.map(routes.search, async (ctx) => {
+	let parsed = parseQuery(ctx.url.searchParams.get("q") ?? "", { fields: ARTICLE_SEARCH.fields });
+	if (isFailure(parsed)) return new Response(parsed.error.message, { status: 400 });
+	if (parsed.data === null) return ctx.render(<EmptySearch />);
+
+	let query = ctx.models.articles.from(ARTICLE_SEARCH.query(ctx.db, parsed.data)).published();
+
+	let page = await Pagination.byOffset(query, { page: 1, perPage: 20 });
+	if (isFailure(page)) throw page.error;
+
+	return ctx.render(<SearchResults page={page.data} parsed={parsed.data} />);
+});
+```
+
+### Creating from a form
+
+```typescript
+router.map(routes.articles.create, async (ctx) => {
+	let input = s.parseSafe(ARTICLE_FORM, Object.fromEntries(ctx.formData));
+	if (!input.success) return ctx.render(<ArticleForm issues={input.issues} />, { status: 422 });
+
+	let article = await ctx.models.articles.create({ ...input.value, author_id: ctx.user.id });
+	if (isFailure(article)) {
+		return ctx.render(<ArticleForm issues={article.error.issues} />, { status: 422 });
+	}
+
+	return redirect(routes.articles.show.href({ id: article.data.id }));
+});
+```
+
+The form schema checks the shape of what was submitted; the model's `validate` callback checks
+what only the database can answer, such as the slug being taken. Both failures render the same
+form.
+
+### Updating and deleting
+
+```typescript
+let updated = await ctx.models.articles.update(id, { published_at: Date.now() });
+if (isFailure(updated)) {
+	if (updated.error instanceof NotFound) return new Response(null, { status: 404 });
+	return ctx.render(<ArticleForm issues={updated.error.issues} />, { status: 422 });
+}
+```
+
+Publishing an article changes `published_at`, so `Articles`' `afterCommit` enqueues
+`notifySubscribers` once the update has landed.
+
+### A transaction across models
+
+```typescript
+router.map(routes.signup, async (ctx) => {
+	let result = await ctx.models.transaction(async (models) => {
+		let user = await models.users.create({ email, name });
+		if (isFailure(user)) return user;
+
+		let article = await models.articles.create({
+			title: "Hello, world",
+			author_id: user.data.id,
+		});
+		if (isFailure(article)) return article;
+
+		return user;
+	});
+
+	if (isFailure(result)) return ctx.render(<SignupForm issues={result.error.issues} />);
+	return redirect(routes.dashboard.href());
+});
+```
+
+The welcome mail from `Users`' `afterCommit` is queued during the transaction and sent once it
+commits. Had the article failed, the transaction would roll back and the mail would be dropped
+along with the user.
+
+### In a job
+
+```typescript
+export const dispatcher = createJobDispatcher({
+	logger,
+	queue: cloudflare.queue(() => env.QUEUE),
+	middleware: [database(), mail(), modelsJobMiddleware(models, { database: Database })],
+});
+```
+
+```typescript
+export default async function notifySubscribers(ctx: JobContext<{ articleId: string }>) {
+	let article = await ctx.models.articles.find(ctx.input.articleId);
+	if (article === null) ctx.exit("Article no longer exists");
+
+	let subscribers = await ctx.models.users.active().where({ subscribed: true }).all();
+	await ctx.get(Mail).sendMany(subscribers.map((user) => digestFor(user, article)));
+}
+```
+
+### In an MCP tool
+
+```typescript
+mcp.tools.map(toolset.findArticles, async (ctx) => {
+	let articles = await ctx.models.articles
+		.published()
+		.by(ctx.input.authorId)
+		.newest()
+		.limit(10)
+		.all();
+	if (articles.length === 0) throw new ToolError("That author has no published articles.");
+	return articles.map(({ title, slug }) => ({ title, slug }));
+});
+```
+
+The MCP handler is mounted on the router, so its tools run on a request context the models
+middleware has already populated.
+
+### In a script or test
+
+Outside a host, bind against a context built by hand. Any context with `get(key)` works, so a test
+uses a real `RequestContext` and sets only the services the callbacks under test read:
+
+```typescript
+let context = new RequestContext(new Request("https://example.com"));
+let sent: MailMessage[] = [];
+context.set(Mail, { send: async (message) => void sent.push(message) });
+
+let users = Users.bind(createSqliteDatabase(), context);
+let user = await users.create({ email: "Pat@Example.com", name: "Pat" });
+
+expect(user).toEqual(success(expect.objectContaining({ email: "pat@example.com" })));
+expect(sent).toEqual([expect.objectContaining({ to: "pat@example.com", template: "welcome" })]);
+```
+
+### Bulk writes, without callbacks
+
+```typescript
+await ctx.models.articles
+	.drafts()
+	.where(sql`"created_at" < ${cutoff}`)
+	.delete();
+```
+
+A delete built from a query runs as one statement and fires no model callbacks, which is what a
+cleanup over thousands of rows wants. When each row needs its callbacks, iterate and call
+`articles.delete(id)` per row.
 
 ## Consequences
 
