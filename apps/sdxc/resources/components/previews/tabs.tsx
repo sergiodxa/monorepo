@@ -15,6 +15,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Badge, Tabs, Text } from "@sdxc/ui";
+import { whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 /** Each tab's own page, so the panel changes with the URL rather than with state. */
@@ -79,19 +80,6 @@ let active = sections[activeIndex];
 	</Tabs.Panels>
 </Tabs>`;
 
-/**
- * Subscribes to the page's `hashchange` in a browser, where the window outlives the island,
- * so the listener is dropped when the island disconnects. A server render holds no window,
- * so nothing is added to the global a Worker shares across requests.
- */
-function followHash(handle: Handle, listener: () => void) {
-	if (typeof document === "undefined") return;
-	globalThis.addEventListener("hashchange", listener);
-	handle.signal.addEventListener("abort", () =>
-		globalThis.removeEventListener("hashchange", listener),
-	);
-}
-
 /** A routing-driven tab strip, hydrated so a tab press re-reads the URL it navigated to. */
 export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(handle: Handle) {
 	let fragment = SECTIONS[0]!.fragment;
@@ -102,7 +90,9 @@ export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(han
 		void handle.update();
 	}
 
-	followHash(handle, readFragment);
+	whileLive(handle, (page: typeof globalThis, signal) => {
+		page.addEventListener("hashchange", readFragment, { signal });
+	})(globalThis);
 
 	return () => {
 		let activeIndex = Math.max(

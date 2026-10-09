@@ -17,7 +17,7 @@ import { hstack, vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Text, Tree } from "@sdxc/ui";
 import { SelectionModel } from "@sdxc/ui/behaviors";
-import { treeKeys } from "@sdxc/ui/mixins";
+import { treeKeys, whileLive } from "@sdxc/ui/mixins";
 import { clientEntry } from "remix/component";
 
 /** Every row the tree renders, so the keyboard pattern has real depth to walk. */
@@ -127,9 +127,9 @@ export const TreePreview = clientEntry(import.meta.url, function TreePreview(han
 		selectedKeys: ["packages/ui/package.json"],
 	});
 
-	// `handle.signal` is an inert stub during the server render, so the
-	// subscription is plain: it dies with the island that owns the model.
-	model.addEventListener("change", () => void handle.update());
+	whileLive(handle, (selection: SelectionModel, signal) => {
+		selection.addEventListener("change", () => void handle.update(), { signal });
+	})(model);
 
 	/**
 	 * Each row is a `<summary>` and its chevron is decoration inside it, so a press

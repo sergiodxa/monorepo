@@ -16,6 +16,7 @@ import { hstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { Badge, Checkbox, Table, Text } from "@sdxc/ui";
 import { SelectionModel } from "@sdxc/ui/behaviors";
+import { whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 import { readSort, sortHref, sortInvoices } from "~/app/services/invoice-sort";
@@ -174,19 +175,6 @@ let direction = (key) => (sort.key === key ? sort.direction : undefined);
 	</div>
 </div>`;
 
-/**
- * Subscribes to the page's `popstate` in a browser, where the window outlives the island,
- * so the listener is dropped when the island disconnects. A server render holds no window,
- * so nothing is added to the global a Worker shares across requests.
- */
-function followHistory(handle: Handle, listener: () => void) {
-	if (typeof document === "undefined") return;
-	globalThis.addEventListener("popstate", listener);
-	handle.signal.addEventListener("abort", () =>
-		globalThis.removeEventListener("popstate", listener),
-	);
-}
-
 /** A sortable, selectable invoice list, hydrated so the selection set drives the rows. */
 export const TablePreview = clientEntry(import.meta.url, function TablePreview(handle: Handle) {
 	let selection = new SelectionModel({
@@ -195,9 +183,9 @@ export const TablePreview = clientEntry(import.meta.url, function TablePreview(h
 		selectedKeys: ["INV-2039"],
 	});
 
-	// `handle.signal` is an inert stub during the server render, so the
-	// subscription is plain: it dies with the island that owns the model.
-	selection.addEventListener("change", () => void handle.update());
+	whileLive(handle, (model: SelectionModel, signal) => {
+		model.addEventListener("change", () => void handle.update(), { signal });
+	})(selection);
 
 	/*
 	 * The headers link rather than listen, so which column is active is whatever the
@@ -211,7 +199,9 @@ export const TablePreview = clientEntry(import.meta.url, function TablePreview(h
 		void handle.update();
 	}
 
-	followHistory(handle, readUrl);
+	whileLive(handle, (page: typeof globalThis, signal) => {
+		page.addEventListener("popstate", readUrl, { signal });
+	})(globalThis);
 
 	/**
 	 * Answers a header's own navigation: the page this preview lives on is a document

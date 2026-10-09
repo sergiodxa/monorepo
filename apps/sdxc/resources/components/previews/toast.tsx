@@ -15,7 +15,7 @@ import { CircleAlertIcon, CircleCheckIcon, InfoIcon } from "@sdxc/icons";
 import { hstack } from "@sdxc/u/layout";
 import { Button, Toast } from "@sdxc/ui";
 import { Toaster } from "@sdxc/ui/behaviors";
-import { dismiss } from "@sdxc/ui/mixins";
+import { dismiss, whileLive } from "@sdxc/ui/mixins";
 import { clientEntry, on } from "remix/component";
 
 /** What each queued toast carries, which is all the region needs to draw one. */
@@ -113,9 +113,9 @@ toaster.addEventListener("change", () => void handle.update());
 export const ToastPreview = clientEntry(import.meta.url, function ToastPreview(handle: Handle) {
 	let toaster = new Toaster<Notice>({ defaultDuration: 6000 });
 
-	// `handle.signal` is an inert stub during the server render, so the
-	// subscription is plain: it dies with the island that owns the queue.
-	toaster.addEventListener("change", () => void handle.update());
+	whileLive(handle, (queue: Toaster<Notice>, signal) => {
+		queue.addEventListener("change", () => void handle.update(), { signal });
+	})(toaster);
 
 	return () => (
 		<>
