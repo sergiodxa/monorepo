@@ -2,19 +2,21 @@
  * Base reset: border-box sizing, zeroed margins/padding,
  * borders reset to "0 solid" so bare border-widths work later, the theme's
  * sans font stack applied once at the document root for every element to
- * inherit, form controls that inherit font/color/line-height, transparent
- * button/input backgrounds with a sensible cursor, block-level media, the theme's
- * focus ring for keyboard focus, and the rest of the usual list/table/[hidden]
- * normalizations.
+ * inherit, MathML drawn in the system's math font, form controls that inherit
+ * font/color/line-height, transparent button/input backgrounds with a sensible
+ * cursor, block-level media, the theme's focus ring for keyboard focus, and the
+ * rest of the usual list/table/[hidden] normalizations.
  *
  * Every selector is wrapped in :where(...) so the whole file carries zero
  * specificity and can never beat a component's own css() rules.
  *
  * Deliberate exemption: this reset does NOT touch the user-agent styles that
- * <dialog> and [popover] depend on. ::backdrop is left alone entirely, and
+ * <dialog>, [popover] and MathML depend on. ::backdrop is left alone entirely,
  * dialog/[popover] are excluded from the margin reset so their default
- * `margin: auto` centering survives untouched. Overlay components own the
- * rest of their presentation explicitly instead of fighting the reset.
+ * `margin: auto` centering survives untouched, and everything inside <math>
+ * keeps the padding that spaces matrix cells and fraction bars. Overlay
+ * components own the rest of their presentation explicitly instead of
+ * fighting the reset.
  */
 
 @layer base, rmx;
@@ -27,7 +29,7 @@
 		border: 0 solid;
 	}
 
-	:where(:not(dialog, [popover])),
+	:where(:not(dialog, [popover], math *)),
 	:where(*)::before,
 	:where(*)::after {
 		margin: 0;
@@ -40,6 +42,14 @@
 		-webkit-text-size-adjust: 100%;
 		tab-size: 4;
 		-webkit-tap-highlight-color: transparent;
+	}
+
+	/*
+	 * Stretchy fences and big operators need a font with an OpenType MATH table;
+	 * the operating systems ship one each, named ahead of the generic family.
+	 */
+	:where(math) {
+		font-family: "STIX Two Math", "Cambria Math", math;
 	}
 
 	:where(hr) {
