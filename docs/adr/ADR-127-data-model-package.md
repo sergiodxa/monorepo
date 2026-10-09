@@ -118,11 +118,11 @@ export const Users = createModel(users, {
 	}),
 });
 
-let users = Users.bind(db, context);
+let users = Users.bind({ db }, context);
 await users.active().inTeam(teamId).orderBy("name", "asc").all();
 ```
 
-- `createModel(table, options)` returns an unbound definition. `definition.bind(db, host?, extra?)`
+- `createModel(table, options)` returns an unbound definition. `definition.bind(context, host?)`
   returns the bound model every method runs on. The database is supplied once, at binding, and
   the bound model is a configured runtime object rather than a set of functions that re-take
   `db` on every call.
@@ -192,7 +192,7 @@ interface, the same way it types `RequestContext` in `config/router-context.d.ts
 /** config/model-context.d.ts */
 declare module "@sdxc/data-model" {
 	interface ModelContext {
-		/** The invocation's log, attached by the models middleware's `extend`. */
+		/** The invocation's log, read from the host context by the models middleware. */
 		log: Log;
 	}
 }
@@ -207,14 +207,14 @@ export const Users = createModel(users, {
 	},
 });
 
-router.use(modelsMiddleware(models, { database: Database, extend: (ctx) => ({ log: ctx.log }) }));
-let bound = Users.bind(db, context, { log });
+router.use(modelsMiddleware(models, (ctx) => ({ db: ctx.db, log: ctx.log })));
+let bound = Users.bind({ db, log }, context);
 ```
 
-The package types `extend`'s return value, and `bind`'s third argument, as every `ModelContext`
-member besides `db` and `get`. Once the app augments the interface, a middleware or a binding
-that leaves out `log` fails to type-check rather than handing a callback an `undefined`; an app
-that augments nothing passes neither.
+The middleware's function and `bind`'s first argument are typed as every `ModelContext` member
+besides `get`, which always reads through to the host. Once the app augments the interface, a
+middleware or a binding that leaves out `log` fails to type-check rather than handing a callback
+an `undefined`; an app that augments nothing returns `{ db }` alone.
 
 | Callback                                    | Runs                                    | Can                   |
 | ------------------------------------------- | --------------------------------------- | --------------------- |
@@ -247,7 +247,7 @@ export const models = createModels({ users: Users, posts: Posts });
 ```typescript
 import { models as modelsMiddleware } from "@sdxc/data-model/router";
 
-router.use(modelsMiddleware(models, { database: Database }));
+router.use(modelsMiddleware(models, (ctx) => ({ db: ctx.db })));
 
 /** In a route handler, or an MCP tool mounted on the router. */
 let user = await ctx.models.users.findByEmail(email);
@@ -257,16 +257,16 @@ let user = await ctx.models.users.findByEmail(email);
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
 
 createJobDispatcher({
-	middleware: [database(), modelsMiddleware(models, { database: Database })],
+	middleware: [database(), modelsMiddleware(models, (ctx) => ({ db: ctx.database }))],
 });
 ```
 
-- The middleware reads the database another middleware already published under the given key,
-  so the tenant's database is the one every model binds to and the package stays unaware of
-  tenancy.
-- Its `extend(ctx)` returns the properties the app added to `ModelContext`, read from the host
-  context the middleware runs on, so the app decides what a callback sees beyond the database.
-  It is required exactly when the augmentation adds required members.
+- The middleware takes a function from the host context, a `RequestContext` or a `JobContext`,
+  to the model context. It can read anything earlier middleware published there, so the
+  tenant's database is the one every model binds to, the app picks what callbacks see as
+  properties, and the package stays unaware of tenancy and of how the app names its services.
+- The function runs on the first model access in an invocation, once, so whatever it reads must
+  already be on the context by then; an invocation that touches no model never runs it.
 - It publishes the bound registry under the `Models` key and installs it as `ctx.models`.
   Members are bound lazily on first access, so an invocation that touches no model binds none.
 - `ctx.models.transaction(async (models) => { ... })` binds every model to the transaction and
@@ -279,7 +279,7 @@ createJobDispatcher({
 
 - The package ships no tables, schemas or migrations; the app declares tables and passes them in.
 - It depends on `remix` (data-table and router types) and `@sdxc/result`; `@sdxc/jobs` is a
-  peer of the `./jobs` entry point only. Logging is whatever the app attaches through `extend`.
+  peer of the `./jobs` entry point only. Logging is whatever the app attaches in the middleware.
 - Everything it returns for querying is a data-table `Query`, so `@sdxc/pagination` and
   `@sdxc/search` need no changes and take no dependency on it.
 
@@ -382,13 +382,13 @@ export const router = createRouter({
 		database(),
 		jobsMiddleware(queue),
 		mail(),
-		modelsMiddleware(models, { database: Database }),
+		modelsMiddleware(models, (ctx) => ({ db: ctx.db, log: ctx.log })),
 	],
 });
 ```
 
 `modelsMiddleware` runs after the middleware that publish the database and the services the
-callbacks read, so every `ctx.get(...)` in a callback finds its value.
+callbacks read, so its function and every `ctx.get(...)` in a callback find their values.
 
 ### Listing with pagination
 
@@ -503,7 +503,11 @@ along with the user.
 export const dispatcher = createJobDispatcher({
 	logger,
 	queue: cloudflare.queue(() => env.QUEUE),
-	middleware: [database(), mail(), modelsJobMiddleware(models, { database: Database })],
+	middleware: [
+		database(),
+		mail(),
+		modelsJobMiddleware(models, (ctx) => ({ db: ctx.database, log: ctx.log })),
+	],
 });
 ```
 
@@ -537,15 +541,16 @@ middleware has already populated.
 
 ### In a script or test
 
-Outside a host, bind against a context built by hand. Any context with `get(key)` works, so a test
-uses a real `RequestContext` and sets only the services the callbacks under test read:
+Outside a host, bind with the model context built by hand and, when callbacks read services, any
+host with `get(key)`. A test uses a real `RequestContext` and sets only what the callbacks under
+test read:
 
 ```typescript
 let context = new RequestContext(new Request("https://example.com"));
 let sent: MailMessage[] = [];
 context.set(Mail, { send: async (message) => void sent.push(message) });
 
-let users = Users.bind(createSqliteDatabase(), context);
+let users = Users.bind({ db: createSqliteDatabase(), log: new Log({ kind: "test" }) }, context);
 let user = await users.create({ email: "Pat@Example.com", name: "Pat" });
 
 expect(user).toEqual(success(expect.objectContaining({ email: "pat@example.com" })));
@@ -658,8 +663,8 @@ send mail or read the request's services.
 `Users.find(db, id)`, `Users.create(db, values)`, as uptime, auth-saas and blog do now.
 
 **Rejected because**: callbacks also need the host context, so every call would take two leading
-arguments, and the middleware would still have to bind them to offer `ctx.models`. `bind(db,
-context)` keeps the "database first" order those apps use while supplying it once.
+arguments, and the middleware would still have to bind them to offer `ctx.models`. `bind({ db },
+host)` keeps the "database first" order those apps use while supplying it once.
 
 ### 5. Model middleware around every query
 
