@@ -9,6 +9,7 @@
 
 import type { Markdown } from "@sdxc/markdown";
 
+import { DiagramTag } from "@sdxc/diagram/ui";
 import { toRemix } from "@sdxc/markdown/remix";
 import { bg, border } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
@@ -79,7 +80,9 @@ export function MarkdownPageView() {
 						minIs(0),
 					]}
 				>
-					<Typeset preset="reading">{toRemix(model.document)}</Typeset>
+					<Typeset preset="reading">
+						{toRemix(model.document, { components: { diagram: DiagramTag } })}
+					</Typeset>
 				</article>
 			</main>
 		</BlogLayout>

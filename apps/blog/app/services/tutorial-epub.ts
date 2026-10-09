@@ -10,6 +10,7 @@
 import type { EpubError } from "@sdxc/epub";
 import type { Result } from "@sdxc/result";
 
+import { renderDiagram } from "@sdxc/diagram/markdown";
 import { EPUB } from "@sdxc/epub";
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
@@ -55,7 +56,9 @@ export function tutorialEpub(input: TutorialEpubInput): Result<EPUB, EpubError |
 		`<h1>${escape(input.title)}</h1>`,
 		input.tags.length > 0 ? `<p class="used">Used: ${escape(input.tags.join(" · "))}</p>` : "",
 		`<p class="byline">By ${escape(AUTHOR.name)}${input.publishedLabel ? ` · ${escape(input.publishedLabel)}` : ""} · <a href="${escape(input.url)}">Read it online</a></p>`,
-		document ? toHTML(document, { syntax: "xhtml" }) : "<p>No content.</p>",
+		document
+			? toHTML(document, { syntax: "xhtml", tags: { diagram: renderDiagram } })
+			: "<p>No content.</p>",
 	].join("\n");
 
 	return EPUB.build({

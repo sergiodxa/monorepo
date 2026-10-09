@@ -22,6 +22,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/dates": "workspace:*",
+		"@sdxc/diagram": "workspace:*",
 		"@sdxc/distill": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",

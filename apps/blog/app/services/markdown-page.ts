@@ -9,6 +9,7 @@
 
 import type { Result } from "@sdxc/result";
 
+import { diagram } from "@sdxc/diagram/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isFailure, success } from "@sdxc/result";
@@ -25,7 +26,7 @@ export interface MarkdownPage {
 	frontmatter: MarkdownPageFrontmatter;
 	/** The body alone, written back from the document, for serving as Markdown. */
 	body: string;
-	/** The body as a highlighted document, for the HTML view. */
+	/** The body with its diagrams drawn and its code highlighted, for the HTML view. */
 	document: Markdown.Document;
 }
 
@@ -46,7 +47,7 @@ export function parseMarkdownPage(raw: string): Result<MarkdownPage, Error> {
 	let body = Markdown.stringify(parsed.data.document);
 	if (isFailure(body)) return body;
 
-	let highlighted = Markdown.walk(parsed.data.document, highlight);
+	let highlighted = Markdown.walk(parsed.data.document, Markdown.compose(diagram, highlight));
 	if (isFailure(highlighted)) return highlighted;
 
 	return success({

@@ -9,6 +9,7 @@
 
 import type { Handle } from "remix/component";
 
+import { DiagramTag } from "@sdxc/diagram/ui";
 import { toRemix } from "@sdxc/markdown/remix";
 import { MicroTime, mf } from "@sdxc/microformats/ui";
 import { bg, border, fg } from "@sdxc/u/color";
@@ -243,7 +244,9 @@ export function PostView() {
 							]}
 						>
 							{model.post.document ? (
-								<Typeset preset="reading">{toRemix(model.post.document)}</Typeset>
+								<Typeset preset="reading">
+									{toRemix(model.post.document, { components: { diagram: DiagramTag } })}
+								</Typeset>
 							) : (
 								<p mix={[m(0)]}>No content.</p>
 							)}

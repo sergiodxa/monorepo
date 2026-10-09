@@ -8,6 +8,7 @@
  */
 
 import { formatDate, parseDate } from "@sdxc/dates";
+import { createDiagramVisitor } from "@sdxc/diagram/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isSuccess, succeeded } from "@sdxc/result";
@@ -310,9 +311,9 @@ export class PostViewModel {
 	}
 
 	/**
-	 * Parses a post body into a document whose fences carry the tokens they render
-	 * with. A source the parser stops on throws through `succeeded(...)`, so a page
-	 * is built from a document that parsed whole or from none at all.
+	 * Parses a post body into a document whose ```mermaid fences are diagram tags and
+	 * whose other fences carry the tokens they render with. A source the parser stops on
+	 * throws through `succeeded(...)`; a diagram that does not parse stays a code block.
 	 *
 	 * @param content Raw markdown text from persisted post metadata.
 	 * @param message Failure message used when the source will not parse.
@@ -324,7 +325,10 @@ export class PostViewModel {
 		let parsed = Markdown.parse(content);
 		succeeded(parsed, message);
 
-		let highlighted = Markdown.walk(parsed.data.document, highlight);
+		let highlighted = Markdown.walk(
+			parsed.data.document,
+			Markdown.compose(createDiagramVisitor({ invalid: "keep" }), highlight),
+		);
 		succeeded(highlighted, message);
 
 		return highlighted.data;
