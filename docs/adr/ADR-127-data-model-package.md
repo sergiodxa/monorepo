@@ -238,6 +238,77 @@ an `undefined`; an app that augments nothing returns `{ db }` alone.
   (`users.active().update({...})`) is data-table's own operation and runs no model callbacks; it
   is the explicit escape hatch for set-based writes.
 
+### Constraints: several models over one table
+
+`constraints` pins columns to fixed values, so several models can share a table, as blog's
+article, tutorial, like and glossary posts share `posts` today:
+
+```typescript
+export const Articles = createModel(posts, { constraints: { type: "article" } });
+export const Tutorials = createModel(posts, { constraints: { type: "tutorial" } });
+```
+
+| Operation                   | Effect of `constraints: { type: "article" }`                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| `query()`, scopes, `from()` | Every query starts with `.where({ type: "article" })`, so paging and search see only articles       |
+| `find(id)`, `findBy(where)` | A row of another type answers `null`                                                                |
+| `create(values)`            | Writes `type: "article"`; the input type omits `type`                                               |
+| `update(id)`, `delete(id)`  | The constraint joins the `WHERE`, so another type's id answers `NotFound`; `type` cannot be changed |
+| Row type                    | `type` narrows to `"article"`                                                                       |
+
+A constraint is a value written on create and fixed afterwards, which fits a discriminator.
+A filter whose column the model itself changes, such as `deleted_at` for soft deletes, stays a
+scope.
+
+### Sub-models: inheritance on a discriminator column
+
+A base model that names a discriminator column can be extended once per value, the way Rails
+single-table inheritance uses `type`:
+
+```typescript
+export const Posts = createModel(posts, {
+	inheritance: "type",
+	scopes: {
+		live: (query) => query.where({ deleted_at: null }),
+		published: (query) => query.where(sql`"published_at" <= ${new Date().toISOString()}`),
+	},
+	callbacks: {
+		async beforeUpdate(values) {
+			return { ...values, updated_at: new Date().toISOString() };
+		},
+	},
+});
+
+export const Articles = Posts.extend("article", {
+	methods: (model) => ({
+		findBySlug: (slug: string) => model.live().published().where(/* slug */).first(),
+	}),
+	callbacks: {
+		async afterCommit(event, ctx) {
+			if (event.operation === "create") {
+				await ctx.get(Jobs).enqueue(jobs.webmentions.send, { postId: event.row.id });
+			}
+		},
+	},
+});
+
+export const Likes = Posts.extend("like", {});
+```
+
+- `extend(value, options)` is `createModel(table, options)` with the base's options merged in
+  and `constraints: { [inheritance]: value }` added. `value` is typed as the discriminator
+  column's own values, so a typo or a value the enum lacks fails to type-check.
+- A sub-model has every scope and method of its base. Declaring one with a name the base
+  already uses is a type error, so a name means the same query on every model sharing it.
+- Callbacks stack: the base's run first, then the sub-model's, for each event. A base
+  `beforeUpdate` stamping `updated_at` therefore covers every post type.
+- The base model reads and writes every row of the table, with the discriminator typed as the
+  column's full union and only its own callbacks running. Writing through the sub-model is what
+  runs the sub-model's callbacks: a base can hold lazily loaded sub-models that are not imported
+  yet, so it never dispatches to them.
+- Sub-models register like any model (`articles: Articles`, or a loader), independently of the
+  base; registering the base is needed only where something uses it directly.
+
 ### A registry and per-host middleware
 
 ```typescript
@@ -610,6 +681,32 @@ expect(user).toEqual(success(expect.objectContaining({ email: "pat@example.com" 
 expect(sent).toEqual([expect.objectContaining({ to: "pat@example.com", template: "welcome" })]);
 ```
 
+### Post types as sub-models
+
+```typescript
+export const models = createModels({
+	posts: Posts,
+	articles: () => import("~/app/models/articles.js"),
+	likes: () => import("~/app/models/likes.js"),
+});
+
+/** Article archive: only articles, already live and published. */
+let page = await Pagination.byKeyset(ctx.models.articles.live().published(), {
+	orderBy: [
+		["published_at", "desc"],
+		["id", "desc"],
+	],
+	limit: 20,
+});
+
+/** A like is created with `type: "like"`, and none of the article callbacks run. */
+await ctx.models.likes.create({ author_id: ctx.user.id, published_at: now });
+
+/** The home feed reads every type through the base, narrowing on the discriminator. */
+let feed = await ctx.models.posts.live().published().limit(50).all();
+for (let post of feed) if (post.type === "article") renderArticle(post);
+```
+
 ### Bulk writes, without callbacks
 
 ```typescript
@@ -674,6 +771,7 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 
 1. `createModel`, `bind`, scope wrapping, CRUD with callbacks, `ModelContext`.
 2. `createModels`, lazy registry binding, `transaction`.
+3. `constraints` and `extend` sub-models, ported against blog's `posts` types.
 
 ### Phase 3: Hosts
 
@@ -760,6 +858,10 @@ and recursion guards on top.
 
 ## Notes
 
+- Blog's posts keep typed metadata in the companion `post_meta` key/value table, decoded by a
+  per-type `MetaCodec`. Whether a model should load and write such a table itself (a `meta`
+  option naming the table, foreign key and codec) is open; D1 would make a post and its meta two
+  statements, so the meta write needs to be one multi-row upsert to keep the pair consistent.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
