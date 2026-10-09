@@ -53,4 +53,33 @@ describe("inlineLinks", () => {
 	test("returns nothing for text without links", () => {
 		expect(inlineLinks("Plain prose.")).toEqual([]);
 	});
+
+	test("keeps a leading pipe of a label that already has a separator", () => {
+		let [link] = inlineLinks("{@link parse | |piped}");
+
+		expect(link?.text).toBe("|piped");
+	});
+
+	test("skips a tag without whitespace before its target", () => {
+		expect(inlineLinks("{@link} {@linkx y} {@linkcode z}").map((link) => link.target)).toEqual([
+			"z",
+		]);
+	});
+
+	test("reads an unclosed tag padded with thousands of tabs in linear time", () => {
+		let text = `{@link\t!${"\t".repeat(50_000)}`;
+
+		let started = performance.now();
+		let links = inlineLinks(text);
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(links).toEqual([]);
+	});
+
+	test("reads a closed tag padded with thousands of tabs in linear time", () => {
+		let [link] = inlineLinks(`{@link\t!${"\t".repeat(50_000)}label}`);
+
+		expect(link?.target).toBe("!");
+		expect(link?.text).toBe("label");
+	});
 });
