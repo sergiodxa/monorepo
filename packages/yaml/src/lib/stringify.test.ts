@@ -115,6 +115,15 @@ describe("stringify", () => {
 			expect(write({ a: "  leading\nspace" })).toBe('a: "  leading\\nspace"\n');
 			expect(write({ a: "two\ntrailing\n\n" })).toBe('a: "two\\ntrailing\\n\\n"\n');
 		});
+
+		test("measures the trailing breaks in linear time when breaks fill the middle", () => {
+			let value = `one${"\n".repeat(100_000)}two`;
+			let started = performance.now();
+			let text = write({ a: value });
+
+			expect(performance.now() - started).toBeLessThan(500);
+			expect(text.startsWith("a: |-\n  one\n")).toBe(true);
+		});
 	});
 
 	describe("the rules it borrows from JSON.stringify", () => {

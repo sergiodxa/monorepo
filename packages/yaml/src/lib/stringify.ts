@@ -266,7 +266,7 @@ function writeString(value: string): Emitted {
  * @returns The block's lines, or `null` to leave the string to the quoting path
  */
 function writeBlock(value: string): Emitted | null {
-	let trailing = /\n*$/.exec(value)?.[0].length ?? 0;
+	let trailing = countTrailingBreaks(value);
 	if (trailing > 1) return null;
 
 	let lines = value.slice(0, value.length - trailing).split("\n");
@@ -278,6 +278,16 @@ function writeBlock(value: string): Emitted | null {
 	if (!readable) return null;
 
 	return { head: trailing === 1 ? "|" : "|-", body: lines };
+}
+
+/**
+ * Counts the line feeds ending a string by walking back from its end, which keeps the
+ * cost linear in the length of that run however many breaks the string holds elsewhere.
+ */
+function countTrailingBreaks(value: string): number {
+	let count = 0;
+	while (count < value.length && value[value.length - 1 - count] === "\n") count++;
+	return count;
 }
 
 /**
