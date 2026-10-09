@@ -160,7 +160,7 @@ out a deferred query instead, described under [Loading models on demand](#loadin
 | `delete(id)`         | `Result<Row, NotFound>`                    | Yes       |
 | `transaction(fn)`    | Whatever `fn` returns                      | Defers    |
 | `load()`             | The bound model, once its module loaded    | No        |
-| Custom `methods`     | Whatever each declares                     | —         |
+| Custom `methods`     | A promise or a model query                 | —         |
 
 Reads answer `null` for a missing row. Writes answer a `Result` from `@sdxc/result`, because a
 validation failure or a missing row is an expected outcome the caller branches on.
