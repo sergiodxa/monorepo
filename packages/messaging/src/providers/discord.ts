@@ -247,7 +247,7 @@ export class DiscordWebhook implements Destination {
 		if (isFailure(checked)) return checked;
 
 		let url = new URL(checked.data);
-		url.pathname = `${url.pathname.replace(/\/+$/u, "")}/messages/${encodeURIComponent(ref["id"] ?? "")}`;
+		url.pathname = `${withoutTrailingSlashes(url.pathname)}/messages/${encodeURIComponent(ref["id"] ?? "")}`;
 		let threadId = ref["threadId"];
 		if (threadId) url.searchParams.set("thread_id", threadId);
 
@@ -281,4 +281,14 @@ export class DiscordWebhook implements Destination {
 			options,
 		);
 	}
+}
+
+/**
+ * The path without its trailing slashes, so the message path joins with exactly one;
+ * scanned from the end so a path holding thousands of slashes still costs linear time.
+ */
+function withoutTrailingSlashes(pathname: string): string {
+	let end = pathname.length;
+	while (end > 0 && pathname[end - 1] === "/") end--;
+	return pathname.slice(0, end);
 }

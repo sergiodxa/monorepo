@@ -147,6 +147,19 @@ describe("DiscordWebhook", () => {
 		});
 	});
 
+	test("edits through a webhook URL ending in thousands of slashes in linear time", async () => {
+		let received = acceptWebhook();
+		let ref = { provider: "discord-webhook", id: "999" };
+		let webhook = new DiscordWebhook({ url: `${WEBHOOK_URL}${"/".repeat(50_000)}` });
+
+		let started = performance.now();
+		let updated = await webhook.update(ref, { title: "up", severity: "success" });
+
+		expect(performance.now() - started).toBeLessThan(2_000);
+		expect(isSuccess(updated)).toBe(true);
+		expect(received[0]?.url.pathname).toBe("/api/webhooks/123/secret-token/messages/999");
+	});
+
 	test("declares reply only with a thread, and replies into it", async () => {
 		let received = acceptWebhook();
 		let ref = { provider: "discord-webhook", id: "999", threadId: "777" };
