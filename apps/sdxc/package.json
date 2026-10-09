@@ -25,6 +25,7 @@
 		"@sdxc/json-schema": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
+		"@sdxc/math": "workspace:*",
 		"@sdxc/mcp": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/rss": "workspace:*",

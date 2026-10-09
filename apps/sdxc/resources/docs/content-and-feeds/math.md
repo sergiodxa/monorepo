@@ -21,6 +21,48 @@ npm add @sdxc/math @sdxc/markdown @sdxc/result remix
 The conversion happens on the server, so the page carries finished markup. Every formula
 also keeps its TeX source as an annotation, which screen readers and copy-paste read back.
 
+## What it looks like
+
+Every formula on this page is drawn the way this guide describes. Euler's identity,
+$`e^{i\pi} + 1 = 0`$, sits inline in a sentence, while a display formula gets a line of its
+own. The quadratic formula:
+
+```math
+x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}
+```
+
+The Gaussian integral:
+
+```math
+\int_{-\infty}^{\infty} e^{-x^2} \, dx = \sqrt{\pi}
+```
+
+The Basel problem, a big operator with its limits above and below:
+
+```math
+\sum_{n=1}^{\infty} \frac{1}{n^2} = \frac{\pi^2}{6}
+```
+
+Bayes' theorem:
+
+```math
+P(A \mid B) = \frac{P(B \mid A) \, P(A)}{P(B)}
+```
+
+A rotation by $`\theta`$ as a matrix:
+
+```math
+R(\theta) = \begin{pmatrix} \cos\theta & -\sin\theta \\ \sin\theta & \cos\theta \end{pmatrix}
+```
+
+The absolute value, defined by cases:
+
+```math
+\lvert x \rvert = \begin{cases} x & \text{if } x \geq 0 \\ -x & \text{if } x < 0 \end{cases}
+```
+
+The source of each is the TeX inside a `math` fence, as the next sections show.
+
 ## Convert a formula
 
 `toMathML` takes TeX without its surrounding `$` or `\[` and answers with a `Result` holding
