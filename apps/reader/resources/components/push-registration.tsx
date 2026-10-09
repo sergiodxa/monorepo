@@ -43,7 +43,7 @@ type PushRegistrationProps = {
 };
 
 export const PushRegistration = clientEntry(
-	"/resources/components/push-registration.tsx#PushRegistration",
+	import.meta.url,
 	function PushRegistration(handle: Handle<PushRegistrationProps>) {
 		/**
 		 * Reports the resolved zone when it differs from what is stored. It is the one thing

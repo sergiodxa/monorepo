@@ -28,15 +28,14 @@ import { createUserStoreDouble } from "~/app/lib/test/store";
 import routes from "~/routes/web";
 
 /**
- * Every module a page's islands can name, globbed exactly as `bootstrap/browser.ts` globs
- * them, so this resolves an island the way the browser will rather than the way a test
- * author assumed it would.
+ * The app's component modules by source path, which the test asset manifest serves each
+ * island's chunk for, so an island the page names is loaded from the source it was built from.
  */
-const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.{ts,tsx}"]);
+const CLIENT_MODULES = import.meta.glob(["../../../resources/**/*.tsx"]);
 
 /**
  * The islands a page names by package specifier, mapped exactly as `bootstrap/browser.ts`
- * maps them, since a bare specifier is outside the reach of any glob.
+ * maps them, since the browser resolves only URLs.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
@@ -564,8 +563,9 @@ describe("paging into a frame", () => {
 	 * above — the enhancement simply never comes up, and the reader is left with the plain
 	 * links and no sign that anything was meant to replace them.
 	 *
-	 * Resolved through the same map and glob the browser entry uses, so a module
-	 * that has moved out of its reach fails here rather than in a browser nobody is watching.
+	 * Each file-backed island names the chunk the asset manifest serves for its source, and
+	 * each package island the specifier the browser entry maps, so an island the build cannot
+	 * reach fails here rather than in a browser nobody is watching.
 	 */
 	test("names every island by a module and an export the browser can reach", async () => {
 		queued("older-cursor");
@@ -583,14 +583,17 @@ describe("paging into a frame", () => {
 		expect(new Set(islands.map((island) => island.moduleUrl))).toEqual(
 			new Set([
 				"@sdxc/lazy-frame/ui",
-				"/resources/components/read-toggle.tsx",
-				"/resources/components/save-toggle.tsx",
-				"/resources/components/shortcuts.tsx",
+				"/assets/resources/components/read-toggle.js",
+				"/assets/resources/components/save-toggle.js",
+				"/assets/resources/components/shortcuts.js",
 			]),
 		);
 
 		for (let { exportName, moduleUrl } of islands) {
-			let load = PACKAGE_MODULES[String(moduleUrl)] ?? CLIENT_MODULES[`../../..${moduleUrl}`];
+			let source = String(moduleUrl)
+				.replace(/^\/assets\//, "")
+				.replace(/\.js$/, ".tsx");
+			let load = PACKAGE_MODULES[String(moduleUrl)] ?? CLIENT_MODULES[`../../../${source}`];
 			expect(load, `nothing the browser can load at ${moduleUrl}`).toBeDefined();
 
 			let module = await load!();
@@ -648,8 +651,8 @@ describe("paging into a frame", () => {
 
 		expect(response.status).toBe(200);
 		/** A fragment is written into a document that already has one, so it opens none. */
-		expect(body).not.toContain("<!DOCTYPE");
 		expect(body).not.toContain("<html");
+		expect(body).not.toContain("<body");
 		expect(body).not.toContain("Mark all read");
 		expect(body).toContain('<ol start="26"');
 		/** And it ends with the frame that carries the reader on from it. */

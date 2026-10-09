@@ -25,13 +25,18 @@ import {
 } from "~/app/http/controllers/chrome";
 import { queueUrl } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
+import frameFallback from "~/app/http/middleware/frame-fallback";
 import requireUser from "~/app/http/middleware/require-user";
 import { SidebarFeeds } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 
 /** GET /sidebar/feeds — the feeds under the sidebar's own heading. */
 export default createAction(routes.sidebar.feeds, {
-	middleware: [requireUser],
+	/**
+	 * Every signed-in page draws this band as a blocking frame, so a failure here answers the
+	 * note in the band's place and the page around it arrives whole.
+	 */
+	middleware: [frameFallback, requireUser],
 	async handler(ctx) {
 		let viewer = getViewer();
 

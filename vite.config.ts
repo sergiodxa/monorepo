@@ -413,7 +413,7 @@ export default defineConfig({
 			AUTH_SAAS_WORKERS_PROJECT,
 			{
 				root: "apps/reader",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

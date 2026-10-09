@@ -7,6 +7,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Frame } from "remix/component";
+import { get } from "remix/routes";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CachedFeed, CachedSearch } from "~/app/http/controllers/chrome";
@@ -62,6 +64,29 @@ function getBand() {
 	let router = createTestRouter(VIEWER);
 	router.map(routes.sidebar.feeds, sidebar);
 	return fetchRoute(router, routes.sidebar.feeds.href());
+}
+
+/** A page drawing the band as the chrome does: a blocking frame with markup after it. */
+const PAGE = get("/page");
+
+/** Requests a page whose sidebar band arrives through its own frame. */
+async function getPage() {
+	let router = createTestRouter(VIEWER);
+	router.map(routes.sidebar.feeds, sidebar);
+	router.map(PAGE, (ctx) =>
+		ctx.render(
+			<html lang="en">
+				<body>
+					<nav>
+						<Frame src={routes.sidebar.feeds.href()} />
+					</nav>
+					<main>the reading</main>
+				</body>
+			</html>,
+		),
+	);
+
+	return await fetchRoute(router, PAGE.href());
 }
 
 /** The copy a reader sees, with the markup carrying it stripped out. */
@@ -138,5 +163,24 @@ describe("GET /sidebar/feeds", () => {
 		railSearches.mockResolvedValue([]);
 
 		expect(readsAs(await (await getBand()).text())).not.toContain("Saved searches");
+	});
+});
+
+describe("a page drawing the band", () => {
+	/**
+	 * The band is a blocking frame on every signed-in page, so a failure reading the rail
+	 * answers the note in its place rather than ending the document it sits in.
+	 */
+	test("arrives whole, with the note in the band's place, when the rail fails", async () => {
+		railFeeds.mockRejectedValue(new Error("the rail cache is unreachable"));
+
+		let response = await getPage();
+		let html = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(readsAs(html)).toContain("This part of the page did not load.");
+		expect(html).not.toContain("the rail cache is unreachable");
+		expect(html).toContain("<main>the reading</main>");
+		expect(html.replaceAll(/<!--[\s\S]*?-->/g, "").trimEnd()).toMatch(/<\/html>$/);
 	});
 });

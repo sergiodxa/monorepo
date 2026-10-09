@@ -84,12 +84,17 @@ indicate requirement levels.
   `app/lib/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes:
   a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet
   import names a file the next build renames. A stylesheet joins by a side-effect
-  `import "….css"` in `resources/layouts/document.tsx`, in cascade order. Every renderer
-  wraps the page through `withDocumentAssets()` in `app/http/render.tsx`, which also hands
-  the shell the nonce its inline import map is admitted by under `script-src`.
-- MUST keep the `bootstrap/browser.ts` glob to `resources/components/`, where the islands
-  live: a layout or view in the client bundle compiles its stylesheets a second time, and
-  every page would link both copies. A package's island goes in its `PACKAGE_MODULES` map.
+  `import "….css"` in `resources/layouts/document.tsx`, in cascade order. The app and every
+  test router install `ctx.render` through `htmlRendering()` in `app/http/render.tsx`, which
+  wraps the page through `withDocumentAssets()` for the nonce its inline import map is
+  admitted by under `script-src`.
+- MUST identify every island as `clientEntry(import.meta.url, …)`, a named top-level export:
+  the build maps that identity to the island's own chunk, and `bootstrap/browser.test.ts`
+  fails on any other first argument. A package's island goes in `bootstrap/browser.ts`'s
+  `PACKAGE_MODULES` map, since the browser resolves only URLs.
+- MUST put `frameFallback` from `app/http/middleware/frame-fallback.tsx` on every route a
+  page draws as a server-rendered `<Frame>`: a frame route that throws ends the whole
+  document, and an error page answered there nests a second document in the first.
 - MUST let `worker-configuration.d.ts` be the only declaration of a binding's type; run
   `bun run cf:typegen` after every change to `wrangler.jsonc`.
 
@@ -113,6 +118,7 @@ indicate requirement levels.
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
   - `app/http/controllers/media.tsx` <- The one place a publisher's image is fetched
   - `app/http/middleware/require-user.ts` <- Guard for the signed-in surface
+  - `app/http/middleware/frame-fallback.tsx` <- The note a failed frame route answers
   - `app/http/middleware/presentation.ts` <- The scheme and reading face every document is
     rendered with, read before any controller runs
   - `app/http/security-policy.ts` <- The policy every response is read under
@@ -142,7 +148,7 @@ indicate requirement levels.
   - `database/feed-schema.ts` <- A feed's tables, mirroring `database/feed-migrations/` exactly
 - Rendering
   - `app/lib/assets.ts` <- The stylesheets and client entry the asset manifest names
-  - `app/http/render.tsx` <- The renderer, which hands the shell its assets and nonce
+  - `app/http/render.tsx` <- The renderer chain, which resolves islands and hands the shell its assets and nonce
   - `resources/layouts/document.tsx` <- The html/head/body shell every page composes into
   - `resources/layouts/app.tsx` <- The chrome every signed-in page wears
   - `resources/views/timeline.tsx` <- The post list both reading surfaces render

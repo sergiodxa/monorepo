@@ -25,7 +25,6 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
@@ -33,7 +32,7 @@ import auth, { getViewer } from "~/app/http/middleware/auth";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { createHtmlRenderer } from "~/app/http/render";
+import { htmlRendering } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
 import { securityTxtEntry } from "~/app/lib/security-txt";
@@ -125,7 +124,7 @@ export default function application(options: application.Options) {
 		 * policy as every other response.
 		 */
 		wellKnown({ "security.txt": securityTxtEntry }) as Middleware,
-		renderWith(createHtmlRenderer) as Middleware,
+		...htmlRendering(),
 	];
 
 	let router = createRouter({ middleware: globalMiddleware, defaultHandler });

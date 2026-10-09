@@ -1,7 +1,8 @@
 /**
  * Browser entry point. It registers a module-scoped translator so any independently
  * hydrated island can translate without an `IntlProvider` above it, then runs remix/component's
- * client runtime against the island modules and reports whatever fails to come up.
+ * client runtime, loading each island from the chunk the server named for it, and reports
+ * whatever fails to come up.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -57,19 +58,9 @@ let { intl } = createTranslator({
 setIntl(intl);
 
 /**
- * Every module an island can hydrate from: the islands, which all live in
- * `resources/components/`. A layout or view in the bundle would compile its stylesheets a
- * second time, so every page would link both copies; a test pulls worker-only imports.
- */
-const CLIENT_MODULES = import.meta.glob([
-	"!../**/*.server.*",
-	"!../**/*.test.*",
-	"../resources/components/**/*.{ts,tsx}",
-]);
-
-/**
- * Islands shipped by packages, keyed by the bare specifier their client entry names, since a
- * glob over the app's own directories cannot reach into `node_modules`.
+ * Islands shipped by packages, keyed by the bare specifier their client entry names. The
+ * renderer writes that specifier as it is, and the browser resolves only URLs, so each one is
+ * imported here where the bundler can resolve it.
  */
 const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 	"@sdxc/lazy-frame/ui": () => import("@sdxc/lazy-frame/ui"),
@@ -78,12 +69,8 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 let runtime = run({
 	/** Resolves a hydrated island's module and named export from the URL the server wrote. */
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-
-		let load = PACKAGE_MODULES[moduleUrl] ?? CLIENT_MODULES[`..${pathname}`];
-		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
-
-		let mod = await load();
+		let load = PACKAGE_MODULES[moduleUrl];
+		let mod: unknown = load ? await load() : await import(/* @vite-ignore */ moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

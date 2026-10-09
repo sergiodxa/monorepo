@@ -1,39 +1,23 @@
 /**
- * The app's request-scoped SSR renderer and its frame resolver. Streams `remix/component` JSX as
- * HTML and fetches every `<Frame>`'s `src` back through the router that is rendering the
- * document, so a fragment shares the request's cookies and middleware chain instead of
- * going out over the network.
- *
- * A frame that does not answer leaves a note in its place saying so, and what went wrong
- * goes to the log: a status line or a thrown message is news about the server rather than
- * about the reading, and the rest of the page arrived and is fine.
- *
- * It lives beside the controllers rather than in `bootstrap/` so a test can exercise the
- * real resolver: a page test that supplies its own stub passes while every frame on the
- * page is broken.
+ * The app's HTML rendering: `remix/component` JSX streamed through the standard renderer, which
+ * resolves each island's module-URL identity to its built chunk and fetches every `<Frame>`
+ * back through the router, wrapped so the document shell finds its assets.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
-import type { ResolveFrameContext } from "remix/component/server";
-import type { RequestContext, Router } from "remix/router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
-import { renderToStream, renderToString } from "remix/component/server";
-import { createHtmlResponse } from "remix/response/html";
+import { render, renderWith } from "remix/middleware/render";
 
-import { documentAssets } from "~/app/lib/assets";
+import { assets, documentAssets } from "~/app/lib/assets";
 import { DocumentAssets } from "~/resources/layouts/document";
-import FrameFallback from "~/resources/views/frame-fallback";
 
-/** How many redirects a frame's sub-request may follow before it is treated as a loop. */
-const MAX_FRAME_REDIRECTS = 10;
-
-/** The header the resolver below sends, naming a sub-request as a frame's. */
+/** The header the renderer sends, naming a sub-request as a frame's. */
 const FRAME_HEADER = "x-remix-frame";
 
 /**
@@ -73,146 +57,42 @@ export function isFrameRequest(request: Request): boolean {
 }
 
 /**
- * Wraps `node` in what the document shell reads: the asset manifest's stylesheets and client
- * entry, looked up per render, and the response's nonce for the inline import map. The nonce
- * is read here, before the stream starts, because the policy header is written ahead of the
- * body; a fragment renders no shell, so its response advertises none.
+ * Renders a page wrapped in what the document shell reads: the asset manifest's stylesheets
+ * and client entry, looked up per render, and the response's nonce for the inline import map.
+ * The nonce is read before the stream starts, because the policy header is written ahead of
+ * the body; a fragment renders no shell, so its response advertises none.
  *
- * @param ctx - The request being answered, whose security headers hold the nonce.
- * @param node - The page to render.
+ * @param ctx - The request being answered, whose `render` it wraps.
  */
-export async function withDocumentAssets(ctx: RequestContext, node: RemixNode): Promise<RemixNode> {
-	let assets = await documentAssets();
-	let nonce =
-		isFrameRequest(ctx.request) || !ctx.has(SecurityHeadersKey)
-			? undefined
-			: ctx.get(SecurityHeadersKey)?.nonce;
+export function withDocumentAssets(ctx: RequestContext) {
+	let renderPage = ctx.render;
 
-	return <DocumentAssets value={{ ...assets, nonce }}>{node}</DocumentAssets>;
-}
+	return async function renderDocument(node: RemixNode, init?: ResponseInit) {
+		let documentAssetsValue = await documentAssets();
+		let nonce =
+			isFrameRequest(ctx.request) || !ctx.has(SecurityHeadersKey)
+				? undefined
+				: ctx.get(SecurityHeadersKey)?.nonce;
 
-/** Creates a request-scoped renderer for server-side HTML responses. */
-export function createHtmlRenderer(ctx: RequestContext) {
-	/**
-	 * Streams `node` to an HTML response, logging failures explicitly since a Worker
-	 * discards the default console-based error hook, and prepending `<!DOCTYPE html>` via
-	 * `createHtmlResponse` since JSX cannot express a doctype directly.
-	 */
-	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(ctx, node), {
-			frameSrc: ctx.request.url,
-			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);
-			},
-			onError(error) {
-				currentLog()?.fail(error, { render: { failed: true } });
-			},
-		});
-
-		let headers = new Headers(init?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		/**
-		 * A fragment is written into a document that already declared one, so it is sent as
-		 * the markup it is; the doctype belongs to whichever response opens the document.
-		 */
-		if (isFrameRequest(ctx.request)) {
-			return new Response(stream, { ...init, headers });
-		}
-
-		return createHtmlResponse(stream, { ...init, headers });
+		return await renderPage(
+			<DocumentAssets value={{ ...documentAssetsValue, nonce }}>{node}</DocumentAssets>,
+			init,
+		);
 	};
 }
 
 /**
- * Fetches frame HTML through the current router so an SSR frame shares the request's
- * context. A frame that answers with anything but content leaves the note below in its
- * place, and says what happened to the log rather than to the reader.
- *
- * @param router - The router rendering the document, which the fragment is fetched through.
- * @param request - The document's own request, for its cookies and for where a reader asks
- * again from.
- * @param intl - The request's dictionary, which the note is written in.
- * @param src - The frame's address, resolved against the frame currently rendering.
- * @param target - The named frame a reload is aimed at, when one is.
- * @param context - Where the frame being rendered sits, which `src` resolves against.
+ * The middleware pair that installs `ctx.render`, in order. Render failures go to the log
+ * explicitly, since a Worker discards the default console-based error hook.
  */
-export async function resolveFrame(
-	router: Router,
-	request: Request,
-	intl: I18n,
-	src: string,
-	target?: string,
-	context?: ResolveFrameContext,
-) {
-	try {
-		let frameSrc = context?.currentFrameSrc ?? request.url;
-		let url = new URL(src, frameSrc);
-		let headers = new Headers();
-		headers.set("accept", "text/html");
-		headers.set("accept-encoding", "identity");
-		headers.set(FRAME_HEADER, "true");
-
-		if (target) headers.set("x-remix-target", target);
-
-		let cookie = request.headers.get("cookie");
-		if (cookie) headers.set("cookie", cookie);
-
-		let res = await followFrameRedirects(router, request, url, headers);
-
-		if (!res.ok) {
-			currentLog()?.warn("frame.no_content", { src: url.toString(), status: res.status });
-
-			return await frameFallback(intl, request);
-		}
-
-		return await res.text();
-	} catch (error) {
-		currentLog()?.fail(error, { frame: { src, failed: true } });
-
-		return await frameFallback(intl, request);
-	}
-}
-
-/**
- * The note a failed frame renders in place of its content. Markup rather than a string
- * built by hand, so it wears the app's own components and the escaping stays in the one
- * place that does it.
- *
- * @param intl - The request's dictionary.
- * @param request - The document the frame sits in, which is what asking again fetches.
- */
-async function frameFallback(intl: I18n, request: Request): Promise<string> {
-	let markup = await renderToString(
-		<FrameFallback
-			message={intl.t("frame.failed")}
-			retryLabel={intl.t("frame.retry")}
-			retryHref={request.url}
-		/>,
-	);
-
-	/**
-	 * The renderer collects the note's styles into a document head, and this goes into a
-	 * page that already has one. The rules travel with the markup — they are minted for this
-	 * render and nothing else declares them — so the wrapper is taken off and the `style`
-	 * elements are left where they land, which is content a body is allowed to hold.
-	 */
-	return markup.replaceAll(/<\/?head>/g, "");
-}
-
-/** Follows SSR frame redirects manually, preserving the request's custom headers across each hop. */
-async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
-	let currentUrl = url;
-	let redirectsRemaining = MAX_FRAME_REDIRECTS;
-
-	while (true) {
-		let res = await router.fetch(
-			new Request(currentUrl, { method: "GET", headers, signal: request.signal }),
-		);
-		let location = res.headers.get("location");
-		if (!location || res.status < 300 || res.status >= 400) return res;
-
-		if (redirectsRemaining-- <= 0) throw new Error("Too many frame redirects");
-		currentUrl = new URL(location, currentUrl);
-	}
+export function htmlRendering(): Middleware[] {
+	return [
+		render({
+			assets,
+			onError(error) {
+				currentLog()?.fail(error, { render: { failed: true } });
+			},
+		}) as Middleware,
+		renderWith(withDocumentAssets) as Middleware,
+	];
 }

@@ -18,7 +18,6 @@ import type { Middleware } from "remix/router";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
@@ -26,10 +25,10 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import { writePresentation } from "~/app/http/cookies";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import { createHtmlRenderer } from "~/app/http/render";
+import { htmlRendering } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { createTestRenderer, ORIGIN } from "~/app/lib/test/controller";
+import { ORIGIN } from "~/app/lib/test/controller";
 
 /**
  * A page rendered through the middleware that decides how it is painted, carrying whatever
@@ -39,13 +38,7 @@ import { createTestRenderer, ORIGIN } from "~/app/lib/test/controller";
  */
 async function render(cookie?: string): Promise<string> {
 	let router = createRouter({
-		middleware: [
-			asyncContext(),
-			formData() as Middleware,
-			i18n,
-			presentation,
-			renderWith(createTestRenderer) as Middleware,
-		],
+		middleware: [asyncContext(), formData() as Middleware, i18n, presentation, ...htmlRendering()],
 		defaultHandler,
 	});
 
@@ -67,7 +60,7 @@ async function serve(): Promise<Response> {
 			i18n,
 			presentation,
 			securityHeaders(SECURITY_POLICY) as Middleware,
-			renderWith(createHtmlRenderer) as Middleware,
+			...htmlRendering(),
 		],
 		defaultHandler,
 	});

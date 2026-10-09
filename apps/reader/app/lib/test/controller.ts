@@ -8,26 +8,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/component";
-import type { Renderer } from "remix/middleware/render";
-import type { Middleware, RequestContext, Router } from "remix/router";
+import type { Middleware, Router } from "remix/router";
 
 import featureFlags from "@sdxc/flags/middleware/router";
 import { lazy } from "@sdxc/lazy-route";
 import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
-import { resolveFrame, withDocumentAssets } from "~/app/http/render";
+import { htmlRendering } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { flags } from "~/app/lib/flags";
 import routes from "~/routes/web";
@@ -42,32 +38,6 @@ export const VIEWER: Viewer = {
 	email: "ada@example.com",
 	avatar: "",
 };
-
-/**
- * Renders the way the app does, and resolves each frame on the page through the router the
- * test is dispatching against, so a band of a page that arrives in its own request is
- * asserted on as part of the page rather than missing from it.
- *
- * The stream is drained before the response is handed back, which gives a test one string
- * to assert against rather than a stream to read.
- *
- * @param ctx - The request being answered, for the router its frames are fetched through.
- */
-export function createTestRenderer(ctx: RequestContext): Renderer<RemixNode> {
-	return async (node, init) => {
-		let stream = renderToStream(await withDocumentAssets(ctx, node), {
-			frameSrc: ctx.request.url,
-			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, ctx.intl, src, target, context);
-			},
-		});
-
-		let headers = new Headers(init?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		return new Response(await new Response(stream).text(), { ...init, headers });
-	};
-}
 
 /**
  * Sets the `Auth` context state directly, standing in for the session-backed `auth`
@@ -119,7 +89,12 @@ export function createTestRouter(viewer: Viewer | null): Router {
 			 * document is also a test of what that document is allowed to load.
 			 */
 			securityHeaders(SECURITY_POLICY) as Middleware,
-			renderWith(createTestRenderer) as Middleware,
+			/**
+			 * The app's own renderer, so each frame on a page is resolved through the router the
+			 * test dispatches against and a band of a page fetched in its own request is
+			 * asserted on as part of the page.
+			 */
+			...htmlRendering(),
 		],
 	});
 

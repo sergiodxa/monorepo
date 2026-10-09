@@ -15,9 +15,21 @@ export const CLIENT_ENTRY_HREF = "/assets/browser.js";
 /** The one stylesheet the document links, as a build combines the three it imports. */
 export const STYLESHEET_HREF = "/assets/index.css";
 
+/**
+ * Every component module, each registered as its own browser entry the way a build emits one
+ * for an island, so a rendered page names the chunk its islands hydrate from. The glob reads
+ * only the paths, which keeps the manifest loadable inside workerd as well as under Node.
+ */
+const ISLAND_ENTRIES = Object.fromEntries(
+	Object.keys(import.meta.glob(["/app/**/*.tsx", "/resources/**/*.tsx"])).map((path) => {
+		let file = path.slice(1);
+		return [file, `/assets/${file.replace(/\.tsx$/, ".js")}`];
+	}),
+);
+
 const MANIFEST: BuildAssetsManifest = {
 	mode: "build",
-	entries: { "bootstrap/browser.ts": CLIENT_ENTRY_HREF },
+	entries: { "bootstrap/browser.ts": CLIENT_ENTRY_HREF, ...ISLAND_ENTRIES },
 	assets: {},
 	importMap: { imports: {} },
 	serverEnvironment: "ssr",

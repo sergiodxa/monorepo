@@ -327,7 +327,7 @@ export function watchRowMarks(announce: (text: string) => void, signal: AbortSig
 }
 
 export const Shortcuts = clientEntry(
-	"/resources/components/shortcuts.tsx#Shortcuts",
+	import.meta.url,
 	function Shortcuts(handle: Handle<Shortcuts.Props>) {
 		/**
 		 * Whether this is running in a browser. The bindings and the button that advertises

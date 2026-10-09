@@ -78,7 +78,7 @@ function SaveMark(handle: Handle<{ isSaved: boolean }>) {
 }
 
 export const SaveToggle = clientEntry(
-	"/resources/components/save-toggle.tsx#SaveToggle",
+	import.meta.url,
 	function SaveToggle(handle: Handle<SaveToggleProps>) {
 		let isSaved = handle.props.isSaved;
 

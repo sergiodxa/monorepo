@@ -107,7 +107,7 @@ function ReadMark(handle: Handle<{ isRead: boolean }>) {
 }
 
 export const ReadToggle = clientEntry(
-	"/resources/components/read-toggle.tsx#ReadToggle",
+	import.meta.url,
 	function ReadToggle(handle: Handle<ReadToggleProps>) {
 		let isRead = handle.props.isRead;
 
