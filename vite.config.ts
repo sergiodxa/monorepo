@@ -295,7 +295,7 @@ export default defineConfig({
 			UPTIME_WORKERS_PROJECT,
 			{
 				root: "apps/r3-auth",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

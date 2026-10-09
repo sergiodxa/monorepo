@@ -11,22 +11,19 @@
 import type { Billing } from "@sdxc/billing";
 import type { Transport } from "@sdxc/mail";
 import type { RemixNode } from "remix/component";
-import type { ResolveFrameContext } from "remix/component/server";
 import type { Database as DataTable } from "remix/data-table";
-import type { Middleware, RequestContext, Router } from "remix/router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import billing from "@sdxc/billing/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
-import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { renderWith } from "remix/middleware/render";
-import { createHtmlResponse } from "remix/response/html";
+import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import type Limiters from "~/app/services/rate-limiters";
@@ -69,7 +66,7 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { documentAssets } from "~/app/lib/assets";
+import { assets, documentAssets } from "~/app/lib/assets";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
 import { createMailTransport } from "~/app/lib/mail";
@@ -135,7 +132,8 @@ export default function application(options: application.Options) {
 			replyTo: MAIL_REPLY_TO,
 		}),
 		cop({ insecureBypassPatterns: COP_BYPASS_PATTERNS }),
-		renderWith(createHtmlRenderer) as Middleware,
+		render({ assets }) as Middleware,
+		renderWith(withDocumentAssets) as Middleware,
 	];
 
 	let router = createRouter({ middleware, defaultHandler });
@@ -185,68 +183,17 @@ export default function application(options: application.Options) {
 }
 
 /**
- * Creates a request-scoped renderer for server-side HTML responses.
- *
- * Uses `createHtmlResponse` to prepend `<!DOCTYPE html>` onto the stream's
- * first chunk, since JSX serializes text as escaped content. The document's built asset URLs
- * are looked up per render, since a Worker may not await them at module scope.
+ * Wraps the request's renderer so every page reads the document's built asset URLs from
+ * context. They are looked up per render, since a Worker may not await them at module scope.
  */
-export function createHtmlRenderer(ctx: RequestContext) {
+export function withDocumentAssets(ctx: RequestContext) {
+	let renderPage = ctx.render;
+
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let assets = await documentAssets();
-		let stream = renderToStream(<DocumentAssets value={assets}>{node}</DocumentAssets>, {
-			frameSrc: ctx.request.url,
-			resolveFrame(src, target, context) {
-				return resolveFrame(ctx.router, ctx.request, src, target, context);
-			},
-		});
-
-		let headers = new Headers(init?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		return createHtmlResponse(stream, { ...init, headers });
-	};
-}
-
-/** Fetches frame HTML through the current router so SSR frames share request context. */
-async function resolveFrame(
-	router: Router,
-	request: Request,
-	src: string,
-	target?: string,
-	context?: ResolveFrameContext,
-) {
-	let frameSrc = context?.currentFrameSrc ?? request.url;
-	let url = new URL(src, frameSrc);
-	let headers = new Headers();
-	headers.set("accept", "text/html");
-	headers.set("accept-encoding", "identity");
-	headers.set("x-remix-frame", "true");
-
-	if (target) headers.set("x-remix-target", target);
-
-	let cookie = request.headers.get("cookie");
-	if (cookie) headers.set("cookie", cookie);
-
-	let res = await followFrameRedirects(router, request, url, headers);
-	if (res.body) return res.body;
-	if (res.ok) return res.text();
-	return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`;
-}
-
-/** Follows SSR frame redirects manually, keeping the original request headers on each hop. */
-async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
-	let currentUrl = url;
-	let redirectsRemaining = 10;
-
-	while (true) {
-		let res = await router.fetch(
-			new Request(currentUrl, { method: "GET", headers, signal: request.signal }),
+		let documentAssetUrls = await documentAssets();
+		return await renderPage(
+			<DocumentAssets value={documentAssetUrls}>{node}</DocumentAssets>,
+			init,
 		);
-		let location = res.headers.get("location");
-		if (!location || res.status < 300 || res.status >= 400) return res;
-
-		if (redirectsRemaining-- <= 0) throw new Error("Too many frame redirects");
-		currentUrl = new URL(location, currentUrl);
-	}
+	};
 }

@@ -43,7 +43,7 @@ type CopyButtonProps = {
  * `handle.update()` and are then finished.
  */
 export const CopyButton = clientEntry(
-	"/resources/components/copy-button.tsx#CopyButton",
+	import.meta.url,
 	function CopyButton(handle: Handle<CopyButtonProps>) {
 		let copied = false;
 		let valueId = `${handle.id}-value`;

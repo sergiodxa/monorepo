@@ -1,7 +1,7 @@
 /**
- * Browser entry point. Boots the client runtime and resolves the few modules that
- * hydrate — this app is server-rendered HTML, so this exists for the handful of
- * interactive components rather than for the pages themselves.
+ * Browser entry point. Pages are server-rendered HTML; the runtime hydrates their islands,
+ * each loaded from the chunk the renderer named for its `clientEntry(import.meta.url)`
+ * identity, so adding an island is only a matter of writing it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,24 +9,9 @@
 
 import { run } from "remix/component";
 
-/**
- * Modules the runtime may hydrate: the islands, which all live in `resources/components/`.
- * Layouts and views stay out, since bundling them would ship the document's stylesheets
- * twice, once with the server's document and once in a chunk no page asks for.
- */
-const clientModules = import.meta.glob([
-	"!../**/*.server.*",
-	"!../**/*.test.*",
-	"../resources/components/**/*.{ts,tsx}",
-]);
-
 run({
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-		let load = clientModules[`..${pathname}`];
-		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
-
-		let mod = await load();
+		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);
