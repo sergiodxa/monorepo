@@ -32,36 +32,31 @@ function getInitials(name: string): string {
 }
 
 /** Renders `src` if given, falling back to {@link getInitials} when there's no image or it fails to load. */
-export const Avatar = clientEntry(
-	"/resources/components/avatar.tsx#Avatar",
-	function Avatar(handle: Handle<AvatarProps>) {
-		return () => {
-			let { src, name, size = 24 } = handle.props;
-			let initials = getInitials(name);
+export const Avatar = clientEntry(import.meta.url, function Avatar(handle: Handle<AvatarProps>) {
+	return () => {
+		let { src, name, size = 24 } = handle.props;
+		let initials = getInitials(name);
 
-			return (
-				<UIAvatar
-					mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}
-				>
-					<UIAvatar.Fallback>{initials}</UIAvatar.Fallback>
-					{src && (
-						<UIAvatar.Image
-							src={src}
-							alt={name}
-							width={size}
-							height={size}
-							mix={[
-								on<HTMLImageElement>("error", (event) => {
-									let img = event.currentTarget as HTMLImageElement;
-									img.style.display = "none";
-								}),
-							]}
-						/>
-					)}
-				</UIAvatar>
-			);
-		};
-	},
-);
+		return (
+			<UIAvatar mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}>
+				<UIAvatar.Fallback>{initials}</UIAvatar.Fallback>
+				{src && (
+					<UIAvatar.Image
+						src={src}
+						alt={name}
+						width={size}
+						height={size}
+						mix={[
+							on<HTMLImageElement>("error", (event) => {
+								let img = event.currentTarget as HTMLImageElement;
+								img.style.display = "none";
+							}),
+						]}
+					/>
+				)}
+			</UIAvatar>
+		);
+	};
+});
 
 export default Avatar;

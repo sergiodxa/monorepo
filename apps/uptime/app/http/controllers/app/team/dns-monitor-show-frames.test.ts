@@ -13,7 +13,6 @@ import type { Middleware, RequestHandler } from "remix/router";
 
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
@@ -22,7 +21,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { createHtmlRenderer } from "~/app/http/render";
+import { htmlRendering } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import {
@@ -224,7 +223,7 @@ async function createHarness(options: createHarness.Options = {}) {
 			database(() => db),
 			seedTeam(team, membership),
 			i18n,
-			renderWith(createHtmlRenderer) as Middleware,
+			...htmlRendering(),
 		],
 	});
 

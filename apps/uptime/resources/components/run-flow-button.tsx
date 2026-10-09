@@ -99,7 +99,7 @@ export function runToast(t: Translate, name: string, run: RunResponse): AppToast
 
 /** Posts the run action, spinning until the flow finishes, then toasting its outcome. */
 export const RunFlowButton = clientEntry(
-	"/resources/components/run-flow-button.tsx#RunFlowButton",
+	import.meta.url,
 	function RunFlowButton(handle: Handle<RunFlowButtonProps>) {
 		let pending = false;
 

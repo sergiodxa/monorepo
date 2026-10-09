@@ -6,7 +6,7 @@
  * binding this form reaches for without supplying fails by name.
  * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds
  * `ctx.team`/`ctx.membership`/`ctx.intl` directly, and `ctx.render` is backed by
- * a minimal renderer mirroring `bootstrap/app.tsx`'s `createHtmlRenderer`.
+ * a minimal renderer mirroring the app's `htmlRendering()` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

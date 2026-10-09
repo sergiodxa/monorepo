@@ -39,7 +39,7 @@ type RefreshFrameButtonProps = {
  * pass through to the browser so the fallback page can still open in a new tab.
  */
 export const RefreshFrameButton = clientEntry(
-	"/resources/components/refresh-frame-button.tsx#RefreshFrameButton",
+	import.meta.url,
 	function RefreshFrameButton(handle: Handle<RefreshFrameButtonProps>) {
 		let pending = false;
 

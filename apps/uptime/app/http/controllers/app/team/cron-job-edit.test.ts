@@ -7,14 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
-import type { Middleware, RequestContext, RequestHandler } from "remix/router";
+import type { Middleware, RequestHandler } from "remix/router";
 
-import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
@@ -23,8 +20,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import { htmlRendering } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -66,16 +63,6 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
-function createHtmlRenderer(ctx: RequestContext) {
-	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
-		let stream = renderToStream(await withDocumentAssets(node), { frameSrc: ctx.request.url });
-		let headers = new Headers(init?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-		return new Response(stream, { ...init, headers });
-	};
-}
-
 /** Sends a GET request through a minimal router mapping a single page route. */
 async function send(
 	db: Database,
@@ -85,7 +72,7 @@ async function send(
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
 	router.map(routes.app.team.cronJobs.edit, {
-		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
+		middleware: [seedTeam(team, membership), i18n, ...htmlRendering()],
 		handler,
 	});
 
@@ -151,7 +138,7 @@ describe("cronJobEdit", () => {
 		 * the page renders the same markup either way, so the payload naming it is
 		 * the proof.
 		 */
-		expect(body).toContain('"moduleUrl":"/resources/components/stepper-field.tsx"');
+		expect(body).toContain('"moduleUrl":"/assets/resources/components/stepper-field.js"');
 		expect(body).toContain('command="--step-up" commandfor="cron-job-grace-period-seconds"');
 	});
 

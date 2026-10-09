@@ -12,10 +12,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { existsSync } from "node:fs";
-
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
+
+import { assets } from "~/app/lib/assets";
 
 import { StepperField } from "./stepper-field";
 
@@ -61,20 +61,20 @@ describe("StepperField", () => {
 
 		expect(entries).toHaveLength(1);
 		expect(entries[0]?.exportName).toBe("StepperField");
-		expect(entries[0]?.moduleUrl).toBe("/resources/components/stepper-field.tsx");
+		expect(entries[0]?.moduleUrl).toBe("file:resources/components/stepper-field.tsx");
 	});
 
 	/**
-	 * `bootstrap/browser.ts` resolves a client entry by globbing `../resources/components/**`
-	 * and keying on the module URL's pathname, a plain string whose mismatch
-	 * only ever surfaces as a hydration-time throw — the failure this test catches.
+	 * The renderer resolves the island's `file:` identity through the asset manifest to the
+	 * chunk the build emitted for it, which is the URL the browser entry imports at hydration.
 	 */
-	test("names a module the browser bootstrap's islands glob actually covers", async () => {
+	test("names a module the asset manifest resolves to the island's own chunk", async () => {
 		let { h } = await hydrationData(await render());
 		let moduleUrl = Object.values(h)[0]?.moduleUrl ?? "";
 
-		expect(moduleUrl.startsWith("/resources/components/")).toBe(true);
-		expect(existsSync(new URL(`../..${moduleUrl}`, import.meta.url))).toBe(true);
+		let { href } = await assets.getScriptEntry(moduleUrl);
+
+		expect(href).toBe("/assets/resources/components/stepper-field.js");
 	});
 
 	/** Every prop the client re-renders from has to survive serialization, or hydration boots a different field. */

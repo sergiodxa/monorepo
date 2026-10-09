@@ -30,7 +30,7 @@ type CheckboxGroupSelectAllProps = {
  * checkboxes are rendered by the page and their change events bubble up to it.
  */
 export const CheckboxGroupSelectAll = clientEntry(
-	"/resources/components/checkbox-group-select-all.tsx#CheckboxGroupSelectAll",
+	import.meta.url,
 	function CheckboxGroupSelectAll(handle: Handle<CheckboxGroupSelectAllProps>) {
 		let ready = false;
 		/** Whether every driven checkbox is currently ticked, which flips the label to "clear". */

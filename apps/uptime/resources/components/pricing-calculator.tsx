@@ -84,7 +84,7 @@ function totalPingsPerMonth(monitors: CalculatorMonitor[]): number {
  * section's own `<h2>`, making its card title an `<h3>` and its panels `<h4>`.
  */
 export const PricingCalculator = clientEntry(
-	"/resources/components/pricing-calculator.tsx#PricingCalculator",
+	import.meta.url,
 	function PricingCalculator(handle: Handle<PricingCalculatorProps>) {
 		let monitors: CalculatorMonitor[] = handle.props.initialFrequencies.map((frequency, index) => ({
 			id: `${handle.id}-monitor-${index}`,

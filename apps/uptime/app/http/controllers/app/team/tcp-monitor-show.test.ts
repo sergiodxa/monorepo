@@ -69,7 +69,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`; `resolveFrame` returns an empty string, since this single-request test only checks each frame's `src`. */
+/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain; `resolveFrame` returns an empty string, since this single-request test only checks each frame's `src`. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
 		let stream = renderToStream(await withDocumentAssets(node), {

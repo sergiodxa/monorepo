@@ -239,7 +239,7 @@ export default defineConfig({
 				 * `jsxImportSource` — apply, which a root-rooted run cannot see.
 				 */
 				root: "apps/uptime",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

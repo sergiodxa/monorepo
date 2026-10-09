@@ -114,7 +114,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`, with `resolveFrame` left a no-op for this single-request page test. */
+/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain, with `resolveFrame` left a no-op for this single-request page test. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
 		let stream = renderToStream(await withDocumentAssets(node), {

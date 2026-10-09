@@ -39,7 +39,7 @@ let monitorCardUptimeHistory = (await import("./monitor-card-uptime-history")).d
 	handler: RequestHandler<any>;
 };
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
+/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });

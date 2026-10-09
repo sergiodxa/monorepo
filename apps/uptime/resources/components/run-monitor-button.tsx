@@ -145,7 +145,7 @@ export function transitionToast(
  * toasting so the toast lands over numbers that already reflect the result.
  */
 export const RunMonitorButton = clientEntry(
-	"/resources/components/run-monitor-button.tsx#RunMonitorButton",
+	import.meta.url,
 	function RunMonitorButton(handle: Handle<RunMonitorButtonProps>) {
 		let pending = false;
 

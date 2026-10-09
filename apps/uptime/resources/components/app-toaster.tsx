@@ -51,61 +51,58 @@ export function showToast(toast: AppToast): void {
 }
 
 /** Renders every toast queued through {@link showToast}, or nothing while the queue is empty. */
-export const AppToaster = clientEntry(
-	"/resources/components/app-toaster.tsx#AppToaster",
-	function AppToaster(handle: Handle) {
-		let toaster = new Toaster<AppToast>();
+export const AppToaster = clientEntry(import.meta.url, function AppToaster(handle: Handle) {
+	let toaster = new Toaster<AppToast>();
 
-		/**
-		 * `queueTask` never runs in the server renderer, so every `document`/timer
-		 * touch below can assume it always runs in the browser.
-		 */
-		handle.queueTask(() => {
-			toaster.addEventListener("change", () => handle.update(), { signal: handle.signal });
+	/**
+	 * `queueTask` never runs in the server renderer, so every `document`/timer
+	 * touch below can assume it always runs in the browser.
+	 */
+	handle.queueTask(() => {
+		toaster.addEventListener("change", () => handle.update(), { signal: handle.signal });
 
-			document.addEventListener(
-				TOAST_EVENT,
-				(event) => {
-					if (!(event instanceof CustomEvent)) return;
-					toaster.add(event.detail as AppToast);
-				},
-				{ signal: handle.signal },
-			);
+		document.addEventListener(
+			TOAST_EVENT,
+			(event) => {
+				if (!(event instanceof CustomEvent)) return;
+				toaster.add(event.detail as AppToast);
+			},
+			{ signal: handle.signal },
+		);
 
-			/** Timers outlive the island otherwise, and each one would fire into a dead tree. */
-			handle.signal.addEventListener("abort", () => toaster.dispose());
-		});
+		/** Timers outlive the island otherwise, and each one would fire into a dead tree. */
+		handle.signal.addEventListener("abort", () => toaster.dispose());
+	});
 
-		return () => {
-			let toasts = toaster.toasts;
-			if (toasts.length === 0) return null;
+	return () => {
+		let toasts = toaster.toasts;
+		if (toasts.length === 0) return null;
 
-			let t = intl(handle).t;
+		let t = intl(handle).t;
 
-			return (
-				<Toast.Region aria-label={t("app.layout.toasts.region")}>
-					{toasts.map((toast) => (
-						<Toast key={toast.id} color={toast.data.color}>
-							<Toast.Content>
-								<Toast.Title>{toast.data.title}</Toast.Title>
-								{toast.data.description && (
-									<Toast.Description>{toast.data.description}</Toast.Description>
-								)}
-							</Toast.Content>
-							<Toast.Close
-								aria-label={t("app.layout.toasts.dismiss")}
-								mix={[
-									on("click", () => {
-										toaster.dismiss(toast.id);
-									}),
-								]}
-							/>
-						</Toast>
-					))}
-				</Toast.Region>
-			);
-		};
-	},
-);
+		return (
+			<Toast.Region aria-label={t("app.layout.toasts.region")}>
+				{toasts.map((toast) => (
+					<Toast key={toast.id} color={toast.data.color}>
+						<Toast.Content>
+							<Toast.Title>{toast.data.title}</Toast.Title>
+							{toast.data.description && (
+								<Toast.Description>{toast.data.description}</Toast.Description>
+							)}
+						</Toast.Content>
+						<Toast.Close
+							aria-label={t("app.layout.toasts.dismiss")}
+							mix={[
+								on("click", () => {
+									toaster.dismiss(toast.id);
+								}),
+							]}
+						/>
+					</Toast>
+				))}
+			</Toast.Region>
+		);
+	};
+});
 
 export default AppToaster;

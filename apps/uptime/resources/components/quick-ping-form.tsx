@@ -71,7 +71,7 @@ type QuickPingFormProps = {
 
 /** Posts the URL to the run-ping action, then reloads the bar's frame with the answer. */
 export const QuickPingForm = clientEntry(
-	"/resources/components/quick-ping-form.tsx#QuickPingForm",
+	import.meta.url,
 	function QuickPingForm(handle: Handle<QuickPingFormProps>) {
 		let pending = false;
 

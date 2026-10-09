@@ -77,81 +77,76 @@ const navLink = [
  * list once the visitor types a search query. The search field's margin uses
  * `raw()`'s physical 3-value shorthand, since `m()` only covers 1/2/4-value form.
  */
-export const DocsNav = clientEntry(
-	"/resources/components/docs-nav.tsx#DocsNav",
-	function DocsNav(handle: Handle<DocsNavProps>) {
-		let search = "";
+export const DocsNav = clientEntry(import.meta.url, function DocsNav(handle: Handle<DocsNavProps>) {
+	let search = "";
 
-		return () => {
-			let { sections, activePath, searchPlaceholder } = handle.props;
-			let query = search.trim().toLowerCase();
-			let results =
-				query.length > 0
-					? sections
-							.flatMap((section) => section.docs.map((doc) => ({ ...doc, section: section.title })))
-							.filter((doc) => doc.title.toLowerCase().includes(query))
-					: null;
+	return () => {
+		let { sections, activePath, searchPlaceholder } = handle.props;
+		let query = search.trim().toLowerCase();
+		let results =
+			query.length > 0
+				? sections
+						.flatMap((section) => section.docs.map((doc) => ({ ...doc, section: section.title })))
+						.filter((doc) => doc.title.toLowerCase().includes(query))
+				: null;
 
-			return (
-				<div>
-					<SearchField aria-label={searchPlaceholder} mix={[raw({ margin: "0 20px 8px" })]}>
-						<SearchField.Input
-							value={search}
-							placeholder={searchPlaceholder}
-							mix={[
-								on("input", (event) => {
-									search = event.currentTarget.value;
-									void handle.update();
-								}),
-							]}
-						/>
-					</SearchField>
+		return (
+			<div>
+				<SearchField aria-label={searchPlaceholder} mix={[raw({ margin: "0 20px 8px" })]}>
+					<SearchField.Input
+						value={search}
+						placeholder={searchPlaceholder}
+						mix={[
+							on("input", (event) => {
+								search = event.currentTarget.value;
+								void handle.update();
+							}),
+						]}
+					/>
+				</SearchField>
 
-					<nav>
-						{results ? (
-							<ul mix={[navList]}>
-								{results.map((doc) => (
-									<li key={doc.path}>
-										<NavLink
-											href={doc.path}
-											hasBackground
-											aria-current={doc.path === activePath ? "page" : undefined}
-											mix={[navLink]}
-										>
-											{doc.title}
-											<span mix={[block(), fontSize("xs"), fg("neutral.muted")]}>
-												{doc.section}
-											</span>
-										</NavLink>
-									</li>
-								))}
-							</ul>
-						) : (
-							sections.map((section) => (
-								<div key={section.title}>
-									<p mix={[sectionTitle]}>{section.title}</p>
-									<ul mix={[navList]}>
-										{section.docs.map((doc) => (
-											<li key={doc.path}>
-												<NavLink
-													href={doc.path}
-													hasBackground
-													aria-current={doc.path === activePath ? "page" : undefined}
-													mix={[navLink]}
-												>
-													{doc.title}
-												</NavLink>
-											</li>
-										))}
-									</ul>
-								</div>
-							))
-						)}
-					</nav>
-				</div>
-			);
-		};
-	},
-);
+				<nav>
+					{results ? (
+						<ul mix={[navList]}>
+							{results.map((doc) => (
+								<li key={doc.path}>
+									<NavLink
+										href={doc.path}
+										hasBackground
+										aria-current={doc.path === activePath ? "page" : undefined}
+										mix={[navLink]}
+									>
+										{doc.title}
+										<span mix={[block(), fontSize("xs"), fg("neutral.muted")]}>{doc.section}</span>
+									</NavLink>
+								</li>
+							))}
+						</ul>
+					) : (
+						sections.map((section) => (
+							<div key={section.title}>
+								<p mix={[sectionTitle]}>{section.title}</p>
+								<ul mix={[navList]}>
+									{section.docs.map((doc) => (
+										<li key={doc.path}>
+											<NavLink
+												href={doc.path}
+												hasBackground
+												aria-current={doc.path === activePath ? "page" : undefined}
+												mix={[navLink]}
+											>
+												{doc.title}
+											</NavLink>
+										</li>
+									))}
+								</ul>
+							</div>
+						))
+					)}
+				</nav>
+			</div>
+		);
+	};
+});
 
 export default DocsNav;

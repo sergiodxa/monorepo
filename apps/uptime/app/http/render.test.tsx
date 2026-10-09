@@ -1,8 +1,7 @@
 /**
- * Tests the request-scoped renderer's response contract: the doctype it prepends ahead of
- * the JSX-rendered markup, which keeps every page in standards mode, and the CSP nonce it
- * hands the document, which must match the one the response's policy names, and the asset
- * manifest's files it hands the document, which a build renames with every change.
+ * Tests the rendering chain's response contract: the doctype ahead of the JSX-rendered markup,
+ * which keeps every page in standards mode, the CSP nonce it hands the document, which must
+ * match the one the response's policy names, and the asset manifest's files it links.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +10,6 @@
 import type { Middleware } from "remix/router";
 
 import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
@@ -23,17 +21,17 @@ import {
 } from "~/app/lib/test/assets-manifest";
 import DocumentLayout from "~/resources/layouts/document";
 
-import { createHtmlRenderer } from "./render";
+import { htmlRendering } from "./render";
 
 /**
  * Fetches a full document by routing a real request through the renderer, so it
  * receives the same `RequestContext` production hands it.
  */
 async function renderDocument() {
-	let router = createRouter();
+	let router = createRouter({ middleware: htmlRendering() });
 
 	router.get("/", (ctx) =>
-		createHtmlRenderer(ctx)(
+		ctx.render(
 			<DocumentLayout title="Test">
 				<p>Body</p>
 			</DocumentLayout>,
@@ -43,7 +41,7 @@ async function renderDocument() {
 	return await router.fetch(new Request("https://uptime.test/"));
 }
 
-describe("createHtmlRenderer", () => {
+describe("htmlRendering", () => {
 	test("the document starts with the doctype, before anything else", async () => {
 		let response = await renderDocument();
 		let html = await response.text();
@@ -55,18 +53,15 @@ describe("createHtmlRenderer", () => {
 	test("keeps the HTML content type", async () => {
 		let response = await renderDocument();
 
-		expect(response.headers.get("content-type")).toBe("text/html; charset=utf-8");
+		expect(response.headers.get("content-type")?.toLowerCase()).toBe("text/html; charset=utf-8");
 	});
 });
 
-describe("createHtmlRenderer with the security policy", () => {
+describe("htmlRendering with the security policy", () => {
 	/** Renders a document through the app's security headers and renderer, as production does. */
 	async function renderSecuredDocument() {
 		let router = createRouter({
-			middleware: [
-				securityHeaders(SECURITY_POLICY) as Middleware,
-				renderWith(createHtmlRenderer) as Middleware,
-			],
+			middleware: [securityHeaders(SECURITY_POLICY) as Middleware, ...htmlRendering()],
 		});
 		router.get("/", (ctx) =>
 			ctx.render(

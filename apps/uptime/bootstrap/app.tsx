@@ -10,8 +10,8 @@
  * A cold isolate evaluates the handful of modules it serves instead of the whole
  * route table, which here spans the marketing site, the signed-in app, and the API.
  *
- * The SSR renderer lives in `~/app/http/render` so tests can reach it directly,
- * without building a router to get at it.
+ * The rendering chain lives in `~/app/http/render` so a test router renders, and resolves
+ * frames, through the same middleware production runs.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -39,7 +39,6 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { renderWith } from "remix/middleware/render";
 import { createController, createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
@@ -51,7 +50,7 @@ import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { createHtmlRenderer } from "~/app/http/render";
+import { htmlRendering } from "~/app/http/render";
 import { SECURITY_POLICY } from "~/app/http/security-policy";
 import { polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
@@ -215,7 +214,7 @@ export default function application(options: application.Options) {
 		 * renderer can read the nonce while the handler still runs.
 		 */
 		securityHeaders(SECURITY_POLICY) as Middleware,
-		renderWith(createHtmlRenderer) as Middleware,
+		...htmlRendering(),
 	];
 
 	let router = createRouter({

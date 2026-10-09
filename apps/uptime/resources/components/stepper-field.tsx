@@ -45,7 +45,7 @@ type StepperFieldProps = {
 
 /** A `NumberField` wired to `stepper()`, so its +/- buttons step the value once hydrated. */
 export const StepperField = clientEntry(
-	"/resources/components/stepper-field.tsx#StepperField",
+	import.meta.url,
 	function StepperField(handle: Handle<StepperFieldProps>) {
 		return () => {
 			let {

@@ -24,36 +24,33 @@ function getInitials(name: string): string {
 }
 
 /** Renders `src` if given, falling back to {@link getInitials} when there's no image or it fails to load. */
-export const Logo = clientEntry(
-	"/resources/components/logo.tsx#Logo",
-	function Logo(handle: Handle<LogoProps>) {
-		let displayImage = true;
+export const Logo = clientEntry(import.meta.url, function Logo(handle: Handle<LogoProps>) {
+	let displayImage = true;
 
-		return () => {
-			let { src, name, size = 24 } = handle.props;
-			let initials = getInitials(name);
+	return () => {
+		let { src, name, size = 24 } = handle.props;
+		let initials = getInitials(name);
 
-			return (
-				<UILogo mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}>
-					<UILogo.Fallback mix={[bg("brand.tint"), fg("brand")]}>{initials}</UILogo.Fallback>
-					{src && displayImage && (
-						<UILogo.Image
-							src={src}
-							alt={name}
-							width={size}
-							height={size}
-							mix={[
-								on<HTMLImageElement>("error", () => {
-									displayImage = false;
-									void handle.update();
-								}),
-							]}
-						/>
-					)}
-				</UILogo>
-			);
-		};
-	},
-);
+		return (
+			<UILogo mix={[is(`${size}px`), bs(`${size}px`), fontSize(`${Math.round(size * 0.42)}px`)]}>
+				<UILogo.Fallback mix={[bg("brand.tint"), fg("brand")]}>{initials}</UILogo.Fallback>
+				{src && displayImage && (
+					<UILogo.Image
+						src={src}
+						alt={name}
+						width={size}
+						height={size}
+						mix={[
+							on<HTMLImageElement>("error", () => {
+								displayImage = false;
+								void handle.update();
+							}),
+						]}
+					/>
+				)}
+			</UILogo>
+		);
+	};
+});
 
 export default Logo;

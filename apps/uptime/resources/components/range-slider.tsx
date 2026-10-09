@@ -41,7 +41,7 @@ type RangeSliderProps = {
 
 /** Slider + live readout + low/high range labels + optional helper text. */
 export const RangeSlider = clientEntry(
-	"/resources/components/range-slider.tsx#RangeSlider",
+	import.meta.url,
 	function RangeSlider(handle: Handle<RangeSliderProps>) {
 		let value = handle.props.defaultValue;
 

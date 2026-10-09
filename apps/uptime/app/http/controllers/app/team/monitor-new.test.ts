@@ -67,7 +67,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s `createHtmlRenderer`. */
+/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
 		let stream = renderToStream(await withDocumentAssets(node), { frameSrc: ctx.request.url });

@@ -32,7 +32,7 @@ type CopyButtonProps = { value: string; label?: string };
 
 /** Copies {@link CopyButtonProps.value} to the clipboard on click, swapping its label to "Copied!" for 2 seconds. */
 export const CopyButton = clientEntry(
-	"/resources/components/copy-button.tsx#CopyButton",
+	import.meta.url,
 	function CopyButton(handle: Handle<CopyButtonProps>) {
 		let copied = false;
 		let valueId = `${handle.id}-value`;
