@@ -64,7 +64,7 @@ describe("the hosted document's asset tags", () => {
 		let importMap = html.indexOf('type="importmap"');
 
 		expect(importMap).toBeGreaterThan(-1);
-		expect(html).toMatch(new RegExp(`<script[^>]*type="importmap"[^>]*nonce="${nonce}"`));
+		expect(/<script[^>]*type="importmap"[^>]*>/.exec(html)?.[0]).toContain(`nonce="${nonce}"`);
 		expect(importMap).toBeLessThan(html.indexOf('rel="modulepreload"'));
 		expect(importMap).toBeLessThan(html.indexOf('<script type="module"'));
 	});
