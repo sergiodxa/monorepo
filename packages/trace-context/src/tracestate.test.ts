@@ -40,6 +40,18 @@ describe("parse", () => {
 		]);
 	});
 
+	test("trims long runs of optional whitespace in linear time", () => {
+		let started = performance.now();
+		let padding = "\t".repeat(50_000);
+		let state = unwrap(parse(`${padding}rojo=1${padding},${padding},congo=2`));
+		expect([...state.entries()]).toEqual([
+			["rojo", "1"],
+			["congo", "2"],
+		]);
+		expect(isSuccess(parse(`rojo=1${padding}x`))).toBe(false);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
 	test("reads an empty or whitespace-only header as the empty state", () => {
 		expect(unwrap(parse("")).size).toBe(0);
 		expect(unwrap(parse("  , ")).size).toBe(0);

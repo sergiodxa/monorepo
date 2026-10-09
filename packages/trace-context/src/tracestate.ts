@@ -30,9 +30,6 @@ const KEY_PATTERN =
 /** One to 256 printable ASCII characters other than `,` and `=`, ending in a non-space. */
 const VALUE_PATTERN = /^[\x20-\x2b\x2d-\x3c\x3e-\x7e]{0,255}[\x21-\x2b\x2d-\x3c\x3e-\x7e]$/;
 
-/** The optional whitespace allowed around each list-member. */
-const OWS = /^[ \t]+|[ \t]+$/g;
-
 /** Keys the constructor for already validated entries to this module, keeping the class sound. */
 const FROM_VALIDATED = Symbol("TraceState.fromValidated");
 
@@ -158,6 +155,18 @@ export class TraceState {
 }
 
 /**
+ * Strips the optional whitespace (spaces and tabs) allowed around each list-member, scanning
+ * once from each end so the cost stays linear however much whitespace a member carries.
+ */
+function trimOws(text: string): string {
+	let start = 0;
+	let end = text.length;
+	while (start < end && (text[start] === " " || text[start] === "\t")) start++;
+	while (end > start && (text[end - 1] === " " || text[end - 1] === "\t")) end--;
+	return text.slice(start, end);
+}
+
+/**
  * Parses one `tracestate` value. Multiple header fields arrive joined by commas from
  * `Headers.get()`, which is the form read here; empty and whitespace-only members are skipped.
  *
@@ -170,7 +179,7 @@ export function parse(value: string): Result<TraceState, TraceStateParseError> {
 	let seen = new Set<string>();
 
 	for (let raw of value.split(",")) {
-		let member = raw.replace(OWS, "");
+		let member = trimOws(raw);
 		if (member === "") continue;
 
 		let parts = member.split("=");
