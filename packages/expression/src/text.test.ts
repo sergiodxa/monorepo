@@ -317,6 +317,18 @@ describe("parse failures", () => {
 		expect(parsed.status === "failure" && parsed.error.message).toMatch(message);
 	});
 
+	test.each([
+		["an unclosed string of escaped quotes", `ctx.a == "${'\\"'.repeat(50_000)}`, 10],
+		["an unclosed quoted name of escaped backticks", `\`${"\\`[".repeat(50_000)}`, 1],
+		["an unclosed quoted segment of escaped backticks", `ctx.a.\`${"\\`[".repeat(50_000)}`, 6],
+	])("refuses %s in linear time", (_, text, column) => {
+		let started = performance.now();
+		let parsed = CONDITIONS.parse(text);
+
+		expect(parsed).toMatchObject({ status: "failure", error: { line: 1, column } });
+		expect(performance.now() - started).toBeLessThan(1_000);
+	});
+
 	test("refuses the operators a restricted dialect leaves out", () => {
 		let rules = createLanguage({ builtins: ["all", "any", "not", "contains"] });
 
