@@ -28,6 +28,12 @@ Base64.encode("Aladdin:open sesame"); // "QWxhZGRpbjpvcGVuIHNlc2FtZQ==", padded
 Hex.decode("zz"); // failure(InvalidEncodingError)
 ```
 
+The codecs alone also ship as `@sdxc/crypto/encoding`, whose import graph stays on Web APIs. Browser bundles import from there, so a dev server that loads modules unbundled never reaches the `node:crypto` import behind password hashing:
+
+```typescript
+import { Base64Url } from "@sdxc/crypto/encoding";
+```
+
 ### Signing and verifying a payload
 
 ```typescript
