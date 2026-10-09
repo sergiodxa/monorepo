@@ -843,7 +843,7 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 	},
 
 	highlight: {
-		code: `<Link href="/guides/routing">
+		code: `<Link href="/examples/guides/routing">
 	<Highlight
 		segments={[
 			{ text: "Typed ", match: false },
@@ -854,7 +854,7 @@ export const COMPONENT_PREVIEWS: Record<string, ComponentPreview> = {
 	/>
 </Link>`,
 		render: () => (
-			<Link href="/guides/routing">
+			<Link href="/examples/guides/routing">
 				<Highlight
 					segments={[
 						{ text: "Typed ", match: false },

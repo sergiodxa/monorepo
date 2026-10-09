@@ -21,27 +21,27 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "center" })]}>
 	<p mix={[m(0), text("sm"), weight("medium")]}>No projects yet</p>
 
 	<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-		<LinkButton href="/projects/new">
+		<LinkButton href="/examples/projects/new">
 			<PlusIcon />
 			Create project
 		</LinkButton>
 		<LinkButton href="/api/ui" color="neutral" variant="outline">
 			Read the docs
 		</LinkButton>
-		<LinkButton href="/projects" color="neutral" variant="ghost">
+		<LinkButton href="/examples/projects" color="neutral" variant="ghost">
 			Cancel
 		</LinkButton>
 	</div>
 
 	<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-		<LinkButton href="/export/projects.csv" download size="sm" color="neutral" variant="outline">
+		<LinkButton href="/examples/export/projects.csv" download size="sm" color="neutral" variant="outline">
 			<DownloadIcon />
 			Export CSV
 		</LinkButton>
-		<LinkButton href="/billing/upgrade" size="lg" color="success">
+		<LinkButton href="/examples/billing/upgrade" size="lg" color="success">
 			Upgrade plan
 		</LinkButton>
-		<LinkButton href="/settings/transfer" variant="outline" aria-disabled="true">
+		<LinkButton href="/examples/settings/transfer" variant="outline" aria-disabled="true">
 			Transfer ownership
 		</LinkButton>
 	</div>
@@ -54,21 +54,21 @@ export const LinkButtonPreview = clientEntry(import.meta.url, function LinkButto
 			<p mix={[m(0), text("sm"), weight("medium"), fg("neutral.emphasis")]}>No projects yet</p>
 
 			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-				<LinkButton href="/projects/new">
+				<LinkButton href="/examples/projects/new">
 					<PlusIcon />
 					Create project
 				</LinkButton>
 				<LinkButton href="/api/ui" color="neutral" variant="outline">
 					Read the docs
 				</LinkButton>
-				<LinkButton href="/projects" color="neutral" variant="ghost">
+				<LinkButton href="/examples/projects" color="neutral" variant="ghost">
 					Cancel
 				</LinkButton>
 			</div>
 
 			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
 				<LinkButton
-					href="/export/projects.csv"
+					href="/examples/export/projects.csv"
 					download
 					size="sm"
 					color="neutral"
@@ -77,10 +77,10 @@ export const LinkButtonPreview = clientEntry(import.meta.url, function LinkButto
 					<DownloadIcon />
 					Export CSV
 				</LinkButton>
-				<LinkButton href="/billing/upgrade" size="lg" color="success">
+				<LinkButton href="/examples/billing/upgrade" size="lg" color="success">
 					Upgrade plan
 				</LinkButton>
-				<LinkButton href="/settings/transfer" variant="outline" aria-disabled="true">
+				<LinkButton href="/examples/settings/transfer" variant="outline" aria-disabled="true">
 					Transfer ownership
 				</LinkButton>
 			</div>

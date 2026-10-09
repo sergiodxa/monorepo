@@ -174,6 +174,19 @@ let direction = (key) => (sort.key === key ? sort.direction : undefined);
 	</div>
 </div>`;
 
+/**
+ * Subscribes to the page's `popstate` in a browser, where the window outlives the island,
+ * so the listener is dropped when the island disconnects. A server render holds no window,
+ * so nothing is added to the global a Worker shares across requests.
+ */
+function followHistory(handle: Handle, listener: () => void) {
+	if (typeof document === "undefined") return;
+	globalThis.addEventListener("popstate", listener);
+	handle.signal.addEventListener("abort", () =>
+		globalThis.removeEventListener("popstate", listener),
+	);
+}
+
 /** A sortable, selectable invoice list, hydrated so the selection set drives the rows. */
 export const TablePreview = clientEntry(import.meta.url, function TablePreview(handle: Handle) {
 	let selection = new SelectionModel({
@@ -198,13 +211,7 @@ export const TablePreview = clientEntry(import.meta.url, function TablePreview(h
 		void handle.update();
 	}
 
-	// The window outlives the island, so the subscription is dropped when the
-	// island disconnects rather than through an options signal, which is an
-	// inert stub during the server render.
-	globalThis.addEventListener("popstate", readUrl);
-	handle.signal.addEventListener("abort", () =>
-		globalThis.removeEventListener("popstate", readUrl),
-	);
+	followHistory(handle, readUrl);
 
 	/**
 	 * Answers a header's own navigation: the page this preview lives on is a document

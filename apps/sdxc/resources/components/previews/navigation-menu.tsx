@@ -19,14 +19,14 @@ const CODE = `<NavigationMenu aria-label="Primary">
 			<NavigationMenu.Content size="wide">
 				<NavigationMenu.ContentGrid>
 					<NavigationMenu.ContentColumn>
-						<NavigationMenu.Link href="/products/uptime">Uptime monitoring</NavigationMenu.Link>
-						<NavigationMenu.Link href="/products/status">Status pages</NavigationMenu.Link>
-						<NavigationMenu.Link href="/products/alerts">On-call alerting</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/uptime">Uptime monitoring</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/status">Status pages</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/alerts">On-call alerting</NavigationMenu.Link>
 					</NavigationMenu.ContentColumn>
 					<NavigationMenu.ContentColumn>
-						<NavigationMenu.Link href="/products/auth">Hosted auth</NavigationMenu.Link>
-						<NavigationMenu.Link href="/products/analytics">Analytics</NavigationMenu.Link>
-						<NavigationMenu.Link href="/products/changelog">Changelog hosting</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/auth">Hosted auth</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/analytics">Analytics</NavigationMenu.Link>
+						<NavigationMenu.Link href="/examples/products/changelog">Changelog hosting</NavigationMenu.Link>
 					</NavigationMenu.ContentColumn>
 				</NavigationMenu.ContentGrid>
 			</NavigationMenu.Content>
@@ -47,7 +47,7 @@ const CODE = `<NavigationMenu aria-label="Primary">
 		</NavigationMenu.Item>
 
 		<NavigationMenu.Item>
-			<NavigationMenu.Link href="/pricing">Pricing</NavigationMenu.Link>
+			<NavigationMenu.Link href="/examples/pricing">Pricing</NavigationMenu.Link>
 		</NavigationMenu.Item>
 
 		<NavigationMenu.Item>
@@ -60,7 +60,7 @@ const CODE = `<NavigationMenu aria-label="Primary">
 			<NavigationMenu.Trigger aria-disabled="true">Enterprise</NavigationMenu.Trigger>
 			<NavigationMenu.Content>
 				<NavigationMenu.ContentList>
-					<NavigationMenu.Link href="/enterprise">Talk to sales</NavigationMenu.Link>
+					<NavigationMenu.Link href="/examples/enterprise">Talk to sales</NavigationMenu.Link>
 				</NavigationMenu.ContentList>
 			</NavigationMenu.Content>
 		</NavigationMenu.Item>
@@ -77,14 +77,24 @@ export const NavigationMenuPreview = clientEntry(import.meta.url, function Navig
 					<NavigationMenu.Content size="wide">
 						<NavigationMenu.ContentGrid>
 							<NavigationMenu.ContentColumn>
-								<NavigationMenu.Link href="/products/uptime">Uptime monitoring</NavigationMenu.Link>
-								<NavigationMenu.Link href="/products/status">Status pages</NavigationMenu.Link>
-								<NavigationMenu.Link href="/products/alerts">On-call alerting</NavigationMenu.Link>
+								<NavigationMenu.Link href="/examples/products/uptime">
+									Uptime monitoring
+								</NavigationMenu.Link>
+								<NavigationMenu.Link href="/examples/products/status">
+									Status pages
+								</NavigationMenu.Link>
+								<NavigationMenu.Link href="/examples/products/alerts">
+									On-call alerting
+								</NavigationMenu.Link>
 							</NavigationMenu.ContentColumn>
 							<NavigationMenu.ContentColumn>
-								<NavigationMenu.Link href="/products/auth">Hosted auth</NavigationMenu.Link>
-								<NavigationMenu.Link href="/products/analytics">Analytics</NavigationMenu.Link>
-								<NavigationMenu.Link href="/products/changelog">
+								<NavigationMenu.Link href="/examples/products/auth">
+									Hosted auth
+								</NavigationMenu.Link>
+								<NavigationMenu.Link href="/examples/products/analytics">
+									Analytics
+								</NavigationMenu.Link>
+								<NavigationMenu.Link href="/examples/products/changelog">
 									Changelog hosting
 								</NavigationMenu.Link>
 							</NavigationMenu.ContentColumn>
@@ -111,7 +121,7 @@ export const NavigationMenuPreview = clientEntry(import.meta.url, function Navig
 				</NavigationMenu.Item>
 
 				<NavigationMenu.Item>
-					<NavigationMenu.Link href="/pricing">Pricing</NavigationMenu.Link>
+					<NavigationMenu.Link href="/examples/pricing">Pricing</NavigationMenu.Link>
 				</NavigationMenu.Item>
 
 				<NavigationMenu.Item>
@@ -124,7 +134,7 @@ export const NavigationMenuPreview = clientEntry(import.meta.url, function Navig
 					<NavigationMenu.Trigger aria-disabled="true">Enterprise</NavigationMenu.Trigger>
 					<NavigationMenu.Content>
 						<NavigationMenu.ContentList>
-							<NavigationMenu.Link href="/enterprise">Talk to sales</NavigationMenu.Link>
+							<NavigationMenu.Link href="/examples/enterprise">Talk to sales</NavigationMenu.Link>
 						</NavigationMenu.ContentList>
 					</NavigationMenu.Content>
 				</NavigationMenu.Item>

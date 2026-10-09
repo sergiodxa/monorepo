@@ -41,30 +41,30 @@ const SIDEBAR_CODE = `<Sidebar.Provider>
 				<Sidebar.GroupContent>
 					<Sidebar.Menu>
 						<Sidebar.MenuItem>
-							<Sidebar.MenuLink href="/dashboard" active>
+							<Sidebar.MenuLink href="/examples/dashboard" active>
 								<LayoutDashboardIcon aria-hidden="true" />
 								<span data-sidebar-collapsed-hide>Dashboard</span>
 							</Sidebar.MenuLink>
 						</Sidebar.MenuItem>
 						<Sidebar.MenuItem>
-							<Sidebar.MenuLink href="/incidents">
+							<Sidebar.MenuLink href="/examples/incidents">
 								<CircleAlertIcon aria-hidden="true" />
 								<span data-sidebar-collapsed-hide>Incidents</span>
 								<Sidebar.MenuBadge>3</Sidebar.MenuBadge>
 							</Sidebar.MenuLink>
 							<Sidebar.MenuSub>
 								<Sidebar.MenuSubItem>
-									<Sidebar.MenuSubLink href="/incidents/open" active>
+									<Sidebar.MenuSubLink href="/examples/incidents/open" active>
 										Open
 									</Sidebar.MenuSubLink>
 								</Sidebar.MenuSubItem>
 								<Sidebar.MenuSubItem>
-									<Sidebar.MenuSubLink href="/incidents/resolved">Resolved</Sidebar.MenuSubLink>
+									<Sidebar.MenuSubLink href="/examples/incidents/resolved">Resolved</Sidebar.MenuSubLink>
 								</Sidebar.MenuSubItem>
 							</Sidebar.MenuSub>
 						</Sidebar.MenuItem>
 						<Sidebar.MenuItem>
-							<Sidebar.MenuLink href="/reports">
+							<Sidebar.MenuLink href="/examples/reports">
 								<ChartLineIcon aria-hidden="true" />
 								<span data-sidebar-collapsed-hide>Reports</span>
 							</Sidebar.MenuLink>
@@ -86,7 +86,7 @@ const SIDEBAR_CODE = `<Sidebar.Provider>
 							</Sidebar.MenuLink>
 						</Sidebar.MenuItem>
 						<Sidebar.MenuItem>
-							<Sidebar.MenuLink href="/settings">
+							<Sidebar.MenuLink href="/examples/settings">
 								<SettingsIcon aria-hidden="true" />
 								<span data-sidebar-collapsed-hide>Settings</span>
 							</Sidebar.MenuLink>
@@ -136,30 +136,32 @@ export const SidebarPreview = clientEntry(import.meta.url, function SidebarPrevi
 						<Sidebar.GroupContent>
 							<Sidebar.Menu>
 								<Sidebar.MenuItem>
-									<Sidebar.MenuLink href="/dashboard" active>
+									<Sidebar.MenuLink href="/examples/dashboard" active>
 										<LayoutDashboardIcon aria-hidden="true" />
 										<span data-sidebar-collapsed-hide>Dashboard</span>
 									</Sidebar.MenuLink>
 								</Sidebar.MenuItem>
 								<Sidebar.MenuItem>
-									<Sidebar.MenuLink href="/incidents">
+									<Sidebar.MenuLink href="/examples/incidents">
 										<CircleAlertIcon aria-hidden="true" />
 										<span data-sidebar-collapsed-hide>Incidents</span>
 										<Sidebar.MenuBadge>3</Sidebar.MenuBadge>
 									</Sidebar.MenuLink>
 									<Sidebar.MenuSub>
 										<Sidebar.MenuSubItem>
-											<Sidebar.MenuSubLink href="/incidents/open" active>
+											<Sidebar.MenuSubLink href="/examples/incidents/open" active>
 												Open
 											</Sidebar.MenuSubLink>
 										</Sidebar.MenuSubItem>
 										<Sidebar.MenuSubItem>
-											<Sidebar.MenuSubLink href="/incidents/resolved">Resolved</Sidebar.MenuSubLink>
+											<Sidebar.MenuSubLink href="/examples/incidents/resolved">
+												Resolved
+											</Sidebar.MenuSubLink>
 										</Sidebar.MenuSubItem>
 									</Sidebar.MenuSub>
 								</Sidebar.MenuItem>
 								<Sidebar.MenuItem>
-									<Sidebar.MenuLink href="/reports">
+									<Sidebar.MenuLink href="/examples/reports">
 										<ChartLineIcon aria-hidden="true" />
 										<span data-sidebar-collapsed-hide>Reports</span>
 									</Sidebar.MenuLink>
@@ -181,7 +183,7 @@ export const SidebarPreview = clientEntry(import.meta.url, function SidebarPrevi
 									</Sidebar.MenuLink>
 								</Sidebar.MenuItem>
 								<Sidebar.MenuItem>
-									<Sidebar.MenuLink href="/settings">
+									<Sidebar.MenuLink href="/examples/settings">
 										<SettingsIcon aria-hidden="true" />
 										<span data-sidebar-collapsed-hide>Settings</span>
 									</Sidebar.MenuLink>

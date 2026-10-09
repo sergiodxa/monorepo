@@ -10,6 +10,20 @@
 import { run } from "remix/component";
 
 /**
+ * Keeps a reader on the page when they press a link or submit a form inside a live example:
+ * those name `/examples/` addresses, and the navigation is cancelled before the runtime
+ * reloads the page from one. Registered ahead of `run()`, so it sees each navigation first.
+ */
+function stayOnExampleNavigation(event: NavigateEvent) {
+	if (!event.cancelable) return;
+	if (!new URL(event.destination.url).pathname.startsWith("/examples/")) return;
+	event.preventDefault();
+	event.stopImmediatePropagation();
+}
+
+globalThis.navigation?.addEventListener("navigate", stayOnExampleNavigation);
+
+/**
  * Boots the client runtime and resolves lazily loaded UI modules.
  */
 run({

@@ -32,7 +32,7 @@ function applyFilter(event: SubmitEvent) {
 
 let current = filters.find((option) => option.value === filter);
 
-<form method="get" action="/tasks" mix={[on<HTMLFormElement, "submit">("submit", applyFilter)]}>
+<form method="get" action="/examples/tasks" mix={[on<HTMLFormElement, "submit">("submit", applyFilter)]}>
 	{filters.map((option) => (
 		<ToggleButton
 			key={option.value}
@@ -66,7 +66,7 @@ export const TaskFilter = clientEntry(import.meta.url, function TaskFilter(handl
 			<div mix={[vstack({ gap: 3, align: "center" })]}>
 				<form
 					method="get"
-					action="/tasks"
+					action="/examples/tasks"
 					mix={[
 						hstack({ gap: 2, align: "center" }),
 						on<HTMLFormElement, "submit">("submit", applyFilter),

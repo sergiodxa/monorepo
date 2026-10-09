@@ -19,7 +19,7 @@ import { clientEntry, on } from "remix/component";
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const TEXT_FIELD_CODE = `<form
 	method="post"
-	action="/workspaces"
+	action="/examples/workspaces"
 	mix={[on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault())]}
 >
 	<Card>
@@ -57,7 +57,7 @@ export const TextFieldPreview = clientEntry(import.meta.url, function TextFieldP
 	return () => (
 		<form
 			method="post"
-			action="/workspaces"
+			action="/examples/workspaces"
 			mix={[
 				is("26rem"),
 				// A docs page has nowhere to post to, so the submission stops here instead

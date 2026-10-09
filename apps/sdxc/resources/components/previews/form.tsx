@@ -43,6 +43,7 @@ function submit(event: SubmitEvent) {
 }
 
 <Form
+	action="/examples/workspaces"
 	method="post"
 	issues={issues}
 	// The native constraints below already block an empty submit with no script;
@@ -125,6 +126,7 @@ export const FormPreview = clientEntry(import.meta.url, function FormPreview(han
 
 		return (
 			<Form
+				action="/examples/workspaces"
 				method="post"
 				issues={issues}
 				// The native constraints below already block an empty submit with no script;

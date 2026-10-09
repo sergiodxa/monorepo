@@ -25,7 +25,7 @@ const CODE = `<Breadcrumbs aria-label="Breadcrumb">
 			</Breadcrumbs.Link>
 		</Breadcrumbs.Item>
 		<Breadcrumbs.Item>
-			<Breadcrumbs.Link href="/projects">Projects</Breadcrumbs.Link>
+			<Breadcrumbs.Link href="/examples/projects">Projects</Breadcrumbs.Link>
 		</Breadcrumbs.Item>
 		<Breadcrumbs.Item>
 			<span mix={[text("sm"), fg("neutral.muted")]} aria-label="4 collapsed folders">
@@ -33,10 +33,10 @@ const CODE = `<Breadcrumbs aria-label="Breadcrumb">
 			</span>
 		</Breadcrumbs.Item>
 		<Breadcrumbs.Item>
-			<Breadcrumbs.Link href="/projects/acme-web/src/components">components</Breadcrumbs.Link>
+			<Breadcrumbs.Link href="/examples/projects/acme-web/src/components">components</Breadcrumbs.Link>
 		</Breadcrumbs.Item>
 		<Breadcrumbs.Item>
-			<Breadcrumbs.Link href="/projects/acme-web/src/components/button.tsx" aria-current="page">
+			<Breadcrumbs.Link href="/examples/projects/acme-web/src/components/button.tsx" aria-current="page">
 				button.tsx
 			</Breadcrumbs.Link>
 		</Breadcrumbs.Item>
@@ -55,7 +55,7 @@ export const BreadcrumbsPreview = clientEntry(import.meta.url, function Breadcru
 					</Breadcrumbs.Link>
 				</Breadcrumbs.Item>
 				<Breadcrumbs.Item>
-					<Breadcrumbs.Link href="/projects">Projects</Breadcrumbs.Link>
+					<Breadcrumbs.Link href="/examples/projects">Projects</Breadcrumbs.Link>
 				</Breadcrumbs.Item>
 				<Breadcrumbs.Item>
 					<span mix={[text("sm"), fg("neutral.muted")]} aria-label="4 collapsed folders">
@@ -63,10 +63,15 @@ export const BreadcrumbsPreview = clientEntry(import.meta.url, function Breadcru
 					</span>
 				</Breadcrumbs.Item>
 				<Breadcrumbs.Item>
-					<Breadcrumbs.Link href="/projects/acme-web/src/components">components</Breadcrumbs.Link>
+					<Breadcrumbs.Link href="/examples/projects/acme-web/src/components">
+						components
+					</Breadcrumbs.Link>
 				</Breadcrumbs.Item>
 				<Breadcrumbs.Item>
-					<Breadcrumbs.Link href="/projects/acme-web/src/components/button.tsx" aria-current="page">
+					<Breadcrumbs.Link
+						href="/examples/projects/acme-web/src/components/button.tsx"
+						aria-current="page"
+					>
 						button.tsx
 					</Breadcrumbs.Link>
 				</Breadcrumbs.Item>

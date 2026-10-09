@@ -24,8 +24,8 @@ const CODE = `<Button
 <Menu id="row-menu" placement="left-start" aria-label="Project actions">
 	<Section aria-labelledby="row-menu-view-heading">
 		<Header id="row-menu-view-heading">View</Header>
-		<Menu.Item href="/projects/q3-roadmap">Open project</Menu.Item>
-		<Menu.Item href="/projects/q3-roadmap/edit">Edit details</Menu.Item>
+		<Menu.Item href="/examples/projects/q3-roadmap">Open project</Menu.Item>
+		<Menu.Item href="/examples/projects/q3-roadmap/edit">Edit details</Menu.Item>
 	</Section>
 	<Menu.Separator />
 	<Menu.Item danger commandfor="confirm-delete" command="show-modal">
@@ -67,8 +67,8 @@ export default {
 			<Menu id="example-menu-row-actions" placement="left-start" aria-label="Project actions">
 				<Section aria-labelledby="example-menu-row-actions-view-heading">
 					<Header id="example-menu-row-actions-view-heading">View</Header>
-					<Menu.Item href="/projects/q3-roadmap">Open project</Menu.Item>
-					<Menu.Item href="/projects/q3-roadmap/edit">Edit details</Menu.Item>
+					<Menu.Item href="/examples/projects/q3-roadmap">Open project</Menu.Item>
+					<Menu.Item href="/examples/projects/q3-roadmap/edit">Edit details</Menu.Item>
 				</Section>
 				<Menu.Separator />
 				<Menu.Item danger commandfor="example-menu-row-actions-confirm" command="show-modal">

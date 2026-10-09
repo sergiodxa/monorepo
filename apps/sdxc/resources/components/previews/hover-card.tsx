@@ -26,7 +26,7 @@ const HOVER_CARD_CODE = `<Text>
 	Merged by{" "}
 	<HoverCard>
 		<HoverCard.Trigger>
-			<Link href="/users/sergiodxa">@sergiodxa</Link>
+			<Link href="/examples/users/sergiodxa">@sergiodxa</Link>
 		</HoverCard.Trigger>
 		{/* bottom-start keeps the panel inside the column it opens in, rather than
 		    centering it under the mention and hanging off the edge. */}
@@ -69,7 +69,7 @@ export const HoverCardPreview = clientEntry(import.meta.url, function HoverCardP
 				Merged by{" "}
 				<HoverCard>
 					<HoverCard.Trigger>
-						<Link href="/users/sergiodxa">@sergiodxa</Link>
+						<Link href="/examples/users/sergiodxa">@sergiodxa</Link>
 					</HoverCard.Trigger>
 					{/* bottom-start keeps the panel inside the column it opens in, rather than
 						    centering it under the mention and hanging off the edge. */}

@@ -9,12 +9,13 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp, ORIGIN } from "~/app/lib/test/router";
 import { readComponent } from "~/app/services/components";
 import {
 	exampleComponents,
 	findPreview,
 	listExamples,
+	previewSlugs,
 } from "~/resources/components/preview-registry.server";
 
 describe("GET /frames/previews/:component", () => {
@@ -106,4 +107,113 @@ describe("live examples", () => {
 			expect(body).not.toContain("<template");
 		},
 	);
+});
+
+/** Every fragment a component page frames: each opening preview, then each live example. */
+function previewSources(): string[] {
+	return [
+		...previewSlugs().map((component) => `/frames/previews/${component}`),
+		...exampleComponents().flatMap((component) =>
+			listExamples(component).map((example) => `/frames/previews/${component}/${example.slug}`),
+		),
+	];
+}
+
+/**
+ * The places a fragment's links and forms send a reader, outside the code block it shows. A
+ * `POST` form with no `action` submits to the page holding it, so it is reported as unreachable.
+ */
+function destinations(html: string): { method: string; url: string }[] {
+	let markup = html.replace(/<pre[\s\S]*?<\/pre>/g, "");
+	let found = [
+		...[...markup.matchAll(/<a\b[^>]*\shref="([^"]*)"/g)].map((match) => ({
+			method: "GET",
+			url: match[1] ?? "",
+		})),
+		...[...markup.matchAll(/\s(?:action|formaction)="([^"]*)"/g)].map((match) => ({
+			method: "POST",
+			url: match[1] ?? "",
+		})),
+	].map((found) => ({ ...found, url: found.url.replaceAll("&amp;", "&") }));
+	for (let form of markup.matchAll(/<form\b[^>]*>/g)) {
+		if (/method="post"/i.test(form[0]) && !/\saction="/.test(form[0])) {
+			found.push({ method: "POST", url: "(the page holding the form)" });
+		}
+	}
+	return found;
+}
+
+describe("live example destinations", () => {
+	/**
+	 * A reader pressing a link or submitting a form inside an example stays on the site: each
+	 * one leads to a page that answers, an in-page fragment, or an `/examples/` address that
+	 * returns them to where they were.
+	 */
+	test("every link and form inside a preview leads somewhere that answers", async () => {
+		let broken: string[] = [];
+
+		for (let src of previewSources()) {
+			let html = await (await fetchApp(src)).text();
+
+			for (let { method, url } of destinations(html)) {
+				if (/^(#|data:|https?:|mailto:|tel:)/.test(url)) continue;
+				let component = src.split("/")[3] ?? "";
+				let target = new URL(url, `${ORIGIN}/api/ui/${component}`);
+				let response =
+					target.origin === ORIGIN
+						? await fetchApp(`${target.pathname}${target.search}`, { method, redirect: "manual" })
+						: undefined;
+				if (response === undefined || response.status >= 400) {
+					broken.push(`${src}: ${method} ${url} → ${response?.status ?? "unreachable"}`);
+				}
+			}
+		}
+
+		expect(broken).toEqual([]);
+	}, 120_000);
+});
+
+describe("/examples/*path", () => {
+	test("returns a reader to the page they pressed a link on", async () => {
+		let response = await fetchApp("/examples/settings/billing", {
+			headers: { referer: `${ORIGIN}/api/ui/nav-link#examples` },
+			redirect: "manual",
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe("/api/ui/nav-link#examples");
+	});
+
+	test("returns a reader to the page they submitted a form from", async () => {
+		let response = await fetchApp("/examples/workspaces", {
+			method: "POST",
+			headers: { referer: `${ORIGIN}/docs/content-and-feeds/markdown-frames` },
+			redirect: "manual",
+		});
+
+		expect(response.status).toBe(303);
+		expect(response.headers.get("location")).toBe("/docs/content-and-feeds/markdown-frames");
+	});
+
+	/**
+	 * A runtime navigation commits the `/examples/` address before it fetches it, so its
+	 * `Referer` is that address; answering with it would redirect the request to itself.
+	 */
+	test("never sends a reader back to an example address", async () => {
+		let response = await fetchApp("/examples/dashboard", {
+			headers: { referer: `${ORIGIN}/examples/dashboard` },
+			redirect: "manual",
+		});
+
+		expect(response.headers.get("location")).toBe("/api/ui");
+	});
+
+	test("sends a request from another site to the component reference instead", async () => {
+		let response = await fetchApp("/examples/settings", {
+			headers: { referer: "https://elsewhere.com/page" },
+			redirect: "manual",
+		});
+
+		expect(response.headers.get("location")).toBe("/api/ui");
+	});
 });

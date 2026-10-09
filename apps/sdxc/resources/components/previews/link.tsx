@@ -33,14 +33,14 @@ const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 
 	<p mix={[m(0), text("sm"), fg("neutral")]}>
 		Removing a workspace takes its members and history with it:{" "}
-		<Link href="/settings/danger" color="danger">
+		<Link href="/examples/settings/danger" color="danger">
 			delete this workspace
 		</Link>
 		.
 	</p>
 
 	<p mix={[m(0), text("sm"), fg("neutral")]}>
-		<Link href="/settings/transfer" aria-disabled="true">
+		<Link href="/examples/settings/transfer" aria-disabled="true">
 			Transferring ownership
 		</Link>{" "}
 		needs a second owner on the account.
@@ -67,14 +67,14 @@ export const LinkPreview = clientEntry(import.meta.url, function LinkPreview() {
 
 			<p mix={[m(0), text("sm"), fg("neutral")]}>
 				Removing a workspace takes its members and history with it:{" "}
-				<Link href="/settings/danger" color="danger">
+				<Link href="/examples/settings/danger" color="danger">
 					delete this workspace
 				</Link>
 				.
 			</p>
 
 			<p mix={[m(0), text("sm"), fg("neutral")]}>
-				<Link href="/settings/transfer" aria-disabled="true">
+				<Link href="/examples/settings/transfer" aria-disabled="true">
 					Transferring ownership
 				</Link>{" "}
 				needs a second owner on the account.

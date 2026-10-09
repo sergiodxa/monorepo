@@ -31,7 +31,7 @@ const CODE = `<Button commandfor="issue-menu" command="toggle-popover" variant="
 <Menu id="issue-menu" aria-label="Issue actions" placement="bottom" mix={[menuKeys()]}>
 	<Section aria-labelledby="issue-menu-edit">
 		<Header id="issue-menu-edit">Edit</Header>
-		<Menu.Item href="/issues/482/edit">
+		<Menu.Item href="/examples/issues/482/edit">
 			<PencilIcon />
 			<span mix={[grow()]}>Rename</span>
 			<Keyboard>R</Keyboard>
@@ -52,7 +52,7 @@ const CODE = `<Button commandfor="issue-menu" command="toggle-popover" variant="
 			<span mix={[grow()]}>Copy link</span>
 			<Keyboard>⌘C</Keyboard>
 		</Menu.Item>
-		<Menu.Item href="/issues/482" target="_blank" rel="noreferrer">
+		<Menu.Item href="/examples/issues/482" target="_blank" rel="noreferrer">
 			<ExternalLinkIcon />
 			<span mix={[grow()]}>Open in new tab</span>
 		</Menu.Item>
@@ -88,7 +88,7 @@ export const MenuPreview = clientEntry(import.meta.url, function MenuPreview() {
 			>
 				<Section aria-labelledby="preview-issue-menu-edit">
 					<Header id="preview-issue-menu-edit">Edit</Header>
-					<Menu.Item href="/issues/482/edit">
+					<Menu.Item href="/examples/issues/482/edit">
 						<PencilIcon />
 						<span mix={[grow()]}>Rename</span>
 						<Keyboard>R</Keyboard>
@@ -109,7 +109,7 @@ export const MenuPreview = clientEntry(import.meta.url, function MenuPreview() {
 						<span mix={[grow()]}>Copy link</span>
 						<Keyboard>⌘C</Keyboard>
 					</Menu.Item>
-					<Menu.Item href="/issues/482" target="_blank" rel="noreferrer">
+					<Menu.Item href="/examples/issues/482" target="_blank" rel="noreferrer">
 						<ExternalLinkIcon />
 						<span mix={[grow()]}>Open in new tab</span>
 					</Menu.Item>

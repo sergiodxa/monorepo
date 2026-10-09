@@ -20,7 +20,7 @@ const QUARTER_HOUR = 900;
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const TIME_FIELD_CODE = `<form
 	method="post"
-	action="/rota"
+	action="/examples/rota"
 	mix={[on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault())]}
 >
 	<Card>
@@ -62,7 +62,7 @@ export const TimeFieldPreview = clientEntry(import.meta.url, function TimeFieldP
 	return () => (
 		<form
 			method="post"
-			action="/rota"
+			action="/examples/rota"
 			mix={[
 				is("26rem"),
 				// A docs page has nowhere to post to, so the submission stops here instead

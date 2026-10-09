@@ -20,7 +20,7 @@ const CODE = `<Button commandfor="revoke-session" command="show-modal" variant="
 	confirmLabel="Sign out"
 	cancelLabel="Stay signed in"
 	form={{
-		action: "/settings/sessions/macbook-pro/revoke",
+		action: "/examples/settings/sessions/macbook-pro/revoke",
 		fields: <input type="hidden" name="csrf" value="b1f4c9e2" />,
 	}}
 />`;
@@ -46,7 +46,7 @@ export default {
 				confirmLabel="Sign out"
 				cancelLabel="Stay signed in"
 				form={{
-					action: "/settings/sessions/macbook-pro/revoke",
+					action: "/examples/settings/sessions/macbook-pro/revoke",
 					fields: <input type="hidden" name="csrf" value="b1f4c9e2" />,
 				}}
 			/>

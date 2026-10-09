@@ -87,6 +87,16 @@ export default route({
 		example: get("/frames/previews/:component/:example"),
 	},
 
+	/**
+	 * Where a live example's links and forms lead. An example reads like an app, so it names
+	 * app paths; under this prefix every one of them returns the reader to the page they
+	 * pressed it on.
+	 */
+	examples: {
+		visit: get("/examples/*path"),
+		submit: post("/examples/*path"),
+	},
+
 	/** Machine-readable surfaces, each one derived from what is already in the bundle. */
 	llms: get("/llms.txt"),
 	sitemap: get("/sitemap.xml"),

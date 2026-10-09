@@ -21,11 +21,11 @@ const SECTION_CODE = `<Button commandfor="preview-account-menu" command="toggle-
 <Menu id="preview-account-menu" aria-label="Account" mix={[menuKeys()]}>
 	<Section aria-labelledby="preview-account-heading">
 		<Header id="preview-account-heading">Account</Header>
-		<Menu.Item href="/settings/profile">
+		<Menu.Item href="/examples/settings/profile">
 			<UserIcon aria-hidden="true" />
 			Profile
 		</Menu.Item>
-		<Menu.Item href="/settings/billing">
+		<Menu.Item href="/examples/settings/billing">
 			<CreditCardIcon aria-hidden="true" />
 			Billing
 		</Menu.Item>
@@ -35,11 +35,11 @@ const SECTION_CODE = `<Button commandfor="preview-account-menu" command="toggle-
 
 	<Section aria-labelledby="preview-workspace-heading">
 		<Header id="preview-workspace-heading">Workspace</Header>
-		<Menu.Item href="/settings/members">
+		<Menu.Item href="/examples/settings/members">
 			<UsersIcon aria-hidden="true" />
 			Members
 		</Menu.Item>
-		<Menu.Item href="/settings/general">
+		<Menu.Item href="/examples/settings/general">
 			<SettingsIcon aria-hidden="true" />
 			General
 		</Menu.Item>
@@ -63,11 +63,11 @@ export const SectionPreview = clientEntry(import.meta.url, function SectionPrevi
 			<Menu id="preview-account-menu" aria-label="Account" mix={[menuKeys()]}>
 				<Section aria-labelledby="preview-account-heading">
 					<Header id="preview-account-heading">Account</Header>
-					<Menu.Item href="/settings/profile">
+					<Menu.Item href="/examples/settings/profile">
 						<UserIcon aria-hidden="true" />
 						Profile
 					</Menu.Item>
-					<Menu.Item href="/settings/billing">
+					<Menu.Item href="/examples/settings/billing">
 						<CreditCardIcon aria-hidden="true" />
 						Billing
 					</Menu.Item>
@@ -77,11 +77,11 @@ export const SectionPreview = clientEntry(import.meta.url, function SectionPrevi
 
 				<Section aria-labelledby="preview-workspace-heading">
 					<Header id="preview-workspace-heading">Workspace</Header>
-					<Menu.Item href="/settings/members">
+					<Menu.Item href="/examples/settings/members">
 						<UsersIcon aria-hidden="true" />
 						Members
 					</Menu.Item>
-					<Menu.Item href="/settings/general">
+					<Menu.Item href="/examples/settings/general">
 						<SettingsIcon aria-hidden="true" />
 						General
 					</Menu.Item>

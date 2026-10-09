@@ -33,7 +33,7 @@ const CODE = `<Button commandfor="invite-modal" command="show-modal">Invite memb
 	<form
 		id="invite-form"
 		method="post"
-		action="/members/invite"
+		action="/examples/members/invite"
 		mix={[vstack({ gap: 4, align: "stretch" })]}
 	>
 		<div mix={[vstack({ gap: 2, align: "stretch" })]}>
@@ -94,7 +94,7 @@ export const ModalPreview = clientEntry(import.meta.url, function ModalPreview()
 				<form
 					id="preview-invite-form"
 					method="post"
-					action="/members/invite"
+					action="/examples/members/invite"
 					mix={[vstack({ gap: 4, align: "stretch" })]}
 				>
 					<div mix={[vstack({ gap: 2, align: "stretch" })]}>

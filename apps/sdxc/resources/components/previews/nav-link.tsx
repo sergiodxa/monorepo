@@ -18,16 +18,16 @@ import { Header, NavLink } from "@sdxc/ui";
 import { clientEntry } from "remix/component";
 
 /** The page the sidebar is rendered for, which is what decides `aria-current`. */
-const ACTIVE_PATH = "/settings/billing";
+const ACTIVE_PATH = "/examples/settings/billing";
 
 /** The source the page shows, matching the markup below. */
 const CODE = `let pathname = useCurrentPath();
 
 let entries = [
-	{ href: "/settings/profile", label: "Profile" },
-	{ href: "/settings/billing", label: "Billing" },
-	{ href: "/settings/members", label: "Members" },
-	{ href: "/settings/webhooks", label: "Webhooks" },
+	{ href: "/examples/settings/profile", label: "Profile" },
+	{ href: "/examples/settings/billing", label: "Billing" },
+	{ href: "/examples/settings/members", label: "Members" },
+	{ href: "/examples/settings/webhooks", label: "Webhooks" },
 ];
 
 <div mix={[hstack({ gap: 10, align: "start" })]}>
@@ -68,10 +68,10 @@ let entries = [
 
 /** The entries both columns render, so the two differ only in how the active one is drawn. */
 const ENTRIES = [
-	{ href: "/settings/profile", label: "Profile" },
-	{ href: "/settings/billing", label: "Billing" },
-	{ href: "/settings/members", label: "Members" },
-	{ href: "/settings/webhooks", label: "Webhooks" },
+	{ href: "/examples/settings/profile", label: "Profile" },
+	{ href: "/examples/settings/billing", label: "Billing" },
+	{ href: "/examples/settings/members", label: "Members" },
+	{ href: "/examples/settings/webhooks", label: "Webhooks" },
 ];
 
 /** A settings sidebar, hydrated so the page loads this example's chunk alone. */

@@ -33,7 +33,7 @@ const FILTERS: Filter[] = [
 ];
 
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
-const TAG_GROUP_CODE = `<form method="post" action="/jobs/filters">
+const TAG_GROUP_CODE = `<form method="post" action="/examples/jobs/filters">
 	<TagGroup aria-labelledby="preview-filters-label">
 		<Label id="preview-filters-label">Applied filters</Label>
 		<TagGroup.List>
@@ -77,7 +77,7 @@ export const TagGroupPreview = clientEntry(
 		return () => (
 			<form
 				method="post"
-				action="/jobs/filters"
+				action="/examples/jobs/filters"
 				mix={[
 					vstack({ gap: 3, align: "start" }),
 					is("24rem"),

@@ -27,12 +27,12 @@ const SLOTS = Array.from({ length: LENGTH }, (_, index) => index + 1);
 /** The source the page shows, matching the markup below apart from the preview's own sizing. */
 const CODE = `let code: string | null = null;
 
-<form method="post" action="/login/verify" mix={[vstack({ gap: 5, align: "stretch" })]}>
+<form method="post" action="/examples/login/verify" mix={[vstack({ gap: 5, align: "stretch" })]}>
 	<div mix={[vstack({ gap: 2, align: "stretch" })]}>
 		<Label htmlFor="otp">One-time code</Label>
 		<OtpField id="otp" name="code" aria-describedby="otp-hint" />
 		<Description id="otp-hint">
-			We sent a six-digit code to sergio@example.com. <Link href="/login/resend">Resend</Link>.
+			We sent a six-digit code to sergio@example.com. <Link href="/examples/login/resend">Resend</Link>.
 		</Description>
 	</div>
 
@@ -86,13 +86,17 @@ export const OtpFieldPreview = clientEntry(
 		let code: string | null = null;
 
 		return () => (
-			<form method="post" action="/login/verify" mix={[vstack({ gap: 5, align: "stretch" })]}>
+			<form
+				method="post"
+				action="/examples/login/verify"
+				mix={[vstack({ gap: 5, align: "stretch" })]}
+			>
 				<div mix={[vstack({ gap: 2, align: "stretch" }), is("20rem")]}>
 					<Label htmlFor="preview-otp">One-time code</Label>
 					<OtpField id="preview-otp" name="code" aria-describedby="preview-otp-hint" />
 					<Description id="preview-otp-hint">
-						We sent a six-digit code to sergio@example.com. <Link href="/login/resend">Resend</Link>
-						.
+						We sent a six-digit code to sergio@example.com.{" "}
+						<Link href="/examples/login/resend">Resend</Link>.
 					</Description>
 				</div>
 

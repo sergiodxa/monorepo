@@ -14,7 +14,7 @@ import { LinkButton, Tooltip } from "@sdxc/ui";
 /** The source the page shows, matching the markup below. */
 const CODE = `<span mix={[hstack({ gap: 0, align: "center" })]}>
 	<LinkButton
-		href="/settings"
+		href="/examples/settings"
 		variant="ghost"
 		size="sm"
 		aria-label="Settings"
@@ -40,7 +40,7 @@ export default {
 	render: () => (
 		<span mix={[hstack({ gap: 0, align: "center" })]}>
 			<LinkButton
-				href="/settings"
+				href="/examples/settings"
 				variant="ghost"
 				size="sm"
 				aria-label="Settings"
