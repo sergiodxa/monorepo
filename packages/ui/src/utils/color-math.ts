@@ -291,7 +291,7 @@ function parseAlphaToken(token: string | undefined): number | null {
 
 /** Parses an `hsl()`/`hsla()` hue token — a plain number optionally suffixed with `deg` — to its numeric degree value, or `null` when `token` matches neither shape. */
 function parseHueToken(token: string): number | null {
-	let match = /^(-?\d*\.?\d+)(deg)?$/i.exec(token);
+	let match = /^(-?(?:\d+(?:\.\d+)?|\.\d+))(deg)?$/i.exec(token);
 	if (match === null) return null;
 
 	let value = Number(match[1]);

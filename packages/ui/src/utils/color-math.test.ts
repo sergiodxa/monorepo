@@ -122,6 +122,14 @@ describe(parseColor.name, () => {
 		expect(parseColor("hsl(120deg 100% 50% / 0.5)")).toEqual({ r: 0, g: 255, b: 0, a: 0.5 });
 	});
 
+	test("reads a hue of 50,000 digits in linear time", () => {
+		let zeros = "0".repeat(50_000);
+		let started = performance.now();
+		expect(parseColor(`hsl(${zeros}x 100% 50%)`)).toBeNull();
+		expect(parseColor(`hsl(${zeros}120deg 100% 50%)`)).toEqual({ r: 0, g: 255, b: 0, a: 1 });
+		expect(performance.now() - started).toBeLessThan(500);
+	});
+
 	test("returns null when hsl()'s saturation or lightness is missing its percent sign", () => {
 		expect(parseColor("hsl(120, 100, 50)")).toBeNull();
 	});
