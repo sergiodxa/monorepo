@@ -80,62 +80,58 @@ const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%"), maxIs
 </div>`;
 
 /** Two series of support volume with a filtering legend, hydrated so each row reports its state. */
-export const ChartPreview = clientEntry(
-	"/resources/components/previews/chart.tsx#ChartPreview",
-	function ChartPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%"), maxIs("32rem")]}>
-				<Chart.Bar
-					aria-label="Tickets opened and resolved, April through September"
-					width={480}
-					height={200}
-					domain={[0, 3000]}
-					tickCount={4}
-					series={["opened", "resolved"]}
-					data={VOLUME.map((row) => ({
-						category: row.month,
-						values: {
-							opened: {
-								value: row.opened,
-								label: `${row.month} opened: ${COUNT.format(row.opened)}`,
-							},
-							resolved: {
-								value: row.resolved,
-								label: `${row.month} resolved: ${COUNT.format(row.resolved)}`,
-							},
+export const ChartPreview = clientEntry(import.meta.url, function ChartPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%"), maxIs("32rem")]}>
+			<Chart.Bar
+				aria-label="Tickets opened and resolved, April through September"
+				width={480}
+				height={200}
+				domain={[0, 3000]}
+				tickCount={4}
+				series={["opened", "resolved"]}
+				data={VOLUME.map((row) => ({
+					category: row.month,
+					values: {
+						opened: {
+							value: row.opened,
+							label: `${row.month} opened: ${COUNT.format(row.opened)}`,
 						},
-					}))}
-				/>
+						resolved: {
+							value: row.resolved,
+							label: `${row.month} resolved: ${COUNT.format(row.resolved)}`,
+						},
+					},
+				}))}
+			/>
 
-				<Chart.Legend aria-label="Series shown">
-					<Chart.Legend.Item color={1} defaultChecked mix={[ariaChecked()]}>
-						Opened
-					</Chart.Legend.Item>
-					<Chart.Legend.Item color={2} defaultChecked mix={[ariaChecked()]}>
-						Resolved
-					</Chart.Legend.Item>
-				</Chart.Legend>
+			<Chart.Legend aria-label="Series shown">
+				<Chart.Legend.Item color={1} defaultChecked mix={[ariaChecked()]}>
+					Opened
+				</Chart.Legend.Item>
+				<Chart.Legend.Item color={2} defaultChecked mix={[ariaChecked()]}>
+					Resolved
+				</Chart.Legend.Item>
+			</Chart.Legend>
 
-				<div mix={[hstack({ gap: 0, align: "center" })]} aria-hidden="true">
-					{VOLUME.map((row) => (
-						<span
-							key={row.month}
-							mix={[grow(), basis("0%"), textAlign("center"), text("xs"), fg("neutral.muted")]}
-						>
-							{row.month}
-						</span>
-					))}
-				</div>
-
-				<p mix={[text("sm"), fg("neutral")]}>
-					<span mix={[weight("medium")]}>Backlog is growing.</span> September opened 2,640 and
-					resolved 2,470. Tab into the plot to hear each bar, or a legend row to strike a series
-					out.
-				</p>
+			<div mix={[hstack({ gap: 0, align: "center" })]} aria-hidden="true">
+				{VOLUME.map((row) => (
+					<span
+						key={row.month}
+						mix={[grow(), basis("0%"), textAlign("center"), text("xs"), fg("neutral.muted")]}
+					>
+						{row.month}
+					</span>
+				))}
 			</div>
-		);
-	},
-);
+
+			<p mix={[text("sm"), fg("neutral")]}>
+				<span mix={[weight("medium")]}>Backlog is growing.</span> September opened 2,640 and
+				resolved 2,470. Tab into the plot to hear each bar, or a legend row to strike a series out.
+			</p>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ChartPreview /> };

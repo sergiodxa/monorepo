@@ -46,44 +46,41 @@ const SEPARATOR_CODE = `<Card>
 </Card>`;
 
 /** Dividers on both axes inside one card, hydrated alongside the rest of the catalogue. */
-export const SeparatorPreview = clientEntry(
-	"/resources/components/previews/separator.tsx#SeparatorPreview",
-	function SeparatorPreview() {
-		return () => (
-			<Card mix={[is("24rem")]}>
-				<Card.Header>
-					<Card.Title>sergiodxa/monorepo</Card.Title>
-					<Card.Description>Small TypeScript packages built on web standards.</Card.Description>
-				</Card.Header>
-				<Card.Content mix={[vstack({ gap: 3, align: "stretch" })]}>
-					<div mix={[hstack({ gap: 4, align: "center" }), text("sm"), weight("medium")]}>
-						<span>TypeScript</span>
-						<Separator aria-orientation="vertical" />
-						<span>MIT</span>
-						<Separator aria-orientation="vertical" />
-						<span>51 packages</span>
-					</div>
+export const SeparatorPreview = clientEntry(import.meta.url, function SeparatorPreview() {
+	return () => (
+		<Card mix={[is("24rem")]}>
+			<Card.Header>
+				<Card.Title>sergiodxa/monorepo</Card.Title>
+				<Card.Description>Small TypeScript packages built on web standards.</Card.Description>
+			</Card.Header>
+			<Card.Content mix={[vstack({ gap: 3, align: "stretch" })]}>
+				<div mix={[hstack({ gap: 4, align: "center" }), text("sm"), weight("medium")]}>
+					<span>TypeScript</span>
+					<Separator aria-orientation="vertical" />
+					<span>MIT</span>
+					<Separator aria-orientation="vertical" />
+					<span>51 packages</span>
+				</div>
 
-					<Separator />
+				<Separator />
 
-					<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
-						<Text>Latest release</Text>
-						<Badge color="success" variant="secondary">
-							2026.9.17
-						</Badge>
-					</div>
+				<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
+					<Text>Latest release</Text>
+					<Badge color="success" variant="secondary">
+						2026.9.17
+					</Badge>
+				</div>
 
-					<Separator />
+				<Separator />
 
-					<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
-						<Text>Last deploy</Text>
-						<Text>12 minutes ago</Text>
-					</div>
-				</Card.Content>
-			</Card>
-		);
-	},
-);
+				<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
+					<Text>Last deploy</Text>
+					<Text>12 minutes ago</Text>
+				</div>
+			</Card.Content>
+		</Card>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SEPARATOR_CODE, render: () => <SeparatorPreview /> };

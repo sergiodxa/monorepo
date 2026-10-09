@@ -59,7 +59,7 @@ const SELECTION_INDICATOR_CODE = `<div mix={[vstack({ gap: 1, align: "stretch" }
 
 /** A sort menu whose checkmark moves, hydrated so the selection has somewhere to go. */
 export const SelectionIndicatorPreview = clientEntry(
-	"/resources/components/previews/selection-indicator.tsx#SelectionIndicatorPreview",
+	import.meta.url,
 	function SelectionIndicatorPreview(handle: Handle) {
 		let selected = "downloads";
 

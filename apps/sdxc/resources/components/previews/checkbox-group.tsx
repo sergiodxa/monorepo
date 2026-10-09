@@ -75,7 +75,7 @@ const CODE = `let chosen = new Set(["email"]);
 
 /** A delivery-channel set that must keep one pick, hydrated so the rule reports itself. */
 export const CheckboxGroupPreview = clientEntry(
-	"/resources/components/previews/checkbox-group.tsx#CheckboxGroupPreview",
+	import.meta.url,
 	function CheckboxGroupPreview(handle: Handle) {
 		let chosen = new Set(["email"]);
 

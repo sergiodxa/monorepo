@@ -45,64 +45,61 @@ const CODE = `{/* The surface owns the arrow, and the gap between the two is wha
 </div>`;
 
 /** Four placements, each against a trigger of its own, hydrated with the rest of the page. */
-export const OverlayArrowPreview = clientEntry(
-	"/resources/components/previews/overlay-arrow.tsx#OverlayArrowPreview",
-	function OverlayArrowPreview() {
-		return () => (
-			<div mix={[hstack({ gap: 8, align: "center", justify: "center" }), flexWrap()]}>
-				{PLACEMENTS.map((entry) => {
-					/*
-					 * The gap between the surface and its trigger is what the glyph reaches across,
-					 * so the pair stacks along the placement's own axis and the surface leads or
-					 * trails depending on which side of the trigger it sits.
-					 */
-					let surface = (
-						<div
-							key="surface"
-							mix={[
-								relative(),
-								p(3),
-								rounded("lg"),
-								bg("neutral.solid"),
-								fg("neutral.onSolid"),
-								text("sm"),
-								weight("medium"),
-							]}
-						>
-							<OverlayArrow placement={entry.placement} mix={[fill("neutral.solid")]}>
-								<svg width={8} height={8} viewBox="0 0 8 8" aria-hidden="true">
-									<path d="M0 0 L4 4 L8 0" />
-								</svg>
-							</OverlayArrow>
-							{entry.placement}
-						</div>
-					);
+export const OverlayArrowPreview = clientEntry(import.meta.url, function OverlayArrowPreview() {
+	return () => (
+		<div mix={[hstack({ gap: 8, align: "center", justify: "center" }), flexWrap()]}>
+			{PLACEMENTS.map((entry) => {
+				/*
+				 * The gap between the surface and its trigger is what the glyph reaches across,
+				 * so the pair stacks along the placement's own axis and the surface leads or
+				 * trails depending on which side of the trigger it sits.
+				 */
+				let surface = (
+					<div
+						key="surface"
+						mix={[
+							relative(),
+							p(3),
+							rounded("lg"),
+							bg("neutral.solid"),
+							fg("neutral.onSolid"),
+							text("sm"),
+							weight("medium"),
+						]}
+					>
+						<OverlayArrow placement={entry.placement} mix={[fill("neutral.solid")]}>
+							<svg width={8} height={8} viewBox="0 0 8 8" aria-hidden="true">
+								<path d="M0 0 L4 4 L8 0" />
+							</svg>
+						</OverlayArrow>
+						{entry.placement}
+					</div>
+				);
 
-					let trigger = (
-						<div
-							key="trigger"
-							mix={[is(10), bs(10), rounded("md"), border({ color: "neutral", width: 1 })]}
-						/>
-					);
+				let trigger = (
+					<div
+						key="trigger"
+						mix={[is(10), bs(10), rounded("md"), border({ color: "neutral", width: 1 })]}
+					/>
+				);
 
-					let pair = entry.surfaceFirst ? [surface, trigger] : [trigger, surface];
+				let pair = entry.surfaceFirst ? [surface, trigger] : [trigger, surface];
 
-					return (
-						<div
-							key={entry.placement}
-							mix={[
-								entry.axis === "block"
-									? vstack({ gap: 3, align: "center" })
-									: hstack({ gap: 3, align: "center" }),
-							]}
-						>
-							{pair}
-						</div>
-					);
-				})}
-			</div>
-		);
-	},
-);
+				return (
+					<div
+						key={entry.placement}
+						mix={[
+							entry.axis === "block"
+								? vstack({ gap: 3, align: "center" })
+								: hstack({ gap: 3, align: "center" }),
+						]}
+					>
+						{pair}
+					</div>
+				);
+			})}
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <OverlayArrowPreview /> };

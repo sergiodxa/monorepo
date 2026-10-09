@@ -75,44 +75,41 @@ const SWITCH_CODE = `<Card>
 </Card>`;
 
 /** A notification panel of three switches, hydrated so each one's `aria-checked` follows it. */
-export const SwitchPreview = clientEntry(
-	"/resources/components/previews/switch.tsx#SwitchPreview",
-	function SwitchPreview() {
-		return () => (
-			<Card mix={[is("26rem")]}>
-				<Card.Header>
-					<Card.Title>Notifications</Card.Title>
-					<Card.Description>Choose what we email you about.</Card.Description>
-				</Card.Header>
-				<Card.Content mix={[vstack({ gap: 4, align: "stretch" })]}>
-					{PREFERENCES.map((preference, index) => (
-						<div key={preference.name} mix={[vstack({ gap: 4, align: "stretch" })]}>
-							{index > 0 ? <Separator /> : null}
-							<label
-								htmlFor={`preview-switch-${preference.name}`}
-								mix={[
-									hstack({ gap: 4, align: "start", justify: "between" }),
-									css({ cursor: "pointer" }),
-								]}
-							>
-								<span mix={[vstack({ gap: 1, align: "start" })]}>
-									<span mix={[text("sm"), weight("medium")]}>{preference.label}</span>
-									<Text>{preference.description}</Text>
-								</span>
-								<Switch
-									id={`preview-switch-${preference.name}`}
-									name={preference.name}
-									defaultChecked={preference.defaultChecked}
-									mix={[ariaChecked(), css({ flexShrink: "0" })]}
-								/>
-							</label>
-						</div>
-					))}
-				</Card.Content>
-			</Card>
-		);
-	},
-);
+export const SwitchPreview = clientEntry(import.meta.url, function SwitchPreview() {
+	return () => (
+		<Card mix={[is("26rem")]}>
+			<Card.Header>
+				<Card.Title>Notifications</Card.Title>
+				<Card.Description>Choose what we email you about.</Card.Description>
+			</Card.Header>
+			<Card.Content mix={[vstack({ gap: 4, align: "stretch" })]}>
+				{PREFERENCES.map((preference, index) => (
+					<div key={preference.name} mix={[vstack({ gap: 4, align: "stretch" })]}>
+						{index > 0 ? <Separator /> : null}
+						<label
+							htmlFor={`preview-switch-${preference.name}`}
+							mix={[
+								hstack({ gap: 4, align: "start", justify: "between" }),
+								css({ cursor: "pointer" }),
+							]}
+						>
+							<span mix={[vstack({ gap: 1, align: "start" })]}>
+								<span mix={[text("sm"), weight("medium")]}>{preference.label}</span>
+								<Text>{preference.description}</Text>
+							</span>
+							<Switch
+								id={`preview-switch-${preference.name}`}
+								name={preference.name}
+								defaultChecked={preference.defaultChecked}
+								mix={[ariaChecked(), css({ flexShrink: "0" })]}
+							/>
+						</label>
+					</div>
+				))}
+			</Card.Content>
+		</Card>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SWITCH_CODE, render: () => <SwitchPreview /> };

@@ -112,108 +112,105 @@ const SHEET_CODE = `<Button commandfor="preview-cart" command="show-modal">
 </Sheet>`;
 
 /** A cart docked to the inline edge, hydrated so the shortcut and the line removals work. */
-export const SheetPreview = clientEntry(
-	"/resources/components/previews/sheet.tsx#SheetPreview",
-	function SheetPreview(handle: Handle) {
-		let lines = LINES;
+export const SheetPreview = clientEntry(import.meta.url, function SheetPreview(handle: Handle) {
+	let lines = LINES;
 
-		/** Drops one line, so the panel has something to do besides open and close. */
-		function remove(id: string) {
-			lines = lines.filter((line) => line.id !== id);
-			void handle.update();
-		}
+	/** Drops one line, so the panel has something to do besides open and close. */
+	function remove(id: string) {
+		lines = lines.filter((line) => line.id !== id);
+		void handle.update();
+	}
 
-		/** Puts the cart back, so a reader who emptied it can look again. */
-		function restore() {
-			lines = LINES;
-			void handle.update();
-		}
+	/** Puts the cart back, so a reader who emptied it can look again. */
+	function restore() {
+		lines = LINES;
+		void handle.update();
+	}
 
-		return () => {
-			let total = lines.reduce((sum, line) => sum + line.price, 0);
+	return () => {
+		let total = lines.reduce((sum, line) => sum + line.price, 0);
 
-			return (
-				<>
-					<Button commandfor="preview-cart" command="show-modal">
-						Open cart
-						<Badge variant="secondary">{lines.length}</Badge>
-						<Keyboard>⌘B</Keyboard>
-					</Button>
+		return (
+			<>
+				<Button commandfor="preview-cart" command="show-modal">
+					Open cart
+					<Badge variant="secondary">{lines.length}</Badge>
+					<Keyboard>⌘B</Keyboard>
+				</Button>
 
-					<Sheet
-						id="preview-cart"
-						side="right"
-						aria-labelledby="preview-cart-title"
-						// A docked column fills the edge it is docked to; a dialog's own block
-						// size hugs its content, so the panel states the full height it wants.
-						mix={[hotkey("mod+b"), bs("100%")]}
-					>
-						<Sheet.Header>
-							<Sheet.Title id="preview-cart-title">Your cart</Sheet.Title>
-							<Sheet.Description>
-								{lines.length} {lines.length === 1 ? "item" : "items"} · billed yearly
-							</Sheet.Description>
-						</Sheet.Header>
+				<Sheet
+					id="preview-cart"
+					side="right"
+					aria-labelledby="preview-cart-title"
+					// A docked column fills the edge it is docked to; a dialog's own block
+					// size hugs its content, so the panel states the full height it wants.
+					mix={[hotkey("mod+b"), bs("100%")]}
+				>
+					<Sheet.Header>
+						<Sheet.Title id="preview-cart-title">Your cart</Sheet.Title>
+						<Sheet.Description>
+							{lines.length} {lines.length === 1 ? "item" : "items"} · billed yearly
+						</Sheet.Description>
+					</Sheet.Header>
 
-						<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%")]}>
-							{lines.length === 0 ? (
-								<Empty>
-									<Empty.Title>Your cart is empty</Empty.Title>
-									<Empty.Description>Put the sample lines back to look again.</Empty.Description>
-									<Empty.Action>
+					<div mix={[vstack({ gap: 3, align: "stretch" }), is("100%")]}>
+						{lines.length === 0 ? (
+							<Empty>
+								<Empty.Title>Your cart is empty</Empty.Title>
+								<Empty.Description>Put the sample lines back to look again.</Empty.Description>
+								<Empty.Action>
+									<Button
+										size="sm"
+										variant="outline"
+										mix={[on<HTMLButtonElement, "click">("click", restore)]}
+									>
+										Restore the cart
+									</Button>
+								</Empty.Action>
+							</Empty>
+						) : (
+							lines.map((line) => (
+								<div key={line.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
+									<div mix={[hstack({ gap: 3, align: "center", justify: "between" })]}>
+										<span mix={[vstack({ gap: 0, align: "start" }), css({ flexGrow: "1" })]}>
+											<span mix={[text("sm"), weight("medium")]}>{line.name}</span>
+											<Text>{line.detail}</Text>
+										</span>
+										<span mix={[text("sm"), weight("medium")]}>${line.price}</span>
 										<Button
+											variant="ghost"
 											size="sm"
-											variant="outline"
-											mix={[on<HTMLButtonElement, "click">("click", restore)]}
+											aria-label={`Remove ${line.name}`}
+											mix={[on<HTMLButtonElement, "click">("click", () => remove(line.id))]}
 										>
-											Restore the cart
+											<Trash2Icon />
 										</Button>
-									</Empty.Action>
-								</Empty>
-							) : (
-								lines.map((line) => (
-									<div key={line.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
-										<div mix={[hstack({ gap: 3, align: "center", justify: "between" })]}>
-											<span mix={[vstack({ gap: 0, align: "start" }), css({ flexGrow: "1" })]}>
-												<span mix={[text("sm"), weight("medium")]}>{line.name}</span>
-												<Text>{line.detail}</Text>
-											</span>
-											<span mix={[text("sm"), weight("medium")]}>${line.price}</span>
-											<Button
-												variant="ghost"
-												size="sm"
-												aria-label={`Remove ${line.name}`}
-												mix={[on<HTMLButtonElement, "click">("click", () => remove(line.id))]}
-											>
-												<Trash2Icon />
-											</Button>
-										</div>
-										<Separator />
 									</div>
-								))
-							)}
+									<Separator />
+								</div>
+							))
+						)}
 
-							<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
-								<Text>Total</Text>
-								<span mix={[text("lg"), weight("semibold")]}>${total}</span>
-							</div>
+						<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
+							<Text>Total</Text>
+							<span mix={[text("lg"), weight("semibold")]}>${total}</span>
 						</div>
+					</div>
 
-						<Sheet.Footer>
-							<Button commandfor="preview-cart" command="close" variant="outline">
-								Keep shopping
-							</Button>
-							<Button commandfor="preview-cart" command="close" disabled={lines.length === 0}>
-								Check out
-							</Button>
-						</Sheet.Footer>
-						<Sheet.Close commandfor="preview-cart" aria-label="Close the cart" />
-					</Sheet>
-				</>
-			);
-		};
-	},
-);
+					<Sheet.Footer>
+						<Button commandfor="preview-cart" command="close" variant="outline">
+							Keep shopping
+						</Button>
+						<Button commandfor="preview-cart" command="close" disabled={lines.length === 0}>
+							Check out
+						</Button>
+					</Sheet.Footer>
+					<Sheet.Close commandfor="preview-cart" aria-label="Close the cart" />
+				</Sheet>
+			</>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SHEET_CODE, render: () => <SheetPreview /> };

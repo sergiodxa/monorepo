@@ -85,7 +85,7 @@ function queueFiles(files: readonly File[]) {
 
 /** A photo upload panel, hydrated so a real drag lands in the queue below it. */
 export const DropZonePreview = clientEntry(
-	"/resources/components/previews/drop-zone.tsx#DropZonePreview",
+	import.meta.url,
 	function DropZonePreview(handle: Handle) {
 		let session = new DragSession();
 		let queued: File[] = [];

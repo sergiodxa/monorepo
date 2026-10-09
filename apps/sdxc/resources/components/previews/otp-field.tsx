@@ -81,7 +81,7 @@ const CODE = `let code: string | null = null;
 
 /** A verification step, hydrated so the slot group advances, retreats and splits a paste. */
 export const OtpFieldPreview = clientEntry(
-	"/resources/components/previews/otp-field.tsx#OtpFieldPreview",
+	import.meta.url,
 	function OtpFieldPreview(handle: Handle) {
 		let code: string | null = null;
 

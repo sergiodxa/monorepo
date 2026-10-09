@@ -133,50 +133,47 @@ const SCROLL_AREA_CODE = `<ScrollArea aria-label="Deploy history">
 </ScrollArea>`;
 
 /** A deploy log tall enough to scroll, hydrated so both scroll timelines run. */
-export const ScrollAreaPreview = clientEntry(
-	"/resources/components/previews/scroll-area.tsx#ScrollAreaPreview",
-	function ScrollAreaPreview() {
-		return () => (
-			<ScrollArea aria-label="Deploy history" mix={[is("26rem"), bs("13rem")]}>
-				<ScrollArea.Viewport mix={[scrollFade({ size: "2rem" })]}>
-					<header
-						mix={[
-							sticky(),
-							scrollShadow({ distance: "48px" }),
-							css({ insetBlockStart: "0", zIndex: "1" }),
-							hstack({ gap: 2, align: "center", justify: "between" }),
-							p(3),
-							bg(),
-							text("sm"),
-							weight("medium"),
-						]}
-					>
-						Deploy history
-						<Text>{DEPLOYS.length} deploys today</Text>
-					</header>
+export const ScrollAreaPreview = clientEntry(import.meta.url, function ScrollAreaPreview() {
+	return () => (
+		<ScrollArea aria-label="Deploy history" mix={[is("26rem"), bs("13rem")]}>
+			<ScrollArea.Viewport mix={[scrollFade({ size: "2rem" })]}>
+				<header
+					mix={[
+						sticky(),
+						scrollShadow({ distance: "48px" }),
+						css({ insetBlockStart: "0", zIndex: "1" }),
+						hstack({ gap: 2, align: "center", justify: "between" }),
+						p(3),
+						bg(),
+						text("sm"),
+						weight("medium"),
+					]}
+				>
+					Deploy history
+					<Text>{DEPLOYS.length} deploys today</Text>
+				</header>
 
-					<div mix={[vstack({ gap: 0, align: "stretch" })]}>
-						{DEPLOYS.map((deploy) => (
-							<div key={deploy.sha}>
-								<div mix={[hstack({ gap: 3, align: "center" }), p(3)]}>
-									<code mix={[text("xs"), fg("neutral"), css({ inlineSize: "4.5rem" })]}>
-										{deploy.sha}
-									</code>
-									<span mix={[text("sm"), css({ flexGrow: "1" })]}>{deploy.summary}</span>
-									<Badge color={deploy.status} variant="secondary">
-										{deploy.environment}
-									</Badge>
-									<Text mix={[text("xs")]}>{deploy.at}</Text>
-								</div>
-								<Separator />
+				<div mix={[vstack({ gap: 0, align: "stretch" })]}>
+					{DEPLOYS.map((deploy) => (
+						<div key={deploy.sha}>
+							<div mix={[hstack({ gap: 3, align: "center" }), p(3)]}>
+								<code mix={[text("xs"), fg("neutral"), css({ inlineSize: "4.5rem" })]}>
+									{deploy.sha}
+								</code>
+								<span mix={[text("sm"), css({ flexGrow: "1" })]}>{deploy.summary}</span>
+								<Badge color={deploy.status} variant="secondary">
+									{deploy.environment}
+								</Badge>
+								<Text mix={[text("xs")]}>{deploy.at}</Text>
 							</div>
-						))}
-					</div>
-				</ScrollArea.Viewport>
-			</ScrollArea>
-		);
-	},
-);
+							<Separator />
+						</div>
+					))}
+				</div>
+			</ScrollArea.Viewport>
+		</ScrollArea>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SCROLL_AREA_CODE, render: () => <ScrollAreaPreview /> };

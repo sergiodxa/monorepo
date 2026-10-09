@@ -32,7 +32,7 @@ type CopyButtonProps = {
 
 /** Copies the text of {@link CopyButtonProps.target} onto the clipboard. */
 export const CopyButton = clientEntry(
-	"/resources/components/copy-button.tsx#CopyButton",
+	import.meta.url,
 	function CopyButton(handle: Handle<CopyButtonProps>) {
 		let copied = false;
 

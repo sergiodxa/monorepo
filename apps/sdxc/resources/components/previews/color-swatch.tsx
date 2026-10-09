@@ -69,47 +69,44 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "start" })]}>
 </div>`;
 
 /** A brand ramp, the semantic roles and the shape vocabulary, hydrated the way every preview here loads. */
-export const ColorSwatchPreview = clientEntry(
-	"/resources/components/previews/color-swatch.tsx#ColorSwatchPreview",
-	function ColorSwatchPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "start" })]}>
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>brand</span>
-					<div mix={[hstack({ gap: 2, align: "center" })]}>
-						{RAMP.map((stop) => (
-							<div key={stop.step} mix={[vstack({ gap: 1, align: "center" })]}>
-								<ColorSwatch value={stop.value} shape="rounded" size="lg" />
-								<span mix={[font("mono"), text("xs"), fg("neutral")]}>{stop.step}</span>
-							</div>
-						))}
-					</div>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>roles</span>
-					<div mix={[hstack({ gap: 4, align: "center" })]}>
-						{ROLES.map((role) => (
-							<div key={role.name} mix={[hstack({ gap: 2, align: "center" })]}>
-								<ColorSwatch value={role.value} shape="circle" size="md" />
-								<span mix={[font("mono"), text("xs"), fg("neutral")]}>{role.name}</span>
-							</div>
-						))}
-					</div>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>shape and size</span>
-					<div mix={[hstack({ gap: 3, align: "center" })]}>
-						<ColorSwatch value="#8b5cf6" shape="square" size="sm" />
-						<ColorSwatch value="#8b5cf6" shape="rounded" size="md" />
-						<ColorSwatch value="#8b5cf6" shape="circle" size="lg" />
-					</div>
+export const ColorSwatchPreview = clientEntry(import.meta.url, function ColorSwatchPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "start" })]}>
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>brand</span>
+				<div mix={[hstack({ gap: 2, align: "center" })]}>
+					{RAMP.map((stop) => (
+						<div key={stop.step} mix={[vstack({ gap: 1, align: "center" })]}>
+							<ColorSwatch value={stop.value} shape="rounded" size="lg" />
+							<span mix={[font("mono"), text("xs"), fg("neutral")]}>{stop.step}</span>
+						</div>
+					))}
 				</div>
 			</div>
-		);
-	},
-);
+
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>roles</span>
+				<div mix={[hstack({ gap: 4, align: "center" })]}>
+					{ROLES.map((role) => (
+						<div key={role.name} mix={[hstack({ gap: 2, align: "center" })]}>
+							<ColorSwatch value={role.value} shape="circle" size="md" />
+							<span mix={[font("mono"), text("xs"), fg("neutral")]}>{role.name}</span>
+						</div>
+					))}
+				</div>
+			</div>
+
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>shape and size</span>
+				<div mix={[hstack({ gap: 3, align: "center" })]}>
+					<ColorSwatch value="#8b5cf6" shape="square" size="sm" />
+					<ColorSwatch value="#8b5cf6" shape="rounded" size="md" />
+					<ColorSwatch value="#8b5cf6" shape="circle" size="lg" />
+				</div>
+			</div>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ColorSwatchPreview /> };

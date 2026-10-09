@@ -78,56 +78,53 @@ const DatabaseNameSchema = s
 </>`;
 
 /** A destructive confirmation gated on a typed name, hydrated so the schema runs as you type. */
-export const AlertDialogPreview = clientEntry(
-	"/resources/components/previews/alert-dialog.tsx#AlertDialogPreview",
-	function AlertDialogPreview() {
-		return () => (
-			<>
-				<Button commandfor="preview-alert-dialog" command="show-modal" color="danger">
-					Delete database
-				</Button>
+export const AlertDialogPreview = clientEntry(import.meta.url, function AlertDialogPreview() {
+	return () => (
+		<>
+			<Button commandfor="preview-alert-dialog" command="show-modal" color="danger">
+				Delete database
+			</Button>
 
-				<AlertDialog id="preview-alert-dialog" aria-labelledby="preview-alert-dialog-title">
-					<form method="dialog" mix={[vstack({ gap: 5, align: "stretch" })]}>
-						<AlertDialog.Header>
-							<AlertDialog.Title id="preview-alert-dialog-title">
-								Delete acme-production?
-							</AlertDialog.Title>
-							<AlertDialog.Description>
-								This removes 14 GB across 38 tables, every read replica, and the last 30 days of
-								point-in-time backups. Six services still hold credentials for it.
-							</AlertDialog.Description>
-						</AlertDialog.Header>
+			<AlertDialog id="preview-alert-dialog" aria-labelledby="preview-alert-dialog-title">
+				<form method="dialog" mix={[vstack({ gap: 5, align: "stretch" })]}>
+					<AlertDialog.Header>
+						<AlertDialog.Title id="preview-alert-dialog-title">
+							Delete acme-production?
+						</AlertDialog.Title>
+						<AlertDialog.Description>
+							This removes 14 GB across 38 tables, every read replica, and the last 30 days of
+							point-in-time backups. Six services still hold credentials for it.
+						</AlertDialog.Description>
+					</AlertDialog.Header>
 
-						<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-							<Label htmlFor="preview-alert-dialog-name">Database name</Label>
-							<Input
-								id="preview-alert-dialog-name"
-								name="database"
-								required
-								autoComplete="off"
-								placeholder={DATABASE_NAME}
-								aria-describedby="preview-alert-dialog-hint preview-alert-dialog-error"
-								mix={[is("100%"), validate(DatabaseNameSchema)]}
-							/>
-							<Description id="preview-alert-dialog-hint">
-								Type the name exactly, so a deletion is never one stray click.
-							</Description>
-							<FieldError id="preview-alert-dialog-error" hidden />
-						</div>
+					<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+						<Label htmlFor="preview-alert-dialog-name">Database name</Label>
+						<Input
+							id="preview-alert-dialog-name"
+							name="database"
+							required
+							autoComplete="off"
+							placeholder={DATABASE_NAME}
+							aria-describedby="preview-alert-dialog-hint preview-alert-dialog-error"
+							mix={[is("100%"), validate(DatabaseNameSchema)]}
+						/>
+						<Description id="preview-alert-dialog-hint">
+							Type the name exactly, so a deletion is never one stray click.
+						</Description>
+						<FieldError id="preview-alert-dialog-error" hidden />
+					</div>
 
-						<AlertDialog.Footer>
-							<AlertDialog.Cancel commandfor="preview-alert-dialog">Keep it</AlertDialog.Cancel>
-							<AlertDialog.Action type="submit" color="danger">
-								Delete forever
-							</AlertDialog.Action>
-						</AlertDialog.Footer>
-					</form>
-				</AlertDialog>
-			</>
-		);
-	},
-);
+					<AlertDialog.Footer>
+						<AlertDialog.Cancel commandfor="preview-alert-dialog">Keep it</AlertDialog.Cancel>
+						<AlertDialog.Action type="submit" color="danger">
+							Delete forever
+						</AlertDialog.Action>
+					</AlertDialog.Footer>
+				</form>
+			</AlertDialog>
+		</>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <AlertDialogPreview /> };

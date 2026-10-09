@@ -139,7 +139,7 @@ function parseDayKey(key: string): Date {
 
 /** A composed month grid picking one range, hydrated so both of its mixins have a model. */
 export const RangeCalendarPreview = clientEntry(
-	"/resources/components/previews/range-calendar.tsx#RangeCalendarPreview",
+	import.meta.url,
 	function RangeCalendarPreview(handle: Handle) {
 		let timeZone = systemTimeZone();
 		let model = new CalendarModel({ focusedDate: OPENING_MONTH });

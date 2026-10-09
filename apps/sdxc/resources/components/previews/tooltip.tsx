@@ -57,41 +57,38 @@ const TOOLTIP_CODE = `<Toolbar aria-label="Thread actions">
 </Toolbar>`;
 
 /** Three icon-only actions with anchored hints, hydrated alongside the rest of the catalogue. */
-export const TooltipPreview = clientEntry(
-	"/resources/components/previews/tooltip.tsx#TooltipPreview",
-	function TooltipPreview() {
-		return () => (
-			<Toolbar aria-label="Thread actions">
-				{ACTIONS.map((action) => {
-					let Glyph =
-						action.id === "star" ? StarIcon : action.id === "archive" ? ArchiveIcon : Trash2Icon;
+export const TooltipPreview = clientEntry(import.meta.url, function TooltipPreview() {
+	return () => (
+		<Toolbar aria-label="Thread actions">
+			{ACTIONS.map((action) => {
+				let Glyph =
+					action.id === "star" ? StarIcon : action.id === "archive" ? ArchiveIcon : Trash2Icon;
 
-					return (
-						<span key={action.id} mix={[hstack({ gap: 0, align: "center" })]}>
-							<Button
-								variant="ghost"
-								size="sm"
-								color={action.id === "delete" ? "danger" : "neutral"}
-								aria-label={action.label}
-								aria-describedby={`preview-tip-${action.id}`}
-								mix={[anchorName(`preview-tip-${action.id}`)]}
-							>
-								<Glyph />
-							</Button>
-							<Tooltip
-								id={`preview-tip-${action.id}`}
-								placement={action.placement}
-								mix={[positionAnchor(`preview-tip-${action.id}`)]}
-							>
-								{action.hint}
-							</Tooltip>
-						</span>
-					);
-				})}
-			</Toolbar>
-		);
-	},
-);
+				return (
+					<span key={action.id} mix={[hstack({ gap: 0, align: "center" })]}>
+						<Button
+							variant="ghost"
+							size="sm"
+							color={action.id === "delete" ? "danger" : "neutral"}
+							aria-label={action.label}
+							aria-describedby={`preview-tip-${action.id}`}
+							mix={[anchorName(`preview-tip-${action.id}`)]}
+						>
+							<Glyph />
+						</Button>
+						<Tooltip
+							id={`preview-tip-${action.id}`}
+							placement={action.placement}
+							mix={[positionAnchor(`preview-tip-${action.id}`)]}
+						>
+							{action.hint}
+						</Tooltip>
+					</span>
+				);
+			})}
+		</Toolbar>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TOOLTIP_CODE, render: () => <TooltipPreview /> };

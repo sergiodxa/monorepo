@@ -50,44 +50,41 @@ const FIELD_ERROR_CODE = `<form>
 </form>`;
 
 /** Two invalid fields, hydrated so the first one's message comes from the schema. */
-export const FieldErrorPreview = clientEntry(
-	"/resources/components/previews/field-error.tsx#FieldErrorPreview",
-	function FieldErrorPreview() {
-		return () => (
-			<form mix={[vstack({ gap: 5, align: "stretch" }), is("24rem")]}>
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-domain">Custom domain</Label>
-					<Input
-						id="preview-domain"
-						name="domain"
-						defaultValue="https://app.acme"
-						required
-						aria-describedby="preview-domain-hint preview-domain-error"
-						mix={[validate(CustomDomain)]}
-					/>
-					<Description id="preview-domain-hint">
-						Point a CNAME at edge.acme-hosting.com before you save this.
-					</Description>
-					<FieldError id="preview-domain-error" hidden />
-				</div>
+export const FieldErrorPreview = clientEntry(import.meta.url, function FieldErrorPreview() {
+	return () => (
+		<form mix={[vstack({ gap: 5, align: "stretch" }), is("24rem")]}>
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-domain">Custom domain</Label>
+				<Input
+					id="preview-domain"
+					name="domain"
+					defaultValue="https://app.acme"
+					required
+					aria-describedby="preview-domain-hint preview-domain-error"
+					mix={[validate(CustomDomain)]}
+				/>
+				<Description id="preview-domain-hint">
+					Point a CNAME at edge.acme-hosting.com before you save this.
+				</Description>
+				<FieldError id="preview-domain-error" hidden />
+			</div>
 
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-subdomain">Workspace subdomain</Label>
-					<Input
-						id="preview-subdomain"
-						name="subdomain"
-						defaultValue="acme"
-						aria-invalid="true"
-						aria-describedby="preview-subdomain-error"
-					/>
-					<FieldError id="preview-subdomain-error">That subdomain is already taken.</FieldError>
-				</div>
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-subdomain">Workspace subdomain</Label>
+				<Input
+					id="preview-subdomain"
+					name="subdomain"
+					defaultValue="acme"
+					aria-invalid="true"
+					aria-describedby="preview-subdomain-error"
+				/>
+				<FieldError id="preview-subdomain-error">That subdomain is already taken.</FieldError>
+			</div>
 
-				<Button type="submit">Save domains</Button>
-			</form>
-		);
-	},
-);
+			<Button type="submit">Save domains</Button>
+		</form>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: FIELD_ERROR_CODE, render: () => <FieldErrorPreview /> };

@@ -46,40 +46,37 @@ const CODE = `<form mix={[vstack({ gap: 5, align: "stretch" }), is("100%"), maxI
 </form>`;
 
 /** Three theme tokens typed in three notations, hydrated so each swatch follows the typing. */
-export const ColorFieldPreview = clientEntry(
-	"/resources/components/previews/color-field.tsx#ColorFieldPreview",
-	function ColorFieldPreview() {
-		return () => (
-			<form mix={[vstack({ gap: 5, align: "stretch" }), is("100%"), maxIs("22rem")]}>
-				<ColorField
-					label="Brand"
-					name="brandColor"
-					format="hex"
-					defaultValue="#3b82f6"
-					description="Buttons, links and focus rings."
-					mix={[colorPreview()]}
-				/>
-				<ColorField
-					label="Surface"
-					name="surfaceColor"
-					format="rgb"
-					defaultValue="rgb(24 24 27)"
-					description="Panel and sheet backgrounds."
-					mix={[colorPreview()]}
-				/>
-				<ColorField
-					label="Danger"
-					name="dangerColor"
-					format="hsl"
-					defaultValue="hsl(0 84% 60%)"
-					description="Destructive actions and failed states."
-					errorMessage="This one has not passed contrast against the surface yet."
-					mix={[colorPreview()]}
-				/>
-			</form>
-		);
-	},
-);
+export const ColorFieldPreview = clientEntry(import.meta.url, function ColorFieldPreview() {
+	return () => (
+		<form mix={[vstack({ gap: 5, align: "stretch" }), is("100%"), maxIs("22rem")]}>
+			<ColorField
+				label="Brand"
+				name="brandColor"
+				format="hex"
+				defaultValue="#3b82f6"
+				description="Buttons, links and focus rings."
+				mix={[colorPreview()]}
+			/>
+			<ColorField
+				label="Surface"
+				name="surfaceColor"
+				format="rgb"
+				defaultValue="rgb(24 24 27)"
+				description="Panel and sheet backgrounds."
+				mix={[colorPreview()]}
+			/>
+			<ColorField
+				label="Danger"
+				name="dangerColor"
+				format="hsl"
+				defaultValue="hsl(0 84% 60%)"
+				description="Destructive actions and failed states."
+				errorMessage="This one has not passed contrast against the surface yet."
+				mix={[colorPreview()]}
+			/>
+		</form>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ColorFieldPreview /> };

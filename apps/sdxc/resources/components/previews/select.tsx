@@ -52,54 +52,51 @@ const SELECT_CODE = `// The change bubbles, so the listener sits on the wrapper 
 </div>`;
 
 /** A grouped region picker, hydrated so the readout follows the selection. */
-export const SelectPreview = clientEntry(
-	"/resources/components/previews/select.tsx#SelectPreview",
-	function SelectPreview(handle: Handle) {
-		let code = "cdg";
+export const SelectPreview = clientEntry(import.meta.url, function SelectPreview(handle: Handle) {
+	let code = "cdg";
 
-		/** Tracks the chosen region so the caption below names the right latency. */
-		function readRegion(event: Event) {
-			let target = event.target;
-			if (!(target instanceof HTMLSelectElement)) return;
+	/** Tracks the chosen region so the caption below names the right latency. */
+	function readRegion(event: Event) {
+		let target = event.target;
+		if (!(target instanceof HTMLSelectElement)) return;
 
-			code = target.value;
-			void handle.update();
-		}
+		code = target.value;
+		void handle.update();
+	}
 
-		return () => {
-			let selected = Object.values(REGIONS)
-				.flat()
-				.find((entry) => entry.code === code);
+	return () => {
+		let selected = Object.values(REGIONS)
+			.flat()
+			.find((entry) => entry.code === code);
 
-			return (
-				<div
-					mix={[
-						vstack({ gap: 2, align: "stretch" }),
-						is("20rem"),
-						on<HTMLDivElement, "change">("change", readRegion),
-					]}
-				>
-					<Label htmlFor="preview-region">Primary region</Label>
-					<Select id="preview-region" name="region" color="brand">
-						<Select.Trigger>
-							<Select.Value />
-						</Select.Trigger>
-						{Object.entries(REGIONS).map(([group, entries]) => (
-							<Select.Group key={group} label={group}>
-								{entries.map((entry) => (
-									<Select.Option key={entry.code} value={entry.code} selected={entry.code === code}>
-										{entry.city}
-									</Select.Option>
-								))}
-							</Select.Group>
-						))}
-					</Select>
-					<Text>Median latency from Madrid: {selected?.latency ?? "—"}</Text>
-				</div>
-			);
-		};
-	},
-);
+		return (
+			<div
+				mix={[
+					vstack({ gap: 2, align: "stretch" }),
+					is("20rem"),
+					on<HTMLDivElement, "change">("change", readRegion),
+				]}
+			>
+				<Label htmlFor="preview-region">Primary region</Label>
+				<Select id="preview-region" name="region" color="brand">
+					<Select.Trigger>
+						<Select.Value />
+					</Select.Trigger>
+					{Object.entries(REGIONS).map(([group, entries]) => (
+						<Select.Group key={group} label={group}>
+							{entries.map((entry) => (
+								<Select.Option key={entry.code} value={entry.code} selected={entry.code === code}>
+									{entry.city}
+								</Select.Option>
+							))}
+						</Select.Group>
+					))}
+				</Select>
+				<Text>Median latency from Madrid: {selected?.latency ?? "—"}</Text>
+			</div>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SELECT_CODE, render: () => <SelectPreview /> };

@@ -50,7 +50,7 @@ const TEXTAREA_CODE = `<form>
 
 /** A review composer that grows and reports itself, hydrated so both are visible. */
 export const TextAreaPreview = clientEntry(
-	"/resources/components/previews/textarea.tsx#TextAreaPreview",
+	import.meta.url,
 	function TextAreaPreview(handle: Handle) {
 		let length = 0;
 		let message = "";

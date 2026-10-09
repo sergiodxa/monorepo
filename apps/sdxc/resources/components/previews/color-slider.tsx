@@ -81,7 +81,7 @@ const CHANNELS = [
 
 /** An HSL channel stack whose tracks follow each other, hydrated so the group reports itself. */
 export const ColorSliderPreview = clientEntry(
-	"/resources/components/previews/color-slider.tsx#ColorSliderPreview",
+	import.meta.url,
 	function ColorSliderPreview(handle: Handle) {
 		let channels = { ...OPENING };
 

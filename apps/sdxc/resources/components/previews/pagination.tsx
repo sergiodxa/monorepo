@@ -80,7 +80,7 @@ function goTo(next: number) {
 
 /** A twelve-page pager, hydrated so the window and its ellipses move as pages change. */
 export const PaginationPreview = clientEntry(
-	"/resources/components/previews/pagination.tsx#PaginationPreview",
+	import.meta.url,
 	function PaginationPreview(handle: Handle) {
 		let page = 4;
 

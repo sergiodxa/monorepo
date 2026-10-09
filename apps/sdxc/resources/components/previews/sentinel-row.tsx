@@ -65,42 +65,39 @@ const SENTINEL_ROW_CODE = `<div role="feed" aria-busy="true" aria-label="Notific
 </div>`;
 
 /** A notification feed's trailing loading row, hydrated so its spinner rotates. */
-export const SentinelRowPreview = clientEntry(
-	"/resources/components/previews/sentinel-row.tsx#SentinelRowPreview",
-	function SentinelRowPreview() {
-		return () => (
-			<div
-				role="feed"
-				aria-busy="true"
-				aria-label="Notifications"
-				mix={[vstack({ gap: 1, align: "stretch" }), is("26rem")]}
-			>
-				{LOADED.map((entry) => {
-					let Glyph = GLYPHS[entry.id as keyof typeof GLYPHS];
+export const SentinelRowPreview = clientEntry(import.meta.url, function SentinelRowPreview() {
+	return () => (
+		<div
+			role="feed"
+			aria-busy="true"
+			aria-label="Notifications"
+			mix={[vstack({ gap: 1, align: "stretch" }), is("26rem")]}
+		>
+			{LOADED.map((entry) => {
+				let Glyph = GLYPHS[entry.id as keyof typeof GLYPHS];
 
-					return (
-						<Item key={entry.id}>
-							<Item.Media>
-								<Glyph aria-hidden="true" />
-							</Item.Media>
-							<Item.Content>
-								<Item.Title>{entry.title}</Item.Title>
-								<Item.Description>{entry.description}</Item.Description>
-							</Item.Content>
-						</Item>
-					);
-				})}
+				return (
+					<Item key={entry.id}>
+						<Item.Media>
+							<Glyph aria-hidden="true" />
+						</Item.Media>
+						<Item.Content>
+							<Item.Title>{entry.title}</Item.Title>
+							<Item.Description>{entry.description}</Item.Description>
+						</Item.Content>
+					</Item>
+				);
+			})}
 
-				<Separator />
+			<Separator />
 
-				<SentinelRow mix={[gap(2)]}>
-					<Spinner size="sm" mix={[spin()]} aria-label="Loading more notifications" />
-					Loading more…
-				</SentinelRow>
-			</div>
-		);
-	},
-);
+			<SentinelRow mix={[gap(2)]}>
+				<Spinner size="sm" mix={[spin()]} aria-label="Loading more notifications" />
+				Loading more…
+			</SentinelRow>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SENTINEL_ROW_CODE, render: () => <SentinelRowPreview /> };

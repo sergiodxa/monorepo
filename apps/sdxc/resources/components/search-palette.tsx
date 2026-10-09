@@ -72,7 +72,7 @@ function emptyMessage(state: "idle" | "loading" | "ready" | "failed", query: str
 
 /** Searches every guide and package reference, and follows the chosen result. */
 export const SearchPalette = clientEntry(
-	"/resources/components/search-palette.tsx#SearchPalette",
+	import.meta.url,
 	function SearchPalette(handle: Handle<SearchPaletteProps>) {
 		let model = new FilterModel();
 

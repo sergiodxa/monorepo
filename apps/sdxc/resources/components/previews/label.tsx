@@ -44,40 +44,37 @@ const CODE = `<form mix={[vstack({ gap: 5, align: "stretch" })]}>
 </form>`;
 
 /** A profile form's captions, hydrated so the page loads this example's chunk alone. */
-export const LabelPreview = clientEntry(
-	"/resources/components/previews/label.tsx#LabelPreview",
-	function LabelPreview() {
-		return () => (
-			<form mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-label-display-name">Display name</Label>
-					<Input
-						id="preview-label-display-name"
-						name="displayName"
-						defaultValue="Sergio"
-						required
-						aria-describedby="preview-label-display-name-hint"
-					/>
-					<Description id="preview-label-display-name-hint">
-						Shown on every comment you leave.
-					</Description>
-				</div>
+export const LabelPreview = clientEntry(import.meta.url, function LabelPreview() {
+	return () => (
+		<form mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-label-display-name">Display name</Label>
+				<Input
+					id="preview-label-display-name"
+					name="displayName"
+					defaultValue="Sergio"
+					required
+					aria-describedby="preview-label-display-name-hint"
+				/>
+				<Description id="preview-label-display-name-hint">
+					Shown on every comment you leave.
+				</Description>
+			</div>
 
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-label-company" mix={[hstack({ gap: 2, justify: "between" })]}>
-						Company
-						<span mix={[text("xs"), fg("neutral.muted")]}>Optional</span>
-					</Label>
-					<Input id="preview-label-company" name="company" placeholder="Where you work" />
-				</div>
-
-				<Label mix={[hstack({ gap: 2, align: "center" })]}>
-					<input type="checkbox" name="digest" defaultChecked />
-					Send me the weekly digest
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-label-company" mix={[hstack({ gap: 2, justify: "between" })]}>
+					Company
+					<span mix={[text("xs"), fg("neutral.muted")]}>Optional</span>
 				</Label>
-			</form>
-		);
-	},
-);
+				<Input id="preview-label-company" name="company" placeholder="Where you work" />
+			</div>
+
+			<Label mix={[hstack({ gap: 2, align: "center" })]}>
+				<input type="checkbox" name="digest" defaultChecked />
+				Send me the weekly digest
+			</Label>
+		</form>
+	);
+});
 
 export default { code: CODE, render: () => <LabelPreview /> };

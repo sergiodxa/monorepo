@@ -114,110 +114,105 @@ const SIDEBAR_CODE = `<Sidebar.Provider>
 </Sidebar.Provider>`;
 
 /** A full application shell — rail, groups, sub-menu, footer and inset — hydrated with the page. */
-export const SidebarPreview = clientEntry(
-	"/resources/components/previews/sidebar.tsx#SidebarPreview",
-	function SidebarPreview() {
-		return () => (
-			<Sidebar.Provider
-				/*
-				 * Tall enough for the whole tree and narrow enough in the rail that the page
-				 * beside it still reads as a page: a shell cropped to a scrolling rail and a
-				 * sliver of content shows neither half of what it is for.
-				 */
-				style={{ "--sidebar-width": "13rem" }}
-				mix={[is("100%"), bs("35rem"), minBs("0")]}
-			>
-				<Sidebar collapsible="none">
-					<Sidebar.Header>
-						<span mix={[text("sm"), weight("semibold")]}>Acme Status</span>
-					</Sidebar.Header>
+export const SidebarPreview = clientEntry(import.meta.url, function SidebarPreview() {
+	return () => (
+		<Sidebar.Provider
+			/*
+			 * Tall enough for the whole tree and narrow enough in the rail that the page
+			 * beside it still reads as a page: a shell cropped to a scrolling rail and a
+			 * sliver of content shows neither half of what it is for.
+			 */
+			style={{ "--sidebar-width": "13rem" }}
+			mix={[is("100%"), bs("35rem"), minBs("0")]}
+		>
+			<Sidebar collapsible="none">
+				<Sidebar.Header>
+					<span mix={[text("sm"), weight("semibold")]}>Acme Status</span>
+				</Sidebar.Header>
 
-					<Sidebar.Content>
-						<Sidebar.Group>
-							<Sidebar.GroupLabel>Workspace</Sidebar.GroupLabel>
-							<Sidebar.GroupContent>
-								<Sidebar.Menu>
-									<Sidebar.MenuItem>
-										<Sidebar.MenuLink href="/dashboard" active>
-											<LayoutDashboardIcon aria-hidden="true" />
-											<span data-sidebar-collapsed-hide>Dashboard</span>
-										</Sidebar.MenuLink>
-									</Sidebar.MenuItem>
-									<Sidebar.MenuItem>
-										<Sidebar.MenuLink href="/incidents">
-											<CircleAlertIcon aria-hidden="true" />
-											<span data-sidebar-collapsed-hide>Incidents</span>
-											<Sidebar.MenuBadge>3</Sidebar.MenuBadge>
-										</Sidebar.MenuLink>
-										<Sidebar.MenuSub>
-											<Sidebar.MenuSubItem>
-												<Sidebar.MenuSubLink href="/incidents/open" active>
-													Open
-												</Sidebar.MenuSubLink>
-											</Sidebar.MenuSubItem>
-											<Sidebar.MenuSubItem>
-												<Sidebar.MenuSubLink href="/incidents/resolved">
-													Resolved
-												</Sidebar.MenuSubLink>
-											</Sidebar.MenuSubItem>
-										</Sidebar.MenuSub>
-									</Sidebar.MenuItem>
-									<Sidebar.MenuItem>
-										<Sidebar.MenuLink href="/reports">
-											<ChartLineIcon aria-hidden="true" />
-											<span data-sidebar-collapsed-hide>Reports</span>
-										</Sidebar.MenuLink>
-									</Sidebar.MenuItem>
-								</Sidebar.Menu>
-							</Sidebar.GroupContent>
-						</Sidebar.Group>
+				<Sidebar.Content>
+					<Sidebar.Group>
+						<Sidebar.GroupLabel>Workspace</Sidebar.GroupLabel>
+						<Sidebar.GroupContent>
+							<Sidebar.Menu>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink href="/dashboard" active>
+										<LayoutDashboardIcon aria-hidden="true" />
+										<span data-sidebar-collapsed-hide>Dashboard</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink href="/incidents">
+										<CircleAlertIcon aria-hidden="true" />
+										<span data-sidebar-collapsed-hide>Incidents</span>
+										<Sidebar.MenuBadge>3</Sidebar.MenuBadge>
+									</Sidebar.MenuLink>
+									<Sidebar.MenuSub>
+										<Sidebar.MenuSubItem>
+											<Sidebar.MenuSubLink href="/incidents/open" active>
+												Open
+											</Sidebar.MenuSubLink>
+										</Sidebar.MenuSubItem>
+										<Sidebar.MenuSubItem>
+											<Sidebar.MenuSubLink href="/incidents/resolved">Resolved</Sidebar.MenuSubLink>
+										</Sidebar.MenuSubItem>
+									</Sidebar.MenuSub>
+								</Sidebar.MenuItem>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink href="/reports">
+										<ChartLineIcon aria-hidden="true" />
+										<span data-sidebar-collapsed-hide>Reports</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
+							</Sidebar.Menu>
+						</Sidebar.GroupContent>
+					</Sidebar.Group>
 
-						<Sidebar.Separator />
+					<Sidebar.Separator />
 
-						<Sidebar.Group>
-							<Sidebar.GroupLabel>Resources</Sidebar.GroupLabel>
-							<Sidebar.GroupContent>
-								<Sidebar.Menu>
-									<Sidebar.MenuItem>
-										<Sidebar.MenuLink href="/docs">
-											<BookOpenIcon aria-hidden="true" />
-											<span data-sidebar-collapsed-hide>Documentation</span>
-										</Sidebar.MenuLink>
-									</Sidebar.MenuItem>
-									<Sidebar.MenuItem>
-										<Sidebar.MenuLink href="/settings">
-											<SettingsIcon aria-hidden="true" />
-											<span data-sidebar-collapsed-hide>Settings</span>
-										</Sidebar.MenuLink>
-									</Sidebar.MenuItem>
-								</Sidebar.Menu>
-							</Sidebar.GroupContent>
-						</Sidebar.Group>
-					</Sidebar.Content>
+					<Sidebar.Group>
+						<Sidebar.GroupLabel>Resources</Sidebar.GroupLabel>
+						<Sidebar.GroupContent>
+							<Sidebar.Menu>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink href="/docs">
+										<BookOpenIcon aria-hidden="true" />
+										<span data-sidebar-collapsed-hide>Documentation</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
+								<Sidebar.MenuItem>
+									<Sidebar.MenuLink href="/settings">
+										<SettingsIcon aria-hidden="true" />
+										<span data-sidebar-collapsed-hide>Settings</span>
+									</Sidebar.MenuLink>
+								</Sidebar.MenuItem>
+							</Sidebar.Menu>
+						</Sidebar.GroupContent>
+					</Sidebar.Group>
+				</Sidebar.Content>
 
-					<Sidebar.Footer>
-						<Sidebar.MenuButton>
-							<UserIcon aria-hidden="true" />
-							<span data-sidebar-collapsed-hide>sergio@aside.co</span>
-						</Sidebar.MenuButton>
-					</Sidebar.Footer>
-				</Sidebar>
+				<Sidebar.Footer>
+					<Sidebar.MenuButton>
+						<UserIcon aria-hidden="true" />
+						<span data-sidebar-collapsed-hide>sergio@aside.co</span>
+					</Sidebar.MenuButton>
+				</Sidebar.Footer>
+			</Sidebar>
 
-				<Sidebar.Inset>
-					<div mix={[vstack({ gap: 3, align: "start" }), p(6)]}>
-						<HeadingScope>
-							<Heading mix={[text("xl"), weight("semibold")]}>Dashboard</Heading>
-						</HeadingScope>
-						<Text>Every monitor reporting, last checked a minute ago.</Text>
-						<Button variant="outline" size="sm">
-							Run every check now
-						</Button>
-					</div>
-				</Sidebar.Inset>
-			</Sidebar.Provider>
-		);
-	},
-);
+			<Sidebar.Inset>
+				<div mix={[vstack({ gap: 3, align: "start" }), p(6)]}>
+					<HeadingScope>
+						<Heading mix={[text("xl"), weight("semibold")]}>Dashboard</Heading>
+					</HeadingScope>
+					<Text>Every monitor reporting, last checked a minute ago.</Text>
+					<Button variant="outline" size="sm">
+						Run every check now
+					</Button>
+				</div>
+			</Sidebar.Inset>
+		</Sidebar.Provider>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SIDEBAR_CODE, flush: true, render: () => <SidebarPreview /> };

@@ -104,7 +104,7 @@ openCover === undefined ? (
 
 /** A cover that morphs between a grid cell and a detail header, hydrated so it runs. */
 export const SharedElementPreview = clientEntry(
-	"/resources/components/previews/shared-element.tsx#SharedElementPreview",
+	import.meta.url,
 	function SharedElementPreview(handle: Handle) {
 		let openSlug: string | null = null;
 

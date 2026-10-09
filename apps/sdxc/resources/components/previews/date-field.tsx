@@ -42,7 +42,7 @@ function pickDate(event: Event & { currentTarget: HTMLInputElement }) {
 
 /** A dated expense claim, hydrated so the field's own hint tracks the day it holds. */
 export const DateFieldPreview = clientEntry(
-	"/resources/components/previews/date-field.tsx#DateFieldPreview",
+	import.meta.url,
 	function DateFieldPreview(handle: Handle) {
 		let today = new Date();
 		let { min, max } = quarterBounds(today);

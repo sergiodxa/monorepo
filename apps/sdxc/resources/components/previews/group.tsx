@@ -63,61 +63,58 @@ const GROUP_CODE = `let copied = false;
 </Group>`;
 
 /** Two fused control clusters, hydrated so the copy button actually copies. */
-export const GroupPreview = clientEntry(
-	"/resources/components/previews/group.tsx#GroupPreview",
-	function GroupPreview(handle: Handle) {
-		let copied = false;
+export const GroupPreview = clientEntry(import.meta.url, function GroupPreview(handle: Handle) {
+	let copied = false;
 
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "stretch" }), is("24rem")]}>
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-api-key">Secret key</Label>
-					<Group>
-						<Input id="preview-api-key" name="apiKey" readOnly value="sk_live_51Nc8yR2eZvKYlo2C" />
-						<Button
-							variant="outline"
-							color="neutral"
-							commandfor="preview-api-key"
-							command={COPY_COMMAND}
-							mix={[
-								copyToClipboard(),
-								on<HTMLButtonElement, "ui:copy">("ui:copy", (event) => {
-									copied = event.success;
-									void handle.update();
-								}),
-							]}
-						>
-							{copied ? <CheckIcon /> : <ClipboardIcon />}
-							<span mix={[visuallyHidden()]}>{copied ? "Copied" : "Copy"}</span>
-						</Button>
-					</Group>
-					<Description>Rotating the key revokes the previous one after an hour.</Description>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Label htmlFor="preview-amount">Invoice total</Label>
-					<Group>
-						<Select name="currency" aria-label="Currency">
-							<Select.Option value="eur" selected>
-								EUR
-							</Select.Option>
-							<Select.Option value="usd">USD</Select.Option>
-							<Select.Option value="gbp">GBP</Select.Option>
-						</Select>
-						<Input
-							id="preview-amount"
-							name="amount"
-							type="number"
-							min={0}
-							step={0.01}
-							defaultValue="1250.00"
-						/>
-					</Group>
-				</div>
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "stretch" }), is("24rem")]}>
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-api-key">Secret key</Label>
+				<Group>
+					<Input id="preview-api-key" name="apiKey" readOnly value="sk_live_51Nc8yR2eZvKYlo2C" />
+					<Button
+						variant="outline"
+						color="neutral"
+						commandfor="preview-api-key"
+						command={COPY_COMMAND}
+						mix={[
+							copyToClipboard(),
+							on<HTMLButtonElement, "ui:copy">("ui:copy", (event) => {
+								copied = event.success;
+								void handle.update();
+							}),
+						]}
+					>
+						{copied ? <CheckIcon /> : <ClipboardIcon />}
+						<span mix={[visuallyHidden()]}>{copied ? "Copied" : "Copy"}</span>
+					</Button>
+				</Group>
+				<Description>Rotating the key revokes the previous one after an hour.</Description>
 			</div>
-		);
-	},
-);
+
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Label htmlFor="preview-amount">Invoice total</Label>
+				<Group>
+					<Select name="currency" aria-label="Currency">
+						<Select.Option value="eur" selected>
+							EUR
+						</Select.Option>
+						<Select.Option value="usd">USD</Select.Option>
+						<Select.Option value="gbp">GBP</Select.Option>
+					</Select>
+					<Input
+						id="preview-amount"
+						name="amount"
+						type="number"
+						min={0}
+						step={0.01}
+						defaultValue="1250.00"
+					/>
+				</Group>
+			</div>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: GROUP_CODE, render: () => <GroupPreview /> };

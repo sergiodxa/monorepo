@@ -138,7 +138,7 @@ const CODE = `let committed: string | null = null;
 
 /** A time-zone field that narrows as you type, hydrated so the draft text drives the list. */
 export const ComboBoxPreview = clientEntry(
-	"/resources/components/previews/combobox.tsx#ComboBoxPreview",
+	import.meta.url,
 	function ComboBoxPreview(handle: Handle) {
 		let committed: string | null = null;
 

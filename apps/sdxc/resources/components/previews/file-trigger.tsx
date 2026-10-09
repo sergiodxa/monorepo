@@ -73,7 +73,7 @@ function readChoice(event: Event & { currentTarget: HTMLInputElement }) {
 
 /** A contacts importer, hydrated so the chosen file decides whether import is available. */
 export const FileTriggerPreview = clientEntry(
-	"/resources/components/previews/file-trigger.tsx#FileTriggerPreview",
+	import.meta.url,
 	function FileTriggerPreview(handle: Handle) {
 		let chosen: File | null = null;
 

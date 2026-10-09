@@ -80,68 +80,65 @@ let active = sections[activeIndex];
 </Tabs>`;
 
 /** A routing-driven tab strip, hydrated so a tab press re-reads the URL it navigated to. */
-export const TabsPreview = clientEntry(
-	"/resources/components/previews/tabs.tsx#TabsPreview",
-	function TabsPreview(handle: Handle) {
-		let fragment = SECTIONS[0]!.fragment;
+export const TabsPreview = clientEntry(import.meta.url, function TabsPreview(handle: Handle) {
+	let fragment = SECTIONS[0]!.fragment;
 
-		/** Re-reads the URL whenever it changes under the island, however that happens. */
-		function readFragment() {
-			fragment = globalThis.location.hash;
-			void handle.update();
-		}
+	/** Re-reads the URL whenever it changes under the island, however that happens. */
+	function readFragment() {
+		fragment = globalThis.location.hash;
+		void handle.update();
+	}
 
-		// The window outlives the island, so the subscription is dropped when the
-		// island disconnects rather than through an options signal, which is an
-		// inert stub during the server render.
-		globalThis.addEventListener("hashchange", readFragment);
-		handle.signal.addEventListener("abort", () =>
-			globalThis.removeEventListener("hashchange", readFragment),
+	// The window outlives the island, so the subscription is dropped when the
+	// island disconnects rather than through an options signal, which is an
+	// inert stub during the server render.
+	globalThis.addEventListener("hashchange", readFragment);
+	handle.signal.addEventListener("abort", () =>
+		globalThis.removeEventListener("hashchange", readFragment),
+	);
+
+	return () => {
+		let activeIndex = Math.max(
+			0,
+			SECTIONS.findIndex((section) => section.fragment === fragment),
 		);
+		let active = SECTIONS[activeIndex]!;
 
-		return () => {
-			let activeIndex = Math.max(
-				0,
-				SECTIONS.findIndex((section) => section.fragment === fragment),
-			);
-			let active = SECTIONS[activeIndex]!;
-
-			return (
-				<Tabs mix={[is("28rem")]}>
-					<Tabs.List aria-label="Settings sections" activeIndex={activeIndex} tabSize={TAB_SIZE}>
-						{SECTIONS.map((section, index) => (
-							<Tabs.Tab
-								key={section.fragment}
-								href={section.fragment}
-								aria-selected={index === activeIndex}
-								mix={[
-									is(TAB_SIZE),
-									// A fragment navigation leaves no history entry the runtime reports,
-									// so the island reads the URL back on the press itself.
-									on<HTMLAnchorElement, "click">("click", () => {
-										fragment = section.fragment;
-										void handle.update();
-									}),
-								]}
-							>
-								{section.label}
-							</Tabs.Tab>
-						))}
-					</Tabs.List>
-					<Tabs.Panels>
-						<Tabs.Panel aria-label={active.heading} mix={[vstack({ gap: 2, align: "start" })]}>
-							<div mix={[hstack({ gap: 2, align: "center" })]}>
-								<span mix={[text("base"), weight("semibold")]}>{active.heading}</span>
-								<Badge variant="secondary">{active.fragment}</Badge>
-							</div>
-							<Text>{active.body}</Text>
-						</Tabs.Panel>
-					</Tabs.Panels>
-				</Tabs>
-			);
-		};
-	},
-);
+		return (
+			<Tabs mix={[is("28rem")]}>
+				<Tabs.List aria-label="Settings sections" activeIndex={activeIndex} tabSize={TAB_SIZE}>
+					{SECTIONS.map((section, index) => (
+						<Tabs.Tab
+							key={section.fragment}
+							href={section.fragment}
+							aria-selected={index === activeIndex}
+							mix={[
+								is(TAB_SIZE),
+								// A fragment navigation leaves no history entry the runtime reports,
+								// so the island reads the URL back on the press itself.
+								on<HTMLAnchorElement, "click">("click", () => {
+									fragment = section.fragment;
+									void handle.update();
+								}),
+							]}
+						>
+							{section.label}
+						</Tabs.Tab>
+					))}
+				</Tabs.List>
+				<Tabs.Panels>
+					<Tabs.Panel aria-label={active.heading} mix={[vstack({ gap: 2, align: "start" })]}>
+						<div mix={[hstack({ gap: 2, align: "center" })]}>
+							<span mix={[text("base"), weight("semibold")]}>{active.heading}</span>
+							<Badge variant="secondary">{active.fragment}</Badge>
+						</div>
+						<Text>{active.body}</Text>
+					</Tabs.Panel>
+				</Tabs.Panels>
+			</Tabs>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TABS_CODE, render: () => <TabsPreview /> };

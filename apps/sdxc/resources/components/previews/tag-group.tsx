@@ -53,7 +53,7 @@ const TAG_GROUP_CODE = `<form method="post" action="/jobs/filters">
 
 /** An applied-filters row, hydrated so each remove control has somewhere to land. */
 export const TagGroupPreview = clientEntry(
-	"/resources/components/previews/tag-group.tsx#TagGroupPreview",
+	import.meta.url,
 	function TagGroupPreview(handle: Handle) {
 		let filters = FILTERS;
 

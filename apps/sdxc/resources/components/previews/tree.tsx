@@ -117,110 +117,107 @@ model.addEventListener("change", () => void handle.update());
 </Tree>`;
 
 /** A repository tree that opens, walks and selects, hydrated so all three work. */
-export const TreePreview = clientEntry(
-	"/resources/components/previews/tree.tsx#TreePreview",
-	function TreePreview(handle: Handle) {
-		let model = new SelectionModel({
-			mode: "multiple",
-			keys: KEYS,
-			// The mixin narrows the model's key universe to the rows keyboard
-			// navigation can reach, so a row inside a collapsed subtree cannot
-			// start out selected.
-			selectedKeys: ["packages/ui/package.json"],
-		});
+export const TreePreview = clientEntry(import.meta.url, function TreePreview(handle: Handle) {
+	let model = new SelectionModel({
+		mode: "multiple",
+		keys: KEYS,
+		// The mixin narrows the model's key universe to the rows keyboard
+		// navigation can reach, so a row inside a collapsed subtree cannot
+		// start out selected.
+		selectedKeys: ["packages/ui/package.json"],
+	});
 
-		// `handle.signal` is an inert stub during the server render, so the
-		// subscription is plain: it dies with the island that owns the model.
-		model.addEventListener("change", () => void handle.update());
+	// `handle.signal` is an inert stub during the server render, so the
+	// subscription is plain: it dies with the island that owns the model.
+	model.addEventListener("change", () => void handle.update());
 
-		/**
-		 * Each row is a `<summary>` and its chevron is decoration inside it, so a press
-		 * anywhere along the row opens and closes the branch.
-		 */
-		return () => (
-			<div mix={[vstack({ gap: 2, align: "stretch" }), is("24rem")]}>
-				<Tree aria-label="Repository files" aria-multiselectable="true" mix={[treeKeys(model)]}>
-					<Tree.Item id="packages" open>
-						<Tree.ItemContent data-tree-item="packages" aria-expanded="true">
+	/**
+	 * Each row is a `<summary>` and its chevron is decoration inside it, so a press
+	 * anywhere along the row opens and closes the branch.
+	 */
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("24rem")]}>
+			<Tree aria-label="Repository files" aria-multiselectable="true" mix={[treeKeys(model)]}>
+				<Tree.Item id="packages" open>
+					<Tree.ItemContent data-tree-item="packages" aria-expanded="true">
+						<Tree.ExpandButton />
+						<FolderIcon aria-hidden="true" />
+						packages
+					</Tree.ItemContent>
+
+					<Tree.Item id="packages-ui" open>
+						<Tree.ItemContent data-tree-item="packages/ui" aria-expanded="true">
 							<Tree.ExpandButton />
 							<FolderIcon aria-hidden="true" />
-							packages
+							ui
 						</Tree.ItemContent>
 
-						<Tree.Item id="packages-ui" open>
-							<Tree.ItemContent data-tree-item="packages/ui" aria-expanded="true">
+						<Tree.Item id="packages-ui-components">
+							<Tree.ItemContent data-tree-item="packages/ui/components" aria-expanded="false">
 								<Tree.ExpandButton />
 								<FolderIcon aria-hidden="true" />
-								ui
+								components
 							</Tree.ItemContent>
 
-							<Tree.Item id="packages-ui-components">
-								<Tree.ItemContent data-tree-item="packages/ui/components" aria-expanded="false">
-									<Tree.ExpandButton />
-									<FolderIcon aria-hidden="true" />
-									components
+							<Tree.Item id="packages-ui-components-tree">
+								<Tree.ItemContent data-tree-item="packages/ui/components/tree.tsx">
+									<FileCodeIcon aria-hidden="true" />
+									tree.tsx
 								</Tree.ItemContent>
-
-								<Tree.Item id="packages-ui-components-tree">
-									<Tree.ItemContent data-tree-item="packages/ui/components/tree.tsx">
-										<FileCodeIcon aria-hidden="true" />
-										tree.tsx
-									</Tree.ItemContent>
-								</Tree.Item>
-								<Tree.Item id="packages-ui-components-table">
-									<Tree.ItemContent data-tree-item="packages/ui/components/table.tsx">
-										<FileCodeIcon aria-hidden="true" />
-										table.tsx
-									</Tree.ItemContent>
-								</Tree.Item>
 							</Tree.Item>
-
-							<Tree.Item id="packages-ui-mixins">
-								<Tree.ItemContent data-tree-item="packages/ui/mixins" aria-expanded="false">
-									<Tree.ExpandButton />
-									<FolderIcon aria-hidden="true" />
-									mixins
-								</Tree.ItemContent>
-								<Tree.Item id="packages-ui-mixins-tree-keys">
-									<Tree.ItemContent data-tree-item="packages/ui/mixins/treeKeys.ts">
-										<FileCodeIcon aria-hidden="true" />
-										treeKeys.ts
-									</Tree.ItemContent>
-								</Tree.Item>
-							</Tree.Item>
-
-							<Tree.Item id="packages-ui-package-json">
-								<Tree.ItemContent data-tree-item="packages/ui/package.json">
-									<FileBracesIcon aria-hidden="true" />
-									package.json
+							<Tree.Item id="packages-ui-components-table">
+								<Tree.ItemContent data-tree-item="packages/ui/components/table.tsx">
+									<FileCodeIcon aria-hidden="true" />
+									table.tsx
 								</Tree.ItemContent>
 							</Tree.Item>
 						</Tree.Item>
 
-						<Tree.Item id="packages-result">
-							<Tree.ItemContent data-tree-item="packages/result" aria-expanded="false">
+						<Tree.Item id="packages-ui-mixins">
+							<Tree.ItemContent data-tree-item="packages/ui/mixins" aria-expanded="false">
 								<Tree.ExpandButton />
 								<FolderIcon aria-hidden="true" />
-								result
+								mixins
 							</Tree.ItemContent>
-							<Tree.Item id="packages-result-index">
-								<Tree.ItemContent data-tree-item="packages/result/index.ts">
+							<Tree.Item id="packages-ui-mixins-tree-keys">
+								<Tree.ItemContent data-tree-item="packages/ui/mixins/treeKeys.ts">
 									<FileCodeIcon aria-hidden="true" />
-									index.ts
+									treeKeys.ts
 								</Tree.ItemContent>
 							</Tree.Item>
+						</Tree.Item>
+
+						<Tree.Item id="packages-ui-package-json">
+							<Tree.ItemContent data-tree-item="packages/ui/package.json">
+								<FileBracesIcon aria-hidden="true" />
+								package.json
+							</Tree.ItemContent>
 						</Tree.Item>
 					</Tree.Item>
-				</Tree>
 
-				<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
-					<Text>{model.size === 0 ? "Nothing selected" : `${model.size} files selected`}</Text>
-					<Text>Arrows move · type to jump · Enter selects</Text>
-				</div>
+					<Tree.Item id="packages-result">
+						<Tree.ItemContent data-tree-item="packages/result" aria-expanded="false">
+							<Tree.ExpandButton />
+							<FolderIcon aria-hidden="true" />
+							result
+						</Tree.ItemContent>
+						<Tree.Item id="packages-result-index">
+							<Tree.ItemContent data-tree-item="packages/result/index.ts">
+								<FileCodeIcon aria-hidden="true" />
+								index.ts
+							</Tree.ItemContent>
+						</Tree.Item>
+					</Tree.Item>
+				</Tree.Item>
+			</Tree>
+
+			<div mix={[hstack({ gap: 2, align: "center", justify: "between" })]}>
+				<Text>{model.size === 0 ? "Nothing selected" : `${model.size} files selected`}</Text>
+				<Text>Arrows move · type to jump · Enter selects</Text>
 			</div>
-		);
-	},
-);
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TREE_CODE, render: () => <TreePreview /> };

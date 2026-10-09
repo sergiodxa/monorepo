@@ -94,7 +94,7 @@ const CODE = `let seats = "3";
 
 /** A seat-count and budget pair, hydrated so the step buttons and hold-repeat work. */
 export const NumberFieldPreview = clientEntry(
-	"/resources/components/previews/number-field.tsx#NumberFieldPreview",
+	import.meta.url,
 	function NumberFieldPreview(handle: Handle) {
 		let seats = "3";
 

@@ -58,56 +58,53 @@ const TIME_FIELD_CODE = `<form
 </form>`;
 
 /** A rota form step with two bounded time fields, hydrated with the page. */
-export const TimeFieldPreview = clientEntry(
-	"/resources/components/previews/time-field.tsx#TimeFieldPreview",
-	function TimeFieldPreview() {
-		return () => (
-			<form
-				method="post"
-				action="/rota"
-				mix={[
-					is("26rem"),
-					// A docs page has nowhere to post to, so the submission stops here instead
-					// of navigating away from the example.
-					on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault()),
-				]}
-			>
-				<Card>
-					<Card.Header>
-						<Card.Title>Thursday 24 September</Card.Title>
-						<Card.Description>Front desk · Ana Ruiz</Card.Description>
-					</Card.Header>
-					<Card.Content mix={[vstack({ gap: 4, align: "stretch" })]}>
-						<TimeField
-							label="Shift starts"
-							name="startTime"
-							required
-							min="09:00"
-							max="17:00"
-							step={QUARTER_HOUR}
-							defaultValue="09:30"
-							description="Between 09:00 and 17:00, in quarter-hour steps."
-						/>
+export const TimeFieldPreview = clientEntry(import.meta.url, function TimeFieldPreview() {
+	return () => (
+		<form
+			method="post"
+			action="/rota"
+			mix={[
+				is("26rem"),
+				// A docs page has nowhere to post to, so the submission stops here instead
+				// of navigating away from the example.
+				on<HTMLFormElement, "submit">("submit", (event) => event.preventDefault()),
+			]}
+		>
+			<Card>
+				<Card.Header>
+					<Card.Title>Thursday 24 September</Card.Title>
+					<Card.Description>Front desk · Ana Ruiz</Card.Description>
+				</Card.Header>
+				<Card.Content mix={[vstack({ gap: 4, align: "stretch" })]}>
+					<TimeField
+						label="Shift starts"
+						name="startTime"
+						required
+						min="09:00"
+						max="17:00"
+						step={QUARTER_HOUR}
+						defaultValue="09:30"
+						description="Between 09:00 and 17:00, in quarter-hour steps."
+					/>
 
-						<TimeField
-							label="Shift ends"
-							name="endTime"
-							required
-							min="09:00"
-							max="17:00"
-							step={QUARTER_HOUR}
-							defaultValue="09:00"
-							errorMessage="The shift ends before it starts."
-						/>
-					</Card.Content>
-					<Card.Footer mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
-						<Button type="submit">Save the shift</Button>
-					</Card.Footer>
-				</Card>
-			</form>
-		);
-	},
-);
+					<TimeField
+						label="Shift ends"
+						name="endTime"
+						required
+						min="09:00"
+						max="17:00"
+						step={QUARTER_HOUR}
+						defaultValue="09:00"
+						errorMessage="The shift ends before it starts."
+					/>
+				</Card.Content>
+				<Card.Footer mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+					<Button type="submit">Save the shift</Button>
+				</Card.Footer>
+			</Card>
+		</form>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TIME_FIELD_CODE, render: () => <TimeFieldPreview /> };

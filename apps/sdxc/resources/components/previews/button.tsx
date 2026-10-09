@@ -104,79 +104,76 @@ let copyState: keyof typeof COPY_LABELS = "idle";
 </div>`;
 
 /** The tone, size and pending vocabulary, plus a copy button that reaches the clipboard. */
-export const ButtonPreview = clientEntry(
-	"/resources/components/previews/button.tsx#ButtonPreview",
-	function ButtonPreview(handle: Handle) {
-		let copyState: keyof typeof COPY_LABELS = "idle";
+export const ButtonPreview = clientEntry(import.meta.url, function ButtonPreview(handle: Handle) {
+	let copyState: keyof typeof COPY_LABELS = "idle";
 
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "start" })]}>
-				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-					<Button type="submit">Save changes</Button>
-					<Button type="button" variant="outline" color="neutral">
-						Discard
-					</Button>
-					<Button type="button" variant="ghost" color="danger">
-						<Trash2Icon size={16} aria-hidden="true" />
-						Delete project
-					</Button>
-					<Button type="button" isPending>
-						Publishing
-					</Button>
-					<Button type="button" disabled>
-						Merge blocked
-					</Button>
-				</div>
-
-				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-					<Button type="button" size="lg">
-						Start free trial
-					</Button>
-					<Button type="button" size="md" variant="outline">
-						Book a demo
-					</Button>
-					<Button type="button" size="sm" variant="ghost" color="neutral">
-						Learn more
-					</Button>
-					<Button type="button" size="sm" aria-label="Invite a teammate">
-						<PlusIcon size={16} />
-					</Button>
-				</div>
-
-				<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
-					<code
-						id="preview-button-token"
-						mix={[font("mono"), text("sm"), p(2, 3), rounded("md"), bg("neutral.tint")]}
-					>
-						sk_live_7Qm2X9cVb0
-					</code>
-					<Button
-						type="button"
-						variant="outline"
-						color="neutral"
-						size="sm"
-						commandfor="preview-button-token"
-						command={COPY_COMMAND}
-						mix={[
-							copyToClipboard(),
-							on<HTMLButtonElement, "ui:copy">("ui:copy", (event) => {
-								copyState = event.success ? "copied" : "refused";
-								void handle.update();
-							}),
-						]}
-					>
-						{copyState === "copied" ? (
-							<CheckIcon size={16} aria-hidden="true" />
-						) : (
-							<CopyIcon size={16} aria-hidden="true" />
-						)}
-						{COPY_LABELS[copyState]}
-					</Button>
-				</div>
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "start" })]}>
+			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+				<Button type="submit">Save changes</Button>
+				<Button type="button" variant="outline" color="neutral">
+					Discard
+				</Button>
+				<Button type="button" variant="ghost" color="danger">
+					<Trash2Icon size={16} aria-hidden="true" />
+					Delete project
+				</Button>
+				<Button type="button" isPending>
+					Publishing
+				</Button>
+				<Button type="button" disabled>
+					Merge blocked
+				</Button>
 			</div>
-		);
-	},
-);
+
+			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+				<Button type="button" size="lg">
+					Start free trial
+				</Button>
+				<Button type="button" size="md" variant="outline">
+					Book a demo
+				</Button>
+				<Button type="button" size="sm" variant="ghost" color="neutral">
+					Learn more
+				</Button>
+				<Button type="button" size="sm" aria-label="Invite a teammate">
+					<PlusIcon size={16} />
+				</Button>
+			</div>
+
+			<div mix={[hstack({ gap: 3, align: "center" }), flexWrap()]}>
+				<code
+					id="preview-button-token"
+					mix={[font("mono"), text("sm"), p(2, 3), rounded("md"), bg("neutral.tint")]}
+				>
+					sk_live_7Qm2X9cVb0
+				</code>
+				<Button
+					type="button"
+					variant="outline"
+					color="neutral"
+					size="sm"
+					commandfor="preview-button-token"
+					command={COPY_COMMAND}
+					mix={[
+						copyToClipboard(),
+						on<HTMLButtonElement, "ui:copy">("ui:copy", (event) => {
+							copyState = event.success ? "copied" : "refused";
+							void handle.update();
+						}),
+					]}
+				>
+					{copyState === "copied" ? (
+						<CheckIcon size={16} aria-hidden="true" />
+					) : (
+						<CopyIcon size={16} aria-hidden="true" />
+					)}
+					{COPY_LABELS[copyState]}
+				</Button>
+			</div>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ButtonPreview /> };

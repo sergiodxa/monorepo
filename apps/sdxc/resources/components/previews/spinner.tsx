@@ -34,35 +34,32 @@ const SPINNER_CODE = `<Button isPending parts={{ spinner: [spin()] }}>
 </Card>`;
 
 /** Three sizes of busy indicator, hydrated so each one actually rotates. */
-export const SpinnerPreview = clientEntry(
-	"/resources/components/previews/spinner.tsx#SpinnerPreview",
-	function SpinnerPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "center" })]}>
-				<Button isPending parts={{ spinner: [spin()] }}>
-					Publishing
-				</Button>
+export const SpinnerPreview = clientEntry(import.meta.url, function SpinnerPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "center" })]}>
+			<Button isPending parts={{ spinner: [spin()] }}>
+				Publishing
+			</Button>
 
-				<div mix={[hstack({ gap: 2, align: "center" })]}>
-					<Spinner size="sm" mix={[spin()]} aria-label="Checking the domain" />
-					<Text>Checking DNS for sergiodxa.com…</Text>
-				</div>
-
-				<Card mix={[is("16rem")]}>
-					<Card.Content mix={[vstack({ gap: 3, align: "center" }), p(2)]}>
-						<Spinner
-							color="brand"
-							size="lg"
-							mix={[spin({ duration: "900ms" })]}
-							aria-label="Loading usage"
-						/>
-						<Text mix={[text("sm")]}>Loading this month&rsquo;s usage</Text>
-					</Card.Content>
-				</Card>
+			<div mix={[hstack({ gap: 2, align: "center" })]}>
+				<Spinner size="sm" mix={[spin()]} aria-label="Checking the domain" />
+				<Text>Checking DNS for sergiodxa.com…</Text>
 			</div>
-		);
-	},
-);
+
+			<Card mix={[is("16rem")]}>
+				<Card.Content mix={[vstack({ gap: 3, align: "center" }), p(2)]}>
+					<Spinner
+						color="brand"
+						size="lg"
+						mix={[spin({ duration: "900ms" })]}
+						aria-label="Loading usage"
+					/>
+					<Text mix={[text("sm")]}>Loading this month&rsquo;s usage</Text>
+				</Card.Content>
+			</Card>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SPINNER_CODE, render: () => <SpinnerPreview /> };

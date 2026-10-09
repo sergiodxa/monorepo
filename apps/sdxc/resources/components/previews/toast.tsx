@@ -110,85 +110,77 @@ toaster.addEventListener("change", () => void handle.update());
 </Toast.Region>`;
 
 /** Buttons that raise real toasts, hydrated so the queue owns every timer. */
-export const ToastPreview = clientEntry(
-	"/resources/components/previews/toast.tsx#ToastPreview",
-	function ToastPreview(handle: Handle) {
-		let toaster = new Toaster<Notice>({ defaultDuration: 6000 });
+export const ToastPreview = clientEntry(import.meta.url, function ToastPreview(handle: Handle) {
+	let toaster = new Toaster<Notice>({ defaultDuration: 6000 });
 
-		// `handle.signal` is an inert stub during the server render, so the
-		// subscription is plain: it dies with the island that owns the queue.
-		toaster.addEventListener("change", () => void handle.update());
+	// `handle.signal` is an inert stub during the server render, so the
+	// subscription is plain: it dies with the island that owns the queue.
+	toaster.addEventListener("change", () => void handle.update());
 
-		return () => (
-			<>
-				<div mix={[hstack({ gap: 2, align: "center" })]}>
-					<Button
-						mix={[on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.saved!))]}
-					>
-						Publish
-					</Button>
-					<Button
-						color="danger"
-						variant="outline"
-						mix={[on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.failed!))]}
-					>
-						Upload a bad file
-					</Button>
-					<Button
-						variant="outline"
+	return () => (
+		<>
+			<div mix={[hstack({ gap: 2, align: "center" })]}>
+				<Button
+					mix={[on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.saved!))]}
+				>
+					Publish
+				</Button>
+				<Button
+					color="danger"
+					variant="outline"
+					mix={[on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.failed!))]}
+				>
+					Upload a bad file
+				</Button>
+				<Button
+					variant="outline"
+					mix={[on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.invited!))]}
+				>
+					Invite a teammate
+				</Button>
+			</div>
+
+			<Toast.Region aria-label="Notifications" placement="bottom-end">
+				{toaster.toasts.map((toast) => (
+					<Toast
+						key={toast.id}
+						id={`preview-toast-${toast.id}`}
+						color={toast.data.color}
+						live={toast.data.color === "danger" ? "assertive" : "polite"}
 						mix={[
-							on<HTMLButtonElement, "click">("click", () => void toaster.add(NOTICES.invited!)),
+							// The queue owns the countdown, so the mixin is here only to answer
+							// the close button's --ui-dismiss command.
+							dismiss({ duration: null }),
+							on<HTMLDivElement, "ui:dismiss">("ui:dismiss", () => void toaster.dismiss(toast.id)),
+							on<HTMLDivElement, "pointerenter">("pointerenter", () => toaster.pause(toast.id)),
+							on<HTMLDivElement, "pointerleave">("pointerleave", () => toaster.resume(toast.id)),
 						]}
 					>
-						Invite a teammate
-					</Button>
-				</div>
-
-				<Toast.Region aria-label="Notifications" placement="bottom-end">
-					{toaster.toasts.map((toast) => (
-						<Toast
-							key={toast.id}
-							id={`preview-toast-${toast.id}`}
-							color={toast.data.color}
-							live={toast.data.color === "danger" ? "assertive" : "polite"}
-							mix={[
-								// The queue owns the countdown, so the mixin is here only to answer
-								// the close button's --ui-dismiss command.
-								dismiss({ duration: null }),
-								on<HTMLDivElement, "ui:dismiss">(
-									"ui:dismiss",
-									() => void toaster.dismiss(toast.id),
-								),
-								on<HTMLDivElement, "pointerenter">("pointerenter", () => toaster.pause(toast.id)),
-								on<HTMLDivElement, "pointerleave">("pointerleave", () => toaster.resume(toast.id)),
-							]}
-						>
-							<Toast.Icon>
-								{toast.data.color === "success" ? (
-									<CircleCheckIcon />
-								) : toast.data.color === "danger" ? (
-									<CircleAlertIcon />
-								) : (
-									<InfoIcon />
-								)}
-							</Toast.Icon>
-							<Toast.Content>
-								<Toast.Title>{toast.data.title}</Toast.Title>
-								<Toast.Description>{toast.data.description}</Toast.Description>
-							</Toast.Content>
-							{toast.data.action ? <Toast.Action>{toast.data.action}</Toast.Action> : null}
-							<Toast.Close
-								aria-label="Dismiss"
-								commandfor={`preview-toast-${toast.id}`}
-								command="--ui-dismiss"
-							/>
-						</Toast>
-					))}
-				</Toast.Region>
-			</>
-		);
-	},
-);
+						<Toast.Icon>
+							{toast.data.color === "success" ? (
+								<CircleCheckIcon />
+							) : toast.data.color === "danger" ? (
+								<CircleAlertIcon />
+							) : (
+								<InfoIcon />
+							)}
+						</Toast.Icon>
+						<Toast.Content>
+							<Toast.Title>{toast.data.title}</Toast.Title>
+							<Toast.Description>{toast.data.description}</Toast.Description>
+						</Toast.Content>
+						{toast.data.action ? <Toast.Action>{toast.data.action}</Toast.Action> : null}
+						<Toast.Close
+							aria-label="Dismiss"
+							commandfor={`preview-toast-${toast.id}`}
+							command="--ui-dismiss"
+						/>
+					</Toast>
+				))}
+			</Toast.Region>
+		</>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TOAST_CODE, render: () => <ToastPreview /> };

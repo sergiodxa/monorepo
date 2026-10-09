@@ -175,144 +175,139 @@ let direction = (key) => (sort.key === key ? sort.direction : undefined);
 </div>`;
 
 /** A sortable, selectable invoice list, hydrated so the selection set drives the rows. */
-export const TablePreview = clientEntry(
-	"/resources/components/previews/table.tsx#TablePreview",
-	function TablePreview(handle: Handle) {
-		let selection = new SelectionModel({
-			mode: "multiple",
-			keys: INVOICES.map((invoice) => invoice.id),
-			selectedKeys: ["INV-2039"],
-		});
+export const TablePreview = clientEntry(import.meta.url, function TablePreview(handle: Handle) {
+	let selection = new SelectionModel({
+		mode: "multiple",
+		keys: INVOICES.map((invoice) => invoice.id),
+		selectedKeys: ["INV-2039"],
+	});
 
-		// `handle.signal` is an inert stub during the server render, so the
-		// subscription is plain: it dies with the island that owns the model.
-		selection.addEventListener("change", () => void handle.update());
+	// `handle.signal` is an inert stub during the server render, so the
+	// subscription is plain: it dies with the island that owns the model.
+	selection.addEventListener("change", () => void handle.update());
 
-		/*
-		 * The headers link rather than listen, so which column is active is whatever the
-		 * query asked for, exactly as it would be for a page an app served sorted.
-		 */
-		let sort = readSort(globalThis.location?.search ?? "");
+	/*
+	 * The headers link rather than listen, so which column is active is whatever the
+	 * query asked for, exactly as it would be for a page an app served sorted.
+	 */
+	let sort = readSort(globalThis.location?.search ?? "");
 
-		/** Re-reads the order from the URL, however the URL came to say something else. */
-		function readUrl() {
-			sort = readSort(globalThis.location.search);
-			void handle.update();
-		}
+	/** Re-reads the order from the URL, however the URL came to say something else. */
+	function readUrl() {
+		sort = readSort(globalThis.location.search);
+		void handle.update();
+	}
 
-		// The window outlives the island, so the subscription is dropped when the
-		// island disconnects rather than through an options signal, which is an
-		// inert stub during the server render.
-		globalThis.addEventListener("popstate", readUrl);
-		handle.signal.addEventListener("abort", () =>
-			globalThis.removeEventListener("popstate", readUrl),
-		);
+	// The window outlives the island, so the subscription is dropped when the
+	// island disconnects rather than through an options signal, which is an
+	// inert stub during the server render.
+	globalThis.addEventListener("popstate", readUrl);
+	handle.signal.addEventListener("abort", () =>
+		globalThis.removeEventListener("popstate", readUrl),
+	);
 
-		/**
-		 * Answers a header's own navigation: the page this preview lives on is a document
-		 * rather than the table's server, so the island writes the query the header asked
-		 * for and orders the rows from it.
-		 */
-		function sortFromHeader(event: MouseEvent) {
-			let target = event.target as Element | null;
-			let link = target?.closest<HTMLAnchorElement>("th[aria-sort] a");
-			if (!link) return;
+	/**
+	 * Answers a header's own navigation: the page this preview lives on is a document
+	 * rather than the table's server, so the island writes the query the header asked
+	 * for and orders the rows from it.
+	 */
+	function sortFromHeader(event: MouseEvent) {
+		let target = event.target as Element | null;
+		let link = target?.closest<HTMLAnchorElement>("th[aria-sort] a");
+		if (!link) return;
 
-			event.preventDefault();
-			globalThis.history.pushState(null, "", link.href);
-			readUrl();
-		}
+		event.preventDefault();
+		globalThis.history.pushState(null, "", link.href);
+		readUrl();
+	}
 
-		/** Selects every invoice, or clears the set once they all are. */
-		function toggleAll() {
-			if (selection.isAll) selection.clear();
-			else selection.selectAll();
-		}
+	/** Selects every invoice, or clears the set once they all are. */
+	function toggleAll() {
+		if (selection.isAll) selection.clear();
+		else selection.selectAll();
+	}
 
-		return () => (
-			<div mix={[is("100%"), on<HTMLDivElement, "click">("click", sortFromHeader)]}>
-				<Table.Container>
-					<Table aria-label="Invoices">
-						<Table.Header>
-							<Table.Row>
-								<Table.Column>
+	return () => (
+		<div mix={[is("100%"), on<HTMLDivElement, "click">("click", sortFromHeader)]}>
+			<Table.Container>
+				<Table aria-label="Invoices">
+					<Table.Header>
+						<Table.Row>
+							<Table.Column>
+								<Checkbox
+									aria-label="Select every invoice"
+									checked={selection.isAll}
+									mix={[on<HTMLInputElement, "change">("change", toggleAll)]}
+								/>
+							</Table.Column>
+							<Table.Column
+								href={sortHref("id", sort)}
+								sortDirection={sort.key === "id" ? sort.direction : undefined}
+							>
+								Invoice
+							</Table.Column>
+							<Table.Column
+								href={sortHref("customer", sort)}
+								sortDirection={sort.key === "customer" ? sort.direction : undefined}
+							>
+								Customer
+							</Table.Column>
+							<Table.Column
+								href={sortHref("issued", sort)}
+								sortDirection={sort.key === "issued" ? sort.direction : undefined}
+							>
+								Issued
+							</Table.Column>
+							<Table.Column>Status</Table.Column>
+							<Table.Column
+								align="end"
+								href={sortHref("total", sort)}
+								sortDirection={sort.key === "total" ? sort.direction : undefined}
+							>
+								Total
+							</Table.Column>
+						</Table.Row>
+					</Table.Header>
+					<Table.Body>
+						{sortInvoices(INVOICES, sort).map((invoice) => (
+							<Table.Row
+								key={invoice.id}
+								aria-selected={selection.isSelected(invoice.id) ? "true" : undefined}
+							>
+								<Table.Cell>
 									<Checkbox
-										aria-label="Select every invoice"
-										checked={selection.isAll}
-										mix={[on<HTMLInputElement, "change">("change", toggleAll)]}
+										aria-label={`Select ${invoice.id}`}
+										checked={selection.isSelected(invoice.id)}
+										mix={[
+											on<HTMLInputElement, "change">("change", () => selection.toggle(invoice.id)),
+										]}
 									/>
-								</Table.Column>
-								<Table.Column
-									href={sortHref("id", sort)}
-									sortDirection={sort.key === "id" ? sort.direction : undefined}
-								>
-									Invoice
-								</Table.Column>
-								<Table.Column
-									href={sortHref("customer", sort)}
-									sortDirection={sort.key === "customer" ? sort.direction : undefined}
-								>
-									Customer
-								</Table.Column>
-								<Table.Column
-									href={sortHref("issued", sort)}
-									sortDirection={sort.key === "issued" ? sort.direction : undefined}
-								>
-									Issued
-								</Table.Column>
-								<Table.Column>Status</Table.Column>
-								<Table.Column
-									align="end"
-									href={sortHref("total", sort)}
-									sortDirection={sort.key === "total" ? sort.direction : undefined}
-								>
-									Total
-								</Table.Column>
+								</Table.Cell>
+								<Table.Cell>{invoice.id}</Table.Cell>
+								<Table.Cell>{invoice.customer}</Table.Cell>
+								<Table.Cell>{invoice.issuedLabel}</Table.Cell>
+								<Table.Cell>
+									<Badge color={STATUS_COLORS[invoice.status]} variant="secondary">
+										{invoice.status}
+									</Badge>
+								</Table.Cell>
+								<Table.Cell>{invoice.totalLabel}</Table.Cell>
 							</Table.Row>
-						</Table.Header>
-						<Table.Body>
-							{sortInvoices(INVOICES, sort).map((invoice) => (
-								<Table.Row
-									key={invoice.id}
-									aria-selected={selection.isSelected(invoice.id) ? "true" : undefined}
-								>
-									<Table.Cell>
-										<Checkbox
-											aria-label={`Select ${invoice.id}`}
-											checked={selection.isSelected(invoice.id)}
-											mix={[
-												on<HTMLInputElement, "change">("change", () =>
-													selection.toggle(invoice.id),
-												),
-											]}
-										/>
-									</Table.Cell>
-									<Table.Cell>{invoice.id}</Table.Cell>
-									<Table.Cell>{invoice.customer}</Table.Cell>
-									<Table.Cell>{invoice.issuedLabel}</Table.Cell>
-									<Table.Cell>
-										<Badge color={STATUS_COLORS[invoice.status]} variant="secondary">
-											{invoice.status}
-										</Badge>
-									</Table.Cell>
-									<Table.Cell>{invoice.totalLabel}</Table.Cell>
-								</Table.Row>
-							))}
-							<Table.LoadMore href="?page=2" colSpan={6}>
-								Load the next 25 invoices
-							</Table.LoadMore>
-						</Table.Body>
-					</Table>
-				</Table.Container>
-				<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
-					<Text>
-						{selection.size} of {INVOICES.length} selected
-					</Text>
-				</div>
+						))}
+						<Table.LoadMore href="?page=2" colSpan={6}>
+							Load the next 25 invoices
+						</Table.LoadMore>
+					</Table.Body>
+				</Table>
+			</Table.Container>
+			<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+				<Text>
+					{selection.size} of {INVOICES.length} selected
+				</Text>
 			</div>
-		);
-	},
-);
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TABLE_CODE, render: () => <TablePreview /> };

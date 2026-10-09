@@ -45,7 +45,7 @@ function RelatedArticles(handle: Handle<{ level: HeadingLevel }>) {
 
 /** A panel's headings, hydrated with the depth the page placed it at threaded in. */
 export const HeadingPreview = clientEntry(
-	"/resources/components/previews/heading.tsx#HeadingPreview",
+	import.meta.url,
 	function HeadingPreview(handle: Handle<{ level: HeadingLevel }>) {
 		return () => (
 			<HeadingScope

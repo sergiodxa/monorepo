@@ -78,82 +78,79 @@ let matches = INVOICES.filter((invoice) =>
 )}`;
 
 /** A filtered invoice list, hydrated so the empty state is reached by typing. */
-export const EmptyPreview = clientEntry(
-	"/resources/components/previews/empty.tsx#EmptyPreview",
-	function EmptyPreview(handle: Handle) {
-		let query = "";
+export const EmptyPreview = clientEntry(import.meta.url, function EmptyPreview(handle: Handle) {
+	let query = "";
 
-		/** Puts the list back, which is the way out the empty state's first action offers. */
-		function clearQuery() {
-			query = "";
-			void handle.update();
-		}
+	/** Puts the list back, which is the way out the empty state's first action offers. */
+	function clearQuery() {
+		query = "";
+		void handle.update();
+	}
 
-		return () => {
-			let matches = INVOICES.filter((invoice) =>
-				`${invoice.id} ${invoice.client}`.toLowerCase().includes(query.trim().toLowerCase()),
-			);
+	return () => {
+		let matches = INVOICES.filter((invoice) =>
+			`${invoice.id} ${invoice.client}`.toLowerCase().includes(query.trim().toLowerCase()),
+		);
 
-			return (
-				<div mix={[vstack({ gap: 3, align: "stretch" }), is("26rem")]}>
-					<Group>
-						<Input
-							name="q"
-							type="search"
-							value={query}
-							placeholder="Search invoices"
-							aria-label="Search invoices"
-							mix={[
-								on<HTMLInputElement, "input">("input", (event) => {
-									query = event.currentTarget.value;
-									void handle.update();
-								}),
-							]}
-						/>
-					</Group>
+		return (
+			<div mix={[vstack({ gap: 3, align: "stretch" }), is("26rem")]}>
+				<Group>
+					<Input
+						name="q"
+						type="search"
+						value={query}
+						placeholder="Search invoices"
+						aria-label="Search invoices"
+						mix={[
+							on<HTMLInputElement, "input">("input", (event) => {
+								query = event.currentTarget.value;
+								void handle.update();
+							}),
+						]}
+					/>
+				</Group>
 
-					{matches.length > 0 ? (
-						<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-							{matches.map((invoice) => (
-								<Item key={invoice.id}>
-									<Item.Media>
-										<FileTextIcon aria-hidden="true" />
-									</Item.Media>
-									<Item.Content>
-										<Item.Title>{invoice.id}</Item.Title>
-										<Item.Description>{invoice.client}</Item.Description>
-									</Item.Content>
-									<Item.Actions>{invoice.amount}</Item.Actions>
-								</Item>
-							))}
-						</div>
-					) : (
-						<Empty>
-							<Empty.Icon>
-								<SearchIcon />
-							</Empty.Icon>
-							<Empty.Title>No invoices match “{query.trim()}”</Empty.Title>
-							<Empty.Description>
-								Search runs over the invoice number and the client&rsquo;s name. Nothing in this
-								workspace matches either.
-							</Empty.Description>
-							<Empty.Action>
-								<Button
-									variant="outline"
-									color="neutral"
-									mix={[on<HTMLButtonElement, "click">("click", clearQuery)]}
-								>
-									Clear the search
-								</Button>
-								<Button>New invoice</Button>
-							</Empty.Action>
-						</Empty>
-					)}
-				</div>
-			);
-		};
-	},
-);
+				{matches.length > 0 ? (
+					<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+						{matches.map((invoice) => (
+							<Item key={invoice.id}>
+								<Item.Media>
+									<FileTextIcon aria-hidden="true" />
+								</Item.Media>
+								<Item.Content>
+									<Item.Title>{invoice.id}</Item.Title>
+									<Item.Description>{invoice.client}</Item.Description>
+								</Item.Content>
+								<Item.Actions>{invoice.amount}</Item.Actions>
+							</Item>
+						))}
+					</div>
+				) : (
+					<Empty>
+						<Empty.Icon>
+							<SearchIcon />
+						</Empty.Icon>
+						<Empty.Title>No invoices match “{query.trim()}”</Empty.Title>
+						<Empty.Description>
+							Search runs over the invoice number and the client&rsquo;s name. Nothing in this
+							workspace matches either.
+						</Empty.Description>
+						<Empty.Action>
+							<Button
+								variant="outline"
+								color="neutral"
+								mix={[on<HTMLButtonElement, "click">("click", clearQuery)]}
+							>
+								Clear the search
+							</Button>
+							<Button>New invoice</Button>
+						</Empty.Action>
+					</Empty>
+				)}
+			</div>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: EMPTY_CODE, render: () => <EmptyPreview /> };

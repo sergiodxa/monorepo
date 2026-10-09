@@ -87,7 +87,7 @@ function toggle(value: string, checked: boolean) {
 
 /** A token-scope list with a partially-checked parent, hydrated so the third state is real. */
 export const CheckboxPreview = clientEntry(
-	"/resources/components/previews/checkbox.tsx#CheckboxPreview",
+	import.meta.url,
 	function CheckboxPreview(handle: Handle) {
 		let granted = new Set(["read"]);
 

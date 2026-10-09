@@ -155,7 +155,7 @@ function moveChannel(event: ColorChannelChangeEvent) {
 
 /** A swatch trigger over a full picking panel, hydrated so every surface in it picks. */
 export const ColorPickerPreview = clientEntry(
-	"/resources/components/previews/color-picker.tsx#ColorPickerPreview",
+	import.meta.url,
 	function ColorPickerPreview(handle: Handle) {
 		let { hue, saturation, brightness } = OPENING_COLOR;
 		let alpha = 1;

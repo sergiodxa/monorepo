@@ -80,57 +80,54 @@ const CODE = `<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 </div>`;
 
 /** A checkout's two choices, hydrated so `aria-checked` tracks the live selection. */
-export const RadioGroupPreview = clientEntry(
-	"/resources/components/previews/radio-group.tsx#RadioGroupPreview",
-	function RadioGroupPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 6, align: "stretch" }), is("22rem")]}>
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Header mix={[m(0)]}>Shipping method</Header>
-					<RadioGroup aria-label="Shipping method" name="shippingMethod">
-						{METHODS.map((method) => (
-							<RadioGroup.Radio
-								key={method.value}
-								value={method.value}
-								required
-								defaultChecked={method.value === "express"}
-								disabled={method.disabled}
-								parts={{ input: [ariaChecked()] }}
-								mix={[
-									p(3),
-									rounded("md"),
-									border({ color: "neutral.border", width: 1 }),
-									has("input:checked", [border("brand.ring"), bg("brand.tint")]),
-								]}
-							>
-								<span mix={[vstack({ gap: 0.5, align: "start" })]}>
-									<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>
-										{`${method.label} · ${method.price}`}
-									</span>
-									<span mix={[text("xs"), fg("neutral.muted")]}>{method.eta}</span>
+export const RadioGroupPreview = clientEntry(import.meta.url, function RadioGroupPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 6, align: "stretch" }), is("22rem")]}>
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Header mix={[m(0)]}>Shipping method</Header>
+				<RadioGroup aria-label="Shipping method" name="shippingMethod">
+					{METHODS.map((method) => (
+						<RadioGroup.Radio
+							key={method.value}
+							value={method.value}
+							required
+							defaultChecked={method.value === "express"}
+							disabled={method.disabled}
+							parts={{ input: [ariaChecked()] }}
+							mix={[
+								p(3),
+								rounded("md"),
+								border({ color: "neutral.border", width: 1 }),
+								has("input:checked", [border("brand.ring"), bg("brand.tint")]),
+							]}
+						>
+							<span mix={[vstack({ gap: 0.5, align: "start" })]}>
+								<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>
+									{`${method.label} · ${method.price}`}
 								</span>
-							</RadioGroup.Radio>
-						))}
-					</RadioGroup>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-					<Header mix={[m(0)]}>Gift wrapping</Header>
-					<RadioGroup aria-label="Gift wrapping" name="giftWrap" orientation="horizontal">
-						<RadioGroup.Radio value="none" defaultChecked parts={{ input: [ariaChecked()] }}>
-							None
+								<span mix={[text("xs"), fg("neutral.muted")]}>{method.eta}</span>
+							</span>
 						</RadioGroup.Radio>
-						<RadioGroup.Radio value="paper" parts={{ input: [ariaChecked()] }}>
-							Paper
-						</RadioGroup.Radio>
-						<RadioGroup.Radio value="box" parts={{ input: [ariaChecked()] }}>
-							Gift box
-						</RadioGroup.Radio>
-					</RadioGroup>
-				</div>
+					))}
+				</RadioGroup>
 			</div>
-		);
-	},
-);
+
+			<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+				<Header mix={[m(0)]}>Gift wrapping</Header>
+				<RadioGroup aria-label="Gift wrapping" name="giftWrap" orientation="horizontal">
+					<RadioGroup.Radio value="none" defaultChecked parts={{ input: [ariaChecked()] }}>
+						None
+					</RadioGroup.Radio>
+					<RadioGroup.Radio value="paper" parts={{ input: [ariaChecked()] }}>
+						Paper
+					</RadioGroup.Radio>
+					<RadioGroup.Radio value="box" parts={{ input: [ariaChecked()] }}>
+						Gift box
+					</RadioGroup.Radio>
+				</RadioGroup>
+			</div>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <RadioGroupPreview /> };

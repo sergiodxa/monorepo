@@ -91,7 +91,7 @@ function isGapActive(stepId: string, side: "before" | "after") {
 
 /** A reorderable release checklist, hydrated so the bars mark a live drop position. */
 export const DropIndicatorPreview = clientEntry(
-	"/resources/components/previews/drop-indicator.tsx#DropIndicatorPreview",
+	import.meta.url,
 	function DropIndicatorPreview(handle: Handle) {
 		let session = new DragSession();
 		let steps = [...STEPS];

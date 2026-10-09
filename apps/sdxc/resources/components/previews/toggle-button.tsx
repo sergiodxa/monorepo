@@ -43,7 +43,7 @@ const TOGGLE_BUTTON_CODE = `// The click reaches the group after the mixin has f
 
 /** Three layer toggles that flip, hydrated so each press has somewhere to write. */
 export const ToggleButtonPreview = clientEntry(
-	"/resources/components/previews/toggle-button.tsx#ToggleButtonPreview",
+	import.meta.url,
 	function ToggleButtonPreview(handle: Handle) {
 		let pressed = new Set(["Places", "Routes"]);
 

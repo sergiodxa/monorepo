@@ -104,98 +104,95 @@ const CODE = `<div mix={[vstack({ gap: 6, align: "stretch" })]}>
 </div>`;
 
 /** A support thread, hydrated so the copy action has a clipboard write to perform. */
-export const MessagePreview = clientEntry(
-	"/resources/components/previews/message.tsx#MessagePreview",
-	function MessagePreview() {
-		return () => (
-			<div mix={[vstack({ gap: 6, align: "stretch" }), is("30rem")]}>
+export const MessagePreview = clientEntry(import.meta.url, function MessagePreview() {
+	return () => (
+		<div mix={[vstack({ gap: 6, align: "stretch" }), is("30rem")]}>
+			<Message>
+				<Message.Avatar>
+					<Avatar>
+						<Avatar.Fallback>AR</Avatar.Fallback>
+					</Avatar>
+				</Message.Avatar>
+				<Message.Header>
+					<strong>Ana Ruiz</strong>
+					<time dateTime="2026-09-21T14:02">14:02</time>
+				</Message.Header>
+				<Message.Content>
+					<Bubble variant="muted">
+						<Bubble.Content id="preview-message-turn-1-text">
+							The deploy finished but the worker is still serving the old bundle. Is there a cache I
+							should be busting?
+						</Bubble.Content>
+					</Bubble>
+				</Message.Content>
+				<Message.Footer>
+					<Button
+						type="button"
+						variant="ghost"
+						size="sm"
+						aria-label="Copy message"
+						commandfor="preview-message-turn-1-text"
+						command={COPY_COMMAND}
+						mix={[copyToClipboard()]}
+					>
+						<CopyIcon />
+					</Button>
+					<Button type="button" variant="ghost" size="sm" aria-label="Reply to Ana Ruiz">
+						<ReplyIcon />
+					</Button>
+				</Message.Footer>
+			</Message>
+
+			<Message>
+				<Message.Avatar>
+					<Avatar>
+						<Avatar.Fallback>SX</Avatar.Fallback>
+					</Avatar>
+				</Message.Avatar>
+				<Message.Header>
+					<strong>Sergio</strong>
+					<time dateTime="2026-09-21T14:05">14:05</time>
+				</Message.Header>
+				<Message.Content>
+					<Bubble align="end">
+						<Bubble.Content>
+							The bundle is fingerprinted, so that is the CDN holding a stale index.
+						</Bubble.Content>
+					</Bubble>
+				</Message.Content>
+			</Message>
+
+			<Message.Group>
+				<Message>
+					{/* A run's later turns carry the avatar, so the turns above it reserve its column. */}
+					<Message.Avatar aria-hidden="true">
+						<span mix={[is("2.5rem")]} />
+					</Message.Avatar>
+					<Message.Header>
+						<strong>Ana Ruiz</strong>
+						<time dateTime="2026-09-21T14:07">14:07</time>
+					</Message.Header>
+					<Message.Content>
+						<Bubble variant="muted">
+							<Bubble.Content>Purging it now.</Bubble.Content>
+						</Bubble>
+					</Message.Content>
+				</Message>
 				<Message>
 					<Message.Avatar>
 						<Avatar>
 							<Avatar.Fallback>AR</Avatar.Fallback>
 						</Avatar>
 					</Message.Avatar>
-					<Message.Header>
-						<strong>Ana Ruiz</strong>
-						<time dateTime="2026-09-21T14:02">14:02</time>
-					</Message.Header>
 					<Message.Content>
 						<Bubble variant="muted">
-							<Bubble.Content id="preview-message-turn-1-text">
-								The deploy finished but the worker is still serving the old bundle. Is there a cache
-								I should be busting?
-							</Bubble.Content>
-						</Bubble>
-					</Message.Content>
-					<Message.Footer>
-						<Button
-							type="button"
-							variant="ghost"
-							size="sm"
-							aria-label="Copy message"
-							commandfor="preview-message-turn-1-text"
-							command={COPY_COMMAND}
-							mix={[copyToClipboard()]}
-						>
-							<CopyIcon />
-						</Button>
-						<Button type="button" variant="ghost" size="sm" aria-label="Reply to Ana Ruiz">
-							<ReplyIcon />
-						</Button>
-					</Message.Footer>
-				</Message>
-
-				<Message>
-					<Message.Avatar>
-						<Avatar>
-							<Avatar.Fallback>SX</Avatar.Fallback>
-						</Avatar>
-					</Message.Avatar>
-					<Message.Header>
-						<strong>Sergio</strong>
-						<time dateTime="2026-09-21T14:05">14:05</time>
-					</Message.Header>
-					<Message.Content>
-						<Bubble align="end">
-							<Bubble.Content>
-								The bundle is fingerprinted, so that is the CDN holding a stale index.
-							</Bubble.Content>
+							<Bubble.Content>That did it — thank you.</Bubble.Content>
 						</Bubble>
 					</Message.Content>
 				</Message>
-
-				<Message.Group>
-					<Message>
-						{/* A run's later turns carry the avatar, so the turns above it reserve its column. */}
-						<Message.Avatar aria-hidden="true">
-							<span mix={[is("2.5rem")]} />
-						</Message.Avatar>
-						<Message.Header>
-							<strong>Ana Ruiz</strong>
-							<time dateTime="2026-09-21T14:07">14:07</time>
-						</Message.Header>
-						<Message.Content>
-							<Bubble variant="muted">
-								<Bubble.Content>Purging it now.</Bubble.Content>
-							</Bubble>
-						</Message.Content>
-					</Message>
-					<Message>
-						<Message.Avatar>
-							<Avatar>
-								<Avatar.Fallback>AR</Avatar.Fallback>
-							</Avatar>
-						</Message.Avatar>
-						<Message.Content>
-							<Bubble variant="muted">
-								<Bubble.Content>That did it — thank you.</Bubble.Content>
-							</Bubble>
-						</Message.Content>
-					</Message>
-				</Message.Group>
-			</div>
-		);
-	},
-);
+			</Message.Group>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <MessagePreview /> };

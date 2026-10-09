@@ -97,7 +97,7 @@ const IMAGE_PLACEHOLDER_CODE = `<Header>Project members</Header>
 
 /** A member roster, hydrated so a failed avatar falls back to its initials. */
 export const ImagePlaceholderPreview = clientEntry(
-	"/resources/components/previews/image-placeholder.tsx#ImagePlaceholderPreview",
+	import.meta.url,
 	function ImagePlaceholderPreview() {
 		return () => (
 			<div mix={[vstack({ gap: 4, align: "stretch" }), is("24rem")]}>

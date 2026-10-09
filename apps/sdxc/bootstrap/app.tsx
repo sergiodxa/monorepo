@@ -51,7 +51,7 @@ import sponsors from "~/app/http/controllers/sponsors";
 import sponsorsWebhook from "~/app/http/controllers/sponsors-webhook";
 import uiExportShow from "~/app/http/controllers/ui-export-show";
 import utilityShow from "~/app/http/controllers/utility-show";
-import { documentAssets } from "~/app/services/assets";
+import { assets, documentAssets } from "~/app/services/assets";
 import { DocumentAssets } from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -77,7 +77,7 @@ export default function application() {
 		trace() as Middleware,
 		formData() as Middleware,
 		cop(),
-		render() as Middleware,
+		render({ assets }) as Middleware,
 		renderWith(withDocumentAssets) as Middleware,
 		userAgent(),
 	];

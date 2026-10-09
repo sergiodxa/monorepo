@@ -60,63 +60,60 @@ const TYPESET_CODE = `<Typeset preset="reading">
 </Typeset>`;
 
 /** A full article excerpt under the reading preset, hydrated alongside the rest of the catalogue. */
-export const TypesetPreview = clientEntry(
-	"/resources/components/previews/typeset.tsx#TypesetPreview",
-	function TypesetPreview() {
-		return () => (
-			<Typeset preset="reading" mix={[is("100%"), maxIs("34rem")]}>
-				<h2>Every fallible call answers with a Result</h2>
+export const TypesetPreview = clientEntry(import.meta.url, function TypesetPreview() {
+	return () => (
+		<Typeset preset="reading" mix={[is("100%"), maxIs("34rem")]}>
+			<h2>Every fallible call answers with a Result</h2>
 
-				<p>
-					A function that can fail returns a <code>Result</code> instead of throwing, so the failure
-					is part of the signature and the caller decides what to do with it. See the{" "}
-					<a href="/api/result">result package</a> for the full surface.
-				</p>
+			<p>
+				A function that can fail returns a <code>Result</code> instead of throwing, so the failure
+				is part of the signature and the caller decides what to do with it. See the{" "}
+				<a href="/api/result">result package</a> for the full surface.
+			</p>
 
-				<ul>
-					<li>No exception escapes a package boundary.</li>
-					<li>Every error case is named in the type.</li>
-					<li>A caller that ignores the failure does not typecheck.</li>
-				</ul>
+			<ul>
+				<li>No exception escapes a package boundary.</li>
+				<li>Every error case is named in the type.</li>
+				<li>A caller that ignores the failure does not typecheck.</li>
+			</ul>
 
-				<blockquote>
-					<p>The compiler is the only reviewer that reads every line.</p>
-				</blockquote>
+			<blockquote>
+				<p>The compiler is the only reviewer that reads every line.</p>
+			</blockquote>
 
-				<pre>
-					<code>{"let user = await findUser(id);\nif (user.isErr) return notFound();"}</code>
-				</pre>
+			<pre>
+				<code>{"let user = await findUser(id);\nif (user.isErr) return notFound();"}</code>
+			</pre>
 
-				<table>
-					<thead>
-						<tr>
-							<th>Method</th>
-							<th>Returns</th>
-						</tr>
-					</thead>
-					<tbody>
-						<tr>
-							<td>
-								<code>unwrap()</code>
-							</td>
-							<td>The value, or throws</td>
-						</tr>
-						<tr>
-							<td>
-								<code>unwrapOr(fallback)</code>
-							</td>
-							<td>The value, or the fallback</td>
-						</tr>
-					</tbody>
-				</table>
+			<table>
+				<thead>
+					<tr>
+						<th>Method</th>
+						<th>Returns</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>
+							<code>unwrap()</code>
+						</td>
+						<td>The value, or throws</td>
+					</tr>
+					<tr>
+						<td>
+							<code>unwrapOr(fallback)</code>
+						</td>
+						<td>The value, or the fallback</td>
+					</tr>
+				</tbody>
+			</table>
 
-				<div data-not-typeset>
-					<Badge color="brand">Opted out of the layer</Badge>
-				</div>
-			</Typeset>
-		);
-	},
-);
+			<div data-not-typeset>
+				<Badge color="brand">Opted out of the layer</Badge>
+			</div>
+		</Typeset>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TYPESET_CODE, render: () => <TypesetPreview /> };

@@ -41,38 +41,35 @@ const TEXT_CODE = `<Card>
 </Card>`;
 
 /** Muted copy carrying every label around emphasized figures, hydrated with the rest. */
-export const TextPreview = clientEntry(
-	"/resources/components/previews/text.tsx#TextPreview",
-	function TextPreview() {
-		return () => (
-			<Card mix={[is("22rem")]}>
-				<Card.Header>
-					<Card.Title>September usage</Card.Title>
-					<Text>Billed on 1 October · Pro plan</Text>
-				</Card.Header>
-				<Card.Content mix={[vstack({ gap: 3, align: "stretch" })]}>
-					<div mix={[hstack({ gap: 2, align: "baseline", justify: "between" })]}>
-						<Text>Requests</Text>
-						<span mix={[text("lg"), weight("semibold")]}>
-							1,284,902 <Text>of 2M</Text>
-						</span>
-					</div>
+export const TextPreview = clientEntry(import.meta.url, function TextPreview() {
+	return () => (
+		<Card mix={[is("22rem")]}>
+			<Card.Header>
+				<Card.Title>September usage</Card.Title>
+				<Text>Billed on 1 October · Pro plan</Text>
+			</Card.Header>
+			<Card.Content mix={[vstack({ gap: 3, align: "stretch" })]}>
+				<div mix={[hstack({ gap: 2, align: "baseline", justify: "between" })]}>
+					<Text>Requests</Text>
+					<span mix={[text("lg"), weight("semibold")]}>
+						1,284,902 <Text>of 2M</Text>
+					</span>
+				</div>
 
-					<div mix={[hstack({ gap: 2, align: "baseline", justify: "between" })]}>
-						<Text>Bandwidth</Text>
-						<span mix={[text("lg"), weight("semibold")]}>
-							38.4 <Text>GB</Text>
-						</span>
-					</div>
+				<div mix={[hstack({ gap: 2, align: "baseline", justify: "between" })]}>
+					<Text>Bandwidth</Text>
+					<span mix={[text("lg"), weight("semibold")]}>
+						38.4 <Text>GB</Text>
+					</span>
+				</div>
 
-					<Separator />
+				<Separator />
 
-					<Text>Overage is charged at $0.40 per additional 100k requests.</Text>
-				</Card.Content>
-			</Card>
-		);
-	},
-);
+				<Text>Overage is charged at $0.40 per additional 100k requests.</Text>
+			</Card.Content>
+		</Card>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: TEXT_CODE, render: () => <TextPreview /> };

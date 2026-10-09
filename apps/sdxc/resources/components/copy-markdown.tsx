@@ -26,7 +26,7 @@ type CopyMarkdownProps = {
 
 /** Copies the markdown behind {@link CopyMarkdownProps.href} onto the clipboard. */
 export const CopyMarkdown = clientEntry(
-	"/resources/components/copy-markdown.tsx#CopyMarkdown",
+	import.meta.url,
 	function CopyMarkdown(handle: Handle<CopyMarkdownProps>) {
 		let outcome: "idle" | "copied" | "failed" = "idle";
 

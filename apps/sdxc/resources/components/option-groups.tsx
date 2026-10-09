@@ -60,7 +60,7 @@ type OptionGroupSyncProps = {
  * what keeps one switch to one cookie write however many strips the page carries.
  */
 export const OptionGroupSync = clientEntry(
-	"/resources/components/option-groups.tsx#OptionGroupSync",
+	import.meta.url,
 	function OptionGroupSync(handle: Handle<OptionGroupSyncProps>) {
 		return () => (
 			<span

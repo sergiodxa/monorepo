@@ -80,64 +80,61 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "start" })]}>
 </div>`;
 
 /** A reviewer row whose last portrait is missing, hydrated so the initials take its place. */
-export const AvatarPreview = clientEntry(
-	"/resources/components/previews/avatar.tsx#AvatarPreview",
-	function AvatarPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "start" })]}>
-				<div mix={[hstack({ gap: 3, align: "center" })]}>
-					<Avatar size="lg">
-						<Avatar.Fallback>AS</Avatar.Fallback>
-						<Avatar.Image
-							src={PORTRAITS.ana}
-							alt="Ana Souza"
-							mix={[imageFallback(), when("&[data-image-error]", hidden())]}
-						/>
-						<Avatar.Badge />
-					</Avatar>
-					<div mix={[vstack({ gap: 0, align: "start" })]}>
-						<span mix={[text("sm"), weight("medium")]}>Ana Souza</span>
-						<span mix={[text("xs"), fg("neutral")]}>Reviewing · online</span>
-					</div>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Reviewers</span>
-					<Avatar.Group aria-label="Four reviewers, three more not shown">
-						<Avatar>
-							<Avatar.Fallback>BL</Avatar.Fallback>
-							<Avatar.Image
-								src={PORTRAITS.bruno}
-								alt="Bruno Lima"
-								mix={[imageFallback(), when("&[data-image-error]", hidden())]}
-							/>
-						</Avatar>
-						<Avatar>
-							<Avatar.Fallback>CW</Avatar.Fallback>
-							<Avatar.Image
-								src={PORTRAITS.chen}
-								alt="Chen Wei"
-								mix={[imageFallback(), when("&[data-image-error]", hidden())]}
-							/>
-						</Avatar>
-						<Avatar>
-							<Avatar.Fallback>DK</Avatar.Fallback>
-						</Avatar>
-						<Avatar>
-							<Avatar.Fallback>EM</Avatar.Fallback>
-							<Avatar.Image
-								src="/portraits/erin-moss.jpg"
-								alt="Erin Moss"
-								mix={[imageFallback(), when("&[data-image-error]", hidden())]}
-							/>
-						</Avatar>
-						<Avatar.Group.Count>+3</Avatar.Group.Count>
-					</Avatar.Group>
+export const AvatarPreview = clientEntry(import.meta.url, function AvatarPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "start" })]}>
+			<div mix={[hstack({ gap: 3, align: "center" })]}>
+				<Avatar size="lg">
+					<Avatar.Fallback>AS</Avatar.Fallback>
+					<Avatar.Image
+						src={PORTRAITS.ana}
+						alt="Ana Souza"
+						mix={[imageFallback(), when("&[data-image-error]", hidden())]}
+					/>
+					<Avatar.Badge />
+				</Avatar>
+				<div mix={[vstack({ gap: 0, align: "start" })]}>
+					<span mix={[text("sm"), weight("medium")]}>Ana Souza</span>
+					<span mix={[text("xs"), fg("neutral")]}>Reviewing · online</span>
 				</div>
 			</div>
-		);
-	},
-);
+
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Reviewers</span>
+				<Avatar.Group aria-label="Four reviewers, three more not shown">
+					<Avatar>
+						<Avatar.Fallback>BL</Avatar.Fallback>
+						<Avatar.Image
+							src={PORTRAITS.bruno}
+							alt="Bruno Lima"
+							mix={[imageFallback(), when("&[data-image-error]", hidden())]}
+						/>
+					</Avatar>
+					<Avatar>
+						<Avatar.Fallback>CW</Avatar.Fallback>
+						<Avatar.Image
+							src={PORTRAITS.chen}
+							alt="Chen Wei"
+							mix={[imageFallback(), when("&[data-image-error]", hidden())]}
+						/>
+					</Avatar>
+					<Avatar>
+						<Avatar.Fallback>DK</Avatar.Fallback>
+					</Avatar>
+					<Avatar>
+						<Avatar.Fallback>EM</Avatar.Fallback>
+						<Avatar.Image
+							src="/portraits/erin-moss.jpg"
+							alt="Erin Moss"
+							mix={[imageFallback(), when("&[data-image-error]", hidden())]}
+						/>
+					</Avatar>
+					<Avatar.Group.Count>+3</Avatar.Group.Count>
+				</Avatar.Group>
+			</div>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <AvatarPreview /> };

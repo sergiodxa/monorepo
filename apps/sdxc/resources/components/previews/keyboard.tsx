@@ -64,7 +64,7 @@ let appleKeyboard = isAppleKeyboard(parse(request.headers.get("user-agent") ?? "
 
 /** A shortcuts panel, hydrated so each hint prints the keys this machine actually has. */
 export const KeyboardPreview = clientEntry(
-	"/resources/components/previews/keyboard.tsx#KeyboardPreview",
+	import.meta.url,
 	function KeyboardPreview(handle: Handle<{ appleKeyboard: boolean }>) {
 		return () => (
 			<div mix={[vstack({ gap: 4, align: "stretch" }), is("22rem")]}>

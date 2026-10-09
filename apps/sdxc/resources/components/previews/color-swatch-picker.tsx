@@ -79,7 +79,7 @@ const CODE = `let picked = { value: "#3b82f6", name: "Blue" };
 
 /** A label-color picker for an issue tracker, hydrated so each option reports its state. */
 export const ColorSwatchPickerPreview = clientEntry(
-	"/resources/components/previews/color-swatch-picker.tsx#ColorSwatchPickerPreview",
+	import.meta.url,
 	function ColorSwatchPickerPreview(handle: Handle) {
 		let picked = { value: "#3b82f6", name: "Blue" };
 

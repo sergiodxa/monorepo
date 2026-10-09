@@ -103,7 +103,7 @@ let followSelection = ref((_node, signal) => {
 
 /** An inbox list, hydrated so arrows, Space, Shift-arrow and clicks all reach the model. */
 export const GridListPreview = clientEntry(
-	"/resources/components/previews/grid-list.tsx#GridListPreview",
+	import.meta.url,
 	function GridListPreview(handle: Handle) {
 		let model = new SelectionModel({ keys: THREADS.map((thread) => thread.id) });
 

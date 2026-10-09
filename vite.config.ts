@@ -17,6 +17,7 @@ import { cloudflareTest } from "@cloudflare/vitest-pool-workers";
 import { defineConfig } from "vite-plus";
 import { defaultExclude } from "vitest/config";
 
+import { clientEntryIdentity } from "./test/client-entry-plugin.ts";
 import { cloudflareWorkersStub } from "./test/cloudflare-workers-plugin.ts";
 
 /**
@@ -364,7 +365,7 @@ export default defineConfig({
 			},
 			{
 				root: "apps/sdxc",
-				plugins: [cloudflareWorkersStub()],
+				plugins: [cloudflareWorkersStub(), clientEntryIdentity()],
 				resolve: {
 					tsconfigPaths: true,
 					alias: {

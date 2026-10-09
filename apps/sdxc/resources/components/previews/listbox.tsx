@@ -93,66 +93,63 @@ let activeValue: listbox.ListboxValue = "docs-site";
 </listbox.Context>`;
 
 /** A project picker, hydrated so arrows, Home/End, typeahead and Enter all reach the list. */
-export const ListBoxPreview = clientEntry(
-	"/resources/components/previews/listbox.tsx#ListBoxPreview",
-	function ListBoxPreview(handle: Handle) {
-		let value = "docs-site";
-		let activeValue: listbox.ListboxValue = "docs-site";
+export const ListBoxPreview = clientEntry(import.meta.url, function ListBoxPreview(handle: Handle) {
+	let value = "docs-site";
+	let activeValue: listbox.ListboxValue = "docs-site";
 
-		return () => (
-			<listbox.Context
-				value={value}
-				activeValue={activeValue}
-				onSelect={(next) => {
-					value = next ?? value;
-					void handle.update();
-				}}
-				onHighlight={(next) => {
-					activeValue = next;
-					void handle.update();
-				}}
-			>
-				<div mix={[vstack({ gap: 2, align: "stretch" }), is("20rem")]}>
-					<Header mix={[m(0)]}>Move issue to</Header>
+	return () => (
+		<listbox.Context
+			value={value}
+			activeValue={activeValue}
+			onSelect={(next) => {
+				value = next ?? value;
+				void handle.update();
+			}}
+			onHighlight={(next) => {
+				activeValue = next;
+				void handle.update();
+			}}
+		>
+			<div mix={[vstack({ gap: 2, align: "stretch" }), is("20rem")]}>
+				<Header mix={[m(0)]}>Move issue to</Header>
 
-					<ListBox
-						role="listbox"
-						tabIndex={0}
-						aria-label="Move issue to"
-						name="projectId"
-						mix={[listboxKeys()]}
-					>
-						{GROUPS.map((group) => (
-							<Section key={group.id} aria-labelledby={`${group.id}-heading`}>
-								<Header id={`${group.id}-heading`}>{group.label}</Header>
-								{group.options.map((option) => (
-									<ListBox.Item
-										key={option.value}
-										value={option.value}
-										checked={value === option.value}
-										disabled={option.disabled}
-										mix={[
-											listbox.option({
-												value: option.value,
-												label: option.label,
-												disabled: option.disabled,
-											}),
-										]}
-									>
-										{option.label}
-									</ListBox.Item>
-								))}
-							</Section>
-						))}
-					</ListBox>
+				<ListBox
+					role="listbox"
+					tabIndex={0}
+					aria-label="Move issue to"
+					name="projectId"
+					mix={[listboxKeys()]}
+				>
+					{GROUPS.map((group) => (
+						<Section key={group.id} aria-labelledby={`${group.id}-heading`}>
+							<Header id={`${group.id}-heading`}>{group.label}</Header>
+							{group.options.map((option) => (
+								<ListBox.Item
+									key={option.value}
+									value={option.value}
+									checked={value === option.value}
+									disabled={option.disabled}
+									mix={[
+										listbox.option({
+											value: option.value,
+											label: option.label,
+											disabled: option.disabled,
+										}),
+									]}
+								>
+									{option.label}
+								</ListBox.Item>
+							))}
+						</Section>
+					))}
+				</ListBox>
 
-					<p mix={[m(0), text("xs"), fg("neutral.muted")]}>
-						Arrow keys move the active row, Enter selects it, and typing jumps to a match.
-					</p>
-				</div>
-			</listbox.Context>
-		);
-	},
-);
+				<p mix={[m(0), text("xs"), fg("neutral.muted")]}>
+					Arrow keys move the active row, Enter selects it, and typing jumps to a match.
+				</p>
+			</div>
+		</listbox.Context>
+	);
+});
 
 export default { code: CODE, render: () => <ListBoxPreview /> };

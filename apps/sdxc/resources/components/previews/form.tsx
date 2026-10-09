@@ -107,102 +107,99 @@ function submit(event: SubmitEvent) {
 </Form>`;
 
 /** A workspace creation form, hydrated so a failed parse renders its own issues. */
-export const FormPreview = clientEntry(
-	"/resources/components/previews/form.tsx#FormPreview",
-	function FormPreview(handle: Handle) {
-		let issues: ReadonlyArray<Issue> = [];
-		let created = false;
+export const FormPreview = clientEntry(import.meta.url, function FormPreview(handle: Handle) {
+	let issues: ReadonlyArray<Issue> = [];
+	let created = false;
 
-		/** Parses the submission the same way the POST handler would, and keeps its issues. */
-		function submit(event: SubmitEvent) {
-			event.preventDefault();
-			let form = event.currentTarget as HTMLFormElement;
-			issues = checkNewWorkspace(new FormData(form));
-			created = issues.length === 0;
-			void handle.update();
-		}
+	/** Parses the submission the same way the POST handler would, and keeps its issues. */
+	function submit(event: SubmitEvent) {
+		event.preventDefault();
+		let form = event.currentTarget as HTMLFormElement;
+		issues = checkNewWorkspace(new FormData(form));
+		created = issues.length === 0;
+		void handle.update();
+	}
 
-		return () => {
-			let termsIssue = issueFor(issues, "terms");
+	return () => {
+		let termsIssue = issueFor(issues, "terms");
 
-			return (
-				<Form
-					method="post"
-					issues={issues}
-					// The native constraints below already block an empty submit with no script;
-					// the schema is what catches the shapes an attribute cannot express.
-					noValidate
-					mix={[is("26rem"), on<HTMLFormElement, "submit">("submit", submit)]}
-				>
-					{created ? <Alert color="success">Workspace created.</Alert> : null}
+		return (
+			<Form
+				method="post"
+				issues={issues}
+				// The native constraints below already block an empty submit with no script;
+				// the schema is what catches the shapes an attribute cannot express.
+				noValidate
+				mix={[is("26rem"), on<HTMLFormElement, "submit">("submit", submit)]}
+			>
+				{created ? <Alert color="success">Workspace created.</Alert> : null}
 
-					<TextField
-						label="Workspace name"
-						name="name"
+				<TextField
+					label="Workspace name"
+					name="name"
+					required
+					description="Shown in the sidebar and on invitations."
+				/>
+				<TextField
+					label="Address"
+					name="slug"
+					required
+					description="Teammates reach the workspace at this.acme.dev."
+				/>
+				<TextField
+					label="Billing owner"
+					name="ownerEmail"
+					type="email"
+					required
+					description="Invoices and renewal notices go here."
+				/>
+
+				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+					<Label htmlFor="preview-form-region">Data region</Label>
+					<Select id="preview-form-region" name="region">
+						<Select.Option value="eu" selected>
+							Europe — Frankfurt
+						</Select.Option>
+						<Select.Option value="us">United States — Iowa</Select.Option>
+						<Select.Option value="ap">Asia Pacific — Sydney</Select.Option>
+					</Select>
+				</div>
+
+				<NumberField>
+					<Label htmlFor="preview-form-seats">Seats to reserve</Label>
+					<NumberField.Group>
+						<NumberField.DecrementButton aria-label="One fewer seat" />
+						<NumberField.Input
+							id="preview-form-seats"
+							name="seats"
+							min={1}
+							max={200}
+							defaultValue={10}
+						/>
+						<NumberField.IncrementButton aria-label="One more seat" />
+					</NumberField.Group>
+				</NumberField>
+
+				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+					<Checkbox
+						name="terms"
+						value="accepted"
 						required
-						description="Shown in the sidebar and on invitations."
-					/>
-					<TextField
-						label="Address"
-						name="slug"
-						required
-						description="Teammates reach the workspace at this.acme.dev."
-					/>
-					<TextField
-						label="Billing owner"
-						name="ownerEmail"
-						type="email"
-						required
-						description="Invoices and renewal notices go here."
-					/>
+						aria-describedby="preview-form-terms-error"
+						aria-invalid={termsIssue ? "true" : undefined}
+					>
+						I accept the data processing agreement
+					</Checkbox>
+					<FieldError id="preview-form-terms-error" hidden={!termsIssue}>
+						{termsIssue}
+					</FieldError>
+				</div>
 
-					<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-						<Label htmlFor="preview-form-region">Data region</Label>
-						<Select id="preview-form-region" name="region">
-							<Select.Option value="eu" selected>
-								Europe — Frankfurt
-							</Select.Option>
-							<Select.Option value="us">United States — Iowa</Select.Option>
-							<Select.Option value="ap">Asia Pacific — Sydney</Select.Option>
-						</Select>
-					</div>
-
-					<NumberField>
-						<Label htmlFor="preview-form-seats">Seats to reserve</Label>
-						<NumberField.Group>
-							<NumberField.DecrementButton aria-label="One fewer seat" />
-							<NumberField.Input
-								id="preview-form-seats"
-								name="seats"
-								min={1}
-								max={200}
-								defaultValue={10}
-							/>
-							<NumberField.IncrementButton aria-label="One more seat" />
-						</NumberField.Group>
-					</NumberField>
-
-					<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-						<Checkbox
-							name="terms"
-							value="accepted"
-							required
-							aria-describedby="preview-form-terms-error"
-							aria-invalid={termsIssue ? "true" : undefined}
-						>
-							I accept the data processing agreement
-						</Checkbox>
-						<FieldError id="preview-form-terms-error" hidden={!termsIssue}>
-							{termsIssue}
-						</FieldError>
-					</div>
-
-					<Button type="submit">Create workspace</Button>
-				</Form>
-			);
-		};
-	},
-);
+				<Button type="submit">Create workspace</Button>
+			</Form>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: FORM_CODE, render: () => <FormPreview /> };

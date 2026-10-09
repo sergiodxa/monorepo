@@ -83,84 +83,76 @@ const CODE = `<Menubar aria-label="Editor" mix={[menubarKeys()]}>
 </Menubar>`;
 
 /** An editor's menu bar, hydrated so the row is one tab stop with arrows between triggers. */
-export const MenubarPreview = clientEntry(
-	"/resources/components/previews/menubar.tsx#MenubarPreview",
-	function MenubarPreview() {
-		return () => (
-			<Menubar aria-label="Editor" mix={[menubarKeys()]}>
-				<Menubar.Trigger commandfor="preview-menubar-file">File</Menubar.Trigger>
-				<Menu id="preview-menubar-file" aria-label="File" placement="bottom" mix={[menuKeys()]}>
-					<Menu.Item>
-						<span mix={[grow()]}>New document</span>
-						<Keyboard>⌘N</Keyboard>
-					</Menu.Item>
-					<Menu.Item>
-						<span mix={[grow()]}>Open…</span>
-						<Keyboard>⌘O</Keyboard>
-					</Menu.Item>
-					<Menu.Separator />
-					<Menu.Item>
-						<span mix={[grow()]}>Save</span>
-						<Keyboard>⌘S</Keyboard>
-					</Menu.Item>
-					<Menu.Item disabled>
-						<span mix={[grow()]}>Save as…</span>
-					</Menu.Item>
-				</Menu>
+export const MenubarPreview = clientEntry(import.meta.url, function MenubarPreview() {
+	return () => (
+		<Menubar aria-label="Editor" mix={[menubarKeys()]}>
+			<Menubar.Trigger commandfor="preview-menubar-file">File</Menubar.Trigger>
+			<Menu id="preview-menubar-file" aria-label="File" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item>
+					<span mix={[grow()]}>New document</span>
+					<Keyboard>⌘N</Keyboard>
+				</Menu.Item>
+				<Menu.Item>
+					<span mix={[grow()]}>Open…</span>
+					<Keyboard>⌘O</Keyboard>
+				</Menu.Item>
+				<Menu.Separator />
+				<Menu.Item>
+					<span mix={[grow()]}>Save</span>
+					<Keyboard>⌘S</Keyboard>
+				</Menu.Item>
+				<Menu.Item disabled>
+					<span mix={[grow()]}>Save as…</span>
+				</Menu.Item>
+			</Menu>
 
-				<Menubar.Trigger commandfor="preview-menubar-edit">Edit</Menubar.Trigger>
-				<Menu id="preview-menubar-edit" aria-label="Edit" placement="bottom" mix={[menuKeys()]}>
-					<Menu.Item>
-						<span mix={[grow()]}>Undo</span>
-						<Keyboard>⌘Z</Keyboard>
-					</Menu.Item>
-					<Menu.Item>
-						<span mix={[grow()]}>Redo</span>
-						<Keyboard>⇧⌘Z</Keyboard>
-					</Menu.Item>
-					<Menu.Separator />
-					<Menu.Item>
-						<span mix={[grow()]}>Find and replace</span>
-						<Keyboard>⌘F</Keyboard>
-					</Menu.Item>
-				</Menu>
+			<Menubar.Trigger commandfor="preview-menubar-edit">Edit</Menubar.Trigger>
+			<Menu id="preview-menubar-edit" aria-label="Edit" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item>
+					<span mix={[grow()]}>Undo</span>
+					<Keyboard>⌘Z</Keyboard>
+				</Menu.Item>
+				<Menu.Item>
+					<span mix={[grow()]}>Redo</span>
+					<Keyboard>⇧⌘Z</Keyboard>
+				</Menu.Item>
+				<Menu.Separator />
+				<Menu.Item>
+					<span mix={[grow()]}>Find and replace</span>
+					<Keyboard>⌘F</Keyboard>
+				</Menu.Item>
+			</Menu>
 
-				<Menubar.Trigger commandfor="preview-menubar-view">View</Menubar.Trigger>
-				<Menu id="preview-menubar-view" aria-label="View" placement="bottom" mix={[menuKeys()]}>
-					<Menu.Item aria-selected="true">Outline</Menu.Item>
-					<Menu.Item>Preview</Menu.Item>
-					<Menu.Item>Split</Menu.Item>
-				</Menu>
+			<Menubar.Trigger commandfor="preview-menubar-view">View</Menubar.Trigger>
+			<Menu id="preview-menubar-view" aria-label="View" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item aria-selected="true">Outline</Menu.Item>
+				<Menu.Item>Preview</Menu.Item>
+				<Menu.Item>Split</Menu.Item>
+			</Menu>
 
-				<Menubar.Trigger commandfor="preview-menubar-insert">Insert</Menubar.Trigger>
-				<Menu id="preview-menubar-insert" aria-label="Insert" placement="bottom" mix={[menuKeys()]}>
-					<Menu.Item>Image</Menu.Item>
-					<Menu.Item>Table</Menu.Item>
-					<Menu.Item>Code block</Menu.Item>
-				</Menu>
+			<Menubar.Trigger commandfor="preview-menubar-insert">Insert</Menubar.Trigger>
+			<Menu id="preview-menubar-insert" aria-label="Insert" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item>Image</Menu.Item>
+				<Menu.Item>Table</Menu.Item>
+				<Menu.Item>Code block</Menu.Item>
+			</Menu>
 
-				<Menubar.Trigger commandfor="preview-menubar-help">Help</Menubar.Trigger>
-				<Menu id="preview-menubar-help" aria-label="Help" placement="bottom" mix={[menuKeys()]}>
-					<Menu.Item href="/docs">Documentation</Menu.Item>
-					<Menu.Item href="/api/ui">Component catalogue</Menu.Item>
-					<Menu.Separator />
-					<Menu.Item>Keyboard shortcuts</Menu.Item>
-				</Menu>
+			<Menubar.Trigger commandfor="preview-menubar-help">Help</Menubar.Trigger>
+			<Menu id="preview-menubar-help" aria-label="Help" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item href="/docs">Documentation</Menu.Item>
+				<Menu.Item href="/api/ui">Component catalogue</Menu.Item>
+				<Menu.Separator />
+				<Menu.Item>Keyboard shortcuts</Menu.Item>
+			</Menu>
 
-				<Menubar.Trigger commandfor="preview-menubar-history" aria-disabled="true">
-					History
-				</Menubar.Trigger>
-				<Menu
-					id="preview-menubar-history"
-					aria-label="History"
-					placement="bottom"
-					mix={[menuKeys()]}
-				>
-					<Menu.Item>Version history</Menu.Item>
-				</Menu>
-			</Menubar>
-		);
-	},
-);
+			<Menubar.Trigger commandfor="preview-menubar-history" aria-disabled="true">
+				History
+			</Menubar.Trigger>
+			<Menu id="preview-menubar-history" aria-label="History" placement="bottom" mix={[menuKeys()]}>
+				<Menu.Item>Version history</Menu.Item>
+			</Menu>
+		</Menubar>
+	);
+});
 
 export default { code: CODE, render: () => <MenubarPreview /> };

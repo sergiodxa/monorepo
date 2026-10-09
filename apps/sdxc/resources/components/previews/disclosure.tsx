@@ -75,7 +75,7 @@ function resetDefaults() {
 
 /** A project's build overrides, hydrated so the section can be put back to its defaults. */
 export const DisclosurePreview = clientEntry(
-	"/resources/components/previews/disclosure.tsx#DisclosurePreview",
+	import.meta.url,
 	function DisclosurePreview(handle: Handle) {
 		let settings = { ...BUILD_DEFAULTS };
 

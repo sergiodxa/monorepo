@@ -64,7 +64,7 @@ const SEARCH_FIELD_CODE = `<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 
 /** A package search that narrows and clears, hydrated so both halves of that work. */
 export const SearchFieldPreview = clientEntry(
-	"/resources/components/previews/search-field.tsx#SearchFieldPreview",
+	import.meta.url,
 	function SearchFieldPreview(handle: Handle) {
 		let query = "";
 

@@ -122,7 +122,7 @@ function send() {
 
 /** A chat window that streams each reply, hydrated so the viewport can follow it. */
 export const MessageScrollerPreview = clientEntry(
-	"/resources/components/previews/message-scroller.tsx#MessageScrollerPreview",
+	import.meta.url,
 	function MessageScrollerPreview(handle: Handle) {
 		let model = new ScrollFollowModel({ pinned: true });
 		let turns: { id: string; from: "reader" | "assistant"; body: string }[] = [];

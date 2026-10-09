@@ -70,65 +70,62 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "start" })]}>
 </div>`;
 
 /** A run's state and an issue's labels, hydrated the way every preview here loads. */
-export const BadgePreview = clientEntry(
-	"/resources/components/previews/badge.tsx#BadgePreview",
-	function BadgePreview() {
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "start" })]}>
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Pipeline</span>
-					<div mix={[hstack({ gap: 2, align: "center" }), flexWrap()]}>
-						<Badge color="success" variant="secondary">
-							<Badge.Icon>
-								<CircleCheckIcon />
-							</Badge.Icon>
-							<Badge.Text>Tests passing</Badge.Text>
-						</Badge>
-						<Badge color="warning" variant="secondary">
-							<Badge.Icon>
-								<ClockIcon />
-							</Badge.Icon>
-							<Badge.Text>Deploy queued</Badge.Text>
-						</Badge>
-						<Badge color="danger" variant="secondary">
-							<Badge.Icon>
-								<CircleXIcon />
-							</Badge.Icon>
-							<Badge.Text>3 checks failed</Badge.Text>
-						</Badge>
-						<Badge color="neutral" variant="outline">
-							Skipped
-						</Badge>
-						<Badge color="brand">
-							<Badge.Icon>
-								<ZapIcon />
-							</Badge.Icon>
-							<Badge.Text>v2026.9.21</Badge.Text>
-						</Badge>
-					</div>
-				</div>
-
-				<div mix={[vstack({ gap: 2, align: "start" })]}>
-					<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Labels</span>
-					<div mix={[hstack({ gap: 2, align: "center" }), flexWrap()]}>
-						<Badge color="brand" variant="outline">
-							enhancement
-						</Badge>
-						<Badge color="danger" variant="outline">
-							regression
-						</Badge>
-						<Badge color="warning" variant="outline">
-							needs repro
-						</Badge>
-						<Badge color="neutral" variant="secondary">
-							good first issue
-						</Badge>
-					</div>
+export const BadgePreview = clientEntry(import.meta.url, function BadgePreview() {
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "start" })]}>
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Pipeline</span>
+				<div mix={[hstack({ gap: 2, align: "center" }), flexWrap()]}>
+					<Badge color="success" variant="secondary">
+						<Badge.Icon>
+							<CircleCheckIcon />
+						</Badge.Icon>
+						<Badge.Text>Tests passing</Badge.Text>
+					</Badge>
+					<Badge color="warning" variant="secondary">
+						<Badge.Icon>
+							<ClockIcon />
+						</Badge.Icon>
+						<Badge.Text>Deploy queued</Badge.Text>
+					</Badge>
+					<Badge color="danger" variant="secondary">
+						<Badge.Icon>
+							<CircleXIcon />
+						</Badge.Icon>
+						<Badge.Text>3 checks failed</Badge.Text>
+					</Badge>
+					<Badge color="neutral" variant="outline">
+						Skipped
+					</Badge>
+					<Badge color="brand">
+						<Badge.Icon>
+							<ZapIcon />
+						</Badge.Icon>
+						<Badge.Text>v2026.9.21</Badge.Text>
+					</Badge>
 				</div>
 			</div>
-		);
-	},
-);
+
+			<div mix={[vstack({ gap: 2, align: "start" })]}>
+				<span mix={[text("xs"), weight("semibold"), fg("neutral.muted")]}>Labels</span>
+				<div mix={[hstack({ gap: 2, align: "center" }), flexWrap()]}>
+					<Badge color="brand" variant="outline">
+						enhancement
+					</Badge>
+					<Badge color="danger" variant="outline">
+						regression
+					</Badge>
+					<Badge color="warning" variant="outline">
+						needs repro
+					</Badge>
+					<Badge color="neutral" variant="secondary">
+						good first issue
+					</Badge>
+				</div>
+			</div>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <BadgePreview /> };

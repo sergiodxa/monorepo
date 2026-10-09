@@ -124,123 +124,118 @@ let totals = cartTotals(lines);
 </Drawer>`;
 
 /** A cart drawer, hydrated so its quantities step and every total follows them. */
-export const DrawerPreview = clientEntry(
-	"/resources/components/previews/drawer.tsx#DrawerPreview",
-	function DrawerPreview(handle: Handle) {
-		let lines: CartLine[] = CART_LINES.map((line) => ({ ...line }));
+export const DrawerPreview = clientEntry(import.meta.url, function DrawerPreview(handle: Handle) {
+	let lines: CartLine[] = CART_LINES.map((line) => ({ ...line }));
 
-		/** A quantity changed, by the stepper's repeat or by typing, so the totals follow. */
-		function changeQuantity(event: Event & { currentTarget: HTMLInputElement }) {
-			let line = lines.find((candidate) => candidate.id === event.currentTarget.dataset.line);
-			if (!line) return;
-			line.quantity = Math.max(1, Number(event.currentTarget.value) || 1);
-			void handle.update();
-		}
+	/** A quantity changed, by the stepper's repeat or by typing, so the totals follow. */
+	function changeQuantity(event: Event & { currentTarget: HTMLInputElement }) {
+		let line = lines.find((candidate) => candidate.id === event.currentTarget.dataset.line);
+		if (!line) return;
+		line.quantity = Math.max(1, Number(event.currentTarget.value) || 1);
+		void handle.update();
+	}
 
-		return () => {
-			let totals = cartTotals(lines);
+	return () => {
+		let totals = cartTotals(lines);
 
-			return (
-				<>
-					<Button commandfor="preview-drawer" command="show-modal">
-						<ShoppingCartIcon />
-						Cart · {String(totals.itemCount)}
-					</Button>
+		return (
+			<>
+				<Button commandfor="preview-drawer" command="show-modal">
+					<ShoppingCartIcon />
+					Cart · {String(totals.itemCount)}
+				</Button>
 
-					<Drawer id="preview-drawer" placement="right" aria-labelledby="preview-drawer-title">
-						<Drawer.Header>
-							<Drawer.Title id="preview-drawer-title">Your cart</Drawer.Title>
-							<Drawer.Description>
-								{totals.freeShipping
-									? "Shipping is on us on this order."
-									: "Spend $150 to get free shipping."}
-							</Drawer.Description>
-						</Drawer.Header>
+				<Drawer id="preview-drawer" placement="right" aria-labelledby="preview-drawer-title">
+					<Drawer.Header>
+						<Drawer.Title id="preview-drawer-title">Your cart</Drawer.Title>
+						<Drawer.Description>
+							{totals.freeShipping
+								? "Shipping is on us on this order."
+								: "Spend $150 to get free shipping."}
+						</Drawer.Description>
+					</Drawer.Header>
 
-						<div
-							mix={[
-								vstack({ gap: 4, align: "stretch" }),
-								// The dock is as tall as the viewport, so everything between the header and
-								// the footer scrolls as one column — the checkout button never slides out
-								// of reach.
-								grow(),
-								minBs(0),
-								overflowY("auto"),
-							]}
-						>
-							{lines.map((line) => (
-								<Item key={line.id}>
-									<Item.Content>
-										<Item.Title>{line.name}</Item.Title>
-										<Item.Description>{line.variant}</Item.Description>
-										<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), mbs(1)]}>
-											<NumberField.Group mix={[stepper(), is("7.5rem")]}>
-												<NumberField.DecrementButton
-													command={NUMBER_FIELD_STEP_DOWN_COMMAND}
-													commandfor={`preview-cart-quantity-${line.id}`}
-													aria-label={`One fewer ${line.name}`}
-												/>
-												<NumberField.Input
-													id={`preview-cart-quantity-${line.id}`}
-													name={`quantity[${line.id}]`}
-													data-line={line.id}
-													min={1}
-													max={99}
-													value={String(line.quantity)}
-													aria-label={`Quantity of ${line.name}`}
-													mix={[on<HTMLInputElement, "input">("input", changeQuantity)]}
-												/>
-												<NumberField.IncrementButton
-													command={NUMBER_FIELD_STEP_UP_COMMAND}
-													commandfor={`preview-cart-quantity-${line.id}`}
-													aria-label={`One more ${line.name}`}
-												/>
-											</NumberField.Group>
-											<span mix={[text("sm"), weight("medium"), tabularNums()]}>
-												{formatPrice(line.unitPrice * line.quantity)}
-											</span>
-										</div>
-									</Item.Content>
-								</Item>
-							))}
+					<div
+						mix={[
+							vstack({ gap: 4, align: "stretch" }),
+							// The dock is as tall as the viewport, so everything between the header and
+							// the footer scrolls as one column — the checkout button never slides out
+							// of reach.
+							grow(),
+							minBs(0),
+							overflowY("auto"),
+						]}
+					>
+						{lines.map((line) => (
+							<Item key={line.id}>
+								<Item.Content>
+									<Item.Title>{line.name}</Item.Title>
+									<Item.Description>{line.variant}</Item.Description>
+									<div mix={[hstack({ gap: 2, align: "center", justify: "between" }), mbs(1)]}>
+										<NumberField.Group mix={[stepper(), is("7.5rem")]}>
+											<NumberField.DecrementButton
+												command={NUMBER_FIELD_STEP_DOWN_COMMAND}
+												commandfor={`preview-cart-quantity-${line.id}`}
+												aria-label={`One fewer ${line.name}`}
+											/>
+											<NumberField.Input
+												id={`preview-cart-quantity-${line.id}`}
+												name={`quantity[${line.id}]`}
+												data-line={line.id}
+												min={1}
+												max={99}
+												value={String(line.quantity)}
+												aria-label={`Quantity of ${line.name}`}
+												mix={[on<HTMLInputElement, "input">("input", changeQuantity)]}
+											/>
+											<NumberField.IncrementButton
+												command={NUMBER_FIELD_STEP_UP_COMMAND}
+												commandfor={`preview-cart-quantity-${line.id}`}
+												aria-label={`One more ${line.name}`}
+											/>
+										</NumberField.Group>
+										<span mix={[text("sm"), weight("medium"), tabularNums()]}>
+											{formatPrice(line.unitPrice * line.quantity)}
+										</span>
+									</div>
+								</Item.Content>
+							</Item>
+						))}
 
-							<Separator />
+						<Separator />
 
-							<div mix={[vstack({ gap: 1, align: "stretch" })]}>
-								<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
-									<Text>Subtotal</Text>
-									<Text>{totals.subtotal}</Text>
-								</div>
-								<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
-									<Text>Shipping</Text>
-									<Text>{totals.shipping}</Text>
-								</div>
-								<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
-									<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>Total</span>
-									<span
-										mix={[text("sm"), weight("semibold"), tabularNums(), fg("neutral.emphasis")]}
-									>
-										{totals.total}
-									</span>
-								</div>
+						<div mix={[vstack({ gap: 1, align: "stretch" })]}>
+							<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
+								<Text>Subtotal</Text>
+								<Text>{totals.subtotal}</Text>
+							</div>
+							<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
+								<Text>Shipping</Text>
+								<Text>{totals.shipping}</Text>
+							</div>
+							<div mix={[hstack({ gap: 4, align: "baseline", justify: "between" })]}>
+								<span mix={[text("sm"), weight("semibold"), fg("neutral.emphasis")]}>Total</span>
+								<span mix={[text("sm"), weight("semibold"), tabularNums(), fg("neutral.emphasis")]}>
+									{totals.total}
+								</span>
 							</div>
 						</div>
+					</div>
 
-						<Drawer.Footer>
-							<Button commandfor="preview-drawer" command="close" variant="outline" color="neutral">
-								Keep shopping
-							</Button>
-							<Button commandfor="preview-drawer" command="close">
-								Checkout · {totals.total}
-							</Button>
-						</Drawer.Footer>
-						<Drawer.Close commandfor="preview-drawer" aria-label="Close the cart" />
-					</Drawer>
-				</>
-			);
-		};
-	},
-);
+					<Drawer.Footer>
+						<Button commandfor="preview-drawer" command="close" variant="outline" color="neutral">
+							Keep shopping
+						</Button>
+						<Button commandfor="preview-drawer" command="close">
+							Checkout · {totals.total}
+						</Button>
+					</Drawer.Footer>
+					<Drawer.Close commandfor="preview-drawer" aria-label="Close the cart" />
+				</Drawer>
+			</>
+		);
+	};
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: DRAWER_CODE, render: () => <DrawerPreview /> };

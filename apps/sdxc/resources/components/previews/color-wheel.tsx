@@ -54,7 +54,7 @@ const CODE = `let hue = 210;
 
 /** A hue ring driving an accent color, hydrated so the root reshapes and the pointer sweeps it. */
 export const ColorWheelPreview = clientEntry(
-	"/resources/components/previews/color-wheel.tsx#ColorWheelPreview",
+	import.meta.url,
 	function ColorWheelPreview(handle: Handle) {
 		let hue = 210;
 

@@ -113,7 +113,7 @@ let tabbable = days.find((day) => day.key === focusedKey) ?? days.find((day) => 
  * reaches the model driving the roving focus.
  */
 export const CalendarPreview = clientEntry(
-	"/resources/components/previews/calendar.tsx#CalendarPreview",
+	import.meta.url,
 	function CalendarPreview(handle: Handle) {
 		let timeZone = systemTimeZone();
 		let model = new CalendarModel({ focusedDate: OPENING_DAY });

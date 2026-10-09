@@ -39,7 +39,7 @@ type TableOfContentsProps = {
 
 /** Renders the in-page navigation, or nothing when the page has too few headings. */
 export const TableOfContents = clientEntry(
-	"/resources/components/table-of-contents.tsx#TableOfContents",
+	import.meta.url,
 	function TableOfContents(handle: Handle<TableOfContentsProps>) {
 		/**
 		 * The headings in the band, in document order. The last set is kept when the band

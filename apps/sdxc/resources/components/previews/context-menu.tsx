@@ -102,91 +102,88 @@ const CODE = `<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs
 </div>`;
 
 /** A file row whose right-click menu opens at the pointer, hydrated so the gesture lands. */
-export const ContextMenuPreview = clientEntry(
-	"/resources/components/previews/context-menu.tsx#ContextMenuPreview",
-	function ContextMenuPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("28rem")]}>
-				<p mix={[text("sm"), fg("neutral")]}>
-					Right-click a row, or focus it and press the Context Menu key.
-				</p>
+export const ContextMenuPreview = clientEntry(import.meta.url, function ContextMenuPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("28rem")]}>
+			<p mix={[text("sm"), fg("neutral")]}>
+				Right-click a row, or focus it and press the Context Menu key.
+			</p>
 
-				<ContextMenu.Trigger
-					tabIndex={0}
-					aria-label="q3-board-review.pdf, press the Context Menu key for actions"
-					mix={[
-						rounded("lg"),
-						border({ color: "neutral", width: 1 }),
-						p(1),
-						contextMenu("preview-row-menu"),
-					]}
-				>
-					<Item>
-						<Item.Media>
-							<FileTextIcon size={18} aria-hidden="true" />
-						</Item.Media>
-						<Item.Content>
-							<Item.Title>q3-board-review.pdf</Item.Title>
-							<Item.Description>2.4 MB · edited by Ana Souza · yesterday</Item.Description>
-						</Item.Content>
-					</Item>
-				</ContextMenu.Trigger>
+			<ContextMenu.Trigger
+				tabIndex={0}
+				aria-label="q3-board-review.pdf, press the Context Menu key for actions"
+				mix={[
+					rounded("lg"),
+					border({ color: "neutral", width: 1 }),
+					p(1),
+					contextMenu("preview-row-menu"),
+				]}
+			>
+				<Item>
+					<Item.Media>
+						<FileTextIcon size={18} aria-hidden="true" />
+					</Item.Media>
+					<Item.Content>
+						<Item.Title>q3-board-review.pdf</Item.Title>
+						<Item.Description>2.4 MB · edited by Ana Souza · yesterday</Item.Description>
+					</Item.Content>
+				</Item>
+			</ContextMenu.Trigger>
 
-				<ContextMenu id="preview-row-menu" aria-label="File actions" mix={[menuKeys()]}>
-					<ContextMenu.Group aria-labelledby="preview-row-menu-file">
-						<ContextMenu.Label id="preview-row-menu-file">File</ContextMenu.Label>
-						<ContextMenu.Item mix={[hstack({ gap: 2, align: "center" })]}>
-							<PencilIcon size={16} aria-hidden="true" />
-							Rename
-							<ContextMenu.Shortcut>F2</ContextMenu.Shortcut>
-						</ContextMenu.Item>
-						<ContextMenu.Item mix={[hstack({ gap: 2, align: "center" })]}>
-							<CopyIcon size={16} aria-hidden="true" />
-							Duplicate
-							<ContextMenu.Shortcut>⌘D</ContextMenu.Shortcut>
-						</ContextMenu.Item>
-						<ContextMenu.Item href="#download" mix={[hstack({ gap: 2, align: "center" })]}>
-							<DownloadIcon size={16} aria-hidden="true" />
-							Download
-						</ContextMenu.Item>
-					</ContextMenu.Group>
-
-					<ContextMenu.Group aria-labelledby="preview-row-menu-share">
-						<ContextMenu.Label id="preview-row-menu-share">Share</ContextMenu.Label>
-						<ContextMenu.SubTrigger
-							commandfor="preview-row-menu-share-surface"
-							command="toggle-popover"
-						>
-							Send a copy
-							<ChevronRightIcon data-slot="icon" size={16} aria-hidden="true" />
-						</ContextMenu.SubTrigger>
-						<ContextMenu.CheckboxItem aria-selected="true">
-							Anyone with the link
-						</ContextMenu.CheckboxItem>
-					</ContextMenu.Group>
-
-					<ContextMenu.Separator />
-
-					<ContextMenu.Item danger mix={[hstack({ gap: 2, align: "center" })]}>
-						<Trash2Icon size={16} aria-hidden="true" />
-						<span mix={[weight("medium")]}>Move to trash</span>
-						<ContextMenu.Shortcut>⌫</ContextMenu.Shortcut>
+			<ContextMenu id="preview-row-menu" aria-label="File actions" mix={[menuKeys()]}>
+				<ContextMenu.Group aria-labelledby="preview-row-menu-file">
+					<ContextMenu.Label id="preview-row-menu-file">File</ContextMenu.Label>
+					<ContextMenu.Item mix={[hstack({ gap: 2, align: "center" })]}>
+						<PencilIcon size={16} aria-hidden="true" />
+						Rename
+						<ContextMenu.Shortcut>F2</ContextMenu.Shortcut>
 					</ContextMenu.Item>
-				</ContextMenu>
+					<ContextMenu.Item mix={[hstack({ gap: 2, align: "center" })]}>
+						<CopyIcon size={16} aria-hidden="true" />
+						Duplicate
+						<ContextMenu.Shortcut>⌘D</ContextMenu.Shortcut>
+					</ContextMenu.Item>
+					<ContextMenu.Item href="#download" mix={[hstack({ gap: 2, align: "center" })]}>
+						<DownloadIcon size={16} aria-hidden="true" />
+						Download
+					</ContextMenu.Item>
+				</ContextMenu.Group>
 
-				<ContextMenu.SubContent
-					id="preview-row-menu-share-surface"
-					aria-label="Send a copy"
-					mix={[menuKeys()]}
-				>
-					<ContextMenu.Item>Email</ContextMenu.Item>
-					<ContextMenu.Item>Slack</ContextMenu.Item>
-					<ContextMenu.Item>Copy link</ContextMenu.Item>
-				</ContextMenu.SubContent>
-			</div>
-		);
-	},
-);
+				<ContextMenu.Group aria-labelledby="preview-row-menu-share">
+					<ContextMenu.Label id="preview-row-menu-share">Share</ContextMenu.Label>
+					<ContextMenu.SubTrigger
+						commandfor="preview-row-menu-share-surface"
+						command="toggle-popover"
+					>
+						Send a copy
+						<ChevronRightIcon data-slot="icon" size={16} aria-hidden="true" />
+					</ContextMenu.SubTrigger>
+					<ContextMenu.CheckboxItem aria-selected="true">
+						Anyone with the link
+					</ContextMenu.CheckboxItem>
+				</ContextMenu.Group>
+
+				<ContextMenu.Separator />
+
+				<ContextMenu.Item danger mix={[hstack({ gap: 2, align: "center" })]}>
+					<Trash2Icon size={16} aria-hidden="true" />
+					<span mix={[weight("medium")]}>Move to trash</span>
+					<ContextMenu.Shortcut>⌫</ContextMenu.Shortcut>
+				</ContextMenu.Item>
+			</ContextMenu>
+
+			<ContextMenu.SubContent
+				id="preview-row-menu-share-surface"
+				aria-label="Send a copy"
+				mix={[menuKeys()]}
+			>
+				<ContextMenu.Item>Email</ContextMenu.Item>
+				<ContextMenu.Item>Slack</ContextMenu.Item>
+				<ContextMenu.Item>Copy link</ContextMenu.Item>
+			</ContextMenu.SubContent>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ContextMenuPreview /> };

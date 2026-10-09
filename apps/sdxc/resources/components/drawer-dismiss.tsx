@@ -17,30 +17,27 @@ import { clientEntry, ref } from "remix/component";
  * the back-forward cache comes back with the drawer closed, since the link that left it
  * closed it first.
  */
-export const DrawerDismiss = clientEntry(
-	"/resources/components/drawer-dismiss.tsx#DrawerDismiss",
-	function DrawerDismiss(_: Handle) {
-		return () => (
-			<span
-				mix={[
-					hidden(),
-					ref((node, signal) => {
-						let drawer = node.closest("dialog");
-						if (!drawer) return;
+export const DrawerDismiss = clientEntry(import.meta.url, function DrawerDismiss(_: Handle) {
+	return () => (
+		<span
+			mix={[
+				hidden(),
+				ref((node, signal) => {
+					let drawer = node.closest("dialog");
+					if (!drawer) return;
 
-						drawer.addEventListener(
-							"click",
-							(event) => {
-								if (isOutside(drawer, event) || isPlainLinkClick(event)) drawer.close();
-							},
-							{ signal },
-						);
-					}),
-				]}
-			/>
-		);
-	},
-);
+					drawer.addEventListener(
+						"click",
+						(event) => {
+							if (isOutside(drawer, event) || isPlainLinkClick(event)) drawer.close();
+						},
+						{ signal },
+					);
+				}),
+			]}
+		/>
+	);
+});
 
 /**
  * Whether a click landed on the backdrop. A press on `::backdrop` is dispatched to the

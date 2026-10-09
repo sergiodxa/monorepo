@@ -65,7 +65,7 @@ let brightness = 70;
 
 /** A picking square whose pointer gesture moves both axes at once, hydrated so the drag lands. */
 export const ColorAreaPreview = clientEntry(
-	"/resources/components/previews/color-area.tsx#ColorAreaPreview",
+	import.meta.url,
 	function ColorAreaPreview(handle: Handle) {
 		let saturation = 80;
 		let brightness = 70;

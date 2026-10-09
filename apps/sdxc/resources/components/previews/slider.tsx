@@ -55,57 +55,54 @@ const SLIDER_CODE = `let gains = { "60": 4, "250": 1, "1k": -2, "4k": 2, "12k": 
 </Card>`;
 
 /** A five-band equalizer, hydrated so every readout follows its own thumb. */
-export const SliderPreview = clientEntry(
-	"/resources/components/previews/slider.tsx#SliderPreview",
-	function SliderPreview(handle: Handle) {
-		let gains = new Map(BANDS.map((band) => [band.id, band.gain]));
+export const SliderPreview = clientEntry(import.meta.url, function SliderPreview(handle: Handle) {
+	let gains = new Map(BANDS.map((band) => [band.id, band.gain]));
 
-		/** Records the dragged band's gain so its readout and fill agree. */
-		function readGain(id: string, event: Event) {
-			let target = event.target;
-			if (!(target instanceof HTMLInputElement)) return;
+	/** Records the dragged band's gain so its readout and fill agree. */
+	function readGain(id: string, event: Event) {
+		let target = event.target;
+		if (!(target instanceof HTMLInputElement)) return;
 
-			gains.set(id, Number(target.value));
-			void handle.update();
-		}
+		gains.set(id, Number(target.value));
+		void handle.update();
+	}
 
-		return () => (
-			<Card mix={[is("24rem")]}>
-				<Card.Header>
-					<Card.Title>Equalizer</Card.Title>
-					<Card.Description>Gain in decibels, −12 to +12.</Card.Description>
-				</Card.Header>
-				<Card.Content mix={[hstack({ gap: 5, align: "end", justify: "center" })]}>
-					{BANDS.map((band) => {
-						let gain = gains.get(band.id) ?? 0;
+	return () => (
+		<Card mix={[is("24rem")]}>
+			<Card.Header>
+				<Card.Title>Equalizer</Card.Title>
+				<Card.Description>Gain in decibels, −12 to +12.</Card.Description>
+			</Card.Header>
+			<Card.Content mix={[hstack({ gap: 5, align: "end", justify: "center" })]}>
+				{BANDS.map((band) => {
+					let gain = gains.get(band.id) ?? 0;
 
-						return (
-							<Slider
-								key={band.id}
-								orientation="vertical"
-								min={-12}
-								max={12}
-								value={gain}
-								mix={[
-									vstack({ gap: 2, align: "center" }),
-									on<HTMLDivElement, "input">("input", (event) => readGain(band.id, event)),
-								]}
-							>
-								<Slider.Output mix={[text("xs"), weight("medium")]}>
-									{gain > 0 ? `+${gain}` : gain}
-								</Slider.Output>
-								<Slider.Track>
-									<Slider.Thumb aria-label={`Gain at ${band.label}`} />
-								</Slider.Track>
-								<Text mix={[text("xs")]}>{band.label}</Text>
-							</Slider>
-						);
-					})}
-				</Card.Content>
-			</Card>
-		);
-	},
-);
+					return (
+						<Slider
+							key={band.id}
+							orientation="vertical"
+							min={-12}
+							max={12}
+							value={gain}
+							mix={[
+								vstack({ gap: 2, align: "center" }),
+								on<HTMLDivElement, "input">("input", (event) => readGain(band.id, event)),
+							]}
+						>
+							<Slider.Output mix={[text("xs"), weight("medium")]}>
+								{gain > 0 ? `+${gain}` : gain}
+							</Slider.Output>
+							<Slider.Track>
+								<Slider.Thumb aria-label={`Gain at ${band.label}`} />
+							</Slider.Track>
+							<Text mix={[text("xs")]}>{band.label}</Text>
+						</Slider>
+					);
+				})}
+			</Card.Content>
+		</Card>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SLIDER_CODE, render: () => <SliderPreview /> };

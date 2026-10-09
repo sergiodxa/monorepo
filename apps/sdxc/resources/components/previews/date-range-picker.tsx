@@ -45,7 +45,7 @@ function readFields(event: Event) {
 
 /** A booking's dates of stay, hydrated so the copy beneath counts the nights between them. */
 export const DateRangePickerPreview = clientEntry(
-	"/resources/components/previews/date-range-picker.tsx#DateRangePickerPreview",
+	import.meta.url,
 	function DateRangePickerPreview(handle: Handle) {
 		let checkIn = "";
 		let checkOut = "";

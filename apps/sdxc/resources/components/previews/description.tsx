@@ -68,7 +68,7 @@ function choosePlan(event: Event) {
 
 /** Two described fields, hydrated so the plan's description answers the plan. */
 export const DescriptionPreview = clientEntry(
-	"/resources/components/previews/description.tsx#DescriptionPreview",
+	import.meta.url,
 	function DescriptionPreview(handle: Handle) {
 		let plan = "team";
 

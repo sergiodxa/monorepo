@@ -40,61 +40,58 @@ const SKELETON_CODE = `<Card aria-busy="true" aria-label="Loading comments">
 </Card>`;
 
 /** A comment thread's loading state, hydrated so the breathe runs as it would in an app. */
-export const SkeletonPreview = clientEntry(
-	"/resources/components/previews/skeleton.tsx#SkeletonPreview",
-	function SkeletonPreview() {
-		return () => (
-			<Card
-				aria-busy="true"
-				aria-label="Loading comments"
-				/* Filling the frame keeps the placeholder the shape of the card it stands in for,
-				 * rather than a small box adrift in the middle of one. */
-				mix={[is("100%"), maxIs("34rem")]}
-			>
-				<Card.Content mix={[vstack({ gap: 5, align: "stretch" })]}>
-					<div mix={[hstack({ gap: 3, align: "center" })]}>
-						<Skeleton
-							mix={[
-								pulse(),
-								css({
-									inlineSize: "2.5rem",
-									blockSize: "2.5rem",
-									borderRadius: "9999px",
-									flexShrink: "0",
-								}),
-							]}
-						/>
-						<div mix={[vstack({ gap: 2, align: "stretch" }), css({ flexGrow: "1" })]}>
-							<Skeleton mix={[pulse(), css({ inlineSize: "9rem" })]} />
-							<Skeleton mix={[pulse(), css({ inlineSize: "5rem", blockSize: "0.75rem" })]} />
-						</div>
+export const SkeletonPreview = clientEntry(import.meta.url, function SkeletonPreview() {
+	return () => (
+		<Card
+			aria-busy="true"
+			aria-label="Loading comments"
+			/* Filling the frame keeps the placeholder the shape of the card it stands in for,
+			 * rather than a small box adrift in the middle of one. */
+			mix={[is("100%"), maxIs("34rem")]}
+		>
+			<Card.Content mix={[vstack({ gap: 5, align: "stretch" })]}>
+				<div mix={[hstack({ gap: 3, align: "center" })]}>
+					<Skeleton
+						mix={[
+							pulse(),
+							css({
+								inlineSize: "2.5rem",
+								blockSize: "2.5rem",
+								borderRadius: "9999px",
+								flexShrink: "0",
+							}),
+						]}
+					/>
+					<div mix={[vstack({ gap: 2, align: "stretch" }), css({ flexGrow: "1" })]}>
+						<Skeleton mix={[pulse(), css({ inlineSize: "9rem" })]} />
+						<Skeleton mix={[pulse(), css({ inlineSize: "5rem", blockSize: "0.75rem" })]} />
 					</div>
+				</div>
 
-					<div mix={[vstack({ gap: 2, align: "stretch" })]}>
-						<Skeleton mix={[pulse()]} />
-						<Skeleton mix={[pulse()]} />
-						<Skeleton mix={[pulse(), css({ inlineSize: "60%" })]} />
-					</div>
+				<div mix={[vstack({ gap: 2, align: "stretch" })]}>
+					<Skeleton mix={[pulse()]} />
+					<Skeleton mix={[pulse()]} />
+					<Skeleton mix={[pulse(), css({ inlineSize: "60%" })]} />
+				</div>
 
-					<div mix={[hstack({ gap: 2, align: "center" })]}>
-						<Skeleton
-							mix={[
-								pulse(),
-								css({ inlineSize: "4.5rem", blockSize: "2rem", borderRadius: "9999px" }),
-							]}
-						/>
-						<Skeleton
-							mix={[
-								pulse(),
-								css({ inlineSize: "4.5rem", blockSize: "2rem", borderRadius: "9999px" }),
-							]}
-						/>
-					</div>
-				</Card.Content>
-			</Card>
-		);
-	},
-);
+				<div mix={[hstack({ gap: 2, align: "center" })]}>
+					<Skeleton
+						mix={[
+							pulse(),
+							css({ inlineSize: "4.5rem", blockSize: "2rem", borderRadius: "9999px" }),
+						]}
+					/>
+					<Skeleton
+						mix={[
+							pulse(),
+							css({ inlineSize: "4.5rem", blockSize: "2rem", borderRadius: "9999px" }),
+						]}
+					/>
+				</div>
+			</Card.Content>
+		</Card>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: SKELETON_CODE, render: () => <SkeletonPreview /> };

@@ -1,7 +1,7 @@
 /**
- * Client runtime entry point. The landing page is server-rendered HTML; the runtime
- * is here for the copy buttons, which need script to reach the clipboard, and stays
- * wired into the build so adding another island is only a matter of writing it.
+ * Client runtime entry point. Pages are server-rendered HTML and the runtime hydrates their
+ * islands, each loaded from the chunk the renderer named for its `clientEntry(import.meta.url)`
+ * identity, so adding an island is only a matter of writing it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,32 +10,11 @@
 import { run } from "remix/component";
 
 /**
- * Modules the runtime may hydrate: the islands, each a `clientEntry()` module under
- * `resources/components/`. Layouts, views and the server-rendered components stay out, since
- * bundling them would compile the document's stylesheets a second time, a copy every page
- * would then link, and give each its own chunk in the import map every page carries.
- */
-const CLIENT_MODULES = import.meta.glob([
-	"../resources/components/previews/*.tsx",
-	"../resources/components/previews/*/*.tsx",
-	"../resources/components/copy-button.tsx",
-	"../resources/components/copy-markdown.tsx",
-	"../resources/components/drawer-dismiss.tsx",
-	"../resources/components/option-groups.tsx",
-	"../resources/components/search-palette.tsx",
-	"../resources/components/table-of-contents.tsx",
-]);
-
-/**
  * Boots the client runtime and resolves lazily loaded UI modules.
  */
 run({
 	async loadModule(moduleUrl, exportName) {
-		let pathname = new URL(moduleUrl, location.origin).pathname;
-		let load = CLIENT_MODULES[`..${pathname}`];
-		if (!load) throw new Error(`Unknown client entry module: ${moduleUrl}`);
-
-		let mod = await load();
+		let mod: unknown = await import(/* @vite-ignore */ moduleUrl);
 
 		if (!mod || typeof mod !== "object") {
 			throw new Error(`Invalid client entry module: ${moduleUrl}`);

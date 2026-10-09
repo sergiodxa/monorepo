@@ -93,66 +93,61 @@ function toggleChannel(event: Event) {
 </Description>`;
 
 /** A notification settings list, hydrated so each switch reports its own live state. */
-export const ItemPreview = clientEntry(
-	"/resources/components/previews/item.tsx#ItemPreview",
-	function ItemPreview(handle: Handle) {
-		let enabled = new Set(
-			CHANNELS.filter((channel) => channel.enabled).map((channel) => channel.id),
-		);
+export const ItemPreview = clientEntry(import.meta.url, function ItemPreview(handle: Handle) {
+	let enabled = new Set(CHANNELS.filter((channel) => channel.enabled).map((channel) => channel.id));
 
-		/** Keeps the summary below honest about what the switches are set to. */
-		function toggleChannel(event: Event) {
-			let input = event.target as HTMLInputElement;
-			if (input.checked) enabled.add(input.name);
-			else enabled.delete(input.name);
-			void handle.update();
-		}
+	/** Keeps the summary below honest about what the switches are set to. */
+	function toggleChannel(event: Event) {
+		let input = event.target as HTMLInputElement;
+		if (input.checked) enabled.add(input.name);
+		else enabled.delete(input.name);
+		void handle.update();
+	}
 
-		return () => (
-			<div mix={[vstack({ gap: 3, align: "stretch" }), is("26rem")]}>
-				<Header>Notifications</Header>
+	return () => (
+		<div mix={[vstack({ gap: 3, align: "stretch" }), is("26rem")]}>
+			<Header>Notifications</Header>
 
-				{/* A checkbox's change event bubbles, so the list is where the island listens. */}
-				<div
-					mix={[
-						vstack({ gap: 2, align: "stretch" }),
-						on<HTMLDivElement, "change">("change", toggleChannel),
-					]}
-				>
-					{CHANNELS.map((channel) => {
-						let Glyph = CHANNEL_ICONS[channel.id as keyof typeof CHANNEL_ICONS];
+			{/* A checkbox's change event bubbles, so the list is where the island listens. */}
+			<div
+				mix={[
+					vstack({ gap: 2, align: "stretch" }),
+					on<HTMLDivElement, "change">("change", toggleChannel),
+				]}
+			>
+				{CHANNELS.map((channel) => {
+					let Glyph = CHANNEL_ICONS[channel.id as keyof typeof CHANNEL_ICONS];
 
-						return (
-							<Item key={channel.id}>
-								<Item.Media>
-									<Glyph aria-hidden="true" />
-								</Item.Media>
-								<Item.Content>
-									<Item.Title>{channel.title}</Item.Title>
-									<Item.Description>{channel.description}</Item.Description>
-								</Item.Content>
-								<Item.Actions>
-									<Switch
-										name={channel.id}
-										defaultChecked={channel.enabled}
-										aria-label={`Notify me by ${channel.title}`}
-										mix={[ariaChecked()]}
-									/>
-								</Item.Actions>
-							</Item>
-						);
-					})}
-				</div>
-
-				<Description>
-					{enabled.size === 0
-						? "You will not be notified at all."
-						: `Notifying you by ${[...enabled].join(", ")}.`}
-				</Description>
+					return (
+						<Item key={channel.id}>
+							<Item.Media>
+								<Glyph aria-hidden="true" />
+							</Item.Media>
+							<Item.Content>
+								<Item.Title>{channel.title}</Item.Title>
+								<Item.Description>{channel.description}</Item.Description>
+							</Item.Content>
+							<Item.Actions>
+								<Switch
+									name={channel.id}
+									defaultChecked={channel.enabled}
+									aria-label={`Notify me by ${channel.title}`}
+									mix={[ariaChecked()]}
+								/>
+							</Item.Actions>
+						</Item>
+					);
+				})}
 			</div>
-		);
-	},
-);
+
+			<Description>
+				{enabled.size === 0
+					? "You will not be notified at all."
+					: `Notifying you by ${[...enabled].join(", ")}.`}
+			</Description>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: ITEM_CODE, render: () => <ItemPreview /> };

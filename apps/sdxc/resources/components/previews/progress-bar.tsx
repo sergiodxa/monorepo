@@ -76,7 +76,7 @@ function startUpload() {
 
 /** An upload queue whose first bar advances on press, hydrated so the task has somewhere to run. */
 export const ProgressBarPreview = clientEntry(
-	"/resources/components/previews/progress-bar.tsx#ProgressBarPreview",
+	import.meta.url,
 	function ProgressBarPreview(handle: Handle) {
 		let uploaded = 0;
 		let timer: ReturnType<typeof setInterval> | undefined;

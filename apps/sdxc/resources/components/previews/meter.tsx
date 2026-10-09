@@ -53,47 +53,44 @@ const CODE = `<div mix={[vstack({ gap: 5, align: "stretch" })]}>
 </div>`;
 
 /** A plan-usage panel, hydrated so the page loads this example's chunk alone. */
-export const MeterPreview = clientEntry(
-	"/resources/components/previews/meter.tsx#MeterPreview",
-	function MeterPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
-				<Header mix={[m(0)]}>Usage this month</Header>
+export const MeterPreview = clientEntry(import.meta.url, function MeterPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 5, align: "stretch" }), is("22rem")]}>
+			<Header mix={[m(0)]}>Usage this month</Header>
 
-				<Meter>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Storage</span>
-						<Meter.ValueLabel>4.5 GB of 10 GB</Meter.ValueLabel>
-					</div>
-					<Meter.Indicator value={45} max={100} aria-label="Storage used" />
-				</Meter>
+			<Meter>
+				<div mix={[hstack({ gap: 2, justify: "between" })]}>
+					<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Storage</span>
+					<Meter.ValueLabel>4.5 GB of 10 GB</Meter.ValueLabel>
+				</div>
+				<Meter.Indicator value={45} max={100} aria-label="Storage used" />
+			</Meter>
 
-				<Meter>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Bandwidth</span>
-						<Meter.ValueLabel>920 GB of 1 TB</Meter.ValueLabel>
-					</div>
-					<Meter.Indicator color="danger" value={92} aria-label="Bandwidth used" />
-				</Meter>
+			<Meter>
+				<div mix={[hstack({ gap: 2, justify: "between" })]}>
+					<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Bandwidth</span>
+					<Meter.ValueLabel>920 GB of 1 TB</Meter.ValueLabel>
+				</div>
+				<Meter.Indicator color="danger" value={92} aria-label="Bandwidth used" />
+			</Meter>
 
-				<Meter>
-					<div mix={[hstack({ gap: 2, justify: "between" })]}>
-						<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Seats</span>
-						<Meter.ValueLabel>8 of 10 in use</Meter.ValueLabel>
-					</div>
-					<Meter.Indicator
-						color="success"
-						value={8}
-						low={3}
-						high={9}
-						optimum={10}
-						max={10}
-						aria-label="Seats in use"
-					/>
-				</Meter>
-			</div>
-		);
-	},
-);
+			<Meter>
+				<div mix={[hstack({ gap: 2, justify: "between" })]}>
+					<span mix={[text("sm"), weight("medium"), fg("neutral.emphasis")]}>Seats</span>
+					<Meter.ValueLabel>8 of 10 in use</Meter.ValueLabel>
+				</div>
+				<Meter.Indicator
+					color="success"
+					value={8}
+					low={3}
+					high={9}
+					optimum={10}
+					max={10}
+					aria-label="Seats in use"
+				/>
+			</Meter>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <MeterPreview /> };

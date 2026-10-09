@@ -63,54 +63,51 @@ const CODE = `<div mix={[hstack({ gap: 5, align: "start" }), flexWrap()]}>
 </div>`;
 
 /** A media grid whose tiles hold their shape, hydrated the way every preview here loads. */
-export const AspectRatioPreview = clientEntry(
-	"/resources/components/previews/aspect-ratio.tsx#AspectRatioPreview",
-	function AspectRatioPreview() {
-		return () => (
-			<div mix={[hstack({ gap: 5, align: "start" }), flexWrap()]}>
-				<figure mix={[vstack({ gap: 2, align: "stretch" }), is("13rem"), m(0)]}>
-					<AspectRatio ratio="16 / 9" mix={[rounded("lg")]}>
-						<img
-							src={POSTERS.keynote}
-							alt="Opening keynote poster"
-							mix={[is("100%"), fit("cover")]}
-						/>
-					</AspectRatio>
-					<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
-						<span mix={[text("sm"), weight("medium")]}>Opening keynote</span>
-						<Badge variant="secondary" color="neutral">
-							16 / 9 · 42 min
-						</Badge>
-					</figcaption>
-				</figure>
+export const AspectRatioPreview = clientEntry(import.meta.url, function AspectRatioPreview() {
+	return () => (
+		<div mix={[hstack({ gap: 5, align: "start" }), flexWrap()]}>
+			<figure mix={[vstack({ gap: 2, align: "stretch" }), is("13rem"), m(0)]}>
+				<AspectRatio ratio="16 / 9" mix={[rounded("lg")]}>
+					<img
+						src={POSTERS.keynote}
+						alt="Opening keynote poster"
+						mix={[is("100%"), fit("cover")]}
+					/>
+				</AspectRatio>
+				<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
+					<span mix={[text("sm"), weight("medium")]}>Opening keynote</span>
+					<Badge variant="secondary" color="neutral">
+						16 / 9 · 42 min
+					</Badge>
+				</figcaption>
+			</figure>
 
-				<figure mix={[vstack({ gap: 2, align: "stretch" }), is("9rem"), m(0)]}>
-					<AspectRatio ratio="1 / 1" mix={[rounded("lg")]}>
-						<img src={POSTERS.album} alt="Podcast cover art" mix={[is("100%"), fit("cover")]} />
-					</AspectRatio>
-					<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
-						<span mix={[text("sm"), weight("medium")]}>Season 3 cover</span>
-						<Badge variant="secondary" color="neutral">
-							1 / 1 · cover art
-						</Badge>
-					</figcaption>
-				</figure>
+			<figure mix={[vstack({ gap: 2, align: "stretch" }), is("9rem"), m(0)]}>
+				<AspectRatio ratio="1 / 1" mix={[rounded("lg")]}>
+					<img src={POSTERS.album} alt="Podcast cover art" mix={[is("100%"), fit("cover")]} />
+				</AspectRatio>
+				<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
+					<span mix={[text("sm"), weight("medium")]}>Season 3 cover</span>
+					<Badge variant="secondary" color="neutral">
+						1 / 1 · cover art
+					</Badge>
+				</figcaption>
+			</figure>
 
-				<figure mix={[vstack({ gap: 2, align: "stretch" }), is("11rem"), m(0)]}>
-					<AspectRatio ratio={4 / 3} mix={[rounded("lg")]}>
-						<img src={POSTERS.slide} alt="Slide deck preview" mix={[is("100%"), fit("cover")]} />
-					</AspectRatio>
-					<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
-						<span mix={[text("sm"), weight("medium")]}>Slide deck</span>
-						<Badge variant="secondary" color="neutral">
-							4 / 3 · 24 slides
-						</Badge>
-					</figcaption>
-				</figure>
-			</div>
-		);
-	},
-);
+			<figure mix={[vstack({ gap: 2, align: "stretch" }), is("11rem"), m(0)]}>
+				<AspectRatio ratio={4 / 3} mix={[rounded("lg")]}>
+					<img src={POSTERS.slide} alt="Slide deck preview" mix={[is("100%"), fit("cover")]} />
+				</AspectRatio>
+				<figcaption mix={[vstack({ gap: 1, align: "start" })]}>
+					<span mix={[text("sm"), weight("medium")]}>Slide deck</span>
+					<Badge variant="secondary" color="neutral">
+						4 / 3 · 24 slides
+					</Badge>
+				</figcaption>
+			</figure>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <AspectRatioPreview /> };

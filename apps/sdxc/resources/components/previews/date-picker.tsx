@@ -38,7 +38,7 @@ function readField(event: Event) {
 
 /** A rotation's start date, hydrated so the hint beneath answers the day the field holds. */
 export const DatePickerPreview = clientEntry(
-	"/resources/components/previews/date-picker.tsx#DatePickerPreview",
+	import.meta.url,
 	function DatePickerPreview(handle: Handle) {
 		let today = new Date();
 		let value = toDayKey(today, systemTimeZone());

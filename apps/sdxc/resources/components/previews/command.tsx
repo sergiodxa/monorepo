@@ -101,57 +101,50 @@ let ran: string | null = null;
 </div>`;
 
 /** A workspace palette that narrows as you type, hydrated so the query and arrow keys drive it. */
-export const CommandPreview = clientEntry(
-	"/resources/components/previews/command.tsx#CommandPreview",
-	function CommandPreview(handle: Handle) {
-		let model = new FilterModel();
-		let ran: string | null = null;
+export const CommandPreview = clientEntry(import.meta.url, function CommandPreview(handle: Handle) {
+	let model = new FilterModel();
+	let ran: string | null = null;
 
-		return () => (
-			<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("26rem")]}>
-				<Command aria-label="Workspace commands" mix={[commandFilter(model), commandKeys(model)]}>
-					<Command.Input
-						type="search"
-						aria-label="Workspace commands"
-						placeholder="Type a command or search…"
-					/>
+	return () => (
+		<div mix={[vstack({ gap: 2, align: "stretch" }), is("100%"), maxIs("26rem")]}>
+			<Command aria-label="Workspace commands" mix={[commandFilter(model), commandKeys(model)]}>
+				<Command.Input
+					type="search"
+					aria-label="Workspace commands"
+					placeholder="Type a command or search…"
+				/>
 
-					<Command.List>
-						{ACTIONS.map((action) => (
-							<Command.Item
-								key={action.id}
-								id={`preview-command-${action.id}`}
-								value={action.label}
+				<Command.List>
+					{ACTIONS.map((action) => (
+						<Command.Item key={action.id} id={`preview-command-${action.id}`} value={action.label}>
+							<button
+								type="button"
+								mix={[
+									hstack({ gap: 3, align: "center" }),
+									is("100%"),
+									on<HTMLButtonElement, "click">("click", () => {
+										ran = action.label;
+										void handle.update();
+									}),
+								]}
 							>
-								<button
-									type="button"
-									mix={[
-										hstack({ gap: 3, align: "center" }),
-										is("100%"),
-										on<HTMLButtonElement, "click">("click", () => {
-											ran = action.label;
-											void handle.update();
-										}),
-									]}
-								>
-									{actionIcon(action.icon)}
-									<span mix={[is("100%"), textAlign("start"), text("sm")]}>{action.label}</span>
-									{action.hint ? <Keyboard>{action.hint}</Keyboard> : null}
-								</button>
-							</Command.Item>
-						))}
-					</Command.List>
+								{actionIcon(action.icon)}
+								<span mix={[is("100%"), textAlign("start"), text("sm")]}>{action.label}</span>
+								{action.hint ? <Keyboard>{action.hint}</Keyboard> : null}
+							</button>
+						</Command.Item>
+					))}
+				</Command.List>
 
-					<Command.Empty>No command matches that.</Command.Empty>
-				</Command>
+				<Command.Empty>No command matches that.</Command.Empty>
+			</Command>
 
-				<p mix={[text("sm"), fg("neutral")]}>
-					{ran === null ? "Arrow keys move the active row; Enter runs it." : `Ran: ${ran}`}
-				</p>
-			</div>
-		);
-	},
-);
+			<p mix={[text("sm"), fg("neutral")]}>
+				{ran === null ? "Arrow keys move the active row; Enter runs it." : `Ran: ${ran}`}
+			</p>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <CommandPreview /> };

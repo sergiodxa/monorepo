@@ -15,12 +15,9 @@ import { clientEntry } from "remix/component";
 const CODE = `<Switch aria-label="Push notifications" name="push" mix={[ariaChecked()]} />`;
 
 /** A switch whose `aria-checked` follows its live state, hydrated so the mixin runs. */
-export const AnnouncedStateSwitch = clientEntry(
-	"/resources/components/previews/switch/announced-state.tsx#AnnouncedStateSwitch",
-	function AnnouncedStateSwitch() {
-		return () => <Switch aria-label="Push notifications" name="push" mix={[ariaChecked()]} />;
-	},
-);
+export const AnnouncedStateSwitch = clientEntry(import.meta.url, function AnnouncedStateSwitch() {
+	return () => <Switch aria-label="Push notifications" name="push" mix={[ariaChecked()]} />;
+});
 
 /** What the preview registry reads: the title, the source to show, and the island to draw. */
 export default {

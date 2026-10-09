@@ -48,42 +48,39 @@ const CODE = `<div mix={[vstack({ gap: 3, align: "stretch" })]}>
 </div>`;
 
 /** A paragraph run of inline links, hydrated so the page loads this example's chunk alone. */
-export const LinkPreview = clientEntry(
-	"/resources/components/previews/link.tsx#LinkPreview",
-	function LinkPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 3, align: "stretch" }), maxIs("34rem")]}>
-				<p mix={[m(0), text("sm"), fg("neutral")]}>
-					Every package is published to npm and documented here — start with the{" "}
-					<Link href="/api/ui">component catalogue</Link>, or read the{" "}
-					<Link href="/docs">guides</Link> if you are wiring one up for the first time.
-				</p>
+export const LinkPreview = clientEntry(import.meta.url, function LinkPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 3, align: "stretch" }), maxIs("34rem")]}>
+			<p mix={[m(0), text("sm"), fg("neutral")]}>
+				Every package is published to npm and documented here — start with the{" "}
+				<Link href="/api/ui">component catalogue</Link>, or read the{" "}
+				<Link href="/docs">guides</Link> if you are wiring one up for the first time.
+			</p>
 
-				<p mix={[m(0), text("sm"), fg("neutral")]}>
-					The source lives on{" "}
-					<Link href="https://github.com/sergiodxa" target="_blank" rel="noreferrer">
-						GitHub
-					</Link>
-					, and release notes land in the changelog.
-				</p>
+			<p mix={[m(0), text("sm"), fg("neutral")]}>
+				The source lives on{" "}
+				<Link href="https://github.com/sergiodxa" target="_blank" rel="noreferrer">
+					GitHub
+				</Link>
+				, and release notes land in the changelog.
+			</p>
 
-				<p mix={[m(0), text("sm"), fg("neutral")]}>
-					Removing a workspace takes its members and history with it:{" "}
-					<Link href="/settings/danger" color="danger">
-						delete this workspace
-					</Link>
-					.
-				</p>
+			<p mix={[m(0), text("sm"), fg("neutral")]}>
+				Removing a workspace takes its members and history with it:{" "}
+				<Link href="/settings/danger" color="danger">
+					delete this workspace
+				</Link>
+				.
+			</p>
 
-				<p mix={[m(0), text("sm"), fg("neutral")]}>
-					<Link href="/settings/transfer" aria-disabled="true">
-						Transferring ownership
-					</Link>{" "}
-					needs a second owner on the account.
-				</p>
-			</div>
-		);
-	},
-);
+			<p mix={[m(0), text("sm"), fg("neutral")]}>
+				<Link href="/settings/transfer" aria-disabled="true">
+					Transferring ownership
+				</Link>{" "}
+				needs a second owner on the account.
+			</p>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <LinkPreview /> };

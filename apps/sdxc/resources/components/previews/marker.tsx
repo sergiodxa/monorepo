@@ -51,47 +51,42 @@ const CODE = `<div mix={[vstack({ gap: 4, align: "stretch" })]}>
 </div>`;
 
 /** A run of between-turn callouts, hydrated so the page loads this example's chunk alone. */
-export const MarkerPreview = clientEntry(
-	"/resources/components/previews/marker.tsx#MarkerPreview",
-	function MarkerPreview() {
-		return () => (
-			<div mix={[vstack({ gap: 4, align: "stretch" }), is("26rem")]}>
-				<Marker variant="separator">
-					<Marker.Content>Today</Marker.Content>
-				</Marker>
+export const MarkerPreview = clientEntry(import.meta.url, function MarkerPreview() {
+	return () => (
+		<div mix={[vstack({ gap: 4, align: "stretch" }), is("26rem")]}>
+			<Marker variant="separator">
+				<Marker.Content>Today</Marker.Content>
+			</Marker>
 
-				<Marker color="success">
-					<Marker.Icon>
-						<CheckIcon />
-					</Marker.Icon>
-					<Marker.Content>Delivered · 14:02</Marker.Content>
-				</Marker>
+			<Marker color="success">
+				<Marker.Icon>
+					<CheckIcon />
+				</Marker.Icon>
+				<Marker.Content>Delivered · 14:02</Marker.Content>
+			</Marker>
 
-				<Marker>
-					<Marker.Icon>
-						<UserPlusIcon />
-					</Marker.Icon>
-					<Marker.Content>Ana joined the conversation</Marker.Content>
-				</Marker>
+			<Marker>
+				<Marker.Icon>
+					<UserPlusIcon />
+				</Marker.Icon>
+				<Marker.Content>Ana joined the conversation</Marker.Content>
+			</Marker>
 
-				<Marker variant="border" color="warning">
-					<Marker.Icon>
-						<TriangleAlertIcon />
-					</Marker.Icon>
-					<Marker.Content>
-						Reconnecting — messages will send once you are back online
-					</Marker.Content>
-				</Marker>
+			<Marker variant="border" color="warning">
+				<Marker.Icon>
+					<TriangleAlertIcon />
+				</Marker.Icon>
+				<Marker.Content>Reconnecting — messages will send once you are back online</Marker.Content>
+			</Marker>
 
-				<Marker>
-					<Marker.Icon aria-hidden={undefined}>
-						<Spinner size="sm" aria-label="Generating a reply" />
-					</Marker.Icon>
-					<Marker.Content mix={[textShimmer()]}>Generating a reply…</Marker.Content>
-				</Marker>
-			</div>
-		);
-	},
-);
+			<Marker>
+				<Marker.Icon aria-hidden={undefined}>
+					<Spinner size="sm" aria-label="Generating a reply" />
+				</Marker.Icon>
+				<Marker.Content mix={[textShimmer()]}>Generating a reply…</Marker.Content>
+			</Marker>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <MarkerPreview /> };

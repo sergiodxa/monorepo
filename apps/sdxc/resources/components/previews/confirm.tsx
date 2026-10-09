@@ -55,49 +55,44 @@ function settle(next: string) {
 </div>`;
 
 /** A subscription cancellation behind a confirmation, hydrated so the decision reports itself. */
-export const ConfirmPreview = clientEntry(
-	"/resources/components/previews/confirm.tsx#ConfirmPreview",
-	function ConfirmPreview(handle: Handle) {
-		let outcome: string | null = null;
+export const ConfirmPreview = clientEntry(import.meta.url, function ConfirmPreview(handle: Handle) {
+	let outcome: string | null = null;
 
-		/** Records which control closed the panel, the seam an app hangs its own effect on. */
-		function settle(next: string) {
-			outcome = next;
-			void handle.update();
-		}
+	/** Records which control closed the panel, the seam an app hangs its own effect on. */
+	function settle(next: string) {
+		outcome = next;
+		void handle.update();
+	}
 
-		return () => (
-			<div mix={[vstack({ gap: 3, align: "center" }), maxIs("26rem")]}>
-				<Button commandfor="preview-confirm" command="show-modal" color="danger" variant="outline">
-					Cancel subscription
-				</Button>
+	return () => (
+		<div mix={[vstack({ gap: 3, align: "center" }), maxIs("26rem")]}>
+			<Button commandfor="preview-confirm" command="show-modal" color="danger" variant="outline">
+				Cancel subscription
+			</Button>
 
-				<Confirm
-					id="preview-confirm"
-					title="Cancel the Team plan?"
-					description={CONSEQUENCES}
-					confirmLabel="Cancel the plan"
-					cancelLabel="Keep the plan"
-					color="danger"
-					parts={{
-						action: [
-							on<HTMLButtonElement, "click">("click", () =>
-								settle("Cancellation scheduled for 30 September."),
-							),
-						],
-						cancel: [
-							on<HTMLButtonElement, "click">("click", () => settle("Still on the Team plan.")),
-						],
-					}}
-				/>
+			<Confirm
+				id="preview-confirm"
+				title="Cancel the Team plan?"
+				description={CONSEQUENCES}
+				confirmLabel="Cancel the plan"
+				cancelLabel="Keep the plan"
+				color="danger"
+				parts={{
+					action: [
+						on<HTMLButtonElement, "click">("click", () =>
+							settle("Cancellation scheduled for 30 September."),
+						),
+					],
+					cancel: [
+						on<HTMLButtonElement, "click">("click", () => settle("Still on the Team plan.")),
+					],
+				}}
+			/>
 
-				<p mix={[text("sm"), fg("neutral"), textAlign("center")]}>
-					{outcome ?? "No decision yet."}
-				</p>
-			</div>
-		);
-	},
-);
+			<p mix={[text("sm"), fg("neutral"), textAlign("center")]}>{outcome ?? "No decision yet."}</p>
+		</div>
+	);
+});
 
 /** What the preview registry reads: the source to show, and the island to draw. */
 export default { code: CODE, render: () => <ConfirmPreview /> };

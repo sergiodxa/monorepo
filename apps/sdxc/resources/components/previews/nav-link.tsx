@@ -75,48 +75,45 @@ const ENTRIES = [
 ];
 
 /** A settings sidebar, hydrated so the page loads this example's chunk alone. */
-export const NavLinkPreview = clientEntry(
-	"/resources/components/previews/nav-link.tsx#NavLinkPreview",
-	function NavLinkPreview() {
-		return () => (
-			<div mix={[hstack({ gap: 10, align: "start" })]}>
-				<nav mix={[vstack({ gap: 2, align: "start" })]}>
-					<Header mix={[m(0)]}>Underlined</Header>
-					{ENTRIES.map((entry) => (
-						<NavLink
-							key={entry.href}
-							href={entry.href}
-							aria-current={entry.href === ACTIVE_PATH ? "page" : undefined}
-						>
-							{entry.label}
-						</NavLink>
-					))}
-				</nav>
+export const NavLinkPreview = clientEntry(import.meta.url, function NavLinkPreview() {
+	return () => (
+		<div mix={[hstack({ gap: 10, align: "start" })]}>
+			<nav mix={[vstack({ gap: 2, align: "start" })]}>
+				<Header mix={[m(0)]}>Underlined</Header>
+				{ENTRIES.map((entry) => (
+					<NavLink
+						key={entry.href}
+						href={entry.href}
+						aria-current={entry.href === ACTIVE_PATH ? "page" : undefined}
+					>
+						{entry.label}
+					</NavLink>
+				))}
+			</nav>
 
-				<nav mix={[vstack({ gap: 1, align: "stretch" })]}>
-					<Header mix={[m(0)]}>Filled</Header>
-					{ENTRIES.map((entry) => (
-						<NavLink
-							key={entry.href}
-							href={entry.href}
-							hasBackground
-							aria-current={entry.href === ACTIVE_PATH ? "page" : undefined}
-							mix={[
-								pi(3),
-								pb(2),
-								rounded("md"),
-								text("sm"),
-								fg("neutral.emphasis"),
-								when('&[aria-current="page"]', bg("brand.tint")),
-							]}
-						>
-							{entry.label}
-						</NavLink>
-					))}
-				</nav>
-			</div>
-		);
-	},
-);
+			<nav mix={[vstack({ gap: 1, align: "stretch" })]}>
+				<Header mix={[m(0)]}>Filled</Header>
+				{ENTRIES.map((entry) => (
+					<NavLink
+						key={entry.href}
+						href={entry.href}
+						hasBackground
+						aria-current={entry.href === ACTIVE_PATH ? "page" : undefined}
+						mix={[
+							pi(3),
+							pb(2),
+							rounded("md"),
+							text("sm"),
+							fg("neutral.emphasis"),
+							when('&[aria-current="page"]', bg("brand.tint")),
+						]}
+					>
+						{entry.label}
+					</NavLink>
+				))}
+			</nav>
+		</div>
+	);
+});
 
 export default { code: CODE, render: () => <NavLinkPreview /> };
