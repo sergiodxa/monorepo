@@ -168,6 +168,42 @@ validation failure or a missing row is an expected outcome the caller branches o
 `from(query)` wraps a query some other package built over the same table, such as a search
 query, so the model's scopes chain onto it.
 
+### Naming a model's types
+
+The bound model's type is inferred from `createModel`, and the package exports the types that
+name it, so a function can take one model without restating its members:
+
+```typescript
+import type { BoundModel, CreateValues, ModelRow } from "@sdxc/data-model";
+
+export const Users = createModel(users, { ... });
+
+export type UserModel = BoundModel<typeof Users>;
+export type User = ModelRow<typeof Users>;
+
+export async function registerUser(model: UserModel, values: CreateValues<typeof Users>) {
+	let existing = await model.findByEmail(values.email);
+	if (existing !== null) return failure(new EmailTaken(values.email));
+	return model.create(values);
+}
+
+await registerUser(ctx.models.users, { email, name });
+```
+
+| Type                     | Names                                                               |
+| ------------------------ | ------------------------------------------------------------------- |
+| `BoundModel<typeof M>`   | The bound model: built-ins, scopes and custom methods               |
+| `ModelQuery<typeof M>`   | A query from that model, with its scopes chainable                  |
+| `ModelRow<typeof M>`     | A row as reads return it, constraints narrowed and `meta` decoded   |
+| `CreateValues<typeof M>` | What `create()` takes: constrained columns omitted, `meta` included |
+| `UpdateValues<typeof M>` | What `update()` takes, every member optional                        |
+
+- A lazily loaded entry has exactly the bound model's type, so `ctx.models.users` satisfies
+  `UserModel` whether the registry imports it up front or on demand, and a test passes
+  `Users.bind({ db }, context)` to the same function.
+- The types are plain generics over the definition, so a model module exports its aliases next
+  to the model, and callers import the aliases without importing the model's runtime code.
+
 ### Callbacks
 
 Callbacks are async and receive a `ModelContext`. The database is the only member the package
