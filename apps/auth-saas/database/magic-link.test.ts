@@ -279,6 +279,7 @@ describe("beginMagicLinkSignIn / completeMagicLinkSignIn: code", () => {
 			at: now,
 		});
 		if (begun.message !== "sign_in") throw new Error("unreachable");
+		expect(begun.code).toMatch(/^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/);
 
 		let completed = await tenant.completeMagicLinkSignIn({
 			credential: { kind: "code", code: begun.code },

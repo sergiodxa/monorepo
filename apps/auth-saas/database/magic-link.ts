@@ -126,18 +126,15 @@ async function checkAndSpendMagicLinkBurst(
 }
 
 /**
- * Draws an eight-symbol code from the unambiguous base32 alphabet by a direct,
- * unbiased byte mapping: 256 divides evenly by the alphabet's 32 symbols, so every
- * byte value lands on a symbol with exactly equal probability and none is ever
- * redrawn the way the twenty-symbol device user code needs rejection sampling to
- * stay unbiased. Answers both the folded form stored and compared, and the
- * hyphenated form a message displays.
+ * Draws an eight-symbol code from the unambiguous base32 alphabet, each byte's top five
+ * bits picking one of the 32 symbols with exactly equal probability. Answers both the
+ * folded form stored and compared, and the hyphenated form a message displays.
  */
 function generateMagicLinkCode(): { folded: string; display: string } {
 	let bytes = randomBytes(CODE_LENGTH);
 	let symbols = "";
 
-	for (let byte of bytes) symbols += CODE_ALPHABET[byte % CODE_ALPHABET.length];
+	for (let byte of bytes) symbols += CODE_ALPHABET[byte >> 3];
 
 	return { folded: symbols, display: `${symbols.slice(0, 4)}-${symbols.slice(4)}` };
 }
