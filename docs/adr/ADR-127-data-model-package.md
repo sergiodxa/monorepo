@@ -281,7 +281,7 @@ export const Posts = createModel(posts, {
 
 export const Articles = Posts.extend("article", {
 	methods: (model) => ({
-		findBySlug: (slug: string) => model.live().published().where(/* slug */).first(),
+		findBySlug: (slug: string) => model.live().published().whereMeta("slug", slug).first(),
 	}),
 	callbacks: {
 		async afterCommit(event, ctx) {
