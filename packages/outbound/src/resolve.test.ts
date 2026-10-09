@@ -78,6 +78,37 @@ describe("resolveHost", () => {
 		expect(isFailure(result) && result.error.code).toBe("refused-host");
 	});
 
+	test("looks up a fully qualified name without its trailing dots", async () => {
+		let names: (string | null)[] = [];
+		server.use(
+			http.get("https://cloudflare-dns.com/dns-query", ({ request }) => {
+				names.push(new URL(request.url).searchParams.get("name"));
+				return HttpResponse.json({ Status: 0, Answer: [] });
+			}),
+		);
+
+		await resolveHost(new URL("https://example.com../"));
+
+		expect(names).toEqual(["example.com", "example.com"]);
+	});
+
+	test("reads a name holding thousands of dots in linear time", async () => {
+		let names: (string | null)[] = [];
+		server.use(
+			http.get("https://cloudflare-dns.com/dns-query", ({ request }) => {
+				names.push(new URL(request.url).searchParams.get("name"));
+				return HttpResponse.json({ Status: 0, Answer: [] });
+			}),
+		);
+		let host = `a${".".repeat(50_000)}b`;
+
+		let started = performance.now();
+		await resolveHost(new URL(`https://${host}/`));
+
+		expect(performance.now() - started).toBeLessThan(2_000);
+		expect(names[0]).toBe(host);
+	});
+
 	test("refuses a name that does not exist", async () => {
 		answering(3);
 

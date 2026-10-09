@@ -41,7 +41,7 @@ export async function resolveHost(
 	let literal = IP.parse(url.hostname);
 	if (isSuccess(literal)) return success([literal.data.toString()]);
 
-	let host = url.hostname.replace(/\.+$/u, "");
+	let host = withoutTrailingDots(url.hostname);
 	let lookup = options.signal ? { signal: options.signal } : {};
 	let [a, aaaa] = await Promise.all([resolve(host, "A", lookup), resolve(host, "AAAA", lookup)]);
 
@@ -95,4 +95,14 @@ function lookupFailed(url: URL, host: string, error: DoHError): OutboundError {
 	return new OutboundError("network", url.href, `Failed to resolve ${host}: ${error.message}`, {
 		cause: error,
 	});
+}
+
+/**
+ * The host name without the root-zone dots that end a fully qualified name, scanned from
+ * the end so a name holding thousands of dots still costs linear time.
+ */
+function withoutTrailingDots(hostname: string): string {
+	let end = hostname.length;
+	while (end > 0 && hostname[end - 1] === ".") end--;
+	return hostname.slice(0, end);
 }
