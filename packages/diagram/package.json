@@ -1,0 +1,20 @@
+{
+	"name": "@sdxc/diagram",
+	"version": "0.0.1",
+	"description": "Mermaid sequence, class, state and flowchart diagrams to SVG, with a markdown walk visitor and a component",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./markdown": "./src/markdown.ts",
+		"./ui": "./src/ui.tsx"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/markdown": "workspace:*",
+		"@sdxc/result": "workspace:*",
+		"remix": "3.0.0"
+	}
+}

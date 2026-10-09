@@ -233,6 +233,7 @@ references live at [sdxc.sergiodxa.com](https://sdxc.sergiodxa.com).
 | ------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [@sdxc/activitypub](packages/activitypub)   | ActivityPub protocol logic: vocabulary, actors, discovery, a verified inbox and signed delivery        |
 | [@sdxc/atom](packages/atom)                 | Atom 1.0 feed parser and builder                                                                       |
+| [@sdxc/diagram](packages/diagram)           | Mermaid sequence, class, state and flowchart diagrams to SVG, with a markdown visitor and a component  |
 | [@sdxc/distill](packages/distill)           | Distill the article out of a web page: fetch under bounds, score, sanitize                             |
 | [@sdxc/feed](packages/feed)                 | One feed API over RSS, Atom and JSON Feed, with conditional fetching and autodiscovery                 |
 | [@sdxc/highlight](packages/highlight)       | Syntax highlighting as tokens, with a markdown visitor that paints code blocks                         |

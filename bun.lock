@@ -100,6 +100,7 @@
         "@sdxc/crypto": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/dates": "workspace:*",
+        "@sdxc/diagram": "workspace:*",
         "@sdxc/distill": "workspace:*",
         "@sdxc/duration": "workspace:*",
         "@sdxc/email-address": "workspace:*",
@@ -345,6 +346,7 @@
         "@sdxc/cache": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/dates": "workspace:*",
+        "@sdxc/diagram": "workspace:*",
         "@sdxc/highlight": "workspace:*",
         "@sdxc/http": "workspace:*",
         "@sdxc/icons": "workspace:*",
@@ -689,6 +691,15 @@
       "dependencies": {
         "@sdxc/duration": "workspace:*",
         "@sdxc/result": "workspace:*",
+      },
+    },
+    "packages/diagram": {
+      "name": "@sdxc/diagram",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/markdown": "workspace:*",
+        "@sdxc/result": "workspace:*",
+        "remix": "3.0.0",
       },
     },
     "packages/digest-fields": {
@@ -2253,6 +2264,8 @@
     "@sdxc/data-table-sqlstorage": ["@sdxc/data-table-sqlstorage@workspace:packages/data-table-sqlstorage"],
 
     "@sdxc/dates": ["@sdxc/dates@workspace:packages/dates"],
+
+    "@sdxc/diagram": ["@sdxc/diagram@workspace:packages/diagram"],
 
     "@sdxc/digest-fields": ["@sdxc/digest-fields@workspace:packages/digest-fields"],
 
