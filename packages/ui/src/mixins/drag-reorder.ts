@@ -12,6 +12,8 @@ import { createElement, createMixin, on } from "remix/component";
 
 import type { DragSession } from "../behaviors/drag-session.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute every reorderable row carries its stable identity on, read by
  * {@link dragReorder} to resolve the row under the pointer and shared by
@@ -137,8 +139,11 @@ function resolveDropPosition(row: HTMLElement, clientY: number): DragSession.Pos
  */
 export const dragReorder = createMixin<HTMLElement, [session: DragSession]>((handle) => {
 	let hostNode: HTMLElement | undefined;
-	let boundSession: DragSession | undefined;
 	let activePointerId: number | undefined;
+	let follow = whileLive(handle, (session: DragSession, signal) => {
+		session.addEventListener("change", () => syncRows(session), { signal });
+		signal.addEventListener("abort", () => session.cancel());
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -171,11 +176,7 @@ export const dragReorder = createMixin<HTMLElement, [session: DragSession]>((han
 	}
 
 	return (session) => {
-		if (boundSession !== session) {
-			boundSession = session;
-			session.addEventListener("change", () => syncRows(session), { signal: handle.signal });
-			handle.signal.addEventListener("abort", () => session.cancel());
-		}
+		follow(session);
 
 		return createElement(handle.element, {
 			mix: [

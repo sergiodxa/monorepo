@@ -362,6 +362,7 @@ script never runs, so the cost of every behavior stays visible before you apply 
 | `validate(schema)`              | a native form control      | Applies a `remix/data-schema` schema through `setCustomValidity()`, mirrored into a `FieldError`.                |
 | `viewTransition()`              | a `SharedElement` island   | Bridges a same-document reload to the View Transition API.                                                       |
 | `trackHostNode(handle)`         | inside a mixin             | Caches a mixin's live host node across insert and remove, for the mixins above that read the DOM outside render. |
+| `whileLive(handle, subscribe)`  | inside a mixin             | Subscribes to a mixin's latest model, session or frame only while its host is live in a document.                |
 
 ### Behavior Classes
 
@@ -467,7 +468,9 @@ export const AppToaster = clientEntry(
 	function AppToaster(handle: Handle) {
 		let toaster = new Toaster<{ title: string; color?: Toast.Color }>();
 
-		toaster.addEventListener("change", () => handle.update(), { signal: handle.signal });
+		handle.queueTask(() =>
+			toaster.addEventListener("change", () => handle.update(), { signal: handle.signal }),
+		);
 		handle.context.set({ toaster });
 
 		return () => (
@@ -512,7 +515,9 @@ export default clientEntry(
 	"/app/components/shortcuts.tsx#default",
 	function Shortcuts(handle: Handle<Props>) {
 		let announcer = new Announcer({ hold: 1200 });
-		announcer.addEventListener("change", () => handle.update(), { signal: handle.signal });
+		handle.queueTask(() =>
+			announcer.addEventListener("change", () => handle.update(), { signal: handle.signal }),
+		);
 
 		let openHelp = () =>
 			document.querySelector<HTMLButtonElement>('[commandfor="shortcuts"]')?.click();

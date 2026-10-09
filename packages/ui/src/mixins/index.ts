@@ -49,3 +49,4 @@ export * from "./track-host-node.js";
 export * from "./treeKeys.js";
 export * from "./validate.js";
 export * from "./view-transition.js";
+export * from "./while-live.js";

@@ -12,6 +12,8 @@ import { createElement, createMixin, on } from "remix/component";
 
 import type { DragSession } from "../behaviors/drag-session.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * `data-*` attribute {@link dropZone} toggles on its host while a file
  * drag from outside the page hovers over it, so a DropZone's styling can
@@ -81,7 +83,10 @@ function isFileDrag(dataTransfer: DataTransfer | null): boolean {
  */
 export const dropZone = createMixin<HTMLElement, [session: DragSession<unknown>]>((handle) => {
 	let hostNode: HTMLElement | undefined;
-	let boundSession: DragSession<unknown> | undefined;
+	let follow = whileLive(handle, (session: DragSession<unknown>, signal) => {
+		session.addEventListener("change", () => syncDropTarget(session), { signal });
+		signal.addEventListener("abort", () => session.cancel());
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -99,13 +104,7 @@ export const dropZone = createMixin<HTMLElement, [session: DragSession<unknown>]
 	}
 
 	return (session) => {
-		if (boundSession !== session) {
-			boundSession = session;
-			session.addEventListener("change", () => syncDropTarget(session), {
-				signal: handle.signal,
-			});
-			handle.signal.addEventListener("abort", () => session.cancel());
-		}
+		follow(session);
 
 		return createElement(handle.element, {
 			mix: [

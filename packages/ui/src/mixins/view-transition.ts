@@ -16,6 +16,7 @@ import { createElement, createMixin } from "remix/component";
 import { prefersReducedMotion } from "../utils/prefers-reduced-motion.js";
 
 import { trackHostNode } from "./track-host-node.js";
+import { whileLive } from "./while-live.js";
 
 /**
  * `data-*` attribute {@link viewTransition} sets on a SharedElement's host
@@ -136,28 +137,29 @@ function settleFrameTransition(frame: FrameHandle): void {
  */
 export const viewTransition: MixinFactory<HTMLElement> = createMixin<HTMLElement>((handle) => {
 	let getHostNode = trackHostNode(handle);
-	let frame = handle.frame;
 
-	frame.addEventListener(
-		"reloadStart",
-		() => {
-			let state = ensureFrameTransition(frame);
-			let hostNode = getHostNode();
-			hostNode?.dispatchEvent(new ViewTransitionEvent(state.transition));
+	let follow = whileLive(handle, (frame: FrameHandle, signal) => {
+		frame.addEventListener(
+			"reloadStart",
+			() => {
+				let state = ensureFrameTransition(frame);
+				let hostNode = getHostNode();
+				hostNode?.dispatchEvent(new ViewTransitionEvent(state.transition));
 
-			if (!state.transition) return;
+				if (!state.transition) return;
 
-			let stopTransitioning = () => getHostNode()?.removeAttribute(TRANSITIONING_ATTRIBUTE);
+				let stopTransitioning = () => getHostNode()?.removeAttribute(TRANSITIONING_ATTRIBUTE);
 
-			hostNode?.toggleAttribute(TRANSITIONING_ATTRIBUTE, true);
-			void state.transition.finished.then(stopTransitioning, stopTransitioning);
-		},
-		{ signal: handle.signal },
-	);
+				hostNode?.toggleAttribute(TRANSITIONING_ATTRIBUTE, true);
+				void state.transition.finished.then(stopTransitioning, stopTransitioning);
+			},
+			{ signal },
+		);
 
-	frame.addEventListener("reloadComplete", () => settleFrameTransition(frame), {
-		signal: handle.signal,
+		frame.addEventListener("reloadComplete", () => settleFrameTransition(frame), { signal });
 	});
+
+	follow(handle.frame);
 
 	return () => createElement(handle.element, {});
 });

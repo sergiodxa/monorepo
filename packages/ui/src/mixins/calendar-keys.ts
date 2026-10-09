@@ -13,6 +13,8 @@ import type { CalendarModel } from "../behaviors/calendar-model.js";
 
 import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute every calendar day cell exposes its date on, in local
  * `YYYY-MM-DD` form, that `calendarKeys()` matches against a
@@ -66,7 +68,9 @@ function fromDateKey(key: string | null): Date | null {
  */
 export const calendarKeys = createMixin<HTMLElement, [model: CalendarModel]>((handle) => {
 	let hostNode: HTMLElement | undefined;
-	let boundModel: CalendarModel | undefined;
+	let follow = whileLive(handle, (model: CalendarModel, signal) => {
+		model.addEventListener("change", () => syncFocusedCell(model), { signal });
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -94,12 +98,7 @@ export const calendarKeys = createMixin<HTMLElement, [model: CalendarModel]>((ha
 	}
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener("change", () => syncFocusedCell(model), {
-				signal: handle.signal,
-			});
-		}
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

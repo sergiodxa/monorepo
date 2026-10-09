@@ -14,6 +14,8 @@ import type { SelectionModel } from "../behaviors/selection-model.js";
 
 import { DISABLED_SELECTOR } from "../utils/disabled-selector.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute every GridList row exposes its {@link SelectionModel.Key} on;
  * `gridListKeys()` correlates a row with the key `SelectionModel` tracks its
@@ -179,7 +181,15 @@ function syncSelection(host: HTMLElement, model: SelectionModel): void {
  */
 export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((handle) => {
 	let hostNode: HTMLElement | undefined;
-	let boundModel: SelectionModel | undefined;
+	let follow = whileLive(handle, (model: SelectionModel, signal) => {
+		model.addEventListener(
+			"change",
+			() => {
+				if (hostNode !== undefined) syncSelection(hostNode, model);
+			},
+			{ signal },
+		);
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -192,16 +202,7 @@ export const gridListKeys = createMixin<HTMLElement, [model: SelectionModel]>((h
 	});
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener(
-				"change",
-				() => {
-					if (hostNode !== undefined) syncSelection(hostNode, model);
-				},
-				{ signal: handle.signal },
-			);
-		}
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

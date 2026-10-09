@@ -20,6 +20,7 @@ import type { ResizeSession } from "../behaviors/resize-session.js";
 import { isNewPrimaryPress } from "../utils/is-new-primary-press.js";
 
 import { trackHostNode } from "./track-host-node.js";
+import { whileLive } from "./while-live.js";
 
 /**
  * Axis a Resizable panel group lays its panels out along, and the direction
@@ -233,8 +234,13 @@ function roundPercent(value: number): number {
 export const resizeHandle = createMixin<HTMLElement, [axis: ResizableAxis, session: ResizeSession]>(
 	(handle) => {
 		let getHostNode = trackHostNode(handle);
-		let boundSession: ResizeSession | undefined;
 		let activePointerId: number | undefined;
+		let follow = whileLive(handle, (session: ResizeSession, signal) => {
+			session.addEventListener("change", () => syncLayout(session), { signal });
+			signal.addEventListener("abort", () => {
+				if (activePointerId !== undefined) session.cancel();
+			});
+		});
 
 		/** Mirrors `session`'s resolved sizes onto their panel elements, and this handle's adjacent panel onto its own ARIA value attributes. */
 		function syncLayout(session: ResizeSession): void {
@@ -269,15 +275,7 @@ export const resizeHandle = createMixin<HTMLElement, [axis: ResizableAxis, sessi
 		}
 
 		return (axis, session) => {
-			if (boundSession !== session) {
-				boundSession = session;
-
-				session.addEventListener("change", () => syncLayout(session), { signal: handle.signal });
-
-				handle.signal.addEventListener("abort", () => {
-					if (activePointerId !== undefined) session.cancel();
-				});
-			}
+			follow(session);
 
 			return createElement(handle.element, {
 				mix: [

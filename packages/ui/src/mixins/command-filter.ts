@@ -13,6 +13,8 @@ import { createElement, createMixin, on } from "remix/component";
 
 import type { FilterModel } from "../behaviors/filter-model.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute the search input exposes itself on — `Command.Input`'s own
  * `<input>` carries this automatically, and `commandFilter()` forwards its
@@ -104,6 +106,15 @@ function syncMatches(root: HTMLElement, model: FilterModel): void {
 export const commandFilter = createMixin<HTMLElement, [model: FilterModel]>((handle) => {
 	let hostNode: HTMLElement | undefined;
 	let boundModel: FilterModel | undefined;
+	let follow = whileLive(handle, (model: FilterModel, signal) => {
+		model.addEventListener(
+			"change",
+			() => {
+				if (hostNode !== undefined) syncMatches(hostNode, model);
+			},
+			{ signal },
+		);
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -115,16 +126,8 @@ export const commandFilter = createMixin<HTMLElement, [model: FilterModel]>((han
 	});
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener(
-				"change",
-				() => {
-					if (hostNode !== undefined) syncMatches(hostNode, model);
-				},
-				{ signal: handle.signal },
-			);
-		}
+		boundModel = model;
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

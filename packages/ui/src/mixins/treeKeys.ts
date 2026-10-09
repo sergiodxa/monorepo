@@ -16,6 +16,8 @@ import type { SelectionModel } from "../behaviors/selection-model.js";
 
 import { isPrintableKey, labelFor, setRovingTabindex } from "../utils/keyboard-nav.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute every Tree row exposes itself on; its value doubles as the
  * `SelectionModel.Key` {@link treeKeys} toggles, ranges over, and mirrors
@@ -219,6 +221,17 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 	let boundModel: SelectionModel | undefined;
 	let buffer = "";
 	let resetBufferId: ReturnType<typeof setTimeout> | undefined;
+	let follow = whileLive(handle, (model: SelectionModel, signal) => {
+		model.addEventListener(
+			"change",
+			() => {
+				if (hostNode === undefined) return;
+				syncSelection(hostNode, model);
+				dispatchTreeChange(hostNode, model);
+			},
+			{ signal },
+		);
+	});
 
 	handle.addEventListener("insert", (event) => {
 		hostNode = event.node;
@@ -243,18 +256,8 @@ export const treeKeys = createMixin<HTMLElement, [model: SelectionModel]>((handl
 	handle.signal.addEventListener("abort", () => clearTimeout(resetBufferId));
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener(
-				"change",
-				() => {
-					if (hostNode === undefined) return;
-					syncSelection(hostNode, model);
-					dispatchTreeChange(hostNode, model);
-				},
-				{ signal: handle.signal },
-			);
-		}
+		boundModel = model;
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

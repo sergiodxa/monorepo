@@ -18,6 +18,8 @@ import type { ScrollFollowModel } from "../behaviors/scroll-follow-model.js";
 
 import { prefersReducedMotion } from "../utils/prefers-reduced-motion.js";
 
+import { whileLive } from "./while-live.js";
+
 /**
  * Attribute every conversational turn exposes itself on, its value the
  * turn's stable id; `messageFollow()` reads it to find the anchor turn and
@@ -278,6 +280,20 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	let userScrollIntent = false;
 	let itemsObserver: IntersectionObserver | undefined;
 	let observedItems = new Set<HTMLElement>();
+	let follow = whileLive(handle, (model: ScrollFollowModel, signal) => {
+		model.addEventListener(
+			"change",
+			() => {
+				if (!hostNode) return;
+
+				syncAttributesFromModel(hostNode, model);
+
+				let request = model.consumeScrollRequest();
+				if (request) fulfillScrollRequest(hostNode, request);
+			},
+			{ signal },
+		);
+	});
 
 	/**
 	 * Lazily creates the visibility observer the first time a turn exists
@@ -412,22 +428,8 @@ export const messageFollow = createMixin<HTMLElement, [model: ScrollFollowModel]
 	});
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-
-			model.addEventListener(
-				"change",
-				() => {
-					if (!hostNode) return;
-
-					syncAttributesFromModel(hostNode, model);
-
-					let request = model.consumeScrollRequest();
-					if (request) fulfillScrollRequest(hostNode, request);
-				},
-				{ signal: handle.signal },
-			);
-		}
+		boundModel = model;
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

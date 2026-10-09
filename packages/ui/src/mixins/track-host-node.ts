@@ -22,12 +22,14 @@ import type { MixinHandle } from "remix/component";
  * export const example = createMixin<HTMLElement>((handle) => {
  * 	let hostNode = trackHostNode(handle);
  *
- * 	addEventListeners(document, handle.signal, {
- * 		keydown() {
- * 			let node = hostNode();
- * 			if (node === undefined) return;
- * 			// ...
- * 		},
+ * 	handle.queueTask(() => {
+ * 		addEventListeners(document, handle.signal, {
+ * 			keydown() {
+ * 				let node = hostNode();
+ * 				if (node === undefined) return;
+ * 				// ...
+ * 			},
+ * 		});
  * 	});
  *
  * 	return () => {};

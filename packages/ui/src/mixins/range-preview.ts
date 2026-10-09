@@ -18,6 +18,7 @@ import type { CalendarModel } from "../behaviors/calendar-model.js";
 
 import { CALENDAR_DAY_DATE_ATTRIBUTE } from "./calendar-keys.js";
 import { trackHostNode } from "./track-host-node.js";
+import { whileLive } from "./while-live.js";
 
 /**
  * Parses a day cell's {@link CALENDAR_DAY_DATE_ATTRIBUTE} value into a
@@ -73,7 +74,9 @@ function classifyRangePosition(
  */
 export const rangePreview = createMixin<HTMLElement, [model: CalendarModel]>((handle) => {
 	let getHostNode = trackHostNode(handle);
-	let boundModel: CalendarModel | undefined;
+	let follow = whileLive(handle, (model: CalendarModel, signal) => {
+		model.addEventListener("change", () => syncRangePreview(model), { signal });
+	});
 
 	/** Mirrors `model`'s anchor day and preview range onto the grid's day cells. */
 	function syncRangePreview(model: CalendarModel): void {
@@ -108,12 +111,7 @@ export const rangePreview = createMixin<HTMLElement, [model: CalendarModel]>((ha
 	}
 
 	return (model) => {
-		if (boundModel !== model) {
-			boundModel = model;
-			model.addEventListener("change", () => syncRangePreview(model), {
-				signal: handle.signal,
-			});
-		}
+		follow(model);
 
 		return createElement(handle.element, {
 			mix: [

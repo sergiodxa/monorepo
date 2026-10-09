@@ -64,7 +64,7 @@ export namespace Announcer {
  * `aria-live` element, and calls {@link Announcer.next} once it has been read.
  *
  * @example
- * announcer.addEventListener("change", () => handle.update(), { signal: handle.signal });
+ * handle.queueTask(() => announcer.addEventListener("change", () => handle.update(), { signal: handle.signal }));
  */
 export class Announcer extends TypedEventTarget<Announcer.Events> {
 	#queue: Announcer.Message[] = [];
