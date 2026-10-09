@@ -46,18 +46,78 @@ export async function version(resource: object): Promise<string> {
 	return `W/"${opaque}"`;
 }
 
+/** A tag read from a conditional header, and the index scanning resumes from after it. */
+interface ScannedTag {
+	opaque: string;
+	next: number;
+}
+
+/**
+ * Whether a character is whitespace as `\s` defines it, so tags are delimited the same way
+ * across all Unicode space separators.
+ */
+function isSpace(char: string | undefined): boolean {
+	return char !== undefined && /\s/.test(char);
+}
+
 /**
  * The entity tags of an `If-Match` or `If-None-Match` header, reduced to their opaque part:
  * the weakness prefix and quotes are dropped, and a bare tag some clients send is accepted.
+ * Text that forms no tag is skipped, and the scan stays linear in the header's length.
  *
  * @param header - The header value
  * @returns The opaque tags, with `*` kept as is
  */
 function parseTags(header: string): string[] {
+	let length = header.length;
+	let spaceEnd = new Int32Array(length + 1).fill(length);
+	let bareEnd = new Int32Array(length + 1).fill(length);
+	for (let index = length - 1; index >= 0; index--) {
+		let char = header[index];
+		let space = isSpace(char);
+		spaceEnd[index] = space ? (spaceEnd[index + 1] ?? length) : index;
+		bareEnd[index] = space || char === "," ? index : (bareEnd[index + 1] ?? length);
+	}
+
+	/**
+	 * Where scanning resumes once a tag ends at `position`: past optional whitespace and the
+	 * comma, or at the end of the header, or `-1` when anything else follows the tag.
+	 */
+	let separatorAfter = (position: number): number => {
+		let end = spaceEnd[position] ?? length;
+		if (end === length) return end;
+		return header[end] === "," ? end + 1 : -1;
+	};
+
+	/** A quoted tag, weak (`W/"…"`, any case) or strong, starting at `start`. */
+	let quotedAt = (start: number): ScannedTag | null => {
+		let open = header.slice(start, start + 2).toLowerCase() === "w/" ? start + 2 : start;
+		if (header[open] !== '"') return null;
+		let close = header.indexOf('"', open + 1);
+		if (close === -1) return null;
+		let next = separatorAfter(close + 1);
+		return next === -1 ? null : { opaque: header.slice(open + 1, close), next };
+	};
+
+	/** A bare tag: the run of characters up to whitespace or a comma, starting at `start`. */
+	let bareAt = (start: number): ScannedTag | null => {
+		let end = bareEnd[start] ?? length;
+		if (end === start) return null;
+		let next = separatorAfter(end);
+		return next === -1 ? null : { opaque: header.slice(start, end), next };
+	};
+
 	let tags: string[] = [];
-	for (let match of header.matchAll(/\s*(?:(W\/)?"([^"]*)"|([^,\s]+))\s*(?:,|$)/gi)) {
-		let opaque = match[2] ?? match[3];
-		if (opaque !== undefined) tags.push(opaque);
+	let index = 0;
+	while (index < length) {
+		let start = spaceEnd[index] ?? length;
+		let tag = quotedAt(start) ?? bareAt(start);
+		if (tag === null) {
+			index = start + 1;
+			continue;
+		}
+		tags.push(tag.opaque);
+		index = tag.next;
 	}
 	return tags;
 }

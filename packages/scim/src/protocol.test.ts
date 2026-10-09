@@ -246,6 +246,15 @@ describe("version", () => {
 		expect(matchesVersion(request({ "If-None-Match": 'W/"old"' }), current)).toBe(true);
 		expect(matchesVersion(request({ "If-None-Match": "*" }), current)).toBe(false);
 	});
+
+	test("reads a conditional header of 50,000 stray characters in linear time", () => {
+		let current = 'W/"abc"';
+		let started = performance.now();
+		let ifMatch = `${"!".repeat(50_000)} W/"abc"`;
+		let request = new Request("https://example.com", { headers: { "If-Match": ifMatch } });
+		expect(matchesVersion(request, current)).toBe(true);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
 });
 
 describe("project", () => {
