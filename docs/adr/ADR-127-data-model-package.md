@@ -275,6 +275,41 @@ createJobDispatcher({
   the table names. `ctx.models` is the property, because `ctx.data` reads as form or loader data.
 - `@sdxc/data-model/router` covers MCP; there is no `@sdxc/data-model/mcp` entry point.
 
+### Loading models on demand
+
+A registry entry is either a model or a function that imports the module holding one, so an
+invocation evaluates only the model modules it uses:
+
+```typescript
+export const models = createModels({
+	users: Users,
+	articles: () => import("~/app/models/articles.js"),
+	invoices: () => import("~/app/models/invoices.js"),
+});
+```
+
+```typescript
+let articles = await ctx.models.articles;
+let page = await Pagination.byOffset(articles.published().newest(), { page: 1, perPage: 20 });
+
+let user = await ctx.models.users.findByEmail(email);
+```
+
+- A lazy entry's module default-exports its model, the shape `dispatcher.map(job, () => import(...))`
+  already uses for jobs.
+- The registry's type follows each entry: a model is read as the bound model, a loader as a
+  `Promise` of it. Forgetting the `await` on a lazy entry is a type error at the first method
+  call.
+- The import runs on first access and the bound model is kept for the rest of the invocation, so
+  a second `await ctx.models.articles` resolves to the same instance without importing again.
+- Inside `ctx.models.transaction(async (models) => { ... })` the same rule applies:
+  `await models.articles` binds the loaded model to the transaction.
+- Model modules import tables, never other models, so loading one never pulls in another; a
+  callback that needs a second model reads it through the host's `ctx.models`.
+- On Workers the bundle still contains every model. What the loader defers is module
+  evaluation, which keeps a model's top-level work, such as building a search definition, off
+  invocations that never use it.
+
 ### Package boundaries
 
 - The package ships no tables, schemas or migrations; the app declares tables and passes them in.
