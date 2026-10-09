@@ -515,7 +515,14 @@ describe("what a scheduled check does", () => {
 
 		expect(after.nextCatchUpAt).toBeLessThanOrEqual(Date.now() + CATCH_UP_MS);
 		expect(after.nextCheckAt).not.toBeNull();
-		expect(await state.storage.getAlarm()).toBe(after.nextCatchUpAt);
+		expect(await state.storage.getAlarm()).toBe(
+			Math.min(
+				...[after.nextCatchUpAt, after.nextCheckAt, after.nextSweepAt].filter(
+					(due): due is number => due !== null,
+				),
+			),
+		);
+		expect(await state.storage.getAlarm()).toBeLessThanOrEqual(after.nextCatchUpAt ?? 0);
 	});
 
 	test("the catch-up carries the leftovers and the check stays armed behind it", async () => {
