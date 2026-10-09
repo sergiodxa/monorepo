@@ -18,6 +18,7 @@
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/dates": "workspace:*",
+		"@sdxc/diagram": "workspace:*",
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/icons": "workspace:*",

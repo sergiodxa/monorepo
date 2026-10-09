@@ -66,6 +66,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 		packages: [
 			"markdown",
 			"math",
+			"diagram",
 			"yaml",
 			"xml",
 			"html",

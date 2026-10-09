@@ -1,7 +1,7 @@
 /**
  * The passes every long-form page runs its parsed markdown through, and the traversals
- * that read the result. The counted holes are filled first; the anchors, the syntax
- * painting and — for a package README — the link rewriting then merge into one walk.
+ * that read the result. The counted holes are filled first; the anchors, the diagrams,
+ * the syntax painting and — for a package README — the link rewriting follow.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@
 import type { MarkdownWalkError } from "@sdxc/markdown";
 import type { Result } from "@sdxc/result";
 
+import { diagram } from "@sdxc/diagram/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toPlainText } from "@sdxc/markdown/plain";
@@ -131,8 +132,9 @@ export function anchorArticle(
 }
 
 /**
- * Prepares a page written for this site: anchored as `anchorArticle` anchors it, and
- * code painted.
+ * Prepares a page written for this site: anchored as `anchorArticle` anchors it,
+ * ```mermaid fences drawn as diagrams, and every other fence painted. A diagram that
+ * does not parse fails the walk, so a broken one stops the build that renders it.
  *
  * @param document - The parsed page
  * @param options - The options it was parsed with
@@ -145,7 +147,7 @@ export function prepareArticle(
 	let anchored = anchorArticle(document, options);
 	if (isFailure(anchored)) return anchored;
 
-	return Markdown.walk(anchored.data, highlight);
+	return Markdown.walk(anchored.data, Markdown.compose(diagram, highlight));
 }
 
 /**
@@ -194,9 +196,9 @@ export function anchorPackageReadme(
 }
 
 /**
- * Prepares a package's own README: anchored as `anchorPackageReadme` anchors it, code
- * painted, and the link rewriting that turns a file written for npm into a page of this
- * site.
+ * Prepares a package's own README: anchored as `anchorPackageReadme` anchors it,
+ * diagrams drawn and code painted, and the link rewriting that turns a file written for
+ * npm into a page of this site.
  */
 export function preparePackageReadme(
 	document: Markdown.Document,
@@ -205,14 +207,16 @@ export function preparePackageReadme(
 	let anchored = anchorPackageReadme(document);
 	if (isFailure(anchored)) return anchored;
 
-	return Markdown.walk(anchored.data, {
-		...highlight,
-		link(node) {
-			let href = rewriteHref(node.href, directory);
-			if (href === node.href) return;
-			return { ...node, href };
-		},
-	});
+	return Markdown.walk(
+		anchored.data,
+		Markdown.compose(diagram, highlight, {
+			link(node: Markdown.Link) {
+				let href = rewriteHref(node.href, directory);
+				if (href === node.href) return;
+				return { ...node, href };
+			},
+		}),
+	);
 }
 
 /**
