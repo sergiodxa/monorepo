@@ -112,6 +112,32 @@ describe("parseDocument", () => {
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) expect(result.data.declaration).toBeUndefined();
 	});
+
+	test("reads a declaration padded with a long whitespace run in linear time", () => {
+		let started = performance.now();
+		let unterminated = parseDocument(`<?xml\t${"\t".repeat(50_000)}`);
+		let padded = parseDocument(`<?xml\t${"\t".repeat(50_000)}version="1.0"?><r/>`);
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(isFailure(unterminated)).toBe(true);
+		expect(isSuccess(padded) && padded.data.declaration).toEqual({ version: "1.0" });
+	});
+
+	test("skips long runs of malformed declaration attributes in linear time", () => {
+		let started = performance.now();
+		let names = parseDocument(`<?xml version="1.0" ${":".repeat(50_000)}?><r/>`);
+		let pairs = parseDocument(`<?xml encoding="utf-8" ${':="a'.repeat(50_000)}?><r/>`);
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(isSuccess(names) && names.data.declaration).toEqual({ version: "1.0" });
+		expect(isSuccess(pairs) && pairs.data.declaration).toEqual({ encoding: "utf-8" });
+	});
+
+	test("skips a declaration value broken across lines", () => {
+		let result = parseDocument(`<?xml version="1.0" encoding="utf\n-8"?><r/>`);
+
+		expect(isSuccess(result) && result.data.declaration).toEqual({ version: "1.0" });
+	});
 });
 
 describe("parseDocument text", () => {

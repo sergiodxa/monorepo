@@ -16,8 +16,18 @@ import type { XML } from "../index.js";
 import { decodeEntities } from "./decode-entities.js";
 import { matchName } from "./xml-names.js";
 
-const XML_DECLARATION_PATTERN = /^\s*<\?xml\s+([^?]+)\?>/i;
-const XML_DECLARATION_ATTRIBUTE_PATTERN = /([a-zA-Z_:][\w:.-]*)\s*=\s*(["'])(.*?)\2/g;
+/**
+ * One whitespace character opens the declaration's body and the rest stays in the
+ * capture, so no two quantifiers compete for the same run and matching stays linear.
+ */
+const XML_DECLARATION_PATTERN = /^\s*<\?xml(\s[^?]*)\?>/i;
+
+const DECLARATION_NAME_START_PATTERN = /[a-zA-Z_:]/;
+
+const DECLARATION_NAME_PATTERN = /[\w:.-]/;
+
+/** Line terminators end a declaration value unclosed, so its attribute is skipped. */
+const LINE_TERMINATOR_PATTERN = /[\n\r\u2028\u2029]/;
 
 /**
  * Literal tabs and line breaks inside an attribute value are collapsed to spaces
@@ -363,27 +373,66 @@ function parseDeclaration(source: string): XML.Declaration | undefined {
 	if (!match?.[1]) return undefined;
 
 	let declaration: XML.Declaration = {};
-	let attributes = match[1];
-	let attributeMatch = XML_DECLARATION_ATTRIBUTE_PATTERN.exec(attributes);
 
-	while (attributeMatch) {
-		let name = attributeMatch[1];
-		let value = attributeMatch[3];
-
+	for (let [name, value] of readDeclarationAttributes(match[1])) {
 		if (name === "version") declaration.version = value;
 		if (name === "encoding") declaration.encoding = value;
 		if (name === "standalone" && (value === "yes" || value === "no")) {
 			declaration.standalone = value;
 		}
-
-		attributeMatch = XML_DECLARATION_ATTRIBUTE_PATTERN.exec(attributes);
 	}
-
-	XML_DECLARATION_ATTRIBUTE_PATTERN.lastIndex = 0;
 
 	if (!declaration.version && !declaration.encoding && !declaration.standalone) {
 		return undefined;
 	}
 
 	return declaration;
+}
+
+/**
+ * Reads each `name="value"` pair from a declaration body in order, skipping any
+ * text that does not form one. Every character is visited a bounded number of
+ * times, so a hostile body costs time linear in its length.
+ *
+ * @param body - The text between `<?xml` and `?>`
+ * @returns The name and unquoted value of each pair
+ */
+function readDeclarationAttributes(body: string): Array<[string, string]> {
+	let attributes: Array<[string, string]> = [];
+	let cursor = 0;
+
+	while (cursor < body.length) {
+		if (!DECLARATION_NAME_START_PATTERN.test(body[cursor] ?? "")) {
+			cursor++;
+			continue;
+		}
+
+		let nameEnd = cursor + 1;
+		while (nameEnd < body.length && DECLARATION_NAME_PATTERN.test(body[nameEnd] ?? "")) nameEnd++;
+
+		let equals = skipWhitespace(body, nameEnd);
+		if (body[equals] !== "=") {
+			cursor = nameEnd;
+			continue;
+		}
+
+		let open = skipWhitespace(body, equals + 1);
+		let quote = body[open];
+		if (quote !== '"' && quote !== "'") {
+			cursor = open;
+			continue;
+		}
+
+		let close = body.indexOf(quote, open + 1);
+		let value = close === -1 ? "" : body.slice(open + 1, close);
+		if (close === -1 || LINE_TERMINATOR_PATTERN.test(value)) {
+			cursor = open + 1;
+			continue;
+		}
+
+		attributes.push([body.slice(cursor, nameEnd), value]);
+		cursor = close + 1;
+	}
+
+	return attributes;
 }
