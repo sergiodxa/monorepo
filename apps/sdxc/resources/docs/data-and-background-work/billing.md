@@ -192,7 +192,7 @@ what stops a late event from rolling an account back.
 A purchase reaches your app twice: once as the buyer's redirect, and again as the platform's
 webhook, which is the one that changes what the account holds:
 
-```mermaid
+```mermaid {% alt="Checkout: the buyer posts to the app, which creates a checkout and redirects to the payment platform; after payment the platform sends a webhook the app records with its signature verdict, answering 401 when unproven, 200 when already processed, or saving the account's entitlements and marking the delivery processed; requests read the Entitlements table" %}
 sequenceDiagram
     actor Buyer
     participant App as Your app

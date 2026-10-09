@@ -47,7 +47,7 @@ sequenceDiagram
 
 That source draws this:
 
-```mermaid
+```mermaid {% alt="A reader requests /posts/hello from the Worker, which checks the cache; on a hit the cache returns the response, on a miss the Worker renders the post and puts it in the cache, then the Worker answers 200 OK" %}
 sequenceDiagram
     actor Reader
     participant Worker
@@ -66,7 +66,7 @@ sequenceDiagram
 Class and state diagrams read the same way. A class diagram puts each parent and each whole
 above the classes that point at it, whichever way round the relation is written:
 
-```mermaid
+```mermaid {% alt="Class diagram: Post has slug, title and publish(); Draft inherits from Post; a Post is composed of many Comments, each with a body" %}
 classDiagram
     class Post {
         +String slug
@@ -83,7 +83,7 @@ classDiagram
 
 A state diagram nests composite states, each with its own start:
 
-```mermaid
+```mermaid {% alt="State diagram: a post starts as Draft, is submitted to Review, goes back to Draft when changes are requested or to Live when approved; inside Live it starts Listed and moves to Archived when archived" %}
 stateDiagram-v2
     [*] --> Draft
     Draft --> Review : submit

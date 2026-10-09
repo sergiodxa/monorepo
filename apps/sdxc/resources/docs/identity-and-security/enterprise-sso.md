@@ -150,7 +150,7 @@ notAfter })` and `toPem()`.
 
 The request id waits in KV while the browser visits the identity provider:
 
-```mermaid
+```mermaid {% alt="SAML sign-in: the app signs an AuthnRequest, stores its id in the SSO namespace under the RelayState and redirects to the identity provider, which posts the SAMLResponse back to the ACS route; the app reads and deletes the pending request, verifies the response, starts a session and redirects home" %}
 sequenceDiagram
     participant B as Browser
     participant A as App

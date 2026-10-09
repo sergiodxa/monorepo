@@ -192,7 +192,7 @@ the session middleware that commits the `Set-Cookie`. The next section shows it 
 
 A redirect thrown from the action unwinds only as far as the catch:
 
-```mermaid
+```mermaid {% alt="A redirect thrown by requireUser() in the action unwinds to catchResponse(), which hands it back as the response; the session middleware then resumes after next() and commits the Set-Cookie, and log(logger) receives the redirect with the cookie" %}
 sequenceDiagram
     participant L as log(logger)
     participant S as Session middleware

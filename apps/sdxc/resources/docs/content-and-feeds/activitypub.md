@@ -430,7 +430,7 @@ fetched fresh rather than trusted.
 
 One follow, from the remote server's first lookup to the `Accept` it gets back, runs like this:
 
-```mermaid
+```mermaid {% alt="An ActivityPub follow: the remote server looks up the WebFinger and actor documents, then posts a signed Follow to the inbox; the site verifies the signature against the sender's key, enqueues the Follow and answers 202; the job stores the follower and enqueues an Accept, which is delivered signed to the remote inbox" %}
 sequenceDiagram
     participant Remote as Remote server
     participant Site as Your site

@@ -261,7 +261,7 @@ A cron delivery runs no job. It enqueues every job declaring the expression that
 returns, so the nightly sweep gets the same retries, timeout and dead-letter handling as any other
 message. Every job, however it started, reaches its handler through the one queue:
 
-```mermaid
+```mermaid {% alt="Route handlers and cron triggers both enqueue onto the app-jobs queue; the dispatcher runs each job, acking it when it returns or exits, and on a retry or throw sending it back to the queue until max_retries, after which it goes to dead-letter handling" %}
 flowchart LR
     Handler["Route handler: ctx.jobs.enqueue"] --> Queue[("app-jobs queue")]
     Cron[Cron trigger] -->|enqueues only| Queue

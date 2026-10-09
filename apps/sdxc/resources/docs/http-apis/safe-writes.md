@@ -149,7 +149,7 @@ stored, so a failed write releases the key and the retry runs it.
 
 The middleware sends each create down one of these paths:
 
-```mermaid
+```mermaid {% alt="Idempotency flow for POST /api/books: without an Idempotency-Key the request runs unprotected or gets a 400 when keys are required; with a key, a new key is claimed and the handler runs, storing a response below 500 or releasing the key otherwise; a key still running gets a 409 with Retry-After, a mismatched method, path or body gets a 422, and a completed key replays the stored response" %}
 flowchart TD
     Req["POST /api/books"] --> HasKey{"Idempotency-Key?"}
     HasKey -->|no| Unprotected["runs unprotected, or 400 with required: true"]

@@ -29,7 +29,7 @@ npm add @sdxc/web-push @sdxc/result @sdxc/validate remix
 A subscription travels from the browser to your Worker once, and every notification travels
 back through the browser's push service:
 
-```mermaid
+```mermaid {% alt="Web push: the page subscribes through the browser, which registers with the push service and gets an endpoint; the page posts the subscription to the Worker, which saves it; later the Worker posts an encrypted payload with a VAPID token to the push service, removing the subscription on a 404 or 410, or the service worker receives a push event and shows a notification" %}
 sequenceDiagram
     participant Page
     participant Browser

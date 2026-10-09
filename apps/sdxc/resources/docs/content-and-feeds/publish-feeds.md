@@ -272,7 +272,7 @@ Worker, so changing hubs is a configuration change.
 
 A subscription and one published post travel like this, with the purge ahead of the ping:
 
-```mermaid
+```mermaid {% alt="WebSub: a subscriber reads the hub and self links from /feed.xml and subscribes at the hub; publishing a post purges the feeds from the edge cache and enqueues a ping job that notifies the hub; on success the hub fetches the fresh feed and pushes the change to subscribers, a 5xx, 429 or timeout retries in 5 minutes, and any other 4xx is acknowledged" %}
 sequenceDiagram
     participant Sub as Subscriber
     participant Hub

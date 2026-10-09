@@ -191,7 +191,7 @@ export default jobs({
 
 A mention reaches your table in two steps, the request and the job:
 
-```mermaid
+```mermaid {% alt="Webmention: the endpoint validates the source and target without fetching anything, answering 400 with a reason or enqueueing the pair and answering 202; the job then fetches the source and saves a pending mention if it links, deletes it if gone or unlinked, retries on timeouts, 5xx or 429, and acknowledges refused hosts, redirects or oversized pages" %}
 sequenceDiagram
     participant Sender as Sending site
     participant Endpoint as POST /webmention

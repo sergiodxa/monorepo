@@ -31,7 +31,7 @@ talks to rather than form submissions.
 A sign-in runs both requests around the authenticator's prompt, and enrollment has the same
 shape on the `register` routes:
 
-```mermaid
+```mermaid {% alt="Passkey sign-in: the browser island requests a challenge the server keeps in the session, the authenticator signs an assertion, the island posts it to verify, and the server spends the challenge, verifies and records the passkey, regenerates the session with the user id and returns a redirect URL" %}
 sequenceDiagram
     participant I as Browser island
     participant S as Server

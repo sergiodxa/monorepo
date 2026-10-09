@@ -131,7 +131,7 @@ your own account fields.
 
 A login is two requests to your app with the provider in between:
 
-```mermaid
+```mermaid {% alt="OpenID Connect login: the browser posts to /login, the app stores state, nonce and PKCE verifier in the session and redirects to the provider, the provider redirects back to /auth/callback with a code, the app exchanges the code for an ID token, verifies it, rotates the session id and redirects to the return URL" %}
 sequenceDiagram
     participant B as Browser
     participant A as App
