@@ -1,0 +1,9 @@
+name: CodeQL config
+
+# Test files strip HTML and match URLs with regexes to make assertions about
+# rendered output, and docs/vendor holds third-party fixtures served as data.
+# Neither ships, so their findings are not attack surface.
+paths-ignore:
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "docs/vendor/**"
