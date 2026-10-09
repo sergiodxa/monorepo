@@ -122,7 +122,7 @@ let users = Users.bind(db, context);
 await users.active().inTeam(teamId).orderBy("name", "asc").all();
 ```
 
-- `createModel(table, options)` returns an unbound definition. `definition.bind(db, context?)`
+- `createModel(table, options)` returns an unbound definition. `definition.bind(db, host?, extra?)`
   returns the bound model every method runs on. The database is supplied once, at binding, and
   the bound model is a configured runtime object rather than a set of functions that re-take
   `db` on every call.
@@ -168,23 +168,42 @@ query, so the model's scopes chain onto it.
 
 ### Callbacks
 
-Callbacks are async and receive a `ModelContext`:
+Callbacks are async and receive a `ModelContext`. The database is the only member the package
+guarantees; everything else is the app's to attach:
 
 ```typescript
-interface ModelContext {
+type ModelContext<Extra = {}> = Extra & {
 	/** The database this model is bound to, or the transaction it runs in. */
 	readonly db: Database;
-	/** The invocation's log. */
-	readonly log: Log;
 	/** Reads a value the host context published, by the same key the app's middleware uses. */
 	get<Key extends object>(key: Key): ContextValue<Key>;
-}
+};
 ```
 
 `get` reads through to the host context, so a callback reaches the job enqueuer, the mail
 transport or the billing provider by the same keys the app's middleware already publishes
-(`ctx.get(Jobs)`, `ctx.get(Mail)`). A script or test binds with its own entries instead of a
+(`ctx.get(Jobs)`, `ctx.get(Mail)`). A script or test binds with its own context instead of a
 request.
+
+Anything a callback should read as a property, such as `ctx.log`, the app declares on the model
+and supplies where it binds:
+
+```typescript
+export const Users = createModel<{ log: Log }>(users, {
+	callbacks: {
+		async afterCreate(row, ctx) {
+			ctx.log.set({ user: { id: row.id } });
+		},
+	},
+});
+
+router.use(modelsMiddleware(models, { database: Database, extend: (ctx) => ({ log: ctx.log }) }));
+let bound = Users.bind(db, context, { log });
+```
+
+The registry's type is the union of what its models declare, so a middleware whose `extend`
+leaves out a property some model needs fails to type-check rather than handing that model an
+`undefined`. A model that declares nothing binds with the database alone.
 
 | Callback                                    | Runs                                    | Can                   |
 | ------------------------------------------- | --------------------------------------- | --------------------- |
@@ -234,6 +253,8 @@ createJobDispatcher({
 - The middleware reads the database another middleware already published under the given key,
   so the tenant's database is the one every model binds to and the package stays unaware of
   tenancy.
+- Its optional `extend(ctx)` returns the extra properties models declared, read from the host
+  context the middleware runs on, so the app decides what a callback sees beyond the database.
 - It publishes the bound registry under the `Models` key and installs it as `ctx.models`.
   Members are bound lazily on first access, so an invocation that touches no model binds none.
 - `ctx.models.transaction(async (models) => { ... })` binds every model to the transaction and
@@ -245,8 +266,8 @@ createJobDispatcher({
 ### Package boundaries
 
 - The package ships no tables, schemas or migrations; the app declares tables and passes them in.
-- It depends on `remix` (data-table and router types), `@sdxc/result` and `@sdxc/logger`;
-  `@sdxc/jobs` is a peer of the `./jobs` entry point only.
+- It depends on `remix` (data-table and router types) and `@sdxc/result`; `@sdxc/jobs` is a
+  peer of the `./jobs` entry point only. Logging is whatever the app attaches through `extend`.
 - Everything it returns for querying is a data-table `Query`, so `@sdxc/pagination` and
   `@sdxc/search` need no changes and take no dependency on it.
 
