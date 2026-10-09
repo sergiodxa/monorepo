@@ -376,7 +376,7 @@ export function camelize(value: string, options: CamelizeOptions = {}): string {
  */
 export function underscore(value: string): string {
 	return value
-		.replace(/([A-Z\d]+)([A-Z][a-z])/g, "$1_$2")
+		.replace(/(?<=[A-Z\d])(?=[A-Z][a-z])/g, "_")
 		.replace(/([a-z\d])([A-Z])/g, "$1_$2")
 		.replace(/[\s-]+/g, "_")
 		.toLowerCase();

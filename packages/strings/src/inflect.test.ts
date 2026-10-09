@@ -183,6 +183,14 @@ describe("underscore", () => {
 	test("leaves an already underscored identifier alone", () => {
 		expect(underscore("cron_job_monitor")).toBe("cron_job_monitor");
 	});
+
+	test("converts a long run of digits in linear time", () => {
+		let digits = "0".repeat(50_000);
+		let started = performance.now();
+		expect(underscore(`${digits}a`)).toBe(`${digits}a`);
+		expect(underscore(`${digits}Request`)).toBe(`${digits}_request`);
+		expect(performance.now() - started).toBeLessThan(500);
+	});
 });
 
 describe("dasherize", () => {
