@@ -14,6 +14,8 @@ import { failure, isFailure, success } from "@sdxc/result";
 
 import type { Subscription } from "./subscription.js";
 
+import { trimPadding } from "./keys.js";
+
 /**
  * Why subscribing failed: `unsupported` for a browser without service workers or the
  * Push API, `denied` for a refused permission, `failed` for anything the browser threw.
@@ -108,7 +110,7 @@ export async function subscribe(
 		return failure(new WebPushBrowserError("unsupported", "This browser cannot receive Web Push"));
 	}
 
-	let key = Base64Url.decode(options.applicationServerKey.replace(/=+$/u, ""));
+	let key = Base64Url.decode(trimPadding(options.applicationServerKey));
 	if (isFailure(key)) {
 		return failure(
 			new WebPushBrowserError("failed", "The applicationServerKey is not base64url", {

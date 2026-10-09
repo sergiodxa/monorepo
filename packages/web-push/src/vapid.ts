@@ -14,7 +14,7 @@ import { JWK, JWT } from "@sdxc/jwt";
 import { failure, isFailure, success } from "@sdxc/result";
 
 import { WebPushError } from "./error.js";
-import { decodeBase64Url, decodePoint, P256_COORDINATE_LENGTH } from "./keys.js";
+import { decodeBase64Url, decodePoint, P256_COORDINATE_LENGTH, trimPadding } from "./keys.js";
 
 /** How long a token stays valid, inside the 24 hours RFC 8292 allows. */
 const TOKEN_LIFETIME_MS = 12 * 60 * 60 * 1000;
@@ -145,7 +145,7 @@ export class Vapid {
 			{ id: KEY_ID, alg: JWK.Algorithm.ES256, private: key.data },
 		]);
 
-		let authorization = `vapid t=${signed}, k=${this.keys.publicKey.replace(/=+$/u, "")}`;
+		let authorization = `vapid t=${signed}, k=${trimPadding(this.keys.publicKey)}`;
 		this.#tokens.set(origin, {
 			authorization,
 			refreshAt: now + TOKEN_LIFETIME_MS - TOKEN_REFRESH_MARGIN_MS,

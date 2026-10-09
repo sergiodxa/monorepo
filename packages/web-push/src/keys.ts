@@ -26,13 +26,27 @@ const P256_PRIME = 0xffffffff00000001000000000000000000000000fffffffffffffffffff
 const P256_B = 0x5ac635d8aa3a93e7b3ebbd55769886bc651d06b0cc53b0f63bce3c3e27d2604bn;
 
 /**
+ * The text without its trailing `=` padding, found by one backward scan so a run of
+ * thousands of `=` before another character costs linear time.
+ *
+ * @param value - Base64url text, padded or not.
+ * @returns The text up to its last non-`=` character.
+ * @example trimPadding("AQID==") // "AQID"
+ */
+export function trimPadding(value: string): string {
+	let end = value.length;
+	while (end > 0 && value[end - 1] === "=") end--;
+	return value.slice(0, end);
+}
+
+/**
  * Reads unpadded or padded base64url, answering `null` for anything else, so a caller
  * branches on malformed key material without a `Result` per field.
  *
  * @param value - The text as a browser or an environment variable carried it.
  */
 export function decodeBase64Url(value: string): Uint8Array<ArrayBuffer> | null {
-	let decoded = Base64Url.decode(value.replace(/=+$/u, ""));
+	let decoded = Base64Url.decode(trimPadding(value));
 	return isFailure(decoded) ? null : Uint8Array.from(decoded.data);
 }
 
@@ -73,5 +87,5 @@ export function decodePoint(value: string): Uint8Array<ArrayBuffer> | null {
  * @param right - The other.
  */
 export function sameKey(left: string, right: string): boolean {
-	return left.replace(/=+$/u, "") === right.replace(/=+$/u, "");
+	return trimPadding(left) === trimPadding(right);
 }
