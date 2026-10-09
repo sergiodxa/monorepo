@@ -35,9 +35,11 @@ Loading the color picker…
 </frame>
 ```
 
-With a fallback, the page streams its first chunk straight away and the region replaces the
-fallback when it arrives. A self-closing `<frame src="/frames/latest-release" />` has no
-fallback, so the page waits for the region before it sends anything. Add `name="…"` when a
+With a fallback, the page streams its first chunk straight away, and the client runtime swaps
+the region in for the fallback when it arrives. A self-closing
+`<frame src="/frames/latest-release" />` has no fallback, so the page waits for the region and
+sends it inline, which is the form to pick when the region has to read before any script
+loads. Add `name="…"` when a
 client entry elsewhere on the page reloads the region through `handle.frames.get(name)`.
 
 ## Register the tag

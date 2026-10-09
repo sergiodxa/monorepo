@@ -28,7 +28,7 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import docsIndex from "~/app/http/controllers/docs-index";
 import docsShow from "~/app/http/controllers/docs-show";
 import feed from "~/app/http/controllers/feed";
-import framePreview from "~/app/http/controllers/frame-preview";
+import framePreview, { frameExample } from "~/app/http/controllers/frame-preview";
 import home from "~/app/http/controllers/home";
 import llms from "~/app/http/controllers/llms";
 import maintenance from "~/app/http/controllers/maintenance";
@@ -109,6 +109,7 @@ export default function application() {
 	router.map(routes.markdown.component, componentMarkdownTwin);
 	router.map(routes.markdown.uiExport, uiExportMarkdownTwin);
 	router.map(routes.frames.preview, framePreview);
+	router.map(routes.frames.example, frameExample);
 	router.map(routes.llms, llms);
 	router.map(routes.sitemap, sitemap);
 	router.map(routes.feed, feed);

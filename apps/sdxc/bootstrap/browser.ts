@@ -17,6 +17,7 @@ import { run } from "remix/component";
  */
 const CLIENT_MODULES = import.meta.glob([
 	"../resources/components/previews/*.tsx",
+	"../resources/components/previews/*/*.tsx",
 	"../resources/components/copy-button.tsx",
 	"../resources/components/copy-markdown.tsx",
 	"../resources/components/drawer-dismiss.tsx",

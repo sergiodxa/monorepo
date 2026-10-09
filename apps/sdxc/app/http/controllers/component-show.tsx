@@ -1,8 +1,8 @@
 /**
  * `GET /api/ui/:component` — one component's reference, and the theming page
- * that shares the segment with the catalogue. The hero is the component itself: these
- * render as server HTML and work before any script loads, so the preview is this page
- * importing the component rather than a sandbox pretending to be one.
+ * that shares the segment with the catalogue. The hero and the examples are the component
+ * itself, each a blocking frame of the fragment a guide embeds too, so their HTML is in the
+ * page before any script loads.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +12,7 @@ import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
 import { font, text, weight } from "@sdxc/u/typography";
-import { isApplePlatform } from "@sdxc/user-agent/helpers";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -27,11 +27,10 @@ import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
 import { absoluteUrl } from "~/app/services/site";
-import ComponentPreview from "~/resources/components/component-preview";
 import CompositionTree from "~/resources/components/composition-tree";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
-import { findPreview } from "~/resources/components/preview-registry.server";
+import { findPreview, listExamples } from "~/resources/components/preview-registry.server";
 import ReferenceProse from "~/resources/components/reference-prose";
 import ReferenceSection from "~/resources/components/reference-section";
 import ReferenceTable from "~/resources/components/reference-table";
@@ -58,13 +57,15 @@ export default createAction(routes.api.component, async (ctx) => {
 
 	let markdownHref = routes.markdown.component.href({ component });
 	let preview = findPreview(component);
-	let examples = reference.examples.slice(preview === null ? 0 : 1);
+	let liveExamples = listExamples(component);
+	let examples = liveExamples.length > 0 ? [] : reference.examples.slice(preview === null ? 0 : 1);
+	let hasExamples = liveExamples.length > 0 || examples.length > 0;
 
 	let anchors: Anchor[] = [
 		{ id: "installation", text: "Installation", level: 2 },
 		{ id: "usage", text: "Usage", level: 2 },
 		reference.parts.length > 0 ? { id: "composition", text: "Composition", level: 2 } : null,
-		examples.length > 0 ? { id: "examples", text: "Examples", level: 2 } : null,
+		hasExamples ? { id: "examples", text: "Examples", level: 2 } : null,
 		{ id: "props", text: "Props", level: 2 },
 		...reference.parts.map((part) => ({ id: anchorFor(part.name), text: part.name, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
@@ -97,11 +98,7 @@ export default createAction(routes.api.component, async (ctx) => {
 						/>
 					</header>
 
-					{preview ? (
-						<ComponentPreview code={preview.code} flush={preview.flush}>
-							{preview.render({ appleKeyboard: isApplePlatform(ctx) })}
-						</ComponentPreview>
-					) : null}
+					{preview ? <Frame src={routes.frames.preview.href({ component })} /> : null}
 
 					<ReferenceSection
 						id="installation"
@@ -136,9 +133,15 @@ export default createAction(routes.api.component, async (ctx) => {
 						</ReferenceSection>
 					) : null}
 
-					{examples.length > 0 ? (
+					{hasExamples ? (
 						<ReferenceSection id="examples" title="Examples">
 							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+								{liveExamples.map((example) => (
+									<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
+										<h3 mix={[m(0), text("base"), weight("semibold")]}>{example.title}</h3>
+										<Frame src={routes.frames.example.href({ component, example: example.slug })} />
+									</section>
+								))}
 								{examples.map((example) => (
 									<Snippet key={example} code={example} />
 								))}

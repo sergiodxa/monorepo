@@ -83,6 +83,8 @@ export default route({
 	frames: {
 		/** One component's live preview, the same one its reference page opens with. */
 		preview: get("/frames/previews/:component"),
+		/** One of the live examples its reference page lists under the preview. */
+		example: get("/frames/previews/:component/:example"),
 	},
 
 	/** Machine-readable surfaces, each one derived from what is already in the bundle. */
