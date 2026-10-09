@@ -60,6 +60,18 @@ export function createArtifactStore(directory: string): ArtifactStore {
  * @returns A name that is one path segment and holds no separators.
  */
 export function sanitize(name: string): string {
-	let cleaned = name.replace(UNSAFE_NAME, "-").replace(/^-+|-+$/g, "");
+	let cleaned = trimDashes(name.replace(UNSAFE_NAME, "-"));
 	return cleaned === "" ? "artifact" : cleaned;
+}
+
+/**
+ * The name with its leading and trailing dashes removed, scanning each end once so a
+ * name made of thousands of dashes still costs linear time.
+ */
+function trimDashes(name: string): string {
+	let start = 0;
+	let end = name.length;
+	while (start < end && name[start] === "-") start++;
+	while (end > start && name[end - 1] === "-") end--;
+	return name.slice(start, end);
 }

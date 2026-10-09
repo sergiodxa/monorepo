@@ -76,4 +76,14 @@ describe(sanitize, () => {
 	test("answers a usable name when nothing readable is left", () => {
 		expect(sanitize("///")).toBe("artifact");
 	});
+
+	test("trims the dashes around a name made of thousands of them in linear time", () => {
+		let dashes = "-".repeat(50_000);
+
+		let started = performance.now();
+		let name = sanitize(`${dashes}a${dashes}b${dashes}`);
+
+		expect(performance.now() - started).toBeLessThan(500);
+		expect(name).toBe(`a${dashes}b`);
+	});
 });
