@@ -53,6 +53,7 @@ describe("kind 2, the comment", () => {
 	test("ends on the comment's closing delimiter", () => {
 		expect(closesHtmlBlock(2, "note --> after")).toBe(true);
 		expect(closesHtmlBlock(2, "note - - >")).toBe(false);
+		expect(closesHtmlBlock(2, "note --!> after")).toBe(false);
 	});
 });
 

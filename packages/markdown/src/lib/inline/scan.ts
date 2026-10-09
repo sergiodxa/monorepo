@@ -43,8 +43,12 @@ const EMAIL_AUTOLINK =
 /** A pointy-bracket link destination, which runs to the first unescaped closing bracket. */
 const BRACKETED_DESTINATION = /<(?:[^<>\n\\]|\\.)*>/y;
 
-/** The three title forms, whose capture groups are the quoted, apostrophed, and parenthesized bodies. */
-const LINK_TITLE = /(?:"((?:\\.|[^"])*)"|'((?:\\.|[^'])*)'|\((((?:\\.|[^()])*))\))/y;
+/**
+ * The three title forms, whose capture groups are the quoted, apostrophed, and parenthesized bodies.
+ * A backslash always pairs with the character after it, so an escaped delimiter never closes a title.
+ */
+const LINK_TITLE =
+	/(?:"((?:\\[\s\S]|[^"\\])*)"|'((?:\\[\s\S]|[^'\\])*)'|\((((?:\\[\s\S]|[^()\\])*))\))/y;
 
 /** A bracketed label, capped at the thousand characters CommonMark allows inside one. */
 const LINK_LABEL = /\[(?:[^\\[\]]|\\[\s\S]){0,1000}\]/y;

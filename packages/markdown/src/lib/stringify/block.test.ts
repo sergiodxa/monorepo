@@ -467,6 +467,14 @@ describe("stringifyBlocks", () => {
 			).toBe('<section-block id="a">');
 		});
 
+		test("drops a long run of trailing newlines in linear time", () => {
+			let started = performance.now();
+			let value = `<div>\n${"\n\nx".repeat(25_000)}${"\n".repeat(50_000)}`;
+			let written = write({ type: "html", value, attributes: {}, position: position() });
+			expect(written).toBe(`<div>\n${"\n\nx".repeat(25_000)}`);
+			expect(performance.now() - started).toBeLessThan(1000);
+		});
+
 		test("puts a thematic break's annotation on the line above it", () => {
 			expect(
 				write({ type: "thematicBreak", attributes: { id: "split" }, position: position() }),

@@ -30,8 +30,14 @@ const OPEN_CONDITIONS = [
 	new RegExp(`^(?:${OPEN_TAG}|${CLOSE_TAG})\\s*$`, "i"),
 ];
 
-/** The first five kinds end on a marker; the last two end on a blank line instead. */
-const CLOSE_CONDITIONS = [/(?!)/, /<\/(?:script|pre|textarea|style)>/i, /-->/, /\?>/, />/, /\]\]>/];
+/** The raw-text elements' closing tags, which end the first kind in any letter case. */
+const RAW_TEXT_CLOSE = /<\/(?:script|pre|textarea|style)>/i;
+
+/**
+ * The literal marker each of kinds two through five ends on, indexed by kind. CommonMark
+ * ends a comment block at `-->` alone, so a `--!>` line leaves it open.
+ */
+const CLOSE_MARKERS = ["", "", "-->", "?>", ">", "]]>"];
 
 /**
  * The kind of HTML block a line opens. The seventh kind cannot interrupt a
@@ -60,5 +66,7 @@ export function readHtmlBlockKind(text: string, interrupting: boolean): number |
  * @returns Whether the block ends with this line included
  */
 export function closesHtmlBlock(kind: number, text: string): boolean {
-	return CLOSE_CONDITIONS[kind]?.test(text) ?? false;
+	if (kind === 1) return RAW_TEXT_CLOSE.test(text);
+	let marker = CLOSE_MARKERS[kind];
+	return marker ? text.includes(marker) : false;
 }

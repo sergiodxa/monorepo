@@ -67,7 +67,7 @@ function stringifyBlock(node: Markdown.Block): string {
 			 * ended it with is dropped here — kept, it lands on top of that separator and every
 			 * write adds a blank line the one before it did not have.
 			 */
-			return above(node.attributes, node.value.replace(/\n+$/, ""));
+			return above(node.attributes, trimTrailingNewlines(node.value));
 		case "footnoteDefinition":
 			return writeFootnoteDefinition(node);
 		case "tag":
@@ -76,6 +76,13 @@ function stringifyBlock(node: Markdown.Block): string {
 		case "comment":
 			return `{/*${node.value}*/}`;
 	}
+}
+
+/** Drops the line endings a raw block's source closed with, scanning back from the end so the cost stays linear. */
+function trimTrailingNewlines(value: string): string {
+	let end = value.length;
+	while (end > 0 && value[end - 1] === "\n") end -= 1;
+	return value.slice(0, end);
 }
 
 /** Places an annotation on the line above a block, which is where a multi-line opener takes one. */

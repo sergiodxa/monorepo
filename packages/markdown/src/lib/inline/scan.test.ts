@@ -291,6 +291,20 @@ describe("link titles", () => {
 		expect(matchTitle('"t"', 0, 2)).toBeNull();
 		expect(matchTitle("(t)", 0, 2)).toBeNull();
 	});
+
+	test("an escaped closing delimiter never ends a title", () => {
+		expect(matchTitle('"a\\"', 0, 4)).toBeNull();
+		expect(matchTitle('"a\\\\"', 0, 5)).toEqual({ title: "a\\", end: 5 });
+	});
+
+	test("an unclosed title full of escapes is rejected in linear time", () => {
+		let started = performance.now();
+		for (let open of ['"', "'", "("]) {
+			let subject = `${open}${"\\!".repeat(50_000)}`;
+			expect(matchTitle(subject, 0, subject.length)).toBeNull();
+		}
+		expect(performance.now() - started).toBeLessThan(1000);
+	});
 });
 
 describe("link labels", () => {
