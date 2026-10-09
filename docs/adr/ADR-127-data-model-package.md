@@ -537,6 +537,8 @@ createJobDispatcher({
   already be on the context by then; an invocation that touches no model never runs it.
 - It publishes the bound registry under the `Models` key and installs it as `ctx.models`.
   Members are bound lazily on first access, so an invocation that touches no model binds none.
+- `models.bind(context, host?)` binds the whole registry outside a host, the way a model's own
+  `bind` does, for scripts, seeds and tests.
 - `ctx.models.transaction(async (models) => { ... })` binds every model to the transaction and
   shares one `afterCommit` queue across them.
 - The registry keys are lowercase plural (`users`, `posts`): they name bound instances, and match
@@ -594,11 +596,68 @@ since they call query methods and never test its class, but code that needs a re
 hand, such as `db.exec(query)` or an `instanceof` check, reads it from the loaded model with
 `await ctx.models.articles.load()`.
 
+### Test factories
+
+`@sdxc/data-model/testing` defines factories over models, drawing values from `@sdxc/sample` so
+a run is reproducible from its seed, and writing through the model so callbacks, constraints and
+meta behave as they do in production:
+
+```typescript
+import { defineFactory } from "@sdxc/data-model/testing";
+
+export const UserFactory = defineFactory(Users, {
+	name: ({ sample }) => sample.person.fullName(),
+	email: ({ sequence }) => `user${sequence}@example.com`,
+	role: "member",
+}).trait("admin", { role: "admin" });
+
+export const ArticleFactory = defineFactory(Articles, {
+	author_id: async ({ create }) => (await create(UserFactory)).id,
+	published_at: ({ sample }) => sample.date.past().toISOString(),
+	meta: ({ sample }) => ({ title: sample.lorem.sentence(), slug: sample.lorem.slug() }),
+}).trait("draft", { published_at: null });
+```
+
+```typescript
+const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
+
+describe(`articles (SAMPLE_SEED=${SEED})`, () => {
+	let models = createModels({ users: Users, articles: Articles }).bind({
+		db: createSqliteDatabase(),
+	});
+	let factories = createFactories(models, { seed: SEED });
+
+	test("lists only published articles", async () => {
+		let author = await factories.create(UserFactory, "admin");
+		await factories.createMany(ArticleFactory, 3, { author_id: author.id });
+		await factories.create(ArticleFactory, "draft", { author_id: author.id });
+
+		expect(await models.articles.published().count()).toBe(3);
+	});
+});
+```
+
+- A factory is a map of attributes, each a value or a function of `{ sample, sequence, create }`
+  that runs only when the call does not override that attribute; an article created with an
+  `author_id` therefore creates no user.
+- The attribute map is typed by `CreateValues` of its model, so a factory for `Articles` cannot
+  set `type`, and its `meta` checks against the declared fields.
+- `createFactories(models, { seed })` gives each factory a generator derived by the factory's
+  name, so adding a factory, or calls to one, leaves every other factory's values unchanged;
+  `sequence` counts per factory from one, for values that must be unique.
+- `build(factory, ...)` returns the values without writing; `create` and `createMany` write
+  through the bound model in the registry, so the factory exercises the same code the app does.
+  A factory writes with the host the registry was bound with, so a test that sets `Mail` on
+  that host observes the welcome mail a created user sends.
+- `create` throws when the model's write fails, with the `ValidationError` as `cause`: a fixture
+  that cannot be built fails the test where it was built, which is the outcome a test wants.
+- Traits are named partial overrides applied in order before the call's own overrides.
+
 ### Package boundaries
 
 - The package ships no tables, schemas or migrations; the app declares tables and passes them in.
 - It depends on `remix` (data-table and router types) and `@sdxc/result`; `@sdxc/jobs` is a
-  peer of the `./jobs` entry point only. Logging is whatever the app attaches in the middleware.
+  peer of the `./jobs` entry point only, and `@sdxc/sample` of the `./testing` entry point only. Logging is whatever the app attaches in the middleware.
 - Everything it returns for querying is a data-table `Query`, so `@sdxc/pagination` and
   `@sdxc/search` need no changes and take no dependency on it.
 
@@ -978,7 +1037,12 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 1. `./router` middleware, with an MCP tool reading `ctx.models` in its tests.
 2. `./jobs` middleware.
 
-### Phase 4: Package chores
+### Phase 4: Testing
+
+1. `./testing`: `defineFactory`, traits, `createFactories` over `@sdxc/sample`.
+2. Replace the hand-built rows in the tests of the first ported app.
+
+### Phase 5: Package chores
 
 1. README, LICENSE, root README row, `apps/sdxc` group and guide, npm bootstrap.
 2. Port one existing model layer to validate the API, starting with a module where the model
@@ -1054,14 +1118,13 @@ and recursion guards on top.
 - [ ] Phase 1: Spec
 - [ ] Phase 2: Core
 - [ ] Phase 3: Hosts
-- [ ] Phase 4: Package chores
+- [ ] Phase 4: Testing
+- [ ] Phase 5: Package chores
 
 ## Notes
 
 - Meta tables replace blog's per-type `MetaCodec` and its `articleMetaValue` duplicate
   resolution; the port of blog's posts is the acceptance case for both.
-- Test factories built on `AnyModel` (`defineFactory(Users, () => ({ ... }))`, typed by
-  `CreateValues`) are a likely follow-up, since every app's tests build rows by hand today.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
