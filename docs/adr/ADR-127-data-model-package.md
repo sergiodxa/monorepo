@@ -172,12 +172,12 @@ Callbacks are async and receive a `ModelContext`. The database is the only membe
 guarantees; everything else is the app's to attach:
 
 ```typescript
-type ModelContext<Extra = {}> = Extra & {
+interface ModelContext {
 	/** The database this model is bound to, or the transaction it runs in. */
 	readonly db: Database;
 	/** Reads a value the host context published, by the same key the app's middleware uses. */
 	get<Key extends object>(key: Key): ContextValue<Key>;
-};
+}
 ```
 
 `get` reads through to the host context, so a callback reaches the job enqueuer, the mail
@@ -185,11 +185,21 @@ transport or the billing provider by the same keys the app's middleware already 
 (`ctx.get(Jobs)`, `ctx.get(Mail)`). A script or test binds with its own context instead of a
 request.
 
-Anything a callback should read as a property, such as `ctx.log`, the app declares on the model
-and supplies where it binds:
+Anything a callback should read as a property, such as `ctx.log`, the app adds by augmenting the
+interface, the same way it types `RequestContext` in `config/router-context.d.ts`:
 
 ```typescript
-export const Users = createModel<{ log: Log }>(users, {
+/** config/model-context.d.ts */
+declare module "@sdxc/data-model" {
+	interface ModelContext {
+		/** The invocation's log, attached by the models middleware's `extend`. */
+		log: Log;
+	}
+}
+```
+
+```typescript
+export const Users = createModel(users, {
 	callbacks: {
 		async afterCreate(row, ctx) {
 			ctx.log.set({ user: { id: row.id } });
@@ -201,9 +211,10 @@ router.use(modelsMiddleware(models, { database: Database, extend: (ctx) => ({ lo
 let bound = Users.bind(db, context, { log });
 ```
 
-The registry's type is the union of what its models declare, so a middleware whose `extend`
-leaves out a property some model needs fails to type-check rather than handing that model an
-`undefined`. A model that declares nothing binds with the database alone.
+The package types `extend`'s return value, and `bind`'s third argument, as every `ModelContext`
+member besides `db` and `get`. Once the app augments the interface, a middleware or a binding
+that leaves out `log` fails to type-check rather than handing a callback an `undefined`; an app
+that augments nothing passes neither.
 
 | Callback                                    | Runs                                    | Can                   |
 | ------------------------------------------- | --------------------------------------- | --------------------- |
@@ -253,8 +264,9 @@ createJobDispatcher({
 - The middleware reads the database another middleware already published under the given key,
   so the tenant's database is the one every model binds to and the package stays unaware of
   tenancy.
-- Its optional `extend(ctx)` returns the extra properties models declared, read from the host
+- Its `extend(ctx)` returns the properties the app added to `ModelContext`, read from the host
   context the middleware runs on, so the app decides what a callback sees beyond the database.
+  It is required exactly when the augmentation adds required members.
 - It publishes the bound registry under the `Models` key and installs it as `ctx.models`.
   Members are bound lazily on first access, so an invocation that touches no model binds none.
 - `ctx.models.transaction(async (models) => { ... })` binds every model to the transaction and
