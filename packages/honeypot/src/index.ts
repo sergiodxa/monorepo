@@ -236,8 +236,17 @@ export class HoneypotError extends Error {
 	}
 }
 
-/** `length` random lowercase letters. The slight modulo bias leaves names unguessable enough. */
+/**
+ * `length` random lowercase letters, each equally likely: a byte's low five bits pick a
+ * letter, and a value past the alphabet's 26 letters is discarded and redrawn.
+ */
 function randomLetters(length: number): string {
-	let bytes = crypto.getRandomValues(new Uint8Array(length));
-	return [...bytes].map((byte) => TRAP_ALPHABET[byte % TRAP_ALPHABET.length]).join("");
+	let letters = "";
+	while (letters.length < length) {
+		for (let byte of crypto.getRandomValues(new Uint8Array(length - letters.length))) {
+			let index = byte & 31;
+			if (index < TRAP_ALPHABET.length) letters += TRAP_ALPHABET[index];
+		}
+	}
+	return letters;
 }

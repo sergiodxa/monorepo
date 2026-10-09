@@ -46,6 +46,18 @@ describe("issue", () => {
 		expect(second.trapField).not.toBe(first.trapField);
 	});
 
+	test("draws every trap name from lowercase letters only", async () => {
+		let honeypot = new Honeypot({ secret: "s3cret" });
+		let letters = new Set<string>();
+		for (let index = 0; index < 200; index++) {
+			let { trapField } = unwrap(await honeypot.issue());
+			expect(trapField).toMatch(/^hp_[a-z]{8}$/);
+			for (let letter of trapField.slice(3)) letters.add(letter);
+		}
+
+		expect(letters.size).toBe(26);
+	});
+
 	test("reads its field names from its options", async () => {
 		let honeypot = new Honeypot({ secret: "s3cret", tokenField: "t", trapPrefix: "x_" });
 		let fields = unwrap(await honeypot.issue());
