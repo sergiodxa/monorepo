@@ -33,3 +33,10 @@ test("counts a repeated link once", () => {
 test("splits words on anything that is not a letter or digit, without links", () => {
 	expect(extractWords("Don't visit https://x.example, ok?")).toEqual(["Don't", "visit", "ok"]);
 });
+
+test("reads a link followed by a long punctuation run in linear time", () => {
+	let content = `https://example.com/a${"!".repeat(50_000)}x`;
+	let started = performance.now();
+	expect(extractLinks(content).map((url) => url.hostname)).toEqual(["example.com"]);
+	expect(performance.now() - started).toBeLessThan(1_000);
+});

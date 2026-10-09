@@ -105,6 +105,30 @@ describe("linkSyntax", () => {
 		expect(fired(linkSyntax(), { content })).toEqual(["link-syntax.markdown"]);
 		expect(fired(linkSyntax(), { content, format: "markdown" })).toEqual([]);
 	});
+
+	test.each([
+		["[URL]https://x.example[/URL]", ["link-syntax.bbcode"]],
+		["[url=https://x.example", []],
+		['<A\tclass="x" HREF = "https://x.example">x</A>', ["link-syntax.html"]],
+		['<a class="x">x</a> href="https://x.example"', []],
+		["[a [b](https://x.example)", ["link-syntax.markdown"]],
+		["[](https://x.example)", []],
+		["[docs] (https://x.example)", []],
+	])("reads %j as its markup", (content, expected) => {
+		expect(fired(linkSyntax(), { content })).toEqual(expected);
+	});
+
+	test.each([
+		["[url=".repeat(50_000), []],
+		["<a\t".repeat(50_000), []],
+		["[".repeat(50_000), []],
+		[`${"<a\t".repeat(50_000)}href=`, ["link-syntax.html"]],
+		[`${"[".repeat(50_000)}](https://x.example)`, ["link-syntax.markdown"]],
+	])("scans a long run of unclosed markup in linear time (case %#)", (content, expected) => {
+		let started = performance.now();
+		expect(fired(linkSyntax(), { content })).toEqual(expected);
+		expect(performance.now() - started).toBeLessThan(1_000);
+	});
 });
 
 describe("linkTargets", () => {
