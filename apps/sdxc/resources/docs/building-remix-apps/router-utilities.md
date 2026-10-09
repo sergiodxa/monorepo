@@ -190,6 +190,25 @@ never resumes after its own `next()`, and whatever it meant to add to the respon
 Put `catchResponse()` below every middleware that reads or decorates the response, such as
 the session middleware that commits the `Set-Cookie`. The next section shows it in place.
 
+A redirect thrown from the action unwinds only as far as the catch:
+
+```mermaid
+sequenceDiagram
+    participant L as log(logger)
+    participant S as Session middleware
+    participant C as catchResponse()
+    participant H as Action
+    L->>S: next()
+    S->>C: next()
+    C->>H: next()
+    Note over H: requireUser() throws a redirect
+    H--xC: Thrown Response
+    Note over C,H: A middleware here never resumes
+    C-->>S: The redirect as the response
+    Note over S: Resumes after next(),<br>commits the Set-Cookie
+    S-->>L: Redirect with Set-Cookie
+```
+
 ## Import each route on first use
 
 A Worker evaluates its whole module graph when an isolate starts, and a cold isolate can start

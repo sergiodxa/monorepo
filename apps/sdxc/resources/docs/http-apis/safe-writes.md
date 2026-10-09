@@ -5,7 +5,7 @@ section:
     title: HTTP APIs
     order: 4
 order: 3
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 Writes fail in two quiet ways. A `POST` times out and the client cannot tell whether the book
@@ -146,6 +146,21 @@ a replay still spends budget. A request without the header runs unprotected; pas
 The same key sent while the first request is still running gets `409` with `Retry-After`, and
 the same key with a different method, path or body gets `422`. Only outcomes below `500` are
 stored, so a failed write releases the key and the retry runs it.
+
+The middleware sends each create down one of these paths:
+
+```mermaid
+flowchart TD
+    Req["POST /api/books"] --> HasKey{"Idempotency-Key?"}
+    HasKey -->|no| Unprotected["runs unprotected, or 400 with required: true"]
+    HasKey -->|yes| Lookup{record for the key?}
+    Lookup -->|none| Claim[claim the key] --> Run[run the handler] --> Status{below 500?}
+    Status -->|yes| Store[store the response]
+    Status -->|no| Release[release the key]
+    Lookup -->|still running| Conflict["409 with Retry-After"]
+    Lookup -->|"different method, path or body"| Mismatch[422]
+    Lookup -->|completed| Replay[replay the stored response]
+```
 
 ## Send a key
 

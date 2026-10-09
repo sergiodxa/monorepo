@@ -5,7 +5,7 @@ section:
     title: Content & feeds
     order: 7
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A feed reader asks for a document in whichever format it was built around, so a site that
@@ -269,6 +269,35 @@ Readers poll, and a poll interval is how long a new post waits to be seen. A Web
 the wait: your feed names a hub, subscribers register with it, and when you ping it the hub
 fetches the feed and pushes the change. The hub URL goes in a `WEBSUB_HUB` variable on your
 Worker, so changing hubs is a configuration change.
+
+A subscription and one published post travel like this, with the purge ahead of the ping:
+
+```mermaid
+sequenceDiagram
+    participant Sub as Subscriber
+    participant Hub
+    participant Site as Your site
+    participant Cache as Edge cache
+    participant Job as feeds.ping
+    Sub->>Site: GET /feed.xml
+    Site-->>Sub: rel="hub" and rel="self" links
+    Sub->>Hub: subscribe to the self URL
+    Site->>Site: publish action stores the post
+    Site->>Cache: purge the feeds
+    Site-)Job: enqueue jobs.feeds.ping with the topics
+    Job->>Hub: publish(WEBSUB_HUB, topics)
+    alt 2xx
+        Hub->>Cache: GET each topic
+        Note over Cache: purged, so the request misses
+        Cache->>Site: GET the feed
+        Site-->>Hub: feed with the new post
+        Hub-)Sub: push the change
+    else 5xx, 429 or no answer
+        Job->>Job: retry in 5 minutes
+    else any other 4xx
+        Job->>Job: ack
+    end
+```
 
 A subscriber may look for the hub in the response's `Link` header or in the document, so
 advertise it in both. One helper builds the two for any feed: the `rel="self"` and `rel="hub"`

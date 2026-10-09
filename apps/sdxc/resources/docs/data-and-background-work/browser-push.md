@@ -26,6 +26,33 @@ only by the key pair you generate below.
 npm add @sdxc/web-push @sdxc/result @sdxc/validate remix
 ```
 
+A subscription travels from the browser to your Worker once, and every notification travels
+back through the browser's push service:
+
+```mermaid
+sequenceDiagram
+    participant Page
+    participant Browser
+    participant Push as Push service
+    participant Worker as Your Worker
+    participant SW as Service worker
+    Page->>Browser: subscribe with applicationServerKey
+    Browser->>Push: register
+    Push-->>Browser: endpoint
+    Browser-->>Page: subscription (endpoint + keys)
+    Page->>Worker: POST subscription
+    Worker->>Worker: validate and save
+    Note over Page,SW: Later
+    Worker->>Push: POST encrypted payload + VAPID token
+    alt 404 or 410
+        Push-->>Worker: gone
+        Worker->>Worker: remove the row
+    else accepted
+        Push->>SW: push event
+        SW->>SW: showNotification
+    end
+```
+
 ## Generate the sender's keys
 
 A push service identifies a sender by one P-256 key pair. Generate it once per deployment:

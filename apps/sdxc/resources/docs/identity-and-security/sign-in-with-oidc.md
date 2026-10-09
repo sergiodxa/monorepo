@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 1
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 This guide adds "sign in with your provider" to a Remix v3 app on Workers: a login route that
@@ -128,6 +128,27 @@ names no destination, or names one on another origin. The default mapped profile
 your own account fields.
 
 ## Start the login
+
+A login is two requests to your app with the provider in between:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as App
+    participant P as Provider
+    B->>A: POST /login
+    Note over A: authorize() stores state, nonce<br>and PKCE verifier in the session
+    A-->>B: 303 to the provider
+    B->>P: Authorization request
+    P-->>B: Redirect to /auth/callback
+    B->>A: GET /auth/callback with code and state
+    Note over B,A: The Lax session cookie rides along
+    A->>P: Exchange the code with the verifier
+    P-->>A: Token set with the ID token
+    Note over A: Verify signature, issuer, audience,<br>expiry and nonce
+    Note over A: Rotate the session id
+    A-->>B: 303 to the return URL
+```
 
 The login controller renders the page on `GET` and hands off to the provider on `POST`.
 `contextOf(ctx)` pairs the request with the session the middleware stored, which is the shape

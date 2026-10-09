@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 2
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 A passkey is a key pair the person's device holds, bound to your domain, unlocked with a
@@ -27,6 +27,28 @@ npm add @sdxc/passkey @sdxc/auth @sdxc/result @sdxc/http @sdxc/ui
 Each ceremony is two requests: the server issues a challenge, the browser signs it, the server
 verifies the signature. WebAuthn is a browser API, so these are JSON endpoints a client island
 talks to rather than form submissions.
+
+A sign-in runs both requests around the authenticator's prompt, and enrollment has the same
+shape on the `register` routes:
+
+```mermaid
+sequenceDiagram
+    participant I as Browser island
+    participant S as Server
+    participant SS as Session
+    participant D as Authenticator
+    I->>S: POST /passkeys/sign-in/challenge
+    S->>SS: keepChallenge
+    S-->>I: Options
+    I->>D: Passkey.authenticate(options)
+    D-->>I: Signed assertion
+    I->>S: POST /passkeys/sign-in/verify
+    S->>SS: spendChallenge
+    Note over S: Passkeys.find, verifyAuthentication,<br>Passkeys.recordUse
+    S->>SS: regenerateId and set userId
+    S-->>I: Redirect URL
+    Note over I: location.assign(redirect)
+```
 
 ```typescript {% title="routes/passkeys.ts" %}
 import { post, route } from "remix/routes";

@@ -189,6 +189,34 @@ what stops a late event from rolling an account back.
 
 ## Receive the platform's webhooks
 
+A purchase reaches your app twice: once as the buyer's redirect, and again as the platform's
+webhook, which is the one that changes what the account holds:
+
+```mermaid
+sequenceDiagram
+    actor Buyer
+    participant App as Your app
+    participant Platform as Payment platform
+    participant Store as Delivery store
+    Buyer->>App: POST checkout
+    App->>Platform: checkouts.create
+    App-->>Buyer: 303 to checkout url
+    Buyer->>Platform: pays
+    Platform->>App: webhook delivery
+    App->>Store: record with signature verdict
+    alt unproven
+        App-->>Platform: 401
+    else already processed
+        App-->>Platform: 200 without running
+    else handler runs
+        App->>Platform: entitlements.of
+        App->>App: Entitlements.save
+        App->>Store: markProcessed
+        App-->>Platform: 200, or 503 on a retryable error
+    end
+    Note over Buyer,App: Requests read the Entitlements table
+```
+
 `BillingWebhook` is the whole receiver. The provider verifies the signature, a store records the
 delivery, and a handler per event type does the work. Every handler here does the same thing,
 on purpose:

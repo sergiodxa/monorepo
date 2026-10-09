@@ -428,6 +428,30 @@ your handler for the activity's type. By the time a handler runs, the sender's a
 fetched from its own server, and anything the activity embeds from another origin has been
 fetched fresh rather than trusted.
 
+One follow, from the remote server's first lookup to the `Accept` it gets back, runs like this:
+
+```mermaid
+sequenceDiagram
+    participant Remote as Remote server
+    participant Site as Your site
+    participant Queue
+    participant Job as federation.process
+    Remote->>Site: GET /.well-known/webfinger
+    Site-->>Remote: self link to /actor
+    Remote->>Site: GET /actor
+    Site-->>Remote: actor with publicKey
+    Remote->>+Site: POST /actor/inbox, signed Follow
+    Site->>Remote: fetch the sender's actor
+    Remote-->>Site: sender's public key
+    Site-)Queue: enqueue the verified Follow
+    Site-->>-Remote: 202 Accepted
+    Queue->>Job: process the Follow
+    Job->>Job: store the follower, run the Follow handler
+    Job-)Queue: enqueue the Accept
+    Queue->>Job: process the delivery
+    Job->>Remote: POST signed Accept to its inbox
+```
+
 **Follow.** The package stores the follower and delivers an `Accept` that embeds the `Follow`,
 which is how the remote server learns the follow went through. A repeated `Follow` means the
 sender never saw the first `Accept`, so it is sent again. Chain a `Follow` handler onto the

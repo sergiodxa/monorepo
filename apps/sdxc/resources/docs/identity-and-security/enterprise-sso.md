@@ -5,7 +5,7 @@ section:
     title: Identity & security
     order: 5
 order: 10
-lastUpdated: 2026-09-29
+lastUpdated: 2026-10-08
 ---
 
 The first large customer asks two questions: can our people sign in through our own identity
@@ -147,6 +147,29 @@ pair you keep as a secret, with `SAML.Certificate.selfSigned({ keys, commonName,
 notAfter })` and `toPem()`.
 
 ## Start a sign-in
+
+The request id waits in KV while the browser visits the identity provider:
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant A as App
+    participant K as SSO namespace
+    participant I as Identity provider
+    B->>A: GET /sso/:slug
+    Note over A: createAuthnRequest signs the request
+    A->>K: Put the request id under RelayState
+    A-->>B: Redirect to the provider
+    B->>I: Signed AuthnRequest
+    I-->>B: Form with SAMLResponse and RelayState
+    B->>A: POST /sso/:slug/acs
+    Note over B,A: Cross-site, so the Lax cookie stays behind
+    A->>K: findPending reads the RelayState
+    A->>K: Delete the pending request
+    Note over A: verifyResponse checks InResponseTo,<br>signature, audience and replay
+    Note over A: startSession
+    A-->>B: 303 to home
+```
 
 The login form asks for the work email, finds the connection for its domain, and sends the
 browser to `routes.sso.start`. `createAuthnRequest` builds the request and signs it with your

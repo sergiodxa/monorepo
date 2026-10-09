@@ -259,7 +259,21 @@ export default {
 
 A cron delivery runs no job. It enqueues every job declaring the expression that fired and
 returns, so the nightly sweep gets the same retries, timeout and dead-letter handling as any other
-message. The Worker's configuration declares the trigger with the same spelling, and the queue it
+message. Every job, however it started, reaches its handler through the one queue:
+
+```mermaid
+flowchart LR
+    Handler["Route handler: ctx.jobs.enqueue"] --> Queue[("app-jobs queue")]
+    Cron[Cron trigger] -->|enqueues only| Queue
+    Queue --> Dispatcher[Dispatcher runs the job]
+    Dispatcher -->|returns| Acked([acked])
+    Dispatcher -->|ctx.exit| Refused(["acked, ends as refuse"])
+    Dispatcher -->|ctx.retry or throw| Left{attempts left?}
+    Left -->|yes| Queue
+    Left -->|"no, after max_retries"| Dead([dead-letter handling])
+```
+
+The Worker's configuration declares the trigger with the same spelling, and the queue it
 both produces to and consumes:
 
 ```json

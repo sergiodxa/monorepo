@@ -189,6 +189,34 @@ export default jobs({
 
 ## Verify in the background
 
+A mention reaches your table in two steps, the request and the job:
+
+```mermaid
+sequenceDiagram
+    participant Sender as Sending site
+    participant Endpoint as POST /webmention
+    participant Job as webmentions.verify
+    participant Source as Source page
+    Sender->>Endpoint: POST source and target
+    Endpoint->>Endpoint: parseRequest, fetching nothing
+    alt rejected
+        Endpoint-->>Sender: 400 with the reason
+    else accepted
+        Endpoint-)Job: enqueue the pair
+        Endpoint-->>Sender: 202 Accepted
+    end
+    Job->>Source: GET source, bounded
+    alt linked
+        Job->>Job: saveMention as pending
+    else gone or unlinked
+        Job->>Job: deleteMention
+    else timeout, 5xx or 429
+        Job->>Job: retry on the backoff
+    else refused host, redirects or size
+        Job->>Job: ack
+    end
+```
+
 `verify` fetches the source under bounds (public hosts only, five redirects, one megabyte and
 five seconds by default), checks that it links to the target, and summarizes it from its
 microformats. Key what you store on the pair, since a repeated pair is an update:
