@@ -2,8 +2,8 @@
  * Tests for the HTTP monitor create/update/delete/play actions. Not part of either
  * half of the actions-directory test-backfill split (it's neither in this half's list
  * nor the other's) but exists in the tree, so it's covered here too. The `QUEUE` binding
- * is an in-memory queue installed through `cloudflare:workers`, so `Monitor.ping()`'s
- * message is asserted on as the message it really enqueued, and `getViewer()` is seeded
+ * is an in-memory queue installed through `cloudflare:workers` and published as `ctx.jobs`,
+ * so an on-demand check is asserted on as the message it really enqueued, and `getViewer()` is seeded
  * the same way `ctx.team`/`ctx.membership` are, standing in for the real
  * `auth`/`requireUser`/`requireTeam` middleware.
  *
@@ -18,8 +18,10 @@ import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { jobEnqueuer } from "@sdxc/jobs/router";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -35,14 +37,14 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
-/** The message `Monitor.ping()` enqueues for an on-demand HTTP check. */
+/** The message an on-demand HTTP check enqueues. */
 interface CheckHttpMessage {
 	job: "checkHttp";
 	body: { id: string; monitorId: string; scheduledAt: number };
 }
 
 /**
- * The queue on-demand checks land on. Module scope because `~/app/data/monitor` captures
+ * The queue on-demand checks land on. Module scope because `~/app/lib/queue` captures
  * `env` on import, so `beforeEach` empties it rather than re-creating it.
  */
 let queue: QueueMock<CheckHttpMessage> = createQueue<CheckHttpMessage>();
@@ -58,6 +60,8 @@ vi.doMock("cloudflare:workers", () => ({
  * forwards the form data unflattened so these tests exercise real branching.
  */
 let { default: models } = await import("~/app/http/middleware/models");
+let { jobQueue } = await import("~/app/lib/queue");
+let { bindModels } = await import("~/app/lib/test/models");
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /**
@@ -123,6 +127,7 @@ async function send(
 			asyncContext(),
 			database(() => db),
 			models(),
+			jobEnqueuer(jobQueue),
 			log() as Middleware,
 			billing({ provider: () => testBilling }) as Middleware,
 			formData() as Middleware,
@@ -199,17 +204,15 @@ describe("createMonitor", () => {
 describe("updateMonitor", () => {
 	test("updates the monitor's fields and redirects to its detail page", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Original",
 				url: "https://old.example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(
@@ -261,17 +264,15 @@ describe("deleteMonitor", () => {
 			{ id: crypto.randomUUID(), subject_id: "admin-1", team_id: team.id, role: "admin" },
 			{ touch: true, returnRow: true },
 		);
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "To delete",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(
@@ -299,17 +300,15 @@ describe("deleteMonitor", () => {
 			{ id: crypto.randomUUID(), subject_id: "member-2", team_id: team.id, role: "member" },
 			{ touch: true, returnRow: true },
 		);
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: "member-1",
 				enabled_at: Date.now(),
 				name: "Not mine",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(
@@ -346,17 +345,15 @@ describe("deleteMonitor", () => {
 describe("playMonitor", () => {
 	test("queues an on-demand check and redirects to the monitor's detail page", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(
@@ -377,20 +374,54 @@ describe("playMonitor", () => {
 		expect(queue.sent[0]!.body.body.monitorId).toBe(monitor.id);
 	});
 
+	/**
+	 * The job id is what a check is billed under, so an on-demand id colliding with a scheduled
+	 * one (`<monitor>:<minute>`) would make one of the two checks free. The fixture's owner has
+	 * no subscription row, which counts as subscribed: the gate fails open.
+	 */
+	test("queues each check under its own on-demand job id", async () => {
+		let { db, team, membership } = await createFixture();
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
+				team_id: team.id,
+				author_id: membership.subject_id,
+				name: "Homepage",
+				url: "https://example.com",
+			}),
+		);
+
+		for (let attempt = 0; attempt < 2; attempt++) {
+			await send(
+				db,
+				team,
+				membership,
+				routes.actions.monitor.http.play,
+				playMonitor as RequestHandler<any>,
+				"POST",
+				{ monitor_id: monitor.id },
+			);
+		}
+
+		let [first, second] = queue.sent.map((message) => message.body);
+		expect(first?.job).toBe("checkHttp");
+		expect(first?.body.id.startsWith(`${monitor.id}:manual:`)).toBe(true);
+		expect(typeof first?.body.scheduledAt).toBe("number");
+		expect(second?.body.id.startsWith(`${monitor.id}:manual:`)).toBe(true);
+		expect(first?.body.id).not.toBe(second?.body.id);
+	});
+
 	test("queues nothing when the team owner is known to be unsubscribed", async () => {
 		let { db, team, membership } = await createFixture();
 		await createRevokedSubscription(db, team.owner_id);
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(
@@ -433,17 +464,15 @@ describe("playMonitor", () => {
 describe("playMonitor billing", () => {
 	test("bills nothing at enqueue, leaving the check the job performs to bill itself", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		await send(
@@ -464,17 +493,15 @@ describe("playMonitor billing", () => {
 	test("bills nothing when the owner is unsubscribed and no check is queued", async () => {
 		let { db, team, membership } = await createFixture();
 		await createRevokedSubscription(db, team.owner_id);
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		await send(
@@ -506,7 +533,13 @@ describe("playMonitor for a caller asking for JSON", () => {
 		monitorId: string,
 	): Promise<Response> {
 		let router = createRouter({
-			middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
+			middleware: [
+				asyncContext(),
+				database(() => db),
+				models(),
+				jobEnqueuer(jobQueue),
+				formData() as Middleware,
+			],
 		});
 		router.map(routes.actions.monitor.http.play, {
 			middleware: [seedTeam(team, membership)],
@@ -535,9 +568,8 @@ describe("playMonitor for a caller asking for JSON", () => {
 		membership: SelectMembership,
 		changes: Record<string, unknown> = {},
 	) {
-		return await db.create(
-			monitors,
-			{
+		return unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
@@ -545,8 +577,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 				name: "Homepage",
 				url: "https://example.com",
 				...changes,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 	}
 

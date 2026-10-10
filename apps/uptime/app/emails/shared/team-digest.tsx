@@ -12,8 +12,8 @@ import type { Handle } from "remix/component";
 
 import { formatDate } from "@sdxc/dates";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 
 import { BORDER_COLOR, MUTED_COLOR, TEXT_COLOR } from "~/app/emails/shared/palette";
 import { statusClass, statusFill } from "~/app/emails/shared/uptime-bar";

@@ -1,6 +1,6 @@
 /**
  * Tests for the dashboard "Monthly Pings Usage" stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env` at module
+ * `cloudflare:workers` is mocked because `~/app/lib/queue` reads `env` at module
  * load. Both figures the card shows come from the local database, so there is no
  * network client to stand in for. `ctx.team`/`ctx.membership`/auth/intl state is
  * seeded directly, standing in for the real `requireUser`/`requireTeam`/i18n
@@ -22,6 +22,7 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -35,7 +36,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, monitorResults, monitors, teams } from "~/database/schema";
+import { memberships, monitorResults, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -57,6 +58,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardUsage = (await import("./dashboard-card-usage")).default as {
 	handler: RequestHandler<any>;
@@ -146,17 +148,15 @@ describe("dashboard-card-usage", () => {
 	test("renders the pings counted from the team's own check history", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: "owner-1",
 				name: "Homepage",
 				url: "https://example.com",
 				enabled_at: Date.now(),
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 		for (let index = 0; index < 3; index++) {
 			await db.create(

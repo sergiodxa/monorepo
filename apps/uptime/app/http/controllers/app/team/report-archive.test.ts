@@ -21,12 +21,12 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, monitors, teams } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./report-archive")).default as { handler: RequestHandler<any> };
@@ -58,34 +58,34 @@ async function createFixture() {
 		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		write,
 	);
-	let monitor = await db.create(
-		monitors,
-		{
+	let monitor = unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: team.id,
 			name: "API, EU",
 			author_id: "member-1",
 			url: "https://api.example.com/health",
 			enabled_at: NOW,
-		},
-		write,
+		}),
 	);
 
 	for (let [date, successful] of [
 		["2026-08-01", 1000],
 		["2026-08-02", 999],
 	] as const) {
-		await MonitorDailyStats.upsertDay(db, {
-			monitor_id: monitor.id,
-			monitor_type: "http",
-			date,
-			total_checks: 1000,
-			successful_checks: successful,
-			failed_checks: 1000 - successful,
-			avg_response_time_ms: 120.5,
-			max_response_time_ms: 300,
-			status: successful === 1000 ? "up" : "degraded",
-		});
+		unwrap(
+			await bindModels(db).monitorDailyStats.upsertDay({
+				monitor_id: monitor.id,
+				monitor_type: "http",
+				date,
+				total_checks: 1000,
+				successful_checks: successful,
+				failed_checks: 1000 - successful,
+				avg_response_time_ms: 120.5,
+				max_response_time_ms: 300,
+				status: successful === 1000 ? "up" : "degraded",
+			}),
+		);
 	}
 
 	return { db, team, membership };

@@ -1,10 +1,9 @@
 /**
  * Tests for the bulk monitor import action. Runs it behind the real session/i18n/form-data
  * chain — its whole output is a redirect plus what it flashed, so the flash is read back on a
- * second request the way the import page reads it. The `QUEUE` binding is an in-memory queue
- * installed through `cloudflare:workers`, because `~/app/data/monitor` reaches it at import
- * time, and `ctx.team`/`ctx.membership` plus the viewer are seeded by a fake middleware
- * standing in for `requireUser`/`requireTeam`.
+ * second request the way the import page reads it. `QUEUE` is an in-memory queue installed
+ * through `cloudflare:workers`, which `~/app/lib/queue` reads at import time; `ctx.team`,
+ * `ctx.membership` and the viewer come from a fake middleware standing in for `requireTeam`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -37,7 +36,7 @@ import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The queue an on-demand check would land on. Module scope because `~/app/data/monitor`
+ * The queue an on-demand check would land on. Module scope because `~/app/lib/queue`
  * captures `env` on import; `beforeEach` empties it to reset state between tests.
  */
 let queue: QueueMock = createQueue();

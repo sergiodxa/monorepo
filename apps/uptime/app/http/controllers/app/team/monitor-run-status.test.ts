@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor run-status probe controller. `cloudflare:workers` is
- * mocked because `~/app/data/monitor` reads `env` at module load. The route
+ * mocked because `~/app/lib/queue` reads `env` at module load. The route
  * lets a hydrated page tell a freshly committed check apart from the one that
  * was already there, so what's pinned here is that both the status and the
  * instant come back verbatim, including for a monitor that has never been
@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -24,13 +25,14 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, monitors, teams } from "~/database/schema";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorRunStatus = (await import("./monitor-run-status")).default as {
 	handler: RequestHandler<any>;
@@ -68,9 +70,8 @@ async function createFixture(monitorChanges: Record<string, unknown> = {}) {
 		{ id: crypto.randomUUID(), subject_id: "owner-1", team_id: team.id, role: "admin" },
 		{ touch: true, returnRow: true },
 	);
-	let monitor = await db.create(
-		monitors,
-		{
+	let monitor = unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: team.id,
 			author_id: membership.subject_id,
@@ -78,8 +79,7 @@ async function createFixture(monitorChanges: Record<string, unknown> = {}) {
 			name: "Homepage",
 			url: "https://example.com",
 			...monitorChanges,
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 
 	return { db, team, membership, monitor };

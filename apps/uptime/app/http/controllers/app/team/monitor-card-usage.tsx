@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { notFound } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
+import type { UptimeModels } from "~/app/models";
+
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import StatCard from "~/resources/components/stat-card";
@@ -47,17 +46,17 @@ function reportable(result: PromiseSettledResult<number>, event: string): number
  * parallel via `Promise.allSettled` so either failing still lets the other
  * render; both read from local check history, independent of billing state.
  *
- * @see {@link Monitor.countConsumedPingsByMonitor} for why the consumed figure
+ * @see `monitors.countConsumedPingsByMonitor` for why the consumed figure
  * can undercount when an aggregation run is lost.
  */
 async function getMonitorPingUsage(
-	db: Database,
+	models: UptimeModels,
 	monitorId: string,
 ): Promise<{ consumed: number | null; estimated: number | null }> {
 	let now = new Date();
 	let [consumedResult, estimatedResult] = await Promise.allSettled([
-		Monitor.countConsumedPingsByMonitor(db, monitorId, now),
-		Monitor.estimateConsumedPingsByMonitor(db, monitorId, now),
+		models.monitors.countConsumedPingsByMonitor(monitorId, now),
+		models.monitors.estimateConsumedPingsByMonitor(monitorId, now),
 	]);
 
 	return {
@@ -72,12 +71,12 @@ export default createAction(routes.app.team.monitors.cards.usage, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		ctx.log.set({ monitor: { id: monitor.id, type: "http" } });
 
-		let usage = await getMonitorPingUsage(ctx.db, monitor.id);
+		let usage = await getMonitorPingUsage(ctx.models, monitor.id);
 
 		return ctx.render(
 			<StatCard

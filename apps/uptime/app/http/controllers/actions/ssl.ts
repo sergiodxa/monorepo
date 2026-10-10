@@ -9,12 +9,11 @@
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import Monitor from "~/app/data/monitor";
 import { UpdateSslSchema } from "~/app/http/validators/ssl";
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import routes from "~/routes/web";
@@ -39,7 +38,7 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 	}
 
 	let { monitor_id, ssl_expires_at, ...values } = result.data;
-	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.monitors.inTeam(ctx.team.id).find(monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let expiresAt = ssl_expires_at ? new Date(ssl_expires_at).getTime() : null;
@@ -47,7 +46,7 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 		? calculateSslStatus(expiresAt, values.ssl_expiry_warning_days)
 		: { status: "unknown" as const };
 
-	await Monitor.updateById(ctx.db, monitor_id, {
+	let update = await ctx.models.monitors.update(monitor_id, {
 		ssl_monitoring_enabled: values.ssl_monitoring_enabled,
 		ssl_expiry_warning_days: values.ssl_expiry_warning_days,
 		ssl_expires_at: expiresAt,
@@ -55,6 +54,7 @@ export const updateSsl = createAction(routes.actions.monitor.http.updateSsl, asy
 		ssl_status: status,
 		ssl_last_checked_at: values.ssl_monitoring_enabled ? Date.now() : null,
 	});
+	unwrap(update);
 
 	session?.flash("toast", { intent: "success", message: "SSL settings saved." });
 	return redirect(

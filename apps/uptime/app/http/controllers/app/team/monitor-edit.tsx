@@ -25,8 +25,6 @@ import { createAction } from "remix/router";
 
 import type { SelectMonitor, SelectMonitorContentCheck } from "~/database/schema";
 
-import ContentCheck from "~/app/data/content-check";
-import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -327,10 +325,10 @@ export default createAction(routes.app.team.monitors.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let contentChecks = await ContentCheck.listByMonitor(ctx.db, monitor.id);
+		let contentChecks = await ctx.models.contentChecks.ofMonitor(monitor.id).all();
 
 		let deleteMonitorTitleId = "delete-monitor-title";
 		let deleteMonitorDescriptionId = "delete-monitor-description";

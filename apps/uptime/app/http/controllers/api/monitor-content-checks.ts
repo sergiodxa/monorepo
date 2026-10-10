@@ -11,14 +11,12 @@ import { Created } from "@sdxc/http/status-code";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
-import ContentCheck from "~/app/data/content-check";
-import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -55,7 +53,7 @@ export default createController(monitorContentChecksRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -67,7 +65,7 @@ export default createController(monitorContentChecksRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = ContentCheck.byMonitorQuery(ctx.db, monitorId);
+				let query = ctx.models.contentChecks.ofMonitor(monitorId);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -98,7 +96,7 @@ export default createController(monitorContentChecksRoutes, {
 			middleware: [requireApiKey("monitors:write"), idempotent],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -110,12 +108,15 @@ export default createController(monitorContentChecksRoutes, {
 					});
 				}
 
-				let contentCheck = await ContentCheck.create(ctx.db, monitorId, {
-					type: result.data.type,
-					value: result.data.value,
-					case_sensitive: result.data.caseSensitive,
-					is_enabled: result.data.isEnabled,
-				});
+				let contentCheck = unwrap(
+					await ctx.models.contentChecks.create({
+						monitor_id: monitorId,
+						type: result.data.type,
+						value: result.data.value,
+						case_sensitive: result.data.caseSensitive,
+						is_enabled: result.data.isEnabled,
+					}),
+				);
 
 				return apiSuccess({ contentCheck: serializeContentCheck(contentCheck) }, Created);
 			},
@@ -126,18 +127,18 @@ export default createController(monitorContentChecksRoutes, {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
 				let { monitorId, contentCheckId } = s.parse(CONTENT_CHECK_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
-				let contentCheck = await ContentCheck.findByIdForMonitor(ctx.db, monitorId, contentCheckId);
+				let contentCheck = await ctx.models.contentChecks.ofMonitor(monitorId).find(contentCheckId);
 				if (!contentCheck)
 					return apiProblems.notFound({
 						detail: "Content check not found",
 						instance: problemInstance(),
 					});
 
-				await ContentCheck.deleteById(ctx.db, contentCheckId);
+				unwrap(await ctx.models.contentChecks.delete(contentCheck.id));
 				return apiSuccess({ success: true });
 			},
 		},

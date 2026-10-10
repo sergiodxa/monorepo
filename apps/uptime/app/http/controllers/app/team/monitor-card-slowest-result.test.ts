@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor detail page "Slowest Result" stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/data/monitor` and
+ * `cloudflare:workers` is mocked because `~/app/lib/queue` and
  * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
  * in-memory implementations. `queryAnalytics`'s Analytics Engine SQL API call is
  * intercepted by MSW, so it never hits the network.
@@ -23,6 +23,7 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -38,7 +39,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { memberships, monitors, teams } from "~/database/schema";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -56,6 +57,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardSlowestResult = (await import("./monitor-card-slowest-result")).default as {
 	handler: RequestHandler<any>;
@@ -111,17 +113,15 @@ async function createFixture() {
 		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
-	let monitor = await db.create(
-		monitors,
-		{
+	let monitor = unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: team.id,
 			author_id: membership.subject_id,
 			enabled_at: Date.now(),
 			name: "Homepage",
 			url: "https://example.com",
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 
 	return { db, team, membership, monitor };

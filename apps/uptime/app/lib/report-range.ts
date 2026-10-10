@@ -21,7 +21,7 @@ import {
 } from "@sdxc/dates";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { getYesterdayDateUtc } from "~/app/data/monitor-daily-stats";
+import { getYesterdayDateUtc } from "~/app/models/monitor-daily-stats";
 
 /** The longest range a report covers, a leap year of daily rows. */
 export const MAX_REPORT_DAYS = 366;

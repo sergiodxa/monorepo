@@ -23,7 +23,7 @@ import { fontSize, nowrap } from "@sdxc/u/typography";
 
 import type { SelectMonitorDailyStats } from "~/database/schema";
 
-import { UPTIME_WINDOW_DAYS } from "~/app/data/monitor-daily-stats";
+import { UPTIME_WINDOW_DAYS } from "~/app/models/monitor-daily-stats";
 
 /**
  * The last {@link UPTIME_WINDOW_DAYS} UTC days (today inclusive) as day keys, oldest first,

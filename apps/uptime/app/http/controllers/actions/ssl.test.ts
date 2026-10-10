@@ -12,6 +12,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -25,7 +26,7 @@ import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The action imports `~/app/data/monitor`, which imports `env` from
+ * The models middleware reaches `~/app/lib/queue`, which imports `env` from
  * `cloudflare:workers`, so this test installs one before importing below. No
  * bindings are supplied, so reading one throws by name — proof these paths touch none.
  */
@@ -33,6 +34,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { updateSsl } = await import("./ssl");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /** Creates an in-memory database seeded with one team, a membership, and a monitor. */
 async function createFixture() {
@@ -48,17 +50,15 @@ async function createFixture() {
 		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
-	let monitor = await db.create(
-		monitors,
-		{
+	let monitor = unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: team.id,
 			author_id: "member-1",
 			enabled_at: Date.now(),
 			name: "Homepage",
 			url: "https://example.com",
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 
 	return { db, team, membership, monitor };

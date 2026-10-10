@@ -8,19 +8,15 @@
 
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import ContentCheck from "~/app/data/content-check";
-import Monitor from "~/app/data/monitor";
 import {
 	CreateContentCheckSchema,
 	DeleteContentCheckSchema,
 } from "~/app/http/validators/content-check";
-import { monitorContentChecks } from "~/database/schema";
 import routes from "~/routes/web";
 
 const MAX_CONTENT_CHECKS_PER_MONITOR = 10;
@@ -44,25 +40,22 @@ export const createContentCheck = createAction(
 
 		let { monitor_id, type, value, case_sensitive } = result.data;
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitor_id);
 		if (!monitor) return notFound("Not Found");
 
-		let existingCount = await ctx.db.count(monitorContentChecks, { where: { monitor_id } });
+		let existingCount = await ctx.models.contentChecks.ofMonitor(monitor_id).count();
 		if (existingCount >= MAX_CONTENT_CHECKS_PER_MONITOR) {
 			return unprocessableEntity("A monitor supports at most 10 content checks.");
 		}
 
-		await ctx.db.create(
-			monitorContentChecks,
-			{
-				id: generateUUID(),
+		unwrap(
+			await ctx.models.contentChecks.create({
 				monitor_id,
 				type,
 				value,
 				case_sensitive,
 				is_enabled: true,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		session?.flash("toast", { intent: "success", message: "Content check added." });
@@ -89,13 +82,13 @@ export const deleteContentCheck = createAction(
 
 		let { monitor_id, content_check_id } = result.data;
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitor_id);
 		if (!monitor) return notFound("Not Found");
 
-		let check = await ContentCheck.findByIdForMonitor(ctx.db, monitor_id, content_check_id);
+		let check = await ctx.models.contentChecks.ofMonitor(monitor_id).find(content_check_id);
 		if (!check) return notFound("Not Found");
 
-		await ctx.db.delete(monitorContentChecks, content_check_id);
+		unwrap(await ctx.models.contentChecks.delete(check.id));
 
 		ctx.get(Session)?.flash("toast", { intent: "success", message: "Content check removed." });
 		return redirect(

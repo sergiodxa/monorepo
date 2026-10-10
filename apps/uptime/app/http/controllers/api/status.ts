@@ -9,17 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createAction } from "remix/router";
 
-import type { SelectMonitor } from "~/database/schema";
+import type { UptimeModels } from "~/app/models";
+import type { Monitor } from "~/app/models/monitors";
 
-import Monitor from "~/app/data/monitor";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiSuccess } from "~/app/services/api-response";
 import { encodeId } from "~/app/services/typed-id";
-import { monitorResults } from "~/database/schema";
 import routes from "~/routes/web";
 
 type MonitorStatus = "up" | "down" | "degraded" | "unknown";
@@ -34,12 +31,11 @@ interface MonitorStatusEntry {
 }
 
 /** Derives one monitor's up/down/unknown state from its latest completed result. */
-async function statusFor(db: Database, monitor: SelectMonitor): Promise<MonitorStatusEntry> {
-	let [latest] = await db.findMany(monitorResults, {
-		where: { monitor_id: monitor.id },
-		orderBy: ["completed_at", "desc"],
-		limit: 1,
-	});
+async function statusFor(models: UptimeModels, monitor: Monitor): Promise<MonitorStatusEntry> {
+	let latest = await models.monitorResults
+		.ofMonitor(monitor.id)
+		.orderBy("completed_at", "desc")
+		.first();
 
 	let status: MonitorStatus = "unknown";
 	if (latest?.response_status !== null && latest?.response_status !== undefined) {
@@ -60,8 +56,13 @@ async function statusFor(db: Database, monitor: SelectMonitor): Promise<MonitorS
 export const statusShow = createAction(routes.api.v1.status, {
 	middleware: [requireApiKey("monitors:read")],
 	handler: async (ctx) => {
-		let monitors = await Monitor.listByTeam(ctx.db, ctx.apiTeam.id);
-		let monitorStatuses = await Promise.all(monitors.map((monitor) => statusFor(ctx.db, monitor)));
+		let monitors = await ctx.models.monitors
+			.inTeam(ctx.apiTeam.id)
+			.orderBy("created_at", "desc")
+			.all();
+		let monitorStatuses = await Promise.all(
+			monitors.map((monitor) => statusFor(ctx.models, monitor)),
+		);
 
 		let enabledMonitors = monitorStatuses.filter((monitor) => monitor.enabled);
 		let downMonitors = enabledMonitors.filter((monitor) => monitor.status === "down");

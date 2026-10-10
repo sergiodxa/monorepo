@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,11 +29,12 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { maintenanceWindows, memberships, monitors, teams } from "~/database/schema";
+import { maintenanceWindows, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./maintenance-window-edit")).default as {
 	handler: RequestHandler<any>;
@@ -151,17 +153,15 @@ describe("maintenanceWindowEdit", () => {
 	 */
 	test("marks the scoped monitor's option as selected, not the all-monitors one", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 		let now = Date.now();
 		let window = await db.create(

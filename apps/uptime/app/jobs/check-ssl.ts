@@ -9,14 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createJobHandler } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
-import type { SelectMonitor } from "~/database/schema";
+import type { UptimeModels } from "~/app/models";
+import type { Monitor } from "~/app/models/monitors";
 
-import Monitor from "~/app/data/monitor";
 import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
@@ -24,14 +23,14 @@ import { apportionCostByTeam } from "~/app/services/cost";
 import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 
 export default createJobHandler(jobs.checkSsl, async (ctx) => {
-	let monitors = await Monitor.listSslEnabled(ctx.database);
+	let monitors = await ctx.models.monitors.sslMonitored().all();
 	apportionCostByTeam(monitors.map((monitor) => monitor.team_id));
 
 	let notifications: NotifyMessage[] = [];
 	let successCount = 0;
 	let errorCount = 0;
 
-	let settled = await mapWithConcurrency(monitors, (monitor) => check(ctx.database, monitor));
+	let settled = await mapWithConcurrency(monitors, (monitor) => check(ctx.models, monitor));
 
 	for (let outcome of settled) {
 		if (outcome.ok) {
@@ -64,17 +63,19 @@ export default createJobHandler(jobs.checkSsl, async (ctx) => {
  * the notification the new status warrants, or `null` when none applies.
  * `shouldAlertOnSslStatus` fires every day a warning threshold covers; a per-alert cooldown bounds the repetition.
  */
-async function check(db: Database, monitor: SelectMonitor): Promise<NotifyMessage | null> {
+async function check(models: UptimeModels, monitor: Monitor): Promise<NotifyMessage | null> {
 	let previousStatus = monitor.ssl_status;
 	let { status, daysUntilExpiry } = calculateSslStatus(
 		monitor.ssl_expires_at,
 		monitor.ssl_expiry_warning_days,
 	);
 
-	await Monitor.updateById(db, monitor.id, {
-		ssl_status: status,
-		ssl_last_checked_at: Date.now(),
-	});
+	unwrap(
+		await models.monitors.update(monitor.id, {
+			ssl_status: status,
+			ssl_last_checked_at: Date.now(),
+		}),
+	);
 
 	if (!shouldAlertOnSslStatus(status, daysUntilExpiry)) return null;
 

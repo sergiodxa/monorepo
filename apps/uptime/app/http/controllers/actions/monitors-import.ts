@@ -1,7 +1,7 @@
 /**
  * `POST /actions/:team/import-monitors` — creates one monitor per URL in a pasted list.
  *
- * Every URL goes through the same validation and the same `Monitor.create` the single-monitor
+ * Every URL goes through the same validation and the same `monitors.create` the single-monitor
  * form uses, so an imported monitor is indistinguishable from a hand-made one and no second
  * creation path exists to drift from the first.
  *
@@ -14,14 +14,13 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
 
-import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import { ImportMonitorsSchema, parseMonitorImportList } from "~/app/http/validators/monitor-import";
 import routes from "~/routes/web";
@@ -35,7 +34,7 @@ import routes from "~/routes/web";
 export const MONITOR_IMPORT_REPORT = "monitorImport";
 
 /**
- * Created monitors rely on the every-minute scheduler for their first check: `Monitor.create`
+ * Created monitors rely on the every-minute scheduler for their first check: `monitors.create`
  * stamps `next_due_at` at now, so the scheduler claims all of them on its next tick, keeping
  * this request's cost flat no matter how long the pasted list is.
  */
@@ -58,11 +57,15 @@ export const importMonitors = createAction(routes.actions.monitor.http.import, a
 	let plan = parseMonitorImportList(result.data.urls);
 
 	for (let candidate of plan.accepted) {
-		await Monitor.create(ctx.db, ctx.team.id, viewer.id, {
-			name: candidate.name,
-			url: candidate.url,
-			interval_seconds: result.data.interval_seconds,
-		});
+		unwrap(
+			await ctx.models.monitors.create({
+				team_id: ctx.team.id,
+				author_id: viewer.id,
+				name: candidate.name,
+				url: candidate.url,
+				interval_seconds: result.data.interval_seconds,
+			}),
+		);
 	}
 
 	let report: MonitorImportReport = {

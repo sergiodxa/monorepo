@@ -16,15 +16,15 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { ContentCheckRule } from "~/app/data/content-check";
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { CostResource } from "~/app/lib/cost-rates";
+import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { HttpCheckOptions, HttpProbeOutcome } from "~/app/services/http-check";
 
 import { createTestDatabase } from "~/app/lib/test/db";
-import { monitors } from "~/database/schema";
 
 /** The `GeoFetchDO` stub `probe` calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = vi.fn(
@@ -52,6 +52,7 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { COST_RESOURCES } = await import("~/app/lib/cost-rates");
 let { CostLedger, trackCost } = await import("~/app/services/cost");
 let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
@@ -119,9 +120,8 @@ function quantity(point: AnalyticsEngineDataPoint | undefined, resource: CostRes
 }
 
 async function seedMonitor(db: Db, overrides: Record<string, unknown> = {}) {
-	return await db.create(
-		monitors,
-		{
+	return unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: "team-1",
 			author_id: "author-1",
@@ -134,8 +134,7 @@ async function seedMonitor(db: Db, overrides: Record<string, unknown> = {}) {
 			location_hint: "wnam",
 			enabled_at: Date.now(),
 			...overrides,
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 }
 

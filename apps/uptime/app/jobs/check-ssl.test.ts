@@ -16,6 +16,7 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -72,10 +73,10 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkSsl = (await import("./check-ssl")).default;
 /**
- * Imported dynamically, after the `cloudflare:workers` mock above, since `Monitor`
- * itself reads `env` at module load and a static import would be hoisted before it.
+ * Imported dynamically, after the `cloudflare:workers` mock above, since the models reach
+ * `~/app/lib/queue`, which reads `env` at module load, and a static import would be hoisted.
  */
-let { default: Monitor } = await import("~/app/data/monitor");
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
 function enqueued(): NotifyEnvelope[] {
@@ -88,6 +89,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkSsl, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -103,14 +105,18 @@ function noteOf(record: Record<string, unknown>, name: string): Log.Note | undef
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertMonitor> = {}) {
-	return await Monitor.create(db, "team-1", "author-1", {
-		name: "Example site",
-		url: "https://example.com",
-		ssl_monitoring_enabled: true,
-		ssl_expiry_warning_days: 30,
-		ssl_expires_at: Date.now() + 10 * 24 * 60 * 60 * 1000,
-		...overrides,
-	});
+	return unwrap(
+		await bindModels(db).monitors.create({
+			team_id: "team-1",
+			author_id: "author-1",
+			name: "Example site",
+			url: "https://example.com",
+			ssl_monitoring_enabled: true,
+			ssl_expiry_warning_days: 30,
+			ssl_expires_at: Date.now() + 10 * 24 * 60 * 60 * 1000,
+			...overrides,
+		}),
+	);
 }
 
 beforeEach(() => {
@@ -133,7 +139,7 @@ describe("checkSsl", () => {
 
 		let record = await runJob(db);
 
-		let updated = await Monitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await bindModels(db).monitors.inTeam("team-1").find(monitor.id);
 		expect(updated?.ssl_status).toBe("expiring");
 		expect(updated?.ssl_last_checked_at).not.toBeNull();
 
@@ -173,7 +179,7 @@ describe("checkSsl", () => {
 
 		await runJob(db);
 
-		let updated = await Monitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await bindModels(db).monitors.inTeam("team-1").find(monitor.id);
 		expect(updated?.ssl_status).toBe("valid");
 		expect(sendBatch).not.toHaveBeenCalled();
 	});
@@ -231,7 +237,7 @@ describe("checkSsl", () => {
 		});
 
 		/** The failing monitor's cached fields are untouched — updateById never ran for it. */
-		let failedRow = await Monitor.findByIdForTeam(db, "team-1", failing.id);
+		let failedRow = await bindModels(db).monitors.inTeam("team-1").find(failing.id);
 		expect(failedRow?.ssl_last_checked_at).toBeNull();
 
 		expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);

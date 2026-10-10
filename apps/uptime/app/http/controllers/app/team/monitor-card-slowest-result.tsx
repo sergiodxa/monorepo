@@ -14,7 +14,6 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getSlowestResultForMonitor } from "~/app/services/analytics";
@@ -28,7 +27,7 @@ export default createAction(routes.app.team.monitors.cards.slowestResult, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		let result = await getSlowestResultForMonitor(ctx.team.id, monitor.id);

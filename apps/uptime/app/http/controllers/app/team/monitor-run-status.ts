@@ -13,7 +13,6 @@ import { notFound, ok } from "@sdxc/http/response/json";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import routes from "~/routes/web";
@@ -24,7 +23,7 @@ export default createAction(routes.app.team.monitors.runStatus, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound({ error: "Not Found" });
 
 		return ok({ status: monitor.last_status, checkedAt: monitor.last_checked_at });

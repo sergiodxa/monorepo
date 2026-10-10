@@ -1,6 +1,6 @@
 /**
  * Tests for the HTTP monitors list page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load — following the exact
+ * because `~/app/lib/queue` reads `env` at module load — following the exact
  * pattern established in `app/http/controllers/actions/monitors.test.ts` — and MSW
  * intercepts outbound HTTP so a stray network call would be visible rather than silent;
  * the page itself no longer makes one. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
@@ -16,6 +16,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -32,13 +33,14 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { memberships, monitors, teams } from "~/database/schema";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./http-monitors")).default as { handler: RequestHandler<any> };
 
@@ -136,17 +138,15 @@ describe("httpMonitors", () => {
 
 	test("lists a team's monitors with their name and URL", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			monitors,
-			{
+		unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership);
@@ -161,9 +161,8 @@ describe("httpMonitors", () => {
 
 	test("badges each monitor with the status its last check cached on the row", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			monitors,
-			{
+		unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
@@ -173,8 +172,7 @@ describe("httpMonitors", () => {
 				last_status: "degraded",
 				last_checked_at: Date.UTC(2026, 6, 30),
 				last_response_time_ms: 842,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let body = await (await send(db, team, membership)).text();

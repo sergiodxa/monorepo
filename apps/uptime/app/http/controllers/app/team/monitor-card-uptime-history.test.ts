@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor detail page uptime-history fragment controller.
- * `cloudflare:workers` is mocked because `~/app/data/monitor` reads `env` at module
+ * `cloudflare:workers` is mocked because `~/app/lib/queue` reads `env` at module
  * load. `ctx.team`/`ctx.membership`/auth state is seeded directly, standing in for the
  * real `requireUser`/`requireTeam` middleware chain, and the `i18n` middleware runs for
  * real because the bar's captions and legend arrive pre-translated from the controller.
@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -24,17 +25,17 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, monitors, teams } from "~/database/schema";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardUptimeHistory = (await import("./monitor-card-uptime-history")).default as {
 	handler: RequestHandler<any>;
@@ -82,17 +83,15 @@ async function createFixture() {
 		{ id: crypto.randomUUID(), subject_id: "member-1", team_id: team.id, role: "member" },
 		{ touch: true, returnRow: true },
 	);
-	let monitor = await db.create(
-		monitors,
-		{
+	let monitor = unwrap(
+		await bindModels(db).monitors.create({
 			id: crypto.randomUUID(),
 			team_id: team.id,
 			author_id: membership.subject_id,
 			enabled_at: Date.now(),
 			name: "Homepage",
 			url: "https://example.com",
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 
 	return { db, team, membership, monitor };
@@ -125,17 +124,19 @@ describe("monitor-card-uptime-history", () => {
 	test("renders the uptime bar from the monitor's recent daily stats", async () => {
 		let { db, team, membership, monitor } = await createFixture();
 		let today = new Date().toISOString().slice(0, 10);
-		await MonitorDailyStats.upsertDay(db, {
-			monitor_id: monitor.id,
-			monitor_type: "http",
-			date: today,
-			total_checks: 10,
-			successful_checks: 10,
-			failed_checks: 0,
-			avg_response_time_ms: 100,
-			max_response_time_ms: 120,
-			status: "up",
-		});
+		unwrap(
+			await bindModels(db).monitorDailyStats.upsertDay({
+				monitor_id: monitor.id,
+				monitor_type: "http",
+				date: today,
+				total_checks: 10,
+				successful_checks: 10,
+				failed_checks: 0,
+				avg_response_time_ms: 100,
+				max_response_time_ms: 120,
+				status: "up",
+			}),
+		);
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);

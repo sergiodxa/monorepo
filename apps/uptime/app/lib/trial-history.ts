@@ -1,7 +1,7 @@
 /**
  * Turns a finished free watch's checks into the daily rows a real monitor's
  * history is made of, carrying day-resolution rows into `monitor_daily_stats`
- * to match `AggregateDailyStatsJob`'s pass/fail rollup, since Analytics
+ * to match the aggregation job's pass/fail rollup, since Analytics
  * Engine stamps each result at ingestion and cannot backdate one to when the
  * trial actually ran it.
  *
@@ -11,10 +11,10 @@
 
 import { toDayKey } from "@sdxc/dates";
 
-import type { DailyStatsInput } from "~/app/data/monitor-daily-stats";
+import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
 import type { MonitorStatus } from "~/database/schema";
 
-import { calculateDailyStatus } from "~/app/data/monitor-daily-stats";
+import { calculateDailyStatus } from "~/app/models/monitor-daily-stats";
 
 /**
  * The zone days are counted in, matching `utcDayBounds` and the aggregation job. A day

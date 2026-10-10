@@ -10,6 +10,7 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -23,15 +24,15 @@ import { memberships, monitorContentChecks, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load
- * time, so importing `./content-checks` needs one installed here. No binding
+ * `~/app/lib/queue`, which the models middleware reaches, reads `env` from
+ * `cloudflare:workers` at module load, so the test installs one here. No binding
  * is supplied, so any path that reaches it fails by name, not as `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
-let { default: Monitor } = await import("~/app/data/monitor");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {
@@ -99,10 +100,14 @@ async function createMembershipRow(
 }
 
 async function createMonitorRow(db: ReturnType<typeof createTestDatabase>["db"], teamId: string) {
-	return await Monitor.create(db, teamId, "author-1", {
-		name: "Homepage",
-		url: "https://example.com",
-	});
+	return unwrap(
+		await bindModels(db).monitors.create({
+			team_id: teamId,
+			author_id: "author-1",
+			name: "Homepage",
+			url: "https://example.com",
+		}),
+	);
 }
 
 describe("POST /actions/:team/create-content-check", () => {
@@ -200,17 +205,15 @@ describe("POST /actions/:team/create-content-check", () => {
 		let monitor = await createMonitorRow(db, team.id);
 
 		for (let i = 0; i < 10; i++) {
-			await db.create(
-				monitorContentChecks,
-				{
+			unwrap(
+				await bindModels(db).contentChecks.create({
 					id: crypto.randomUUID(),
 					monitor_id: monitor.id,
 					type: "contains",
 					value: `check-${i}`,
 					case_sensitive: false,
 					is_enabled: true,
-				},
-				{ touch: true, returnRow: true },
+				}),
 			);
 		}
 
@@ -234,17 +237,15 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
-		let check = await db.create(
-			monitorContentChecks,
-			{
+		let check = unwrap(
+			await bindModels(db).contentChecks.create({
 				id: crypto.randomUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "to delete",
 				case_sensitive: false,
 				is_enabled: true,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await postContentCheckAction(
@@ -269,17 +270,15 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let membership = await createMembershipRow(db, team.id);
 		let otherTeam = await createTeamRow(db);
 		let monitor = await createMonitorRow(db, otherTeam.id);
-		let check = await db.create(
-			monitorContentChecks,
-			{
+		let check = unwrap(
+			await bindModels(db).contentChecks.create({
 				id: crypto.randomUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "not yours",
 				case_sensitive: false,
 				is_enabled: true,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await postContentCheckAction(
@@ -301,17 +300,15 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
 		let otherMonitor = await createMonitorRow(db, team.id);
-		let check = await db.create(
-			monitorContentChecks,
-			{
+		let check = unwrap(
+			await bindModels(db).contentChecks.create({
 				id: crypto.randomUUID(),
 				monitor_id: otherMonitor.id,
 				type: "contains",
 				value: "wrong monitor",
 				case_sensitive: false,
 				is_enabled: true,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await postContentCheckAction(
@@ -332,17 +329,15 @@ describe("DELETE /actions/:team/delete-content-check", () => {
 		let team = await createTeamRow(db);
 		let membership = await createMembershipRow(db, team.id);
 		let monitor = await createMonitorRow(db, team.id);
-		let check = await db.create(
-			monitorContentChecks,
-			{
+		let check = unwrap(
+			await bindModels(db).contentChecks.create({
 				id: crypto.randomUUID(),
 				monitor_id: monitor.id,
 				type: "contains",
 				value: "still here",
 				case_sensitive: false,
 				is_enabled: true,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await postContentCheckAction(

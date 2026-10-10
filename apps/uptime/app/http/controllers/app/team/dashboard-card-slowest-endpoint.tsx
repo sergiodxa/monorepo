@@ -14,7 +14,6 @@ import { isFailure } from "@sdxc/result";
 import { Empty } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
@@ -27,7 +26,7 @@ export default createAction(routes.app.team.dashboard.cards.slowestEndpoint, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
 		let [monitors, summaries] = await Promise.all([
-			Monitor.listByTeam(ctx.db, ctx.team.id),
+			ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
 			getTeamHttpSummaries(ctx.team.id),
 		]);
 

@@ -9,11 +9,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
+import type { UptimeModels } from "~/app/models";
+
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import StatCard from "~/resources/components/stat-card";
@@ -26,13 +25,13 @@ import routes from "~/routes/web";
  * failure still lets the other render. Each resolves to `null` on failure, so "usage unavailable" is never shown as "0 used".
  */
 async function getPingUsage(
-	db: Database,
+	models: UptimeModels,
 	team: { id: string },
 ): Promise<{ consumed: number | null; usage: number | null }> {
 	let now = new Date();
 	let [consumedResult, usageResult] = await Promise.allSettled([
-		Monitor.countConsumedPingsByTeam(db, team.id, now),
-		Monitor.estimateConsumedPingsByTeam(db, team.id, now),
+		models.monitors.countConsumedPingsByTeam(team.id, now),
+		models.monitors.estimateConsumedPingsByTeam(team.id, now),
 	]);
 
 	return {
@@ -45,7 +44,7 @@ async function getPingUsage(
 export default createAction(routes.app.team.dashboard.cards.usage, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
-		let { consumed, usage } = await getPingUsage(ctx.db, ctx.team);
+		let { consumed, usage } = await getPingUsage(ctx.models, ctx.team);
 
 		if (consumed === null && usage === null) {
 			return ctx.render(

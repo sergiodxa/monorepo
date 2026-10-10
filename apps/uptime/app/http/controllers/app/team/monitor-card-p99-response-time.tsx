@@ -6,7 +6,7 @@
  * fallback. Requires `requireUser` + `requireTeam`.
  *
  * Calls `getHttpP99ResponseTime` directly, so the card pays for exactly one Analytics
- * Engine query, separate from `Monitor.getStatsById`'s combined D1 aggregate query.
+ * Engine query, separate from `monitors.statsForMonitor`'s combined D1 aggregate query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -17,7 +17,6 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Monitor from "~/app/data/monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
@@ -31,7 +30,7 @@ export default createAction(routes.app.team.monitors.cards.p99ResponseTime, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		/**

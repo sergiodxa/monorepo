@@ -16,6 +16,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -30,11 +31,12 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { alerts, memberships, monitors, teams } from "~/database/schema";
+import { alerts, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./alerts")).default as { handler: RequestHandler<any> };
 
@@ -198,17 +200,15 @@ describe("alerts", () => {
 
 	test("resolves a monitor-scoped alert's monitor name", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 		await db.create(
 			alerts,

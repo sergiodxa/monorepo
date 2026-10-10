@@ -10,11 +10,11 @@
 
 import { env } from "cloudflare:workers";
 
-import type { ContentCheckRule } from "~/app/data/content-check";
+import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
-import ContentCheck from "~/app/data/content-check";
 import { DO_WALL_TIME_HEADER, NO_REDIRECT_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
+import { evaluateContentChecks } from "~/app/models/content-checks";
 import { recordCost } from "~/app/services/cost";
 
 const MS_PER_SECOND = 1000;
@@ -203,12 +203,12 @@ export class HttpCheck {
 
 	/**
 	 * Whether the probed body satisfies every enabled content check, which is vacuously
-	 * true when there are none. Delegates the matching itself to `ContentCheck.evaluate`,
+	 * true when there are none. Delegates the matching itself to `evaluateContentChecks`,
 	 * so the rules mean the same thing here as they do for a stored monitor.
 	 */
 	evaluate(outcome: HttpProbeOutcome): boolean {
 		if (this.options.contentChecks.length === 0) return true;
-		return ContentCheck.evaluate(this.options.contentChecks, outcome.body);
+		return evaluateContentChecks(this.options.contentChecks, outcome.body);
 	}
 
 	/** Classifies a check as up/degraded/down per `docs/http-monitors.md`'s status model. */

@@ -1,6 +1,6 @@
 /**
  * Tests for the HTTP monitor detail page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load, and `ctx.team`/
+ * because `~/app/lib/queue` reads `env` at module load, and `ctx.team`/
  * `ctx.membership`/`ctx.teams`/auth state are seeded by a fake middleware standing in
  * for `requireUser`/`requireTeam`.
  *
@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -27,13 +28,14 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { memberships, monitors, teams } from "~/database/schema";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./monitor-show")).default as { handler: RequestHandler<any> };
 
@@ -112,17 +114,15 @@ async function send(
 describe("monitorShow", () => {
 	test("renders the monitor's configuration and SSL status", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership, monitor.id);
@@ -137,9 +137,8 @@ describe("monitorShow", () => {
 
 	test("words the certificate's last check as a distance from now, with the absolute time on hover", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
@@ -148,8 +147,7 @@ describe("monitorShow", () => {
 				url: "https://example.com",
 				ssl_monitoring_enabled: true,
 				ssl_last_checked_at: Date.now() - 3 * 60 * 60 * 1000,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership, monitor.id);

@@ -22,6 +22,7 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -37,7 +38,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
-import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
+import { dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -59,6 +60,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 	handler: RequestHandler<any>;
@@ -238,17 +240,15 @@ describe("dashboard-card-count", () => {
 
 	test("resource=http renders the HTTP monitor count and up/down breakdown", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			monitors,
-			{
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				author_id: membership.subject_id,
 				enabled_at: Date.now(),
 				name: "Homepage",
 				url: "https://example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 		server.use(
 			http.post(SQL_URL, () =>

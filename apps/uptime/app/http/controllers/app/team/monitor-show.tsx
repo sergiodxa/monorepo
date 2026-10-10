@@ -37,7 +37,6 @@ import type { SslStatus } from "~/app/services/ssl-info";
 import type { SelectMonitor } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import Monitor from "~/app/data/monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -61,7 +60,7 @@ export default createAction(routes.app.team.monitors.show, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
 		return ctx.render(

@@ -11,13 +11,12 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectMonitor } from "~/database/schema";
 
-import Monitor from "~/app/data/monitor";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_MONITOR_BODY } from "~/app/http/openapi/monitors";
@@ -65,7 +64,7 @@ export default createController(monitorsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = Monitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.monitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -103,7 +102,9 @@ export default createController(monitorsRoutes, {
 					});
 				}
 
-				let monitor = await Monitor.create(ctx.db, ctx.apiTeam.id, ctx.apiTeam.owner_id, {
+				let created = await ctx.models.monitors.create({
+					team_id: ctx.apiTeam.id,
+					author_id: ctx.apiTeam.owner_id,
 					name: result.data.name,
 					url: result.data.url,
 					method: result.data.method,
@@ -116,7 +117,7 @@ export default createController(monitorsRoutes, {
 					ssl_expiry_warning_days: result.data.sslExpiryWarningDays,
 				});
 
-				return apiSuccess({ monitor: serializeMonitor(monitor) }, Created);
+				return apiSuccess({ monitor: serializeMonitor(unwrap(created)) }, Created);
 			},
 		},
 
@@ -124,7 +125,7 @@ export default createController(monitorsRoutes, {
 		monitorsStats: {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
-				let stats = await Monitor.getStatsByTeamId(ctx.db, ctx.apiTeam.id);
+				let stats = await ctx.models.monitors.statsForTeam(ctx.apiTeam.id);
 				return apiSuccess({ stats });
 			},
 		},

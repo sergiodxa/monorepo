@@ -9,19 +9,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { JobEnqueuer } from "@sdxc/jobs";
+import type { Database } from "remix/data-table";
+
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { ok } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import Monitor from "~/app/data/monitor";
+import Subscription from "~/app/data/subscription";
 import { getViewer } from "~/app/http/middleware/auth";
 import { CreateMonitorSchema, UpdateMonitorSchema } from "~/app/http/validators/monitor";
+import jobs from "~/app/jobs";
 import { trackSecondMonitorCreated } from "~/app/services/funnel-events";
 import routes from "~/routes/web";
 
@@ -32,6 +37,30 @@ import routes from "~/routes/web";
 const ACTIVATION_MONITOR_COUNT = 2;
 
 const MonitorIdSchema = f.object({ monitor_id: f.field(s.string()) });
+
+/**
+ * Enqueues an on-demand check for a monitor, settling billing here so a queued check is
+ * always one that's allowed to run. Reads the D1 projection and **fails open**: only a
+ * positively-known `inactive` state refuses.
+ *
+ * @returns Whether the check was enqueued, which is what lets the caller tell the visitor
+ * their check is going to happen.
+ */
+async function ping(
+	db: Database,
+	enqueuer: JobEnqueuer,
+	monitorId: string,
+	ownerId: string,
+): Promise<boolean> {
+	if ((await Subscription.stateFor(db, ownerId)) === "inactive") return false;
+
+	await enqueuer.enqueue(jobs.checkHttp, {
+		id: `${monitorId}:manual:${generateUUID()}`,
+		monitorId,
+		scheduledAt: Date.now(),
+	});
+	return true;
+}
 
 /**
  * POST /actions/:team/create-monitor. The first check is skipped without a
@@ -53,15 +82,21 @@ export const createMonitor = createAction(routes.actions.monitor.http.create, as
 		});
 	}
 
-	let monitor = await Monitor.create(ctx.db, ctx.team.id, viewer.id, result.data);
-	await Monitor.ping(ctx.db, monitor.id, ctx.team.owner_id);
+	let monitor = unwrap(
+		await ctx.models.monitors.create({
+			team_id: ctx.team.id,
+			author_id: viewer.id,
+			...result.data,
+		}),
+	);
+	await ping(ctx.db, ctx.jobs, monitor.id, ctx.team.owner_id);
 
 	/**
 	 * Counted after creation, so the number is the team's total including this one, and
 	 * compared for equality rather than `>=` so the event fires exactly once per team no
 	 * matter how many monitors they go on to add.
 	 */
-	let monitorCount = await Monitor.countByTeam(ctx.db, ctx.team.id);
+	let monitorCount = await ctx.models.monitors.inTeam(ctx.team.id).count();
 	if (monitorCount === ACTIVATION_MONITOR_COUNT) {
 		trackSecondMonitorCreated(ctx.log, {
 			teamId: ctx.team.id,
@@ -98,10 +133,10 @@ export const updateMonitor = createAction(routes.actions.monitor.http.update, as
 	}
 
 	let { monitor_id, ...changes } = result.data;
-	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.monitors.inTeam(ctx.team.id).find(monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await Monitor.updateById(ctx.db, monitor_id, changes);
+	unwrap(await ctx.models.monitors.update(monitor_id, changes));
 
 	session?.flash("toast", { intent: "success", message: "Monitor updated." });
 	return redirect(
@@ -127,10 +162,10 @@ export const deleteMonitor = createAction(routes.actions.monitor.http.delete, as
 		return notFound("Not Found");
 	}
 
-	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let existing = await ctx.models.monitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await Monitor.deleteById(ctx.db, result.data.monitor_id);
+	unwrap(await ctx.models.monitors.delete(existing.id));
 
 	session?.flash("toast", { intent: "success", message: `Monitor "${existing.name}" deleted.` });
 	return redirect(routes.app.team.monitors.index.href({ team: ctx.team.slug }), {
@@ -152,10 +187,10 @@ export const playMonitor = createAction(routes.actions.monitor.http.play, async 
 		});
 	}
 
-	let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let monitor = await ctx.models.monitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
-	let queued = await Monitor.ping(ctx.db, monitor.id, ctx.team.owner_id);
+	let queued = await ping(ctx.db, ctx.jobs, monitor.id, ctx.team.owner_id);
 
 	/**
 	 * A JSON caller is a hydrated page that won't navigate, so the outcome goes in the
