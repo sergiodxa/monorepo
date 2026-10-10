@@ -47,6 +47,17 @@ indicate requirement levels.
   subclass the platform drops so an `instanceof` is always false on the far side; a
   `Date`, for the reason every stored timestamp is an integer; and a thrown failure where
   a discriminated union would let the caller tell one refusal from another.
+- MUST reach a table through its model, bound once per owner of the database: a reader's
+  object as `this.#models` from `database/models/user/`, a feed's object the same way from
+  `database/models/feed/`, and the catalog through `catalog()` in `database/registry.ts`
+  from `database/models/catalog/`. A model owns ids, scopes and the rows a delete takes
+  with it; logging, tiers and refusals stay in the object. Statements a model cannot
+  express stay hand-written over the raw `Database`: materializing a page of posts, the
+  timeline and label walks, search, the retention sweeps, the poll pipeline in
+  `database/refresh.ts`, and the upserts that must stay one statement (`registerFeed`,
+  `linkBillingCustomer`, `writeSubscription`, `deliveries.record`). Every binding uses
+  `transactions: "none"`: a write that must land with another awaits no network I/O
+  between them, so the object commits both in the same turn.
 - MUST map every route through `lazy(() => import(...))` from `@sdxc/lazy-route`, so the
   URL surface is complete at startup while a cold isolate evaluates only the controller
   the request reached.
@@ -146,6 +157,10 @@ indicate requirement levels.
   - `database/registry.ts` <- The feed catalog, which turns a URL into the id naming its object
   - `database/schema.ts` <- The reader's tables, mirroring `database/migrations/` exactly
   - `database/feed-schema.ts` <- A feed's tables, mirroring `database/feed-migrations/` exactly
+  - `database/models/user/index.ts` <- A reader's models, bound once per object
+  - `database/models/feed/index.ts` <- A feed's models, bound once per object
+  - `database/models/catalog/index.ts` <- The catalog and billing models, bound once per
+    isolate beside the D1 connection
 - Rendering
   - `app/lib/assets.ts` <- The stylesheets and client entry the asset manifest names
   - `app/http/render.tsx` <- The renderer chain, which resolves islands and hands the shell its assets and nonce

@@ -144,6 +144,10 @@ to exist before the first deploy.
 The feed catalog in D1 is migrated from `database/catalog-migrations`. Each reader's and each
 feed's own SQLite migrates itself when its Durable Object boots.
 
+Code reads and writes those tables through `@sdxc/data-model` models in `database/models/`,
+one registry per database: `user/` for a reader's object, `feed/` for a feed's object and
+`catalog/` for D1.
+
 ```bash
 bun run db:local:migrate
 bun run db:remote:migrate
