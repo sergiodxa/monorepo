@@ -307,6 +307,31 @@ describe("writes", () => {
 		]);
 	});
 
+	test("a key declared on the table reads, updates and deletes by its object form", async () => {
+		let keyed = table({
+			name: "users",
+			primaryKey: ["id"],
+			columns: {
+				id: c.text(),
+				email: c.text(),
+				name: c.text(),
+				role: c.text(),
+				deleted_at: c.text().nullable(),
+				created_at: c.text(),
+				updated_at: c.text(),
+			},
+			timestamps: true,
+		});
+		let { db } = openDatabase();
+		let model = createModel(keyed).bind({ db });
+		unwrap(await model.create({ id: "u1", email: "a@example.com", name: "A", role: "x" }));
+
+		expect((await model.find({ id: "u1" }))?.name).toBe("A");
+		expect(unwrap(await model.update({ id: "u1" }, { name: "B" })).name).toBe("B");
+		expect(isSuccess(await model.delete({ id: "u1" }))).toBe(true);
+		expect(await model.find({ id: "u1" })).toBeNull();
+	});
+
 	test("a table validate failure comes back as a ValidationError", async () => {
 		let strict = table({
 			name: "users",

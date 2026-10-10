@@ -276,10 +276,17 @@ export function scopeQuery<Query>(query: Query, config: ModelConfig, unscoped = 
 	return scoped as Query;
 }
 
-/** The `WHERE` object a primary-key input selects, for a single or a composite key. */
+/**
+ * The `WHERE` object a primary-key input selects, for a single or a composite key. A single
+ * key reads either as its value or as an object naming its column, the two forms data-table's
+ * `PrimaryKeyInput` types it as depending on how the table declares its key.
+ */
 export function keyWhere(config: ModelConfig, key: unknown): Row {
 	let [column] = config.primaryKey;
-	if (config.primaryKey.length === 1 && column !== undefined) return { [column]: key };
+	if (config.primaryKey.length === 1 && column !== undefined) {
+		let named = typeof key === "object" && key !== null && !Array.isArray(key);
+		return { [column]: named ? (key as Row)[column] : key };
+	}
 
 	let object = (key ?? {}) as Row;
 	let where: Row = {};
