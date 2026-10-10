@@ -10,7 +10,7 @@
 import { createModel } from "@sdxc/data-model";
 import { Jobs } from "@sdxc/jobs/router";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { like, lt, or } from "remix/data-table";
 
 import jobs from "~/app/jobs";
