@@ -23,7 +23,7 @@ import { normalizeDomain } from "@sdxc/email-address";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, lt, notNull, table } from "remix/data-table";
 

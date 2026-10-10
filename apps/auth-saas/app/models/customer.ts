@@ -11,7 +11,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 /** Mints a `cus_` TypeID for a new customer row. */
@@ -69,7 +69,7 @@ export default class Customer {
 		return db.create(
 			Customer.table,
 			{
-				id: customerId(generateUUIDv7()).toString(),
+				id: customerId(generateUUID()).toString(),
 				name: data.name,
 				provider_connection: "polar",
 				provider_customer_id: null,

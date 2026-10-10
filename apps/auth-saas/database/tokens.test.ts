@@ -12,7 +12,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 

@@ -20,7 +20,7 @@ import type { Database, TableRow } from "remix/data-table";
 import { seal } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { column as c, eq, table } from "remix/data-table";
 

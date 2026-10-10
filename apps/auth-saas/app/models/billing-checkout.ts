@@ -12,7 +12,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 /** Whether an opened checkout buys the tenant's base plan or an add-on product. */
@@ -78,7 +78,7 @@ export default class BillingCheckout {
 		return db.create(
 			BillingCheckout.table,
 			{
-				attempt_id: attemptId(generateUUIDv7()).toString(),
+				attempt_id: attemptId(generateUUID()).toString(),
 				tenant_id: data.tenantId,
 				customer_id: data.customerId,
 				product_slug: data.productSlug,

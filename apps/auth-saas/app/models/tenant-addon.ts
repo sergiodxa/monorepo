@@ -10,7 +10,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 /** Mints an `addon_` TypeID for a new tenant add-on row. */
@@ -91,7 +91,7 @@ export default class TenantAddon {
 		return db.create(
 			TenantAddon.table,
 			{
-				id: addonId(generateUUIDv7()).toString(),
+				id: addonId(generateUUID()).toString(),
 				tenant_id: data.tenantId,
 				product_slug: data.productSlug,
 				subscription_id: data.subscriptionId,

@@ -18,7 +18,7 @@ import { CounterError, RelyingParty } from "@sdxc/passkey/server";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
 import { parse as parseUserAgent } from "@sdxc/user-agent";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, column as c, eq, lt, ne, table } from "remix/data-table";
 
 import type { AuditAction } from "./audit-events";

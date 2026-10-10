@@ -14,7 +14,7 @@ import type { Database, TableRow } from "remix/data-table";
 
 import { failure, success } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, inList, sql, table } from "remix/data-table";
 
 import { RecordNotFoundError } from "~/app/lib/db-errors";
@@ -118,7 +118,7 @@ export default class Membership {
 		return db.create(
 			Membership.table,
 			{
-				id: membershipId(generateUUIDv7()).toString(),
+				id: membershipId(generateUUID()).toString(),
 				tenant_id: data.tenantId,
 				subject_id: data.subjectId,
 				role: data.role,

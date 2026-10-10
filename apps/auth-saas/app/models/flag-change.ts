@@ -10,7 +10,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 /** Mints a `fchg_` TypeID for a new flag change row. */
@@ -57,7 +57,7 @@ export default class FlagChange {
 		return db.create(
 			FlagChange.table,
 			{
-				id: flagChangeId(generateUUIDv7()).toString(),
+				id: flagChangeId(generateUUID()).toString(),
 				key: data.key,
 				before: data.before,
 				after: data.after,

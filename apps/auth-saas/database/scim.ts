@@ -24,7 +24,7 @@ import { filterToWhere } from "@sdxc/scim/data-table";
 import { compileFilter } from "@sdxc/scim/filter";
 import { applyPatch } from "@sdxc/scim/patch";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, table } from "remix/data-table";
 

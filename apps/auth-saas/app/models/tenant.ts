@@ -14,7 +14,7 @@ import type { Database, TableRow } from "remix/data-table";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, ne, table } from "remix/data-table";
 
 /** Cloudflare region codes a tenant's Durable Object can be placed in. */
@@ -174,7 +174,7 @@ export default class Tenant {
 		return db.create(
 			Tenant.table,
 			{
-				id: tenantId(generateUUIDv7()).toString(),
+				id: tenantId(generateUUID()).toString(),
 				customer_id: data.customerId,
 				name: data.name,
 				slug: data.slug,

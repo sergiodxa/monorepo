@@ -20,7 +20,7 @@ import { randomToken, seal } from "@sdxc/crypto";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { column as c, table } from "remix/data-table";
 

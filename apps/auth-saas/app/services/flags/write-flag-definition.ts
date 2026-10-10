@@ -18,7 +18,7 @@ import type { Database } from "remix/data-table";
 
 import { evaluateAll, FLAG_DEFINITION_SCHEMA, parseFlagSet } from "@sdxc/flags-engine";
 import { isFailure } from "@sdxc/result";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import * as s from "remix/data-schema";
 
 import FlagChange from "~/app/models/flag-change";
@@ -79,7 +79,7 @@ export async function writeFlagDefinition(
 	}
 
 	let before = stored.flags[input.key];
-	let version = generateUUIDv7();
+	let version = generateUUID();
 
 	let written = await store.write({
 		...stored,

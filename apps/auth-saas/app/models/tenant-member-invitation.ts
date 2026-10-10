@@ -12,7 +12,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { and, column as c, eq, gt, isNull, table } from "remix/data-table";
 
 /** A tenant member invitation's role, the same vocabulary a direct-grant membership carries. */
@@ -71,7 +71,7 @@ export default class TenantMemberInvitation {
 		return db.create(
 			TenantMemberInvitation.table,
 			{
-				id: tenantMemberInvitationId(generateUUIDv7()).toString(),
+				id: tenantMemberInvitationId(generateUUID()).toString(),
 				tenant_id: data.tenantId,
 				email: data.email,
 				role: data.role,

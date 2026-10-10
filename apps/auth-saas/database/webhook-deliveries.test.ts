@@ -13,7 +13,7 @@ import { importKey, randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as Webhooks from "@sdxc/webhooks";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";

@@ -20,7 +20,7 @@ import type { Database, TableRow } from "remix/data-table";
 import { Base32, Hex, open, randomBytes, randomToken, seal, sha256, totp } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import {
 	and,
 	column as c,

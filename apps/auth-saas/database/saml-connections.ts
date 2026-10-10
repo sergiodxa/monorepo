@@ -17,7 +17,7 @@ import { normalizeDomain } from "@sdxc/email-address";
 import { isFailure } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, lt, table } from "remix/data-table";
 

@@ -11,7 +11,7 @@
 import type { Database, TableRow } from "remix/data-table";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { column as c, inList, table } from "remix/data-table";
 
 /** Mints an `exp_` TypeID for a new tenant export run row. */
@@ -70,7 +70,7 @@ export default class TenantExportRun {
 		return db.create(
 			TenantExportRun.table,
 			{
-				id: tenantExportRunId(generateUUIDv7()).toString(),
+				id: tenantExportRunId(generateUUID()).toString(),
 				tenant_id: data.tenantId,
 				include_credentials: data.includeCredentials,
 				status: "queued",

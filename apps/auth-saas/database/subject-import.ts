@@ -12,7 +12,7 @@
 import type { Database } from "remix/data-table";
 
 import { password } from "@sdxc/crypto";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, eq } from "remix/data-table";
 

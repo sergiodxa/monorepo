@@ -12,7 +12,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { parse as parseProtectedResource } from "@sdxc/well-known/oauth-protected-resource";
 import { Database } from "remix/data-table";

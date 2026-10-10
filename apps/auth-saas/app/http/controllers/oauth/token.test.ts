@@ -14,7 +14,7 @@ import { Base64, Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { JWK } from "@sdxc/jwt";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database } from "remix/data-table";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";

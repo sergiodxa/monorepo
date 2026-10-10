@@ -17,7 +17,7 @@ import { checkPassword } from "@sdxc/password-policy";
 import { checkPasswordHistory } from "@sdxc/password-policy/history";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, column as c, eq, notInList, notNull, table } from "remix/data-table";
 
 import type { AuditAction, AuditActor } from "./audit-events";

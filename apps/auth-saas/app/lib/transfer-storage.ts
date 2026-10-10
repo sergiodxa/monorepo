@@ -22,7 +22,8 @@ import type { Database, TableRow } from "remix/data-table";
 import { Hex, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID, generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID as generateUUIDv7 } from "@sdxc/uuid/v7";
 import { column as c, table } from "remix/data-table";
 
 import { recordCost } from "./cost-ledger";

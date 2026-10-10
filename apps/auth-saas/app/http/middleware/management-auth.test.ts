@@ -17,7 +17,7 @@ import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { Database as DataTableDatabase } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";

@@ -15,7 +15,7 @@ import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import * as s from "remix/data-schema";
 import { and, column as c, eq, inList, isNull, lt, ne, table } from "remix/data-table";
 
