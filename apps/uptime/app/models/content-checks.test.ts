@@ -1,8 +1,7 @@
 /**
- * Unit tests for the `ContentCheck` data-access model: monitor-scoped listing and lookup,
- * and the response-body evaluation (`contains`/`not_contains`/`regex`, ANDed across every
- * enabled check). Evaluation takes the structural `ContentCheckRule`, so both a stored row
- * and an ad-hoc rule are covered.
+ * Tests the content checks model: monitor-scoped listing and lookup, and the response-body
+ * evaluation (`contains`/`not_contains`/`regex`, ANDed across every enabled check), over both
+ * a stored row and an ad-hoc rule, since evaluation takes the structural `ContentCheckRule`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,22 +11,26 @@ import type { Database } from "remix/data-table";
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { ContentCheckRule } from "~/app/data/content-check";
+import type { UptimeModels } from "~/app/models";
+import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
-import ContentCheck from "~/app/data/content-check";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { evaluateContentChecks } from "~/app/models/content-checks";
 import { monitorContentChecks } from "~/database/schema";
 
 let db: Database;
+let models: UptimeModels;
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 });
 
 /**
- * Seeds a content-check row straight into the table, so `listByMonitor` and
- * `findByIdForMonitor` have fixtures independent of the monitor-creation path.
+ * Seeds a content-check row straight into the table, so the monitor-scoped reads
+ * have fixtures independent of the monitor-creation path.
  */
 async function createCheck(monitorId: string, overrides: Partial<SelectMonitorContentCheck> = {}) {
 	return await db.create(
@@ -45,39 +48,39 @@ async function createCheck(monitorId: string, overrides: Partial<SelectMonitorCo
 	);
 }
 
-describe("ContentCheck.listByMonitor", () => {
+describe("contentChecks.ofMonitor", () => {
 	test("lists only checks for the given monitor", async () => {
 		let checkA = await createCheck("monitor-1");
 		await createCheck("monitor-2");
 
-		let checks = await ContentCheck.listByMonitor(db, "monitor-1");
+		let checks = await models.contentChecks.ofMonitor("monitor-1").all();
 		expect(checks.map((check) => check.id)).toEqual([checkA.id]);
 	});
 
 	test("returns an empty array for a monitor with no checks", async () => {
-		expect(await ContentCheck.listByMonitor(db, "monitor-1")).toEqual([]);
+		expect(await models.contentChecks.ofMonitor("monitor-1").all()).toEqual([]);
 	});
 });
 
-describe("ContentCheck.findByIdForMonitor", () => {
+describe("contentChecks.ofMonitor().find", () => {
 	test("finds a check scoped to its monitor", async () => {
 		let check = await createCheck("monitor-1");
 
-		expect(await ContentCheck.findByIdForMonitor(db, "monitor-1", check.id)).toEqual(check);
+		expect(await models.contentChecks.ofMonitor("monitor-1").find(check.id)).toEqual(check);
 	});
 
 	test("returns null when the check belongs to a different monitor", async () => {
 		let check = await createCheck("monitor-1");
 
-		expect(await ContentCheck.findByIdForMonitor(db, "monitor-2", check.id)).toBeNull();
+		expect(await models.contentChecks.ofMonitor("monitor-2").find(check.id)).toBeNull();
 	});
 
 	test("returns null for a missing id", async () => {
-		expect(await ContentCheck.findByIdForMonitor(db, "monitor-1", "missing")).toBeNull();
+		expect(await models.contentChecks.ofMonitor("monitor-1").find("missing")).toBeNull();
 	});
 });
 
-/** Builds a fully shaped check in memory, for the `evaluate()` tests. */
+/** Builds a fully shaped check in memory, for the evaluation tests. */
 function check(overrides: Partial<SelectMonitorContentCheck>): SelectMonitorContentCheck {
 	return {
 		id: "check-1",
@@ -92,63 +95,63 @@ function check(overrides: Partial<SelectMonitorContentCheck>): SelectMonitorCont
 	};
 }
 
-describe("ContentCheck.evaluate", () => {
+describe("evaluateContentChecks", () => {
 	test("passes when there are no checks at all", () => {
-		expect(ContentCheck.evaluate([], "anything")).toBe(true);
+		expect(evaluateContentChecks([], "anything")).toBe(true);
 	});
 
 	test("`contains` passes when the body includes the value", () => {
-		expect(ContentCheck.evaluate([check({ type: "contains", value: "OK" })], "Status: OK")).toBe(
+		expect(evaluateContentChecks([check({ type: "contains", value: "OK" })], "Status: OK")).toBe(
 			true,
 		);
 	});
 
 	test("`contains` fails when the body doesn't include the value", () => {
-		expect(ContentCheck.evaluate([check({ type: "contains", value: "OK" })], "Status: down")).toBe(
+		expect(evaluateContentChecks([check({ type: "contains", value: "OK" })], "Status: down")).toBe(
 			false,
 		);
 	});
 
 	test("`not_contains` passes when the body doesn't include the value", () => {
 		let checks = [check({ type: "not_contains", value: "error" })];
-		expect(ContentCheck.evaluate(checks, "all good")).toBe(true);
+		expect(evaluateContentChecks(checks, "all good")).toBe(true);
 	});
 
 	test("`not_contains` fails when the body includes the value", () => {
 		let checks = [check({ type: "not_contains", value: "error" })];
-		expect(ContentCheck.evaluate(checks, "an error occurred")).toBe(false);
+		expect(evaluateContentChecks(checks, "an error occurred")).toBe(false);
 	});
 
 	test("`regex` passes when the pattern matches", () => {
 		let checks = [check({ type: "regex", value: "^Status: (OK|UP)$" })];
-		expect(ContentCheck.evaluate(checks, "Status: OK")).toBe(true);
+		expect(evaluateContentChecks(checks, "Status: OK")).toBe(true);
 	});
 
 	test("`regex` fails when the pattern doesn't match", () => {
 		let checks = [check({ type: "regex", value: "^Status: (OK|UP)$" })];
-		expect(ContentCheck.evaluate(checks, "Status: DOWN")).toBe(false);
+		expect(evaluateContentChecks(checks, "Status: DOWN")).toBe(false);
 	});
 
 	test("matching is case-insensitive by default", () => {
 		let checks = [check({ type: "contains", value: "ok", case_sensitive: false })];
-		expect(ContentCheck.evaluate(checks, "Status: OK")).toBe(true);
+		expect(evaluateContentChecks(checks, "Status: OK")).toBe(true);
 	});
 
 	test("matching is case-sensitive when configured", () => {
 		let checks = [check({ type: "contains", value: "ok", case_sensitive: true })];
-		expect(ContentCheck.evaluate(checks, "Status: OK")).toBe(false);
+		expect(evaluateContentChecks(checks, "Status: OK")).toBe(false);
 	});
 
 	test("regex respects case sensitivity too", () => {
 		let insensitive = [check({ type: "regex", value: "status", case_sensitive: false })];
 		let sensitive = [check({ type: "regex", value: "status", case_sensitive: true })];
-		expect(ContentCheck.evaluate(insensitive, "Status: OK")).toBe(true);
-		expect(ContentCheck.evaluate(sensitive, "Status: OK")).toBe(false);
+		expect(evaluateContentChecks(insensitive, "Status: OK")).toBe(true);
+		expect(evaluateContentChecks(sensitive, "Status: OK")).toBe(false);
 	});
 
 	test("disabled checks are ignored even when they would fail", () => {
 		let checks = [check({ type: "contains", value: "never matches", is_enabled: false })];
-		expect(ContentCheck.evaluate(checks, "anything")).toBe(true);
+		expect(evaluateContentChecks(checks, "anything")).toBe(true);
 	});
 
 	test("every enabled check must pass (logical AND)", () => {
@@ -156,12 +159,12 @@ describe("ContentCheck.evaluate", () => {
 			check({ id: "c1", type: "contains", value: "OK" }),
 			check({ id: "c2", type: "not_contains", value: "error" }),
 		];
-		expect(ContentCheck.evaluate(checks, "Status: OK, no problems")).toBe(true);
-		expect(ContentCheck.evaluate(checks, "Status: OK, error occurred")).toBe(false);
+		expect(evaluateContentChecks(checks, "Status: OK, no problems")).toBe(true);
+		expect(evaluateContentChecks(checks, "Status: OK, error occurred")).toBe(false);
 	});
 
 	test("an unrecognized type fails rather than passing silently", () => {
-		expect(ContentCheck.evaluate([check({ type: "jsonpath", value: "OK" })], "Status: OK")).toBe(
+		expect(evaluateContentChecks([check({ type: "jsonpath", value: "OK" })], "Status: OK")).toBe(
 			false,
 		);
 	});
@@ -180,14 +183,14 @@ describe("ContentCheck.evaluate", () => {
 		};
 		let stored = check({ type: "contains", value: "OK" });
 
-		expect(ContentCheck.evaluate([rule], "Status: OK")).toBe(
-			ContentCheck.evaluate([stored], "Status: OK"),
+		expect(evaluateContentChecks([rule], "Status: OK")).toBe(
+			evaluateContentChecks([stored], "Status: OK"),
 		);
-		expect(ContentCheck.evaluate([rule], "Status: down")).toBe(
-			ContentCheck.evaluate([stored], "Status: down"),
+		expect(evaluateContentChecks([rule], "Status: down")).toBe(
+			evaluateContentChecks([stored], "Status: down"),
 		);
-		expect(ContentCheck.evaluate([rule], "Status: OK")).toBe(true);
-		expect(ContentCheck.evaluate([rule], "Status: down")).toBe(false);
+		expect(evaluateContentChecks([rule], "Status: OK")).toBe(true);
+		expect(evaluateContentChecks([rule], "Status: down")).toBe(false);
 	});
 
 	test("mixes a persisted row and a bare rule in one evaluation", () => {
@@ -196,7 +199,7 @@ describe("ContentCheck.evaluate", () => {
 			{ type: "not_contains", value: "error", case_sensitive: false, is_enabled: true },
 		];
 
-		expect(ContentCheck.evaluate(rules, "Status: OK")).toBe(true);
-		expect(ContentCheck.evaluate(rules, "Status: OK, error occurred")).toBe(false);
+		expect(evaluateContentChecks(rules, "Status: OK")).toBe(true);
+		expect(evaluateContentChecks(rules, "Status: OK, error occurred")).toBe(false);
 	});
 });

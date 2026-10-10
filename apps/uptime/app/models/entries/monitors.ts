@@ -8,4 +8,9 @@
  */
 
 /** This domain's models, keyed by the name `ctx.models` binds each under. */
-export const MONITOR_MODELS = {};
+export const MONITOR_MODELS = {
+	contentChecks: () => import("../content-checks"),
+	monitorDailyStats: () => import("../monitor-daily-stats"),
+	monitorResults: () => import("../monitor-results"),
+	monitors: () => import("../monitors"),
+};

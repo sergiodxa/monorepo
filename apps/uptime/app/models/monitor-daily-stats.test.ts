@@ -1,25 +1,37 @@
 /**
- * Unit tests for `MonitorDailyStats`: the delete-then-insert idempotency of `upsertDay`
- * (a re-run must leave one row per `(monitor_id, monitor_type, date)`), the
- * rolling-window filter on `listRecentDays`, and the pure helpers
- * `calculateDailyStatus`, `getYesterdayDateUtc`, and `utcDayBounds`. `listRecentDays`
- * cuts off relative to today, so its fixtures are offsets from the current UTC date and
- * stay inside the window as time passes.
+ * Tests the monitor daily stats model: the delete-then-insert idempotency of `upsertDay` (a
+ * re-run leaves one row per `(monitor_id, monitor_type, date)`), the rolling window
+ * `listRecentDays` reads, and the pure day helpers. Window fixtures are offsets from today.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import MonitorDailyStats, {
+import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
+
+import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import {
 	calculateDailyStatus,
 	getYesterdayDateUtc,
 	UPTIME_WINDOW_DAYS,
 	utcDayBounds,
-} from "~/app/data/monitor-daily-stats";
-import { createTestDatabase } from "~/app/lib/test/db";
+} from "~/app/models/monitor-daily-stats";
 import { monitorDailyStats } from "~/database/schema";
+
+/** Models over a fresh database, with the raw handle for assertions that bypass them. */
+function setup() {
+	let { db } = createTestDatabase();
+	return { db, models: bindModels(db) };
+}
+
+/** Writes a day through the model, failing the test when the write is refused. */
+async function upsertDay(models: ReturnType<typeof setup>["models"], input: DailyStatsInput) {
+	return unwrap(await models.monitorDailyStats.upsertDay(input));
+}
 
 /**
  * The `"YYYY-MM-DD"` UTC date `daysAgo` days before today, so a fixture's position
@@ -32,9 +44,7 @@ function dateDaysAgo(daysAgo: number): string {
 }
 
 /** A valid `upsertDay` input, with any field overridable per test. */
-function dailyStatsInput(
-	overrides: Partial<Parameters<typeof MonitorDailyStats.upsertDay>[1]> = {},
-) {
+function dailyStatsInput(overrides: Partial<DailyStatsInput> = {}) {
 	return {
 		monitor_id: crypto.randomUUID(),
 		monitor_type: "http" as const,
@@ -49,12 +59,12 @@ function dailyStatsInput(
 	};
 }
 
-describe("MonitorDailyStats.upsertDay", () => {
+describe("monitorDailyStats.upsertDay", () => {
 	test("creates a row when none exists for that monitor/type/date", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let input = dailyStatsInput();
 
-		let row = await MonitorDailyStats.upsertDay(db, input);
+		let row = await upsertDay(models, input);
 
 		expect(row.monitor_id).toBe(input.monitor_id);
 		expect(row.monitor_type).toBe("http");
@@ -64,11 +74,11 @@ describe("MonitorDailyStats.upsertDay", () => {
 	});
 
 	test("replaces the existing row instead of duplicating it on a re-run", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let input = dailyStatsInput({ total_checks: 100, successful_checks: 100, failed_checks: 0 });
 
-		let first = await MonitorDailyStats.upsertDay(db, input);
-		let second = await MonitorDailyStats.upsertDay(db, {
+		let first = await upsertDay(models, input);
+		let second = await upsertDay(models, {
 			...input,
 			total_checks: 50,
 			successful_checks: 40,
@@ -88,16 +98,13 @@ describe("MonitorDailyStats.upsertDay", () => {
 	});
 
 	test("leaves a different date's row for the same monitor untouched", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let monitorId = crypto.randomUUID();
-		let dayOne = await MonitorDailyStats.upsertDay(
-			db,
+		let dayOne = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: "2026-03-01" }),
 		);
-		await MonitorDailyStats.upsertDay(
-			db,
-			dailyStatsInput({ monitor_id: monitorId, date: "2026-03-02" }),
-		);
+		await upsertDay(models, dailyStatsInput({ monitor_id: monitorId, date: "2026-03-02" }));
 
 		let rows = await db.findMany(monitorDailyStats, {
 			where: { monitor_id: monitorId, monitor_type: "http" },
@@ -108,28 +115,28 @@ describe("MonitorDailyStats.upsertDay", () => {
 
 	/** Flow monitors roll up into this same table, so their days round-trip like any other's. */
 	test("stores a flow monitor's day under its own type", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorId = crypto.randomUUID();
 
-		let row = await MonitorDailyStats.upsertDay(
-			db,
+		let row = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "flow", date: dateDaysAgo(1) }),
 		);
 
 		expect(row.monitor_type).toBe("flow");
-		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "flow");
+		let rows = await models.monitorDailyStats.listRecentDays(monitorId, "flow");
 		expect(rows.map((each) => each.id)).toEqual([row.id]);
 	});
 
 	test("leaves a different monitor_type's row for the same monitor/date untouched", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let monitorId = crypto.randomUUID();
-		let httpRow = await MonitorDailyStats.upsertDay(
-			db,
+		let httpRow = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "tcp", date: "2026-03-01" }),
 		);
-		await MonitorDailyStats.upsertDay(
-			db,
+		await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "dns", date: "2026-03-01" }),
 		);
 
@@ -140,96 +147,90 @@ describe("MonitorDailyStats.upsertDay", () => {
 	});
 });
 
-describe("MonitorDailyStats.listRecentDays", () => {
+describe("monitorDailyStats.listRecentDays", () => {
 	test("returns the window's rows oldest first, so the bars read left to right", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorId = crypto.randomUUID();
 
-		let older = await MonitorDailyStats.upsertDay(
-			db,
+		let older = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(UPTIME_WINDOW_DAYS - 1) }),
 		);
-		let today = await MonitorDailyStats.upsertDay(
-			db,
+		let today = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(0) }),
 		);
-		let middle = await MonitorDailyStats.upsertDay(
-			db,
+		let middle = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(10) }),
 		);
 
-		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "http");
+		let rows = await models.monitorDailyStats.listRecentDays(monitorId, "http");
 		expect(rows.map((row) => row.id)).toEqual([older.id, middle.id, today.id]);
 	});
 
 	test("excludes rows older than the window, however much history the monitor has", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorId = crypto.randomUUID();
 
-		await MonitorDailyStats.upsertDay(
-			db,
+		await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(UPTIME_WINDOW_DAYS) }),
 		);
-		await MonitorDailyStats.upsertDay(
-			db,
+		await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(UPTIME_WINDOW_DAYS + 200) }),
 		);
-		let inWindow = await MonitorDailyStats.upsertDay(
-			db,
+		let inWindow = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(UPTIME_WINDOW_DAYS - 1) }),
 		);
 
-		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "http");
+		let rows = await models.monitorDailyStats.listRecentDays(monitorId, "http");
 		expect(rows.map((row) => row.id)).toEqual([inWindow.id]);
 	});
 
 	test("honors a narrower window than the default", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorId = crypto.randomUUID();
 
-		await MonitorDailyStats.upsertDay(
-			db,
-			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(20) }),
-		);
-		let recent = await MonitorDailyStats.upsertDay(
-			db,
+		await upsertDay(models, dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(20) }));
+		let recent = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, date: dateDaysAgo(2) }),
 		);
 
-		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "http", 7);
+		let rows = await models.monitorDailyStats.listRecentDays(monitorId, "http", 7);
 		expect(rows.map((row) => row.id)).toEqual([recent.id]);
 	});
 
 	test("returns an empty array when the monitor has no stats", async () => {
-		let { db } = createTestDatabase();
-		expect(await MonitorDailyStats.listRecentDays(db, crypto.randomUUID(), "http")).toEqual([]);
+		let { models } = setup();
+		expect(await models.monitorDailyStats.listRecentDays(crypto.randomUUID(), "http")).toEqual([]);
 	});
 
 	test("never mixes another monitor's rows in", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorA = crypto.randomUUID();
 		let monitorB = crypto.randomUUID();
-		await MonitorDailyStats.upsertDay(
-			db,
-			dailyStatsInput({ monitor_id: monitorA, date: dateDaysAgo(1) }),
-		);
+		await upsertDay(models, dailyStatsInput({ monitor_id: monitorA, date: dateDaysAgo(1) }));
 
-		expect(await MonitorDailyStats.listRecentDays(db, monitorB, "http")).toEqual([]);
+		expect(await models.monitorDailyStats.listRecentDays(monitorB, "http")).toEqual([]);
 	});
 
 	test("never mixes another monitor_type's rows in", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let monitorId = crypto.randomUUID();
-		let dnsRow = await MonitorDailyStats.upsertDay(
-			db,
+		let dnsRow = await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "dns", date: dateDaysAgo(1) }),
 		);
-		await MonitorDailyStats.upsertDay(
-			db,
+		await upsertDay(
+			models,
 			dailyStatsInput({ monitor_id: monitorId, monitor_type: "tcp", date: dateDaysAgo(1) }),
 		);
 
-		let rows = await MonitorDailyStats.listRecentDays(db, monitorId, "dns");
+		let rows = await models.monitorDailyStats.listRecentDays(monitorId, "dns");
 		expect(rows.map((row) => row.id)).toEqual([dnsRow.id]);
 	});
 });

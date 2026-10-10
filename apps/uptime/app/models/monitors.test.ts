@@ -1,27 +1,26 @@
 /**
- * Unit tests for the `Monitor` data-access model. The raw-SQL `findDue` claim the
- * scheduler runs every minute mutates the rows it returns, so the claim semantics get
- * dedicated coverage; `getStats*` splits across D1 and a stubbed Analytics Engine so the
- * scope it passes and its failure degradation stay observable.
+ * Tests the HTTP monitors model. The `findDue` claim the scheduler runs every minute mutates
+ * the rows it returns, so its claim semantics get dedicated coverage; the stats split across D1
+ * and a stubbed Analytics Engine so the scope they pass and their failure degradation show.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
+import type { CreateValues, UpdateValues } from "@sdxc/data-model";
 import type { Result } from "@sdxc/result";
 import type { DataManipulationRequest, DatabaseDriver } from "remix/data-table";
 
-import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
-import { failure, success } from "@sdxc/result";
+import { NotFound } from "@sdxc/data-model";
+import { failure, isFailure, isSuccess, success, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
+import type { Monitors } from "~/app/models/monitors";
 import type { HttpP99Scope } from "~/app/services/analytics";
 
-import { createActiveSubscription, createRevokedSubscription } from "~/app/lib/test/billing";
 import {
 	applyMigrations,
 	compileSqliteStatement,
@@ -41,36 +40,39 @@ import {
 	teams,
 } from "~/database/schema";
 
-/** The message body `Monitor.ping` passes to `env.QUEUE.send(...)`. */
-interface PingQueueMessage {
-	job: string;
-	body: { id: string; monitorId: string; scheduledAt: number };
-}
-
 /**
- * The queue `Monitor.ping` sends to. It lives at module scope because the module under
- * test captures `env` on import, so `beforeEach` resets this same instance, and its
- * recorded messages are what the `ping` cases assert on.
- */
-let queue: QueueMock<PingQueueMessage> = createQueue<PingQueueMessage>({ name: "uptime" });
-
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
-
-/**
- * `Monitor.getStats*` reads its p99 from Analytics Engine, so stubbing the service keeps
- * the D1 half of the card assertable in process and makes the scope each entry point
- * passes observable; `app/services/analytics.test.ts` covers the SQL text.
+ * The stats read their p99 from Analytics Engine, so stubbing the service keeps the D1 half
+ * of the card assertable in process and makes the scope each entry point passes observable;
+ * `app/services/analytics.test.ts` covers the SQL text.
  */
 let p99Query = vi.fn(async (_scope: HttpP99Scope): Promise<Result<number | null, Error>> =>
 	success(null),
 );
 vi.doMock("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
-let { default: Monitor } = await import("~/app/data/monitor");
+let { bindModels } = await import("~/app/lib/test/models");
+let { scheduledJobId } = await import("~/app/models/monitors");
 
-beforeEach(() => {
-	queue.reset();
-});
+/** Creates a monitor through the model, failing the test when the write is refused. */
+async function createMonitor(
+	db: Database,
+	teamId: string,
+	authorId: string,
+	input: Omit<CreateValues<typeof Monitors>, "team_id" | "author_id">,
+) {
+	return unwrap(
+		await bindModels(db).monitors.create({ team_id: teamId, author_id: authorId, ...input }),
+	);
+}
+
+/** Updates a monitor through the model, failing the test when the write is refused. */
+async function updateMonitor(
+	db: Database,
+	monitorId: string,
+	changes: UpdateValues<typeof Monitors>,
+) {
+	return unwrap(await bindModels(db).monitors.update(monitorId, changes));
+}
 
 /**
  * Records the query plan SQLite chose for every statement, so a test can assert how a
@@ -129,16 +131,16 @@ function toBinding(value: unknown): unknown {
 }
 
 /**
- * The ids `Monitor.findDue` claimed. The claim returns each monitor's team as well, since
+ * The ids `findDue` claimed. The claim returns each monitor's team as well, since
  * the scheduler apportions its own cost across the teams whose monitors were due, and every
  * assertion here is about which monitors moved.
  */
 async function dueIds(db: Database, scheduledAt: number) {
-	let due = await Monitor.findDue(db, scheduledAt);
+	let due = await bindModels(db).monitors.findDue(scheduledAt);
 	return due.map((row) => row.id);
 }
 
-/** Inserts a team row so `findDue`'s join to `teams` has an owner to resolve. */
+/** Inserts a team row so the claim's team has an owner to resolve. */
 async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> = {}) {
 	return await db.create(
 		teams,
@@ -153,13 +155,13 @@ async function createTeam(db: Database, overrides: Partial<{ ownerId: string }> 
 	);
 }
 
-describe("Monitor.create", () => {
+describe("monitors.create", () => {
 	/** Due on creation, so the first check runs on the next scheduler tick. */
 	test("creates a monitor for a team, enabled immediately", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
@@ -175,12 +177,12 @@ describe("Monitor.create", () => {
 	});
 });
 
-describe("Monitor.listByTeam", () => {
+describe("monitors.inTeam", () => {
 	test("lists a team's monitors, most recently created first", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		let first = await Monitor.create(db, team.id, "author-1", {
+		let first = await createMonitor(db, team.id, "author-1", {
 			name: "First",
 			url: "https://a.example.com",
 		});
@@ -189,12 +191,12 @@ describe("Monitor.listByTeam", () => {
 		 * deterministic — two creates in the same millisecond would otherwise tie.
 		 */
 		await db.update(monitors, first.id, { created_at: first.created_at - 1000 }, { touch: false });
-		let second = await Monitor.create(db, team.id, "author-1", {
+		let second = await createMonitor(db, team.id, "author-1", {
 			name: "Second",
 			url: "https://b.example.com",
 		});
 
-		let rows = await Monitor.listByTeam(db, team.id);
+		let rows = await bindModels(db).monitors.inTeam(team.id).orderBy("created_at", "desc").all();
 		expect(rows.map((row) => row.id)).toEqual([second.id, first.id]);
 	});
 
@@ -202,57 +204,59 @@ describe("Monitor.listByTeam", () => {
 		let { db } = createTestDatabase();
 		let teamA = await createTeam(db);
 		let teamB = await createTeam(db);
-		await Monitor.create(db, teamA.id, "author-1", { name: "A", url: "https://a.example.com" });
+		await createMonitor(db, teamA.id, "author-1", { name: "A", url: "https://a.example.com" });
 
-		expect(await Monitor.listByTeam(db, teamB.id)).toEqual([]);
+		expect(
+			await bindModels(db).monitors.inTeam(teamB.id).orderBy("created_at", "desc").all(),
+		).toEqual([]);
 	});
 });
 
-describe("Monitor.countByTeam", () => {
+describe("monitors.inTeam().count", () => {
 	test("counts a team's monitors and ignores other teams", async () => {
 		let { db } = createTestDatabase();
 		let teamA = await createTeam(db);
 		let teamB = await createTeam(db);
-		await Monitor.create(db, teamA.id, "author-1", { name: "A", url: "https://a.example.com" });
-		await Monitor.create(db, teamA.id, "author-1", { name: "B", url: "https://b.example.com" });
+		await createMonitor(db, teamA.id, "author-1", { name: "A", url: "https://a.example.com" });
+		await createMonitor(db, teamA.id, "author-1", { name: "B", url: "https://b.example.com" });
 
-		expect(await Monitor.countByTeam(db, teamA.id)).toBe(2);
-		expect(await Monitor.countByTeam(db, teamB.id)).toBe(0);
+		expect(await bindModels(db).monitors.inTeam(teamA.id).count()).toBe(2);
+		expect(await bindModels(db).monitors.inTeam(teamB.id).count()).toBe(0);
 	});
 });
 
-describe("Monitor.listSslEnabled", () => {
+describe("monitors.sslMonitored", () => {
 	test("lists only SSL-monitoring-enabled monitors, across every team", async () => {
 		let { db } = createTestDatabase();
 		let teamA = await createTeam(db);
 		let teamB = await createTeam(db);
 
-		let sslEnabled = await Monitor.create(db, teamA.id, "author-1", {
+		let sslEnabled = await createMonitor(db, teamA.id, "author-1", {
 			name: "SSL on",
 			url: "https://a.example.com",
 			ssl_monitoring_enabled: true,
 		});
-		await Monitor.create(db, teamB.id, "author-1", {
+		await createMonitor(db, teamB.id, "author-1", {
 			name: "SSL off",
 			url: "https://b.example.com",
 			ssl_monitoring_enabled: false,
 		});
 
-		let rows = await Monitor.listSslEnabled(db);
+		let rows = await bindModels(db).monitors.sslMonitored().all();
 		expect(rows.map((row) => row.id)).toEqual([sslEnabled.id]);
 	});
 });
 
-describe("Monitor.findByIdForTeam", () => {
+describe("monitors.inTeam().find", () => {
 	test("finds a monitor scoped to its team", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
 
-		let found = await Monitor.findByIdForTeam(db, team.id, monitor.id);
+		let found = await bindModels(db).monitors.inTeam(team.id).find(monitor.id);
 		expect(found?.id).toBe(monitor.id);
 	});
 
@@ -260,152 +264,89 @@ describe("Monitor.findByIdForTeam", () => {
 		let { db } = createTestDatabase();
 		let teamA = await createTeam(db);
 		let teamB = await createTeam(db);
-		let monitor = await Monitor.create(db, teamA.id, "author-1", {
+		let monitor = await createMonitor(db, teamA.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
 
-		expect(await Monitor.findByIdForTeam(db, teamB.id, monitor.id)).toBeNull();
+		expect(await bindModels(db).monitors.inTeam(teamB.id).find(monitor.id)).toBeNull();
 	});
 
 	test("returns null when the id doesn't exist", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		expect(await Monitor.findByIdForTeam(db, team.id, crypto.randomUUID())).toBeNull();
+		expect(await bindModels(db).monitors.inTeam(team.id).find(crypto.randomUUID())).toBeNull();
 	});
 });
 
-describe("Monitor.updateById", () => {
+describe("monitors.update", () => {
 	test("updates a monitor's editable fields", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
 
-		let updated = await Monitor.updateById(db, monitor.id, { name: "Renamed" });
+		let updated = await updateMonitor(db, monitor.id, { name: "Renamed" });
 		expect(updated.name).toBe("Renamed");
 		expect(updated.updated_at).toBeGreaterThanOrEqual(monitor.updated_at);
 	});
 });
 
-describe("Monitor.deleteById", () => {
+describe("monitors.delete", () => {
 	test("deletes a monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
 
-		expect(await Monitor.deleteById(db, monitor.id)).toBe(true);
-		expect(await Monitor.findByIdForTeam(db, team.id, monitor.id)).toBeNull();
+		expect(isSuccess(await bindModels(db).monitors.delete(monitor.id))).toBe(true);
+		expect(await bindModels(db).monitors.inTeam(team.id).find(monitor.id)).toBeNull();
 	});
 
-	test("returns false for a monitor that doesn't exist", async () => {
+	test("answers NotFound for a monitor that doesn't exist", async () => {
 		let { db } = createTestDatabase();
-		expect(await Monitor.deleteById(db, crypto.randomUUID())).toBe(false);
+		let deleted = await bindModels(db).monitors.delete(crypto.randomUUID());
+
+		expect(isFailure(deleted) && deleted.error instanceof NotFound).toBe(true);
 	});
 });
 
-describe("Monitor.ping", () => {
-	test("enqueues a checkHttp message with a job id derived from the monitor id", async () => {
-		let { db } = createTestDatabase();
-		let monitorId = crypto.randomUUID();
-		await createActiveSubscription(db, "owner-1");
-
-		expect(await Monitor.ping(db, monitorId, "owner-1")).toBe(true);
-
-		expect(queue.sent).toHaveLength(1);
-		let message = queue.sent[0]?.body;
-		expect(message?.job).toBe("checkHttp");
-		expect(message?.body.monitorId).toBe(monitorId);
-		expect(message?.body.id.startsWith(`${monitorId}:manual:`)).toBe(true);
-		expect(typeof message?.body.scheduledAt).toBe("number");
-	});
-
-	test("enqueues nothing when the team owner is known to be unsubscribed", async () => {
-		let { db } = createTestDatabase();
-		await createRevokedSubscription(db, "owner-1");
-
-		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-1")).toBe(false);
-
-		expect(queue.sent).toHaveLength(0);
-	});
-
-	/**
-	 * Fails open, as ADR-005 requires: a missed webhook leaves the projection empty, so an
-	 * unknown state counts as subscribed and the subscription gate stays out of the read
-	 * path.
-	 */
-	test("enqueues when the owner's subscription state is unknown", async () => {
-		let { db } = createTestDatabase();
-
-		expect(await Monitor.ping(db, crypto.randomUUID(), "owner-nobody")).toBe(true);
-
-		expect(queue.sent).toHaveLength(1);
-	});
-
-	test("gives two cron deliveries in the same minute one shared job id", async () => {
+describe("scheduledJobId", () => {
+	test("gives two cron deliveries in the same minute one shared job id", () => {
 		let monitorId = crypto.randomUUID();
 		let first = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 		let second = Date.UTC(2026, 6, 28, 12, 34, 15, 0);
 
-		expect(Monitor.scheduledJobId(monitorId, first)).toBe(
-			Monitor.scheduledJobId(monitorId, second),
-		);
+		expect(scheduledJobId(monitorId, first)).toBe(scheduledJobId(monitorId, second));
 	});
 
-	test("gives consecutive minutes distinct job ids", async () => {
+	test("gives consecutive minutes distinct job ids", () => {
 		let monitorId = crypto.randomUUID();
 		let minute = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 		let nextMinute = Date.UTC(2026, 6, 28, 12, 35, 8, 0);
 
-		expect(Monitor.scheduledJobId(monitorId, minute)).not.toBe(
-			Monitor.scheduledJobId(monitorId, nextMinute),
-		);
+		expect(scheduledJobId(monitorId, minute)).not.toBe(scheduledJobId(monitorId, nextMinute));
 	});
 
-	test("scopes the scheduled job id to the monitor", async () => {
+	test("scopes the scheduled job id to the monitor", () => {
 		let scheduledAt = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
 
-		expect(Monitor.scheduledJobId("monitor-a", scheduledAt)).not.toBe(
-			Monitor.scheduledJobId("monitor-b", scheduledAt),
+		expect(scheduledJobId("monitor-a", scheduledAt)).not.toBe(
+			scheduledJobId("monitor-b", scheduledAt),
 		);
 	});
 
 	/**
-	 * The job id is what the check is billed under, so a manual id colliding with a
-	 * scheduled one would make one of the two checks free: the second delivery would
-	 * short-circuit on the `monitor_results` primary key and never reach the meter.
+	 * The job id is what a check is billed under, so an on-demand id (`<id>:manual:<uuid>`)
+	 * colliding with a scheduled one would make one of the two checks free.
 	 */
-	test("gives an on-demand check an id no scheduled check can be given", async () => {
-		let monitorId = crypto.randomUUID();
-		let scheduledAt = Date.UTC(2026, 6, 28, 12, 34, 8, 0);
-
-		let { db } = createTestDatabase();
-		await createActiveSubscription(db, "owner-1");
-		await Monitor.ping(db, monitorId, "owner-1");
-
-		let manualId = queue.sent[0]?.body.body.id;
-		expect(manualId).not.toBe(Monitor.scheduledJobId(monitorId, scheduledAt));
-		expect(manualId).toContain(":manual:");
-		expect(Monitor.scheduledJobId(monitorId, scheduledAt)).not.toContain(":manual:");
-	});
-
-	test("gives each on-demand check its own job id", async () => {
-		let monitorId = crypto.randomUUID();
-
-		let { db } = createTestDatabase();
-		await createActiveSubscription(db, "owner-1");
-
-		await Monitor.ping(db, monitorId, "owner-1");
-		await Monitor.ping(db, monitorId, "owner-1");
-
-		let [first, second] = queue.sent.map((message) => message.body.body.id);
-		expect(first).not.toBe(second);
+	test("never gives a scheduled check an id an on-demand check uses", () => {
+		expect(scheduledJobId(crypto.randomUUID(), Date.now())).not.toContain(":manual:");
 	});
 });
 
@@ -414,7 +355,7 @@ describe("Monitor.ping", () => {
  * that column in the same call, so every case below asserts on the state it leaves behind.
  * Scheduling reads only that column, so the cadence holds however long a check takes.
  */
-describe("Monitor.findDue", () => {
+describe("monitors.findDue", () => {
 	/** The `next_due_at` currently stored for a monitor, which is what a claim moves. */
 	async function nextDueAt(db: Database, monitorId: string) {
 		let monitor = await db.findOne(monitors, { where: { id: monitorId } });
@@ -424,7 +365,7 @@ describe("Monitor.findDue", () => {
 	test("claims a newly created monitor on the first tick after it exists", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -438,7 +379,7 @@ describe("Monitor.findDue", () => {
 	test("never claims the same monitor twice in the same minute", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		await Monitor.create(db, team.id, "author-1", {
+		await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -452,7 +393,7 @@ describe("Monitor.findDue", () => {
 	test("claims the monitor again once its next due time arrives", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -467,7 +408,7 @@ describe("Monitor.findDue", () => {
 	test("advances the due time from the previous one, so latency can't cause drift", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -483,7 +424,7 @@ describe("Monitor.findDue", () => {
 	test("a monitor left unscheduled for an hour is claimed once, not sixty times", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -500,7 +441,7 @@ describe("Monitor.findDue", () => {
 	test("keeps the cadence on interval boundaries when the claim lands mid-interval", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 300,
@@ -516,12 +457,12 @@ describe("Monitor.findDue", () => {
 	test("never claims a disabled monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await Monitor.updateById(db, monitor.id, { enabled_at: null });
+		await updateMonitor(db, monitor.id, { enabled_at: null });
 
 		expect(await nextDueAt(db, monitor.id)).toBeNull();
 		expect(await dueIds(db, Date.now() + 60 * 60_000)).toEqual([]);
@@ -530,13 +471,13 @@ describe("Monitor.findDue", () => {
 	test("claims a re-enabled monitor again on the next tick", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await Monitor.updateById(db, monitor.id, { enabled_at: null });
-		await Monitor.updateById(db, monitor.id, { enabled_at: Date.now() });
+		await updateMonitor(db, monitor.id, { enabled_at: null });
+		await updateMonitor(db, monitor.id, { enabled_at: Date.now() });
 
 		expect(await dueIds(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
@@ -549,7 +490,7 @@ describe("Monitor.findDue", () => {
 	test("claims through the next_due_at index instead of scanning a table", async () => {
 		let { db, plans } = createPlanRecordingDatabase();
 		let team = await createTeam(db);
-		await Monitor.create(db, team.id, "author-1", {
+		await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 		});
@@ -566,11 +507,11 @@ describe("Monitor.findDue", () => {
 		let { db } = createTestDatabase();
 		let teamA = await createTeam(db);
 		let teamB = await createTeam(db);
-		let a = await Monitor.create(db, teamA.id, "author-1", {
+		let a = await createMonitor(db, teamA.id, "author-1", {
 			name: "A",
 			url: "https://a.example.com",
 		});
-		let b = await Monitor.create(db, teamB.id, "author-1", {
+		let b = await createMonitor(db, teamB.id, "author-1", {
 			name: "B",
 			url: "https://b.example.com",
 		});
@@ -582,11 +523,11 @@ describe("Monitor.findDue", () => {
 	});
 });
 
-describe("Monitor.updateById scheduling", () => {
+describe("monitors.update scheduling", () => {
 	test("re-anchors the schedule when the interval changes", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 3600,
@@ -598,7 +539,7 @@ describe("Monitor.updateById scheduling", () => {
 			{ touch: false },
 		);
 
-		await Monitor.updateById(db, monitor.id, { interval_seconds: 60 });
+		await updateMonitor(db, monitor.id, { interval_seconds: 60 });
 
 		expect(await dueIds(db, Date.now() + 1000)).toEqual([monitor.id]);
 	});
@@ -610,7 +551,7 @@ describe("Monitor.updateById scheduling", () => {
 	test("leaves the schedule alone for an edit that doesn't touch it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
@@ -618,7 +559,7 @@ describe("Monitor.updateById scheduling", () => {
 		let scheduled = Date.now() + 3_600_000;
 		await db.update(monitors, monitor.id, { next_due_at: scheduled }, { touch: false });
 
-		let renamed = await Monitor.updateById(db, monitor.id, {
+		let renamed = await updateMonitor(db, monitor.id, {
 			name: "Renamed",
 			interval_seconds: 60,
 		});
@@ -629,14 +570,14 @@ describe("Monitor.updateById scheduling", () => {
 	test("keeps a disabled monitor unscheduled when its interval changes", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "Homepage",
 			url: "https://example.com",
 			interval_seconds: 60,
 		});
-		await Monitor.updateById(db, monitor.id, { enabled_at: null });
+		await updateMonitor(db, monitor.id, { enabled_at: null });
 
-		let updated = await Monitor.updateById(db, monitor.id, { interval_seconds: 120 });
+		let updated = await updateMonitor(db, monitor.id, { interval_seconds: 120 });
 
 		expect(updated.next_due_at).toBeNull();
 		expect(await dueIds(db, Date.now() + 60 * 60_000)).toEqual([]);
@@ -648,7 +589,7 @@ describe("Monitor.updateById scheduling", () => {
  * at July 14–15 and the rollup window at July 1–13. The rollup stands in for anything
  * older, since the `clean` job's retention removes those raw rows.
  */
-describe("Monitor.countConsumedPingsByTeam", () => {
+describe("monitors.countConsumedPingsByTeam", () => {
 	let date = new Date("2026-07-15T12:00:00.000Z");
 	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
 
@@ -701,7 +642,7 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 
 	/** One monitor of every type for `teamId`, to hang results and rollup rows off. */
 	async function createMonitors(db: Database, teamId: string) {
-		let http = await Monitor.create(db, teamId, "author-1", {
+		let http = await createMonitor(db, teamId, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -765,7 +706,7 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		);
 		await db.update(cronJobPings, ping.id, { created_at: insideRawWindow }, { touch: false });
 
-		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(1116);
+		expect(await bindModels(db).monitors.countConsumedPingsByTeam(team.id, date)).toBe(1116);
 	});
 
 	test("never double counts a day that has both a rollup row and surviving raw rows", async () => {
@@ -777,7 +718,7 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 6, 0, 0));
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 13, 7, 0, 0));
 
-		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(5);
+		expect(await bindModels(db).monitors.countConsumedPingsByTeam(team.id, date)).toBe(5);
 	});
 
 	test("counts the whole month raw when the raw window covers it", async () => {
@@ -789,7 +730,10 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		await createHttpResult(db, http.id, Date.UTC(2026, 6, 1, 1, 30, 0));
 
 		expect(
-			await Monitor.countConsumedPingsByTeam(db, team.id, new Date("2026-07-01T12:00:00.000Z")),
+			await bindModels(db).monitors.countConsumedPingsByTeam(
+				team.id,
+				new Date("2026-07-01T12:00:00.000Z"),
+			),
 		).toBe(2);
 	});
 
@@ -814,14 +758,14 @@ describe("Monitor.countConsumedPingsByTeam", () => {
 		await createDailyStats(db, other.http.id, "http", "2026-07-02", 1000);
 		await createHttpResult(db, other.http.id, insideRawWindow);
 
-		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.countConsumedPingsByTeam(team.id, date)).toBe(0);
 	});
 
 	test("counts zero, not null, for a team that has never been checked", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
 
-		expect(await Monitor.countConsumedPingsByTeam(db, team.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.countConsumedPingsByTeam(team.id, date)).toBe(0);
 	});
 });
 
@@ -830,7 +774,7 @@ describe("Monitor.countConsumedPingsByTeam", () => {
  * window is July 14–15 and the rollup window July 1–13 — since both methods have to cut
  * the two stores identically or the monitor card and the dashboard card would disagree.
  */
-describe("Monitor.countConsumedPingsByMonitor", () => {
+describe("monitors.countConsumedPingsByMonitor", () => {
 	let date = new Date("2026-07-15T12:00:00.000Z");
 	let insideRawWindow = Date.UTC(2026, 6, 14, 8, 0, 0);
 
@@ -883,7 +827,7 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 	test("sums this monitor's rollup days and its raw window", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -893,13 +837,13 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 		await createHttpResult(db, monitor.id, insideRawWindow);
 		await createHttpResult(db, monitor.id, insideRawWindow + 60_000);
 
-		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(112);
+		expect(await bindModels(db).monitors.countConsumedPingsByMonitor(monitor.id, date)).toBe(112);
 	});
 
 	test("never double counts a day that has both a rollup row and surviving raw rows", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -908,13 +852,13 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 6, 0, 0));
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 13, 7, 0, 0));
 
-		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(5);
+		expect(await bindModels(db).monitors.countConsumedPingsByMonitor(monitor.id, date)).toBe(5);
 	});
 
 	test("counts the whole month raw when the raw window covers it", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -923,8 +867,7 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 		await createHttpResult(db, monitor.id, Date.UTC(2026, 6, 1, 1, 30, 0));
 
 		expect(
-			await Monitor.countConsumedPingsByMonitor(
-				db,
+			await bindModels(db).monitors.countConsumedPingsByMonitor(
 				monitor.id,
 				new Date("2026-07-01T12:00:00.000Z"),
 			),
@@ -934,11 +877,11 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 	test("never counts another month or another monitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
-		let sibling = await Monitor.create(db, team.id, "author-1", {
+		let sibling = await createMonitor(db, team.id, "author-1", {
 			name: "Other",
 			url: "https://other.example.com",
 		});
@@ -951,22 +894,22 @@ describe("Monitor.countConsumedPingsByMonitor", () => {
 		await createDailyStats(db, sibling.id, "2026-07-02", 1000);
 		await createHttpResult(db, sibling.id, insideRawWindow);
 
-		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.countConsumedPingsByMonitor(monitor.id, date)).toBe(0);
 	});
 
 	test("counts zero, not null, for a monitor that has never been checked", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
 
-		expect(await Monitor.countConsumedPingsByMonitor(db, monitor.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.countConsumedPingsByMonitor(monitor.id, date)).toBe(0);
 	});
 });
 
-describe("Monitor.estimateConsumedPingsByTeam", () => {
+describe("monitors.estimateConsumedPingsByTeam", () => {
 	/**
 	 * 744 hourly checks each for the HTTP, DNS and TCP monitors across a 31-day July, plus
 	 * the 30 midnight cron occurrences strictly after the 1st, giving 2262.
@@ -976,7 +919,7 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 		let team = await createTeam(db);
 		let date = new Date("2026-07-15T12:00:00.000Z");
 
-		await Monitor.create(db, team.id, "author-1", {
+		await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 			interval_seconds: 3600,
@@ -1007,7 +950,7 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			enabled_at: Date.now(),
 		});
 
-		let estimate = await Monitor.estimateConsumedPingsByTeam(db, team.id, date);
+		let estimate = await bindModels(db).monitors.estimateConsumedPingsByTeam(team.id, date);
 		expect(estimate).toBe(2262);
 	});
 
@@ -1016,12 +959,12 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 		let team = await createTeam(db);
 		let date = new Date("2026-07-15T12:00:00.000Z");
 
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 			interval_seconds: 3600,
 		});
-		await Monitor.updateById(db, monitor.id, { enabled_at: null });
+		await updateMonitor(db, monitor.id, { enabled_at: null });
 		await db.create(dnsMonitors, {
 			id: crypto.randomUUID(),
 			team_id: team.id,
@@ -1039,7 +982,7 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			enabled_at: null,
 		});
 
-		expect(await Monitor.estimateConsumedPingsByTeam(db, team.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.estimateConsumedPingsByTeam(team.id, date)).toBe(0);
 	});
 
 	test("never counts another team's monitors", async () => {
@@ -1048,13 +991,13 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 		let teamB = await createTeam(db);
 		let date = new Date("2026-07-15T12:00:00.000Z");
 
-		await Monitor.create(db, teamB.id, "author-1", {
+		await createMonitor(db, teamB.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 			interval_seconds: 3600,
 		});
 
-		expect(await Monitor.estimateConsumedPingsByTeam(db, teamA.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.estimateConsumedPingsByTeam(teamA.id, date)).toBe(0);
 	});
 
 	test("skips a cron job with an invalid expression instead of throwing", async () => {
@@ -1071,11 +1014,11 @@ describe("Monitor.estimateConsumedPingsByTeam", () => {
 			enabled_at: Date.now(),
 		});
 
-		expect(await Monitor.estimateConsumedPingsByTeam(db, team.id, date)).toBe(0);
+		expect(await bindModels(db).monitors.estimateConsumedPingsByTeam(team.id, date)).toBe(0);
 	});
 });
 
-describe("Monitor.getStats", () => {
+describe("monitors.statsForTeam and statsForMonitor", () => {
 	/** A completed HTTP check, the row the D1 half of the stats card aggregates. */
 	async function createResult(db: Database, monitorId: string, responseStatus: number) {
 		await db.create(
@@ -1094,7 +1037,7 @@ describe("Monitor.getStats", () => {
 	test("takes total/uptime/lastCheck from D1 and the p99 from Analytics Engine", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -1104,7 +1047,7 @@ describe("Monitor.getStats", () => {
 		p99Query.mockClear();
 		p99Query.mockImplementation(async () => success(410));
 
-		let stats = await Monitor.getStatsByTeamId(db, team.id);
+		let stats = await bindModels(db).monitors.statsForTeam(team.id);
 
 		expect(stats.total).toBe(2);
 		expect(stats.uptime).toBe(50);
@@ -1113,10 +1056,10 @@ describe("Monitor.getStats", () => {
 		expect(p99Query).toHaveBeenCalledWith({ teamId: team.id });
 	});
 
-	test("scopes the Analytics Engine query to the monitor for getStatsById", async () => {
+	test("scopes the Analytics Engine query to the monitor for statsForMonitor", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -1125,7 +1068,7 @@ describe("Monitor.getStats", () => {
 		p99Query.mockClear();
 		p99Query.mockImplementation(async () => success(120));
 
-		let stats = await Monitor.getStatsById(db, monitor.id);
+		let stats = await bindModels(db).monitors.statsForMonitor(monitor.id);
 
 		expect(stats.total).toBe(1);
 		expect(stats.uptime).toBe(100);
@@ -1136,7 +1079,7 @@ describe("Monitor.getStats", () => {
 	test("degrades the p99 to null when Analytics Engine fails, keeping the D1 figures", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeam(db);
-		let monitor = await Monitor.create(db, team.id, "author-1", {
+		let monitor = await createMonitor(db, team.id, "author-1", {
 			name: "HTTP",
 			url: "https://example.com",
 		});
@@ -1145,7 +1088,7 @@ describe("Monitor.getStats", () => {
 		p99Query.mockClear();
 		p99Query.mockImplementation(async () => failure(new Error("Analytics query failed: 503")));
 
-		let stats = await Monitor.getStatsByTeamId(db, team.id);
+		let stats = await bindModels(db).monitors.statsForTeam(team.id);
 
 		expect(stats.total).toBe(1);
 		expect(stats.uptime).toBe(100);
@@ -1159,7 +1102,7 @@ describe("Monitor.getStats", () => {
 		p99Query.mockClear();
 		p99Query.mockImplementation(async () => success(null));
 
-		let stats = await Monitor.getStatsByTeamId(db, team.id);
+		let stats = await bindModels(db).monitors.statsForTeam(team.id);
 
 		expect(stats.total).toBe(0);
 		expect(stats.uptime).toBeNull();
