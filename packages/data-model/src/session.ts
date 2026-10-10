@@ -103,8 +103,8 @@ export function modelContext(session: Session): ModelContext {
 		...session.init,
 		db: session.db,
 		models: session.models,
-		get: (key) => session.host?.get(key) as never,
-	} as ModelContext;
+		get: (key: object) => session.host?.get(key),
+	} as unknown as ModelContext;
 	return session.context;
 }
 
