@@ -28,10 +28,10 @@ import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { TrialIncident } from "~/app/lib/trial-report";
 import type { SelectTrialWatch, SelectTrialWatchResult } from "~/database/schema";
 
-import TrialWatch, { TRIAL_WATCH_DURATION_DAYS } from "~/app/data/trial-watch";
 import { BASE_PRICE_USD, formatUsd } from "~/app/lib/pricing";
 import { SEO } from "~/app/lib/seo";
 import { incidentsFrom, segmentsOver, watchStats } from "~/app/lib/trial-report";
+import { TRIAL_WATCH_DURATION_DAYS, isConvertible } from "~/app/models/trial-watches";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -155,7 +155,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 	let t = ctx.intl.t;
 	let locale = ctx.locale;
 
-	let watch = await TrialWatch.findByReportToken(ctx.db, token);
+	let watch = await ctx.models.trialWatches.findBy({ report_token: token });
 
 	/**
 	 * A token this database never issued and one whose watch has since been swept are the same
@@ -166,8 +166,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 	let now = Date.now();
 	let period = reportPeriod(watch, now);
-	let results = await TrialWatch.listResultsBetween(
-		ctx.db,
+	let results = await ctx.models.trialWatchResults.listBetween(
 		watch.id,
 		period.from,
 		watch.expires_at,
@@ -228,7 +227,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 	let offer =
 		watch.converted_at !== null
 			? "converted"
-			: TrialWatch.isConvertible(watch, now)
+			: isConvertible(watch, now)
 				? "convertible"
 				: "expired";
 

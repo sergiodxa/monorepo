@@ -29,8 +29,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 
-import Lead from "~/app/data/lead";
-import TrialWatch from "~/app/data/trial-watch";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
 import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
@@ -45,6 +43,7 @@ import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/lib/test/honeypot";
 import { useMailServerDns } from "~/app/lib/test/mail-servers";
+import { hasMarketingConsent } from "~/app/models/leads";
 import routes from "~/routes/web";
 
 /**
@@ -66,6 +65,7 @@ vi.doMock("~/app/services/trial-guard", () => ({
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: trialLead } = await import("./lead");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
@@ -172,10 +172,10 @@ describe("POST /try/lead", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.trial.check.index.href());
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
 		expect(lead).not.toBeNull();
 
-		let watches = await TrialWatch.listByLead(db, lead!.id);
+		let watches = await bindModels(db).trialWatches.listByLead(lead!.id);
 		expect(watches).toHaveLength(1);
 		expect(watches[0]?.url).toBe("https://probed.example/");
 	});
@@ -186,8 +186,8 @@ describe("POST /try/lead", () => {
 
 		let { db } = await submit({ email: "reader@example.com" }, session);
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
-		let watches = await TrialWatch.listByLead(db, lead!.id);
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
+		let watches = await bindModels(db).trialWatches.listByLead(lead!.id);
 		expect(watches[0]?.last_status).toBe("degraded");
 	});
 
@@ -200,8 +200,8 @@ describe("POST /try/lead", () => {
 			session,
 		);
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
-		let watches = await TrialWatch.listByLead(db, lead!.id);
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
+		let watches = await bindModels(db).trialWatches.listByLead(lead!.id);
 		expect(watches[0]?.url).toBe("https://probed.example/");
 	});
 
@@ -209,7 +209,7 @@ describe("POST /try/lead", () => {
 		let { response, db } = await submit({ email: "reader@example.com" }, new Session());
 
 		expect(response.status).toBe(303);
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
 		expect(transport.messages).toHaveLength(0);
 	});
 
@@ -249,10 +249,10 @@ describe("POST /try/lead consent", () => {
 
 		let { db } = await submit({ email: "reader@example.com" }, session);
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
 		expect(lead?.consented_at).toBeNull();
-		expect(Lead.hasMarketingConsent(lead!)).toBe(false);
-		expect(await TrialWatch.listByLead(db, lead!.id)).toHaveLength(1);
+		expect(hasMarketingConsent(lead!)).toBe(false);
+		expect(await bindModels(db).trialWatches.listByLead(lead!.id)).toHaveLength(1);
 	});
 
 	test("records consent when the box was ticked", async () => {
@@ -261,9 +261,9 @@ describe("POST /try/lead consent", () => {
 
 		let { db } = await submit({ email: "reader@example.com", consent: "true" }, session);
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
 		expect(lead?.consented_at).not.toBeNull();
-		expect(Lead.hasMarketingConsent(lead!)).toBe(true);
+		expect(hasMarketingConsent(lead!)).toBe(true);
 	});
 });
 
@@ -289,8 +289,8 @@ describe("POST /try/lead free-watch cap", () => {
 
 	/** Every watch in the database, whichever lead opened it. */
 	async function allWatches(db: ReturnType<typeof createTestDatabase>["db"]) {
-		let lead = await Lead.findByEmail(db, "reader@example.com");
-		return lead === null ? [] : await TrialWatch.listByLead(db, lead.id);
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
+		return lead === null ? [] : await bindModels(db).trialWatches.listByLead(lead.id);
 	}
 
 	test("opens no second watch on a URL that already has one", async () => {
@@ -384,8 +384,8 @@ describe("POST /try/lead free-watch cap", () => {
 			two.set(TRIAL_PROBE, probeState({ url: "https://probed.example/" }));
 			await submit({ email: spelling }, two, db);
 
-			let lead = await Lead.findByEmail(db, "hello@sergiodxa.com");
-			expect(await TrialWatch.listByLead(db, lead!.id)).toHaveLength(1);
+			let lead = await bindModels(db).leads.findByEmail("hello@sergiodxa.com");
+			expect(await bindModels(db).trialWatches.listByLead(lead!.id)).toHaveLength(1);
 			expect(transport.last?.email).toBeInstanceOf(TrialRepeatReportEmail);
 		},
 	);
@@ -437,7 +437,7 @@ describe("POST /try/lead free-watch cap", () => {
 			{},
 		);
 
-		expect((await Lead.findByEmail(db, "reader@example.com"))?.emails_sent).toBe(2);
+		expect((await bindModels(db).leads.findByEmail("reader@example.com"))?.emails_sent).toBe(2);
 	});
 });
 
@@ -452,7 +452,7 @@ describe("POST /try/lead validation", () => {
 		expect(response.status).toBe(200);
 		expect(response.headers.get("location")).toBeNull();
 		expect(body).toContain("That does not look like an email address.");
-		expect(await TrialWatch.claimDue(db, Date.now() + 86_400_000)).toHaveLength(0);
+		expect(await bindModels(db).trialWatches.claimDue(Date.now() + 86_400_000)).toHaveLength(0);
 	});
 
 	test("refuses a disposable inbox, keeping the address in the field", async () => {
@@ -464,7 +464,7 @@ describe("POST /try/lead validation", () => {
 
 		expect(body).toContain("this one is from a disposable email service");
 		expect(body).toContain('value="reader@mailinator.com"');
-		expect(await Lead.findByEmail(db, "reader@mailinator.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@mailinator.com")).toBeNull();
 		expect(session.get(TRIAL_PROBE)).toBeDefined();
 	});
 
@@ -476,7 +476,7 @@ describe("POST /try/lead validation", () => {
 		let { db, response } = await submit({ email: "reader@nomail.example" }, session);
 
 		expect(await response.text()).toContain("nomail.example does not accept email.");
-		expect(await Lead.findByEmail(db, "reader@nomail.example")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@nomail.example")).toBeNull();
 	});
 
 	test("accepts an address whose mail-server lookup failed, since the answer is unknown", async () => {
@@ -486,7 +486,7 @@ describe("POST /try/lead validation", () => {
 
 		let { db } = await submit({ email: "reader@flaky.example" }, session);
 
-		expect(await Lead.findByEmail(db, "reader@flaky.example")).not.toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@flaky.example")).not.toBeNull();
 	});
 
 	test("offers the likely provider for a mistyped domain before starting anything", async () => {
@@ -498,7 +498,7 @@ describe("POST /try/lead validation", () => {
 
 		expect(body).toContain("Did you mean reader@gmail.com? Send reader@gmal.com again to keep it.");
 		expect(body).toContain('name="email_confirmed"');
-		expect(await Lead.findByEmail(db, "reader@gmal.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@gmal.com")).toBeNull();
 	});
 
 	test("keeps a mistyped-looking address once the visitor sends it again", async () => {
@@ -510,7 +510,7 @@ describe("POST /try/lead validation", () => {
 			session,
 		);
 
-		expect(await Lead.findByEmail(db, "reader@gmal.com")).not.toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@gmal.com")).not.toBeNull();
 		expect(transport.last?.to).toEqual([{ email: "reader@gmal.com" }]);
 	});
 
@@ -554,8 +554,8 @@ describe("POST /try/lead honeypot", () => {
 		expect(response.headers.get("location")).toBe(routes.trial.check.index.href());
 		expect(session.get(TRIAL_WATCH_STARTED)).toBe("https://probed.example/");
 		expect(session.get(TRIAL_PROBE)).toBeUndefined();
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
-		expect(await TrialWatch.claimDue(db, Date.now() + 86_400_000)).toHaveLength(0);
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
+		expect(await bindModels(db).trialWatches.claimDue(Date.now() + 86_400_000)).toHaveLength(0);
 		expect(transport.messages).toHaveLength(0);
 	});
 
@@ -572,7 +572,7 @@ describe("POST /try/lead honeypot", () => {
 		expect(body).toContain("https://probed.example/");
 		expect(honeypotFields(body).token).toBeTruthy();
 		expect(session.get(TRIAL_PROBE)).toBeDefined();
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
 		expect(transport.messages).toHaveLength(0);
 	});
 
@@ -586,7 +586,7 @@ describe("POST /try/lead honeypot", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
 		expect(transport.messages).toHaveLength(0);
 	});
 
@@ -602,7 +602,7 @@ describe("POST /try/lead honeypot", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(await Lead.findByEmail(db, "reader@example.com")).not.toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).not.toBeNull();
 		expect(transport.messages).toHaveLength(1);
 	});
 });
@@ -632,8 +632,8 @@ describe("POST /try/lead funnel event", () => {
 			records,
 		);
 
-		let lead = await Lead.findByEmail(db, "reader@example.com");
-		let watches = await TrialWatch.listByLead(db, lead!.id);
+		let lead = await bindModels(db).leads.findByEmail("reader@example.com");
+		let watches = await bindModels(db).trialWatches.listByLead(lead!.id);
 
 		expect(funnelEvents(records)).toHaveLength(1);
 		expect(funnelEvents(records)[0]).toMatchObject({

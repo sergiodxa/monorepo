@@ -16,14 +16,13 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HttpCheckOptions, HttpCheckResult } from "~/app/services/http-check";
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import TrialWatch from "~/app/data/trial-watch";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
@@ -80,6 +79,7 @@ vi.doMock("~/app/services/http-check", () => ({
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let checkTrialWatches = (await import("./check-trial-watches")).default;
 
 let transport = new MemoryTransport();
@@ -90,6 +90,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkTrialWatches, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
 
@@ -105,15 +106,17 @@ function notesOf(record: Record<string, unknown>, name: string): Log.Note[] {
 }
 
 async function seedLead(db: Database, email = "visitor@example.com"): Promise<SelectLead> {
-	return await Lead.upsertByEmail(db, {
-		email,
-		locale: "en",
-		consented: false,
-	});
+	return unwrap(
+		await bindModels(db).leads.upsertByEmail({
+			email,
+			locale: "en",
+			consented: false,
+		}),
+	);
 }
 
 /**
- * Seeds a watch and forces it due, since `TrialWatch.create` schedules the first check an
+ * Seeds a watch and forces it due, since creating a trial watch schedules the first check an
  * interval out — the trial page has already shown the visitor that first result.
  */
 async function seedWatch(
@@ -122,8 +125,7 @@ async function seedWatch(
 	overrides: Partial<SelectTrialWatch> = {},
 	url = "https://example.com",
 ): Promise<SelectTrialWatch> {
-	let created = await TrialWatch.create(db, leadId, { url });
-	if (!created) throw new Error("Failed to seed trial watch");
+	let created = unwrap(await bindModels(db).trialWatches.create({ lead_id: leadId, url }));
 
 	await db.update(
 		trialWatches,
@@ -132,7 +134,7 @@ async function seedWatch(
 		{ touch: false },
 	);
 
-	let row = await TrialWatch.findById(db, created.id);
+	let row = await bindModels(db).trialWatches.find(created.id);
 	if (!row) throw new Error("Seeded trial watch disappeared");
 	return row;
 }
@@ -192,12 +194,12 @@ describe("checkTrialWatches", () => {
 		expect(probes[0]?.followRedirects).toBe(false);
 		expect(probes[0]?.contentChecks).toEqual([]);
 
-		let results = await TrialWatch.listResults(db, watch.id);
+		let results = await bindModels(db).trialWatchResults.listByWatch(watch.id);
 		expect(results).toHaveLength(1);
 		expect(results[0]?.status).toBe("up");
 		expect(results[0]?.response_time_ms).toBe(250);
 
-		let updated = await TrialWatch.findById(db, watch.id);
+		let updated = await bindModels(db).trialWatches.find(watch.id);
 		expect(updated?.last_status).toBe("up");
 		expect(updated?.checks_run).toBe(1);
 		expect(updated?.checks_ok).toBe(1);
@@ -251,8 +253,8 @@ describe("checkTrialWatches", () => {
 
 		let record = await runJob(db);
 
-		expect(await TrialWatch.listResults(db, failing.id)).toHaveLength(0);
-		expect(await TrialWatch.listResults(db, healthy.id)).toHaveLength(1);
+		expect(await bindModels(db).trialWatchResults.listByWatch(failing.id)).toHaveLength(0);
+		expect(await bindModels(db).trialWatchResults.listByWatch(healthy.id)).toHaveLength(1);
 
 		expect(record).toMatchObject({ "trial.probed": 1, "trial.failed": 1 });
 		expect(notesOf(record, "trial.watch_failed")[0]?.["watch.id"]).toBe(failing.id);
@@ -271,7 +273,7 @@ describe("checkTrialWatches change notifications", () => {
 		expect(sentOf(TrialChangeEmail)).toBe(1);
 		expect(transport.last?.to).toEqual([{ email: "visitor@example.com" }]);
 
-		let updated = await TrialWatch.findById(db, watch.id);
+		let updated = await bindModels(db).trialWatches.find(watch.id);
 		expect(updated?.change_notified_at).not.toBeNull();
 
 		expect(record).toMatchObject({ "trial.changed": 1 });
@@ -318,7 +320,7 @@ describe("checkTrialWatches change notifications", () => {
 		}
 
 		expect(sentOf(TrialChangeEmail)).toBe(1);
-		expect(await TrialWatch.listResults(db, watch.id)).toHaveLength(5);
+		expect(await bindModels(db).trialWatchResults.listByWatch(watch.id)).toHaveLength(5);
 	});
 
 	test("lets the next day's change through once the bound has moved", async () => {
@@ -354,7 +356,7 @@ describe("checkTrialWatches wrap-up", () => {
 		expect(probes).toHaveLength(0);
 		expect(sentOf(TrialWeeklyDigestEmail)).toBe(1);
 
-		let updated = await TrialWatch.findById(db, watch.id);
+		let updated = await bindModels(db).trialWatches.find(watch.id);
 		expect(updated?.summary_sent_at).not.toBeNull();
 		expect(updated?.next_due_at).toBeNull();
 
@@ -411,7 +413,7 @@ describe("checkTrialWatches wrap-up", () => {
 		await runJob(db);
 
 		expect(transport.messages).toHaveLength(0);
-		expect((await TrialWatch.findById(db, watch.id))?.next_due_at).toBeNull();
+		expect((await bindModels(db).trialWatches.find(watch.id))?.next_due_at).toBeNull();
 	});
 
 	test("ends an expired watch whose lead is gone rather than retrying it forever", async () => {
@@ -423,7 +425,7 @@ describe("checkTrialWatches wrap-up", () => {
 		let record = await runJob(db);
 
 		expect(transport.messages).toHaveLength(0);
-		expect((await TrialWatch.findById(db, watch.id))?.next_due_at).toBeNull();
+		expect((await bindModels(db).trialWatches.find(watch.id))?.next_due_at).toBeNull();
 		expect(notesOf(record, "trial.lead_missing")[0]?.["watch.id"]).toBe(watch.id);
 	});
 });
@@ -448,7 +450,7 @@ describe("checkTrialWatches metering", () => {
 
 		await runJob(db);
 
-		expect(await TrialWatch.listResults(db, watch.id)).toHaveLength(1);
+		expect(await bindModels(db).trialWatchResults.listByWatch(watch.id)).toHaveLength(1);
 	});
 });
 

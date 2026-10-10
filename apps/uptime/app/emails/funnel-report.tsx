@@ -15,7 +15,7 @@ import type { Handle, RemixElement } from "remix/component";
 import { diffInDays, formatDate, formatDateTime } from "@sdxc/dates";
 import { Email } from "@sdxc/mail";
 
-import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";
+import type { TrialDailyCounters } from "~/app/models/trial-daily-stats";
 
 /** The language and zone the report is written in; see the module docblock on both. */
 const REPORT_LOCALE = "en";

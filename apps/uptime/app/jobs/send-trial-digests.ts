@@ -11,14 +11,12 @@ import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
 
 import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-import type { TrialWatchDigestEntry } from "~/app/data/trial-watch";
 import type { TrialStats } from "~/app/emails/shared/trial";
+import type { TrialWatchDigestEntry } from "~/app/models/trial-watches";
 import type { SelectLead, SelectTrialWatchResult } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import TrialWatch, { isHealthyTrialStatus } from "~/app/data/trial-watch";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import jobs from "~/app/jobs";
@@ -26,6 +24,7 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { features } from "~/app/lib/flags";
 import { segmentsOver } from "~/app/lib/trial-report";
 import { formatUptime } from "~/app/lib/uptime-report";
+import { isHealthyTrialStatus } from "~/app/models/trial-watches";
 import { recordCost } from "~/app/services/cost";
 import { trackTrialProgressEmailSent } from "~/app/services/funnel-events";
 
@@ -45,7 +44,7 @@ export default createJobHandler(jobs.sendTrialDigests, async (ctx) => {
 	 */
 	let now = Date.now();
 
-	let leads = await Lead.listDueForDigest(ctx.database, now);
+	let leads = await ctx.models.leads.listDueForDigest(now);
 
 	/**
 	 * A lead belongs to no team, so this cost is recorded with no weights: the ledger
@@ -95,7 +94,7 @@ async function digest(
 	now: number,
 ): Promise<boolean> {
 	let since = now - DIGEST_WINDOW_HOURS * MS_PER_HOUR;
-	let entries = await TrialWatch.listDigestForLead(ctx.database, lead.id, since);
+	let entries = await ctx.models.trialWatches.listDigestForLead(lead.id, since);
 
 	let targets = entries.map((entry) => toTarget(entry, since)).filter((target) => target !== null);
 
@@ -123,9 +122,9 @@ async function digest(
 	}
 
 	/** Only now: the stamp is what moves this lead's next digest to tomorrow. */
-	await Lead.markDigestSent(ctx.database, lead.id, now);
+	unwrap(await ctx.models.leads.markDigestSent(lead.id, now));
 	/** And on the same condition, since the funnel counts sends that landed. */
-	await Lead.recordEmailSent(ctx.database, lead.id, now);
+	await ctx.models.leads.recordEmailSent(lead.id, now);
 
 	/**
 	 * On the same condition again, and with no URL in it: how many targets the email covered

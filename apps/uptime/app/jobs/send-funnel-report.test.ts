@@ -18,13 +18,10 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import Lead from "~/app/data/lead";
-import TrialConversion from "~/app/data/trial-conversion";
-import TrialDailyStats from "~/app/data/trial-daily-stats";
-import TrialWatch from "~/app/data/trial-watch";
 import { FunnelReportEmail } from "~/app/emails/funnel-report";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -57,12 +54,15 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 let transport = new MemoryTransport();
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 	transport = new MemoryTransport();
 	env.FUNNEL_REPORT_TO = "ops@example.com";
 });
@@ -82,6 +82,7 @@ async function runJob() {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendFunnelReport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
 
 	await sendFunnelReport(ctx);
@@ -96,12 +97,15 @@ function noteOf(record: Record<string, unknown>, name: string): Log.Note | undef
 
 /** A lead created yesterday, with a watch under it — one submission of the free form. */
 async function seedSubmission(email: string, at: number = duringYesterday()) {
-	let lead = await Lead.upsertByEmail(db, { email, locale: "en", consented: false });
+	let lead = unwrap(await models.leads.upsertByEmail({ email, locale: "en", consented: false }));
 	await db.update(leads, lead.id, { created_at: at }, { touch: false });
 
-	let watch = await TrialWatch.create(db, lead.id, {
-		url: `https://${email.split("@")[0]}.example`,
-	});
+	let watch = unwrap(
+		await models.trialWatches.create({
+			lead_id: lead.id,
+			url: `https://${email.split("@")[0]}.example`,
+		}),
+	);
 	await db.update(trialWatches, watch.id, { created_at: at }, { touch: false });
 
 	return lead;
@@ -129,7 +133,7 @@ describe("staying quiet", () => {
 
 		await runJob();
 
-		expect((await TrialDailyStats.findByDate(db, yesterday()))?.new_leads).toBe(1);
+		expect((await models.trialDailyStats.findBy({ date: yesterday() }))?.new_leads).toBe(1);
 	});
 
 	test("sends nothing on a day when nothing at all happened", async () => {
@@ -142,7 +146,7 @@ describe("staying quiet", () => {
 	test("still writes a row of zeroes for a day when nothing happened", async () => {
 		await runJob();
 
-		let row = await TrialDailyStats.findByDate(db, yesterday());
+		let row = await models.trialDailyStats.findBy({ date: yesterday() });
 		expect(row).not.toBeNull();
 		expect(row?.new_leads).toBe(0);
 		expect(row?.emails_sent).toBe(0);
@@ -165,7 +169,7 @@ describe("what the day counts", () => {
 
 		let record = await runJob();
 
-		let row = await TrialDailyStats.findByDate(db, yesterday());
+		let row = await models.trialDailyStats.findBy({ date: yesterday() });
 		expect(row?.new_leads).toBe(1);
 		expect(row?.urls_checked).toBe(1);
 		expect(row?.emails_sent).toBe(1);
@@ -183,7 +187,7 @@ describe("what the day counts", () => {
 	test("counts the digests, change emails and wrap-ups the day's stamps record", async () => {
 		let lead = await seedSubmission("ada@example.com");
 		await db.update(leads, lead.id, { last_digest_at: duringYesterday() }, { touch: false });
-		let [watch] = await TrialWatch.listByLead(db, lead.id);
+		let [watch] = await models.trialWatches.listByLead(lead.id);
 		await db.update(
 			trialWatches,
 			watch?.id ?? "",
@@ -193,7 +197,7 @@ describe("what the day counts", () => {
 
 		await runJob();
 
-		expect((await TrialDailyStats.findByDate(db, yesterday()))?.emails_sent).toBe(4);
+		expect((await models.trialDailyStats.findBy({ date: yesterday() }))?.emails_sent).toBe(4);
 	});
 
 	test("leaves out anything that happened on a different day", async () => {
@@ -201,12 +205,12 @@ describe("what the day counts", () => {
 
 		await runJob();
 
-		expect((await TrialDailyStats.findByDate(db, yesterday()))?.new_leads).toBe(0);
+		expect((await models.trialDailyStats.findBy({ date: yesterday() }))?.new_leads).toBe(0);
 	});
 
 	test("counts signups and payments separately", async () => {
 		await seedSubmission("ada@example.com");
-		await TrialConversion.recordSignup(db, {
+		await models.trialConversions.recordSignup({
 			ownerId: "subject-1",
 			leadCreatedAt: duringYesterday() - 4 * MS_PER_DAY,
 			emailsSent: 5,
@@ -214,11 +218,11 @@ describe("what the day counts", () => {
 			watchCount: 1,
 			signedUpAt: duringYesterday(),
 		});
-		await TrialConversion.markPaid(db, "subject-1", duringYesterday() + 60_000);
+		await models.trialConversions.markPaid("subject-1", duringYesterday() + 60_000);
 
 		await runJob();
 
-		let row = await TrialDailyStats.findByDate(db, yesterday());
+		let row = await models.trialDailyStats.findBy({ date: yesterday() });
 		expect(row?.free_signups).toBe(1);
 		expect(row?.paid_conversions).toBe(1);
 	});
@@ -248,7 +252,7 @@ describe("the report itself", () => {
 
 	test("itemises a paid conversion with the days and emails it took", async () => {
 		await seedSubmission("ada@example.com");
-		await TrialConversion.recordSignup(db, {
+		await models.trialConversions.recordSignup({
 			ownerId: "subject-1",
 			leadCreatedAt: duringYesterday() - 6 * MS_PER_DAY,
 			emailsSent: 8,
@@ -256,7 +260,7 @@ describe("the report itself", () => {
 			watchCount: 2,
 			signedUpAt: duringYesterday() - MS_PER_DAY,
 		});
-		await TrialConversion.markPaid(db, "subject-1", duringYesterday());
+		await models.trialConversions.markPaid("subject-1", duringYesterday());
 
 		await runJob();
 
@@ -267,7 +271,7 @@ describe("the report itself", () => {
 	});
 
 	test("includes the trailing totals, drawn from the days already reported", async () => {
-		await TrialDailyStats.upsertDay(db, {
+		await models.trialDailyStats.upsertDay({
 			date: new Date(Date.now() - 3 * MS_PER_DAY).toISOString().slice(0, 10),
 			newLeads: 9,
 			urlsChecked: 0,

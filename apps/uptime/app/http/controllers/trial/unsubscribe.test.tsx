@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -24,13 +25,12 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import Lead from "~/app/data/lead";
-import TrialWatch from "~/app/data/trial-watch";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { bindModels } from "~/app/lib/test/models";
 import routes from "~/routes/web";
 
 import unsubscribe from "./unsubscribe";
@@ -47,16 +47,26 @@ function createTestRenderer(): Renderer<RemixNode> {
 	};
 }
 
+/** Records a lead for an address the way the trial form does. */
+async function addLead(db: Db, email: string) {
+	return unwrap(
+		await bindModels(db).leads.upsertByEmail({ email, locale: "en", consented: false }),
+	);
+}
+
+/** Starts watching a URL for a lead, seeded as last seen up. */
+async function addWatch(db: Db, leadId: string, url: string) {
+	return unwrap(
+		await bindModels(db).trialWatches.create({ lead_id: leadId, url, last_status: "up" }),
+	);
+}
+
 /** A lead with one watch under it, which is what an unsubscribe has to take away. */
 async function createFixture() {
 	let { db } = createTestDatabase();
 
-	let lead = await Lead.upsertByEmail(db, {
-		email: "reader@example.com",
-		locale: "en",
-		consented: false,
-	});
-	await TrialWatch.create(db, lead.id, { url: "https://example.com/", last_status: "up" });
+	let lead = await addLead(db, "reader@example.com");
+	await addWatch(db, lead.id, "https://example.com/");
 
 	return { db, lead };
 }
@@ -112,8 +122,8 @@ describe("GET /unsubscribe/:token", () => {
 
 		await visit(db, lead.unsubscribe_token, "GET");
 
-		expect(await Lead.findByEmail(db, "reader@example.com")).not.toBeNull();
-		expect(await TrialWatch.listByLead(db, lead.id)).toHaveLength(1);
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).not.toBeNull();
+		expect(await bindModels(db).trialWatches.listByLead(lead.id)).toHaveLength(1);
 	});
 
 	test("answers an unknown token with the same confirmation page", async () => {
@@ -134,8 +144,8 @@ describe("POST /unsubscribe/:token", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("You are unsubscribed");
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
-		expect(await TrialWatch.listByLead(db, lead.id)).toHaveLength(0);
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
+		expect(await bindModels(db).trialWatches.listByLead(lead.id)).toHaveLength(0);
 	});
 
 	test("answers an unknown token with the same page rather than an error", async () => {
@@ -169,21 +179,17 @@ describe("POST /unsubscribe/:token", () => {
 
 		expect(response.status).toBe(200);
 		expect(body).toBe("");
-		expect(await Lead.findByEmail(db, "reader@example.com")).toBeNull();
+		expect(await bindModels(db).leads.findByEmail("reader@example.com")).toBeNull();
 	});
 
 	test("leaves another lead's data alone", async () => {
 		let { db, lead } = await createFixture();
-		let other = await Lead.upsertByEmail(db, {
-			email: "other@example.com",
-			locale: "en",
-			consented: false,
-		});
-		await TrialWatch.create(db, other.id, { url: "https://other.example/", last_status: "up" });
+		let other = await addLead(db, "other@example.com");
+		await addWatch(db, other.id, "https://other.example/");
 
 		await visit(db, lead.unsubscribe_token, "POST");
 
-		expect(await Lead.findByEmail(db, "other@example.com")).not.toBeNull();
-		expect(await TrialWatch.listByLead(db, other.id)).toHaveLength(1);
+		expect(await bindModels(db).leads.findByEmail("other@example.com")).not.toBeNull();
+		expect(await bindModels(db).trialWatches.listByLead(other.id)).toHaveLength(1);
 	});
 });

@@ -14,19 +14,12 @@ import type { Mailer } from "@sdxc/mail";
 
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-import type { ClaimedTrialWatch } from "~/app/data/trial-watch";
+import type { ClaimedTrialWatch } from "~/app/models/trial-watches";
 import type { HttpCheckResult } from "~/app/services/http-check";
 import type { MonitorStatus, SelectLead } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import TrialWatch, {
-	TRIAL_WATCH_DURATION_DAYS,
-	isHealthyTrialStatus,
-	shouldNotifyChange,
-	shouldSendSummary,
-} from "~/app/data/trial-watch";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
@@ -35,6 +28,12 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { features } from "~/app/lib/flags";
 import { trialProbeOptions } from "~/app/lib/trial-probe";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
+import {
+	TRIAL_WATCH_DURATION_DAYS,
+	isHealthyTrialStatus,
+	shouldNotifyChange,
+	shouldSendSummary,
+} from "~/app/models/trial-watches";
 import { recordCost } from "~/app/services/cost";
 import {
 	hostnameOf,
@@ -75,7 +74,7 @@ export default createJobHandler(jobs.checkTrialWatches, async (ctx) => {
 	 */
 	let now = Date.now();
 
-	let watches = await TrialWatch.claimDue(ctx.database, now);
+	let watches = await ctx.models.trialWatches.claimDue(now);
 
 	/**
 	 * No `apportionCost` call: a lead is never a billing team, so leaving its weights empty
@@ -144,7 +143,7 @@ async function check(
 	 */
 	let firstAlert = watch.change_notified_at === null;
 
-	await TrialWatch.recordCheck(ctx.database, watch, {
+	await ctx.models.trialWatches.recordCheck(watch, {
 		status: result.status,
 		responseTimeMs: result.outcome.responseTimeMs,
 	});
@@ -164,9 +163,9 @@ async function check(
 	 * the reader unaware their site went down.
 	 */
 	if (sent) {
-		await TrialWatch.markChangeNotified(ctx.database, watch.id, now);
+		unwrap(await ctx.models.trialWatches.markChangeNotified(watch.id, now));
 		/** Same condition, one row up: the funnel counts confirmed sends. */
-		await Lead.recordEmailSent(ctx.database, watch.lead_id, now);
+		await ctx.models.leads.recordEmailSent(watch.lead_id, now);
 
 		if (firstAlert) {
 			trackFirstTrialAlertSent(ctx.log, {
@@ -197,7 +196,7 @@ async function reportFirstCheck(
 	if (now - watch.created_at > FIRST_CHECK_WINDOW_MS) return;
 
 	try {
-		let row = await TrialWatch.findById(ctx.database, watch.id);
+		let row = await ctx.models.trialWatches.find(watch.id);
 		if (row?.checks_run !== 1) return;
 
 		trackFirstTrialCheckCompleted(ctx.log, {
@@ -228,23 +227,23 @@ async function expire(
 	now: number,
 ): Promise<CheckedWatch> {
 	if (!shouldSendSummary(watch, now)) {
-		await TrialWatch.finish(ctx.database, watch.id);
+		unwrap(await ctx.models.trialWatches.finish(watch.id));
 		return DID_NOTHING;
 	}
 
-	let lead = await Lead.findById(ctx.database, watch.lead_id);
+	let lead = await ctx.models.leads.find(watch.lead_id);
 	if (!lead) {
 		ctx.log.warn("trial.lead_missing", { "watch.id": watch.id, "lead.id": watch.lead_id });
-		await TrialWatch.finish(ctx.database, watch.id);
+		unwrap(await ctx.models.trialWatches.finish(watch.id));
 		return DID_NOTHING;
 	}
 
 	if (!(await sendSummary(ctx, mailer, watch, lead))) return DID_NOTHING;
 
 	/** One write that both records the send and ends the watch; the two are one event. */
-	await TrialWatch.markSummarySent(ctx.database, watch.id, now);
+	unwrap(await ctx.models.trialWatches.markSummarySent(watch.id, now));
 	/** Same condition: the funnel counts confirmed sends. */
-	await Lead.recordEmailSent(ctx.database, lead.id, now);
+	await ctx.models.leads.recordEmailSent(lead.id, now);
 	return { probed: false, changed: false, wrappedUp: true };
 }
 
@@ -263,7 +262,7 @@ async function sendChange(
 	result: HttpCheckResult,
 	now: number,
 ): Promise<boolean> {
-	let lead = await Lead.findById(ctx.database, watch.lead_id);
+	let lead = await ctx.models.leads.find(watch.lead_id);
 	if (!lead) {
 		ctx.log.warn("trial.lead_missing", { "watch.id": watch.id, "lead.id": watch.lead_id });
 		return false;
@@ -311,14 +310,13 @@ async function sendSummary(
 	watch: ClaimedTrialWatch,
 	lead: SelectLead,
 ): Promise<boolean> {
-	let row = await TrialWatch.findById(ctx.database, watch.id);
+	let row = await ctx.models.trialWatches.find(watch.id);
 	if (!row) {
 		ctx.log.warn("trial.watch_missing", { "watch.id": watch.id });
 		return false;
 	}
 
-	let results = await TrialWatch.listResultsBetween(
-		ctx.database,
+	let results = await ctx.models.trialWatchResults.listBetween(
 		row.id,
 		row.created_at,
 		row.expires_at,
@@ -327,7 +325,7 @@ async function sendSummary(
 
 	/**
 	 * Built inside the request: signing in is what turns a watched target into a real
-	 * monitor, and `TrialWatch.listConvertibleByLead` runs on the sign-in path, so the
+	 * monitor, and `trialWatches.listConvertibleByLead` runs on the sign-in path, so the
 	 * link is the app entry point, carrying a signed-out reader through sign-in first.
 	 */
 	let subscribeUrl = `${APP_ORIGIN}${routes.app.index.href()}`;

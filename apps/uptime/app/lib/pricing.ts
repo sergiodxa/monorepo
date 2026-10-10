@@ -21,7 +21,7 @@ export const BASE_PRICE_USD = 5;
  * term quoted across the marketing pages, trial page, and trial emails, so it
  * lives here where `resources/content/marketing.ts` can read it directly.
  *
- * @see `~/app/data/trial-watch` — owns what it means for a watch to expire.
+ * @see `~/app/models/trial-watches` — owns what it means for a watch to expire.
  */
 export const FREE_TRIAL_DAYS = 7;
 

@@ -25,7 +25,6 @@ import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import Lead from "~/app/data/lead";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -87,15 +86,15 @@ export default createController(routes.trial.unsubscribe, {
 		/**
 		 * POST /unsubscribe/:token — deletes the lead and everything attached to it, then
 		 * reports it plainly: the answer to "do you still have my address?" becomes genuinely
-		 * no. See `Lead.forget` for the reasoning behind the hard delete. A mailbox provider's
+		 * no. See `leads.forget` for the reasoning behind the hard delete. A mailbox provider's
 		 * RFC 8058 one-click POST reads no body, so it gets an empty `200`.
 		 */
 		async action(ctx) {
 			let { token } = s.parse(ParamsSchema, ctx.params);
 			let t = ctx.intl.t;
 
-			let lead = await Lead.findByUnsubscribeToken(ctx.db, token);
-			if (lead) await Lead.forget(ctx.db, lead.id);
+			let lead = await ctx.models.leads.findBy({ unsubscribe_token: token });
+			if (lead) await ctx.models.leads.forget(lead.id);
 			if (isOneClickUnsubscribe(ctx.formData)) return new Response(null, { status: 200 });
 
 			return renderPage(

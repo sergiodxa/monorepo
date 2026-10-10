@@ -13,11 +13,11 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import TrialConversion from "~/app/data/trial-conversion";
 import jobs from "~/app/jobs";
 import clean from "~/app/jobs/clean";
 import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import {
 	alertEvents,
 	dnsMonitorResults,
@@ -94,6 +94,7 @@ describe("clean", () => {
 		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1, log });
 		ctx.set(Database, db, { property: "database" });
+		publishModels(ctx, db);
 		await clean(ctx);
 		log.emit();
 
@@ -249,6 +250,7 @@ describe("clean trial cleanup", () => {
 	async function run() {
 		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
 		ctx.set(Database, db, { property: "database" });
+		publishModels(ctx, db);
 		await clean(ctx);
 	}
 
@@ -268,7 +270,7 @@ describe("clean trial cleanup", () => {
 
 	/**
 	 * A watch dated from `createdAt`, with both of its deadlines derived the way it is
-	 * created. Seeds `report_token` directly since this helper bypasses `TrialWatch.create`,
+	 * created. Seeds `report_token` directly since this helper bypasses the trial watches model,
 	 * the path that normally issues one for a real watch.
 	 */
 	async function seedWatch(
@@ -441,7 +443,7 @@ describe("clean trial cleanup", () => {
 		await seedLead("lead-1", now - 31 * MS_PER_DAY);
 		await seedWatch("watch-1", "lead-1", now - 31 * MS_PER_DAY);
 		await seedTrialResult("result-1", "watch-1", now - 31 * MS_PER_DAY);
-		await TrialConversion.recordSignup(db, {
+		await bindModels(db).trialConversions.recordSignup({
 			ownerId: "subject-1",
 			leadCreatedAt: now - 31 * MS_PER_DAY,
 			emailsSent: 6,
@@ -456,7 +458,7 @@ describe("clean trial cleanup", () => {
 		expect(await db.findMany(trialWatches, {})).toHaveLength(0);
 		expect(await db.findMany(trialWatchResults, {})).toHaveLength(0);
 
-		let record = await TrialConversion.findByOwner(db, "subject-1");
+		let record = await bindModels(db).trialConversions.findBy({ owner_id: "subject-1" });
 		expect(record?.emails_sent).toBe(6);
 		expect(record?.watch_count).toBe(1);
 		expect(record?.urls).toBe('["https://example.com"]');

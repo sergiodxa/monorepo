@@ -11,7 +11,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
@@ -19,8 +19,6 @@ import { Session } from "remix/session";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { SupportedLanguage } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import TrialWatch, { TRIAL_WATCH_DURATION_DAYS } from "~/app/data/trial-watch";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialConfirmationEmail } from "~/app/emails/trial-confirmation";
 import { TrialRepeatReportEmail } from "~/app/emails/trial-repeat-report";
@@ -33,6 +31,7 @@ import {
 } from "~/app/http/controllers/trial/session";
 import { TRIAL_EMAIL_CONFIRMED_FIELD, TrialLeadSchema } from "~/app/http/validators/trial";
 import { segmentsOver, watchStats } from "~/app/lib/trial-report";
+import { TRIAL_WATCH_DURATION_DAYS } from "~/app/models/trial-watches";
 import { recordCost } from "~/app/services/cost";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { hostnameOf, trackTrialMonitorStarted } from "~/app/services/funnel-events";
@@ -125,16 +124,18 @@ export default createAction(routes.trial.lead, async (ctx) => {
 
 	let locale = toSupportedLanguage(ctx.locale);
 
-	let lead = await Lead.upsertByEmail(ctx.db, {
-		email: result.data.email,
-		/**
-		 * Always absent: the form now asks only for email and consent, and every message
-		 * greets the recipient by email alone. `LeadInput` still names the column, so this
-		 * stays until the column itself goes.
-		 */
-		locale,
-		consented: result.data.consent,
-	});
+	let lead = unwrap(
+		await ctx.models.leads.upsertByEmail({
+			email: result.data.email,
+			/**
+			 * Always absent: the form now asks only for email and consent, and every message
+			 * greets the recipient by email alone. `LeadInput` still names the column, so this
+			 * stays until the column itself goes.
+			 */
+			locale,
+			consented: result.data.consent,
+		}),
+	);
 
 	ctx.log.set({ trial: { lead_id: lead.id } });
 
@@ -143,13 +144,12 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	 * had its free week, since a watch is deleted thirty days after creation and
 	 * can only be found within that window.
 	 */
-	let existing = await TrialWatch.findByNormalizedUrl(ctx.db, lead.id, probe.url);
+	let existing = await ctx.models.trialWatches.findByNormalizedUrl(lead.id, probe.url);
 
 	if (existing) {
 		ctx.log.set({ trial: { watch_id: existing.id, repeated: true } });
 
-		let results = await TrialWatch.listResultsBetween(
-			ctx.db,
+		let results = await ctx.models.trialWatchResults.listBetween(
 			existing.id,
 			existing.created_at,
 			existing.expires_at,
@@ -184,7 +184,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		if (isFailure(report)) {
 			ctx.log.warn("trial.repeat_report_email_failed", { message: report.error.message });
 		} else {
-			await Lead.recordEmailSent(ctx.db, lead.id);
+			await ctx.models.leads.recordEmailSent(lead.id);
 		}
 
 		/**
@@ -196,15 +196,18 @@ export default createAction(routes.trial.lead, async (ctx) => {
 		return back;
 	}
 
-	let watch = await TrialWatch.create(ctx.db, lead.id, {
-		url: probe.url,
-		/**
-		 * The status the visitor just saw, so change detection has a baseline from the very
-		 * first hour instead of spending one establishing it — the watch's first check is an
-		 * interval out precisely because this one already happened.
-		 */
-		last_status: probe.status,
-	});
+	let watch = unwrap(
+		await ctx.models.trialWatches.create({
+			lead_id: lead.id,
+			url: probe.url,
+			/**
+			 * The status the visitor just saw, so change detection has a baseline from the very
+			 * first hour instead of spending one establishing it — the watch's first check is an
+			 * interval out precisely because this one already happened.
+			 */
+			last_status: probe.status,
+		}),
+	);
 
 	ctx.log.set({ trial: { watch_id: watch.id, repeated: false } });
 
@@ -249,7 +252,7 @@ export default createAction(routes.trial.lead, async (ctx) => {
 	if (isFailure(sent)) {
 		ctx.log.warn("trial.confirmation_email_failed", { message: sent.error.message });
 	} else {
-		await Lead.recordEmailSent(ctx.db, lead.id);
+		await ctx.models.leads.recordEmailSent(lead.id);
 	}
 
 	session?.set(TRIAL_WATCH_STARTED, probe.url);

@@ -18,14 +18,12 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { failure } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import TrialWatch from "~/app/data/trial-watch";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import jobs from "~/app/jobs";
@@ -34,6 +32,7 @@ import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
@@ -54,6 +53,7 @@ async function runJob(db: Database, options: { transport?: Transport } = {}) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendTrialDigests, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
 		property: "mailer",
@@ -69,15 +69,17 @@ async function runJob(db: Database, options: { transport?: Transport } = {}) {
  * `created_at` until a digest has been sent and a lead created now is not due until tomorrow.
  */
 async function seedDueLead(db: Database, email = "visitor@example.com"): Promise<SelectLead> {
-	let lead = await Lead.upsertByEmail(db, {
-		email,
-		locale: "en",
-		consented: false,
-	});
+	let lead = unwrap(
+		await bindModels(db).leads.upsertByEmail({
+			email,
+			locale: "en",
+			consented: false,
+		}),
+	);
 
 	await db.update(leads, lead.id, { created_at: Date.now() - 2 * MS_PER_DAY }, { touch: false });
 
-	let row = await Lead.findById(db, lead.id);
+	let row = await bindModels(db).leads.find(lead.id);
 	if (!row) throw new Error("Seeded lead disappeared");
 	return row;
 }
@@ -88,14 +90,13 @@ async function seedWatch(
 	url: string,
 	overrides: Partial<SelectTrialWatch> = {},
 ): Promise<SelectTrialWatch> {
-	let created = await TrialWatch.create(db, leadId, { url });
-	if (!created) throw new Error("Failed to seed trial watch");
+	let created = unwrap(await bindModels(db).trialWatches.create({ lead_id: leadId, url }));
 
 	if (Object.keys(overrides).length > 0) {
 		await db.update(trialWatches, created.id, overrides, { touch: false });
 	}
 
-	let row = await TrialWatch.findById(db, created.id);
+	let row = await bindModels(db).trialWatches.find(created.id);
 	if (!row) throw new Error("Seeded trial watch disappeared");
 	return row;
 }
@@ -181,11 +182,13 @@ describe("sendTrialDigests", () => {
 
 	test("sends nothing on the day someone signed up", async () => {
 		let { db } = createTestDatabase();
-		let lead = await Lead.upsertByEmail(db, {
-			email: "fresh@example.com",
-			locale: "en",
-			consented: false,
-		});
+		let lead = unwrap(
+			await bindModels(db).leads.upsertByEmail({
+				email: "fresh@example.com",
+				locale: "en",
+				consented: false,
+			}),
+		);
 		await seedWatch(db, lead.id, "https://example.com", { last_status: "up" });
 
 		await runJob(db);
@@ -202,7 +205,7 @@ describe("sendTrialDigests", () => {
 		await runJob(db);
 
 		expect(digests()).toHaveLength(1);
-		expect((await Lead.findById(db, lead.id))?.last_digest_at).not.toBeNull();
+		expect((await bindModels(db).leads.find(lead.id))?.last_digest_at).not.toBeNull();
 	});
 
 	test("sends one email per lead, not one per lead per URL", async () => {
@@ -231,7 +234,7 @@ describe("sendTrialDigests", () => {
 		expect(transport.messages).toHaveLength(0);
 		expect(noteOf(record, "digests.nothing_to_report")?.["lead.id"]).toBe(lead.id);
 		/** Nothing was sent, so nothing is stamped and tomorrow's run tries again. */
-		expect((await Lead.findById(db, lead.id))?.last_digest_at).toBeNull();
+		expect((await bindModels(db).leads.find(lead.id))?.last_digest_at).toBeNull();
 	});
 
 	test("reports the last day and ignores checks older than the window", async () => {
@@ -265,7 +268,7 @@ describe("sendTrialDigests", () => {
 
 		await runJob(db);
 
-		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(1);
+		expect((await bindModels(db).leads.find(lead.id))?.emails_sent).toBe(1);
 	});
 
 	test("counts nothing when the transport refuses the digest", async () => {
@@ -275,7 +278,7 @@ describe("sendTrialDigests", () => {
 
 		await runJob(db, { transport: new RefusingTransport() });
 
-		let row = await Lead.findById(db, lead.id);
+		let row = await bindModels(db).leads.find(lead.id);
 		expect(row?.emails_sent).toBe(0);
 		/** The digest also stays owed here, gated on the same accepted-send condition as the counter. */
 		expect(row?.last_digest_at).toBeNull();
