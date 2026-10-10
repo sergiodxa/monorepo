@@ -393,6 +393,7 @@
         "@sdxc/cron": "workspace:*",
         "@sdxc/crypto": "workspace:*",
         "@sdxc/csv": "workspace:*",
+        "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/dates": "workspace:*",
         "@sdxc/doh": "workspace:*",
