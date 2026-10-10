@@ -16,6 +16,7 @@ import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 
 import { createFederation } from "~/app/services/activitypub";
+import { bindModels } from "~/app/test/models";
 import { ACTOR_ID } from "~/config/activitypub";
 
 /** The remote account every federation test follows, replies and reacts as. */
@@ -67,7 +68,7 @@ export function testFederation(
 	keys: ActorKeys,
 	queue: Federation.Queue = new TestQueue(),
 ): Federation {
-	return createFederation({ db, cache: new MemoryCache(), keys, queue });
+	return createFederation({ db, models: bindModels(db), cache: new MemoryCache(), keys, queue });
 }
 
 /** The blog actor's keys, generated once per test file. */

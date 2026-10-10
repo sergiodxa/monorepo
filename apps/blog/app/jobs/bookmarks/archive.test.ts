@@ -20,6 +20,7 @@ import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { publishModels } from "~/app/test/models";
 
 vi.doMock("~/app/services/wayback-keys", () => ({
 	waybackKeys: async () => ({ access: "access-key", secret: "secret-key" }),
@@ -60,6 +61,7 @@ async function bookmark(created_at?: string): Promise<string> {
 async function run(postId: string): Promise<void> {
 	let ctx = createJobContext(jobs.bookmarks.archive, { id: "m", attempts: 1, input: { postId } });
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	await archive(ctx);
 }
 

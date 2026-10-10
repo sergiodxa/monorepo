@@ -13,7 +13,6 @@ import { verify } from "@sdxc/webmention/receiver";
 
 import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
-import { Webmention } from "~/app/repositories/webmention";
 import { USER_AGENT } from "~/app/services/webmention";
 
 /**
@@ -33,11 +32,11 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 
 	let post = await Post.findMentionable(ctx.db, pair.target, pair.target.origin);
 	if (!post) {
-		await Webmention.markDeleted(ctx.db, pair);
+		await ctx.models.webmentions.markDeleted(pair);
 		return ctx.ack("The target no longer takes mentions");
 	}
 
-	let policy = await Webmention.policyFor(ctx.db, pair.source.hostname);
+	let policy = await ctx.models.webmentionDomains.policyFor(pair.source.hostname);
 	if (policy === "block") return ctx.ack("The source host is blocked");
 
 	let outcome = await verify(pair, { userAgent: USER_AGENT });
@@ -50,11 +49,11 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 	ctx.log.set({ webmention: { outcome: outcome.data.status } });
 
 	if (outcome.data.status !== "linked") {
-		await Webmention.markDeleted(ctx.db, pair);
+		await ctx.models.webmentions.markDeleted(pair);
 		return;
 	}
 
-	let stored = await Webmention.upsert(ctx.db, {
+	let stored = await ctx.models.webmentions.record({
 		postId: post.id,
 		pair,
 		mention: outcome.data.mention,

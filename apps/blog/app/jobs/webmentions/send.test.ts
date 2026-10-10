@@ -16,9 +16,9 @@ import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
-import { WebmentionSend } from "~/app/repositories/webmention-send";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels, publishModels } from "~/app/test/models";
 
 /** Every `enqueueMany` call, standing in for the queue the dispatcher writes to. */
 let enqueued = vi.fn<(job: unknown, inputs: unknown[]) => Promise<void>>(async () => {});
@@ -52,6 +52,7 @@ async function article(slug: string, links: string[], published_at: string | nul
 async function run(handler: typeof send, input: { postId: string }): Promise<void> {
 	let ctx = createJobContext(jobs.webmentions.send, { id: "m", attempts: 1, input });
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	await handler(ctx);
 }
 
@@ -79,7 +80,7 @@ describe("the send job", () => {
 
 	test("also notifies a page the post stopped linking to", async () => {
 		let id = await article("edited", ["https://example.com/kept"]);
-		await WebmentionSend.record(db, id, "https://example.com/dropped", {
+		await bindModels(db).webmentionSends.record(id, "https://example.com/dropped", {
 			status: "sent",
 			endpoint: "https://example.com/webmention",
 			code: 202,
@@ -96,7 +97,7 @@ describe("the send job", () => {
 
 	test("notifies every past target once the post is deleted", async () => {
 		let id = await article("deleted", ["https://example.com/a"]);
-		await WebmentionSend.record(db, id, "https://example.com/a", {
+		await bindModels(db).webmentionSends.record(id, "https://example.com/a", {
 			status: "sent",
 			endpoint: null,
 			code: 202,
@@ -128,6 +129,7 @@ describe("the scheduled job", () => {
 
 		let ctx = createJobContext(jobs.webmentions.scheduled, { id: "m", attempts: 1 });
 		ctx.set(Database, db, { property: "db" });
+		publishModels(ctx, db);
 		await scheduled(ctx);
 
 		expect(deliveries()).toEqual([{ postId: arrived }]);

@@ -14,8 +14,8 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import { hostOf } from "~/app/models/webmentions";
 import { Post } from "~/app/repositories/post";
-import { hostOf, Webmention } from "~/app/repositories/webmention";
 import { WebmentionDecisionSchema, WebmentionQueueSchema } from "~/app/schemas/cms/webmention";
 import { TAGS } from "~/app/services/cache";
 import { CMSWebmentionsView } from "~/resources/views/cms/webmentions";
@@ -56,7 +56,7 @@ export default createController(routes.cms.webmentions, {
 		index: async (ctx) => {
 			let query = await validate(ctx.url.searchParams, WebmentionQueueSchema);
 			let status = isFailure(query) ? "pending" : query.data.status;
-			let rows = await Webmention.findByStatus(ctx.db, status);
+			let rows = await ctx.models.webmentions.findByStatus(status);
 
 			let items: Array<CMSWebmentionsView.Item> = rows.map((row) => ({
 				id: row.id,
@@ -83,7 +83,7 @@ export default createController(routes.cms.webmentions, {
 			let form = await validate(ctx.get(FormData), WebmentionDecisionSchema);
 			let queue = isFailure(form) ? "pending" : form.data.status;
 			let back = `${routes.cms.webmentions.index.href()}?status=${queue}`;
-			let mention = ctx.params.id ? await Webmention.findById(ctx.db, ctx.params.id) : null;
+			let mention = ctx.params.id ? await ctx.models.webmentions.find(ctx.params.id) : null;
 			if (isFailure(form) || !mention) {
 				return redirect(back, { status: redirect.Status.SeeOther });
 			}
@@ -93,18 +93,19 @@ export default createController(routes.cms.webmentions, {
 
 			switch (form.data.decision) {
 				case "approve":
-					await Webmention.setStatus(ctx.db, mention.id, "approved");
+					await ctx.models.webmentions.setStatus(mention.id, "approved");
 					break;
 				case "reject":
-					await Webmention.setStatus(ctx.db, mention.id, "rejected");
+					await ctx.models.webmentions.setStatus(mention.id, "rejected");
 					break;
 				case "allow":
-					await Webmention.setPolicy(ctx.db, host, "allow");
-					await Webmention.setStatus(ctx.db, mention.id, "approved");
+					await ctx.models.webmentionDomains.setPolicy(host, "allow");
+					await ctx.models.webmentions.setStatus(mention.id, "approved");
 					break;
 				case "block":
-					await Webmention.setPolicy(ctx.db, host, "block");
-					for (let postId of await Webmention.rejectFromHost(ctx.db, host)) affected.add(postId);
+					await ctx.models.webmentionDomains.setPolicy(host, "block");
+					for (let postId of await ctx.models.webmentions.rejectFromHost(host))
+						affected.add(postId);
 					break;
 			}
 

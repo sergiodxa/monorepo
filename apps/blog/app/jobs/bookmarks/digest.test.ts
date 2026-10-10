@@ -20,6 +20,7 @@ import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { publishModels } from "~/app/test/models";
 
 /** Every `enqueueMany` call, standing in for the queue the dispatcher writes to. */
 let enqueued = vi.fn<(job: unknown, inputs: unknown[]) => Promise<void>>(async () => {});
@@ -58,6 +59,7 @@ async function bookmark(url: string, flagged = false): Promise<string> {
 async function runDigest(mail: MemoryTransport | null = transport): Promise<void> {
 	let ctx = createJobContext(jobs.bookmarks.digest, { id: "m", attempts: 1 });
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	ctx.set(Mail, mail ?? undefined, { property: "mail" });
 	try {
 		await digest(ctx);
@@ -110,6 +112,7 @@ describe("the sweep job", () => {
 
 		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
 		ctx.set(Database, db, { property: "db" });
+		publishModels(ctx, db);
 		await sweep(ctx);
 
 		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.inspect, [{ postId: external }]);
@@ -125,6 +128,7 @@ describe("the sweep job", () => {
 
 		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
 		ctx.set(Database, db, { property: "db" });
+		publishModels(ctx, db);
 		await sweep(ctx);
 
 		expect(enqueued).toHaveBeenCalledWith(jobs.bookmarks.archive, []);

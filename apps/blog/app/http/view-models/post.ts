@@ -13,10 +13,10 @@ import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { isSuccess, succeeded } from "@sdxc/result";
 
-import type { Webmention } from "~/app/repositories/webmention";
+import type { Webmention } from "~/app/models/webmentions";
 
+import { hostOf } from "~/app/models/webmentions";
 import { Post } from "~/app/repositories/post";
-import { hostOf } from "~/app/repositories/webmention";
 import { permalink } from "~/app/services/webmention";
 
 /**
@@ -173,7 +173,7 @@ export class PostViewModel {
 		loadedPost: PostViewModel.LoadedPost,
 		requestUrl: string,
 		format: "html" | "md" | undefined,
-		mentions: Array<Webmention.Row> = [],
+		mentions: Array<Webmention> = [],
 	): PostViewModel.Page {
 		if (loadedPost.postType === "articles") {
 			let post = loadedPost.post;
@@ -261,7 +261,7 @@ export class PostViewModel {
 	 *
 	 * @param rows Approved mention rows.
 	 */
-	private static mentions(rows: Array<Webmention.Row>): PostViewModel.Page["mentions"] {
+	private static mentions(rows: Array<Webmention>): PostViewModel.Page["mentions"] {
 		let responses: Array<PostViewModel.Mention> = [];
 		let reactions: Array<PostViewModel.Mention> = [];
 

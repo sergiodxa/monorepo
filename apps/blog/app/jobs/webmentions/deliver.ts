@@ -14,7 +14,6 @@ import { send } from "@sdxc/webmention/sender";
 
 import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
-import { WebmentionSend } from "~/app/repositories/webmention-send";
 import { permalink, USER_AGENT } from "~/app/services/webmention";
 
 /**
@@ -48,9 +47,9 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 				: error.status >= 500 || error.status === 429;
 		if (transient) return ctx.retry({ delay: retryBackoff.delay(ctx.attempts), cause: error });
 
-		if (removed) await WebmentionSend.forget(ctx.db, postId, target);
+		if (removed) await ctx.models.webmentionSends.forget(postId, target);
 		else {
-			await WebmentionSend.record(ctx.db, postId, target, {
+			await ctx.models.webmentionSends.record(postId, target, {
 				status: "failed",
 				endpoint: null,
 				code: error instanceof WebmentionFetchError ? null : error.status,
@@ -63,10 +62,9 @@ export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
 	let delivery = result.data;
 	ctx.log.set({ webmention: { delivery: delivery.status } });
 
-	if (removed) return await WebmentionSend.forget(ctx.db, postId, target);
+	if (removed) return await ctx.models.webmentionSends.forget(postId, target);
 
-	await WebmentionSend.record(
-		ctx.db,
+	await ctx.models.webmentionSends.record(
 		postId,
 		target,
 		delivery.status === "sent"

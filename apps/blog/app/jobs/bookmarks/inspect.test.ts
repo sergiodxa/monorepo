@@ -20,6 +20,7 @@ import { Bookmark } from "~/app/repositories/bookmark";
 import { LikePost } from "~/app/repositories/posts/like";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { publishModels } from "~/app/test/models";
 
 import inspect from "./inspect";
 
@@ -79,6 +80,7 @@ async function bookmark(meta: { title?: string; description?: string } = {}): Pr
 async function run(postId: string, attempts = 1): Promise<void> {
 	let ctx = createJobContext(jobs.bookmarks.inspect, { id: "m", attempts, input: { postId } });
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	await inspect(ctx);
 }
 

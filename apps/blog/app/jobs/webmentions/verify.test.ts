@@ -17,9 +17,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { ArticlePost } from "~/app/repositories/posts/article";
-import { Webmention } from "~/app/repositories/webmention";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels, publishModels } from "~/app/test/models";
 
 import handler from "./verify";
 
@@ -66,12 +66,16 @@ async function run(source = SOURCE, target = TARGET) {
 		input: { source, target },
 	});
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	await handler(ctx);
 }
 
 /** The stored mention for the default pair. */
 function stored() {
-	return Webmention.findByPair(db, { source: new URL(SOURCE), target: new URL(TARGET) });
+	return bindModels(db).webmentions.findByPair({
+		source: new URL(SOURCE),
+		target: new URL(TARGET),
+	});
 }
 
 describe("the verify job", () => {
@@ -88,7 +92,7 @@ describe("the verify job", () => {
 	});
 
 	test("approves on arrival a mention from an allowed host", async () => {
-		await Webmention.setPolicy(db, "replies.example.com", "allow");
+		await bindModels(db).webmentionDomains.setPolicy("replies.example.com", "allow");
 		serveReply();
 
 		await run();
@@ -100,7 +104,7 @@ describe("the verify job", () => {
 		serveReply();
 		await run();
 		let first = await stored();
-		await Webmention.setStatus(db, first!.id, "rejected");
+		await bindModels(db).webmentions.setStatus(first!.id, "rejected");
 
 		await run();
 
@@ -125,7 +129,7 @@ describe("the verify job", () => {
 	});
 
 	test("drops a mention from a blocked host without fetching it", async () => {
-		await Webmention.setPolicy(db, "replies.example.com", "block");
+		await bindModels(db).webmentionDomains.setPolicy("replies.example.com", "block");
 
 		await expect(run()).rejects.toBeInstanceOf(Job.Ack);
 		expect(await stored()).toBeNull();

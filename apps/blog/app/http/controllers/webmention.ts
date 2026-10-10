@@ -13,7 +13,6 @@ import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
 import { Post } from "~/app/repositories/post";
-import { Webmention } from "~/app/repositories/webmention";
 import routes from "~/routes/web";
 
 /**
@@ -33,7 +32,7 @@ export default createAction(routes.webmention, async (ctx) => {
 	}
 
 	let { source, target } = parsed.data;
-	if ((await Webmention.policyFor(ctx.db, source.hostname)) === "block") {
+	if ((await ctx.models.webmentionDomains.policyFor(source.hostname)) === "block") {
 		ctx.log.set({ webmention: { dropped: source.hostname } });
 		return accepted();
 	}

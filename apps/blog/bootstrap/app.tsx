@@ -162,6 +162,7 @@ function activityPubService(env: App.Env): Middleware {
 			]);
 		return createFederation({
 			db: ctx.db,
+			models: ctx.models,
 			cache: new WorkerKVCache(env.CACHE),
 			keys: BLOG_KEYS,
 			queue: federationQueue(ctx.jobs),

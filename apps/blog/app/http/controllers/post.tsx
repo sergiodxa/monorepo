@@ -23,7 +23,6 @@ import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
 import { Post } from "~/app/repositories/post";
-import { Webmention } from "~/app/repositories/webmention";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { article, tombstone } from "~/app/services/federated-posts";
 import { postEpub } from "~/app/services/post-epub";
@@ -210,7 +209,7 @@ export default createAction(
 			});
 		}
 
-		let mentions = await Webmention.findApprovedForPost(ctx.db, post.post.id);
+		let mentions = await ctx.models.webmentions.findApprovedForPost(post.post.id);
 		let viewModel = PostViewModel.page(
 			post,
 			ctx.request.url,

@@ -17,9 +17,9 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { ArticlePost } from "~/app/repositories/posts/article";
-import { WebmentionSend } from "~/app/repositories/webmention-send";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels, publishModels } from "~/app/test/models";
 
 import handler from "./deliver";
 
@@ -68,6 +68,7 @@ async function run(removed = false, attempts = 1) {
 		input: { postId, target: TARGET, removed },
 	});
 	ctx.set(Database, db, { property: "db" });
+	publishModels(ctx, db);
 	await handler(ctx);
 }
 
@@ -86,7 +87,7 @@ describe("the deliver job", () => {
 
 		expect(received[0]?.get("source")).toBe("https://sergiodxa.com/articles/sender");
 		expect(received[0]?.get("target")).toBe(TARGET);
-		expect(await WebmentionSend.targetsFor(db, postId)).toEqual([new URL(TARGET)]);
+		expect(await bindModels(db).webmentionSends.targetsFor(postId)).toEqual([new URL(TARGET)]);
 	});
 
 	test("records a target without an endpoint, so a later change leaves it alone", async () => {
@@ -94,7 +95,7 @@ describe("the deliver job", () => {
 
 		await run();
 
-		expect(await WebmentionSend.targetsFor(db, postId)).toEqual([new URL(TARGET)]);
+		expect(await bindModels(db).webmentionSends.targetsFor(postId)).toEqual([new URL(TARGET)]);
 	});
 
 	test("forgets a removed link once its target has been told", async () => {
@@ -104,14 +105,14 @@ describe("the deliver job", () => {
 		await run(true);
 
 		expect(received).toHaveLength(2);
-		expect(await WebmentionSend.targetsFor(db, postId)).toEqual([]);
+		expect(await bindModels(db).webmentionSends.targetsFor(postId)).toEqual([]);
 	});
 
 	test("retries while the endpoint is failing", async () => {
 		serveEndpoint(503);
 
 		await expect(run()).rejects.toBeInstanceOf(Job.Retry);
-		expect(await WebmentionSend.targetsFor(db, postId)).toEqual([]);
+		expect(await bindModels(db).webmentionSends.targetsFor(postId)).toEqual([]);
 	});
 
 	test("waits longer before each retry of a failing endpoint", async () => {

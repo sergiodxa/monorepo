@@ -1,5 +1,5 @@
 /**
- * Tests the Webmention repository against a migrated in-memory database: blocking a
+ * Tests the Webmention model against a migrated in-memory database: blocking a
  * host rejects what it already sent and reports which posts render differently, and a
  * resend after deletion brings the mention back.
  *
@@ -14,8 +14,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
-
-import { Webmention } from "./webmention";
+import { bindModels } from "~/app/test/models";
 
 const TARGET = new URL("https://blog.test/articles/post");
 
@@ -44,41 +43,41 @@ beforeEach(async () => {
 	postId = post!.id;
 });
 
-describe("Webmention.rejectFromHost", () => {
+describe("webmentions.rejectFromHost", () => {
 	test("rejects the host's mentions and names the posts whose approved ones changed", async () => {
-		let spam = await Webmention.upsert(db, {
+		let spam = await bindModels(db).webmentions.record({
 			postId,
 			pair: { source: new URL("https://spam.example/a"), target: TARGET },
 			mention: mention("https://spam.example/a"),
 			status: "approved",
 		});
-		let other = await Webmention.upsert(db, {
+		let other = await bindModels(db).webmentions.record({
 			postId,
 			pair: { source: new URL("https://friend.example/a"), target: TARGET },
 			mention: mention("https://friend.example/a"),
 			status: "approved",
 		});
 
-		let affected = await Webmention.rejectFromHost(db, "spam.example");
+		let affected = await bindModels(db).webmentions.rejectFromHost("spam.example");
 
 		expect(affected).toEqual([postId]);
-		expect((await Webmention.findById(db, spam.id))?.status).toBe("rejected");
-		expect((await Webmention.findById(db, other.id))?.status).toBe("approved");
+		expect((await bindModels(db).webmentions.find(spam.id))?.status).toBe("rejected");
+		expect((await bindModels(db).webmentions.find(other.id))?.status).toBe("approved");
 	});
 });
 
-describe("Webmention.upsert", () => {
+describe("webmentions.record", () => {
 	test("brings a deleted mention back with the arrival status", async () => {
 		let pair = { source: new URL("https://friend.example/b"), target: TARGET };
-		await Webmention.upsert(db, {
+		await bindModels(db).webmentions.record({
 			postId,
 			pair,
 			mention: mention(pair.source.href),
 			status: "approved",
 		});
-		await Webmention.markDeleted(db, pair);
+		await bindModels(db).webmentions.markDeleted(pair);
 
-		let again = await Webmention.upsert(db, {
+		let again = await bindModels(db).webmentions.record({
 			postId,
 			pair,
 			mention: mention(pair.source.href),
@@ -86,5 +85,21 @@ describe("Webmention.upsert", () => {
 		});
 
 		expect(again.status).toBe("pending");
+	});
+});
+
+describe("webmentions.markSourceDeleted", () => {
+	test("withdraws every mention the source made", async () => {
+		let source = new URL("https://friend.example/likes/1");
+		let stored = await bindModels(db).webmentions.record({
+			postId,
+			pair: { source, target: TARGET },
+			mention: mention(source.href),
+			status: "approved",
+		});
+
+		await bindModels(db).webmentions.markSourceDeleted(source);
+
+		expect((await bindModels(db).webmentions.find(stored.id))?.status).toBe("deleted");
 	});
 });

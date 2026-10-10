@@ -13,9 +13,9 @@ import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
-import { Webmention } from "~/app/repositories/webmention";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -155,13 +155,13 @@ describe("a post page", () => {
 			name: null,
 			published: null,
 		});
-		await Webmention.upsert(db, {
+		await bindModels(db).webmentions.record({
 			postId: liveId,
 			pair: { source: new URL("https://replies.example.com/approved"), target },
 			mention: mention("Approved Author"),
 			status: "approved",
 		});
-		await Webmention.upsert(db, {
+		await bindModels(db).webmentions.record({
 			postId: liveId,
 			pair: { source: new URL("https://replies.example.com/pending"), target },
 			mention: mention("Pending Author"),

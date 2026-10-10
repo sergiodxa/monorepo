@@ -17,10 +17,11 @@ import { CacheSeenActivities, Federation } from "@sdxc/activitypub";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, success, wrap } from "@sdxc/result";
 
+import type { BlogModels } from "~/app/models";
+
 import jobs from "~/app/jobs";
 import { FollowerRepository } from "~/app/repositories/follower";
 import { Post } from "~/app/repositories/post";
-import { Webmention } from "~/app/repositories/webmention";
 import { FederatedPosts } from "~/app/services/federated-posts";
 import {
 	ACTIVITYPUB_USER_AGENT,
@@ -101,8 +102,10 @@ export function siteActor(): ActivityPub.Actor {
 
 /** What {@link createFederation} builds the blog's federation over. */
 export interface FederationServices {
-	/** The invocation's database, which the stores, the block list and the handlers use. */
+	/** The invocation's database, which the follower and object stores use. */
 	db: Database;
+	/** The invocation's models, which the block list and the response handlers use. */
+	models: BlogModels;
 	/** Remote documents, delivery schemes and failing origins; the `WorkerKVCache` over `CACHE`. */
 	cache: Cache;
 	keys: ActorKeys | KeyProvider;
@@ -115,11 +118,11 @@ export interface FederationServices {
  * blocks can neither deliver, follow nor receive, and responses to a post land in the same
  * `webmentions` table its Webmentions do.
  *
- * @param services The invocation's database, the document cache, the keys and the queue.
- * @example createFederation({ db: ctx.db, cache, keys: BLOG_KEYS, queue: federationQueue(ctx.jobs) });
+ * @param services The invocation's database and models, the document cache, the keys and the queue.
+ * @example createFederation({ db: ctx.db, models: ctx.models, cache, keys: BLOG_KEYS, queue });
  */
 export function createFederation(services: FederationServices): Federation {
-	let { db } = services;
+	let { db, models } = services;
 	let posts = new FederatedPosts(db);
 
 	return new Federation({
@@ -134,7 +137,7 @@ export function createFederation(services: FederationServices): Federation {
 		userAgent: ACTIVITYPUB_USER_AGENT,
 		queue: services.queue,
 		async blocked(host) {
-			return (await Webmention.policyFor(db, host)) === "block";
+			return (await models.webmentionDomains.policyFor(host)) === "block";
 		},
 		async outbox(cursor) {
 			let [total, page] = await Promise.all([
@@ -145,9 +148,9 @@ export function createFederation(services: FederationServices): Federation {
 			return success({ ...page.data, totalItems: isFailure(total) ? null : total.data });
 		},
 	})
-		.on(["Create", "Update", "Like", "Announce"], (ctx) => storeResponse(db, ctx.summary()))
-		.on("Undo", (ctx) => withdraw(db, ctx.object?.id ?? null))
-		.on("Delete", (ctx) => withdraw(db, ctx.deleted.kind === "object" ? ctx.deleted.id : null));
+		.on(["Create", "Update", "Like", "Announce"], (ctx) => storeResponse(services, ctx.summary()))
+		.on("Undo", (ctx) => withdraw(models, ctx.object?.id ?? null))
+		.on("Delete", (ctx) => withdraw(models, ctx.deleted.kind === "object" ? ctx.deleted.id : null));
 }
 
 /**
@@ -169,33 +172,40 @@ export function federationQueue(enqueuer: JobEnqueuer): Federation.Queue {
  * Webmention is stored: a blocked host is dropped, an allowed one approved on arrival, and
  * any other waits as `pending`. A response to anything but a published post is dropped.
  *
- * @param db The invocation's database.
+ * @param services The invocation's database and models.
  * @param summary The response, `null` for an activity that is none.
  */
-async function storeResponse(db: Database, summary: Summary | null): Promise<Result<void, Error>> {
+async function storeResponse(
+	services: FederationServices,
+	summary: Summary | null,
+): Promise<Result<void, Error>> {
 	let source = summary === null ? null : URL.parse(summary.id);
 	let target = summary === null ? null : URL.parse(summary.target);
 	if (summary === null || source === null || target === null) return success(undefined);
-	return await wrap(() => store(db, summary, { source, target }));
+	return await wrap(() => store(services, summary, { source, target }));
 }
 
 /**
  * Upserts one response under its pair, once the pair parsed.
  *
- * @param db The invocation's database.
+ * @param services The invocation's database and models.
  * @param summary The response.
  * @param pair The remote source and the local target.
  */
-async function store(db: Database, summary: Summary, pair: { source: URL; target: URL }) {
+async function store(
+	{ db, models }: FederationServices,
+	summary: Summary,
+	pair: { source: URL; target: URL },
+) {
 	let { source, target } = pair;
 
 	let post = await Post.findMentionable(db, target, PROFILE.canonical.origin);
 	if (post === null) return;
 
-	let policy = await Webmention.policyFor(db, source.hostname);
+	let policy = await models.webmentionDomains.policyFor(source.hostname);
 	if (policy === "block") return;
 
-	let stored = await Webmention.upsert(db, {
+	let stored = await models.webmentions.record({
 		postId: post.id,
 		pair: { source, target },
 		mention: {
@@ -219,13 +229,13 @@ async function store(db: Database, summary: Summary, pair: { source: URL; target
  * Withdraws every response a remote post or reaction made, which its `Undo` or `Delete`
  * means; a source that never responded, or a deleted account, changes nothing.
  *
- * @param db The invocation's database.
+ * @param models The invocation's models.
  * @param id The undone or deleted object's id.
  */
-async function withdraw(db: Database, id: string | null): Promise<Result<void, Error>> {
+async function withdraw(models: BlogModels, id: string | null): Promise<Result<void, Error>> {
 	let source = id === null ? null : URL.parse(id);
 	if (source === null) return success(undefined);
-	return await wrap(() => Webmention.markSourceDeleted(db, source));
+	return await wrap(() => models.webmentions.markSourceDeleted(source));
 }
 
 /** A profile field's value: the link Mastodon verifies when the page links back with `rel="me"`. */

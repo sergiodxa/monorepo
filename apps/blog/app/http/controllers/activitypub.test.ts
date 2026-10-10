@@ -35,7 +35,6 @@ import publish from "~/app/jobs/activitypub/publish";
 import { FollowerRepository } from "~/app/repositories/follower";
 import { Post } from "~/app/repositories/post";
 import { ArticlePost } from "~/app/repositories/posts/article";
-import { Webmention } from "~/app/repositories/webmention";
 import { federationQueue } from "~/app/services/activitypub";
 import {
 	ALICE,
@@ -50,6 +49,7 @@ import {
 } from "~/app/test/activitypub";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels, publishModels } from "~/app/test/models";
 import { ACTOR_ID, FOLLOWERS_ID, FOLLOWING_ID, INBOX_ID, OUTBOX_ID } from "~/config/activitypub";
 import routes from "~/routes/web";
 
@@ -398,7 +398,7 @@ describe("POST /activitypub/inbox", () => {
 		expect(response.status).toBe(202);
 		await drain(queuedMessages());
 
-		let stored = await Webmention.findByPair(db, {
+		let stored = await bindModels(db).webmentions.findByPair({
 			source: new URL(REPLY.id),
 			target: new URL("https://sergiodxa.com/articles/post-0"),
 		});
@@ -414,20 +414,20 @@ describe("POST /activitypub/inbox", () => {
 
 	test("approves a like from an allowed host, and withdraws it on Undo", async () => {
 		let [postId] = await articles(1);
-		await Webmention.setPolicy(db, "mastodon.social", "allow");
+		await bindModels(db).webmentionDomains.setPolicy("mastodon.social", "allow");
 
 		expect((await deliver(LIKE)).status).toBe(202);
 		await drain(queuedMessages());
 		jobQueue.reset();
 
-		let approved = await Webmention.findApprovedForPost(db, postId ?? "");
+		let approved = await bindModels(db).webmentions.findApprovedForPost(postId ?? "");
 		expect(approved).toEqual([expect.objectContaining({ kind: "like", source: LIKE.id })]);
 
 		let undo = { ...LIKE, id: `${LIKE.id}/undo`, type: "Undo", object: LIKE };
 		expect((await deliver(undo)).status).toBe(202);
 		await drain(queuedMessages());
 
-		expect(await Webmention.findApprovedForPost(db, postId ?? "")).toEqual([]);
+		expect(await bindModels(db).webmentions.findApprovedForPost(postId ?? "")).toEqual([]);
 	});
 
 	test("refuses an unsigned delivery with a 401", async () => {
@@ -445,7 +445,7 @@ describe("POST /activitypub/inbox", () => {
 	});
 
 	test("refuses a server the moderation policy blocks", async () => {
-		await Webmention.setPolicy(db, "mastodon.social", "block");
+		await bindModels(db).webmentionDomains.setPolicy("mastodon.social", "block");
 
 		let response = await deliver(FOLLOW);
 
@@ -473,6 +473,7 @@ describe("the activityPub.publish job", () => {
 			input: { postId, changedAt },
 		});
 		ctx.set(Database, db, { property: "db" });
+		publishModels(ctx, db);
 		ctx.set(ActivityPub, testFederation(db, keys, queue), { property: "activityPub" });
 		await publish(ctx);
 	}

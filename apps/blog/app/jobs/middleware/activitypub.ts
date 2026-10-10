@@ -10,7 +10,10 @@ import type { Federation } from "@sdxc/activitypub";
 import type { JobEnqueuer, JobMiddleware } from "@sdxc/jobs";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
+import { Models } from "@sdxc/data-model";
 import { env } from "cloudflare:workers";
+
+import type { BlogModels } from "~/app/models";
 
 import { ActivityPub } from "~/app/http/middleware/activitypub";
 import { Database } from "~/app/http/middleware/database";
@@ -34,6 +37,7 @@ export function activityPub(enqueuer: () => JobEnqueuer): JobMiddleware<{
 	return async (ctx, next) => {
 		let federation = createFederation({
 			db: ctx.require(Database),
+			models: ctx.require(Models) as BlogModels,
 			cache: new WorkerKVCache(env.CACHE),
 			keys: BLOG_KEYS,
 			queue: federationQueue(enqueuer()),

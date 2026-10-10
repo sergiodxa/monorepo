@@ -8,6 +8,8 @@
 
 import type { Database } from "remix/data-table";
 
+import { Models } from "@sdxc/data-model";
+
 import { models } from "~/app/models";
 
 /**
@@ -17,4 +19,18 @@ import { models } from "~/app/models";
  */
 export function bindModels(db: Database) {
 	return models.bind({ db });
+}
+
+/**
+ * Publishes the models bound to `db` on a job context a test built by hand, the way the
+ * dispatcher's `models()` middleware does for a real run.
+ *
+ * @param ctx The job context a test created with `createJobContext`.
+ * @param db The database the job reads.
+ */
+export function publishModels(
+	ctx: { set(key: object, value: unknown, options: { property: string }): void },
+	db: Database,
+): void {
+	ctx.set(Models, bindModels(db), { property: "models" });
 }

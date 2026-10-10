@@ -15,7 +15,6 @@ import { outboundLinks, plan } from "@sdxc/webmention/sender";
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/jobs/dispatcher";
 import { Post } from "~/app/repositories/post";
-import { WebmentionSend } from "~/app/repositories/webmention-send";
 import { permalink } from "~/app/services/webmention";
 
 /**
@@ -43,7 +42,7 @@ export default createJobHandler(jobs.webmentions.send, async (ctx) => {
 
 	let source = permalink(post);
 	let current = deleted ? [] : linksOf(post.content, source);
-	let previous = await WebmentionSend.targetsFor(ctx.db, post.id);
+	let previous = await ctx.models.webmentionSends.targetsFor(post.id);
 	let { targets } = plan(current, previous);
 	let linked = new Set(current.map((url) => url.href));
 
