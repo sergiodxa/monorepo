@@ -183,6 +183,7 @@ of the base's is a type error.
 | Member                 | Answers                                                    |
 | ---------------------- | ---------------------------------------------------------- |
 | `query()`, scopes      | A data-table `Query` with the model's scopes chainable     |
+| `db`                   | The database it is bound to, for a method's raw statement  |
 | `unscoped()`           | The same, without the default scope                        |
 | `withMeta(keys)`       | A query loading only those meta keys                       |
 | `whereMeta(key, v)`    | A query keeping rows holding `v` under the key             |

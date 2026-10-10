@@ -318,6 +318,11 @@ export interface UpsertOptions<S extends ModelShape> {
  * @template S The model's shape.
  */
 export interface BoundModelMethods<S extends ModelShape> {
+	/**
+	 * The database the model is bound to, or the transaction it runs in, for a custom method
+	 * that runs a raw statement the query builder cannot express.
+	 */
+	readonly db: Database;
 	/** A query over the model's rows, with its constraints applied and its scopes chainable. */
 	query(): ModelQueryOf<S>;
 	/** A query loading only these meta keys; `query().withMeta(keys)`. */

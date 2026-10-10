@@ -137,6 +137,7 @@ const RESERVED_NAMES = new Set([
 	"transaction",
 	"load",
 	"unscoped",
+	"db",
 	"then",
 	"catch",
 	"finally",

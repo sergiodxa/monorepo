@@ -216,6 +216,7 @@ out a deferred query instead, described under [Loading models on demand](#loadin
 | Member                | Returns                                    | Callbacks |
 | --------------------- | ------------------------------------------ | --------- |
 | `query()`, scopes     | Scoped `Query`                             | No        |
+| `db`                  | The binding's database, or its transaction | No        |
 | `from(query)`         | The given query, scoped                    | No        |
 | `withMeta(keys)`      | `query().withMeta(keys)`                   | No        |
 | `whereMeta(key, v)`   | `query().whereMeta(key, v)`                | No        |

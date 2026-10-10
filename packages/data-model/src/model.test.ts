@@ -12,7 +12,7 @@ import type { AnyQuery, Database } from "remix/data-table";
 import { InvalidOrderingError, Pagination } from "@sdxc/pagination";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
-import { column as c, fail, lte, Query, table } from "remix/data-table";
+import { column as c, fail, lte, Query, sql, table } from "remix/data-table";
 import { describe, expect, test } from "vitest";
 
 import { createIds, postComments, posts, users } from "./fixtures/schema.js";
@@ -450,6 +450,31 @@ describe("default scopes", () => {
 		await seed(db);
 
 		expect(await model.countAll()).toBe(1);
+	});
+
+	test("a method runs a raw statement through this.db, inside the unit of work it joins", async () => {
+		let Renaming = createModel(users, {
+			methods: {
+				async renameAll(name: string) {
+					await this.db.exec(sql`update "users" set "name" = ${name}`);
+				},
+			},
+		});
+		let { db } = openDatabase();
+		await seed(db);
+		let model = Renaming.bind({ db }, undefined, { transactions: "database" });
+
+		await model.renameAll("Everyone");
+		let rolledBack = model.transaction(async (scoped) => {
+			await (scoped as unknown as { users: typeof model }).users.renameAll("Nobody");
+			throw new Error("abort");
+		});
+
+		await expect(rolledBack).rejects.toThrow("abort");
+		expect((await model.unscoped().all()).map((user) => user.name)).toEqual([
+			"Everyone",
+			"Everyone",
+		]);
 	});
 
 	test("a sub-model's default scope applies after the base's", async () => {

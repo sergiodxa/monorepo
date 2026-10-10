@@ -38,6 +38,7 @@ export function bindModel(config: ModelConfig, session: Session): RuntimeModel {
 	});
 
 	let model: RuntimeModel = {
+		db: session.db,
 		query: () =>
 			wrapQuery(scopeQuery(session.db.query(config.table as never), config), state(false)) as never,
 		unscoped: () =>
