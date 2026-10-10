@@ -1341,8 +1341,8 @@ and recursion guards on top.
 - [x] Phase 3: Hosts
 - [x] Phase 4: Testing: `./testing`, and demo's tests seed postings through a factory
 - [ ] Phase 5: Package chores: README, LICENSE, the root README row and the `apps/sdxc` group
-      and guide are done, and demo and blog are ported; the npm bootstrap and the remaining
-      apps' `data/`, `models/` and `repositories/` modules remain
+      and guide are done, and demo, blog, r3-auth, auth-saas (control plane), reader and uptime
+      are ported; the npm bootstrap and auth-saas's per-tenant Durable Object repositories remain
 
 ## Notes
 
@@ -1362,3 +1362,17 @@ and recursion guards on top.
 - An atomic multi-statement meta write on D1 would need the driver to expose D1's `batch()`,
   which runs its statements in one transaction; data-table's driver interface has no such
   operation today, so insert-then-prune stays the D1 strategy until it does.
+- Multi-table reads stay in `app/repositories/` (uptime's reports and team digests, blog's
+  search), and hot-path batch or keyset SQL stays hand-written (reader's timeline, search and
+  retention sweeps); a model covers one table and its scopes.
+- `Monitor.ping` writes no row, so it is a controller helper enqueuing through `ctx.jobs`; the
+  `afterCommit` acceptance case is uptime's team-domain create queuing its ownership check.
+  Every `*Query` pagination twin became an unordered scope the caller orders.
+- Reader binds one registry per database (two Durable Objects and D1), each with
+  `transactions: "none"`; the single global `ModelContext` augmentation cannot type three
+  registries, so reader leaves it unaugmented.
+- Gaps the ports surfaced, still open: defaulted columns are required by `create`; methods
+  cannot reach sibling models or the context; an unannotated method return collapses the
+  registry type (TS7022); reserved method names fail only at runtime; a lazy entry's `db` is
+  unusable before `load()`; bulk `update` takes no `touch` option; there is no upsert,
+  insert-ignore or increment; bound methods cannot be spied on in tests.
