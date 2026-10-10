@@ -406,6 +406,18 @@ describe("Pagination.byKeyset", () => {
 		if (isFailure(result)) expect(result.error).toBeInstanceOf(InvalidOrderingError);
 	});
 
+	test("refuses a query that already orders, since its sort would lead the seek", async () => {
+		let result = await Pagination.byKeyset(
+			db.query(events).where({ team_id: 1 }).orderBy("name", "asc"),
+			{ orderBy: ORDER_NEWEST_FIRST, limit: 5 },
+		);
+
+		expect(isFailure(result) && result.error).toBeInstanceOf(InvalidOrderingError);
+		expect(isFailure(result) && result.error.message).toBe(
+			"Invalid keyset ordering: the query already orders by name; leave the ordering to `orderBy` in the options",
+		);
+	});
+
 	test("refuses an empty ordering", async () => {
 		let result = await Pagination.byKeyset(db.query(events), { orderBy: [], limit: 5 });
 

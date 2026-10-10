@@ -13,6 +13,7 @@ import type { Result } from "@sdxc/result";
 import type { Predicate } from "remix/data-table";
 
 import { failure, success } from "@sdxc/result";
+import { Query } from "remix/data-table";
 
 import type { CursorDirection, CursorValue } from "./cursor.js";
 
@@ -219,4 +220,40 @@ export function readOrderingValue(row: unknown, column: string): unknown {
 	if (unqualified !== undefined && unqualified in record) return record[unqualified];
 
 	return undefined;
+}
+
+/**
+ * data-table keeps a query's state behind a symbol it does not export; it is found once, by
+ * description, on the class that defines it.
+ */
+const QUERY_SNAPSHOT = Object.getOwnPropertySymbols(Query.prototype).find(
+	(symbol) => symbol.description === "querySnapshot",
+);
+
+/**
+ * Refuses a query that already orders its rows. The keyset strategy appends its own sort keys,
+ * so an earlier `orderBy` would lead the ordering and the page would seek on the wrong key.
+ * A query that exposes no data-table snapshot, such as a structural one, passes unchecked.
+ *
+ * @param query The query handed to `byKeyset()`.
+ * @returns `query` on success, or `InvalidOrderingError` naming the existing sort.
+ */
+export function rejectExistingOrdering<Value>(query: Value): Result<Value, InvalidOrderingError> {
+	if (QUERY_SNAPSHOT === undefined || typeof query !== "object" || query === null) {
+		return success(query);
+	}
+
+	let snapshot = (query as Record<symbol, unknown>)[QUERY_SNAPSHOT];
+	if (typeof snapshot !== "function") return success(query);
+
+	let state = (snapshot as () => { state?: { orderBy?: Array<{ column: string }> } }).call(query);
+	let existing = state.state?.orderBy ?? [];
+	if (existing.length === 0) return success(query);
+
+	let columns = existing.map((clause) => clause.column).join(", ");
+	return failure(
+		new InvalidOrderingError(
+			`the query already orders by ${columns}; leave the ordering to \`orderBy\` in the options`,
+		),
+	);
 }

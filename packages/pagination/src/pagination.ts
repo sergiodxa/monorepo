@@ -23,6 +23,7 @@ import { InvalidCursorError, PaginationError, QueryFailedError } from "./errors.
 import {
 	buildSeekPredicate,
 	readOrderingValue,
+	rejectExistingOrdering,
 	reverseOrdering,
 	validateOrdering,
 	zipSeekKeys,
@@ -417,6 +418,9 @@ export class Pagination {
 	): Promise<Result<KeysetPage<Row>, PaginationError>> {
 		let ordering = validateOrdering(options.orderBy, options.unique ?? false);
 		if (isFailure(ordering)) return ordering;
+
+		let unordered = rejectExistingOrdering(query);
+		if (isFailure(unordered)) return unordered;
 
 		let seek = resolveSeek(options);
 		if (isFailure(seek)) return seek;
