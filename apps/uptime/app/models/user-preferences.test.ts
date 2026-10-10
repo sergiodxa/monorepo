@@ -1,5 +1,5 @@
 /**
- * Unit tests for the `UserPreferences` data-access model: the not-yet-set lookup
+ * Unit tests for the user preferences model: the not-yet-set lookup
  * branch, and `setLanguage`'s create-then-update-in-place behavior for the subject.
  *
  * The email opt-out is the part worth the most cases, because every uncertain state has to read
@@ -7,7 +7,7 @@
  * app no longer sends — and only a stored refusal naming the email may stop it. A `wants` that
  * defaulted the other way would still pass a test that only checked the refusal.
  *
- * The two writers share one private upsert, so each is tested for touching only its
+ * The two writers share one upsert keyed on the subject, so each is tested for touching only its
  * own field on that shared row, so a save cannot silently reset the other setting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -16,10 +16,12 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import UserPreferences from "~/app/data/user-preferences";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { wantsEmail } from "~/app/models/user-preferences";
 import { userPreferences } from "~/database/schema";
 
 /**
@@ -28,122 +30,136 @@ import { userPreferences } from "~/database/schema";
  * of the case is a value the current `OptionalEmail` union cannot produce.
  */
 async function storeRawUnsubscribed(db: Database, subjectId: string, json: string) {
-	await UserPreferences.setUnsubscribedEmails(db, subjectId, []);
+	unwrap(
+		await bindModels(db, recordJobs().jobs).userPreferences.setUnsubscribedEmails(subjectId, []),
+	);
 	await db.exec("UPDATE user_preferences SET unsubscribed_emails = ? WHERE subject_id = ?", [
 		json,
 		subjectId,
 	]);
 }
 
-describe("UserPreferences.findBySubjectId", () => {
+/** Models over a fresh database, with the database itself for counting rows. */
+function setup() {
+	let { db } = createTestDatabase();
+	return { db, models: bindModels(db, recordJobs().jobs) };
+}
+
+describe("userPreferences.findBy", () => {
 	test("returns null when the subject has never set any preferences", async () => {
-		let { db } = createTestDatabase();
-		expect(await UserPreferences.findBySubjectId(db, crypto.randomUUID())).toBeNull();
+		let { models } = setup();
+		expect(await models.userPreferences.findBy({ subject_id: crypto.randomUUID() })).toBeNull();
 	});
 
 	test("finds a subject's preferences row once one exists", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, subjectId, "es");
+		unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
 
-		expect((await UserPreferences.findBySubjectId(db, subjectId))?.preferred_language).toBe("es");
+		expect(
+			(await models.userPreferences.findBy({ subject_id: subjectId }))?.preferred_language,
+		).toBe("es");
 	});
 
 	test("never returns a different subject's preferences", async () => {
-		let { db } = createTestDatabase();
-		await UserPreferences.setLanguage(db, crypto.randomUUID(), "es");
+		let { models } = setup();
+		unwrap(await models.userPreferences.setLanguage(crypto.randomUUID(), "es"));
 
-		expect(await UserPreferences.findBySubjectId(db, crypto.randomUUID())).toBeNull();
+		expect(await models.userPreferences.findBy({ subject_id: crypto.randomUUID() })).toBeNull();
 	});
 });
 
-describe("UserPreferences.setLanguage", () => {
+describe("userPreferences.setLanguage", () => {
 	test("creates a preferences row on first use", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
 
-		let row = await UserPreferences.setLanguage(db, subjectId, "fr");
+		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "fr"));
 
 		expect(row.subject_id).toBe(subjectId);
 		expect(row.preferred_language).toBe("fr");
 	});
 
 	test("updates the existing row in place on a second call, instead of creating another", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		let first = await UserPreferences.setLanguage(db, subjectId, "fr");
+		let first = unwrap(await models.userPreferences.setLanguage(subjectId, "fr"));
 
-		let second = await UserPreferences.setLanguage(db, subjectId, "de");
+		let second = unwrap(await models.userPreferences.setLanguage(subjectId, "de"));
 
 		expect(second.id).toBe(first.id);
 		expect(second.preferred_language).toBe("de");
-		expect((await UserPreferences.findBySubjectId(db, subjectId))?.preferred_language).toBe("de");
+		expect(
+			(await models.userPreferences.findBy({ subject_id: subjectId }))?.preferred_language,
+		).toBe("de");
 	});
 
 	test("clears the language back to null", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, subjectId, "ja");
+		unwrap(await models.userPreferences.setLanguage(subjectId, "ja"));
 
-		let cleared = await UserPreferences.setLanguage(db, subjectId, null);
+		let cleared = unwrap(await models.userPreferences.setLanguage(subjectId, null));
 
 		expect(cleared.preferred_language).toBeNull();
 	});
 
 	test("leaves a stored opt-out alone", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamWeeklyDigest"]);
+		unwrap(await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]));
 
-		let row = await UserPreferences.setLanguage(db, subjectId, "es");
+		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
 
 		expect(row.unsubscribed_emails).toEqual(["teamWeeklyDigest"]);
 	});
 });
 
-describe("UserPreferences.wants", () => {
+describe("wantsEmail", () => {
 	test("sends every optional email to a subject with no preferences row", () => {
-		expect(UserPreferences.wants(null, "teamDailyDigest")).toBe(true);
-		expect(UserPreferences.wants(null, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(null, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(null, "teamWeeklyDigest")).toBe(true);
 	});
 
 	/** A row exists for the language alone far more often than for an opt-out. */
 	test("sends every optional email to a subject whose row has no list", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		let row = await UserPreferences.setLanguage(db, subjectId, "es");
+		let row = unwrap(await models.userPreferences.setLanguage(subjectId, "es"));
 
 		expect(row.unsubscribed_emails).toBeNull();
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(true);
 	});
 
 	test("sends every optional email to a subject who has turned nothing off", async () => {
-		let { db } = createTestDatabase();
-		let row = await UserPreferences.setUnsubscribedEmails(db, crypto.randomUUID(), []);
+		let { models } = setup();
+		let row = unwrap(await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), []));
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("stops only the email the stored list names", async () => {
-		let { db } = createTestDatabase();
-		let row = await UserPreferences.setUnsubscribedEmails(db, crypto.randomUUID(), [
-			"teamDailyDigest",
-		]);
+		let { models } = setup();
+		let row = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), ["teamDailyDigest"]),
+		);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(false);
+		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("stops both when both are named", async () => {
-		let { db } = createTestDatabase();
-		let row = await UserPreferences.setUnsubscribedEmails(db, crypto.randomUUID(), [
-			"teamDailyDigest",
-			"teamWeeklyDigest",
-		]);
+		let { models } = setup();
+		let row = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(crypto.randomUUID(), [
+				"teamDailyDigest",
+				"teamWeeklyDigest",
+			]),
+		);
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(false);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(false);
+		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(false);
 	});
 
 	/**
@@ -152,35 +168,37 @@ describe("UserPreferences.wants", () => {
 	 * emails it does.
 	 */
 	test("a retired email left in the stored list mutes nothing that is still sent", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let subjectId = crypto.randomUUID();
 		await storeRawUnsubscribed(db, subjectId, '["teamMonthlyRecap"]');
 
-		let row = await UserPreferences.findBySubjectId(db, subjectId);
+		let row = await models.userPreferences.findBy({ subject_id: subjectId });
 
 		expect(row?.unsubscribed_emails?.map(String)).toEqual(["teamMonthlyRecap"]);
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(true);
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("still honours a live refusal stored beside a retired one", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let subjectId = crypto.randomUUID();
 		await storeRawUnsubscribed(db, subjectId, '["teamMonthlyRecap","teamDailyDigest"]');
 
-		let row = await UserPreferences.findBySubjectId(db, subjectId);
+		let row = await models.userPreferences.findBy({ subject_id: subjectId });
 
-		expect(UserPreferences.wants(row, "teamDailyDigest")).toBe(false);
-		expect(UserPreferences.wants(row, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(row, "teamDailyDigest")).toBe(false);
+		expect(wantsEmail(row, "teamWeeklyDigest")).toBe(true);
 	});
 });
 
-describe("UserPreferences.setUnsubscribedEmails", () => {
+describe("userPreferences.setUnsubscribedEmails", () => {
 	test("creates a preferences row for a subject who has none", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let subjectId = crypto.randomUUID();
 
-		let row = await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamDailyDigest"]);
+		let row = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamDailyDigest"]),
+		);
 
 		expect(row.subject_id).toBe(subjectId);
 		expect(row.unsubscribed_emails).toEqual(["teamDailyDigest"]);
@@ -192,11 +210,15 @@ describe("UserPreferences.setUnsubscribedEmails", () => {
 	 * full replacement lets an unchecked switch turn an email back on.
 	 */
 	test("replaces the whole stored list instead of adding to it", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let subjectId = crypto.randomUUID();
-		let first = await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamDailyDigest"]);
+		let first = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamDailyDigest"]),
+		);
 
-		let second = await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamWeeklyDigest"]);
+		let second = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]),
+		);
 
 		expect(second.id).toBe(first.id);
 		expect(second.unsubscribed_emails).toEqual(["teamWeeklyDigest"]);
@@ -204,58 +226,66 @@ describe("UserPreferences.setUnsubscribedEmails", () => {
 	});
 
 	test("re-subscribes to everything when the list comes back empty", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setUnsubscribedEmails(db, subjectId, [
-			"teamDailyDigest",
-			"teamWeeklyDigest",
-		]);
+		unwrap(
+			await models.userPreferences.setUnsubscribedEmails(subjectId, [
+				"teamDailyDigest",
+				"teamWeeklyDigest",
+			]),
+		);
 
-		let cleared = await UserPreferences.setUnsubscribedEmails(db, subjectId, []);
+		let cleared = unwrap(await models.userPreferences.setUnsubscribedEmails(subjectId, []));
 
 		expect(cleared.unsubscribed_emails).toEqual([]);
-		expect(UserPreferences.wants(cleared, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(cleared, "teamDailyDigest")).toBe(true);
 	});
 
 	/** The two settings live on one row and are saved by two different forms. */
 	test("never clobbers a language chosen earlier", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, subjectId, "ja");
+		unwrap(await models.userPreferences.setLanguage(subjectId, "ja"));
 
-		let row = await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamWeeklyDigest"]);
+		let row = unwrap(
+			await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]),
+		);
 
 		expect(row.preferred_language).toBe("ja");
-		expect((await UserPreferences.findBySubjectId(db, subjectId))?.preferred_language).toBe("ja");
+		expect(
+			(await models.userPreferences.findBy({ subject_id: subjectId }))?.preferred_language,
+		).toBe("ja");
 	});
 
 	test("stores the opt-out against one subject only", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let optedOut = crypto.randomUUID();
 		let other = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, other, "es");
+		unwrap(await models.userPreferences.setLanguage(other, "es"));
 
-		await UserPreferences.setUnsubscribedEmails(db, optedOut, ["teamDailyDigest"]);
+		unwrap(await models.userPreferences.setUnsubscribedEmails(optedOut, ["teamDailyDigest"]));
 
-		expect((await UserPreferences.findBySubjectId(db, other))?.unsubscribed_emails).toBeNull();
+		expect(
+			(await models.userPreferences.findBy({ subject_id: other }))?.unsubscribed_emails,
+		).toBeNull();
 	});
 });
 
-describe("UserPreferences.findBySubjectIds", () => {
+describe("userPreferences.findBySubjectIds", () => {
 	test("returns an empty map for an empty list, without a query", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 
-		expect((await UserPreferences.findBySubjectIds(db, [])).size).toBe(0);
+		expect((await models.userPreferences.findBySubjectIds([])).size).toBe(0);
 	});
 
 	test("keys each subject's row by their subject id", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let one = crypto.randomUUID();
 		let two = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, one, "es");
-		await UserPreferences.setUnsubscribedEmails(db, two, ["teamDailyDigest"]);
+		unwrap(await models.userPreferences.setLanguage(one, "es"));
+		unwrap(await models.userPreferences.setUnsubscribedEmails(two, ["teamDailyDigest"]));
 
-		let found = await UserPreferences.findBySubjectIds(db, [one, two]);
+		let found = await models.userPreferences.findBySubjectIds([one, two]);
 
 		expect(found.size).toBe(2);
 		expect(found.get(one)?.preferred_language).toBe("es");
@@ -267,12 +297,12 @@ describe("UserPreferences.findBySubjectIds", () => {
 	 * "the defaults" — a mapped placeholder would move that decision in here.
 	 */
 	test("leaves out a subject who has never set any preferences", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let known = crypto.randomUUID();
 		let unknown = crypto.randomUUID();
-		await UserPreferences.setLanguage(db, known, "fr");
+		unwrap(await models.userPreferences.setLanguage(known, "fr"));
 
-		let found = await UserPreferences.findBySubjectIds(db, [known, unknown]);
+		let found = await models.userPreferences.findBySubjectIds([known, unknown]);
 
 		expect([...found.keys()]).toEqual([known]);
 		expect(found.has(unknown)).toBe(false);
@@ -280,21 +310,22 @@ describe("UserPreferences.findBySubjectIds", () => {
 	});
 
 	test("returns an empty map when none of the subjects has a row", async () => {
-		let { db } = createTestDatabase();
-		await UserPreferences.setLanguage(db, crypto.randomUUID(), "es");
+		let { models } = setup();
+		unwrap(await models.userPreferences.setLanguage(crypto.randomUUID(), "es"));
 
 		expect(
-			(await UserPreferences.findBySubjectIds(db, [crypto.randomUUID(), crypto.randomUUID()])).size,
+			(await models.userPreferences.findBySubjectIds([crypto.randomUUID(), crypto.randomUUID()]))
+				.size,
 		).toBe(0);
 	});
 
 	/** One person in three teams appears three times in the due list. */
 	test("asks once for a subject listed several times", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		await UserPreferences.setUnsubscribedEmails(db, subjectId, ["teamWeeklyDigest"]);
+		unwrap(await models.userPreferences.setUnsubscribedEmails(subjectId, ["teamWeeklyDigest"]));
 
-		let found = await UserPreferences.findBySubjectIds(db, [subjectId, subjectId, subjectId]);
+		let found = await models.userPreferences.findBySubjectIds([subjectId, subjectId, subjectId]);
 
 		expect(found.size).toBe(1);
 		expect(found.get(subjectId)?.unsubscribed_emails).toEqual(["teamWeeklyDigest"]);
@@ -302,14 +333,14 @@ describe("UserPreferences.findBySubjectIds", () => {
 
 	/** The pairing the digest job uses: one lookup, then the predicate per recipient. */
 	test("feeds wants for a subject with a row and for one without", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let optedOut = crypto.randomUUID();
 		let never = crypto.randomUUID();
-		await UserPreferences.setUnsubscribedEmails(db, optedOut, ["teamDailyDigest"]);
+		unwrap(await models.userPreferences.setUnsubscribedEmails(optedOut, ["teamDailyDigest"]));
 
-		let found = await UserPreferences.findBySubjectIds(db, [optedOut, never]);
+		let found = await models.userPreferences.findBySubjectIds([optedOut, never]);
 
-		expect(UserPreferences.wants(found.get(optedOut) ?? null, "teamDailyDigest")).toBe(false);
-		expect(UserPreferences.wants(found.get(never) ?? null, "teamDailyDigest")).toBe(true);
+		expect(wantsEmail(found.get(optedOut) ?? null, "teamDailyDigest")).toBe(false);
+		expect(wantsEmail(found.get(never) ?? null, "teamDailyDigest")).toBe(true);
 	});
 });

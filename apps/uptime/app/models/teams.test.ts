@@ -1,9 +1,8 @@
 /**
- * Unit tests for the `Team` data-access model: team/slug lookup, membership
- * resolution and listing, domain auto-join, provisioning with `uniqueSlug`
- * collision handling, role management, and — the highest-value case —
- * `deleteById`'s full cascade across every team-owned table, checked against a
- * second team that must come through it intact.
+ * Unit tests for the teams model: team/slug lookup, the teams a subject belongs to,
+ * provisioning with its owner's admin membership and `uniqueSlug` collision handling, and —
+ * the highest-value case — `delete`'s full cascade across every team-owned table, checked
+ * against a second team that must come through it intact.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,18 +11,16 @@
 import type { Database } from "remix/data-table";
 
 import { IdToken } from "@sdxc/auth/id-token";
-import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
-import { unwrap } from "@sdxc/result";
-import { describe, expect, test, vi } from "vitest";
+import { NotFound } from "@sdxc/data-model";
+import { isFailure, unwrap } from "@sdxc/result";
+import { describe, expect, test } from "vitest";
 
+import type { UptimeModels } from "~/app/models";
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import StatusPage from "~/app/data/status-page";
-import TcpMonitor from "~/app/data/tcp-monitor";
-import Team, { generateTeamSlug } from "~/app/data/team";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { generateTeamSlug } from "~/app/models/teams";
 import {
 	alertEvents,
 	alerts,
@@ -39,6 +36,7 @@ import {
 	monitorContentChecks,
 	monitorDailyStats,
 	monitorResults,
+	monitors,
 	statusPageMonitors,
 	statusPages,
 	tcpMonitorResults,
@@ -47,14 +45,36 @@ import {
 	teams,
 } from "~/database/schema";
 
-/**
- * `~/app/data/monitor` imports `env` from `cloudflare:workers`, which resolves only
- * inside the Workers runtime — supply an in-memory queue so the module loads, and
- * import `Monitor` dynamically afterwards so the binding registers first.
- */
-vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: createQueue() }) }));
+/** Models over a fresh database, enqueuing into a recorder so no write reaches a queue. */
+function setup() {
+	let { db } = createTestDatabase();
+	return { db, models: bindModels(db, recordJobs().jobs) };
+}
 
-let { default: Monitor } = await import("~/app/data/monitor");
+/** Creates a subject's personal team, failing the test when the write is refused. */
+async function createPersonal(models: UptimeModels, idToken: IdToken = buildIdToken()) {
+	return unwrap(await models.teams.createPersonal(idToken));
+}
+
+/** Creates an additional team, failing the test when the write is refused. */
+async function createAdditional(models: UptimeModels, ownerId: string, name: string) {
+	return unwrap(await models.teams.createAdditional(ownerId, name));
+}
+
+/** An HTTP monitor row for a team, seeded directly since its model lives elsewhere. */
+async function seedMonitor(db: Database, teamId: string, authorId: string) {
+	return await db.create(
+		monitors,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			author_id: authorId,
+			name: "Homepage",
+			url: "https://example.com",
+		},
+		{ touch: true, returnRow: true },
+	);
+}
 
 /** A fully-populated `IdToken`, with any claim overridable per test. */
 function buildIdToken(
@@ -77,16 +97,13 @@ function buildIdToken(
 
 /**
  * Creates a team owned by `ownerSubjectId` with one row in every team-owned table
- * `Team.deleteById` must cascade, plus the histories and attachments hanging off
+ * `teams.delete` must cascade, plus the histories and attachments hanging off
  * those rows, and returns them all so callers can assert on each side of a delete.
  */
-async function seedFullTeam(db: Database, ownerSubjectId: string) {
-	let team = await Team.createTeam(db, buildIdToken({ subject: ownerSubjectId }));
+async function seedFullTeam(db: Database, models: UptimeModels, ownerSubjectId: string) {
+	let team = await createPersonal(models, buildIdToken({ subject: ownerSubjectId }));
 
-	let monitor = await Monitor.create(db, team.id, ownerSubjectId, {
-		name: "Homepage",
-		url: "https://example.com",
-	});
+	let monitor = await seedMonitor(db, team.id, ownerSubjectId);
 	let monitorResult = await db.create(
 		monitorResults,
 		{
@@ -103,17 +120,22 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 		{ id: crypto.randomUUID(), monitor_id: monitor.id, type: "contains", value: "OK" },
 		{ touch: true, returnRow: true },
 	);
-	let dailyStats = await MonitorDailyStats.upsertDay(db, {
-		monitor_id: monitor.id,
-		monitor_type: "http",
-		date: "2026-03-01",
-		total_checks: 10,
-		successful_checks: 10,
-		failed_checks: 0,
-		avg_response_time_ms: 40,
-		max_response_time_ms: 60,
-		status: "up",
-	});
+	let dailyStats = await db.create(
+		monitorDailyStats,
+		{
+			id: crypto.randomUUID(),
+			monitor_id: monitor.id,
+			monitor_type: "http",
+			date: "2026-03-01",
+			total_checks: 10,
+			successful_checks: 10,
+			failed_checks: 0,
+			avg_response_time_ms: 40,
+			max_response_time_ms: 60,
+			status: "up",
+		},
+		{ touch: true, returnRow: true },
+	);
 
 	let dnsMonitor = await db.create(
 		dnsMonitors,
@@ -136,11 +158,11 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 		{ returnRow: true },
 	);
 
-	let tcpMonitor = await TcpMonitor.create(db, team.id, {
-		name: "TCP",
-		host: "db.example.com",
-		port: 5432,
-	});
+	let tcpMonitor = await db.create(
+		tcpMonitors,
+		{ id: crypto.randomUUID(), team_id: team.id, name: "TCP", host: "db.example.com", port: 5432 },
+		{ touch: true, returnRow: true },
+	);
 	let tcpResult = await db.create(
 		tcpMonitorResults,
 		{
@@ -213,12 +235,18 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 		{ touch: true, returnRow: true },
 	);
 
-	let statusPage = await StatusPage.create(db, team.id, {
-		name: "Public status",
-		slug: `status-${crypto.randomUUID()}`,
-		title: "Status",
-	});
-	await StatusPage.setMonitors(db, statusPage.id, [monitor.id]);
+	let statusPage = await db.create(
+		statusPages,
+		{
+			id: crypto.randomUUID(),
+			team_id: team.id,
+			name: "Public status",
+			slug: `status-${crypto.randomUUID()}`,
+			title: "Status",
+		},
+		{ touch: true, returnRow: true },
+	);
+	await db.create(statusPageMonitors, { status_page_id: statusPage.id, monitor_id: monitor.id });
 
 	let apiKey = await db.create(
 		apiKeys,
@@ -238,10 +266,7 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 	);
 
 	let domain = unwrap(
-		await bindModels(db, recordJobs().jobs).teamDomains.create({
-			team_id: team.id,
-			hostname: "example.com",
-		}),
+		await models.teamDomains.create({ team_id: team.id, hostname: "example.com" }),
 	);
 
 	let invite = await db.create(
@@ -282,7 +307,7 @@ type SeededTeam = Awaited<ReturnType<typeof seedFullTeam>>;
 /** Asserts every row `seedFullTeam` created for `seed` is still present. */
 async function expectSeedIntact(db: Database, seed: SeededTeam) {
 	expect(await db.find(teams, seed.team.id)).not.toBeNull();
-	expect(await Monitor.findByIdForTeam(db, seed.team.id, seed.monitor.id)).not.toBeNull();
+	expect(await db.find(monitors, seed.monitor.id)).not.toBeNull();
 	expect(await db.find(monitorResults, seed.monitorResult.id)).not.toBeNull();
 	expect(await db.find(monitorContentChecks, seed.contentCheck.id)).not.toBeNull();
 	expect(
@@ -292,14 +317,14 @@ async function expectSeedIntact(db: Database, seed: SeededTeam) {
 	).toContain(seed.dailyStats.id);
 	expect(await db.find(dnsMonitors, seed.dnsMonitor.id)).not.toBeNull();
 	expect(await db.find(dnsMonitorResults, seed.dnsResult.id)).not.toBeNull();
-	expect(await TcpMonitor.findByIdForTeam(db, seed.team.id, seed.tcpMonitor.id)).not.toBeNull();
+	expect(await db.find(tcpMonitors, seed.tcpMonitor.id)).not.toBeNull();
 	expect(await db.find(tcpMonitorResults, seed.tcpResult.id)).not.toBeNull();
 	expect(await db.find(cronJobMonitors, seed.cronJob.id)).not.toBeNull();
 	expect(await db.find(cronJobPings, seed.cronPing.id)).not.toBeNull();
 	expect(await db.find(alerts, seed.alert.id)).not.toBeNull();
 	expect(await db.find(alertEvents, seed.alertEvent.id)).not.toBeNull();
 	expect(await db.find(maintenanceWindows, seed.maintenanceWindow.id)).not.toBeNull();
-	expect(await StatusPage.findByIdForTeam(db, seed.team.id, seed.statusPage.id)).not.toBeNull();
+	expect(await db.find(statusPages, seed.statusPage.id)).not.toBeNull();
 	expect(
 		await db.findMany(statusPageMonitors, { where: { status_page_id: seed.statusPage.id } }),
 	).toHaveLength(1);
@@ -312,7 +337,7 @@ async function expectSeedIntact(db: Database, seed: SeededTeam) {
 /** Asserts every row `seedFullTeam` created for `seed` has been deleted. */
 async function expectSeedGone(db: Database, seed: SeededTeam) {
 	expect(await db.find(teams, seed.team.id)).toBeNull();
-	expect(await Monitor.findByIdForTeam(db, seed.team.id, seed.monitor.id)).toBeNull();
+	expect(await db.find(monitors, seed.monitor.id)).toBeNull();
 	expect(await db.find(monitorResults, seed.monitorResult.id)).toBeNull();
 	expect(await db.find(monitorContentChecks, seed.contentCheck.id)).toBeNull();
 	expect(await db.findMany(monitorDailyStats, { where: { monitor_id: seed.monitor.id } })).toEqual(
@@ -337,162 +362,81 @@ async function expectSeedGone(db: Database, seed: SeededTeam) {
 	expect(await db.findMany(memberships, { where: { team_id: seed.team.id } })).toEqual([]);
 }
 
-describe("Team.findByIdOrSlug", () => {
+describe("teams.findByIdOrSlug", () => {
 	test("finds a team by its UUID id", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
+		let { models } = setup();
+		let team = await createPersonal(models);
 
-		expect((await Team.findByIdOrSlug(db, team.id))?.id).toBe(team.id);
+		expect((await models.teams.findByIdOrSlug(team.id))?.id).toBe(team.id);
 	});
 
 	test("finds a team by its slug", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken({ username: "acme" }));
+		let { models } = setup();
+		let team = await createPersonal(models, buildIdToken({ username: "acme" }));
 
-		expect((await Team.findByIdOrSlug(db, team.slug))?.id).toBe(team.id);
+		expect((await models.teams.findByIdOrSlug(team.slug))?.id).toBe(team.id);
 	});
 
 	test("returns null for an id that doesn't exist", async () => {
-		let { db } = createTestDatabase();
-		expect(await Team.findByIdOrSlug(db, crypto.randomUUID())).toBeNull();
+		let { models } = setup();
+		expect(await models.teams.findByIdOrSlug(crypto.randomUUID())).toBeNull();
 	});
 
 	test("returns null for a slug that doesn't exist", async () => {
-		let { db } = createTestDatabase();
-		expect(await Team.findByIdOrSlug(db, "no-such-slug")).toBeNull();
+		let { models } = setup();
+		expect(await models.teams.findByIdOrSlug("no-such-slug")).toBeNull();
 	});
 });
 
-describe("Team.findMembership", () => {
-	test("finds a subject's membership on a team", async () => {
-		let { db } = createTestDatabase();
-		let subjectId = crypto.randomUUID();
-		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
+describe("teams.findByIds", () => {
+	test("keys each listed team by id and leaves out an id that names none", async () => {
+		let { models } = setup();
+		let team = await createPersonal(models);
+		let missing = crypto.randomUUID();
 
-		let membership = await Team.findMembership(db, team.id, subjectId);
-		expect(membership?.role).toBe("admin");
+		let found = await models.teams.findByIds([team.id, team.id, missing]);
+
+		expect([...found.keys()]).toEqual([team.id]);
+		expect(found.get(team.id)?.slug).toBe(team.slug);
 	});
 
-	test("returns null when the subject isn't a member", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
-
-		expect(await Team.findMembership(db, team.id, crypto.randomUUID())).toBeNull();
-	});
-});
-
-describe("Team.listMembersByTeam", () => {
-	test("lists every membership row for a team", async () => {
-		let { db } = createTestDatabase();
-		let subjectId = crypto.randomUUID();
-		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
-
-		let rows = await Team.listMembersByTeam(db, team.id);
-		expect(rows.map((row) => row.subject_id)).toEqual([subjectId]);
-	});
-
-	test("never returns another team's memberships", async () => {
-		let { db } = createTestDatabase();
-		await Team.createTeam(db, buildIdToken());
-		let teamB = await Team.createTeam(db, buildIdToken());
-
-		let members = await Team.listMembersByTeam(db, teamB.id);
-		expect(members).toHaveLength(1);
+	test("returns an empty map for an empty list", async () => {
+		let { models } = setup();
+		expect((await models.teams.findByIds([])).size).toBe(0);
 	});
 });
 
-describe("Team.listBySubjectId", () => {
+describe("teams.ownerIdsByTeamIds", () => {
+	test("maps each team to its owner's subject id", async () => {
+		let { models } = setup();
+		let ownerId = crypto.randomUUID();
+		let team = await createPersonal(models, buildIdToken({ subject: ownerId }));
+
+		let owners = await models.teams.ownerIdsByTeamIds([team.id, crypto.randomUUID()]);
+
+		expect([...owners]).toEqual([[team.id, ownerId]]);
+	});
+});
+
+describe("teams.listForSubject", () => {
 	test("lists every team a subject belongs to", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
+		let team = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
-		let rows = await Team.listBySubjectId(db, subjectId);
+		let rows = await models.teams.listForSubject(subjectId);
 		expect(rows.map((row) => row.id)).toEqual([team.id]);
 	});
 
 	test("returns an empty array for a subject with no memberships", async () => {
-		let { db } = createTestDatabase();
-		expect(await Team.listBySubjectId(db, crypto.randomUUID())).toEqual([]);
+		let { models } = setup();
+		expect(await models.teams.listForSubject(crypto.randomUUID())).toEqual([]);
 	});
 });
 
-describe("Team.joinByDomain", () => {
-	test("joins the subject to every team whose verified domain matches their email, and returns the first", async () => {
-		let { db } = createTestDatabase();
-		let ownerTeam = await Team.createTeam(db, buildIdToken());
-		let domain = unwrap(
-			await bindModels(db, recordJobs().jobs).teamDomains.create({
-				team_id: ownerTeam.id,
-				hostname: "acme.com",
-			}),
-		);
-		unwrap(await bindModels(db).teamDomains.update(domain.id, { verified_at: Date.now() }));
-
-		let joiner = buildIdToken({ email: "person@acme.com" });
-		let joined = await Team.joinByDomain(db, joiner);
-
-		expect(joined?.id).toBe(ownerTeam.id);
-		expect((await Team.findMembership(db, ownerTeam.id, joiner.subject))?.role).toBe("member");
-	});
-
-	test("returns null and joins nothing when the domain isn't verified", async () => {
-		let { db } = createTestDatabase();
-		let ownerTeam = await Team.createTeam(db, buildIdToken());
-		unwrap(
-			await bindModels(db, recordJobs().jobs).teamDomains.create({
-				team_id: ownerTeam.id,
-				hostname: "acme.com",
-			}),
-		);
-
-		let joiner = buildIdToken({ email: "person@acme.com" });
-		expect(await Team.joinByDomain(db, joiner)).toBeNull();
-		expect(await Team.findMembership(db, ownerTeam.id, joiner.subject)).toBeNull();
-	});
-
-	test("returns null when no domain matches the email's hostname at all", async () => {
-		let { db } = createTestDatabase();
-		let joiner = buildIdToken({ email: "person@nowhere.com" });
-		expect(await Team.joinByDomain(db, joiner)).toBeNull();
-	});
-
-	test("joins every team with a matching verified domain, not just one", async () => {
-		let { db } = createTestDatabase();
-		let teamA = await Team.createTeam(db, buildIdToken());
-		let teamB = await Team.createTeam(db, buildIdToken());
-		let domainA = unwrap(
-			await bindModels(db, recordJobs().jobs).teamDomains.create({
-				team_id: teamA.id,
-				hostname: "acme.com",
-			}),
-		);
-		let domainB = unwrap(
-			await bindModels(db, recordJobs().jobs).teamDomains.create({
-				team_id: teamB.id,
-				hostname: "acme.com",
-			}),
-		);
-		unwrap(await bindModels(db).teamDomains.update(domainA.id, { verified_at: Date.now() }));
-		unwrap(await bindModels(db).teamDomains.update(domainB.id, { verified_at: Date.now() }));
-
-		let joiner = buildIdToken({ email: "person@acme.com" });
-		await Team.joinByDomain(db, joiner);
-
-		expect(await Team.findMembership(db, teamA.id, joiner.subject)).not.toBeNull();
-		expect(await Team.findMembership(db, teamB.id, joiner.subject)).not.toBeNull();
-	});
-
-	test("throws when the email has no usable hostname", async () => {
-		let { db } = createTestDatabase();
-		let joiner = buildIdToken({ email: "" });
-		await expect(Team.joinByDomain(db, joiner)).rejects.toThrow("Invalid email format");
-	});
-});
-
-describe("Team.createTeam", () => {
+describe("teams.createPersonal", () => {
 	test("creates a personal team named after the subject and makes them its owning admin", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
 		let idToken = buildIdToken({
 			subject: subjectId,
@@ -501,79 +445,93 @@ describe("Team.createTeam", () => {
 			picture: "https://cdn.example.com/jane.png",
 		});
 
-		let team = await Team.createTeam(db, idToken);
+		let team = await createPersonal(models, idToken);
 
 		expect(team.owner_id).toBe(subjectId);
 		expect(team.name).toBe("Jane Doe's Team");
 		expect(team.slug).toBe("janedoe-team");
 		expect(team.logo).toBe("https://cdn.example.com/jane.png");
-		expect((await Team.findMembership(db, team.id, subjectId))?.role).toBe("admin");
+		expect((await models.memberships.findFor(team.id, subjectId))?.role).toBe("admin");
 	});
 
 	test("falls back to a null logo when the token has no picture", async () => {
-		let { db } = createTestDatabase();
-		let idToken = buildIdToken({ picture: "" });
+		let { models } = setup();
 
-		let team = await Team.createTeam(db, idToken);
+		let team = await createPersonal(models, buildIdToken({ picture: "" }));
 		expect(team.logo).toBeNull();
 	});
 });
 
-describe("Team.createAdditional", () => {
-	test("creates a team owned by the given subject with a slug derived from its name", async () => {
-		let { db } = createTestDatabase();
+describe("teams.create", () => {
+	test("makes the owner of any created team its admin member", async () => {
+		let { models } = setup();
 		let ownerId = crypto.randomUUID();
 
-		let team = await Team.createAdditional(db, ownerId, "Ops Team");
+		let team = unwrap(
+			await models.teams.create({ owner_id: ownerId, name: "Ops", slug: "ops", logo: null }),
+		);
+
+		let members = await models.memberships.inTeam(team.id).all();
+		expect(members.map((row) => [row.subject_id, row.role])).toEqual([[ownerId, "admin"]]);
+	});
+});
+
+describe("teams.createAdditional", () => {
+	test("creates a team owned by the given subject with a slug derived from its name", async () => {
+		let { models } = setup();
+		let ownerId = crypto.randomUUID();
+
+		let team = await createAdditional(models, ownerId, "Ops Team");
 
 		expect(team.owner_id).toBe(ownerId);
 		expect(team.name).toBe("Ops Team");
 		expect(team.slug).toBe("ops-team");
-		expect((await Team.findMembership(db, team.id, ownerId))?.role).toBe("admin");
+		expect((await models.memberships.findFor(team.id, ownerId))?.role).toBe("admin");
 	});
 
 	test("appends a suffix when the derived slug collides with an existing team", async () => {
-		let { db } = createTestDatabase();
-		let first = await Team.createAdditional(db, crypto.randomUUID(), "Ops Team");
-		let second = await Team.createAdditional(db, crypto.randomUUID(), "Ops Team");
+		let { models } = setup();
+		let first = await createAdditional(models, crypto.randomUUID(), "Ops Team");
+		let second = await createAdditional(models, crypto.randomUUID(), "Ops Team");
 
 		expect(second.slug).not.toBe(first.slug);
 		expect(second.slug.startsWith("ops-team-")).toBe(true);
 	});
 });
 
-describe("Team.uniqueSlug", () => {
+describe("teams.uniqueSlug", () => {
 	test("returns the candidate slug unchanged when it isn't taken", async () => {
-		let { db } = createTestDatabase();
-		expect(await Team.uniqueSlug(db, "fresh-slug")).toBe("fresh-slug");
+		let { models } = setup();
+		expect(await models.teams.uniqueSlug("fresh-slug")).toBe("fresh-slug");
 	});
 
 	test("appends a suffix until the slug no longer collides", async () => {
-		let { db } = createTestDatabase();
-		await Team.createAdditional(db, crypto.randomUUID(), "Taken");
+		let { models } = setup();
+		await createAdditional(models, crypto.randomUUID(), "Taken");
 
-		let slug = await Team.uniqueSlug(db, "taken");
+		let slug = await models.teams.uniqueSlug("taken");
 		expect(slug).not.toBe("taken");
 		expect(slug).toMatch(/^taken-[0-9a-z]{6}$/);
-		expect(await Team.findByIdOrSlug(db, slug)).toBeNull();
+		expect(await models.teams.findByIdOrSlug(slug)).toBeNull();
 	});
 });
 
-describe("Team.listWithRoleBySubjectId", () => {
+describe("teams.listWithRoleForSubject", () => {
 	test("lists every team with the subject's role and owner status", async () => {
-		let { db } = createTestDatabase();
+		let { models } = setup();
 		let subjectId = crypto.randomUUID();
-		let ownedTeam = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
+		let ownedTeam = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
-		let otherOwnerId = crypto.randomUUID();
-		let memberTeam = await Team.createAdditional(db, otherOwnerId, "Other Co");
-		await db.create(
-			memberships,
-			{ id: crypto.randomUUID(), subject_id: subjectId, team_id: memberTeam.id, role: "member" },
-			{ touch: true, returnRow: true },
+		let memberTeam = await createAdditional(models, crypto.randomUUID(), "Other Co");
+		unwrap(
+			await models.memberships.create({
+				subject_id: subjectId,
+				team_id: memberTeam.id,
+				role: "member",
+			}),
 		);
 
-		let rows = await Team.listWithRoleBySubjectId(db, subjectId);
+		let rows = await models.teams.listWithRoleForSubject(subjectId);
 		let byTeamId = new Map(rows.map((row) => [row.team.id, row]));
 
 		expect(byTeamId.get(ownedTeam.id)).toMatchObject({ role: "admin", isOwner: true });
@@ -581,92 +539,55 @@ describe("Team.listWithRoleBySubjectId", () => {
 	});
 
 	test("returns an empty array for a subject with no memberships", async () => {
-		let { db } = createTestDatabase();
-		expect(await Team.listWithRoleBySubjectId(db, crypto.randomUUID())).toEqual([]);
+		let { models } = setup();
+		expect(await models.teams.listWithRoleForSubject(crypto.randomUUID())).toEqual([]);
 	});
 });
 
-describe("Team.updateById", () => {
+describe("teams.update", () => {
 	test("updates a team's editable fields", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
+		let { models } = setup();
+		let team = await createPersonal(models);
 
-		let updated = await Team.updateById(db, team.id, { name: "Renamed" });
+		let updated = unwrap(await models.teams.update(team.id, { name: "Renamed" }));
 		expect(updated.name).toBe("Renamed");
 	});
 });
 
-describe("Team.setRole", () => {
-	test("changes a subject's role on a team", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
-		let memberId = crypto.randomUUID();
-		await db.create(
-			memberships,
-			{ id: crypto.randomUUID(), subject_id: memberId, team_id: team.id, role: "member" },
-			{ touch: true, returnRow: true },
-		);
-
-		await Team.setRole(db, team.id, memberId, "admin");
-
-		expect((await Team.findMembership(db, team.id, memberId))?.role).toBe("admin");
-	});
-
-	test("throws when the subject has no membership on the team", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
-
-		await expect(Team.setRole(db, team.id, crypto.randomUUID(), "admin")).rejects.toThrow(
-			/No membership/,
-		);
-	});
-});
-
-describe("Team.removeMembership", () => {
-	test("removes a subject's membership from a team", async () => {
-		let { db } = createTestDatabase();
-		let subjectId = crypto.randomUUID();
-		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
-
-		await Team.removeMembership(db, team.id, subjectId);
-
-		expect(await Team.findMembership(db, team.id, subjectId)).toBeNull();
-	});
-
-	test("is a no-op when the subject isn't a member", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
-
-		await Team.removeMembership(db, team.id, crypto.randomUUID());
-	});
-});
-
-describe("Team.deleteById", () => {
+describe("teams.delete", () => {
 	test("cascades to every row the team owns, without touching another team's data", async () => {
-		let { db } = createTestDatabase();
-		let toDelete = await seedFullTeam(db, crypto.randomUUID());
-		let untouched = await seedFullTeam(db, crypto.randomUUID());
+		let { db, models } = setup();
+		let toDelete = await seedFullTeam(db, models, crypto.randomUUID());
+		let untouched = await seedFullTeam(db, models, crypto.randomUUID());
 
 		await expectSeedIntact(db, toDelete);
 		await expectSeedIntact(db, untouched);
 
-		await Team.deleteById(db, toDelete.team.id);
+		unwrap(await models.teams.delete(toDelete.team.id));
 
 		await expectSeedGone(db, toDelete);
 		await expectSeedIntact(db, untouched);
 	});
 
 	test("succeeds for a team with no owned rows besides its own membership", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
+		let { db, models } = setup();
+		let team = await createPersonal(models);
 
-		await Team.deleteById(db, team.id);
+		unwrap(await models.teams.delete(team.id));
 
 		expect(await db.find(teams, team.id)).toBeNull();
 	});
+
+	test("answers NotFound for a team that does not exist", async () => {
+		let { models } = setup();
+
+		let deleted = await models.teams.delete(crypto.randomUUID());
+
+		expect(isFailure(deleted) && deleted.error).toBeInstanceOf(NotFound);
+	});
 });
 
-describe("Team.countMonitorsByTeam", () => {
+describe("teams.countMonitorsByTeam", () => {
 	/** One flow monitor, enough for the count to see the team. */
 	async function seedFlowMonitor(db: Database, teamId: string) {
 		return await db.create(
@@ -684,39 +605,36 @@ describe("Team.countMonitorsByTeam", () => {
 	}
 
 	test("counts a team whose only monitor is a flow monitor", async () => {
-		let { db } = createTestDatabase();
-		let team = await Team.createTeam(db, buildIdToken());
+		let { db, models } = setup();
+		let team = await createPersonal(models);
 		await seedFlowMonitor(db, team.id);
 
-		let counts = await Team.countMonitorsByTeam(db);
+		let counts = await models.teams.countMonitorsByTeam();
 
 		expect(counts.get(team.id)).toBe(1);
 	});
 
 	test("adds flow monitors to a team's other types rather than replacing them", async () => {
-		let { db } = createTestDatabase();
+		let { db, models } = setup();
 		let subjectId = crypto.randomUUID();
-		let team = await Team.createTeam(db, buildIdToken({ subject: subjectId }));
+		let team = await createPersonal(models, buildIdToken({ subject: subjectId }));
 
-		await Monitor.create(db, team.id, subjectId, {
-			name: "Homepage",
-			url: "https://example.com",
-		});
+		await seedMonitor(db, team.id, subjectId);
 		await seedFlowMonitor(db, team.id);
 		await seedFlowMonitor(db, team.id);
 
-		let counts = await Team.countMonitorsByTeam(db);
+		let counts = await models.teams.countMonitorsByTeam();
 
 		expect(counts.get(team.id)).toBe(3);
 	});
 
 	test("leaves a team with no monitors of any type out of the map", async () => {
-		let { db } = createTestDatabase();
-		let withFlow = await Team.createTeam(db, buildIdToken());
-		let without = await Team.createTeam(db, buildIdToken());
+		let { db, models } = setup();
+		let withFlow = await createPersonal(models);
+		let without = await createPersonal(models, buildIdToken({ username: "other" }));
 		await seedFlowMonitor(db, withFlow.id);
 
-		let counts = await Team.countMonitorsByTeam(db);
+		let counts = await models.teams.countMonitorsByTeam();
 
 		expect(counts.get(withFlow.id)).toBe(1);
 		expect(counts.has(without.id)).toBe(false);

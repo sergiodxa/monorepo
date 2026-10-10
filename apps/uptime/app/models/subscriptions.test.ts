@@ -1,5 +1,5 @@
 /**
- * Unit tests for the `Subscription` projection model: the snapshot write's idempotency and its
+ * Unit tests for the subscriptions projection model: the snapshot write's idempotency and its
  * out-of-order guard, the three-state entitlement read, the scheduling write, and the
  * sweep still claiming an owner nothing is known about. Runs against in-memory SQLite
  * with every migration applied, so the raw upsert and the cross-table `next_due_at`
@@ -11,11 +11,13 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import Subscription from "~/app/data/subscription";
+import type { UptimeModels } from "~/app/models";
+
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { claimDue } from "~/app/lib/scheduling";
 import { emptyEntitlementState, entitlementState } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { dnsMonitors, monitors, tcpMonitors, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -24,9 +26,11 @@ type Db = ReturnType<typeof createTestDatabase>["db"];
 vi.spyOn(console, "info").mockImplementation(() => {});
 
 let db: Db;
+let models: UptimeModels;
 
 beforeEach(() => {
 	({ db } = createTestDatabase());
+	models = bindModels(db, recordJobs().jobs);
 });
 
 async function createTeam(db: Db, ownerId: string) {
@@ -61,13 +65,13 @@ async function createMonitor(db: Db, teamId: string, changes: Record<string, unk
 	);
 }
 
-describe("Subscription.sync", () => {
+describe("subscriptions.sync", () => {
 	test("maps a snapshot onto the projection's columns", async () => {
-		let synced = await Subscription.sync(db, "owner-1", entitlementState());
+		let synced = await models.subscriptions.sync("owner-1", entitlementState());
 
 		expect(synced).toEqual({ applied: true, changed: true, entitled: true });
 
-		let [row] = await Subscription.listAll(db);
+		let [row] = await models.subscriptions.query().all();
 		expect(row?.external_customer_id).toBe("owner-1");
 		expect(row?.billing_subscription_id).toBe("sub_1");
 		expect(row?.billing_product_slug).toBe(MONITORING_PRODUCT);
@@ -78,109 +82,106 @@ describe("Subscription.sync", () => {
 	});
 
 	test("keeps a status the platform still reports, ended period and all", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState({ status: "canceled" }));
+		await models.subscriptions.sync("owner-1", entitlementState({ status: "canceled" }));
 
-		let [row] = await Subscription.listAll(db);
+		let [row] = await models.subscriptions.query().all();
 		expect(row?.status).toBe("canceled");
 		expect(row?.revoked_at).toBeNull();
 	});
 
 	test("revokes a subscription the snapshot stopped listing, rather than deleting it", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState());
+		await models.subscriptions.sync("owner-1", entitlementState());
 
-		let synced = await Subscription.sync(
-			db,
+		let synced = await models.subscriptions.sync(
 			"owner-1",
 			emptyEntitlementState({ readAt: "2026-07-20T00:00:00.000Z" }),
 		);
 
 		expect(synced).toEqual({ applied: true, changed: true, entitled: false });
 
-		let [row] = await Subscription.listAll(db);
+		let [row] = await models.subscriptions.query().all();
 		expect(row?.status).toBe("revoked");
 		expect(row?.revoked_at).toBe(new Date("2026-07-20T00:00:00.000Z").getTime());
 	});
 
 	test("is idempotent: a re-read updates the same row and reports no change", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState());
+		await models.subscriptions.sync("owner-1", entitlementState());
 
-		expect(await Subscription.sync(db, "owner-1", entitlementState())).toEqual({
+		expect(await models.subscriptions.sync("owner-1", entitlementState())).toEqual({
 			applied: true,
 			changed: false,
 			entitled: true,
 		});
 
-		expect(await Subscription.listAll(db)).toHaveLength(1);
+		expect(await models.subscriptions.query().all()).toHaveLength(1);
 	});
 
 	test("applies a fresher snapshot", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState());
+		await models.subscriptions.sync("owner-1", entitlementState());
 
 		expect(
-			await Subscription.sync(
-				db,
+			await models.subscriptions.sync(
 				"owner-1",
 				entitlementState({ status: "past_due", readAt: "2026-07-16T00:00:00.000Z" }),
 			),
 		).toEqual({ applied: true, changed: true, entitled: false });
 
-		let [row] = await Subscription.listAll(db);
+		let [row] = await models.subscriptions.query().all();
 		expect(row?.status).toBe("past_due");
 	});
 
 	test("refuses an older snapshot, so a slower read can't roll state back", async () => {
-		await Subscription.sync(
-			db,
+		await models.subscriptions.sync(
 			"owner-1",
 			entitlementState({ status: "past_due", readAt: "2026-07-16T00:00:00.000Z" }),
 		);
 
-		expect(await Subscription.sync(db, "owner-1", entitlementState())).toMatchObject({
+		expect(await models.subscriptions.sync("owner-1", entitlementState())).toMatchObject({
 			applied: false,
 		});
 
-		let [row] = await Subscription.listAll(db);
+		let [row] = await models.subscriptions.query().all();
 		expect(row?.status).toBe("past_due");
-		expect(await Subscription.listAll(db)).toHaveLength(1);
+		expect(await models.subscriptions.query().all()).toHaveLength(1);
 	});
 
 	test("records nothing for a product this app does not sell", async () => {
 		expect(
-			await Subscription.sync(db, "owner-1", entitlementState({ productSlug: "ebook" })),
+			await models.subscriptions.sync("owner-1", entitlementState({ productSlug: "ebook" })),
 		).toEqual({ applied: false, changed: false, entitled: false });
 
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await models.subscriptions.query().all()).toHaveLength(0);
 	});
 });
 
-describe("Subscription.stateFor", () => {
+describe("subscriptions.stateFor", () => {
 	test("is unknown when the projection has never heard of the owner", async () => {
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("unknown");
-		expect(await Subscription.isActive(db, "owner-1")).toBe(false);
+		expect(await models.subscriptions.stateFor("owner-1")).toBe("unknown");
+		expect(await models.subscriptions.isActive("owner-1")).toBe(false);
 	});
 
 	test("is active when a recorded subscription is in an entitling status", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState({ status: "trialing" }));
+		await models.subscriptions.sync("owner-1", entitlementState({ status: "trialing" }));
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("active");
-		expect(await Subscription.isActive(db, "owner-1")).toBe(true);
+		expect(await models.subscriptions.stateFor("owner-1")).toBe("active");
+		expect(await models.subscriptions.isActive("owner-1")).toBe(true);
 	});
 
 	test("is inactive — not unknown — once a lapsed subscription is on record", async () => {
-		await Subscription.sync(db, "owner-1", entitlementState({ status: "canceled" }));
+		await models.subscriptions.sync("owner-1", entitlementState({ status: "canceled" }));
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("inactive");
-		expect(await Subscription.isActive(db, "owner-1")).toBe(false);
+		expect(await models.subscriptions.stateFor("owner-1")).toBe("inactive");
+		expect(await models.subscriptions.isActive("owner-1")).toBe(false);
 	});
 
 	test("ignores another owner's subscription", async () => {
-		await Subscription.sync(db, "owner-2", entitlementState());
+		await models.subscriptions.sync("owner-2", entitlementState());
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("unknown");
+		expect(await models.subscriptions.stateFor("owner-1")).toBe("unknown");
 	});
 });
 
-describe("Subscription.applyEntitlement", () => {
+describe("subscriptions.applyEntitlement", () => {
 	test("unschedules every monitor type the owner's teams hold", async () => {
 		let team = await createTeam(db, "owner-1");
 		let monitor = await createMonitor(db, team.id);
@@ -208,7 +209,7 @@ describe("Subscription.applyEntitlement", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		expect(await Subscription.applyEntitlement(db, "owner-1", false)).toBe(3);
+		expect(await models.subscriptions.applyEntitlement("owner-1", false)).toBe(3);
 
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
 		expect((await db.findOne(tcpMonitors, { where: { id: tcp.id } }))?.next_due_at).toBeNull();
@@ -221,7 +222,7 @@ describe("Subscription.applyEntitlement", () => {
 		await createMonitor(db, mine.id);
 		let other = await createMonitor(db, theirs.id);
 
-		expect(await Subscription.applyEntitlement(db, "owner-1", false)).toBe(1);
+		expect(await models.subscriptions.applyEntitlement("owner-1", false)).toBe(1);
 
 		expect((await db.findOne(monitors, { where: { id: other.id } }))?.next_due_at).not.toBeNull();
 	});
@@ -231,7 +232,7 @@ describe("Subscription.applyEntitlement", () => {
 		let enabled = await createMonitor(db, team.id, { next_due_at: null });
 		let disabled = await createMonitor(db, team.id, { enabled_at: null, next_due_at: null });
 
-		expect(await Subscription.applyEntitlement(db, "owner-1", true)).toBe(1);
+		expect(await models.subscriptions.applyEntitlement("owner-1", true)).toBe(1);
 
 		expect((await db.findOne(monitors, { where: { id: enabled.id } }))?.next_due_at).not.toBeNull();
 		expect((await db.findOne(monitors, { where: { id: disabled.id } }))?.next_due_at).toBeNull();
@@ -241,8 +242,8 @@ describe("Subscription.applyEntitlement", () => {
 		let team = await createTeam(db, "owner-1");
 		await createMonitor(db, team.id);
 
-		expect(await Subscription.applyEntitlement(db, "owner-1", false)).toBe(1);
-		expect(await Subscription.applyEntitlement(db, "owner-1", false)).toBe(0);
+		expect(await models.subscriptions.applyEntitlement("owner-1", false)).toBe(1);
+		expect(await models.subscriptions.applyEntitlement("owner-1", false)).toBe(0);
 	});
 
 	test("leaves an already-scheduled monitor's cadence where it is", async () => {
@@ -250,7 +251,7 @@ describe("Subscription.applyEntitlement", () => {
 		let dueAt = Date.now() + 30_000;
 		let monitor = await createMonitor(db, team.id, { next_due_at: dueAt });
 
-		expect(await Subscription.applyEntitlement(db, "owner-1", true)).toBe(0);
+		expect(await models.subscriptions.applyEntitlement("owner-1", true)).toBe(0);
 
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBe(dueAt);
 	});
@@ -261,8 +262,8 @@ describe("the sweep and unknown subscription state", () => {
 		let team = await createTeam(db, "owner-1");
 		let monitor = await createMonitor(db, team.id, { next_due_at: Date.now() - 1000 });
 
-		expect(await Subscription.stateFor(db, "owner-1")).toBe("unknown");
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await models.subscriptions.stateFor("owner-1")).toBe("unknown");
+		expect(await models.subscriptions.query().all()).toHaveLength(0);
 
 		let claimed = await claimDue(db, monitors, ["id"], Date.now());
 

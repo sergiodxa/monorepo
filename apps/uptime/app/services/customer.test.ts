@@ -1,5 +1,5 @@
 /**
- * Unit tests for the `Customer` billing policy: resolving a signed-in subject to a platform
+ * Unit tests for the billing customer policy: resolving a signed-in subject to a platform
  * customer (by our own id first, then by address, creating one when neither matches), the
  * hosted checkout and portal it opens, and what cancelling an account's billing means here.
  *
@@ -26,9 +26,14 @@ import { BillingError } from "@sdxc/billing";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import Customer from "~/app/data/customer";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
+import {
+	cancelSubscriptions,
+	openCheckout,
+	openPortal,
+	provisionCustomer,
+} from "~/app/services/customer";
 import routes from "~/routes/web";
 
 /** The team every hosted page below is opened for. */
@@ -102,12 +107,12 @@ function stubBilling(customers: Partial<CustomerApi>): Billing {
 	} as unknown as Billing;
 }
 
-describe("Customer.provision", () => {
+describe("provisionCustomer", () => {
 	test("answers the customer already linked to the subject, looking no further", async () => {
 		let linked = customer({ id: "cus-linked", externalId: "user-1" });
 		let billing = stubBilling({ find: async () => success(linked) });
 
-		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(linked);
+		expect(await unwrap(provisionCustomer(billing, idToken))).toEqual(linked);
 	});
 
 	test("adopts a customer holding the address but none of our ids", async () => {
@@ -124,7 +129,7 @@ describe("Customer.provision", () => {
 			},
 		});
 
-		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(adopted);
+		expect(await unwrap(provisionCustomer(billing, idToken))).toEqual(adopted);
 		expect(updates).toEqual([[{ id: "cus-by-email" }, { externalId: "user-1" }]]);
 	});
 
@@ -138,7 +143,7 @@ describe("Customer.provision", () => {
 				),
 		});
 
-		let provisioned = await Customer.provision(billing, idToken);
+		let provisioned = await provisionCustomer(billing, idToken);
 
 		expect(isFailure(provisioned)).toBe(true);
 		if (isFailure(provisioned)) expect(provisioned.error.code).toBe("conflict");
@@ -151,7 +156,7 @@ describe("Customer.provision", () => {
 			findByEmail: async () => success(theirs),
 		});
 
-		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(theirs);
+		expect(await unwrap(provisionCustomer(billing, idToken))).toEqual(theirs);
 	});
 
 	test("creates a customer when neither our id nor the address matches", async () => {
@@ -167,7 +172,7 @@ describe("Customer.provision", () => {
 			},
 		});
 
-		expect(await unwrap(Customer.provision(billing, idToken))).toEqual(created);
+		expect(await unwrap(provisionCustomer(billing, idToken))).toEqual(created);
 		expect(inputs).toEqual([{ email: "user@example.com", externalId: "user-1", name: "User One" }]);
 	});
 
@@ -179,14 +184,14 @@ describe("Customer.provision", () => {
 				),
 		});
 
-		let provisioned = await Customer.provision(billing, idToken);
+		let provisioned = await provisionCustomer(billing, idToken);
 
 		expect(isFailure(provisioned)).toBe(true);
 		if (isFailure(provisioned)) expect(provisioned.error.code).toBe("unauthenticated");
 	});
 });
 
-describe("Customer.checkout", () => {
+describe("openCheckout", () => {
 	test("opens a session for the monitoring product, carrying where the owner arrived from", async () => {
 		let billing = createTestBilling();
 		await unwrap(
@@ -205,7 +210,7 @@ describe("Customer.checkout", () => {
 			},
 		});
 
-		let url = await unwrap(Customer.checkout(recording, TEAM, REQUEST_URL, ATTRIBUTION));
+		let url = await unwrap(openCheckout(recording, TEAM, REQUEST_URL, ATTRIBUTION));
 
 		expect(url).not.toBe("");
 		expect(opened).toEqual([
@@ -235,14 +240,14 @@ describe("Customer.checkout", () => {
 		let billing = createTestBilling();
 		billing.fail("checkouts.create", "unknown");
 
-		let opened = await Customer.checkout(billing, TEAM, REQUEST_URL, NO_ATTRIBUTION);
+		let opened = await openCheckout(billing, TEAM, REQUEST_URL, NO_ATTRIBUTION);
 
 		expect(isFailure(opened)).toBe(true);
 		if (isFailure(opened)) expect(opened.error.code).toBe("unknown");
 	});
 });
 
-describe("Customer.portal", () => {
+describe("openPortal", () => {
 	test("opens the hosted portal and returns the owner to their team", async () => {
 		let billing = createTestBilling();
 		await unwrap(
@@ -262,7 +267,7 @@ describe("Customer.portal", () => {
 			},
 		});
 
-		let url = await unwrap(Customer.portal(recording, TEAM, REQUEST_URL));
+		let url = await unwrap(openPortal(recording, TEAM, REQUEST_URL));
 
 		expect(url).not.toBe("");
 		expect(opened).toEqual([{ customer: { externalId: TEAM.owner_id }, returnTo: DASHBOARD }]);
@@ -272,21 +277,21 @@ describe("Customer.portal", () => {
 		let billing = createTestBilling();
 		let portalless = billing.with({ portal: undefined });
 
-		let opened = await Customer.portal(portalless, TEAM, REQUEST_URL);
+		let opened = await openPortal(portalless, TEAM, REQUEST_URL);
 
 		expect(isFailure(opened)).toBe(true);
 		if (isFailure(opened)) expect(opened.error.code).toBe("unsupported");
 	});
 });
 
-describe("Customer.cancelSubscriptions", () => {
+describe("cancelSubscriptions", () => {
 	test("succeeds with zero when the owner holds nothing", async () => {
 		let billing = createTestBilling();
 		await unwrap(
 			billing.customers.create({ email: "owner@example.com", externalId: TEAM.owner_id }),
 		);
 
-		expect(await unwrap(Customer.cancelSubscriptions(billing, TEAM.owner_id))).toBe(0);
+		expect(await unwrap(cancelSubscriptions(billing, TEAM.owner_id))).toBe(0);
 	});
 
 	test("ends every monitoring subscription the owner still holds", async () => {
@@ -306,7 +311,7 @@ describe("Customer.cancelSubscriptions", () => {
 			await unwrap(billing.checkouts.finish(opened.id));
 		}
 
-		expect(await unwrap(Customer.cancelSubscriptions(billing, TEAM.owner_id))).toBe(2);
+		expect(await unwrap(cancelSubscriptions(billing, TEAM.owner_id))).toBe(2);
 
 		let left = await unwrap(
 			billing.subscriptions.list({
@@ -322,7 +327,7 @@ describe("Customer.cancelSubscriptions", () => {
 		let billing = createTestBilling();
 		billing.fail("subscriptions.list", "unknown");
 
-		let cancelled = await Customer.cancelSubscriptions(billing, TEAM.owner_id);
+		let cancelled = await cancelSubscriptions(billing, TEAM.owner_id);
 
 		expect(isFailure(cancelled)).toBe(true);
 		if (isFailure(cancelled)) expect(cancelled.error.code).toBe("unknown");
