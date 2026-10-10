@@ -9,15 +9,15 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
-import Job, { POSTING_LIFETIME_DAYS } from "~/app/data/posting";
 import jobs from "~/app/jobs";
+import { POSTING_LIFETIME_DAYS } from "~/app/models/posting";
 
 /** Milliseconds in one day, the unit the lifetime is stated in. */
 const DAY_MS = 86_400_000;
 
 export default createJobHandler(jobs.expirePostings, async (ctx) => {
 	let cutoff = Date.now() - POSTING_LIFETIME_DAYS * DAY_MS;
-	let closed = await Job.expirePublishedBefore(ctx.database, cutoff);
+	let closed = await ctx.models.postings.expirePublishedBefore(cutoff);
 
 	ctx.log.set({ postings: { expired: closed } });
 });

@@ -30,6 +30,7 @@ import outbox from "~/app/http/controllers/outbox";
 import position from "~/app/http/controllers/position";
 import database from "~/app/http/middleware/database";
 import jobs from "~/app/http/middleware/jobs";
+import models from "~/app/http/middleware/models";
 import callerBudget from "~/app/http/middleware/rate-limit";
 import { documentAssets } from "~/app/lib/assets";
 import { captchaProvider } from "~/app/lib/captcha";
@@ -71,6 +72,7 @@ export default function application(
 			resources,
 		}) as Middleware,
 		database(openDb),
+		models(),
 		jobs(openDb),
 		renderWith(createHtmlRenderer) as Middleware,
 	];

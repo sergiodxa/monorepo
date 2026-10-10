@@ -8,10 +8,8 @@
  */
 
 import { createHandler, ToolError } from "@sdxc/mcp";
+import { isFailure } from "@sdxc/result";
 
-import Job from "~/app/data/posting";
-import jobs from "~/app/jobs";
-import { cache, LISTING_KEY } from "~/app/lib/cache";
 import { summarize, toEntry, toMarkdown } from "~/app/mcp/postings";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -28,37 +26,36 @@ const mcp = createHandler({
 });
 
 mcp.tools.map(toolset.searchJobs, async (ctx) => {
-	let found = await Job.search(ctx.db, ctx.input.query, ctx.input.limit);
+	let found = await ctx.models.postings.search(ctx.input.query, ctx.input.limit);
 	return found.map(summarize);
 });
 
 mcp.tools.map(toolset.listJobs, async (ctx) => {
-	let open = await Job.listOpen(ctx.db, ctx.input.limit);
+	let open = await ctx.models.postings.listOpen(ctx.input.limit);
 	return open.map(summarize);
 });
 
 mcp.tools.map(toolset.getJob, async (ctx) => {
-	let posting = await Job.find(ctx.db, ctx.input.id);
+	let posting = await ctx.models.postings.find(ctx.input.id);
 	if (posting === null) throw new ToolError("No position has that id. Find one with search_jobs.");
 	return toMarkdown(posting);
 });
 
-/** Publishes the way the submit form does: the row, a fresh listing, and the confirmation. */
+/** Publishes through the same model the submit form does, so the confirmation follows. */
 mcp.tools.map(toolset.publishJob, async (ctx) => {
-	let posting = await Job.publish(ctx.db, ctx.input);
-	await cache.delete(LISTING_KEY);
-	await ctx.jobs.enqueue(jobs.sendConfirmation, { postingId: posting.id, locale: ctx.locale });
+	let posting = await ctx.models.postings.create(ctx.input);
+	if (isFailure(posting)) throw new ToolError("The position could not be published.");
 
-	ctx.log.set({ posting: { id: posting.id } });
+	ctx.log.set({ posting: { id: posting.data.id } });
 
-	return toMarkdown(posting);
+	return toMarkdown(posting.data);
 });
 
 mcp.resources.map(resourceset.posting, {
-	list: async (ctx) => (await Job.listOpen(ctx.db, PICKER_SIZE)).map(toEntry),
+	list: async (ctx) => (await ctx.models.postings.listOpen(PICKER_SIZE)).map(toEntry),
 
 	read: async (ctx) => {
-		let posting = await Job.find(ctx.db, ctx.variables.id);
+		let posting = await ctx.models.postings.find(ctx.variables.id);
 		return posting ? toMarkdown(posting) : null;
 	},
 });

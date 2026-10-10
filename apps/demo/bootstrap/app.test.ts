@@ -11,11 +11,11 @@ import type { Database } from "remix/data-table";
 
 import { beforeEach, expect, test } from "vitest";
 
-import Job from "~/app/data/posting";
 import { cache, LISTING_KEY } from "~/app/lib/cache";
 import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
 import { outbox } from "~/app/lib/mailer";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
+import { bindModels, PostingFactory } from "~/app/lib/test/models";
 import { createTestDatabase, fetchApp } from "~/app/lib/test/router";
 
 /**
@@ -53,14 +53,7 @@ const RENDERED_DESCRIPTION = "<strong>things</strong>";
 
 /** Publishes a posting whose body only a Markdown pass turns into {@link RENDERED_DESCRIPTION}. */
 async function publishMarkdownPosting() {
-	return await Job.publish(db, {
-		title: "Senior Remix Engineer",
-		company: "Acme",
-		location: "Remote",
-		salary: "$150k – $180k",
-		description: MARKDOWN_DESCRIPTION,
-		contact_email: "hiring@acme.test",
-	});
+	return await factories.create(PostingFactory, { description: MARKDOWN_DESCRIPTION });
 }
 
 /** A complete submission, as the form sends it. */
@@ -78,22 +71,18 @@ function submission(overrides: Record<string, string> = {}): URLSearchParams {
 }
 
 let db: Database;
+let models: Awaited<ReturnType<typeof bindModels>>["models"];
+let factories: Awaited<ReturnType<typeof bindModels>>["factories"];
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	({ models, factories } = await bindModels(db));
 	outbox.clear();
 	await cache.delete(LISTING_KEY);
 });
 
 test("lists the open positions", async () => {
-	await Job.publish(db, {
-		title: "Senior Remix Engineer",
-		company: "Acme",
-		location: "Remote",
-		salary: "$150k – $180k",
-		description: "We build things with Remix v3.",
-		contact_email: "hiring@acme.test",
-	});
+	await factories.create(PostingFactory);
 
 	let response = await fetchApp(db, "/");
 	let html = await response.text();
@@ -107,7 +96,7 @@ test("publishes a submission and mails the poster", async () => {
 	let response = await fetchApp(db, "/", { method: "POST", body: submission() });
 
 	expect(response.status).toBe(303);
-	expect(await Job.listOpen(db, 10)).toHaveLength(1);
+	expect(await models.postings.listOpen(10)).toHaveLength(1);
 
 	expect(outbox.messages).toHaveLength(1);
 	expect(outbox.messages[0]?.to[0]?.email).toBe("hiring@acme.test");
@@ -119,7 +108,7 @@ test("refuses a submission that fails the captcha", async () => {
 	let response = await fetchApp(db, "/", { method: "POST", body });
 
 	expect(response.status).toBe(403);
-	expect(await Job.listOpen(db, 10)).toHaveLength(0);
+	expect(await models.postings.listOpen(10)).toHaveLength(0);
 	expect(outbox.messages).toHaveLength(0);
 });
 
@@ -177,7 +166,7 @@ test("reopens the form with the reason when a submission is refused", async () =
 	let html = await response.text();
 
 	expect(response.status).toBe(400);
-	expect(await Job.listOpen(db, 10)).toHaveLength(0);
+	expect(await models.postings.listOpen(10)).toHaveLength(0);
 	expect(html).toMatch(
 		/<dialog[^>]*\sopen(?=[\s>])[^>]*id="post-a-job"|<dialog[^>]*id="post-a-job"[^>]*\sopen(?=[\s>])/,
 	);

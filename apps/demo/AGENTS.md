@@ -32,7 +32,7 @@ shortest correct version of a thing wins over the clever one.
 | Router assembly              | `bootstrap/app.tsx`        |
 | MCP server                   | `bootstrap/mcp.ts`         |
 | Job dispatcher and its queue | `app/jobs/dispatcher.ts`   |
-| Data access                  | `app/data/posting.ts`      |
+| Models and their registry    | `app/models/`              |
 | In-memory adapters           | `app/lib/`                 |
 | Palette the theme derives    | `resources/css/colors.css` |
 | Built asset URLs (manifest)  | `app/lib/assets.ts`        |

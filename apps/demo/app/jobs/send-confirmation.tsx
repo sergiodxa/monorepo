@@ -10,14 +10,13 @@
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import Job from "~/app/data/posting";
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
 import jobs from "~/app/jobs";
 import { translatorFor } from "~/app/lib/i18n";
 import { mailer } from "~/app/lib/mailer";
 
 export default createJobHandler(jobs.sendConfirmation, async (ctx) => {
-	let posting = await Job.find(ctx.database, ctx.input.postingId);
+	let posting = await ctx.models.postings.find(ctx.input.postingId);
 	if (!posting) {
 		ctx.log.note("confirmation.posting_missing");
 		return;

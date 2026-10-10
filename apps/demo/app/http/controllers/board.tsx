@@ -1,7 +1,7 @@
 /**
  * The board's two actions: the listing every visitor lands on, and the submission that
- * publishes a position. Publishing writes the row, drops the cached listing, and hands the
- * confirmation email to a background job, so the visitor is redirected without waiting.
+ * publishes a position. The posting model drops the cached listing and queues the
+ * confirmation email once the row is stored, so the visitor is redirected without waiting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,9 +16,7 @@ import { createAction } from "remix/router";
 
 import type { Posting } from "~/database/schema";
 
-import Job from "~/app/data/posting";
 import { PostingSchema } from "~/app/http/validators/posting";
-import jobs from "~/app/jobs";
 import { cache, LISTING_KEY, LISTING_TTL } from "~/app/lib/cache";
 import { turnstileSiteKey } from "~/app/lib/captcha";
 import DocumentLayout from "~/resources/layouts/document";
@@ -30,7 +28,7 @@ const PAGE_SIZE = 50;
 
 /** The open positions, from the cache when it has them and from the database otherwise. */
 async function openPostings(ctx: RequestContext): Promise<Posting[]> {
-	let listing = await cache.fetch(LISTING_KEY, () => Job.listOpen(ctx.db, PAGE_SIZE), {
+	let listing = await cache.fetch(LISTING_KEY, () => ctx.models.postings.listOpen(PAGE_SIZE), {
 		ttl: LISTING_TTL,
 	});
 
@@ -65,11 +63,10 @@ export async function action(ctx: RequestContext): Promise<Response> {
 	let submission = await validate(ctx.formData, PostingSchema);
 	if (isFailure(submission)) return await renderBoard(ctx, ctx.intl.t("form.invalid"));
 
-	let posting = await Job.publish(ctx.db, submission.data);
-	await cache.delete(LISTING_KEY);
-	await ctx.jobs.enqueue(jobs.sendConfirmation, { postingId: posting.id, locale: ctx.locale });
+	let posting = await ctx.models.postings.create(submission.data);
+	if (isFailure(posting)) return await renderBoard(ctx, ctx.intl.t("form.invalid"));
 
-	ctx.log.set({ posting: { id: posting.id } });
+	ctx.log.set({ posting: { id: posting.data.id } });
 
 	return redirect(routes.board.index.href(), { status: redirect.Status.SeeOther });
 }

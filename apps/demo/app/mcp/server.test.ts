@@ -12,7 +12,8 @@ import type { Database } from "remix/data-table";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { beforeEach, expect, test } from "vitest";
 
-import Job from "~/app/data/posting";
+import { outbox } from "~/app/lib/mailer";
+import { bindModels, PostingFactory } from "~/app/lib/test/models";
 import { createTestDatabase, fetchApp, ORIGIN } from "~/app/lib/test/router";
 
 /** What the endpoint answered, in the fields these tests read. */
@@ -26,9 +27,12 @@ interface Body {
 }
 
 let db: Database;
+let models: Awaited<ReturnType<typeof bindModels>>["models"];
+let factories: Awaited<ReturnType<typeof bindModels>>["factories"];
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	({ models, factories } = await bindModels(db));
 });
 
 /** Sends one JSON-RPC call through the whole router and reads back what it answered. */
@@ -81,8 +85,8 @@ test("publishes the list, search, read and publish tools", async () => {
 });
 
 test("lists every open position", async () => {
-	await Job.publish(db, POSTING);
-	await Job.publish(db, { ...POSTING, title: "Staff Remix Engineer" });
+	await factories.create(PostingFactory);
+	await factories.create(PostingFactory, { title: "Staff Remix Engineer" });
 
 	let body = await send("tools/call", { name: "list_jobs", arguments: {} });
 	let listed = JSON.parse(body.result?.content?.[0]?.text ?? "[]") as Array<{ title: string }>;
@@ -94,7 +98,7 @@ test("lists every open position", async () => {
 });
 
 test("reads one position back as Markdown", async () => {
-	let posting = await Job.publish(db, POSTING);
+	let posting = await factories.create(PostingFactory);
 
 	let body = await send("tools/call", { name: "get_job", arguments: { id: posting.id } });
 
@@ -115,7 +119,17 @@ test("publishes a position an agent submits onto the board", async () => {
 
 	expect(body.result?.isError).toBeUndefined();
 	expect(body.result?.content?.[0]?.text).toContain("# Senior Remix Engineer");
-	expect((await Job.listOpen(db, 10)).map((it) => it.title)).toEqual(["Senior Remix Engineer"]);
+	expect((await models.postings.listOpen(10)).map((it) => it.title)).toEqual([
+		"Senior Remix Engineer",
+	]);
+});
+
+test("mails the poster of a position an agent publishes, as the submit form does", async () => {
+	outbox.clear();
+
+	await send("tools/call", { name: "publish_job", arguments: POSTING });
+
+	expect(outbox.messages.map((message) => message.to[0]?.email)).toEqual(["hiring@acme.test"]);
 });
 
 test("refuses a position without a valid contact email", async () => {
@@ -125,11 +139,11 @@ test("refuses a position without a valid contact email", async () => {
 	});
 
 	expect(body.error?.code).toBe(-32602);
-	expect(await Job.listOpen(db, 10)).toEqual([]);
+	expect(await models.postings.listOpen(10)).toEqual([]);
 });
 
 test("answers a search with the matching position", async () => {
-	await Job.publish(db, POSTING);
+	await factories.create(PostingFactory);
 
 	let body = await send("tools/call", { name: "search_jobs", arguments: { query: "Remix" } });
 

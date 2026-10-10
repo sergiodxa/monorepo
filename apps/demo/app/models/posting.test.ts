@@ -9,34 +9,24 @@
 
 import { expect, test } from "vitest";
 
-import Job, { POSTING_LIFETIME_DAYS } from "~/app/data/posting";
+import { bindModels, PostingFactory } from "~/app/lib/test/models";
 import { createTestDatabase } from "~/app/lib/test/router";
+import { POSTING_LIFETIME_DAYS } from "~/app/models/posting";
 
 /** Milliseconds in one day, the unit the lifetime is stated in. */
 const DAY_MS = 86_400_000;
 
-/** A complete posting, with only the fields a test varies left to the caller. */
-function posting(overrides: Record<string, unknown> = {}) {
-	return {
-		title: "Senior Remix Engineer",
-		company: "Acme",
-		location: "Remote",
-		salary: "$150k – $180k",
-		description: "We build things with Remix v3.",
-		contact_email: "hiring@acme.test",
-		...overrides,
-	};
-}
-
 test("closes the postings older than the board's lifetime and leaves the rest", async () => {
 	let db = await createTestDatabase();
+	let { models, factories } = await bindModels(db);
 
-	let fresh = await Job.publish(db, posting());
-	let stale = await Job.publish(db, posting({ title: "Stale" }));
+	let fresh = await factories.create(PostingFactory);
+	let stale = await factories.create(PostingFactory, { title: "Stale" });
 	await db.exec("UPDATE postings SET created_at = ? WHERE id = ?", [1, stale.id]);
 
-	let closed = await Job.expirePublishedBefore(db, Date.now() - POSTING_LIFETIME_DAYS * DAY_MS);
+	let cutoff = Date.now() - POSTING_LIFETIME_DAYS * DAY_MS;
+	let closed = await models.postings.expirePublishedBefore(cutoff);
 
 	expect(closed).toBe(1);
-	expect((await Job.listOpen(db, 10)).map((it) => it.id)).toEqual([fresh.id]);
+	expect((await models.postings.listOpen(10)).map((it) => it.id)).toEqual([fresh.id]);
 });

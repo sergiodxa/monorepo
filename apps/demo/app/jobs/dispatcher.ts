@@ -11,17 +11,30 @@ import type { JobDispatcher, JobDispatcherContext, JobMiddleware } from "@sdxc/j
 import type { MemoryQueue } from "@sdxc/jobs/memory";
 import type { Database as DataTable } from "remix/data-table";
 
+import { models as publishModels } from "@sdxc/data-model/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as memory from "@sdxc/jobs/memory";
 
 import type { DatabaseEffect } from "~/app/jobs/middleware/database";
 
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
+import { Database, database } from "~/app/jobs/middleware/database";
+import { FALLBACK_LANGUAGE } from "~/app/lib/i18n";
+import { models } from "~/app/models";
 import { logger } from "~/bootstrap/logger";
 
-/** The dispatcher the board's jobs run through, carrying the database its chain publishes. */
-export type Dispatcher = JobDispatcher<readonly [JobMiddleware<DatabaseEffect>]>;
+/** The models a job reads as `ctx.models`, bound to the database the chain opened. */
+function modelsMiddleware() {
+	return publishModels(models, (ctx) => ({
+		db: ctx.require(Database),
+		locale: FALLBACK_LANGUAGE,
+	}));
+}
+
+/** The dispatcher the board's jobs run through, carrying what its chain publishes. */
+export type Dispatcher = JobDispatcher<
+	readonly [JobMiddleware<DatabaseEffect>, ReturnType<typeof modelsMiddleware>]
+>;
 
 /** A dispatcher and the queue it writes to, so a caller can run what it just enqueued. */
 export interface JobRuntime {
@@ -47,7 +60,7 @@ export function createDispatcher(openDatabase: () => DataTable): JobRuntime {
 	let dispatcher = createJobDispatcher({
 		logger,
 		queue,
-		middleware: [database(openDatabase)] as const,
+		middleware: [database(openDatabase), modelsMiddleware()] as const,
 		timeout: "30 seconds",
 	});
 

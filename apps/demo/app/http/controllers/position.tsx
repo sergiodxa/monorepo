@@ -18,7 +18,6 @@ import { Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Job from "~/app/data/posting";
 import PositionDetail from "~/resources/components/position-detail";
 import DocumentLayout from "~/resources/layouts/document";
 import { isFrameRequest } from "~/routes/frames";
@@ -31,7 +30,7 @@ const Params = s.object({ id: s.string() });
 export default createAction(routes.position, async (ctx) => {
 	let { id } = s.parse(Params, ctx.params);
 
-	let posting = await Job.find(ctx.db, id);
+	let posting = await ctx.models.postings.find(id);
 
 	if (posting === null) {
 		let missing = (

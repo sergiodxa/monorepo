@@ -1294,9 +1294,10 @@ and recursion guards on top.
       SQLite, Durable Object SQLite and a real D1 binding in the Workers pool
 - [x] Phase 2: Core, including the `byKeyset` guard in `@sdxc/pagination`
 - [x] Phase 3: Hosts
-- [ ] Phase 4: Testing: `./testing` is done; replacing hand-built rows waits for the first port
-- [ ] Phase 5: Package chores: README, LICENSE and the root README row are done; the
-      `apps/sdxc` group and guide, the npm bootstrap and the app ports remain
+- [x] Phase 4: Testing: `./testing`, and demo's tests seed postings through a factory
+- [ ] Phase 5: Package chores: README, LICENSE, the root README row and the `apps/sdxc` group
+      and guide are done, and demo is ported; the npm bootstrap and the remaining apps'
+      `data/`, `models/` and `repositories/` modules remain
 
 ## Notes
 

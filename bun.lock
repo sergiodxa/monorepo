@@ -194,6 +194,7 @@
         "@pitlane/assets": "0.1.0",
         "@sdxc/cache": "workspace:*",
         "@sdxc/captcha": "workspace:*",
+        "@sdxc/data-model": "workspace:*",
         "@sdxc/data-table-d1": "workspace:*",
         "@sdxc/get-client-ip": "workspace:*",
         "@sdxc/http": "workspace:*",
@@ -219,6 +220,7 @@
         "@pitlane/vite-plugin-remix": "0.8.0",
         "@sdxc/cloudflare-mocks": "workspace:*",
         "@sdxc/messageformat": "workspace:*",
+        "@sdxc/sample": "workspace:*",
         "@sdxc/spec": "workspace:*",
         "cf": "1.0.0-beta.5",
         "vite": "^8.2.2",
@@ -684,7 +686,6 @@
         "@sdxc/json-schema": "workspace:*",
         "@sdxc/mcp": "workspace:*",
         "@sdxc/pagination": "workspace:*",
-        "@sdxc/random": "workspace:*",
         "@sdxc/sample": "workspace:*",
       },
       "peerDependencies": {
