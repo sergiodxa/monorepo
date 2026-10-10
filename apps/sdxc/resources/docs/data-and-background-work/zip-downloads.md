@@ -4,7 +4,7 @@ description: Bundle generated text, CSV streams and stored files into one ZIP do
 section:
     title: Data & background work
     order: 6
-order: 20
+order: 17
 lastUpdated: 2026-10-08
 ---
 

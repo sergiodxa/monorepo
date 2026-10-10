@@ -4,7 +4,7 @@ description: Read an uploaded CSV into validated rows with errors that name the 
 section:
     title: Data & background work
     order: 6
-order: 7
+order: 8
 lastUpdated: 2026-09-29
 ---
 

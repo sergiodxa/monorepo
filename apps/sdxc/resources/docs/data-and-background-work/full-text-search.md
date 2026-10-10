@@ -4,7 +4,7 @@ description: Keep an FTS5 index beside the tables you already have, parse what a
 section:
     title: Data & background work
     order: 6
-order: 21
+order: 18
 lastUpdated: 2026-10-08
 ---
 

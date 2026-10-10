@@ -4,7 +4,7 @@ description: Declare jobs once, enqueue them from handlers, run them on Cloudfla
 section:
     title: Data & background work
     order: 6
-order: 3
+order: 4
 lastUpdated: 2026-10-08
 ---
 

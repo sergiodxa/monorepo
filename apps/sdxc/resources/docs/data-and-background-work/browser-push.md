@@ -4,7 +4,7 @@ description: Subscribe a browser from a click, store the subscription safely, an
 section:
     title: Data & background work
     order: 6
-order: 13
+order: 14
 lastUpdated: 2026-10-08
 ---
 

@@ -4,7 +4,7 @@ description: Write emails as remix/component classes, translate them for the rea
 section:
     title: Data & background work
     order: 6
-order: 4
+order: 5
 lastUpdated: 2026-10-08
 ---
 

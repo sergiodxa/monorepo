@@ -4,7 +4,7 @@ description: Let customers write conditions as text or JSON, store them as data,
 section:
     title: Data & background work
     order: 6
-order: 9
+order: 10
 lastUpdated: 2026-10-05
 ---
 

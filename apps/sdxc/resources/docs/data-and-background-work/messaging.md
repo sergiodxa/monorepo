@@ -4,7 +4,7 @@ description: Write one message, deliver it to Slack, Discord, Telegram, PagerDut
 section:
     title: Data & background work
     order: 6
-order: 12
+order: 13
 lastUpdated: 2026-10-08
 ---
 

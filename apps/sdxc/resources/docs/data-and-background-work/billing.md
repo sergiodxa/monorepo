@@ -4,7 +4,7 @@ description: Sell through a hosted checkout, keep your own copy of what each cus
 section:
     title: Data & background work
     order: 6
-order: 6
+order: 7
 lastUpdated: 2026-10-08
 ---
 

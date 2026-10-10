@@ -4,7 +4,7 @@ description: Wait longer after each failure, with a ceiling and jitter, in queue
 section:
     title: Data & background work
     order: 6
-order: 8
+order: 9
 lastUpdated: 2026-10-08
 ---
 

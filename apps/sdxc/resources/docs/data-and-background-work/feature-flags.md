@@ -4,7 +4,7 @@ description: Declare flags in a typed catalog, target them by rule or percentage
 section:
     title: Data & background work
     order: 6
-order: 5
+order: 6
 lastUpdated: 2026-10-08
 ---
 

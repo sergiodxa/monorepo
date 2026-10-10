@@ -4,7 +4,7 @@ description: Subscribe readers to Buttondown or Kit through one contract, credit
 section:
     title: Data & background work
     order: 6
-order: 10
+order: 11
 lastUpdated: 2026-10-08
 ---
 

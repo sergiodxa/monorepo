@@ -4,7 +4,7 @@ description: Wrap remix/data-table tables in models with scopes, callbacks and t
 section:
     title: Data & background work
     order: 6
-order: 2.5
+order: 3
 lastUpdated: 2026-10-09
 ---
 
