@@ -10,7 +10,7 @@
 import type { RemixNode } from "remix/component";
 
 import { isOneClickUnsubscribe } from "@sdxc/mail/unsubscribe";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { vstack } from "@sdxc/u/layout";
 import { m, maxIs, mi, minBs, p } from "@sdxc/u/size";
 import { textAlign } from "@sdxc/u/typography";
@@ -19,7 +19,6 @@ import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import UserPreferences from "~/app/data/user-preferences";
 import { verifyDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import { optionalEmails } from "~/database/schema";
 import DocumentLayout from "~/resources/layouts/document";
@@ -126,7 +125,9 @@ export default createController(routes.digestUnsubscribe, {
 			let unsubscribe = await readToken(token);
 			if (!unsubscribe) return renderInvalid();
 
-			await UserPreferences.unsubscribe(ctx.db, unsubscribe.subjectId, unsubscribe.email);
+			unwrap(
+				await ctx.models.userPreferences.unsubscribe(unsubscribe.subjectId, unsubscribe.email),
+			);
 			if (isOneClickUnsubscribe(ctx.formData)) return new Response(null, { status: 200 });
 
 			return renderPage(

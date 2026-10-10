@@ -10,7 +10,6 @@
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import routes from "~/routes/web";
@@ -22,7 +21,7 @@ export default createAction(routes.app.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let teams = await Team.listBySubjectId(ctx.db, viewer.id);
+		let teams = await ctx.models.teams.listForSubject(viewer.id);
 		let firstTeam = teams[0];
 		if (!firstTeam) throw new Error(`Viewer ${viewer.id} has no team membership`);
 

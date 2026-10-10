@@ -20,12 +20,12 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import Subscription from "~/app/data/subscription";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -140,7 +140,7 @@ describe("POST /webhooks/polar", () => {
 		let response = await dispatch({ body: delivery.body, headers: new Headers() });
 
 		expect(response.status).toBe(401);
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await bindModels(db).subscriptions.query().all()).toHaveLength(0);
 	});
 
 	test("records the delivery with its verdict even when the signature fails", async () => {
@@ -167,7 +167,7 @@ describe("POST /webhooks/polar", () => {
 		let response = await dispatch(delivery);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.stateFor(db, ownerId)).toBe("active");
+		expect(await bindModels(db).subscriptions.stateFor(ownerId)).toBe("active");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
 
 		let [row] = await db.findMany(billingWebhookDeliveries);
@@ -189,7 +189,7 @@ describe("POST /webhooks/polar", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.stateFor(db, ownerId)).toBe("inactive");
+		expect(await bindModels(db).subscriptions.stateFor(ownerId)).toBe("inactive");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
 	});
 
@@ -201,7 +201,7 @@ describe("POST /webhooks/polar", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await bindModels(db).subscriptions.query().all()).toHaveLength(0);
 	});
 
 	test("records nothing for a subscription to another product", async () => {
@@ -212,7 +212,7 @@ describe("POST /webhooks/polar", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await bindModels(db).subscriptions.query().all()).toHaveLength(0);
 	});
 
 	test("acknowledges a redelivery without running the handler again", async () => {
@@ -250,7 +250,7 @@ describe("POST /webhooks/polar", () => {
 		let response = await dispatch(delivery);
 
 		expect(response.status).toBe(200);
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await bindModels(db).subscriptions.query().all()).toHaveLength(0);
 
 		/** Left unprocessed on purpose, so the trail shows a delivery this app never acted on. */
 		let [row] = await db.findMany(billingWebhookDeliveries);

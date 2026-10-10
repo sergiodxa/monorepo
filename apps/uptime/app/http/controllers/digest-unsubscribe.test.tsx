@@ -24,13 +24,14 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import UserPreferences from "~/app/data/user-preferences";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { bindModels } from "~/app/lib/test/models";
 import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
+import { wantsEmail } from "~/app/models/user-preferences";
 import routes from "~/routes/web";
 
 import digestUnsubscribe from "./digest-unsubscribe";
@@ -122,8 +123,8 @@ async function visit(db: Db, token: string, method: "GET" | "POST", oneClick = t
 
 /** Whether the subject would still be sent the daily digest. */
 async function wantsDaily(db: Db, subjectId = "subject-1") {
-	let preferences = await UserPreferences.findBySubjectId(db, subjectId);
-	return UserPreferences.wants(preferences, "teamDailyDigest");
+	let preferences = await bindModels(db).userPreferences.findBy({ subject_id: subjectId });
+	return wantsEmail(preferences, "teamDailyDigest");
 }
 
 describe("GET /digests/unsubscribe/:token", () => {
@@ -198,17 +199,17 @@ describe("POST /digests/unsubscribe/:token", () => {
 
 	test("keeps the member's other choices and answers a repeat the same way", async () => {
 		let { db } = createTestDatabase();
-		await UserPreferences.setLanguage(db, "subject-1", "es");
+		unwrap(await bindModels(db).userPreferences.setLanguage("subject-1", "es"));
 		let token = await dailyToken();
 
 		await visit(db, token, "POST");
 		let second = await visit(db, token, "POST", false);
 
-		let preferences = await UserPreferences.findBySubjectId(db, "subject-1");
+		let preferences = await bindModels(db).userPreferences.findBy({ subject_id: "subject-1" });
 		expect(second.response.status).toBe(200);
 		expect(preferences?.preferred_language).toBe("es");
 		expect(preferences?.unsubscribed_emails).toEqual(["teamDailyDigest"]);
-		expect(UserPreferences.wants(preferences, "teamWeeklyDigest")).toBe(true);
+		expect(wantsEmail(preferences, "teamWeeklyDigest")).toBe(true);
 	});
 
 	test("rejects a tampered token and leaves every subscription alone", async () => {

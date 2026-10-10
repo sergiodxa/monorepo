@@ -11,6 +11,7 @@
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { jobEnqueuer } from "@sdxc/jobs/router";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -32,11 +33,11 @@ let queue = createQueue({ name: "uptime" });
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");
 let { teams } = await import("~/database/schema");
 let { backfillDailyStatsCreate } = await import("./backfill-daily-stats");
 let { jobQueue } = await import("~/app/lib/queue");
+let { bindModels } = await import("~/app/lib/test/models");
 let routes = (await import("~/routes/web")).default;
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -56,7 +57,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test key", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test key", scopes, expires_at: null }),
+	);
 	return key;
 }
 

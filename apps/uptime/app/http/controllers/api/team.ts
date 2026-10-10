@@ -10,13 +10,12 @@
 import type { RequestContext } from "remix/router";
 
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";
 
-import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { UPDATE_TEAM_BODY, WRITABLE_TEAM } from "~/app/http/openapi/team";
 import { teamLogoUrl } from "~/app/lib/team-logo";
@@ -67,7 +66,7 @@ async function patchTeam(ctx: RequestContext): Promise<Response> {
 	if (changed.has("name")) changes.name = value.name;
 	if (changed.has("logoUrl")) changes.logo = value.logoUrl ?? null;
 
-	let team = await Team.updateById(ctx.db, ctx.apiTeam.id, changes);
+	let team = unwrap(await ctx.models.teams.update(ctx.apiTeam.id, changes));
 	return apiSuccess({ team: serializeTeam(team) });
 }
 
@@ -103,7 +102,7 @@ export default createController(teamRoutes, {
 				if (result.data.name !== undefined) changes.name = result.data.name;
 				if (result.data.logoUrl !== undefined) changes.logo = result.data.logoUrl;
 
-				let team = await Team.updateById(ctx.db, ctx.apiTeam.id, changes);
+				let team = unwrap(await ctx.models.teams.update(ctx.apiTeam.id, changes));
 				return apiSuccess({ team: serializeTeam(team) });
 			},
 		},

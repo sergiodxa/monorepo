@@ -19,8 +19,6 @@ import { isFailure } from "@sdxc/result";
 import type { DeletedTeamNotice } from "~/app/services/account-erasure";
 import type { SelectAccountDeletion } from "~/database/schema";
 
-import AccountDeletion from "~/app/data/account-deletion";
-import UserPreferences from "~/app/data/user-preferences";
 import { AccountDeletedEmail } from "~/app/emails/account-deleted";
 import { emailTranslator } from "~/app/emails/locale";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
@@ -31,7 +29,7 @@ import { recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
 
 export default createJobHandler(jobs.deleteAccounts, async (ctx) => {
-	let pending = await AccountDeletion.listPending(ctx.database);
+	let pending = await ctx.models.accountDeletions.listPending();
 
 	let deleted = 0;
 	let errorCount = 0;
@@ -118,7 +116,7 @@ async function erase(
 	}
 
 	/** Last, and only now: this row is the last thing that held the address. */
-	await AccountDeletion.remove(ctx.database, request.subject_id);
+	await ctx.models.accountDeletions.remove(request.subject_id);
 
 	ctx.log.note("accounts.deleted", {
 		"subject.id": request.subject_id,
@@ -148,7 +146,7 @@ async function notifyFormerMembers(
 	let subjectIds = teams.flatMap((team) => team.memberIds);
 	let [profiles, preferences] = await Promise.all([
 		resolveSubjects(admin, subjectIds),
-		UserPreferences.findBySubjectIds(ctx.database, subjectIds),
+		ctx.models.userPreferences.findBySubjectIds(subjectIds),
 	]);
 
 	let notified = 0;

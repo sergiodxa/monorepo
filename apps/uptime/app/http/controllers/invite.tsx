@@ -9,6 +9,7 @@
  */
 
 import { redirect } from "@sdxc/http/response";
+import { unwrap } from "@sdxc/result";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
@@ -18,7 +19,6 @@ import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Invite from "~/app/data/invite";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import DocumentLayout from "~/resources/layouts/document";
@@ -32,7 +32,7 @@ export default createAction(routes.invite, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { inviteId } = s.parse(s.object({ inviteId: s.string() }), ctx.params);
-		let invite = await Invite.findById(ctx.db, inviteId);
+		let invite = await ctx.models.invites.find(inviteId);
 
 		let renderError = (message: string) =>
 			ctx.render(
@@ -74,7 +74,7 @@ export default createAction(routes.invite, {
 			);
 		}
 
-		await Invite.accept(ctx.db, invite.id, invite.team_id, viewer.id);
+		unwrap(await ctx.models.invites.accept(invite.id, viewer.id));
 
 		return redirect(routes.app.team.dashboard.index.href({ team: invite.team_id }), {
 			status: redirect.Status.SeeOther,

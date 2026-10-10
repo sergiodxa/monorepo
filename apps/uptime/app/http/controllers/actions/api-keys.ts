@@ -10,13 +10,13 @@
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import { CreateApiKeySchema, DeleteApiKeySchema } from "~/app/http/validators/api-key";
+import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import routes from "~/routes/web";
 
 /** POST /actions/:team/create-api-key */
@@ -31,13 +31,15 @@ export const createApiKey = createAction(routes.teamAdminActions.apiKey.create, 
 		});
 	}
 
-	let count = await ApiKey.countByTeam(ctx.db, ctx.team.id);
+	let count = await ctx.models.apiKeys.inTeam(ctx.team.id).count();
 	if (count >= MAX_API_KEYS_PER_TEAM) {
 		return badRequest(`A team can have at most ${MAX_API_KEYS_PER_TEAM} API keys.`);
 	}
 
 	let { name, scopes, expires_at } = result.data;
-	let { record, key } = await ApiKey.create(ctx.db, ctx.team.id, { name, scopes, expires_at });
+	let { record, key } = unwrap(
+		await ctx.models.apiKeys.issue(ctx.team.id, { name, scopes, expires_at }),
+	);
 
 	session?.flash("newApiKey", { name: record.name, key });
 	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {
@@ -56,10 +58,13 @@ export const deleteApiKey = createAction(routes.teamAdminActions.apiKey.delete, 
 		});
 	}
 
-	let apiKey = await ApiKey.findByIdForTeam(ctx.db, ctx.team.id, result.data.api_key_id);
+	let apiKey = await ctx.models.apiKeys
+		.inTeam(ctx.team.id)
+		.where({ id: result.data.api_key_id })
+		.first();
 	if (!apiKey) return notFound("Not Found");
 
-	await ApiKey.deleteById(ctx.db, apiKey.id);
+	unwrap(await ctx.models.apiKeys.delete(apiKey.id));
 
 	session?.flash("toast", { intent: "success", message: `API key "${apiKey.name}" deleted.` });
 	return redirect(routes.app.team.apiKeys.index.href({ team: ctx.team.slug }), {

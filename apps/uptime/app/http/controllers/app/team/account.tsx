@@ -24,13 +24,11 @@ import { createAction } from "remix/router";
 
 import type { OptionalEmail } from "~/database/schema";
 
-import AccountDeletion from "~/app/data/account-deletion";
-import Team from "~/app/data/team";
-import UserPreferences from "~/app/data/user-preferences";
 import { EMAIL_PREFERENCES_ANCHOR } from "~/app/emails/shared/team-digest";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { wantsEmail } from "~/app/models/user-preferences";
 import { planAccountErasure } from "~/app/services/account-erasure";
 import { optionalEmails, supportedLanguages } from "~/database/schema";
 import Avatar from "~/resources/components/avatar";
@@ -108,10 +106,10 @@ export default createAction(routes.app.team.account, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let [memberships, preferences, plan, queuedDeletion] = await Promise.all([
-			Team.listWithRoleBySubjectId(ctx.db, viewer.id),
-			UserPreferences.findBySubjectId(ctx.db, viewer.id),
+			ctx.models.teams.listWithRoleForSubject(viewer.id),
+			ctx.models.userPreferences.findBy({ subject_id: viewer.id }),
 			planAccountErasure(ctx.db, viewer.id),
-			AccountDeletion.findBySubjectId(ctx.db, viewer.id),
+			ctx.models.accountDeletions.findBy({ subject_id: viewer.id }),
 		]);
 
 		let preferredLanguage = preferences?.preferred_language ?? null;
@@ -291,7 +289,7 @@ export default createAction(routes.app.team.account, {
 													 * stored preference lists only the emails a member turned off, so an absent
 													 * email means they still want it.
 													 */
-													defaultChecked={UserPreferences.wants(preferences, email)}
+													defaultChecked={wantsEmail(preferences, email)}
 													aria-describedby={emailDescriptionId(email)}
 												>
 													{ctx.intl.t(`page.account.emails.list.${email}.name`)}

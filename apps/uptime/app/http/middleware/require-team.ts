@@ -15,7 +15,6 @@ import { currentLog } from "@sdxc/logger";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import Team from "~/app/data/team";
 import { getViewer } from "~/app/http/middleware/auth";
 import { apportionCostByTeam } from "~/app/services/cost";
 
@@ -44,12 +43,12 @@ export let requireTeam: Middleware = async (ctx, next) => {
 	if (!viewer) return notFound("Not Found");
 
 	let [team, teams] = await Promise.all([
-		Team.findByIdOrSlug(ctx.db, idOrSlug),
-		Team.listBySubjectId(ctx.db, viewer.id),
+		ctx.models.teams.findByIdOrSlug(idOrSlug),
+		ctx.models.teams.listForSubject(viewer.id),
 	]);
 	if (!team) return notFound("Not Found");
 
-	let membership = await Team.findMembership(ctx.db, team.id, viewer.id);
+	let membership = await ctx.models.memberships.findFor(team.id, viewer.id);
 	if (!membership) return notFound("Not Found");
 
 	ctx.team = team;

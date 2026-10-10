@@ -1,6 +1,6 @@
 /**
  * Tests for the team settings page controller. No `cloudflare:workers` mock is
- * needed since this controller only touches `~/app/data/invite`, `~/app/data/team`,
+ * needed since this controller only reads memberships and invites through its models,
  * and `~/app/services/subjects`, none of which depend on
  * a queue binding. A fake `ManagementClient` answers that it holds no record for the
  * seeded members, so the page renders them by raw `subject_id`.
@@ -31,7 +31,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import Invite from "~/app/data/invite";
 import { admin } from "~/app/http/middleware/admin";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
@@ -274,11 +273,12 @@ describe("settings page", () => {
 	test("renders the pending invitations and verified domains tables when non-empty", async () => {
 		let { db, team, ownerMembership } = await createFixture();
 
-		let invite = await Invite.create(
-			db,
-			team.id,
-			ownerMembership.subject_id,
-			"invitee@example.com",
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: ownerMembership.subject_id,
+				email: "invitee@example.com",
+			}),
 		);
 		let domain = unwrap(
 			await bindModels(db, recordJobs().jobs).teamDomains.create({

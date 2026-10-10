@@ -15,7 +15,6 @@ import i18nMiddleware from "@sdxc/i18n/middleware";
 import { getContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 
-import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import de from "~/app/locales/de";
@@ -47,7 +46,7 @@ async function findLocale(request: Request): Promise<string | null> {
 	let viewer = getViewer();
 	if (!viewer) return null;
 
-	let preferences = await UserPreferences.findBySubjectId(ctx.db, viewer.id);
+	let preferences = await ctx.models.userPreferences.findBy({ subject_id: viewer.id });
 
 	let stored = preferences?.preferred_language;
 	if (!stored) return null;

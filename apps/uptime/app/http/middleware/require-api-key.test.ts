@@ -1,6 +1,6 @@
 /**
  * Integration tests for `requireApiKey`. They run the real hash lookup
- * (`ApiKey.findByHash` / `Team.findByIdOrSlug`) against an in-memory SQLite database
+ * (`apiKeys.findBy` / `teams.findByIdOrSlug`) against an in-memory SQLite database
  * with real migrations applied, to verify a valid key with the right scope reaches
  * the handler with `ctx.apiKey`/`ctx.apiTeam` populated and `last_used_at` touched,
  * and that a missing, unknown, expired, or under-scoped key each resolve to the
@@ -11,19 +11,19 @@
  */
 
 import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { parse as parseMetadata } from "@sdxc/well-known/oauth-protected-resource";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import protectedResource from "~/app/http/controllers/api/protected-resource";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { apiKeys, apiKeyScopes, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -49,7 +49,9 @@ async function seedApiKey(
 	scopes: ApiKeyScope[],
 	expires_at: number | null = null,
 ) {
-	return await ApiKey.create(db, teamId, { name: "Test key", scopes, expires_at });
+	return unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "Test key", scopes, expires_at }),
+	);
 }
 
 async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, string> = {}) {

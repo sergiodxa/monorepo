@@ -7,9 +7,9 @@
  */
 
 import * as s from "@sdxc/json-schema";
+import { unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import ApiKey from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { API_KEY_ID_PARAMS } from "~/app/http/openapi/api-keys";
@@ -22,11 +22,11 @@ export const apiKeyDestroy = createAction(routes.api.v1.apiKeys.destroy, {
 	middleware: [catchValidationError(), requireApiKey("api-keys:write")],
 	handler: async (ctx) => {
 		let { apiKeyId } = s.parse(API_KEY_ID_PARAMS, ctx.params);
-		let existing = await ApiKey.findByIdForTeam(ctx.db, ctx.apiTeam.id, apiKeyId);
+		let existing = await ctx.models.apiKeys.inTeam(ctx.apiTeam.id).where({ id: apiKeyId }).first();
 		if (!existing)
 			return apiProblems.notFound({ detail: "API key not found", instance: problemInstance() });
 
-		await ApiKey.deleteById(ctx.db, apiKeyId);
+		unwrap(await ctx.models.apiKeys.delete(apiKeyId));
 		return apiSuccess({ deleted: true });
 	},
 });

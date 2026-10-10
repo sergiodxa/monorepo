@@ -7,9 +7,9 @@
  */
 
 import * as s from "@sdxc/json-schema";
+import { unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { INVITE_ID_PARAMS } from "~/app/http/openapi/team";
@@ -22,7 +22,7 @@ export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 	middleware: [catchValidationError(), requireApiKey("invites:write")],
 	handler: async (ctx) => {
 		let { inviteId } = s.parse(INVITE_ID_PARAMS, ctx.params);
-		let invite = await Invite.findByIdForTeam(ctx.db, ctx.apiTeam.id, inviteId);
+		let invite = await ctx.models.invites.inTeam(ctx.apiTeam.id).where({ id: inviteId }).first();
 		if (!invite)
 			return apiProblems.notFound({ detail: "Invite not found", instance: problemInstance() });
 		if (invite.accepted_at !== null) {
@@ -32,7 +32,7 @@ export const inviteDestroy = createAction(routes.api.v1.invites.destroy, {
 			});
 		}
 
-		await Invite.revoke(ctx.db, inviteId);
+		unwrap(await ctx.models.invites.delete(inviteId));
 		return apiSuccess({ deleted: true });
 	},
 });

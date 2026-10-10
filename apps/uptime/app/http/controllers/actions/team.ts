@@ -10,14 +10,11 @@
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import Customer from "~/app/data/customer";
-import Invite from "~/app/data/invite";
-import Team from "~/app/data/team";
 import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
 import {
 	ChangeRoleSchema,
@@ -25,6 +22,7 @@ import {
 	RemoveMemberSchema,
 	UpdateTeamSchema,
 } from "~/app/http/validators/team";
+import { cancelSubscriptions } from "~/app/services/customer";
 import routes from "~/routes/web";
 
 /**
@@ -47,7 +45,7 @@ export const updateTeam = createAction(routes.teamAdminActions.team.update, asyn
 	}
 
 	let { name, logo } = result.data;
-	await Team.updateById(ctx.db, ctx.team.id, { name, logo: logo || null });
+	unwrap(await ctx.models.teams.update(ctx.team.id, { name, logo: logo || null }));
 
 	session?.flash("toast", { intent: "success", message: "Team updated." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -71,7 +69,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 	 * way, and leaving a subscription running is recoverable from the platform's own dashboard
 	 * while a half-deleted team is not.
 	 */
-	let cancelled = await Customer.cancelSubscriptions(ctx.billing, ctx.team.owner_id);
+	let cancelled = await cancelSubscriptions(ctx.billing, ctx.team.owner_id);
 
 	if (isFailure(cancelled)) {
 		ctx.log.warn("team.subscription_cancel_refused", {
@@ -81,7 +79,7 @@ export const deleteTeam = createAction(routes.teamAdminActions.team.delete, asyn
 		});
 	}
 
-	await Team.deleteById(ctx.db, ctx.team.id);
+	unwrap(await ctx.models.teams.delete(ctx.team.id));
 
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
 });
@@ -101,8 +99,8 @@ export const removeMember = createAction(routes.teamAdminActions.member.remove, 
 		return badRequest("The team owner can't be removed.");
 	}
 
-	await Team.removeMembership(ctx.db, ctx.team.id, result.data.subject_id);
-	await Invite.deleteByTeamAndEmail(ctx.db, ctx.team.id, result.data.email);
+	await ctx.models.memberships.remove(ctx.team.id, result.data.subject_id);
+	await ctx.models.invites.withdraw(ctx.team.id, result.data.email);
 
 	session?.flash("toast", { intent: "success", message: "Member removed." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -125,10 +123,12 @@ export const changeRole = createAction(routes.teamAdminActions.member.changeRole
 		return badRequest("The team owner's role can't be changed.");
 	}
 
-	let membership = await Team.findMembership(ctx.db, ctx.team.id, result.data.subject_id);
+	let membership = await ctx.models.memberships.findFor(ctx.team.id, result.data.subject_id);
 	if (!membership) return notFound("Not Found");
 
-	await Team.setRole(ctx.db, ctx.team.id, result.data.subject_id, result.data.role);
+	unwrap(
+		await ctx.models.memberships.setRole(ctx.team.id, result.data.subject_id, result.data.role),
+	);
 
 	session?.flash("toast", { intent: "success", message: "Role updated." });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

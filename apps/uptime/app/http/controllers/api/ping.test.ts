@@ -20,6 +20,7 @@ import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
 import featureFlags from "@sdxc/flags/middleware/router";
+import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -30,7 +31,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { FLAG_SET, flags } from "~/app/lib/flags";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
@@ -111,6 +111,7 @@ vi.doMock("cloudflare:sockets", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: pingCreate } = await import("./ping");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /** Silences whatever a refused request writes, so the assertions read the response bodies. */
 vi.spyOn(console, "log").mockImplementation(() => {});
@@ -156,7 +157,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[] = ["ping:trigger"]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 

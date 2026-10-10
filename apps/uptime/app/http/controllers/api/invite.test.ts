@@ -9,17 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
@@ -48,7 +48,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -76,7 +78,13 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
-		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -87,15 +95,23 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		let body = (await response.json()) as { data: { deleted: boolean } };
 		expect(body.data.deleted).toBe(true);
 
-		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).toBeNull();
+		expect(
+			await bindModels(db).invites.inTeam(team.id).where({ id: invite.id }).first(),
+		).toBeNull();
 	});
 
 	test("answers 409 conflict and does not delete an already-accepted invite", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
-		let invite = await Invite.create(db, team.id, team.owner_id, "accepted@example.com");
-		await Invite.accept(db, invite.id, team.id, crypto.randomUUID());
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "accepted@example.com",
+			}),
+		);
+		unwrap(await bindModels(db).invites.accept(invite.id, crypto.randomUUID()));
 
 		let response = await dispatch(
 			db,
@@ -103,13 +119,21 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		);
 
 		await expectProblem(response, "conflict");
-		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).not.toBeNull();
+		expect(
+			await bindModels(db).invites.inTeam(team.id).where({ id: invite.id }).first(),
+		).not.toBeNull();
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
 
 		let response = await dispatch(db, destroyRequest(invite.id));
 		expect(response.status).toBe(401);
@@ -118,7 +142,13 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 	test("returns 401 when the Authorization header is garbage", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -131,7 +161,13 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:read"]);
-		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -145,11 +181,12 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
-		let invite = await Invite.create(
-			db,
-			otherTeam.id,
-			otherTeam.owner_id,
-			"someone-else@example.com",
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: otherTeam.id,
+				sender_id: otherTeam.owner_id,
+				email: "someone-else@example.com",
+			}),
 		);
 
 		let response = await dispatch(
@@ -158,14 +195,22 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await Invite.findByIdForTeam(db, otherTeam.id, invite.id)).not.toBeNull();
+		expect(
+			await bindModels(db).invites.inTeam(otherTeam.id).where({ id: invite.id }).first(),
+		).not.toBeNull();
 	});
 
 	test("answers validation-error for a raw UUID in place of the invite id", async () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
-		let invite = await Invite.create(db, team.id, team.owner_id, "pending@example.com");
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -177,6 +222,8 @@ describe("DELETE /api/v1/invites/:inviteId", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
-		expect(await Invite.findByIdForTeam(db, team.id, invite.id)).not.toBeNull();
+		expect(
+			await bindModels(db).invites.inTeam(team.id).where({ id: invite.id }).first(),
+		).not.toBeNull();
 	});
 });

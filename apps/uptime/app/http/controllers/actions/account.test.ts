@@ -24,10 +24,10 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
-import AccountDeletion from "~/app/data/account-deletion";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -514,7 +514,7 @@ describe("POST /actions/request-account-deletion", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe(routes.home.href());
 
-		let queued = await AccountDeletion.findBySubjectId(db, viewer.id);
+		let queued = await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id });
 		expect(queued).not.toBeNull();
 		expect(queued?.email).toBe(viewer.email);
 
@@ -541,7 +541,7 @@ describe("POST /actions/request-account-deletion", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain('Type "DELETE" to confirm.');
-		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id })).toBeNull();
 		expect(session.destroy).not.toHaveBeenCalled();
 	});
 
@@ -557,7 +557,7 @@ describe("POST /actions/request-account-deletion", () => {
 		await submit();
 		await submit();
 
-		expect(await AccountDeletion.listPending(db)).toHaveLength(1);
+		expect(await bindModels(db).accountDeletions.listPending()).toHaveLength(1);
 	});
 });
 
@@ -565,7 +565,7 @@ describe("DELETE /actions/cancel-account-deletion", () => {
 	test("drops the queued request and returns the viewer where they came from", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
-		await AccountDeletion.enqueue(db, viewer.id, viewer.email);
+		await bindModels(db).accountDeletions.enqueue(viewer.id, viewer.email);
 
 		let response = await postAccountAction(
 			cancelDeletion,
@@ -579,14 +579,14 @@ describe("DELETE /actions/cancel-account-deletion", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("Location")).toBe("https://uptime.test/app/acme/account");
-		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id })).toBeNull();
 	});
 
 	test("cancels only the viewer's own request, never somebody else's", async () => {
 		let { db } = createTestDatabase();
 		let viewer = createViewer();
-		await AccountDeletion.enqueue(db, viewer.id, viewer.email);
-		await AccountDeletion.enqueue(db, "someone-else", "other@example.com");
+		await bindModels(db).accountDeletions.enqueue(viewer.id, viewer.email);
+		await bindModels(db).accountDeletions.enqueue("someone-else", "other@example.com");
 
 		await postAccountAction(
 			cancelDeletion,
@@ -598,8 +598,10 @@ describe("DELETE /actions/cancel-account-deletion", () => {
 			{ method: "DELETE" },
 		);
 
-		expect(await AccountDeletion.findBySubjectId(db, viewer.id)).toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "someone-else")).not.toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: viewer.id })).toBeNull();
+		expect(
+			await bindModels(db).accountDeletions.findBy({ subject_id: "someone-else" }),
+		).not.toBeNull();
 	});
 
 	test("is silent for a viewer who has nothing queued", async () => {

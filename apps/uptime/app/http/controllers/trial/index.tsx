@@ -10,7 +10,6 @@
 
 import type { Translate } from "@sdxc/i18n";
 import type { Handle, RemixNode } from "remix/component";
-import type { Database } from "remix/data-table";
 
 import { TurnstileWidget } from "@sdxc/captcha/turnstile/ui";
 import { formatDateTime } from "@sdxc/dates";
@@ -75,13 +74,12 @@ import { createController } from "remix/router";
 import { Session } from "remix/session";
 
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
+import type { UptimeModels } from "~/app/models";
 import type { EmailAddressRefusalReason } from "~/app/services/email-address";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
 import type { TrialRefusalReason } from "~/app/services/trial-guard";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
-import Subscription from "~/app/data/subscription";
-import Team from "~/app/data/team";
 import {
 	TRIAL_PROBE,
 	TRIAL_WATCH_REPEATED,
@@ -985,14 +983,14 @@ interface TrialAccount {
  * Answers `null` for an anonymous visitor without touching the database, which is what
  * keeps the free path exactly as cheap as it was before this page knew about accounts.
  *
- * @param db - The request's database.
+ * @param models - The request's models.
  * @returns The viewer's standing, or `null` when nobody is signed in.
  */
-async function resolveTrialAccount(db: Database): Promise<TrialAccount | null> {
+async function resolveTrialAccount(models: UptimeModels): Promise<TrialAccount | null> {
 	let viewer = getViewer();
 	if (viewer === null) return null;
 
-	let [team] = await Team.listBySubjectId(db, viewer.id);
+	let [team] = await models.teams.listForSubject(viewer.id);
 	if (team === undefined) return { team: null, billedTeam: null };
 
 	/**
@@ -1000,7 +998,7 @@ async function resolveTrialAccount(db: Database): Promise<TrialAccount | null> {
 	 * the viewer onto the free path. An owner whose state cannot be determined
 	 * keeps being billed, because a lookup blip must not quietly spend the public daily budget on a paying customer.
 	 */
-	let state = await Subscription.stateFor(db, team.owner_id);
+	let state = await models.subscriptions.stateFor(team.owner_id);
 	return { team, billedTeam: state === "inactive" ? null : team };
 }
 
@@ -1084,7 +1082,7 @@ export default createController(routes.trial.check, {
 				return renderTrialPage({ prefill: submitted, expired: true }, { status: 400 });
 			}
 
-			let account = await resolveTrialAccount(ctx.db);
+			let account = await resolveTrialAccount(ctx.models);
 			let billedTeam = account?.billedTeam ?? null;
 
 			if (billedTeam !== null) {

@@ -11,13 +11,12 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectInvite } from "~/database/schema";
 
-import Invite from "~/app/data/invite";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -57,7 +56,7 @@ export default createController(invitesRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = Invite.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.invites.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -101,18 +100,24 @@ export default createController(invitesRoutes, {
 				let undeliverable = await refuseUndeliverableRecipient(result.data.email, "/email");
 				if (undeliverable) return undeliverable;
 
-				if (await Invite.findByEmailForTeam(ctx.db, ctx.apiTeam.id, result.data.email)) {
+				if (
+					await ctx.models.invites
+						.inTeam(ctx.apiTeam.id)
+						.where({ email: result.data.email })
+						.first()
+				) {
 					return apiProblems.conflict({
 						detail: "An invite for this email already exists",
 						instance: problemInstance(),
 					});
 				}
 
-				let invite = await Invite.create(
-					ctx.db,
-					ctx.apiTeam.id,
-					ctx.apiTeam.owner_id,
-					result.data.email,
+				let invite = unwrap(
+					await ctx.models.invites.create({
+						team_id: ctx.apiTeam.id,
+						sender_id: ctx.apiTeam.owner_id,
+						email: result.data.email,
+					}),
 				);
 				return apiSuccess({ invite: serializeInvite(invite) }, Created);
 			},

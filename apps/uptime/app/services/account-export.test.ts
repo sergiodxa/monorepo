@@ -16,6 +16,7 @@ import { describe, expect, test } from "vitest";
 import type { AlertConfig, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import {
 	accountExportFilename,
 	ACCOUNT_EXPORT_FORMAT,
@@ -131,7 +132,7 @@ describe("buildAccountExport", () => {
 		let { db } = createTestDatabase();
 		let now = new Date("2026-08-04T10:20:30.000Z");
 
-		let document = await buildAccountExport(db, SUBJECT, now);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT, now);
 
 		expect(document.format).toBe(ACCOUNT_EXPORT_FORMAT);
 		expect(document.version).toBe(1);
@@ -142,7 +143,7 @@ describe("buildAccountExport", () => {
 	test("carries the viewer's own preferences, defaulting an untouched account to nothing chosen", async () => {
 		let { db } = createTestDatabase();
 
-		let empty = await buildAccountExport(db, SUBJECT);
+		let empty = await buildAccountExport(db, bindModels(db), SUBJECT);
 		expect(empty.preferences).toEqual({ preferredLanguage: null, unsubscribedEmails: [] });
 
 		await db.create(
@@ -156,7 +157,7 @@ describe("buildAccountExport", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		expect(document.preferences).toEqual({
 			preferredLanguage: "es",
 			unsubscribedEmails: ["teamDailyDigest"],
@@ -187,7 +188,7 @@ describe("buildAccountExport", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 
 		expect(document.memberships).toHaveLength(2);
 		let ownedMembership = document.memberships.find((entry) => entry.name === "Owned");
@@ -214,7 +215,7 @@ describe("buildAccountExport", () => {
 		await addMember(db, team.id, "colleague-1", "member");
 		await addMember(db, team.id, "colleague-2", "member");
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let serialized = JSON.stringify(document);
 
 		expect(document.memberships[0]?.memberCount).toBe(3);
@@ -239,7 +240,7 @@ describe("buildAccountExport", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let serialized = JSON.stringify(await buildAccountExport(db, SUBJECT));
+		let serialized = JSON.stringify(await buildAccountExport(db, bindModels(db), SUBJECT));
 
 		expect(serialized).not.toContain("hash-must-not-leak");
 		expect(serialized).not.toContain("prefix-must-not-leak");
@@ -254,7 +255,7 @@ describe("buildAccountExport", () => {
 			config: { url: "https://hooks.example.com/uptime", secret: "signing-secret-must-not-leak" },
 		});
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let serialized = JSON.stringify(document);
 
 		expect(document.ownedTeams[0]?.alerts[0]?.strategy).toBe("webhook");
@@ -271,7 +272,7 @@ describe("buildAccountExport", () => {
 			config: { webhookUrl: "https://hooks.slack.com/services/must-not-leak" },
 		});
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let serialized = JSON.stringify(document);
 
 		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBeNull();
@@ -287,7 +288,7 @@ describe("buildAccountExport", () => {
 			config: { routingKey: "routing-key-must-not-leak" },
 		});
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 
 		expect(document.ownedTeams[0]?.alerts[0]?.strategy).toBe("pagerduty");
 		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBeNull();
@@ -303,7 +304,7 @@ describe("buildAccountExport", () => {
 			config: { webhookUrl: "https://discord.com/api/webhooks/must-not-leak" },
 		});
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 
 		expect(document.ownedTeams[0]?.alerts[0]?.destination).toBeNull();
 		expect(JSON.stringify(document)).not.toContain("must-not-leak");
@@ -325,7 +326,7 @@ describe("buildAccountExport", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let serialized = JSON.stringify(await buildAccountExport(db, SUBJECT));
+		let serialized = JSON.stringify(await buildAccountExport(db, bindModels(db), SUBJECT));
 
 		expect(serialized).not.toContain("invitee-must-not-leak@example.com");
 	});
@@ -362,7 +363,7 @@ describe("buildAccountExport", () => {
 			{ returnRow: true },
 		);
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let exported = document.ownedTeams[0]?.statusPages[0] as { monitors: unknown[] };
 
 		expect(document.ownedTeams[0]?.statusPages).toHaveLength(1);
@@ -377,7 +378,7 @@ describe("buildAccountExport", () => {
 		await addDnsRecord(db, monitor.id, { name: "mail.example.com", value: "203.0.113.5" });
 		await addDnsRecord(db, monitor.id, { name: "example.com", value: "203.0.113.1" });
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let exported = document.ownedTeams[0]?.dnsMonitors[0] as {
 			records: { name: string; value: string; dns_monitor_id?: string }[];
 		};
@@ -411,7 +412,7 @@ describe("buildAccountExport", () => {
 			});
 		}
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 		let exported = document.ownedTeams[0]?.dnsMonitors[0] as { records: unknown[] };
 
 		expect(exported.records).toHaveLength(MAX_EXPORTED_DNS_RECORDS_PER_TEAM);
@@ -422,7 +423,7 @@ describe("buildAccountExport", () => {
 	test("says in the file itself what was left out, so an omission does not read as a bug", async () => {
 		let { db } = createTestDatabase();
 
-		let document = await buildAccountExport(db, SUBJECT);
+		let document = await buildAccountExport(db, bindModels(db), SUBJECT);
 
 		expect(document.excluded.length).toBeGreaterThan(0);
 		expect(document.excluded.join(" ")).toContain("API keys");

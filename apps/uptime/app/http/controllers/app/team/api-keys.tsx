@@ -22,7 +22,6 @@ import { Badge, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import ApiKey from "~/app/data/api-key";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
@@ -49,7 +48,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let apiKeys = await ApiKey.listByTeam(ctx.db, ctx.team.id);
+		let apiKeys = await ctx.models.apiKeys.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
 		let newApiKey = ctx.get(Session)?.get("newApiKey") as NewApiKey | undefined;
 
 		return ctx.render(

@@ -3,14 +3,14 @@
  * team's keys (metadata only, never the hash), and `POST` creates one, returning
  * the plaintext key exactly once and enforcing the per-team key limit. Every
  * action is guarded by `requireApiKey`, so each test authenticates with a real
- * bearer key minted through `ApiKey.create` rather than a fake middleware.
+ * bearer key minted through `apiKeys.issue` rather than a fake middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { DataTableStore, idempotencyKeys } from "@sdxc/idempotency/data-table";
-import { success } from "@sdxc/result";
+import { success, unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -18,14 +18,15 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import apiKeysController from "~/app/http/controllers/api/api-keys";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
+import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import { apiKeys, teams } from "~/database/schema";
 import { apiKeysRoutes } from "~/routes/api-groups";
 
@@ -49,7 +50,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "auth key", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "auth key", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -94,11 +97,13 @@ describe("GET /api/v1/api-keys", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["api-keys:read"]);
-		await ApiKey.create(db, otherTeam.id, {
-			name: "not mine",
-			scopes: ["monitors:read"],
-			expires_at: null,
-		});
+		unwrap(
+			await bindModels(db).apiKeys.issue(otherTeam.id, {
+				name: "not mine",
+				scopes: ["monitors:read"],
+				expires_at: null,
+			}),
+		);
 
 		let response = await dispatch(db, get(key));
 		expect(response.status).toBe(200);
@@ -115,11 +120,13 @@ describe("GET /api/v1/api-keys", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["api-keys:read"]);
-		await ApiKey.create(db, team.id, {
-			name: "second key",
-			scopes: ["monitors:read"],
-			expires_at: null,
-		});
+		unwrap(
+			await bindModels(db).apiKeys.issue(team.id, {
+				name: "second key",
+				scopes: ["monitors:read"],
+				expires_at: null,
+			}),
+		);
 
 		let path = apiKeysRoutes.apiKeysIndex.href();
 		let response = await dispatch(db, getPath(`${path}?perPage=1`, key));
@@ -174,22 +181,28 @@ describe("GET /api/v1/api-keys total", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["api-keys:read"]);
-		await ApiKey.create(db, team.id, {
-			name: "second key",
-			scopes: ["monitors:read"],
-			expires_at: null,
-		});
-		await ApiKey.create(db, team.id, {
-			name: "third key",
-			scopes: ["monitors:read"],
-			expires_at: null,
-		});
+		unwrap(
+			await bindModels(db).apiKeys.issue(team.id, {
+				name: "second key",
+				scopes: ["monitors:read"],
+				expires_at: null,
+			}),
+		);
+		unwrap(
+			await bindModels(db).apiKeys.issue(team.id, {
+				name: "third key",
+				scopes: ["monitors:read"],
+				expires_at: null,
+			}),
+		);
 		// A key the caller cannot see must not reach the total either.
-		await ApiKey.create(db, otherTeam.id, {
-			name: "not mine",
-			scopes: ["monitors:read"],
-			expires_at: null,
-		});
+		unwrap(
+			await bindModels(db).apiKeys.issue(otherTeam.id, {
+				name: "not mine",
+				scopes: ["monitors:read"],
+				expires_at: null,
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -238,7 +251,7 @@ describe("POST /api/v1/api-keys", () => {
 		let body = await expectProblem(response, "forbidden");
 		expect(problemMessages(body)).toContain("monitors:write");
 
-		expect(await ApiKey.countByTeam(db, team.id)).toBe(1);
+		expect(await bindModels(db).apiKeys.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("names every ungranted scope, not just the first", async () => {
@@ -285,11 +298,13 @@ describe("POST /api/v1/api-keys", () => {
 		let key = await createApiKey(db, team.id, ["api-keys:write"]);
 
 		for (let i = 0; i < MAX_API_KEYS_PER_TEAM - 1; i++) {
-			await ApiKey.create(db, team.id, {
-				name: `Key ${i}`,
-				scopes: ["monitors:read"],
-				expires_at: null,
-			});
+			unwrap(
+				await bindModels(db).apiKeys.issue(team.id, {
+					name: `Key ${i}`,
+					scopes: ["monitors:read"],
+					expires_at: null,
+				}),
+			);
 		}
 
 		let response = await dispatch(

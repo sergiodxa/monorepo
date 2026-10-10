@@ -21,11 +21,10 @@ import { createAction } from "remix/router";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
-import Customer from "~/app/data/customer";
-import Subscription from "~/app/data/subscription";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { openCheckout, openPortal } from "~/app/services/customer";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
@@ -82,11 +81,11 @@ export default createAction(routes.app.team.checkout, {
 			return notice(ctx.intl.t("page.billing.ownerOnly"), viewer);
 		}
 
-		let hasActiveSubscription = await Subscription.isActive(ctx.db, ctx.team.owner_id);
+		let hasActiveSubscription = await ctx.models.subscriptions.isActive(ctx.team.owner_id);
 
 		let opened = hasActiveSubscription
-			? await Customer.portal(ctx.billing, ctx.team, ctx.url)
-			: await Customer.checkout(ctx.billing, ctx.team, ctx.url, ctx.attribution);
+			? await openPortal(ctx.billing, ctx.team, ctx.url)
+			: await openCheckout(ctx.billing, ctx.team, ctx.url, ctx.attribution);
 
 		if (isFailure(opened)) {
 			ctx.log.warn("billing.hosted_page_failed", {

@@ -11,12 +11,11 @@
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import Invite from "~/app/data/invite";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { CreateInviteSchema, RevokeInviteSchema } from "~/app/http/validators/invite";
@@ -56,13 +55,20 @@ export const createInvite = createAction(routes.teamAdminActions.invite.create, 
 		});
 	}
 
-	let existing = await Invite.findByEmailForTeam(ctx.db, ctx.team.id, email);
+	let existing = await ctx.models.invites.inTeam(ctx.team.id).where({ email }).first();
 	if (existing && existing.accepted_at !== null) {
 		return badRequest(`${email} already accepted an invite to this team.`);
 	}
 
 	let invite =
-		existing ?? (await Invite.create(ctx.db, ctx.team.id, ctx.membership.subject_id, email));
+		existing ??
+		unwrap(
+			await ctx.models.invites.create({
+				team_id: ctx.team.id,
+				sender_id: ctx.membership.subject_id,
+				email: email,
+			}),
+		);
 
 	let url = new URL(routes.invite.href({ inviteId: invite.id }), ctx.request.url).toString();
 
@@ -95,11 +101,14 @@ export const revokeInvite = createAction(routes.teamAdminActions.invite.revoke, 
 		});
 	}
 
-	let invite = await Invite.findByIdForTeam(ctx.db, ctx.team.id, result.data.invite_id);
+	let invite = await ctx.models.invites
+		.inTeam(ctx.team.id)
+		.where({ id: result.data.invite_id })
+		.first();
 	if (!invite) return notFound("Not Found");
 	if (invite.accepted_at !== null) return badRequest("This invite was already accepted.");
 
-	await Invite.revoke(ctx.db, invite.id);
+	unwrap(await ctx.models.invites.delete(invite.id));
 
 	session?.flash("toast", { intent: "success", message: `Invite to ${invite.email} revoked.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {

@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import { toDayKey } from "@sdxc/dates";
 import { inList } from "remix/data-table";
 
+import type { UptimeModels } from "~/app/models";
 import type {
 	AlertConfig,
 	OptionalEmail,
@@ -21,8 +22,6 @@ import type {
 	SupportedLanguage,
 } from "~/database/schema";
 
-import Team from "~/app/data/team";
-import UserPreferences from "~/app/data/user-preferences";
 import {
 	alerts,
 	cronJobMonitors,
@@ -146,25 +145,27 @@ const EXCLUSIONS = [
 /**
  * Builds the export document for one signed-in subject.
  *
- * @param db - Database handle.
+ * @param db - Database handle each owned team's configuration is read from, table by table.
+ * @param models - The same database's models, for the memberships and preferences.
  * @param subject - The exporter, as the ID token on the request describes them.
  * @param now - Timestamp recorded as `exportedAt`; injectable so a test can assert it.
  * @returns The document, ready to be serialized.
  */
 export async function buildAccountExport(
 	db: Database,
+	models: UptimeModels,
 	subject: ExportSubject,
 	now: Date = new Date(),
 ): Promise<AccountExportDocument> {
 	let [rows, preferences] = await Promise.all([
-		Team.listWithRoleBySubjectId(db, subject.id),
-		UserPreferences.findBySubjectId(db, subject.id),
+		models.teams.listWithRoleForSubject(subject.id),
+		models.userPreferences.findBy({ subject_id: subject.id }),
 	]);
 
 	let perTeam = await Promise.all(
 		rows.map(async ({ team, role, isOwner }) => {
 			let [members, owned] = await Promise.all([
-				Team.listMembersByTeam(db, team.id),
+				models.memberships.inTeam(team.id).all(),
 				isOwner ? exportOwnedTeam(db, team.id, team.name, team.slug) : null,
 			]);
 			let own = members.find((member) => member.subject_id === subject.id);

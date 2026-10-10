@@ -18,7 +18,6 @@ import { Session } from "remix/session";
 
 import type { MonitorStatus } from "~/database/schema";
 
-import Subscription from "~/app/data/subscription";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { RunPingSchema } from "~/app/http/validators/ping";
@@ -115,7 +114,7 @@ export const runPing = createAction(routes.actions.runPing, {
 		 * `stateFor`: an owner whose subscription state can't be determined still
 		 * gets their check, matching the manual "run check" button.
 		 */
-		if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
+		if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
 			session?.set(QUICK_PING_RESULT, { kind: "error", id, code: "subscriptionRequired" });
 			return back;
 		}

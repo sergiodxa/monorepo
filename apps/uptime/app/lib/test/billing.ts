@@ -3,7 +3,7 @@
  * test ever needs to arrange.
  *
  * The projection is written the way production writes it — from an entitlement snapshot,
- * through `Subscription.sync` — so a test seeds the state a webhook would have left rather
+ * through `subscriptions.sync` — so a test seeds the state a webhook would have left rather
  * than the columns it happens to produce.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -11,13 +11,24 @@
  */
 
 import type { EntitlementState, SubscriptionStatus, UsageRecord } from "@sdxc/billing";
+import type { JobEnqueuer } from "@sdxc/jobs";
 import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { unwrap } from "@sdxc/result";
 
-import Subscription from "~/app/data/subscription";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
+import Subscriptions from "~/app/models/subscriptions";
+
+/** An enqueuer for a binding whose model queues nothing, which fails loudly if one ever does. */
+const refuseJobs: JobEnqueuer = {
+	async enqueue(job, ..._input): Promise<void> {
+		throw new Error(`Seeding billing state queued ${job.name}`);
+	},
+	async enqueueMany(job, _inputs): Promise<void> {
+		throw new Error(`Seeding billing state queued ${job.name}`);
+	},
+};
 
 /** The fields of an entitlement snapshot a test may need to vary. */
 export interface EntitlementOptions {
@@ -67,11 +78,19 @@ export function emptyEntitlementState(options: EntitlementOptions = {}): Entitle
 }
 
 /**
+ * The subscriptions model bound to `db` on its own, so a test seeding billing state loads no
+ * queue module ahead of the `cloudflare:workers` mock it installs. Its writes queue no jobs.
+ */
+function subscriptionsOn(db: Database) {
+	return Subscriptions.bind({ db, jobs: refuseJobs });
+}
+
+/**
  * Records an active monitoring subscription for `ownerId`, the way a delivery would, so
  * entitlement gates in tests read the answer straight from this projection.
  */
 export async function createActiveSubscription(db: Database, ownerId: string): Promise<void> {
-	await Subscription.sync(db, ownerId, entitlementState());
+	await subscriptionsOn(db).sync(ownerId, entitlementState());
 }
 
 /**
@@ -81,12 +100,9 @@ export async function createActiveSubscription(db: Database, ownerId: string): P
  * held, and then a later read no longer lists it.
  */
 export async function createRevokedSubscription(db: Database, ownerId: string): Promise<void> {
-	await Subscription.sync(db, ownerId, entitlementState());
-	await Subscription.sync(
-		db,
-		ownerId,
-		emptyEntitlementState({ readAt: "2026-07-20T00:00:00.000Z" }),
-	);
+	let subscriptions = subscriptionsOn(db);
+	await subscriptions.sync(ownerId, entitlementState());
+	await subscriptions.sync(ownerId, emptyEntitlementState({ readAt: "2026-07-20T00:00:00.000Z" }));
 }
 
 /**

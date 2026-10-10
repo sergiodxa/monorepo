@@ -21,7 +21,7 @@ import { apiKeys, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { createApiKey, deleteApiKey } = await import("./api-keys");
-let { MAX_API_KEYS_PER_TEAM } = await import("~/app/data/api-key");
+let { MAX_API_KEYS_PER_TEAM } = await import("~/app/models/api-keys");
 
 /** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {

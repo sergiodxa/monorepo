@@ -27,7 +27,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
-import AccountDeletion from "~/app/data/account-deletion";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import jobs from "~/app/jobs";
@@ -37,6 +36,7 @@ import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import { memberships, monitors, teams } from "~/database/schema";
 
 let transport = new MemoryTransport();
@@ -170,6 +170,7 @@ async function runJob(db: Database, mailTransport: Transport = transport) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.deleteAccounts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: mailTransport, from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -252,7 +253,7 @@ describe("deleteAccounts", () => {
 			},
 			{ touch: true, returnRow: true },
 		);
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 		await sell("subject-1");
 
 		let record = await runJob(db);
@@ -267,7 +268,7 @@ describe("deleteAccounts", () => {
 		expect(transport.messages[0]?.subject).toBe("Your Uptime account has been deleted");
 
 		/** The request is gone, which is the only thing that says "finished". */
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 
 		expect(record).toMatchObject({
 			"accounts.total": 1,
@@ -286,7 +287,7 @@ describe("deleteAccounts", () => {
 		let team = await createTeamRow(db, { owner_id: "owner-2" });
 		await addMember(db, team.id, "owner-2");
 		await addMember(db, team.id, "subject-1", "member");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 
@@ -297,7 +298,7 @@ describe("deleteAccounts", () => {
 		expect(
 			await db.findOne(memberships, { where: { team_id: team.id, subject_id: "subject-1" } }),
 		).toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 	});
 
 	/**
@@ -308,7 +309,7 @@ describe("deleteAccounts", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		billing.fail("subscriptions.list");
 
@@ -318,7 +319,9 @@ describe("deleteAccounts", () => {
 		expect(await db.count(memberships, { where: { subject_id: "subject-1" } })).toBe(1);
 		expect(transport.messages).toHaveLength(0);
 		/** Still queued, which is the retry: tomorrow's run tries again. */
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
+		expect(
+			await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" }),
+		).not.toBeNull();
 
 		expect(record).toMatchObject({ "accounts.deleted": 0, "accounts.failed": 1 });
 		expect(noteOf(record, "accounts.erasure_failed")?.["subject.id"]).toBe("subject-1");
@@ -328,13 +331,15 @@ describe("deleteAccounts", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db, new RefusingTransport());
 
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
 		/** The row is the only copy of the address, so it has to outlive a refused send. */
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
+		expect(
+			await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" }),
+		).not.toBeNull();
 	});
 
 	/**
@@ -346,10 +351,12 @@ describe("deleteAccounts", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db, new RefusingTransport());
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
+		expect(
+			await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" }),
+		).not.toBeNull();
 
 		cancelMock.mockClear();
 		await runJob(db);
@@ -357,7 +364,7 @@ describe("deleteAccounts", () => {
 		/** The first run already ended the billing, so this one finds nothing left to cancel. */
 		expect(cancelMock).not.toHaveBeenCalled();
 		expect(transport.messages).toHaveLength(1);
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 	});
 
 	test("running the sweep twice over the same account is clean the second time", async () => {
@@ -365,7 +372,7 @@ describe("deleteAccounts", () => {
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");
 		await addMember(db, team.id, "colleague-1", "member");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 		expect(transport.messages).toHaveLength(1);
@@ -387,7 +394,7 @@ describe("deleteAccounts", () => {
 		addresses.set("subject-1", "ada@example.com");
 		addresses.set("colleague-1", "one@example.com");
 		addresses.set("colleague-2", "two@example.com");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 
@@ -395,7 +402,7 @@ describe("deleteAccounts", () => {
 
 		let notice = transport.find((message) => message.email instanceof TeamDeletedEmail);
 		expect(notice?.subject).toBe("Acme has been deleted on Uptime");
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 	});
 
 	test("notifies nobody for a team the deleted account was the only member of", async () => {
@@ -403,7 +410,7 @@ describe("deleteAccounts", () => {
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, "subject-1");
 		addresses.set("subject-1", "ada@example.com");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 
@@ -419,7 +426,7 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "colleague-1", "member");
 		addresses.set("owner-2", "owner@example.com");
 		addresses.set("colleague-1", "one@example.com");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 
@@ -436,12 +443,12 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "colleague-2", "member");
 		/** No address for colleague-1: the auth server refuses that subject. */
 		addresses.set("colleague-2", "two@example.com");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		let record = await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual(["two@example.com"]);
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 
 		expect(noteOf(record, "accounts.member_profile_missing")?.["subject.id"]).toBe("colleague-1");
 		expect(noteOf(record, "accounts.members_notified")).toMatchObject({
@@ -458,13 +465,13 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "colleague-1", "member");
 		addresses.set("colleague-1", "one@example.com");
 		authenticates = false;
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		await runJob(db);
 
 		expect(notifiedAddresses(transport.messages)).toEqual([]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 	});
 
 	/**
@@ -478,14 +485,14 @@ describe("deleteAccounts", () => {
 		await addMember(db, team.id, "subject-1");
 		await addMember(db, team.id, "colleague-1", "member");
 		addresses.set("colleague-1", "one@example.com");
-		await AccountDeletion.enqueue(db, "subject-1", "ada@example.com");
+		await bindModels(db).accountDeletions.enqueue("subject-1", "ada@example.com");
 
 		let selective = new SelectiveTransport((message) => message.email instanceof TeamDeletedEmail);
 		let record = await runJob(db, selective);
 
 		expect(notifiedAddresses(selective.messages)).toEqual(["one@example.com"]);
 		expect(await db.findOne(teams, { where: { id: team.id } })).toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" })).toBeNull();
 
 		expect(noteOf(record, "accounts.member_email_failed")?.["subject.id"]).toBe("colleague-1");
 		expect(record).toMatchObject({ "accounts.deleted": 1, "accounts.failed": 0 });
@@ -497,8 +504,8 @@ describe("deleteAccounts", () => {
 		let second = await createTeamRow(db, { owner_id: "subject-2", name: "Second" });
 		await addMember(db, first.id, "subject-1");
 		await addMember(db, second.id, "subject-2");
-		await AccountDeletion.enqueue(db, "subject-1", "one@example.com", 1_000);
-		await AccountDeletion.enqueue(db, "subject-2", "two@example.com", 2_000);
+		await bindModels(db).accountDeletions.enqueue("subject-1", "one@example.com", 1_000);
+		await bindModels(db).accountDeletions.enqueue("subject-2", "two@example.com", 2_000);
 
 		/**
 		 * Only the first subject holds a subscription, so refusing cancellation fails that
@@ -510,10 +517,12 @@ describe("deleteAccounts", () => {
 		let record = await runJob(db);
 
 		expect(await db.findOne(teams, { where: { id: first.id } })).not.toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "subject-1")).not.toBeNull();
+		expect(
+			await bindModels(db).accountDeletions.findBy({ subject_id: "subject-1" }),
+		).not.toBeNull();
 
 		expect(await db.findOne(teams, { where: { id: second.id } })).toBeNull();
-		expect(await AccountDeletion.findBySubjectId(db, "subject-2")).toBeNull();
+		expect(await bindModels(db).accountDeletions.findBy({ subject_id: "subject-2" })).toBeNull();
 
 		expect(record).toMatchObject({
 			"accounts.total": 2,

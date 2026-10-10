@@ -16,8 +16,6 @@ import { currentLog } from "@sdxc/logger";
 
 import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import Team from "~/app/data/team";
 import { hashApiKey } from "~/app/services/api-key";
 import { apiChallenge } from "~/app/services/api-metadata";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
@@ -70,17 +68,17 @@ export default function requireApiKey(scope: ApiKeyScope): Middleware {
 		if (!key) return unauthorized(ctx.url.origin, false);
 
 		let keyHash = await hashApiKey(key);
-		let apiKey = await ApiKey.findByHash(ctx.db, keyHash);
+		let apiKey = await ctx.models.apiKeys.findBy({ key_hash: keyHash });
 		if (!apiKey) return unauthorized(ctx.url.origin, true);
 
 		if (apiKey.expires_at !== null && apiKey.expires_at < Date.now()) {
 			return unauthorized(ctx.url.origin, true);
 		}
 
-		let team = await Team.findByIdOrSlug(ctx.db, apiKey.team_id);
+		let team = await ctx.models.teams.findByIdOrSlug(apiKey.team_id);
 		if (!team) return unauthorized(ctx.url.origin, true);
 
-		await ApiKey.touchLastUsedAt(ctx.db, apiKey.id);
+		await ctx.models.apiKeys.markUsed(apiKey.id);
 
 		if (!apiKey.scopes.includes(scope)) {
 			return apiProblems.forbidden(

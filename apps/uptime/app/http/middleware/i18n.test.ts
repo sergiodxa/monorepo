@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
@@ -16,7 +17,6 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import UserPreferences from "~/app/data/user-preferences";
 import { language } from "~/app/http/cookies";
 import { auth, type Viewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
@@ -24,6 +24,7 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -109,7 +110,7 @@ describe("i18n middleware", () => {
 
 	test("keeps the cookie's language over a conflicting stored preference, without a query", async () => {
 		let { db: raw } = createTestDatabase();
-		await UserPreferences.setLanguage(raw, viewer.id, "es");
+		unwrap(await bindModels(raw).userPreferences.setLanguage(viewer.id, "es"));
 
 		let { db, calls } = counting(raw);
 		let response = await dispatch(db, {
@@ -125,7 +126,7 @@ describe("i18n middleware", () => {
 
 	test("resolves from the stored preference and re-sets the cookie when the cookie is gone", async () => {
 		let { db } = createTestDatabase();
-		await UserPreferences.setLanguage(db, viewer.id, "es");
+		unwrap(await bindModels(db).userPreferences.setLanguage(viewer.id, "es"));
 
 		let response = await dispatch(db, { viewer, headers: { "Accept-Language": "fr" } });
 

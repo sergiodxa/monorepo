@@ -9,19 +9,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
 import { useMailServerDns } from "~/app/lib/test/mail-servers";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -55,7 +55,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -89,8 +91,14 @@ describe("GET /api/v1/invites", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:read"]);
 
-		let invite = await Invite.create(db, team.id, team.owner_id, "new@example.com");
-		await Invite.accept(db, invite.id, team.id, crypto.randomUUID());
+		let invite = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "new@example.com",
+			}),
+		);
+		unwrap(await bindModels(db).invites.accept(invite.id, crypto.randomUUID()));
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 
@@ -109,8 +117,20 @@ describe("GET /api/v1/invites", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:read"]);
 
-		await Invite.create(db, team.id, team.owner_id, "mine@example.com");
-		await Invite.create(db, otherTeam.id, otherTeam.owner_id, "theirs@example.com");
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "mine@example.com",
+			}),
+		);
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: otherTeam.id,
+				sender_id: otherTeam.owner_id,
+				email: "theirs@example.com",
+			}),
+		);
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		let body = (await response.json()) as { data: { invites: { email: string }[] } };
@@ -124,8 +144,20 @@ describe("GET /api/v1/invites", () => {
 		let key = await createApiKey(db, team.id, ["invites:read"]);
 		let auth = { Authorization: `Bearer ${key}` };
 
-		await Invite.create(db, team.id, team.owner_id, "first@example.com");
-		await Invite.create(db, team.id, team.owner_id, "second@example.com");
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "first@example.com",
+			}),
+		);
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "second@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -192,11 +224,35 @@ describe("GET /api/v1/invites total", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:read"]);
-		await Invite.create(db, team.id, team.owner_id, "first@example.com");
-		await Invite.create(db, team.id, team.owner_id, "second@example.com");
-		await Invite.create(db, team.id, team.owner_id, "third@example.com");
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "first@example.com",
+			}),
+		);
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "second@example.com",
+			}),
+		);
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "third@example.com",
+			}),
+		);
 		// An invite the key cannot see must not reach the total either.
-		await Invite.create(db, otherTeam.id, otherTeam.owner_id, "theirs@example.com");
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: otherTeam.id,
+				sender_id: otherTeam.owner_id,
+				email: "theirs@example.com",
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -235,7 +291,10 @@ describe("POST /api/v1/invites", () => {
 		expect(body.data.invite.acceptedAt).toBeNull();
 		expect(body.data.invite.teamId).toBe(encodeId("team", team.id));
 
-		let created = await Invite.findByEmailForTeam(db, team.id, "new@example.com");
+		let created = await bindModels(db)
+			.invites.inTeam(team.id)
+			.where({ email: "new@example.com" })
+			.first();
 		expect(created).not.toBeNull();
 	});
 
@@ -255,7 +314,7 @@ describe("POST /api/v1/invites", () => {
 		expect(problem.extensions.errors).toEqual([
 			{ pointer: "/email", code: "invalid", message: "nomail.example does not accept email" },
 		]);
-		expect(await Invite.listByTeam(db, team.id)).toHaveLength(0);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(0);
 	});
 
 	test("refuses an address whose domain is an IP literal", async () => {
@@ -276,9 +335,21 @@ describe("POST /api/v1/invites", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
-		await Invite.create(db, team.id, team.owner_id, "pending@example.com");
-		let accepted = await Invite.create(db, team.id, team.owner_id, "accepted@example.com");
-		await Invite.accept(db, accepted.id, team.id, crypto.randomUUID());
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "pending@example.com",
+			}),
+		);
+		let accepted = unwrap(
+			await bindModels(db).invites.create({
+				team_id: team.id,
+				sender_id: team.owner_id,
+				email: "accepted@example.com",
+			}),
+		);
+		unwrap(await bindModels(db).invites.accept(accepted.id, crypto.randomUUID()));
 
 		for (let email of ["pending@example.com", "accepted@example.com"]) {
 			let response = await dispatch(
@@ -287,13 +358,19 @@ describe("POST /api/v1/invites", () => {
 			);
 			await expectProblem(response, "conflict");
 		}
-		expect((await Invite.listByTeam(db, team.id)).length).toBe(2);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(2);
 	});
 
 	test("invites an email another team already invited", async () => {
 		let { db } = createTestDatabase();
 		let otherTeam = await createTeamRow(db);
-		await Invite.create(db, otherTeam.id, otherTeam.owner_id, "shared@example.com");
+		unwrap(
+			await bindModels(db).invites.create({
+				team_id: otherTeam.id,
+				sender_id: otherTeam.owner_id,
+				email: "shared@example.com",
+			}),
+		);
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["invites:write"]);
 
@@ -316,7 +393,9 @@ describe("POST /api/v1/invites", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
-		expect(await Invite.findByEmailForTeam(db, team.id, "not-an-email")).toBeNull();
+		expect(
+			await bindModels(db).invites.inTeam(team.id).where({ email: "not-an-email" }).first(),
+		).toBeNull();
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -351,7 +430,7 @@ describe("POST /api/v1/invites with an Idempotency-Key", () => {
 		expect(first.status).toBe(201);
 		expect(second.status).toBe(201);
 		expect(await second.json()).toEqual(await first.json());
-		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("a retry while the first request runs answers idempotency-key-in-use", async () => {
@@ -367,7 +446,7 @@ describe("POST /api/v1/invites with an Idempotency-Key", () => {
 		expect(response.status).toBe(409);
 		expect(response.headers.get("Retry-After")).toBe("1");
 		await expectProblem(response, "idempotencyKeyInUse");
-		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("reusing a key for a different body answers idempotency-key-reused", async () => {
@@ -381,7 +460,7 @@ describe("POST /api/v1/invites with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(422);
 		await expectProblem(response, "idempotencyKeyReused");
-		expect((await Invite.listByTeam(db, team.id)).length).toBe(1);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
@@ -394,6 +473,6 @@ describe("POST /api/v1/invites with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "idempotencyKeyInvalid");
-		expect((await Invite.listByTeam(db, team.id)).length).toBe(0);
+		expect(await bindModels(db).invites.inTeam(team.id).count()).toBe(0);
 	});
 });

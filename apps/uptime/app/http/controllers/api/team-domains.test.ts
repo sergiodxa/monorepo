@@ -10,13 +10,13 @@
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
@@ -41,6 +41,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: teamDomainsController } = await import("./team-domains");
+let { bindModels } = await import("~/app/lib/test/models");
 
 beforeEach(() => {
 	queue.reset();
@@ -63,7 +64,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 

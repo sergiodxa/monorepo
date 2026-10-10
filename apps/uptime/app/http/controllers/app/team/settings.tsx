@@ -52,8 +52,6 @@ import { AlertDialog, Button, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import Invite from "~/app/data/invite";
-import Team from "~/app/data/team";
 import { admin } from "~/app/http/middleware/admin";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
@@ -143,8 +141,8 @@ export default createAction(routes.app.team.settings, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let [members, pendingInvites, domains] = await Promise.all([
-			Team.listMembersByTeam(ctx.db, ctx.team.id),
-			Invite.listPendingByTeam(ctx.db, ctx.team.id),
+			ctx.models.memberships.inTeam(ctx.team.id).all(),
+			ctx.models.invites.inTeam(ctx.team.id).pending().orderBy("created_at", "desc").all(),
 			ctx.models.teamDomains.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
 		]);
 

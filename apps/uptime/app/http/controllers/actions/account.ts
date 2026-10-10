@@ -14,14 +14,11 @@
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import AccountDeletion from "~/app/data/account-deletion";
-import Team from "~/app/data/team";
-import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import { RequestAccountDeletionSchema } from "~/app/http/validators/account";
@@ -42,7 +39,7 @@ export const createTeam = createAction(routes.accountActions.createTeam, async (
 		return badRequest("Enter a team name.");
 	}
 
-	let team = await Team.createAdditional(ctx.db, viewer.id, result.data.name);
+	let team = unwrap(await ctx.models.teams.createAdditional(viewer.id, result.data.name));
 
 	return redirect(routes.app.team.dashboard.index.href({ team: team.slug }), {
 		status: redirect.Status.SeeOther,
@@ -63,10 +60,10 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 		});
 	}
 
-	let membership = await Team.findMembership(ctx.db, result.data.team_id, viewer.id);
+	let membership = await ctx.models.memberships.findFor(result.data.team_id, viewer.id);
 	if (!membership) return notFound("Not Found");
 
-	let team = await Team.findByIdOrSlug(ctx.db, result.data.team_id);
+	let team = await ctx.models.teams.findByIdOrSlug(result.data.team_id);
 	if (!team) return notFound("Not Found");
 
 	if (team.owner_id === viewer.id) return badRequest("The team owner can't leave the team.");
@@ -74,7 +71,7 @@ export const leaveTeam = createAction(routes.accountActions.leaveTeam, async (ct
 		return badRequest("Admins must be demoted to a member before leaving.");
 	}
 
-	await Team.removeMembership(ctx.db, result.data.team_id, viewer.id);
+	await ctx.models.memberships.remove(result.data.team_id, viewer.id);
 
 	session?.flash("toast", { intent: "success", message: `Left "${team.name}".` });
 	return redirect(routes.home.href(), { status: redirect.Status.SeeOther });
@@ -95,7 +92,7 @@ export const updateEmails = createAction(routes.accountActions.updateEmails, asy
 	let wanted = new Set(result.data.emails);
 	let unsubscribed = optionalEmails.filter((email) => !wanted.has(email));
 
-	await UserPreferences.setUnsubscribedEmails(ctx.db, viewer.id, unsubscribed);
+	unwrap(await ctx.models.userPreferences.setUnsubscribedEmails(viewer.id, unsubscribed));
 
 	let session = ctx.get(Session);
 	session?.flash("toast", { intent: "success", message: "Email preferences saved." });
@@ -117,6 +114,7 @@ export const exportData = createAction(routes.accountActions.exportData, async (
 	let now = new Date();
 	let document = await buildAccountExport(
 		ctx.db,
+		ctx.models,
 		{ id: viewer.id, name: viewer.name, email: viewer.email },
 		now,
 	);
@@ -144,7 +142,7 @@ export const requestDeletion = createAction(routes.accountActions.requestDeletio
 		return badRequest('Type "DELETE" to confirm.');
 	}
 
-	await AccountDeletion.enqueue(ctx.db, viewer.id, viewer.email);
+	await ctx.models.accountDeletions.enqueue(viewer.id, viewer.email);
 
 	ctx.get(Session)?.destroy();
 
@@ -160,7 +158,7 @@ export const cancelDeletion = createAction(routes.accountActions.cancelDeletion,
 	let viewer = getViewer();
 	if (!viewer) throw new Error("requireUser must run before this handler");
 
-	await AccountDeletion.remove(ctx.db, viewer.id);
+	await ctx.models.accountDeletions.remove(viewer.id);
 
 	let session = ctx.get(Session);
 	session?.flash("toast", { intent: "success", message: "Account deletion cancelled." });
@@ -180,7 +178,7 @@ export const updateLanguage = createAction(routes.accountActions.updateLanguage,
 		return badRequest("Invalid language.");
 	}
 
-	await UserPreferences.setLanguage(ctx.db, viewer.id, result.data.language);
+	unwrap(await ctx.models.userPreferences.setLanguage(viewer.id, result.data.language));
 
 	let headers = new Headers();
 	headers.set("Set-Cookie", await languageCookie.serialize(result.data.language ?? ""));

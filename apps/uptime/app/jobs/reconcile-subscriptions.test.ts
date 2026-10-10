@@ -21,12 +21,12 @@ import { success, unwrap } from "@sdxc/result";
 import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import Subscription from "~/app/data/subscription";
 import jobs from "~/app/jobs";
 import { Database } from "~/app/jobs/middleware/database";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 
 /** Days after which a handled delivery is dropped, as the job is configured. */
@@ -105,8 +105,7 @@ async function subscribe() {
 
 /** Writes the projection from what the platform currently says, so the two start in step. */
 async function projectCurrentState() {
-	await Subscription.sync(
-		db,
+	await bindModels(db).subscriptions.sync(
 		ownerId,
 		await unwrap(billing.entitlements.of({ externalId: ownerId })),
 	);
@@ -175,7 +174,7 @@ describe("reconcileSubscriptions", () => {
 
 		let record = await run();
 
-		expect(await Subscription.stateFor(db, ownerId)).toBe("active");
+		expect(await bindModels(db).subscriptions.stateFor(ownerId)).toBe("active");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).not.toBeNull();
 
 		expect(noteOf(record, "subscriptions.repaired")?.entitled).toBe(true);
@@ -190,7 +189,7 @@ describe("reconcileSubscriptions", () => {
 
 		let record = await run();
 
-		expect(await Subscription.stateFor(db, ownerId)).toBe("inactive");
+		expect(await bindModels(db).subscriptions.stateFor(ownerId)).toBe("inactive");
 		expect((await db.findOne(monitors, { where: { id: monitor.id } }))?.next_due_at).toBeNull();
 		expect(noteOf(record, "subscriptions.repaired")?.entitled).toBe(false);
 	});
@@ -205,7 +204,7 @@ describe("reconcileSubscriptions", () => {
 
 		let record = await run();
 
-		expect(await Subscription.listAll(db)).toHaveLength(0);
+		expect(await bindModels(db).subscriptions.query().all()).toHaveLength(0);
 		expect(noteOf(record, "subscriptions.unlinked_customer")).toBeDefined();
 	});
 

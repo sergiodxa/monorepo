@@ -14,17 +14,17 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectApiKey } from "~/database/schema";
 
-import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import { idempotentUnstored } from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_API_KEY_BODY } from "~/app/http/openapi/api-keys";
+import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
@@ -59,7 +59,7 @@ export default createController(apiKeysRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = ApiKey.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.apiKeys.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -89,7 +89,7 @@ export default createController(apiKeysRoutes, {
 		apiKeysCreate: {
 			middleware: [requireApiKey("api-keys:write"), idempotentUnstored],
 			handler: async (ctx) => {
-				let existingCount = await ApiKey.countByTeam(ctx.db, ctx.apiTeam.id);
+				let existingCount = await ctx.models.apiKeys.inTeam(ctx.apiTeam.id).count();
 				if (existingCount >= MAX_API_KEYS_PER_TEAM) {
 					return apiProblems.limitExceeded({
 						detail: "API key limit reached for this team",
@@ -119,11 +119,13 @@ export default createController(apiKeysRoutes, {
 					});
 				}
 
-				let { record, key } = await ApiKey.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					scopes: result.data.scopes,
-					expires_at: result.data.expiresAt ?? null,
-				});
+				let { record, key } = unwrap(
+					await ctx.models.apiKeys.issue(ctx.apiTeam.id, {
+						name: result.data.name,
+						scopes: result.data.scopes,
+						expires_at: result.data.expiresAt ?? null,
+					}),
+				);
 
 				return apiSuccess({ apiKey: serializeApiKey(record), key }, Created);
 			},

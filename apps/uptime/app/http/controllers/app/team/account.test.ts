@@ -1,7 +1,7 @@
 /**
  * Tests for the account page controller. No `cloudflare:workers` mock is needed —
- * this controller only touches `~/app/data/team` and `~/app/data/user-preferences`,
- * neither of which depends on a queue binding. `ctx.team`/`ctx.membership`/
+ * this controller only reads teams, preferences and deletion requests through its
+ * models, none of which queue a job. `ctx.team`/`ctx.membership`/
  * `Auth`/`ctx.intl` are seeded directly, standing in for the real
  * `requireUser`/`requireTeam` middleware chain.
  *
@@ -24,11 +24,11 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/schema";
 
-import AccountDeletion from "~/app/data/account-deletion";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { bindModels } from "~/app/lib/test/models";
 import en from "~/app/locales/en";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
@@ -376,7 +376,7 @@ describe("account page — Delete Account", () => {
 	 */
 	test("shows a viewer who is already queued that state plus a cancel button, and not the form", async () => {
 		let { db, team, membership } = await createFixture();
-		await AccountDeletion.enqueue(db, membership.subject_id, "viewer@example.com");
+		await bindModels(db).accountDeletions.enqueue(membership.subject_id, "viewer@example.com");
 
 		let body = await (await renderAccount(db, team, membership)).text();
 

@@ -7,17 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -47,7 +48,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
