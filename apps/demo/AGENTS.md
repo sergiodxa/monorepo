@@ -22,18 +22,24 @@ shortest correct version of a thing wins over the clever one.
   component owns
 - MUST put every user-facing string in `app/locales/`, both languages, and read it through
   `ctx.intl.t`
+- MUST build the router's global chain with `createMiddleware(...)` and type a controller's
+  context as `AppContext` from `bootstrap/app.tsx`, never a `Middleware[]` variable, which
+  erases what each middleware publishes
+- MUST keep models free of request concerns: a model callback never reads the language or the
+  translator, so wording a message, and enqueueing the job that sends it in the visitor's
+  language, stays in the controller or the MCP tool
 - MUST keep the D1 binding and `database/migrations/` real, so `bun run db:local:migrate`
   is what creates the board's table
 
 ## Reference Files
 
-| Concern                      | File                       |
-| ---------------------------- | -------------------------- |
-| Router assembly              | `bootstrap/app.tsx`        |
-| MCP server                   | `bootstrap/mcp.ts`         |
-| Job dispatcher and its queue | `app/jobs/dispatcher.ts`   |
-| Models and their registry    | `app/models/`              |
-| In-memory adapters           | `app/lib/`                 |
-| Palette the theme derives    | `resources/css/colors.css` |
-| Built asset URLs (manifest)  | `app/lib/assets.ts`        |
-| Router-level tests           | `app/lib/test/router.ts`   |
+| Concern                       | File                       |
+| ----------------------------- | -------------------------- |
+| Router assembly, `AppContext` | `bootstrap/app.tsx`        |
+| MCP server                    | `bootstrap/mcp.ts`         |
+| Job dispatcher and its queue  | `app/jobs/dispatcher.ts`   |
+| Models and their registry     | `app/models/`              |
+| In-memory adapters            | `app/lib/`                 |
+| Palette the theme derives     | `resources/css/colors.css` |
+| Built asset URLs (manifest)   | `app/lib/assets.ts`        |
+| Router-level tests            | `app/lib/test/router.ts`   |

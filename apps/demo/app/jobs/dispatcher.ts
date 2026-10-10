@@ -19,16 +19,12 @@ import type { DatabaseEffect } from "~/app/jobs/middleware/database";
 
 import jobs from "~/app/jobs";
 import { Database, database } from "~/app/jobs/middleware/database";
-import { FALLBACK_LANGUAGE } from "~/app/lib/i18n";
 import { models } from "~/app/models";
 import { logger } from "~/bootstrap/logger";
 
 /** The models a job reads as `ctx.models`, bound to the database the chain opened. */
 function modelsMiddleware() {
-	return publishModels(models, (ctx) => ({
-		db: ctx.require(Database),
-		locale: FALLBACK_LANGUAGE,
-	}));
+	return publishModels(models, (ctx) => ({ db: ctx.require(Database) }));
 }
 
 /** The dispatcher the board's jobs run through, carrying what its chain publishes. */

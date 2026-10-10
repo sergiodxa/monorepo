@@ -1,19 +1,17 @@
 /**
  * The posting model: the open listing the board renders, the search an agent runs, and the
  * sweep that closes stale postings. Publishing one through `create` assigns its id and
- * timestamps, then drops the cached listing and queues the confirmation once the row landed.
+ * timestamps, and drops the cached listing once the row is stored.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createModel } from "@sdxc/data-model";
-import { Jobs } from "@sdxc/jobs/router";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { like, lt, or } from "remix/data-table";
 
-import jobs from "~/app/jobs";
 import { cache, LISTING_KEY } from "~/app/lib/cache";
 import { postings } from "~/database/schema";
 
@@ -37,20 +35,22 @@ export const Postings = createModel(postings, {
 			),
 	},
 
-	methods: (model) => ({
-		listOpen: (limit: number) => model.open().newest().limit(limit).all(),
-		search: (term: string, limit: number) =>
-			model.open().matching(term).newest().limit(limit).all(),
+	methods: {
+		listOpen(limit: number) {
+			return this.open().newest().limit(limit).all();
+		},
+		search(term: string, limit: number) {
+			return this.open().matching(term).newest().limit(limit).all();
+		},
 		/** Closes every open posting published before `cutoff`, answering how many it closed. */
-		expirePublishedBefore: async (cutoff: number) => {
+		async expirePublishedBefore(cutoff: number) {
 			let now = Date.now();
-			let result = await model
-				.open()
+			let result = await this.open()
 				.where(lt(postings.created_at, cutoff))
 				.update({ expired_at: now, updated_at: now });
 			return result.affectedRows;
 		},
-	}),
+	},
 
 	callbacks: {
 		/** Integer columns hold epoch milliseconds, so the timestamps are written here. */
@@ -64,13 +64,9 @@ export const Postings = createModel(postings, {
 			};
 		},
 
-		/** Runs once the posting is stored, so a refused write mails nobody. */
-		async afterCommit(event, ctx) {
-			if (event.operation !== "create") return;
-			await cache.delete(LISTING_KEY);
-			await ctx
-				.require(Jobs)
-				.enqueue(jobs.sendConfirmation, { postingId: event.row.id, locale: ctx.locale });
+		/** Runs once the posting is stored, so the listing never shows a write that failed. */
+		async afterCommit(event) {
+			if (event.operation === "create") await cache.delete(LISTING_KEY);
 		},
 	},
 });

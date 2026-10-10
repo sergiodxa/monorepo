@@ -10,7 +10,7 @@
 import type { Captcha } from "@sdxc/captcha";
 import type { RemixNode } from "remix/component";
 import type { Database as DataTable } from "remix/data-table";
-import type { Middleware, RequestContext } from "remix/router";
+import type { MiddlewareContext, RequestContext } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -22,7 +22,7 @@ import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { renderWith } from "remix/middleware/render";
 import { createHtmlResponse } from "remix/response/html";
-import { createRouter } from "remix/router";
+import { createMiddleware, createRouter } from "remix/router";
 
 import * as board from "~/app/http/controllers/board";
 import defaultHandler from "~/app/http/controllers/default-handler";
@@ -50,6 +50,40 @@ const SUBMIT_LIMIT = 5;
 const MCP_LIMIT = 60;
 
 /**
+ * The middleware every request runs through, in order. Built with `createMiddleware`, so the
+ * chain keeps its tuple type and {@link AppContext} sees what each link publishes.
+ *
+ * @param openDb Opens the database the request reads through.
+ */
+function globalMiddleware(openDb: () => DataTable) {
+	return createMiddleware(
+		asyncContext(),
+		log(logger),
+		getClientIP(),
+		formData(),
+		cop(),
+		i18n({
+			detection: { supportedLanguages: SUPPORTED_LANGUAGES, fallbackLanguage: FALLBACK_LANGUAGE },
+			resources,
+		}),
+		database(openDb),
+		models(),
+		jobs(openDb),
+		renderWith(createHtmlRenderer),
+	);
+}
+
+/** The context a handler sees once the global middleware has run. */
+export type AppContext = MiddlewareContext<ReturnType<typeof globalMiddleware>>;
+
+declare module "remix/router" {
+	/** Types route helpers such as `createAction` with the context the global chain builds. */
+	interface RouterTypes {
+		context: AppContext;
+	}
+}
+
+/**
  * Builds the board's HTTP router.
  *
  * @param openDb Opens the database every request and job reads through; a test hands in its
@@ -61,23 +95,7 @@ export default function application(
 	openDb: () => DataTable = openDatabase,
 	guard: Captcha = captchaProvider(),
 ) {
-	let globalMiddleware: Middleware[] = [
-		asyncContext(),
-		log(logger) as Middleware,
-		getClientIP(),
-		formData() as Middleware,
-		cop(),
-		i18n({
-			detection: { supportedLanguages: SUPPORTED_LANGUAGES, fallbackLanguage: FALLBACK_LANGUAGE },
-			resources,
-		}) as Middleware,
-		database(openDb),
-		models(),
-		jobs(openDb),
-		renderWith(createHtmlRenderer) as Middleware,
-	];
-
-	let router = createRouter({ middleware: globalMiddleware, defaultHandler });
+	let router = createRouter<AppContext>({ middleware: globalMiddleware(openDb), defaultHandler });
 
 	router.map(routes.board, {
 		actions: {

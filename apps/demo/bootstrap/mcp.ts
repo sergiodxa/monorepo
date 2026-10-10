@@ -10,6 +10,7 @@
 import { createHandler, ToolError } from "@sdxc/mcp";
 import { isFailure } from "@sdxc/result";
 
+import jobs from "~/app/jobs";
 import { summarize, toEntry, toMarkdown } from "~/app/mcp/postings";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
@@ -41,12 +42,15 @@ mcp.tools.map(toolset.getJob, async (ctx) => {
 	return toMarkdown(posting);
 });
 
-/** Publishes through the same model the submit form does, so the confirmation follows. */
+/** Publishes the way the submit form does: the row, then the confirmation in the caller's language. */
 mcp.tools.map(toolset.publishJob, async (ctx) => {
 	let posting = await ctx.models.postings.create(ctx.input);
 	if (isFailure(posting)) throw new ToolError("The position could not be published.");
 
-	ctx.log.set({ posting: { id: posting.data.id } });
+	let postingId = posting.data.id;
+	await ctx.jobs.enqueue(jobs.sendConfirmation, { postingId, locale: ctx.locale });
+
+	ctx.log.set({ posting: { id: postingId } });
 
 	return toMarkdown(posting.data);
 });

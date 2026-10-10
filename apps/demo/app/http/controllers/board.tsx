@@ -1,22 +1,22 @@
 /**
  * The board's two actions: the listing every visitor lands on, and the submission that
- * publishes a position. The posting model drops the cached listing and queues the
- * confirmation email once the row is stored, so the visitor is redirected without waiting.
+ * publishes a position. Publishing stores the row and hands the confirmation email, written in
+ * the visitor's language, to a background job, so the visitor is redirected without waiting.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-
-import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
+import type { AppContext } from "~/bootstrap/app";
 import type { Posting } from "~/database/schema";
 
 import { PostingSchema } from "~/app/http/validators/posting";
+import jobs from "~/app/jobs";
 import { cache, LISTING_KEY, LISTING_TTL } from "~/app/lib/cache";
 import { turnstileSiteKey } from "~/app/lib/captcha";
 import DocumentLayout from "~/resources/layouts/document";
@@ -27,7 +27,7 @@ import routes from "~/routes/web";
 const PAGE_SIZE = 50;
 
 /** The open positions, from the cache when it has them and from the database otherwise. */
-async function openPostings(ctx: RequestContext): Promise<Posting[]> {
+async function openPostings(ctx: AppContext): Promise<Posting[]> {
 	let listing = await cache.fetch(LISTING_KEY, () => ctx.models.postings.listOpen(PAGE_SIZE), {
 		ttl: LISTING_TTL,
 	});
@@ -40,7 +40,7 @@ async function openPostings(ctx: RequestContext): Promise<Posting[]> {
  *
  * @param error Why the last submission was refused; its presence reopens the submit form.
  */
-async function renderBoard(ctx: RequestContext, error?: string): Promise<Response> {
+async function renderBoard(ctx: AppContext, error?: string): Promise<Response> {
 	let postings = await openPostings(ctx);
 
 	return ctx.render(
@@ -59,14 +59,17 @@ export const index = createAction(routes.board.index, (ctx) => renderBoard(ctx))
  * rather than a `createAction`, because the route declares middleware of its own and an
  * action object's `handler` has to be one.
  */
-export async function action(ctx: RequestContext): Promise<Response> {
+export async function action(ctx: AppContext): Promise<Response> {
 	let submission = await validate(ctx.formData, PostingSchema);
 	if (isFailure(submission)) return await renderBoard(ctx, ctx.intl.t("form.invalid"));
 
 	let posting = await ctx.models.postings.create(submission.data);
 	if (isFailure(posting)) return await renderBoard(ctx, ctx.intl.t("form.invalid"));
 
-	ctx.log.set({ posting: { id: posting.data.id } });
+	let postingId = posting.data.id;
+	await ctx.jobs.enqueue(jobs.sendConfirmation, { postingId, locale: ctx.locale });
+
+	ctx.log.set({ posting: { id: postingId } });
 
 	return redirect(routes.board.index.href(), { status: redirect.Status.SeeOther });
 }
