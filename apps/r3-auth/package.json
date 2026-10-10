@@ -17,6 +17,7 @@
 		"@sdxc/authz": "workspace:*",
 		"@sdxc/billing": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/duration": "workspace:*",

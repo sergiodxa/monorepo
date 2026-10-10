@@ -64,6 +64,7 @@ import oauthAuthorizationServer from "~/app/http/controllers/well-known/oauth-au
 import openidConfiguration from "~/app/http/controllers/well-known/openid-configuration";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import { models } from "~/app/http/middleware/models";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
 import { assets, documentAssets } from "~/app/lib/assets";
@@ -113,6 +114,7 @@ export default function application(options: application.Options) {
 		headRequests(),
 		asyncContext(),
 		database(() => options.db ?? createDatabase()),
+		models() as Middleware,
 		rateLimiters(() => options.limiters ?? createRateLimiters()),
 		log(logger) as Middleware,
 		getClientIP(),

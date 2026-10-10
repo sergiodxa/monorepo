@@ -20,6 +20,8 @@ import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { createCookie } from "remix/cookie";
 import { vi } from "vitest";
 
+import type { AuthModels } from "~/app/models";
+
 /** Requests a limiter allows per window when a test does not ask for a smaller budget. */
 const DEFAULT_RATE_LIMIT = 1000;
 
@@ -95,11 +97,11 @@ async function loadModules() {
 	modules ??= Promise.all([
 		import("~/bootstrap/app"),
 		import("~/app/services/rate-limiters"),
-		import("~/app/lib/test/db"),
-	]).then(([app, rateLimiters, db]) => ({
+		import("~/app/lib/test/models"),
+	]).then(([app, rateLimiters, testModels]) => ({
 		application: app.default,
 		RateLimiters: rateLimiters.default,
-		createTestDatabase: db.createTestDatabase,
+		createTestModels: testModels.createTestModels,
 	}));
 
 	return await modules;
@@ -110,7 +112,7 @@ let modules:
 	| Promise<{
 			application: (typeof import("~/bootstrap/app"))["default"];
 			RateLimiters: (typeof import("~/app/services/rate-limiters"))["default"];
-			createTestDatabase: (typeof import("~/app/lib/test/db"))["createTestDatabase"];
+			createTestModels: (typeof import("~/app/lib/test/models"))["createTestModels"];
 	  }>
 	| undefined;
 
@@ -124,6 +126,8 @@ export interface TestApp {
 	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["application"]>;
 	/** The migrated in-memory database every controller reads as `ctx.db`. */
 	db: Database;
+	/** The app's models bound to {@link TestApp.db}, for seeding and asserting through the model layer. */
+	models: AuthModels;
 	/** The KV namespace backing sessions and authorization codes. */
 	kv: ReturnType<typeof createKVNamespace>;
 	/** The bucket the signing keys are generated into on first use. */
@@ -190,7 +194,7 @@ export async function withUnreadableSigningKeys<T>(
  * middleware chain against storage it can read back.
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
-	let { application, RateLimiters, createTestDatabase } = await loadModules();
+	let { application, RateLimiters, createTestModels } = await loadModules();
 
 	let appKv = createKVNamespace();
 	let appR2 = createR2Bucket();
@@ -198,7 +202,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 	bindings.KV = appKv;
 	bindings.R2 = appR2;
 
-	let { db } = createTestDatabase();
+	let { db, models } = createTestModels();
 
 	let recorder = new MemoryTransport();
 	let mailTransport: Transport = options.mailTransport ?? recorder;
@@ -227,6 +231,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 	return {
 		router,
 		db,
+		models,
 		kv: appKv,
 		r2: appR2,
 		billing,
