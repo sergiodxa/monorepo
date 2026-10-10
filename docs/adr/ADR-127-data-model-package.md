@@ -66,8 +66,11 @@ side effects a model is wanted for.
 
 - `@sdxc/pagination` pages any value with the query methods it uses (`Pagination.byOffset`,
   `Pagination.byKeyset`); it types its input structurally, not as a concrete class.
-- `@sdxc/search` returns a data-table `Query` from `definition.query(db, parsed)`, which callers
-  narrow with `.where()` and hand to pagination.
+- `@sdxc/search` returns a `SearchQuery` from `definition.query(db, parsed)`: its own object
+  with `where`, `orderBy`, `limit`, `offset`, `count` and `all`, whose rows are decoded
+  `SearchRow`s. It satisfies pagination's structural interfaces and is not a data-table `Query`.
+- `@sdxc/validate` already defines the `ValidationError` forms render: Standard Schema issues,
+  each with a `message` and a `path`.
 - Per-request services are published on the context (ADR-057): a `Database` key carries the
   tenant's database, `Jobs` carries the enqueuer (`ctx.jobs.enqueue(...)`), apps declare their own
   `Mail` and similar keys.
@@ -86,8 +89,31 @@ through `JobMiddleware`, so they need their own entry point.
 
 ### Database constraints
 
-`@sdxc/data-table-d1` has no interactive transactions; `@sdxc/data-table-sqlstorage` does. Any
-callback timing that depends on commit has to define what happens on D1.
+Neither Cloudflare adapter gives `db.transaction()` the meaning the word promises:
+
+| Adapter                        | `db.transaction(fn)`                                                                                  |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `@sdxc/data-table-d1`          | A logical scope. Every statement commits as it runs; rollback discards nothing already written        |
+| `@sdxc/data-table-sqlstorage`  | Rejects. The platform coalesces every write of one event-loop turn into one commit and has no `BEGIN` |
+| `remix/data-table-sqlite`      | A real transaction, which is what tests run on                                                        |
+| Nested scopes, on any of these | Need savepoints, which both Cloudflare adapters report `false`, so data-table throws                  |
+
+data-table also commits whenever the callback resolves: a returned value, a `Failure` included,
+commits; only a throw rolls back. Any callback timing that depends on commit therefore has to be
+defined without a database transaction behind it, and must work where opening one throws.
+
+### Query mechanics
+
+`Query` keeps its state in private class fields, and every builder method clones with
+`new Query(table)`. A subclass loses its prototype on the first `where()`, and a proxy that
+forwards itself as `this` throws on private-field access. The wrapper that adds scopes to a query
+has exactly one viable shape: a proxy whose property trap returns functions that apply the method
+to the underlying query and wrap any `Query` that comes back. `instanceof` holds through it, and
+`db.exec(wrapped)` works because the snapshot symbol forwards like any member.
+
+`Query`'s five type parameters (source, column types, row, loaded relations, phase) change
+through `select()` and `with()`, so a scope typed `(query) => query.where(...)` cannot re-derive
+them. Scopes are restricted to the methods that keep all five fixed.
 
 ## Decision
 
@@ -110,7 +136,7 @@ export const Users = createModel(users, {
 		},
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx.get(Jobs).enqueue(jobs.sendWelcome, { userId: event.row.id });
+			await ctx.require(Jobs).enqueue(jobs.sendWelcome, { userId: event.row.id });
 		},
 	},
 	methods: (model) => ({
@@ -147,26 +173,61 @@ For a model loaded up front, the wrapped value is still a `Query` (`instanceof` 
 pagination, search refinement and eager loading accept it unchanged. A lazily loaded model hands
 out a deferred query instead, described under [Loading models on demand](#loading-models-on-demand).
 
+- A scope preserves the query it receives: it may call `where`, `having`, `orderBy`, `groupBy`,
+  `limit`, `offset` and `distinct`, and its result is typed as the same query type as its input.
+  `with()` and `select()` change the row or loaded type, so they belong in `methods`, where the
+  return type is inferred per method; a scope calling either is a type error.
+- An ordering scope is still a scope, and `Pagination.byKeyset` appends its own sort after
+  whatever the query carries, so `articles.newest()` handed to keyset paging would seek on the
+  wrong key. `@sdxc/pagination` gains a check: `byKeyset` reads the query's snapshot and fails
+  with a `Failure` when the query already orders, instead of paging wrongly.
+- `BoundModel`, `ModelQuery` and the scope types are interfaces over a few plain parameters
+  (row, scopes, methods, meta), never conditional types over `typeof Model`, so a helper generic
+  over a model still resolves members and the type-aware lint pass stays within budget across an
+  app with dozens of models.
+
 ### Bound model surface
 
-| Member               | Returns                                    | Callbacks |
-| -------------------- | ------------------------------------------ | --------- |
-| `query()`, scopes    | Scoped `Query`                             | No        |
-| `from(query)`        | The given `Query`, scoped                  | No        |
-| `find(id)`           | `Row \| null`                              | No        |
-| `findBy(where)`      | `Row \| null`                              | No        |
-| `create(values)`     | `Result<Row, ValidationError>`             | Yes       |
-| `update(id, values)` | `Result<Row, ValidationError \| NotFound>` | Yes       |
-| `delete(id)`         | `Result<Row, NotFound>`                    | Yes       |
-| `transaction(fn)`    | Whatever `fn` returns                      | Defers    |
-| `load()`             | The bound model, once its module loaded    | No        |
-| Custom `methods`     | A promise or a model query                 | —         |
+| Member                | Returns                                    | Callbacks |
+| --------------------- | ------------------------------------------ | --------- |
+| `query()`, scopes     | Scoped `Query`                             | No        |
+| `from(query)`         | The given query, scoped                    | No        |
+| `find(key)`           | `Row \| null`                              | No        |
+| `findBy(where)`       | `Row \| null`                              | No        |
+| `create(values)`      | `Result<Row, ValidationError>`             | Yes       |
+| `update(key, values)` | `Result<Row, ValidationError \| NotFound>` | Yes       |
+| `upsert(values)`      | `Result<Row, ValidationError>`             | Yes       |
+| `delete(key)`         | `Result<Row, NotFound>`                    | Yes       |
+| `transaction(fn)`     | Whatever `fn` returns                      | Defers    |
+| `load()`              | The bound model, once its module loaded    | No        |
+| Custom `methods`      | A promise or a model query                 | —         |
 
 Reads answer `null` for a missing row. Writes answer a `Result` from `@sdxc/result`, because a
-validation failure or a missing row is an expected outcome the caller branches on.
+validation failure or a missing row is an expected outcome the caller branches on. `key` is the
+table's primary key input, a value for a single-column key and an object for a composite one.
 
-`from(query)` wraps a query some other package built over the same table, such as a search
-query, so the model's scopes chain onto it.
+`ValidationError` is the class `@sdxc/validate` exports, so a model failure and a form-schema
+failure carry the same Standard Schema issues and render through the same code. A unique or
+foreign-key violation the database raises as `DataTableConstraintError` is mapped into it as
+well, with the path taken from the constraint's name (`idx_users_email` to `["email"]`), so the
+caller branches on one failure type whether the model's `validate` or the index caught it.
+
+`upsert` is the D1-safe form of a create-or-update: one statement, as `db.upsert` runs it.
+Its callbacks are the create ones when the row did not exist and the update ones when it did,
+decided from the returned row's timestamps, and `afterCommit` names the operation that happened.
+
+Every write reads the row first. `db.delete` answers a boolean and `db.update` takes a key, so
+the row a `delete` returns, `event.before`, `event.changed` and the constraint joined to the
+`WHERE` all come from a `SELECT` before the statement, and the after-row from `RETURNING`, which
+both Cloudflare adapters support. On D1 that read is not atomic with the write, so `changed` is
+best-effort under concurrent updates of the same row.
+
+`from(query)` wraps a query some other package built over the same table so the model's scopes
+chain onto it. It is typed over pagination's structural `OffsetQuery` and `KeysetQuery`
+interfaces, which is what a `SearchQuery` is, and only scopes that use `where`, `orderBy`,
+`limit` and `offset` are callable on the result: a scope calling `having`, `groupBy` or
+`distinct` is absent from its type. Rows keep the type the given query produces, so a search's
+decoded rows come back as `SearchRow`s.
 
 ### Naming a model's types
 
@@ -202,6 +263,11 @@ await registerUser(ctx.models.users, { email, name });
 - A lazily loaded entry has exactly the bound model's type, so `ctx.models.users` satisfies
   `UserModel` whether the registry imports it up front or on demand, and a test passes
   `Users.bind({ db }, context)` to the same function.
+- `CreateValues` requires every column the row type does, except the ones it can see are
+  supplied elsewhere: a constrained column is omitted, a nullable column and the table's declared
+  `timestamps` columns are optional. Column types carry nullability but not defaults, so a column
+  a `beforeCreate` fills (`slug` from `title`) or the database defaults is named in the model's
+  `optional` list to be optional in the input; data-table itself types every write as a partial.
 - The types are plain generics over the definition, so a model module exports its aliases next
   to the model, and callers import the aliases without importing the model's runtime code.
 
@@ -239,22 +305,33 @@ await forPost(ctx.models.users, id); // type error: users rows have no post_id
 
 ### Callbacks
 
-Callbacks are async and receive a `ModelContext`. The database is the only member the package
-guarantees; everything else is the app's to attach:
+Callbacks are async and receive a `ModelContext`. The database and the registry are the members
+the package guarantees; everything else is the app's to attach:
 
 ```typescript
 interface ModelContext {
 	/** The database this model is bound to, or the transaction it runs in. */
 	readonly db: Database;
-	/** Reads a value the host context published, by the same key the app's middleware uses. */
-	get<Key extends object>(key: Key): ContextValue<Key>;
+	/** Every model in the registry, bound to the same database and scope as this one. */
+	readonly models: BoundModels;
+	/** Reads a value the host context published, or `undefined` when nothing did. */
+	get<Key extends object>(key: Key): ContextValue<Key> | undefined;
+	/** Reads a value the host context published, throwing when nothing did. */
+	require<Key extends object>(key: Key): NonNullable<ContextValue<Key>>;
 }
 ```
 
-`get` reads through to the host context, so a callback reaches the job enqueuer, the mail
-transport or the billing provider by the same keys the app's middleware already publishes
-(`ctx.get(Jobs)`, `ctx.get(Mail)`). A script or test binds with its own context instead of a
-request.
+`get` and `require` read through to the host context, so a callback reaches the job enqueuer,
+the mail transport or the billing provider by the same keys the app's middleware already
+publishes (`ctx.require(Jobs)`, `ctx.require(Mail)`). Their contracts are the hosts' own:
+`RequestContext.get` and `JobContext.get` both answer `undefined` for a key nothing published,
+and `JobContext.require` throws, so a callback reading a service the middleware chain forgot
+fails at the read rather than at `.enqueue` of `undefined`. A script or test binds with its own
+context instead of a request.
+
+`models` is how a callback reaches another model: inside a unit of work it is the set bound to
+that scope, and outside a host it is the registry `bind` was called on, so a single model bound
+on its own has a registry of one.
 
 Anything a callback should read as a property, such as `ctx.log`, the app adds by augmenting the
 interface, the same way it types `RequestContext` in `config/router-context.d.ts`:
@@ -287,25 +364,56 @@ besides `get`, which always reads through to the host. Once the app augments the
 middleware or a binding that leaves out `log` fails to type-check rather than handing a callback
 an `undefined`; an app that augments nothing returns `{ db }` alone.
 
-| Callback                                    | Runs                                    | Can                   |
-| ------------------------------------------- | --------------------------------------- | --------------------- |
-| `validate(values, ctx)`                     | Before every create and update          | Fail with issues      |
-| `beforeCreate`, `beforeUpdate`              | After `validate`, before the statement  | Rewrite values, fail  |
-| `beforeDelete`                              | Before the statement                    | Fail                  |
-| `afterCreate`, `afterUpdate`, `afterDelete` | After the statement succeeds            | Read and write the db |
-| `afterCommit(event)`                        | After the enclosing transaction commits | Dispatch side effects |
+| Step                                            | Runs                                      | Can                   |
+| ----------------------------------------------- | ----------------------------------------- | --------------------- |
+| `validate(values, ctx)`                         | First, on every create, update and upsert | Fail with issues      |
+| `beforeCreate`, `beforeUpdate`                  | After `validate`, before the statement    | Rewrite values, fail  |
+| `beforeDelete`                                  | Before the statement                      | Fail                  |
+| Table `beforeWrite`, `validate`, `beforeDelete` | Inside data-table, as the statement runs  | Fail, synchronously   |
+| The statement                                   | With `RETURNING`, then table `afterWrite` | —                     |
+| `afterCreate`, `afterUpdate`, `afterDelete`     | After the statement succeeds              | Read and write the db |
+| `afterCommit(event)`                            | After the enclosing unit of work resolves | Dispatch side effects |
 
 - The model `validate` callback is async and runs in addition to the table's synchronous one,
-  so a uniqueness check or a lookup against another table lives on the model.
-- `after*` callbacks run inside the transaction when there is one; a failure there rolls the
-  write back.
-- `afterCommit` is where jobs and mail belong. Inside `users.transaction(...)` (or
-  `models.transaction(...)`), events queue and flush once the transaction resolves, and are
-  dropped when it rolls back, so a rolled-back signup never sends a welcome email. Outside a
-  transaction, and always on D1, `afterCommit` runs right after the write's `after*` callback.
+  so a uniqueness check or a lookup against another table lives on the model. The table's own
+  hooks keep running inside data-table; a failure they raise as `DataTableValidationError` is
+  caught and returned as the same `ValidationError` the model's callbacks produce.
+- A uniqueness check in `validate` is advisory on D1, where nothing serialises the lookup and the
+  insert. The unique index is the guarantee, and its `DataTableConstraintError` comes back as a
+  `ValidationError` too, so the caller handles the race the same way it handles the check.
+- `after*` callbacks run before the write is reported to the caller. Where the database has a
+  real transaction, a failure there rolls the write back; on D1 and sqlstorage the row stays
+  written and the write answers the failure, so an `after*` callback keeps to work the model
+  can repeat, and anything with consequences outside the database goes in `afterCommit`.
+- `afterCommit` is where jobs and mail belong, and its timing is defined by the unit of work
+  rather than by a database transaction. Inside `models.transaction(fn)`, events queue and
+  flush once `fn` resolves with a success, and are dropped when `fn` throws or resolves with a
+  `Failure`, so a signup whose second step fails never sends a welcome email, on every adapter.
+  Outside a unit of work, `afterCommit` runs right after the write's `after*` callback.
 - Callbacks run for writes made through the model. A bulk write built from a query
   (`users.active().update({...})`) is data-table's own operation and runs no model callbacks; it
   is the explicit escape hatch for set-based writes.
+
+### Units of work
+
+`models.transaction(fn)` and a bound model's `transaction(fn)` open a unit of work: `fn`
+receives every model bound to the scope, `afterCommit` events defer to its end, and a database
+transaction is opened only where the adapter has one.
+
+- A returned `Failure` aborts: the scope throws a private sentinel to make data-table roll back
+  where it can, catches it, drops the queued events and returns the failure to the caller. Only
+  a successful return commits and flushes. This is the rule the signup example relies on, since
+  data-table itself commits on any resolved callback.
+- Opening a database transaction is an adapter decision, taken once at binding: data-table
+  exposes no capability flag for it, so the models middleware and `bind` take
+  `transactions: "database" | "none"`, defaulting to `"none"`, which is correct for both
+  Cloudflare adapters; the sqlite adapter tests run on sets `"database"`. On `"none"` the scope
+  wraps nothing and sqlstorage, whose `db.transaction()` rejects, is never asked for one.
+- A scope opened inside another joins it: both Cloudflare adapters report `savepoints: false`,
+  so a nested `db.transaction()` would throw, and the inner `fn` shares the outer queue and
+  settles with it.
+- The name stays `transaction` because it is what data-table and Rails call the scope; what it
+  guarantees is the deferral, and atomicity only where the database provides it.
 
 ### Constraints: several models over one table
 
@@ -317,13 +425,17 @@ export const Articles = createModel(posts, { constraints: { type: "article" } })
 export const Tutorials = createModel(posts, { constraints: { type: "tutorial" } });
 ```
 
-| Operation                   | Effect of `constraints: { type: "article" }`                                                        |
-| --------------------------- | --------------------------------------------------------------------------------------------------- |
-| `query()`, scopes, `from()` | Every query starts with `.where({ type: "article" })`, so paging and search see only articles       |
-| `find(id)`, `findBy(where)` | A row of another type answers `null`                                                                |
-| `create(values)`            | Writes `type: "article"`; the input type omits `type`                                               |
-| `update(id)`, `delete(id)`  | The constraint joins the `WHERE`, so another type's id answers `NotFound`; `type` cannot be changed |
-| Row type                    | `type` narrows to `"article"`                                                                       |
+| Operation                    | Effect of `constraints: { type: "article" }`                                                         |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `query()`, scopes, `from()`  | Every query starts with `.where({ type: "article" })`, so paging and search see only articles        |
+| `find(id)`, `findBy(where)`  | A row of another type answers `null`                                                                 |
+| `create(values)`             | Writes `type: "article"`; the input type omits `type`                                                |
+| `update(key)`, `delete(key)` | The constraint joins the `WHERE`, so another type's key answers `NotFound`; `type` cannot be changed |
+| Row type                     | `type` narrows to `"article"`                                                                        |
+
+A constrained write runs as `query().where({ id, type: "article" }).update(values, { returning })`
+rather than `db.update(table, key, values)`, because the key-based helper has no place for the
+constraint; the returned row is the after-row the callbacks and the `Result` carry.
 
 A constraint is a value written on create and fixed afterwards, which fits a discriminator.
 A filter whose column the model itself changes, such as `deleted_at` for soft deletes, stays a
@@ -342,8 +454,8 @@ export const Posts = createModel(posts, {
 		published: (query) => query.where(sql`"published_at" <= ${new Date().toISOString()}`),
 	},
 	callbacks: {
-		async beforeUpdate(values) {
-			return { ...values, updated_at: new Date().toISOString() };
+		async beforeDelete(row, ctx) {
+			if (row.federated_at !== null) return fail("Federated posts are retracted, not deleted");
 		},
 	},
 });
@@ -355,7 +467,7 @@ export const Articles = Posts.extend("article", {
 	callbacks: {
 		async afterCommit(event, ctx) {
 			if (event.operation === "create") {
-				await ctx.get(Jobs).enqueue(jobs.webmentions.send, { postId: event.row.id });
+				await ctx.require(Jobs).enqueue(jobs.webmentions.send, { postId: event.row.id });
 			}
 		},
 	},
@@ -370,11 +482,14 @@ export const Likes = Posts.extend("like", {});
 - A sub-model has every scope and method of its base. Declaring one with a name the base
   already uses is a type error, so a name means the same query on every model sharing it.
 - Callbacks stack: the base's run first, then the sub-model's, for each event. A base
-  `beforeUpdate` stamping `updated_at` therefore covers every post type.
+  `beforeDelete` refusing to delete a federated post therefore covers every post type. Timestamp
+  stamping stays with the table's own `timestamps` declaration, which data-table applies to
+  every write, model or not.
 - The base model reads and writes every row of the table, with the discriminator typed as the
   column's full union and only its own callbacks running. Writing through the sub-model is what
   runs the sub-model's callbacks: a base can hold lazily loaded sub-models that are not imported
-  yet, so it never dispatches to them.
+  yet, so it never dispatches to them. `posts.update(key)` on an article therefore runs no
+  article callback, and code that wants them writes through `articles`.
 - Sub-models register like any model (`articles: Articles`, or a loader), independently of the
   base; registering the base is needed only where something uses it directly.
 
@@ -473,8 +588,11 @@ let article = await ctx.models.articles.whereMeta("slug", slug).first();
 let spanish = ctx.models.articles.whereMeta("locale", "es").whereMeta("tags", inList(["remix"]));
 ```
 
-- It matches only the latest row of each single-valued key, so a superseded value never
-  matches; for a list field it matches any item.
+- It matches any row under the key, for a list field any item. Writes prune a key's older
+  rows right after inserting the new one, so a superseded value is matchable only in the window
+  between those two statements; matching the latest row alone would need a correlated subquery
+  ordered by `updated_at` that no index serves, and reads still resolve each key to its latest
+  row, so a row matched through a stale value comes back with the current one.
 - Equality and `inList` are served by an index on `(key, value)`, which blog already has.
 - Ordering by a meta value is out of scope: a value that lists sort or page by belongs in a
   column, where keyset pagination can seek on it.
@@ -539,10 +657,13 @@ createJobDispatcher({
   Members are bound lazily on first access, so an invocation that touches no model binds none.
 - `models.bind(context, host?)` binds the whole registry outside a host, the way a model's own
   `bind` does, for scripts, seeds and tests.
-- `ctx.models.transaction(async (models) => { ... })` binds every model to the transaction and
-  shares one `afterCommit` queue across them.
-- The registry keys are lowercase plural (`users`, `posts`): they name bound instances, and match
-  the table names. `ctx.models` is the property, because `ctx.data` reads as form or loader data.
+- `ctx.models.transaction(async (models) => { ... })` opens a unit of work: every model in
+  `models` is bound to its scope and shares one `afterCommit` queue, as described under
+  [Units of work](#units-of-work).
+- The registry keys are lowercase plural (`users`, `posts`, `articles`): they name bound
+  instances. `ctx.models` is the property, because `ctx.data` reads as form or loader data; the
+  middleware is generic over the property name, since the router types `ctx.<property>` from the
+  middleware's declared effect and throws at runtime on a name the context already has.
 - `@sdxc/data-model/router` covers MCP; there is no `@sdxc/data-model/mcp` entry point.
 
 ### Loading models on demand
@@ -586,7 +707,7 @@ whether an entry is lazy or not, and an entry can move between the two without t
 - Inside `ctx.models.transaction(async (models) => { ... })` the proxy binds the loaded model to
   the transaction.
 - Model modules import tables, never other models, so loading one never pulls in another; a
-  callback that needs a second model reads the registry with `ctx.get(Models)`.
+  callback that needs a second model reads `ctx.models`, bound to the same scope.
 - On Workers the bundle still contains every model. What the loader defers is module
   evaluation, which keeps a model's top-level work, such as building a search definition, off
   invocations that never use it.
@@ -619,6 +740,8 @@ export const ArticleFactory = defineFactory(Articles, {
 ```
 
 ```typescript
+import { systemSeed } from "@sdxc/random";
+
 const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
 
 describe(`articles (SAMPLE_SEED=${SEED})`, () => {
@@ -656,10 +779,14 @@ describe(`articles (SAMPLE_SEED=${SEED})`, () => {
 ### Package boundaries
 
 - The package ships no tables, schemas or migrations; the app declares tables and passes them in.
-- It depends on `remix` (data-table and router types) and `@sdxc/result`; `@sdxc/jobs` is a
-  peer of the `./jobs` entry point only, and `@sdxc/sample` of the `./testing` entry point only. Logging is whatever the app attaches in the middleware.
-- Everything it returns for querying is a data-table `Query`, so `@sdxc/pagination` and
-  `@sdxc/search` need no changes and take no dependency on it.
+- It depends on `remix` (data-table and router types), `@sdxc/result` and `@sdxc/validate`,
+  whose `ValidationError` every write answers; `@sdxc/jobs` is a peer of the `./jobs` entry
+  point only, and `@sdxc/sample` of the `./testing` entry point only. Logging is whatever the
+  app attaches in the middleware.
+- Everything it returns for querying is a data-table `Query`, or the structural query `from()`
+  was given, so `@sdxc/search` needs no change and neither package takes a dependency on it.
+  `@sdxc/pagination` gains one guard, `byKeyset` refusing a query that already orders, which
+  stands on its own.
 
 ## Usage Examples
 
@@ -708,7 +835,7 @@ export const Articles = createModel(articles, {
 
 		async afterCommit(event, ctx) {
 			if (event.operation === "update" && event.changed.includes("published_at")) {
-				await ctx.get(Jobs).enqueue(jobs.notifySubscribers, { articleId: event.row.id });
+				await ctx.require(Jobs).enqueue(jobs.notifySubscribers, { articleId: event.row.id });
 			}
 		},
 	},
@@ -730,7 +857,7 @@ export const Users = createModel(users, {
 
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx.get(Mail).send({ to: event.row.email, template: "welcome" });
+			await ctx.require(Mail).send({ to: event.row.email, template: "welcome" });
 		},
 	},
 });
@@ -766,7 +893,7 @@ export const router = createRouter({
 ```
 
 `modelsMiddleware` runs after the middleware that publish the database and the services the
-callbacks read, so its function and every `ctx.get(...)` in a callback find their values.
+callbacks read, so its function and every `ctx.require(...)` in a callback find their values.
 
 ### Listing with pagination
 
@@ -815,6 +942,10 @@ router.map(routes.search, async (ctx) => {
 	return ctx.render(<SearchResults page={page.data} parsed={parsed.data} />);
 });
 ```
+
+`from()` takes the `SearchQuery` as the structural query it is. `published` is callable on it
+because it only adds a `where`; a scope that eager-loads or groups is absent from the wrapped
+search's type, and `page.data.items` are the search's decoded rows.
 
 ### Creating from a form
 
@@ -871,9 +1002,10 @@ router.map(routes.signup, async (ctx) => {
 });
 ```
 
-The welcome mail from `Users`' `afterCommit` is queued during the transaction and sent once it
-commits. Had the article failed, the transaction would roll back and the mail would be dropped
-along with the user.
+The welcome mail from `Users`' `afterCommit` is queued during the unit of work and sent once
+the callback resolves with a success. Had the article failed, the returned `Failure` would abort
+the scope and drop the mail, on every adapter; on the sqlite adapter the user row would roll
+back too, while on D1 it stays written, which is the compensating delete the caller decides on.
 
 ### In a job
 
@@ -895,7 +1027,7 @@ export default async function notifySubscribers(ctx: JobContext<{ articleId: str
 	if (article === null) ctx.exit("Article no longer exists");
 
 	let subscribers = await ctx.models.users.active().where({ subscribed: true }).all();
-	await ctx.get(Mail).sendMany(subscribers.map((user) => digestFor(user, article)));
+	await ctx.require(Mail).sendMany(subscribers.map((user) => digestFor(user, article)));
 }
 ```
 
@@ -992,8 +1124,16 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 
 ### Negative
 
-- **Wrapped queries** - scope chaining depends on every data-table `Query` method returning a
-  new `Query`. A data-table release that changes this breaks chaining until the wrapper adapts.
+- **Wrapped queries** - scope chaining is a proxy over `Query`, which keeps private state and
+  clones with `new Query`. A data-table release that changes either breaks chaining until the
+  wrapper adapts, and scopes are limited to the methods that keep the query's type fixed.
+- **Every write reads first** - the row a write returns, `event.before`, `event.changed` and a
+  constraint's `WHERE` cost one `SELECT` before the statement, and on D1 that read is not atomic
+  with the write.
+- **`from()` narrows scopes** - a search query is structural, so only scopes built from `where`,
+  `orderBy`, `limit` and `offset` chain onto it, and its rows are the search's, not the model's.
+- **Base writes skip sub-model callbacks** - `posts.update(key)` on an article runs the base's
+  callbacks only; code that wants the article's writes through `articles`.
 - **Deferred queries** - a query from a lazily loaded model is a recording until it runs, so the
   rare caller that needs a real `Query` in hand awaits `load()` first, and custom methods are
   limited to returning promises or model queries.
@@ -1002,8 +1142,10 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
   between the two statements can briefly show old and new items together.
 - **Two write paths** - model writes run callbacks and query-built bulk writes do not. The
   distinction has to be learned, as with Rails' `update_all`.
-- **D1 weakens `afterCommit`** - without interactive transactions, it runs per write, so a
-  multi-step D1 mutation can dispatch a job for a step a later failure leaves orphaned.
+- **Atomicity is the adapter's** - a unit of work defers side effects on every adapter but
+  rolls writes back only where the database has a transaction, which neither Cloudflare adapter
+  does. A multi-step D1 or sqlstorage mutation that fails midway keeps its earlier writes, and
+  the caller compensates; what the scope guarantees is that no job or mail goes out for them.
 - **Another layer** - a reader following a write now looks at the table hooks and the model
   callbacks.
 
@@ -1020,16 +1162,25 @@ cleanup over thousands of rows wants. When each row needs its callbacks, iterate
 **Priority:** High
 
 1. Write the acceptance tests first: binding, scopes chaining into `Pagination.byOffset`, each
-   callback's ordering, `afterCommit` flush and drop on `@sdxc/data-table-sqlstorage`, and the
-   per-write fallback on D1.
-2. Back database tests with `@sdxc/cloudflare-mocks/sqlite`.
+   callback's ordering with the table's own hooks, `afterCommit` flush on success and drop on a
+   throw and on a returned `Failure`, a nested scope joining its parent, and a constraint error
+   answering a `ValidationError`.
+2. Run them on the sqlite adapter with real `BEGIN`/`COMMIT` for the rollback assertions, and
+   again on `@sdxc/data-table-d1` over `@sdxc/cloudflare-mocks` and on sqlstorage in the Workers
+   pool for the degraded contract: events still drop, earlier writes stay, nothing asks
+   sqlstorage for a transaction.
+3. Pin the scope typing with type tests: a scope calling `with()` or `select()` fails to
+   type-check, a helper generic over `AnyModel` resolves `find` and `query`, and `CreateValues`
+   requires a non-null column and accepts a nullable one omitted.
 
 ### Phase 2: Core
 
 1. `createModel`, `bind`, scope wrapping, CRUD with callbacks, `ModelContext`.
 2. `createModels`, lazy registry binding, `transaction`.
 3. `constraints` and `extend` sub-models, ported against blog's `posts` types.
-4. `metaTable`, `field.*`, `withMeta` and `whereMeta`, ported against blog's `post_meta`,
+4. `byKeyset` in `@sdxc/pagination` fails on a query that already orders, read from the query's
+   snapshot, so an ordering scope cannot silently break seeking.
+5. `metaTable`, `field.*`, `withMeta` and `whereMeta`, ported against blog's `post_meta`,
    including a D1 test that fails the prune statement and asserts reads stay correct.
 
 ### Phase 3: Hosts
@@ -1094,14 +1245,14 @@ and eager loading execute themselves, so a middleware would run for `users.find(
 a paged listing unless the model wrapped every execution path. Each need it would serve already
 has a home:
 
-| Need                                       | Where it lives                                                             |
-| ------------------------------------------ | -------------------------------------------------------------------------- |
-| Work before a write, querying other models | `validate` and `before*` callbacks, which receive `ctx.db` and `ctx.get()` |
-| A filter every read applies (soft deletes) | A `defaultScope` option, applied in `query()`, added when a port needs it  |
-| Per-tenant isolation                       | The tenant's database, bound by the models middleware                      |
-| Authorization                              | The route, job or tool boundary that receives the traffic                  |
-| Logging or timing every query              | The database adapter, or the host's own middleware                         |
-| Caching a read                             | A custom method that consults the cache first                              |
+| Need                                       | Where it lives                                                              |
+| ------------------------------------------ | --------------------------------------------------------------------------- |
+| Work before a write, querying other models | `validate` and `before*` callbacks, which receive `ctx.db` and `ctx.models` |
+| A filter every read applies (soft deletes) | A `defaultScope` option, applied in `query()`, added when a port needs it   |
+| Per-tenant isolation                       | The tenant's database, bound by the models middleware                       |
+| Authorization                              | The route, job or tool boundary that receives the traffic                   |
+| Logging or timing every query              | The database adapter, or the host's own middleware                          |
+| Caching a read                             | A custom method that consults the cache first                               |
 
 A middleware that queries other models would also trigger theirs, which needs ordering rules
 and recursion guards on top.
@@ -1128,3 +1279,8 @@ and recursion guards on top.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
+- The AGENTS.md rule stating `db.transaction()` is atomic on `@sdxc/data-table-sqlstorage`
+  predates the adapter refusing transactions and is corrected alongside this package.
+- An atomic multi-statement meta write on D1 would need the driver to expose D1's `batch()`,
+  which runs its statements in one transaction; data-table's driver interface has no such
+  operation today, so insert-then-prune stays the D1 strategy until it does.
