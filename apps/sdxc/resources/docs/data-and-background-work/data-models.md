@@ -34,7 +34,7 @@ write made through the model:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { fail } from "remix/data-table";
 
 import { users } from "~/database/schema";
@@ -254,7 +254,7 @@ fields over it; rows then carry a decoded `meta` object:
 
 ```typescript {% title="app/models/articles.ts" %}
 import { field } from "@sdxc/data-model";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import { postMeta } from "~/database/schema";
 

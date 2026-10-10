@@ -35,7 +35,7 @@ and keeps the UUID recoverable. Bind each prefix once, in one module:
 import type { TypeID } from "@sdxc/typeid";
 
 import { typeid } from "@sdxc/typeid";
-import { generateUUIDv7 } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 export const postId = typeid("post");
 export const authorId = typeid("author");
@@ -43,15 +43,15 @@ export const authorId = typeid("author");
 export type PostId = TypeID<"post">;
 
 export function newPostId(): PostId {
-	return postId(generateUUIDv7());
+	return postId(generateUUID());
 }
 ```
 
 The prefix is a literal type, so a function asking for a `TypeID<"post">` refuses an author
-id at compile time. `generateUUIDv7` puts a millisecond timestamp in front of the random
-bits, and a TypeID sorts the way its UUID does, so new ids arrive in creation order and a
-listing can page on the id alone. Use `generateUUID` instead for an id you hand to someone
-outside the system, since a v7 value reveals when it was minted.
+id at compile time. A UUID from `@sdxc/uuid/v7` puts a millisecond timestamp in front of the
+random bits, and a TypeID sorts the way its UUID does, so new ids arrive in creation order and
+a listing can page on the id alone. Import `generateUUID` from `@sdxc/uuid/v4` instead for an
+id you hand to someone outside the system, since a v7 value reveals when it was minted.
 
 ## Keep UUIDs typed below the edge
 

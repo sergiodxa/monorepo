@@ -179,7 +179,7 @@ private key:
 import { redirect, text } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
