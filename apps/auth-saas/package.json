@@ -21,6 +21,7 @@
 		"@sdxc/captcha": "workspace:*",
 		"@sdxc/cloudflare-pricing": "workspace:*",
 		"@sdxc/crypto": "workspace:*",
+		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
 		"@sdxc/doh": "workspace:*",
