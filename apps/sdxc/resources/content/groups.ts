@@ -99,6 +99,7 @@ export const PACKAGE_GROUPS: PackageGroupDefinition[] = [
 	{
 		title: "Data & storage",
 		packages: [
+			"data-model",
 			"cache",
 			"workers-cache",
 			"search",

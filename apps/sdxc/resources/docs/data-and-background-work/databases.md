@@ -177,6 +177,8 @@ whichever built-in SQLite module the runtime has.
 
 - [Wire the router: middleware, context and services](/docs/building-remix-apps/wire-the-router)
   — how `ctx.db` sits among the rest of the middleware.
+- [Model your tables](/docs/data-and-background-work/data-models) — wrap these tables in
+  models with scopes, callbacks and `ctx.models`.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) — run a nightly sweep
   against the same database.
 - [Cache on Cloudflare Workers](/docs/data-and-background-work/cache-on-workers) — keep a hot
