@@ -26,13 +26,14 @@ import type { DatabaseDriver } from "remix/data-table";
 
 import { randomToken, timingSafeEqual } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { renewalAt, subscribe, unsubscribe } from "@sdxc/websub/subscriber";
 import { env } from "cloudflare:workers";
 import { DurableObject } from "cloudflare:workers";
-import { Database, gt } from "remix/data-table";
+import { Database } from "remix/data-table";
 
 import type { FeedStatus, SelectFeed, SelectItem } from "~/database/feed-schema";
+import type { FeedModels } from "~/database/models/feed";
 import type { HubAdvert } from "~/database/refresh";
 
 import { features, flagsFor } from "~/app/lib/flags";
@@ -40,23 +41,20 @@ import { logger } from "~/bootstrap/logger";
 import { forgetHead, publishHead } from "~/database/feed-head";
 import { FEED_MIGRATIONS, FEED_JOURNAL } from "~/database/feed-migrations";
 import {
-	feed as feedTable,
 	FEED_RETENTION,
-	HUB_COOLOFF_MS,
 	HUB_DAILY_NOTIFICATION_LIMIT,
 	HUB_LEASE_SECONDS,
 	HUB_MISS_LIMIT,
 	HUB_NOTIFICATION_WINDOW_MS,
 	HUB_POLL_FLOOR_MS,
 	hubCoalesced,
-	items,
 	POLL_CEILING_MS,
 	POLL_FLOOR_MS,
 	pollIntervalFor,
 	PURGE_GRACE_MS,
-	subscribers,
 } from "~/database/feed-schema";
 import { runMigrations } from "~/database/migrations";
+import { feedModels } from "~/database/models/feed";
 import { FEED_ROW_ID, pollFeed, pruneItems } from "~/database/refresh";
 import { deleteFeed, renameFeed, retireFeed, reviveFeed, stampActivity } from "~/database/registry";
 import routes from "~/routes/web";
@@ -209,6 +207,13 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	/** The feed's own SQLite, built once because the storage handle outlives every call. */
 	#db: Database;
 
+	/**
+	 * The feed's models, bound once to the object's database. Each write commits on its own:
+	 * the object's SQLite coalesces every write of one turn into one commit, so writes that
+	 * must land together share a turn with no network I/O between them.
+	 */
+	#models: FeedModels;
+
 	/** Kept because a purge empties the storage this instance is still answering from. */
 	#adapter: DatabaseDriver;
 
@@ -229,6 +234,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * written timestamp binds and sorts as the integer every column of this schema holds.
 		 */
 		this.#db = new Database(adapter, { now: () => Date.now() });
+		this.#models = feedModels.bind({ db: this.#db });
 
 		/**
 		 * A constructor cannot await, and the runtime holds every request behind this, so
@@ -266,10 +272,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * the common case, and it costs a read rather than a write to the table every
 		 * unsubscribe then has to check.
 		 */
-		let joined = await this.#db.find(subscribers, { user_id: userId });
-		if (joined === null) {
-			await this.#db.create(subscribers, { user_id: userId, subscribed_at: now });
-		}
+		await this.#models.subscribers.follow(userId, now);
 
 		/**
 		 * A feed serving out its grace period is followed again, so the purge it was waiting
@@ -277,7 +280,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 * still here, which is what the grace period was for.
 		 */
 		if (feed.purge_at !== null) {
-			await this.#db.update(feedTable, { id: FEED_ROW_ID }, { purge_at: null, updated_at: now });
+			unwrap(await this.#models.feed.change({ purge_at: null, updated_at: now }));
 			await reviveFeed(this.#feedId());
 		}
 
@@ -303,7 +306,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * @param userId - The reader leaving, as their OIDC subject.
 	 */
 	async unsubscribe(userId: string): Promise<FeedStore.UnsubscribeResult> {
-		await this.#db.delete(subscribers, { user_id: userId });
+		await this.#models.subscribers.unfollow(userId);
 
 		let feed = await this.#feedRow();
 
@@ -336,11 +339,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 			await this.#clearHub("none", null, now);
 		}
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{ purge_at: now + PURGE_GRACE_MS, updated_at: now },
-		);
+		unwrap(await this.#models.feed.change({ purge_at: now + PURGE_GRACE_MS, updated_at: now }));
 		await retireFeed(this.#feedId());
 		await this.ctx.storage.setAlarm(now + PURGE_GRACE_MS);
 
@@ -478,11 +477,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * @param limit - The most items to answer with, capped at what one page carries.
 	 */
 	async getItemsAfter(cursor: number, limit: number = SYNC_PAGE): Promise<FeedStore.ItemsPage> {
-		let rows = await this.#db.findMany(items, {
-			where: gt("revision", cursor),
-			orderBy: [["revision", "asc"]],
-			limit: Math.min(Math.max(1, limit), SYNC_PAGE),
-		});
+		let rows = await this.#models.items.pageAfter(cursor, Math.min(Math.max(1, limit), SYNC_PAGE));
 
 		/**
 		 * The measured rate rides along with the page a subscriber was already reading, so a
@@ -556,9 +551,8 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		feedUrl: string,
 		now: number,
 	): Promise<{ ok: true; feed: SelectFeed } | { ok: false; reason: FeedStore.SubscribeFailure }> {
-		let created = await this.#db.create(
-			feedTable,
-			{
+		let created = unwrap(
+			await this.#models.feed.create({
 				id: FEED_ROW_ID,
 				feed_url: feedUrl,
 				title: feedUrl,
@@ -566,14 +560,13 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 				failure_count: 0,
 				created_at: now,
 				updated_at: now,
-			},
-			{ returnRow: true },
+			}),
 		);
 
 		let outcome = await pollFeed(this.#db, { now });
 
 		if (outcome.status !== "ok" && outcome.status !== "not_modified") {
-			await this.#db.delete(feedTable, { id: FEED_ROW_ID });
+			await this.#models.feed.query().where({ id: FEED_ROW_ID }).delete();
 			return { ok: false, reason: outcome.status === "parse_error" ? "not-found" : "unreachable" };
 		}
 
@@ -612,7 +605,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	async #purge(): Promise<void> {
 		let feedId = this.#feedId();
 		let feed = await this.#feedRow();
-		let held = await this.#db.count(items);
+		let held = await this.#models.items.query().count();
 
 		await forgetHead(feedId);
 		await this.ctx.storage.deleteAll();
@@ -643,7 +636,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 
 	/** The feed's single row, or `null` for an object nothing has subscribed to yet. */
 	async #feedRow(): Promise<SelectFeed | null> {
-		return await this.#db.find(feedTable, { id: FEED_ROW_ID });
+		return await this.#models.feed.current();
 	}
 
 	/**
@@ -653,20 +646,12 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * asks it and none of them wants the number: the index answers this from its first row.
 	 */
 	async #hasSubscribers(): Promise<boolean> {
-		let [row] = await this.#db.query(subscribers).select("user_id").limit(1).all();
-		return row !== undefined;
+		return await this.#models.subscribers.anyone();
 	}
 
 	/** The newest items, for a subscriber to start from. */
 	async #newest(limit: number): Promise<FeedStore.Item[]> {
-		let rows = await this.#db.findMany(items, {
-			orderBy: [
-				["published_at", "desc"],
-				["id", "desc"],
-			],
-			limit,
-		});
-
+		let rows = await this.#models.items.newest(limit);
 		return rows.map(itemOf);
 	}
 
@@ -802,17 +787,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		 */
 		let lease = verification.leaseSeconds > 0 ? verification.leaseSeconds : HUB_LEASE_SECONDS;
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{
-				hub_state: "active",
-				hub_lease_until: now + lease * 1000,
-				hub_lease_seconds: lease,
-				hub_misses: 0,
-				updated_at: now,
-			},
-		);
+		unwrap(await this.#models.feed.activateHub(lease, now));
 
 		await this.#armNext(await this.#untilNextPoll(await this.#feedRow(), now));
 
@@ -838,15 +813,13 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 				: 0;
 		let notifications = counted + 1;
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{
+		unwrap(
+			await this.#models.feed.change({
 				hub_notified_at: now,
 				hub_notifications: notifications,
 				hub_misses: 0,
 				updated_at: now,
-			},
+			}),
 		);
 
 		/**
@@ -940,19 +913,8 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		let secret = randomToken({ bytes: HUB_SECRET_BYTES });
 		let token = randomToken({ bytes: HUB_TOKEN_BYTES });
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{
-				hub_url: hub.url,
-				hub_topic: hub.topic,
-				hub_state: "pending",
-				hub_secret: secret,
-				hub_token: token,
-				hub_lease_until: null,
-				hub_misses: 0,
-				updated_at: now,
-			},
+		unwrap(
+			await this.#models.feed.awaitHub({ url: hub.url, topic: hub.topic, secret, token }, now),
 		);
 
 		if (!renewal) {
@@ -1021,10 +983,11 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	async #leaveHub(feed: SelectFeed, reason: string): Promise<void> {
 		if (feed.hub_url === null || feed.hub_topic === null || feed.hub_token === null) return;
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{ hub_leaving_token: feed.hub_token, hub_leaving_topic: feed.hub_topic },
+		unwrap(
+			await this.#models.feed.change({
+				hub_leaving_token: feed.hub_token,
+				hub_leaving_topic: feed.hub_topic,
+			}),
 		);
 
 		await unsubscribe({
@@ -1088,11 +1051,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		let misses = before.hub_misses + 1;
 
 		if (misses < HUB_MISS_LIMIT) {
-			await this.#db.update(
-				feedTable,
-				{ id: FEED_ROW_ID },
-				{ hub_misses: misses, updated_at: now },
-			);
+			unwrap(await this.#models.feed.change({ hub_misses: misses, updated_at: now }));
 			return;
 		}
 
@@ -1108,21 +1067,7 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 	 * @param now - Epoch milliseconds the change is written at.
 	 */
 	async #clearHub(state: "none" | "failed", hubUrl: string | null, now: number): Promise<void> {
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{
-				hub_url: hubUrl,
-				hub_topic: null,
-				hub_state: state,
-				hub_secret: null,
-				hub_token: null,
-				hub_lease_until: state === "failed" ? now + HUB_COOLOFF_MS : null,
-				hub_lease_seconds: null,
-				hub_misses: 0,
-				updated_at: now,
-			},
-		);
+		unwrap(await this.#models.feed.clearHub(state, hubUrl, now));
 	}
 
 	/**
@@ -1141,10 +1086,12 @@ export class FeedDO extends DurableObject<Cloudflare.Env> {
 		if (feed.hub_leaving_token === null || feed.hub_leaving_topic !== topic) return "refused";
 		if (!timingSafeEqual(feed.hub_leaving_token, token)) return "refused";
 
-		await this.#db.update(
-			feedTable,
-			{ id: FEED_ROW_ID },
-			{ hub_leaving_token: null, hub_leaving_topic: null, updated_at: Date.now() },
+		unwrap(
+			await this.#models.feed.change({
+				hub_leaving_token: null,
+				hub_leaving_topic: null,
+				updated_at: Date.now(),
+			}),
 		);
 
 		return "confirmed";
