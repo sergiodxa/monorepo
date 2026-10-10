@@ -203,7 +203,7 @@ export function Marker(handle: Handle<Marker.Props>) {
  * @example
  * <Marker.Icon><CheckIcon /></Marker.Icon>
  * @example
- * <Marker.Icon aria-hidden={false}>
+ * <Marker.Icon aria-hidden="false">
  * 	<Spinner size="sm" aria-label={t("status.generating")} />
  * </Marker.Icon>
  */

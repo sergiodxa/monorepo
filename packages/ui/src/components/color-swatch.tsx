@@ -35,7 +35,7 @@ const DEFAULT_SIZE: ColorSwatch.Size = "md";
 /**
  * Applied through {@link attrs} so the host is hidden from assistive
  * technology by default, since composed uses supply their own accessible
- * name; pass `aria-hidden={false}` and `aria-label` to render standalone.
+ * name; pass `aria-hidden="false"` and `aria-label` to render standalone.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 

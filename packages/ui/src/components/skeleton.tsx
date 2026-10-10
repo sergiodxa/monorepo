@@ -17,7 +17,7 @@ import { attrs } from "remix/component";
 /**
  * Default `aria-hidden` value applied through {@link attrs}, keeping a
  * placeholder out of the accessibility tree unless a consumer sets
- * `aria-hidden={false}` to expose a loading label to assistive tech.
+ * `aria-hidden="false"` to expose a loading label to assistive tech.
  */
 const DEFAULT_ARIA_HIDDEN = "true";
 
@@ -45,7 +45,7 @@ export namespace Skeleton {
  * @example
  * <Skeleton style={{ blockSize: "2.5rem", inlineSize: "2.5rem", borderRadius: "9999px" }} />
  * @example
- * <Skeleton aria-hidden={false} aria-label={t("status.loadingProfile")} />
+ * <Skeleton aria-hidden="false" aria-label={t("status.loadingProfile")} />
  */
 export function Skeleton(handle: Handle<Skeleton.Props>) {
 	return () => {
