@@ -15,19 +15,14 @@ import type { Database } from "remix/data-table";
 import { zonedParts } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
-import { and, isNull } from "remix/data-table";
 
+import type { UserModels } from "~/database/models/user";
 import type { SelectPushSubscription, SelectSettings } from "~/database/schema";
 
 import { NotificationEmail, textFrom, translationFor } from "~/app/push/copy";
 import { unsubscribeUrl } from "~/app/push/unsubscribe";
 import { vapidKeys } from "~/app/push/vapid";
-import {
-	feeds,
-	NOTIFY_FEED_TITLES,
-	PUSH_FAILURE_LIMIT,
-	pushSubscriptions,
-} from "~/database/schema";
+import { NOTIFY_FEED_TITLES, PUSH_FAILURE_LIMIT } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
@@ -117,7 +112,8 @@ export interface NotifyOutcome {
 
 /** Everything the notification step reads, so nothing here reaches for a request. */
 export interface NotifyInput {
-	db: Database;
+	/** The reader's models, whose devices are written as each push service answers. */
+	models: UserModels;
 	/** The settings row as the writes before this left it. */
 	row: SelectSettings;
 	/** Epoch milliseconds the gap and the quiet window are measured at. */
@@ -253,13 +249,13 @@ export function pushOutcome(code: WebPushErrorCode | null): PushOutcome {
  * and every cursor has advanced, so a delivery that fails costs nothing but itself and the
  * alarm re-arms unaffected.
  *
- * @param input - The database, the settings row, the clock and the mailer.
- * @example let outcome = await notify({ db, row, now: Date.now(), mayEmail, mailer, record });
+ * @param input - The models, the settings row, the clock and the mailer.
+ * @example let outcome = await notify({ models, row, now: Date.now(), mayEmail, mailer, record });
  */
 export async function notify(input: NotifyInput): Promise<NotifyOutcome> {
-	let { db, row, now, record } = input;
+	let { models, row, now, record } = input;
 
-	let summary = await summarize(db, row.last_notified_at ?? 0);
+	let summary = await summarize(models.posts.db, row.last_notified_at ?? 0);
 	let channels = await enabledChannels(input);
 
 	let outcome: NotifyOutcome = {
@@ -318,10 +314,10 @@ export async function notify(input: NotifyInput): Promise<NotifyOutcome> {
  * without anything having to go back and clear a switch.
  */
 async function enabledChannels(input: NotifyInput): Promise<Channel[]> {
-	let { db, row, mayEmail, mailer, appUrl } = input;
+	let { models, row, mayEmail, mailer, appUrl } = input;
 	let channels: Channel[] = [];
 
-	if (row.notify_push && (await db.count(pushSubscriptions, {})) > 0) channels.push("push");
+	if (row.notify_push && (await models.devices.query().count()) > 0) channels.push("push");
 
 	if (row.notify_email && mayEmail && mailer !== null && appUrl !== null && row.email) {
 		channels.push("email");
@@ -368,7 +364,7 @@ async function deliverPush(
 
 	/** One sender for the round, so devices on one push service share one VAPID signature. */
 	let push = new WebPush({ vapid: keys });
-	let devices = await input.db.findMany(pushSubscriptions, {});
+	let devices = await input.models.devices.query().all();
 	let accepted = 0;
 
 	await Promise.all(
@@ -393,7 +389,7 @@ async function deliverTo(
 	device: SelectPushSubscription,
 	summary: Summary,
 ): Promise<boolean> {
-	let { db, now, record } = input;
+	let { models, now, record } = input;
 	let started = Date.now();
 
 	let { t } = translationFor(device.locale);
@@ -438,18 +434,14 @@ async function deliverTo(
 	});
 
 	if (outcome === "accepted") {
-		await db.update(
-			pushSubscriptions,
-			{ id: device.id },
-			{ last_delivered_at: now, failure_count: 0 },
-		);
+		await models.devices.update({ id: device.id }, { last_delivered_at: now, failure_count: 0 });
 
 		return true;
 	}
 
 	if (outcome === "expired") {
 		record("alarm", { event: "push.expired", status, failureCount: device.failure_count });
-		await db.delete(pushSubscriptions, { id: device.id });
+		await models.devices.delete({ id: device.id });
 
 		return false;
 	}
@@ -468,12 +460,12 @@ async function deliverTo(
 
 	if (failures >= PUSH_FAILURE_LIMIT) {
 		record("alarm", { event: "push.expired", status, failureCount: failures });
-		await db.delete(pushSubscriptions, { id: device.id });
+		await models.devices.delete({ id: device.id });
 
 		return false;
 	}
 
-	await db.update(pushSubscriptions, { id: device.id }, { failure_count: failures });
+	await models.devices.update({ id: device.id }, { failure_count: failures });
 
 	return false;
 }
@@ -516,14 +508,4 @@ async function deliverEmail(input: NotifyInput, summary: Summary): Promise<boole
 	});
 
 	return ok;
-}
-
-/**
- * Every subscription the reader opted in and still follows, which is what a settings page
- * counts to tell somebody whether they have configured anything at all.
- *
- * @param db - The reader's own database.
- */
-export async function countNotifiedFeeds(db: Database): Promise<number> {
-	return await db.count(feeds, { where: and({ notify: true }, isNull("unfollowed_at")) });
 }

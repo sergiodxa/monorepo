@@ -26,10 +26,8 @@ import { Mailer } from "@sdxc/mail";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import { decodeCursor, encodeCursor, InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { DataTableAdapter } from "@sdxc/rate-limit";
-import { isFailure } from "@sdxc/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
-import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
 import { DurableObject, env } from "cloudflare:workers";
 import {
 	and,
@@ -47,6 +45,7 @@ import {
 import type { ReaderClaims } from "~/app/authz/access";
 import type { LimitRefusal, Tier, TierLimits, TierSource } from "~/app/lib/entitlement";
 import type { FeedStore } from "~/database/feed-do";
+import type { UserModels } from "~/database/models/user";
 import type {
 	AgentScope,
 	RuleAction,
@@ -100,7 +99,8 @@ import { logger } from "~/bootstrap/logger";
 import { feedStore } from "~/database/feed-do";
 import { KEYS_PER_BULK_READ, readHeads } from "~/database/feed-head";
 import { runMigrations } from "~/database/migrations";
-import { countNotifiedFeeds, notify } from "~/database/notify";
+import { userModels } from "~/database/models/user";
+import { notify } from "~/database/notify";
 import { chunked, insertChunkSize } from "~/database/refresh";
 import { registerFeed } from "~/database/registry";
 import {
@@ -110,35 +110,23 @@ import {
 	DEFAULT_THEME,
 	DEFAULT_VELOCITY,
 	feedItems,
-	feeds,
-	folders,
-	itemTags,
 	PIN_LIMIT,
-	pushSubscriptions,
 	QUIET_FROM_HOUR,
 	QUIET_TO_HOUR,
 	RULE_PREVIEW_POSTS,
-	rules,
 	SAVED_SEARCH_LIMIT,
 	SEARCH_NAME_LENGTH,
 	READING_FACES,
 	SEARCH_READ_STATES,
-	searches,
-	settings,
 	THEMES,
 	TAG_LIMIT,
-	tags,
 	TAGS_PER_ITEM,
 	TOKEN_LIFETIME_MS,
 	TOKEN_LIMIT,
 	TOKEN_USE_STAMP_MS,
-	tokens,
 	VELOCITIES,
 	VELOCITY_WINDOW_MS,
 } from "~/database/schema";
-
-/** The row `settings` holds, which the `CHECK` on its primary key keeps to exactly one. */
-const SETTINGS_ID = 1;
 
 /**
  * Feeds one request synchronizes behind the page it has already answered. A reader back
@@ -1126,6 +1114,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	#db: Database;
 
 	/**
+	 * The models over that database, bound once for the same reason. Unbatched writes rely
+	 * on the object coalescing every write of one turn into one commit, so a step that must
+	 * land with another never awaits network I/O between the two.
+	 */
+	#models: UserModels;
+
+	/**
 	 * Opens the reader's database and applies whatever schema has not run yet.
 	 *
 	 * @param ctx - The object's storage, alarms and concurrency gate.
@@ -1142,6 +1137,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * column of this schema holds.
 		 */
 		this.#db = new Database(adapter, { now: () => Date.now() });
+		this.#models = userModels.bind({ db: this.#db });
 
 		/**
 		 * A constructor cannot await, and the runtime holds every request behind this, so
@@ -1165,7 +1161,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * alarm has no ID token to read it off.
 		 */
 		if (email && email !== row.email) {
-			row = await this.#db.update(settings, { id: SETTINGS_ID }, { email });
+			row = await this.#models.settings.write({ email });
 		}
 
 		/**
@@ -1179,7 +1175,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** The reader's preferences, or `null` for an object no sign-in has reached yet. */
 	async getSettings(): Promise<UserStore.Settings | null> {
-		let row = await this.#db.find(settings, { id: SETTINGS_ID });
+		let row = await this.#models.settings.current();
 		return row === null ? null : toSettings(row);
 	}
 
@@ -1195,14 +1191,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async setPresentation(input: { theme: string; face: string }): Promise<UserStore.Presentation> {
 		await this.#settingsRow();
 
-		let updated = await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{
-				theme: isTheme(input.theme) ? input.theme : DEFAULT_THEME,
-				reading_face: isReadingFace(input.face) ? input.face : DEFAULT_READING_FACE,
-			},
-		);
+		let updated = await this.#models.settings.write({
+			theme: isTheme(input.theme) ? input.theme : DEFAULT_THEME,
+			reading_face: isReadingFace(input.face) ? input.face : DEFAULT_READING_FACE,
+		});
 
 		return toPresentation(updated);
 	}
@@ -1254,16 +1246,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 						Date.now(),
 					);
 
-		await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{
-				tier: decided.tier,
-				tier_source: snapshot.source,
-				grace_until: decided.graceUntil,
-				tier_checked_at: snapshot.readAt,
-			},
-		);
+		await this.#models.settings.write({
+			tier: decided.tier,
+			tier_source: snapshot.source,
+			grace_until: decided.graceUntil,
+			tier_checked_at: snapshot.readAt,
+		});
 
 		this.#record("job", {
 			event: "user.tier",
@@ -1299,9 +1287,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let tier = storedTier(row);
 
 		let [followed, saved, posts] = await Promise.all([
-			this.#db.count(feeds, { where: isNull("unfollowed_at") }),
-			this.#db.count(feedItems, { where: notNull("saved_at") }),
-			this.#db.count(feedItems),
+			this.#models.subscriptions.followed().count(),
+			this.#models.posts.saved().count(),
+			this.#models.posts.query().count(),
 		]);
 
 		let measured: UserStore.Limit[] = [
@@ -1329,7 +1317,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * empty subscription list without reading a page of feeds to count it.
 	 */
 	async countFeeds(): Promise<number> {
-		return await this.#db.count(feeds, { where: isNull("unfollowed_at") });
+		return await this.#models.subscriptions.followed().count();
 	}
 
 	/**
@@ -1388,18 +1376,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * a reader let pile up costs the same as clearing one they are caught up on.
 	 */
 	async markFeedRead(feedId: string): Promise<number> {
-		let unread = and({ feed_id: feedId }, isNull("read_at"));
-
 		/**
 		 * Counted before the write rather than read back from it. What a write reports is
 		 * rows of storage, and a post lives in the table and in whichever partial indexes it
 		 * qualifies for, so marking one read writes several rows. The reader is told about
 		 * posts.
 		 */
-		let posts = await this.#db.count(feedItems, { where: unread });
+		let posts = await this.#models.posts.ofSubscription(feedId).unread().count();
 		if (posts === 0) return 0;
 
-		await this.#db.updateMany(feedItems, { read_at: Date.now() }, { where: unread });
+		await this.#models.posts.ofSubscription(feedId).unread().update({ read_at: Date.now() });
 
 		return posts;
 	}
@@ -1407,10 +1393,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	/** Marks every unread post read across every feed, and reports how many that was. */
 	async markAllRead(): Promise<number> {
 		/** Counted rather than read back from the write, for the reason one feed's sweep is. */
-		let posts = await this.#db.count(feedItems, { where: isNull("read_at") });
+		let posts = await this.#models.posts.unread().count();
 		if (posts === 0) return 0;
 
-		await this.#db.updateMany(feedItems, { read_at: Date.now() }, { where: isNull("read_at") });
+		await this.#models.posts.unread().update({ read_at: Date.now() });
 
 		return posts;
 	}
@@ -1419,13 +1405,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async exportFeeds(): Promise<UserStore.FeedExport[]> {
 		// The whole list, unpaged: a document holding some of a reader's subscriptions is
 		// one they would restore an incomplete library from.
-		let rows = await this.#db.findMany(feeds, {
-			where: isNull("unfollowed_at"),
-			orderBy: [
-				["created_at", "desc"],
-				["id", "desc"],
-			],
-		});
+		let rows = await this.#models.subscriptions
+			.followed()
+			.orderBy("created_at", "desc")
+			.orderBy("id", "desc")
+			.all();
 
 		/** The folder names read once for the whole list, since a document groups by them. */
 		let byId = new Map((await this.listFolders()).map((folder) => [folder.id, folder.title]));
@@ -1444,18 +1428,16 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader would restore an incomplete library from.
 	 */
 	async exportSaved(): Promise<UserStore.SavedExport[]> {
-		let rows = await this.#db.findMany(feedItems, {
-			where: notNull("saved_at"),
-			orderBy: [
-				["saved_at", "desc"],
-				["id", "desc"],
-			],
-		});
+		let rows = await this.#models.posts
+			.saved()
+			.orderBy("saved_at", "desc")
+			.orderBy("id", "desc")
+			.all();
 
 		let ids = [...new Set(rows.map((row) => row.feed_id))];
 		let sources = new Map<string, { title: string; feedUrl: string }>();
 		for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
-			for (let feed of await this.#db.findMany(feeds, { where: inList("id", batch) })) {
+			for (let feed of await this.#models.subscriptions.query().where(inList("id", batch)).all()) {
 				sources.set(feed.id, { title: feed.title, feedUrl: feed.feed_url });
 			}
 		}
@@ -1500,7 +1482,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 */
 		let opened = new Map<string, Promise<SelectFolder>>();
 		let folderByTitle = (title: string): Promise<SelectFolder> => {
-			let pending = opened.get(title) ?? this.#folderByTitle(title);
+			let pending = opened.get(title) ?? this.#models.folders.findOrCreate(title);
 			opened.set(title, pending);
 			return pending;
 		};
@@ -1543,13 +1525,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			 * Bytes are what SQLite compares, which the index carries; the reader's own
 			 * language orders what comes back, where the request's locale is.
 			 */
-			this.#db.findMany(feeds, {
-				where: isNull("unfollowed_at"),
-				orderBy: [
-					["title", "asc"],
-					["id", "asc"],
-				],
-			}),
+			this.#models.subscriptions.followed().orderBy("title", "asc").orderBy("id", "asc").all(),
 			this.#unreadCounts(),
 			/**
 			 * The whole folder list read once and carried onto the rows, so a rail drawn under
@@ -1571,12 +1547,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One followed feed, or `null` when this reader does not follow it. */
 	async getFeed(feedId: string): Promise<UserStore.FeedSummary | null> {
-		let row = await this.#db.find(feeds, { id: feedId });
+		let row = await this.#models.subscriptions.find({ id: feedId });
 		if (row === null || row.unfollowed_at !== null) return null;
 
-		let unread = await this.#db.count(feedItems, {
-			where: and({ feed_id: feedId }, isNull("read_at")),
-		});
+		let unread = await this.#models.posts.ofSubscription(feedId).unread().count();
 
 		return toFeedSummary(row, unread, await this.#folderOf(row));
 	}
@@ -1639,7 +1613,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (!joined.ok) return { ok: false, reason: joined.reason, feedId: null };
 
 		let now = Date.now();
-		let subscriptionId = TypeID.fromUUID("feed", generateUUID()).toString();
 
 		/**
 		 * Written straight through rather than inside a transaction scope. A Durable Object
@@ -1647,10 +1620,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * turn makes is coalesced into one atomic commit and discarded together if the turn
 		 * throws.
 		 */
-		let created = await this.#db.create(
-			feeds,
-			{
-				id: subscriptionId,
+		let created = unwrap(
+			await this.#models.subscriptions.create({
 				feed_id: feedId,
 				feed_url: joined.feed.feedUrl,
 				site_url: joined.feed.siteUrl,
@@ -1666,9 +1637,9 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				 * returned, which is what the rail's quiet group is derived from.
 				 */
 				posts_per_day: joined.feed.postsPerDay,
-			},
-			{ returnRow: true },
+			}),
 		);
+		let subscriptionId = created.id;
 
 		/**
 		 * The first page of a new subscription is an arrival like any other, so a rule the
@@ -1702,7 +1673,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * which may lag; this one came back from the feed itself, in the same answer as the
 		 * items, and names exactly what that object had decided by the time it answered.
 		 */
-		await this.#db.update(feeds, { id: subscriptionId }, { cursor: joined.head });
+		await this.#models.subscriptions.write(subscriptionId, { cursor: joined.head });
 
 		await this.#stampRefreshed(now);
 
@@ -1720,7 +1691,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let checked = await userStore(subject).checkFeedNow(feedId);
 	 */
 	async checkFeedNow(feedId: string): Promise<UserStore.CheckResult> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		/**
@@ -1764,7 +1735,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * the feed's name, marked as no longer followed so every list leaves it out.
 	 */
 	async unfollowFeed(feedId: string): Promise<boolean> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null) return false;
 
 		let dropped = and({ feed_id: feedId }, isNull("saved_at"));
@@ -1780,14 +1751,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * longer see or reason about, and one they would be astonished to find working again
 		 * if they followed the feed a second time.
 		 */
-		await this.#db.deleteMany(rules, { where: { feed_id: feedId } });
+		await this.#models.rules.ofSubscription(feedId).delete();
 
-		let saved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
+		let saved = await this.#models.posts.ofSubscription(feedId).count();
 
 		if (saved > 0) {
-			await this.#db.update(feeds, { id: feedId }, { unfollowed_at: Date.now() });
+			await this.#models.subscriptions.write(feedId, { unfollowed_at: Date.now() });
 		} else {
-			await this.#db.delete(feeds, { id: feedId });
+			unwrap(await this.#models.subscriptions.delete({ id: feedId }));
 		}
 
 		/**
@@ -1831,7 +1802,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * from the stamp puts a returning reader back on the cadence they pay for before
 		 * the wake that would otherwise have run on a backed-off one.
 		 */
-		await this.#db.update(settings, { id: SETTINGS_ID }, { last_opened_at: started });
+		await this.#models.settings.write({ last_opened_at: started });
 		await this.#reschedule({ ...row, last_opened_at: started });
 
 		/**
@@ -1951,15 +1922,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async setVelocity(feedId: string, velocity: string): Promise<UserStore.VelocityResult> {
 		if (!isVelocity(velocity)) return { ok: false, reason: "invalid-velocity" };
 
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null) return { ok: false, reason: "not-following" };
 
-		let updated = await this.#db.update(feeds, { id: feedId }, { velocity });
+		let updated = await this.#models.subscriptions.write(feedId, { velocity });
 		await this.#ageOut(updated, Date.now());
 
-		let unread = await this.#db.count(feedItems, {
-			where: and({ feed_id: feedId }, isNull("read_at")),
-		});
+		let unread = await this.#models.posts.ofSubscription(feedId).unread().count();
 
 		return { ok: true, feed: toFeedSummary(updated, unread, await this.#folderOf(updated)) };
 	}
@@ -1976,7 +1945,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader does not hold.
 	 */
 	async openPost(itemId: string): Promise<UserStore.OpenedPost | null> {
-		let row = await this.#db.find(feedItems, { id: itemId });
+		let row = await this.#models.posts.find({ id: itemId });
 		if (row === null) return null;
 
 		let [labels, feed, extraction] = await Promise.all([
@@ -2012,7 +1981,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param saved - Whether to keep it; `false` puts it back under whatever rule would take it.
 	 */
 	async saveItem(itemId: string, saved = true): Promise<UserStore.SaveResult> {
-		let item = await this.#db.find(feedItems, { id: itemId });
+		let item = await this.#models.posts.find({ id: itemId });
 		if (item === null) return { ok: false, reason: "not-found" };
 
 		if (!saved) {
@@ -2021,7 +1990,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			 * to whatever rule would have taken it, unlabelled.
 			 */
 			await this.#forgetTags([itemId]);
-			await this.#db.update(feedItems, { id: itemId }, { saved_at: null });
+			unwrap(await this.#models.posts.update({ id: itemId }, { saved_at: null }));
 			await this.#dropIfSpent(item.feed_id);
 
 			return { ok: true, saved: false };
@@ -2033,13 +2002,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (!keeping.allowed) return { ok: false, reason: SWITCHED_OFF };
 
 		let tier = storedTier(await this.#settingsRow());
-		let kept = await this.#db.count(feedItems, { where: notNull("saved_at") });
+		let kept = await this.#models.posts.saved().count();
 
 		if (!withinLimit(tier, "saved", kept)) {
 			return { ok: false, reason: "full", limit: limitRefusal(tier, "saved", kept) };
 		}
 
-		await this.#db.update(feedItems, { id: itemId }, { saved_at: Date.now() });
+		unwrap(await this.#models.posts.update({ id: itemId }, { saved_at: Date.now() }));
 
 		return { ok: true, saved: true };
 	}
@@ -2149,13 +2118,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * folder list is shorter than the feeds under it.
 	 */
 	async listFolders(): Promise<UserStore.Folder[]> {
-		let rows = await this.#db.findMany(folders, { orderBy: [["title", "asc"]] });
+		let rows = await this.#models.folders.alphabetical();
 		return rows.map(toFolder);
 	}
 
 	/** One folder, or `null` when the reader has none by that id. */
 	async getFolder(folderId: string): Promise<UserStore.Folder | null> {
-		let row = await this.#db.find(folders, { id: folderId });
+		let row = await this.#models.folders.find({ id: folderId });
 		return row === null ? null : toFolder(row);
 	}
 
@@ -2169,10 +2138,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let name = title.trim();
 		if (name.length === 0) return { ok: false, reason: "invalid-title" };
 
-		let taken = await this.#db.findOne(folders, { where: { title: name } });
+		let taken = await this.#models.folders.byTitle(name);
 		if (taken !== null) return { ok: false, reason: "duplicate-title" };
 
-		let folder = toFolder(await this.#createFolder(name));
+		let folder = toFolder(unwrap(await this.#models.folders.create({ title: name })));
 		this.#record("job", { event: "user.folder", action: "create", folderId: folder.id });
 
 		return { ok: true, folder };
@@ -2188,13 +2157,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let name = title.trim();
 		if (name.length === 0) return { ok: false, reason: "invalid-title" };
 
-		let folder = await this.#db.find(folders, { id: folderId });
+		let folder = await this.#models.folders.find({ id: folderId });
 		if (folder === null) return { ok: false, reason: "not-found" };
 
-		let taken = await this.#db.findOne(folders, { where: { title: name } });
+		let taken = await this.#models.folders.byTitle(name);
 		if (taken !== null && taken.id !== folderId) return { ok: false, reason: "duplicate-title" };
 
-		let renamed = await this.#db.update(folders, { id: folderId }, { title: name });
+		let renamed = unwrap(await this.#models.folders.update({ id: folderId }, { title: name }));
 		this.#record("job", { event: "user.folder", action: "rename", folderId });
 
 		return { ok: true, folder: toFolder(renamed) };
@@ -2207,14 +2176,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param folderId - The folder to delete.
 	 */
 	async deleteFolder(folderId: string): Promise<UserStore.FolderRemoval> {
-		let folder = await this.#db.find(folders, { id: folderId });
+		let folder = await this.#models.folders.find({ id: folderId });
 		if (folder === null) return { ok: false, reason: "not-found" };
 
-		let filed = await this.#db.count(feeds, { where: { folder_id: folderId } });
+		let filed = await this.#models.subscriptions.inFolder(folderId).count();
 
-		await this.#db.updateMany(feeds, { folder_id: null }, { where: { folder_id: folderId } });
-		await this.#db.updateMany(feedItems, { folder_id: null }, { where: { folder_id: folderId } });
-		await this.#db.delete(folders, { id: folderId });
+		/** The folder's subscriptions and their posts come back unfiled in the same turn. */
+		unwrap(await this.#models.folders.delete({ id: folderId }));
 
 		this.#record("job", {
 			event: "user.folder",
@@ -2242,7 +2210,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param target - The folder, the name to file it under, or `null` to unfile it.
 	 */
 	async fileFeed(feedId: string, target: UserStore.FolderTarget): Promise<UserStore.FileResult> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null || feed.unfollowed_at !== null) {
 			return { ok: false, reason: "not-following" };
 		}
@@ -2250,14 +2218,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let folder: SelectFolder | null = null;
 
 		if (target !== null && "folderId" in target) {
-			folder = await this.#db.find(folders, { id: target.folderId });
+			folder = await this.#models.folders.find({ id: target.folderId });
 			if (folder === null) return { ok: false, reason: "not-found" };
 		}
 
 		if (target !== null && "title" in target) {
 			let name = target.title.trim();
 			if (name.length === 0) return { ok: false, reason: "invalid-title" };
-			folder = await this.#folderByTitle(name);
+			folder = await this.#models.folders.findOrCreate(name);
 		}
 
 		let folderId = folder === null ? null : folder.id;
@@ -2267,10 +2235,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * feed read is: what a write reports is rows of storage, and a post lives in the
 		 * table and in whichever partial indexes it qualifies for.
 		 */
-		let moved = await this.#db.count(feedItems, { where: { feed_id: feedId } });
+		let moved = await this.#models.posts.ofSubscription(feedId).count();
 
-		await this.#db.update(feeds, { id: feedId }, { folder_id: folderId });
-		await this.#db.updateMany(feedItems, { folder_id: folderId }, { where: { feed_id: feedId } });
+		await this.#models.subscriptions.write(feedId, { folder_id: folderId });
+		await this.#models.posts.ofSubscription(feedId).update({ folder_id: folderId });
 
 		this.#record("job", {
 			event: "user.folder",
@@ -2290,13 +2258,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * on how many there may be is what keeps that one read.
 	 */
 	async listTags(): Promise<UserStore.Tag[]> {
-		let rows = await this.#db.findMany(tags, { orderBy: [["name", "asc"]] });
+		let rows = await this.#models.tags.alphabetical();
 		return rows.map(toTag);
 	}
 
 	/** One label, or `null` when the reader has none by that id. */
 	async getTag(tagId: string): Promise<UserStore.Tag | null> {
-		let row = await this.#db.find(tags, { id: tagId });
+		let row = await this.#models.tags.find({ id: tagId });
 		return row === null ? null : toTag(row);
 	}
 
@@ -2316,16 +2284,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let folded = foldTagName(name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
 
-		let taken = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		let taken = await this.#models.tags.bySlug(folded.slug);
 		if (taken !== null) return { ok: false, reason: "tag-exists", tag: toTag(taken) };
 
-		let held = await this.#db.count(tags);
+		let held = await this.#models.tags.query().count();
 		if (held >= TAG_LIMIT) {
 			this.#record("job", { event: "user.tag.refused", reason: "tag-limit", tags: held });
 			return { ok: false, reason: "tag-limit" };
 		}
 
-		let tag = toTag(await this.#createTag(folded.name, folded.slug));
+		let tag = toTag(
+			unwrap(await this.#models.tags.create({ name: folded.name, slug: folded.slug })),
+		);
 		this.#record("job", { event: "user.tag.created", tagId: tag.id, tags: held + 1, items: 0 });
 
 		return { ok: true, tag };
@@ -2349,25 +2319,23 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let folded = foldTagName(name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
 
-		let tag = await this.#db.find(tags, { id: tagId });
+		let tag = await this.#models.tags.find({ id: tagId });
 		if (tag === null) return { ok: false, reason: "not-found" };
 
-		let taken = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		let taken = await this.#models.tags.bySlug(folded.slug);
 		if (taken !== null && taken.id !== tagId) {
 			return { ok: false, reason: "tag-exists", tag: toTag(taken) };
 		}
 
-		let renamed = await this.#db.update(
-			tags,
-			{ id: tagId },
-			{ name: folded.name, slug: folded.slug },
+		let renamed = unwrap(
+			await this.#models.tags.update({ id: tagId }, { name: folded.name, slug: folded.slug }),
 		);
 
-		let items = await this.#db.count(itemTags, { where: { tag_id: tagId } });
+		let items = await this.#models.itemTags.ofTag(tagId).count();
 		this.#record("job", {
 			event: "user.tag.renamed",
 			tagId,
-			tags: await this.#db.count(tags),
+			tags: await this.#models.tags.query().count(),
 			items,
 		});
 
@@ -2381,18 +2349,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tagId - The label to delete.
 	 */
 	async deleteTag(tagId: string): Promise<UserStore.TagRemoval> {
-		let tag = await this.#db.find(tags, { id: tagId });
+		let tag = await this.#models.tags.find({ id: tagId });
 		if (tag === null) return { ok: false, reason: "not-found" };
 
-		let items = await this.#db.count(itemTags, { where: { tag_id: tagId } });
+		let items = await this.#models.itemTags.ofTag(tagId).count();
 
-		await this.#db.deleteMany(itemTags, { where: { tag_id: tagId } });
-		await this.#db.delete(tags, { id: tagId });
+		/** The label comes off every post in the same turn it goes. */
+		unwrap(await this.#models.tags.delete({ id: tagId }));
 
 		this.#record("job", {
 			event: "user.tag.deleted",
 			tagId,
-			tags: await this.#db.count(tags),
+			tags: await this.#models.tags.query().count(),
 			items,
 		});
 
@@ -2422,14 +2390,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let labelling = await this.#decide(abilities.tags.label);
 		if (!labelling.allowed) return { ok: false, reason: refusalReason(labelling) };
 
-		let item = await this.#db.find(feedItems, { id: itemId });
+		let item = await this.#models.posts.find({ id: itemId });
 		if (item === null) return { ok: false, reason: "not-found" };
 
 		let tag = await this.#resolveTag(target, create);
 		if (!tag.ok) return tag;
 
-		let carried = await this.#db.count(itemTags, { where: { item_id: itemId } });
-		let already = await this.#db.find(itemTags, { tag_id: tag.tag.id, item_id: itemId });
+		let carried = await this.#models.itemTags.onPost(itemId).count();
+		let already = await this.#models.itemTags.find({ tag_id: tag.tag.id, item_id: itemId });
 
 		if (already === null && carried >= TAGS_PER_ITEM) {
 			this.#record("job", { event: "user.tag.refused", reason: "post-tag-limit", tags: carried });
@@ -2461,12 +2429,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * so this is written once whether or not the label was already there.
 		 */
 		if (already === null) {
-			await this.#db.create(itemTags, {
-				tag_id: tag.tag.id,
-				item_id: itemId,
-				published_at: item.published_at,
-				created_at: Date.now(),
-			});
+			unwrap(
+				await this.#models.itemTags.create({
+					tag_id: tag.tag.id,
+					item_id: itemId,
+					published_at: item.published_at,
+				}),
+			);
 		}
 
 		this.#record("job", {
@@ -2488,10 +2457,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tagId - The label to remove.
 	 */
 	async untagItem(itemId: string, tagId: string): Promise<{ ok: true; removed: boolean }> {
-		let row = await this.#db.find(itemTags, { tag_id: tagId, item_id: itemId });
+		let row = await this.#models.itemTags.find({ tag_id: tagId, item_id: itemId });
 		if (row === null) return { ok: true, removed: false };
 
-		await this.#db.delete(itemTags, { tag_id: tagId, item_id: itemId });
+		unwrap(await this.#models.itemTags.delete({ tag_id: tagId, item_id: itemId }));
 
 		return { ok: true, removed: true };
 	}
@@ -2567,19 +2536,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * readers who are not searching.
 	 */
 	async listSearches(): Promise<UserStore.SavedSearch[]> {
-		let rows = await this.#db.findMany(searches, {
-			orderBy: [
-				["name", "asc"],
-				["id", "asc"],
-			],
-		});
+		let rows = await this.#models.searches.alphabetical();
 
 		return rows.map(toSavedSearch);
 	}
 
 	/** One saved search, or `null` when the reader has none by that id. */
 	async getSearch(searchId: string): Promise<UserStore.SavedSearch | null> {
-		let row = await this.#db.find(searches, { id: searchId });
+		let row = await this.#models.searches.find({ id: searchId });
 		return row === null ? null : toSavedSearch(row);
 	}
 
@@ -2596,22 +2560,19 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let checked = await this.#searchDraft(draft);
 		if (!checked.ok) return checked;
 
-		let held = await this.#db.count(searches);
+		let held = await this.#models.searches.query().count();
 		if (held >= SAVED_SEARCH_LIMIT) {
 			this.#record("job", { event: "user.search.refused", reason: "full", searches: held });
 			return { ok: false, reason: "full", limit: SAVED_SEARCH_LIMIT };
 		}
 
-		let written = await this.#db.create(
-			searches,
-			{
-				id: TypeID.fromUUID("search", generateUUID()).toString(),
+		let written = unwrap(
+			await this.#models.searches.create({
 				name: checked.name,
 				query: checked.query,
 				read_state: checked.readState,
 				feed_id: checked.feedId,
-			},
-			{ returnRow: true },
+			}),
 		);
 
 		this.#record("job", {
@@ -2636,21 +2597,22 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		searchId: string,
 		draft: UserStore.SavedSearchDraft,
 	): Promise<UserStore.SavedSearchResult> {
-		let stored = await this.#db.find(searches, { id: searchId });
+		let stored = await this.#models.searches.find({ id: searchId });
 		if (stored === null) return { ok: false, reason: "not-found" };
 
 		let checked = await this.#searchDraft(draft, searchId);
 		if (!checked.ok) return checked;
 
-		let written = await this.#db.update(
-			searches,
-			{ id: searchId },
-			{
-				name: checked.name,
-				query: checked.query,
-				read_state: checked.readState,
-				feed_id: checked.feedId,
-			},
+		let written = unwrap(
+			await this.#models.searches.update(
+				{ id: searchId },
+				{
+					name: checked.name,
+					query: checked.query,
+					read_state: checked.readState,
+					feed_id: checked.feedId,
+				},
+			),
 		);
 
 		return { ok: true, search: toSavedSearch(written) };
@@ -2658,10 +2620,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** Forgets a saved search, which deletes no post and changes no list but the rail's. */
 	async deleteSearch(searchId: string): Promise<UserStore.SavedSearchRemoval> {
-		let stored = await this.#db.find(searches, { id: searchId });
+		let stored = await this.#models.searches.find({ id: searchId });
 		if (stored === null) return { ok: false, reason: "not-found" };
 
-		await this.#db.delete(searches, { id: searchId });
+		unwrap(await this.#models.searches.delete({ id: searchId }));
 		this.#record("job", { event: "user.search.forgotten", searchId });
 
 		return { ok: true };
@@ -2701,11 +2663,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let parsed = parseQuery(draft.query);
 		if (isFailure(parsed) || parsed.data === null) return { ok: false, reason: "invalid-query" };
 
-		let taken = await this.#db.findOne(searches, { where: { name } });
+		let taken = await this.#models.searches.byName(name);
 		if (taken !== null && taken.id !== excluding) return { ok: false, reason: "duplicate-name" };
 
 		let feedId = draft.feedId;
-		if (feedId !== null && (await this.#db.find(feeds, { id: feedId })) === null) {
+		if (feedId !== null && (await this.#models.subscriptions.find({ id: feedId })) === null) {
 			feedId = null;
 		}
 
@@ -2719,19 +2681,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	}
 
 	async listRules(): Promise<UserStore.Rule[]> {
-		let rows = await this.#db.findMany(rules, {
-			orderBy: [
-				["created_at", "asc"],
-				["id", "asc"],
-			],
-		});
+		let rows = await this.#models.rules.inOrder();
 
 		return rows.map(toRule);
 	}
 
 	/** One rule, or `null` when the reader has none by that id. */
 	async getRule(ruleId: string): Promise<UserStore.Rule | null> {
-		let row = await this.#db.find(rules, { id: ruleId });
+		let row = await this.#models.rules.find({ id: ruleId });
 		return row === null ? null : toRule(row);
 	}
 
@@ -2754,24 +2711,21 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let checked = await this.#ruleDraft(draft);
 		if (!checked.ok) return checked;
 
-		let held = await this.#db.count(rules);
+		let held = await this.#models.rules.query().count();
 		if (!withinLimit(tier, "rules", held)) {
 			this.#record("job", { event: "user.rule.refused", reason: "rule-limit", rules: held });
 			return { ok: false, reason: "rule-limit", limit: limitRefusal(tier, "rules", held) };
 		}
 
-		let written = await this.#db.create(
-			rules,
-			{
-				id: TypeID.fromUUID("rule", generateUUID()).toString(),
+		let written = unwrap(
+			await this.#models.rules.create({
 				feed_id: checked.feedId,
 				field: checked.field,
 				value: checked.value,
 				action: checked.action,
 				matches: 0,
 				last_matched_at: null,
-			},
-			{ returnRow: true },
+			}),
 		);
 
 		this.#record("job", {
@@ -2798,21 +2752,22 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let writing = await this.#decide(abilities.rules.write);
 		if (!writing.allowed) return { ok: false, reason: refusalReason(writing) };
 
-		let existing = await this.#db.find(rules, { id: ruleId });
+		let existing = await this.#models.rules.find({ id: ruleId });
 		if (existing === null) return { ok: false, reason: "not-found" };
 
 		let checked = await this.#ruleDraft(draft);
 		if (!checked.ok) return checked;
 
-		let written = await this.#db.update(
-			rules,
-			{ id: ruleId },
-			{
-				feed_id: checked.feedId,
-				field: checked.field,
-				value: checked.value,
-				action: checked.action,
-			},
+		let written = unwrap(
+			await this.#models.rules.update(
+				{ id: ruleId },
+				{
+					feed_id: checked.feedId,
+					field: checked.field,
+					value: checked.value,
+					action: checked.action,
+				},
+			),
 		);
 
 		return { ok: true, rule: toRule(written) };
@@ -2825,11 +2780,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param ruleId - The rule to delete.
 	 */
 	async deleteRule(ruleId: string): Promise<UserStore.RuleRemoval> {
-		let existing = await this.#db.find(rules, { id: ruleId });
+		let existing = await this.#models.rules.find({ id: ruleId });
 		if (existing === null) return { ok: false, reason: "not-found" };
 
-		await this.#db.delete(rules, { id: ruleId });
-		this.#record("job", { event: "user.rule.deleted", ruleId, rules: await this.#db.count(rules) });
+		unwrap(await this.#models.rules.delete({ id: ruleId }));
+		this.#record("job", {
+			event: "user.rule.deleted",
+			ruleId,
+			rules: await this.#models.rules.query().count(),
+		});
 
 		return { ok: true };
 	}
@@ -2946,11 +2905,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			return { ok: false, reason: "not-entitled" };
 		}
 
-		let updated = await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{ notify_push: input.push, notify_email: input.email },
-		);
+		let updated = await this.#models.settings.write({
+			notify_push: input.push,
+			notify_email: input.email,
+		});
 
 		return { ok: true, notifications: await this.#notifications(updated) };
 	}
@@ -2960,7 +2918,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * Idempotent, so a mailbox provider repeating its one-click request changes nothing more.
 	 */
 	async stopEmail(): Promise<void> {
-		await this.#db.update(settings, { id: SETTINGS_ID }, { notify_email: false });
+		await this.#models.settings.write({ notify_email: false });
 	}
 
 	/**
@@ -2974,15 +2932,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async setQuietHours(input: UserStore.QuietHours): Promise<UserStore.Notifications> {
 		await this.#settingsRow();
 
-		let updated = await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{
-				quiet_hours: input.enabled,
-				quiet_from: clampHour(input.from, QUIET_FROM_HOUR),
-				quiet_to: clampHour(input.to, QUIET_TO_HOUR),
-			},
-		);
+		let updated = await this.#models.settings.write({
+			quiet_hours: input.enabled,
+			quiet_from: clampHour(input.from, QUIET_FROM_HOUR),
+			quiet_to: clampHour(input.to, QUIET_TO_HOUR),
+		});
 
 		return await this.#notifications(updated);
 	}
@@ -2999,7 +2953,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let row = await this.#settingsRow();
 		if (!isValidTimeZone(timeZone) || timeZone === row.time_zone) return false;
 
-		await this.#db.update(settings, { id: SETTINGS_ID }, { time_zone: timeZone });
+		await this.#models.settings.write({ time_zone: timeZone });
 
 		return true;
 	}
@@ -3017,30 +2971,15 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async registerDevice(input: UserStore.DeviceRegistration): Promise<{ devices: number }> {
 		await this.#settingsRow();
 
-		let existing = await this.#db.findOne(pushSubscriptions, {
-			where: { endpoint: input.endpoint },
-		});
-
-		let values = {
+		await this.#models.devices.register(input.endpoint, {
 			p256dh: input.p256dh,
 			auth: input.auth,
 			vapid_key: input.vapidKey ?? null,
 			user_agent: input.userAgent ?? null,
 			locale: input.locale ?? "en",
-			failure_count: 0,
-		};
+		});
 
-		if (existing === null) {
-			await this.#db.create(pushSubscriptions, {
-				id: TypeID.fromUUID("push", generateUUID()).toString(),
-				endpoint: input.endpoint,
-				...values,
-			});
-		} else {
-			await this.#db.update(pushSubscriptions, { id: existing.id }, values);
-		}
-
-		let devices = await this.#db.count(pushSubscriptions, {});
+		let devices = await this.#models.devices.query().count();
 		this.#record("job", { event: "push.registered", devices });
 
 		return { devices };
@@ -3048,7 +2987,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** Forgets one device, which is how a reader revokes a browser they no longer read in. */
 	async forgetDevice(deviceId: string): Promise<boolean> {
-		return await this.#db.delete(pushSubscriptions, { id: deviceId });
+		return isSuccess(await this.#models.devices.delete({ id: deviceId }));
 	}
 
 	/**
@@ -3060,10 +2999,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param wanted - Whether to hear about it.
 	 */
 	async setFeedNotify(feedId: string, wanted = true): Promise<UserStore.NotifyFeedResult> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null) return { ok: false, reason: "not-following" };
 
-		let updated = await this.#db.update(feeds, { id: feedId }, { notify: wanted });
+		let updated = await this.#models.subscriptions.write(feedId, { notify: wanted });
 
 		return { ok: true, notify: updated.notify };
 	}
@@ -3080,10 +3019,12 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		feedId: string,
 		wanted = true,
 	): Promise<UserStore.LinkParametersResult> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null) return { ok: false, reason: "not-following" };
 
-		let updated = await this.#db.update(feeds, { id: feedId }, { keep_link_parameters: wanted });
+		let updated = await this.#models.subscriptions.write(feedId, {
+			keep_link_parameters: wanted,
+		});
 
 		return { ok: true, keepLinkParameters: updated.keep_link_parameters };
 	}
@@ -3096,14 +3037,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param pinned - Whether to pin it; `false` puts it back among the rest.
 	 */
 	async pinFeed(feedId: string, pinned = true): Promise<UserStore.PinResult> {
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null || feed.unfollowed_at !== null) {
 			return { ok: false, reason: "not-following" };
 		}
 
 		if (!pinned) {
 			if (feed.pinned_at !== null) {
-				await this.#db.update(feeds, { id: feedId }, { pinned_at: null });
+				await this.#models.subscriptions.write(feedId, { pinned_at: null });
 			}
 
 			this.#record("job", { event: "user.feed.pinned", feedId: feed.feed_id, pinned: false });
@@ -3113,13 +3054,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (feed.pinned_at !== null) return { ok: true, pinned: true };
 
-		let held = await this.#db.count(feeds, {
-			where: and(isNull("unfollowed_at"), notNull("pinned_at")),
-		});
+		let held = await this.#models.subscriptions.followed().pinned().count();
 
 		if (held >= PIN_LIMIT) return { ok: false, reason: "pin-limit", allowed: PIN_LIMIT };
 
-		await this.#db.update(feeds, { id: feedId }, { pinned_at: Date.now() });
+		await this.#models.subscriptions.write(feedId, { pinned_at: Date.now() });
 		this.#record("job", { event: "user.feed.pinned", feedId: feed.feed_id, pinned: true });
 
 		return { ok: true, pinned: true };
@@ -3136,15 +3075,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * which is the class of bug the keyset design exists to make impossible.
 	 */
 	async pinnedStrip(): Promise<UserStore.PinnedFeed[]> {
-		let pinned = await this.#db.findMany(feeds, {
-			where: and(isNull("unfollowed_at"), notNull("pinned_at")),
-			/** Pin order is an ordering the reader produced, which is what the timestamp is for. */
-			orderBy: [
-				["pinned_at", "asc"],
-				["id", "asc"],
-			],
-			limit: PIN_LIMIT,
-		});
+		/** Pin order is an ordering the reader produced, which is what the timestamp is for. */
+		let pinned = await this.#models.subscriptions
+			.followed()
+			.pinned()
+			.orderBy("pinned_at", "asc")
+			.orderBy("id", "asc")
+			.limit(PIN_LIMIT)
+			.all();
 
 		let strip: UserStore.PinnedFeed[] = [];
 
@@ -3184,19 +3122,18 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async recordPublishingRate(feedId: string, postsPerDay: number | null): Promise<void> {
 		if (postsPerDay === null) return;
 
-		let feed = await this.#db.find(feeds, { id: feedId });
+		let feed = await this.#models.subscriptions.find({ id: feedId });
 		if (feed === null || feed.posts_per_day === postsPerDay) return;
 
-		await this.#db.update(feeds, { id: feedId }, { posts_per_day: postsPerDay });
+		await this.#models.subscriptions.write(feedId, { posts_per_day: postsPerDay });
 	}
 
 	/** Marks one post read or unread. `false` when no such post is stored. */
 	async markRead(itemId: string, read = true): Promise<boolean> {
-		let written = await this.#db.updateMany(
-			feedItems,
-			{ read_at: read ? Date.now() : null },
-			{ where: { id: itemId } },
-		);
+		let written = await this.#models.posts
+			.query()
+			.where({ id: itemId })
+			.update({ read_at: read ? Date.now() : null });
 
 		return (written.affectedRows ?? 0) > 0;
 	}
@@ -3208,12 +3145,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * is a list they cannot revoke from.
 	 */
 	async listAgentTokens(): Promise<UserStore.AgentToken[]> {
-		let rows = await this.#db.findMany(tokens, {
-			orderBy: [
-				["created_at", "desc"],
-				["id", "desc"],
-			],
-		});
+		let rows = await this.#models.agentTokens.newestFirst();
 
 		return rows.map(toAgentToken);
 	}
@@ -3239,14 +3171,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		if (!isAgentScope(draft.scope)) return { ok: false, reason: "invalid-scope" };
 
-		let held = await this.#db.count(tokens, { where: isNull("revoked_at") });
+		let held = await this.#models.agentTokens.live().count();
 		if (held >= TOKEN_LIMIT) return { ok: false, reason: "token-limit", allowed: TOKEN_LIMIT };
 
 		let now = Date.now();
 
-		let row = await this.#db.create(
-			tokens,
-			{
+		let row = unwrap(
+			await this.#models.agentTokens.create({
 				id: draft.id,
 				name,
 				scope: draft.scope,
@@ -3255,8 +3186,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 				last_used_at: null,
 				expires_at: now + TOKEN_LIFETIME_MS,
 				revoked_at: null,
-			},
-			{ returnRow: true },
+			}),
 		);
 
 		return { ok: true, token: toAgentToken(row) };
@@ -3271,10 +3201,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tokenId - The row the reader asked to stop honouring.
 	 */
 	async revokeAgentToken(tokenId: string): Promise<UserStore.AgentTokenRemoval> {
-		let row = await this.#db.find(tokens, { id: tokenId });
+		let row = await this.#models.agentTokens.find({ id: tokenId });
 		if (row === null || row.revoked_at !== null) return { ok: false, reason: "not-found" };
 
-		await this.#db.update(tokens, { id: tokenId }, { revoked_at: Date.now() });
+		unwrap(await this.#models.agentTokens.update({ id: tokenId }, { revoked_at: Date.now() }));
 
 		return { ok: true };
 	}
@@ -3292,7 +3222,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let allowed = await userStore(subject).authorizeAgent(tokenId);
 	 */
 	async authorizeAgent(tokenId: string): Promise<UserStore.AgentAuthorization> {
-		let row = await this.#db.find(tokens, { id: tokenId });
+		let row = await this.#models.agentTokens.find({ id: tokenId });
 		if (row === null) return { ok: false, reason: "unknown-token" };
 		if (row.revoked_at !== null) return { ok: false, reason: "revoked" };
 
@@ -3307,7 +3237,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (!(await this.#withinDailyBudget(tokenId))) return { ok: false, reason: "budget" };
 
 		if (row.last_used_at === null || now - row.last_used_at >= TOKEN_USE_STAMP_MS) {
-			await this.#db.update(tokens, { id: tokenId }, { last_used_at: now });
+			unwrap(await this.#models.agentTokens.update({ id: tokenId }, { last_used_at: now }));
 		}
 
 		return { ok: true, scope, tier, may: agent };
@@ -3362,7 +3292,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		try {
 			if (due.catchUp) {
-				await this.#db.update(settings, { id: SETTINGS_ID }, { next_catch_up_at: null });
+				await this.#models.settings.write({ next_catch_up_at: null });
 				await this.synchronize(undefined, "scheduled");
 			}
 
@@ -3404,14 +3334,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param subject - The reader this object holds, for a caller that already knows it.
 	 */
 	async #settingsRow(subject: string = this.#subject()): Promise<SelectSettings> {
-		let stored = await this.#db.find(settings, { id: SETTINGS_ID });
-		if (stored !== null) return stored;
-
-		return await this.#db.create(
-			settings,
-			{ id: SETTINGS_ID, subject, last_refreshed_at: null },
-			{ returnRow: true },
-		);
+		return await this.#models.settings.provision(subject);
 	}
 
 	/**
@@ -3423,7 +3346,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	async #roomForFeed(): Promise<UserStore.Limit | null> {
 		let tier = storedTier(await this.#settingsRow());
-		let followed = await this.#db.count(feeds, { where: isNull("unfollowed_at") });
+		let followed = await this.#models.subscriptions.followed().count();
 
 		if (withinLimit(tier, "feeds", followed)) return null;
 
@@ -3490,7 +3413,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	async #stampRefreshed(now: number): Promise<void> {
 		await this.#settingsRow();
-		await this.#db.update(settings, { id: SETTINGS_ID }, { last_refreshed_at: now });
+		await this.#models.settings.write({ last_refreshed_at: now });
 	}
 
 	/**
@@ -3500,11 +3423,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * the wake a scheduled check was armed for and leave nothing to re-arm it.
 	 */
 	async #armCatchUp(): Promise<void> {
-		await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{ next_catch_up_at: Date.now() + CATCH_UP_MS },
-		);
+		await this.#models.settings.write({ next_catch_up_at: Date.now() + CATCH_UP_MS });
 
 		await this.#arm();
 	}
@@ -3541,14 +3460,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let now = Date.now();
 		let interval = checkIntervalFor(leasedTier(row, now), row.last_opened_at, now);
 
-		await this.#db.update(
-			settings,
-			{ id: SETTINGS_ID },
-			{
-				next_check_at: interval === null ? null : nextCheckAt(this.#subject(), interval, now),
-				next_sweep_at: interval === null ? null : (row.next_sweep_at ?? now + SWEEP_INTERVAL_MS),
-			},
-		);
+		await this.#models.settings.write({
+			next_check_at: interval === null ? null : nextCheckAt(this.#subject(), interval, now),
+			next_sweep_at: interval === null ? null : (row.next_sweep_at ?? now + SWEEP_INTERVAL_MS),
+		});
 
 		await this.#arm();
 	}
@@ -3604,8 +3519,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 */
 	async #notifications(row: SelectSettings): Promise<UserStore.Notifications> {
 		let [devices, opted, emailing] = await Promise.all([
-			this.#db.findMany(pushSubscriptions, { orderBy: [["created_at", "desc"]] }),
-			countNotifiedFeeds(this.#db),
+			this.#models.devices.newestFirst(),
+			this.#models.subscriptions.notified().count(),
 			this.#decide(abilities.digests.email, row),
 		]);
 
@@ -3636,7 +3551,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let row = await this.#settingsRow();
 
 		let outcome = await notify({
-			db: this.#db,
+			models: this.#models,
 			row,
 			now,
 			mayEmail: (await this.#decide(abilities.digests.email, row)).allowed,
@@ -3647,7 +3562,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		});
 
 		if (outcome.notified) {
-			await this.#db.update(settings, { id: SETTINGS_ID }, { last_notified_at: now });
+			await this.#models.settings.write({ last_notified_at: now });
 		}
 	}
 
@@ -3678,11 +3593,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let row = await this.#settingsRow();
 
 		if (row.next_sweep_at !== null) {
-			await this.#db.update(
-				settings,
-				{ id: SETTINGS_ID },
-				{ next_sweep_at: now + SWEEP_INTERVAL_MS },
-			);
+			await this.#models.settings.write({ next_sweep_at: now + SWEEP_INTERVAL_MS });
 		}
 
 		/**
@@ -3698,19 +3609,6 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			tier: swept.tier,
 			budget: swept.budget,
 		});
-	}
-
-	/**
-	 * The folder by that exact name, made when the reader has none by it.
-	 *
-	 * The upsert is what the unique title buys: filing by name is idempotent, so a document
-	 * naming one folder over twenty feeds creates it once and files twenty feeds into it.
-	 *
-	 * @param title - The name, already trimmed to what a rail would draw.
-	 */
-	async #folderByTitle(title: string): Promise<SelectFolder> {
-		let existing = await this.#db.findOne(folders, { where: { title } });
-		return existing ?? (await this.#createFolder(title));
 	}
 
 	/**
@@ -3750,31 +3648,24 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		| { ok: false; reason: Exclude<UserStore.TagFailure, "saved-full"> }
 	> {
 		if ("tagId" in target) {
-			let row = await this.#db.find(tags, { id: target.tagId });
+			let row = await this.#models.tags.find({ id: target.tagId });
 			return row === null ? { ok: false, reason: "not-found" } : { ok: true, tag: toTag(row) };
 		}
 
 		let folded = foldTagName(target.name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
 
-		let existing = await this.#db.findOne(tags, { where: { slug: folded.slug } });
+		let existing = await this.#models.tags.bySlug(folded.slug);
 		if (existing !== null) return { ok: true, tag: toTag(existing) };
 
 		if (!create) return { ok: false, reason: "not-found" };
 
-		let held = await this.#db.count(tags);
+		let held = await this.#models.tags.query().count();
 		if (held >= TAG_LIMIT) return { ok: false, reason: "tag-limit" };
 
-		return { ok: true, tag: toTag(await this.#createTag(folded.name, folded.slug)) };
-	}
+		let created = unwrap(await this.#models.tags.create({ name: folded.name, slug: folded.slug }));
 
-	/** Writes one label row, minting the id every join row and every URL holds it by. */
-	async #createTag(name: string, slug: string): Promise<SelectTag> {
-		return await this.#db.create(
-			tags,
-			{ id: TypeID.fromUUID("tag", generateUUID()).toString(), name, slug },
-			{ returnRow: true },
-		);
+		return { ok: true, tag: toTag(created) };
 	}
 
 	/**
@@ -3792,7 +3683,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (itemIds.length === 0) return;
 
 		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
-			await this.#db.deleteMany(itemTags, { where: inList("item_id", batch) });
+			await this.#models.itemTags.onPosts(batch).delete();
 		}
 	}
 
@@ -3810,7 +3701,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let held = new Map((await this.listTags()).map((tag) => [tag.id, tag]));
 
 		for (let batch of chunked([...itemIds], IDS_PER_LOOKUP)) {
-			let rows = await this.#db.findMany(itemTags, { where: inList("item_id", batch) });
+			let rows = await this.#models.itemTags.onPosts(batch).all();
 
 			for (let row of rows) {
 				let tag = held.get(row.tag_id);
@@ -3823,26 +3714,17 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		return byItem;
 	}
 
-	/** Writes one folder row, minting the id every other row holds it by. */
-	async #createFolder(title: string): Promise<SelectFolder> {
-		return await this.#db.create(
-			folders,
-			{ id: TypeID.fromUUID("folder", generateUUID()).toString(), title },
-			{ returnRow: true },
-		);
-	}
-
 	/** The folder one subscription is filed in, or `null` for an unfiled one. */
 	async #folderOf(feed: SelectFeed): Promise<UserStore.Folder | null> {
 		if (feed.folder_id === null) return null;
 
-		let row = await this.#db.find(folders, { id: feed.folder_id });
+		let row = await this.#models.folders.find({ id: feed.folder_id });
 		return row === null ? null : toFolder(row);
 	}
 
 	/** Every feed this reader still follows, which is every list and sweep's starting point. */
 	async #subscriptions(): Promise<SelectFeed[]> {
-		return await this.#db.findMany(feeds, { where: isNull("unfollowed_at") });
+		return await this.#models.subscriptions.followed().all();
 	}
 
 	/**
@@ -3919,7 +3801,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			if (answered.items.length === 0) {
 				if (answered.head > cursor) {
 					cursor = answered.head;
-					await this.#db.update(feeds, { id: feed.id }, { cursor });
+					await this.#models.subscriptions.write(feed.id, { cursor });
 				}
 
 				break;
@@ -3939,7 +3821,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			ruled += materialized.ruled;
 
 			cursor = greatestRevision(answered.items);
-			await this.#db.update(feeds, { id: feed.id }, { cursor });
+			await this.#models.subscriptions.write(feed.id, { cursor });
 
 			if (answered.head <= cursor) break;
 		}
@@ -4125,7 +4007,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let feedId = draft.feedId ?? null;
 
 		if (feedId !== null) {
-			let feed = await this.#db.find(feeds, { id: feedId });
+			let feed = await this.#models.subscriptions.find({ id: feedId });
 			if (feed === null || feed.unfollowed_at !== null)
 				return { ok: false, reason: "not-following" };
 		}
@@ -4152,7 +4034,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** The rules a run evaluates, read whole, with nothing counted against them yet. */
 	async #ruleRun(): Promise<RuleRun> {
-		return { rules: await this.#db.findMany(rules), matched: new Map() };
+		return { rules: await this.#models.rules.query().all(), matched: new Map() };
 	}
 
 	/**
@@ -4166,13 +4048,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		for (let [ruleId, count] of run.matched) {
 			if (count === 0) continue;
 
-			let rule = await this.#db.find(rules, { id: ruleId });
+			let rule = await this.#models.rules.find({ id: ruleId });
 			if (rule === null) continue;
 
-			await this.#db.update(
-				rules,
-				{ id: ruleId },
-				{ matches: rule.matches + count, last_matched_at: now },
+			unwrap(
+				await this.#models.rules.update(
+					{ id: ruleId },
+					{ matches: rule.matches + count, last_matched_at: now },
+				),
 			);
 		}
 
@@ -4189,12 +4072,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param subscriptionId - The feed the unsaved post belonged to.
 	 */
 	async #dropIfSpent(subscriptionId: string): Promise<void> {
-		let feed = await this.#db.find(feeds, { id: subscriptionId });
+		let feed = await this.#models.subscriptions.find({ id: subscriptionId });
 		if (feed === null || feed.unfollowed_at === null) return;
 
-		let kept = await this.#db.count(feedItems, {
-			where: and({ feed_id: subscriptionId }, notNull("saved_at")),
-		});
+		let kept = await this.#models.posts.ofSubscription(subscriptionId).saved().count();
 
 		if (kept > 0) return;
 
@@ -4206,7 +4087,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		await this.#forgetTags(doomed.map((row) => row.id));
 		await this.#db.deleteMany(feedItems, { where: { feed_id: subscriptionId } });
-		await this.#db.delete(feeds, { id: subscriptionId });
+		unwrap(await this.#models.subscriptions.delete({ id: subscriptionId }));
 	}
 
 	/**
@@ -4221,8 +4102,8 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * table and one index answer rather than a scan of every post the reader has.
 		 */
 		let budget = await this.#budget();
-		let followed = await this.#db.count(feeds, { where: isNull("unfollowed_at") });
-		let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
+		let followed = await this.#models.subscriptions.followed().count();
+		let held = await this.#models.posts.ofSubscription(feed.id).count();
 
 		if (held <= shareOf(followed, budget)) return false;
 
@@ -4231,7 +4112,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		 * and refusing is what it does when reclaiming has nothing left to take. An object
 		 * sitting exactly on it has no room for the next post either.
 		 */
-		return (await this.#db.count(feedItems)) >= budget;
+		return (await this.#models.posts.query().count()) >= budget;
 	}
 
 	/**
@@ -4258,7 +4139,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		for (let feed of followed) swept.aged += await this.#ageOut(feed, now);
 
-		let total = await this.#db.count(feedItems);
+		let total = await this.#models.posts.query().count();
 		if (total < budget) return swept;
 
 		/**
@@ -4269,7 +4150,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let share = shareOf(followed.length, budget);
 
 		for (let feed of followed) {
-			let held = await this.#db.count(feedItems, { where: { feed_id: feed.id } });
+			let held = await this.#models.posts.ofSubscription(feed.id).count();
 			if (held <= share) continue;
 
 			let reclaimed = await this.#reclaim(feed.id, held - share);
@@ -4347,7 +4228,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * and following that feed again is picking it back up rather than starting a second one.
 	 */
 	async #subscriptionByUrl(feedUrl: string): Promise<SelectFeed | null> {
-		return await this.#db.findOne(feeds, { where: { feed_url: feedUrl } });
+		return await this.#models.subscriptions.byUrl(feedUrl);
 	}
 
 	/**
@@ -4366,13 +4247,11 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let room = await this.#roomForFeed();
 		if (room !== null) return { ok: false, reason: "over-limit", feedId: null, limit: room };
 
-		let revived = await this.#db.update(feeds, { id: existing.id }, { unfollowed_at: null });
+		let revived = await this.#models.subscriptions.write(existing.id, { unfollowed_at: null });
 		await feedStore(existing.feed_id).subscribe(this.#subject(), existing.feed_url);
 
 		let synchronized = await this.#syncFeed(revived);
-		let unread = await this.#db.count(feedItems, {
-			where: and({ feed_id: existing.id }, isNull("read_at")),
-		});
+		let unread = await this.#models.posts.ofSubscription(existing.id).unread().count();
 
 		return {
 			ok: true,
@@ -4588,7 +4467,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		let refs: UserStore.FeedRef[] = [];
 		for (let batch of chunked(ids, IDS_PER_LOOKUP)) {
-			let rows = await this.#db.findMany(feeds, { where: inList("id", batch) });
+			let rows = await this.#models.subscriptions.query().where(inList("id", batch)).all();
 			refs.push(
 				...rows.map((row) => ({
 					id: row.id,
