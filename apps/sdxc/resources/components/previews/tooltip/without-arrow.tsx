@@ -21,7 +21,7 @@ const CODE = `<span mix={[hstack({ gap: 0, align: "center" })]}>
 		aria-describedby="settings-tooltip"
 		mix={[anchorName("settings-tooltip")]}
 	>
-		<SettingsIcon aria-hidden />
+		<SettingsIcon aria-hidden="true" />
 	</LinkButton>
 	<Tooltip
 		id="settings-tooltip"
@@ -47,7 +47,7 @@ export default {
 				aria-describedby="example-tooltip-without-arrow"
 				mix={[anchorName("example-tooltip-without-arrow")]}
 			>
-				<SettingsIcon aria-hidden />
+				<SettingsIcon aria-hidden="true" />
 			</LinkButton>
 			<Tooltip
 				id="example-tooltip-without-arrow"
