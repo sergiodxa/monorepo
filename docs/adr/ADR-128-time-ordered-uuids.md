@@ -42,18 +42,29 @@ sorts the same way as the UUID behind it.
 
 ## Decision
 
-Entity IDs are UUIDv7 (RFC 9562), created by `generateUUID()` from `@sdxc/uuid`. The
+Entity IDs are UUIDv7 (RFC 9562), created by `generateUUID()` from `@sdxc/uuid/v7`. The
 external TypeID form stays as it is and becomes time-ordered automatically.
 
 ### `@sdxc/uuid` API
 
-| Function           | Produces                          | Use for                                          |
-| ------------------ | --------------------------------- | ------------------------------------------------ |
-| `generateUUID()`   | Monotonic UUIDv7                  | Every entity ID by default                       |
-| `generateUUIDv4()` | UUIDv4 from `crypto.randomUUID()` | Entity IDs whose creation time must stay private |
+Each version is its own entry point, and each exports the same `generateUUID(): UUID`. Code
+picks a version by its import path, and switching versions changes only that path.
 
-`generateUUIDv7()` is removed, and its auth-saas callers move to `generateUUID()` in the same
-release. Under the repo's breaking-change policy there is no deprecated alias.
+| Entry point     | `generateUUID()` produces         | Use for                                          |
+| --------------- | --------------------------------- | ------------------------------------------------ |
+| `@sdxc/uuid/v7` | Monotonic UUIDv7                  | Every entity ID by default                       |
+| `@sdxc/uuid/v4` | UUIDv4 from `crypto.randomUUID()` | Entity IDs whose creation time must stay private |
+| `@sdxc/uuid`    | No generator                      | The `UUID` type, `isUUID`, `assertUUID`, errors  |
+
+```typescript
+import { generateUUID } from "@sdxc/uuid/v7";
+import { generateUUID as generatePrivateUUID } from "@sdxc/uuid/v4";
+```
+
+The root entry point keeps validation only, so every module that creates IDs names its
+version in the import. Today's root `generateUUID()` (v4) and `generateUUIDv7()` are removed.
+Their callers move to the matching subpath in the same release. Under the repo's
+breaking-change policy there is no deprecated alias.
 
 ### Monotonic within a millisecond
 
@@ -88,8 +99,8 @@ time and has 74 random bits instead of 122.
 
 | Value                                                     | Generator                        |
 | --------------------------------------------------------- | -------------------------------- |
-| Row primary keys (users, posts, monitors, tenants, ...)   | `generateUUID()` (v7)            |
-| Rows whose creation time is private                       | `generateUUIDv4()`               |
+| Row primary keys (users, posts, monitors, tenants, ...)   | `@sdxc/uuid/v7`                  |
+| Rows whose creation time is private                       | `@sdxc/uuid/v4`                  |
 | OAuth authorization codes, tokens, invite and reset links | Random secret, unchanged         |
 | JWT `jti`, correlation IDs, MIME boundaries, leases       | `crypto.randomUUID()`, unchanged |
 
@@ -103,8 +114,8 @@ keep ordering by `created_at`.
 
 ### Repo rule
 
-`AGENTS.md` gains a rule: entity IDs come from `generateUUID()` in `@sdxc/uuid`, never from
-`crypto.randomUUID()`. Use `generateUUIDv4()` only when the entity's creation time must stay
+`AGENTS.md` gains a rule: entity IDs come from `generateUUID()` in `@sdxc/uuid/v7`, never from
+`crypto.randomUUID()`. Use `@sdxc/uuid/v4` only when the entity's creation time must stay
 private.
 
 ## Consequences
@@ -117,12 +128,15 @@ private.
   newest/oldest-first listings for new rows, including rows created in the same request
 - **Sortable public IDs at no extra cost** - TypeIDs inherit the order, so a TypeID suffix
   behaves like a prefixed ULID
-- **One obvious call** - the default-named function is the right one for entity IDs
+- **Version visible at the import** - every module that creates IDs names `v7` or `v4` in
+  its import path, so a review sees which one it chose
+- **One interface** - both entry points export the same `generateUUID(): UUID`, so changing
+  an entity's version changes only the import path
 
 ### Negative
 
 - **Creation time is public** - anyone holding a TypeID can decode when the entity was
-  created. Entities where that matters must opt into `generateUUIDv4()`, which relies on the
+  created. Entities where that matters must import from `@sdxc/uuid/v4`, which relies on the
   author noticing
 - **Fewer random bits** - 74 instead of 122. This is ample for uniqueness, but rules out v7
   for anything used as a bearer secret
@@ -143,8 +157,8 @@ private.
 
 **Priority:** High
 
-1. Make `generateUUID()` produce a monotonic UUIDv7, add `generateUUIDv4()`, and remove
-   `generateUUIDv7()`
+1. Add the `./v7` entry point (monotonic UUIDv7) and the `./v4` entry point, each exporting
+   `generateUUID()`, and remove both generators from the root entry point
 2. Tests: version and variant bits, ordering across milliseconds, ordering within a frozen
    millisecond, counter overflow advancing the timestamp, and a backwards clock
 3. Update the README and the `@sdxc/typeid` examples that call `crypto.randomUUID()`
@@ -153,11 +167,11 @@ private.
 
 **Priority:** High
 
-1. auth-saas: replace `generateUUIDv7()` with `generateUUID()`
-2. blog: replace `crypto.randomUUID()` with `generateUUID()` in the `post`, `post-meta`,
+1. auth-saas: import `generateUUID` from `@sdxc/uuid/v7` in place of `generateUUIDv7()`
+2. blog: replace `crypto.randomUUID()` with `generateUUID()` from `@sdxc/uuid/v7` in the `post`, `post-meta`,
    `user`, `webmention`, and `webmention-send` repositories
-3. uptime, r3-auth, reader, demo: pick up v7 through the existing `generateUUID()` calls, and
-   switch any entity whose creation time is private to `generateUUIDv4()`
+3. uptime, r3-auth, reader, demo: move each `generateUUID` import to `@sdxc/uuid/v7`, or to
+   `@sdxc/uuid/v4` for an entity whose creation time is private
 
 ### Phase 3: Repo rule
 
@@ -167,7 +181,15 @@ private.
 
 ## Alternatives Considered
 
-### 1. ULID
+### 1. Version-named functions on the root entry point
+
+`generateUUID()` for v7 and `generateUUIDv4()` beside it, both exported from `@sdxc/uuid`.
+
+**Rejected because**: the call sites would differ by version, and the unsuffixed name hides
+which version a module uses. Subpath entry points keep one function name and put the version
+in the import.
+
+### 2. ULID
 
 ULID has the same layout (48-bit millisecond timestamp, 80 random bits) and the same sort and
 locality behavior.
@@ -176,18 +198,18 @@ locality behavior.
 `assertUUID`, and `TypeID.toUUID()` for no gain. TypeID over v7 already gives a ULID-like
 public string.
 
-### 2. Keep v4 and add `created_at` indexes
+### 3. Keep v4 and add `created_at` indexes
 
 **Rejected because**: it keeps the random index writes and requires a composite index on every
 table that paginates.
 
-### 3. Integer sequences
+### 4. Integer sequences
 
 **Rejected because**: they expose row counts and growth rate, and they are enumerable. A
 per-tenant Durable Object database would also need a separate sequence per tenant, which
 complicates any cross-tenant copy or import.
 
-### 4. Non-monotonic v7 (the current `generateUUIDv7()`)
+### 5. Non-monotonic v7 (the current `generateUUIDv7()`)
 
 **Rejected because**: frozen time on Workers makes every ID in a request share a millisecond,
 so the ordering guarantee would fail exactly where batches of related rows are created.
