@@ -18,19 +18,18 @@ import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
-import { and, Database, gt, sql } from "remix/data-table";
+import { Database, sql } from "remix/data-table";
 
 import type { SelectBillingCustomer, SelectBillingSubscription } from "~/database/catalog-schema";
+import type { CatalogModels } from "~/database/models/catalog";
 
-import {
-	billingCustomers,
-	billingDeliveries,
-	billingSubscriptions,
-	catalogFeeds,
-} from "~/database/catalog-schema";
+import { catalogModels } from "~/database/models/catalog";
 
 /** The isolate's connection, opened by whichever follow or poll reaches it first. */
 let database: Database | undefined;
+
+/** The catalog's models, bound once per isolate to {@link connect}'s connection. */
+let models: CatalogModels | undefined;
 
 /**
  * Opens the catalog's connection, once per isolate.
@@ -43,6 +42,14 @@ function connect(): Database {
 	return (database ??= new Database(createD1DatabaseAdapter(env.PLATFORM_DB), {
 		now: () => Date.now(),
 	}));
+}
+
+/**
+ * The catalog's models over the isolate's connection. Each write commits on its own, since
+ * D1 runs no interactive transaction, so every one of them is a single statement.
+ */
+function catalog(): CatalogModels {
+	return (models ??= catalogModels.bind({ db: connect() }));
 }
 
 /**
@@ -94,13 +101,7 @@ export async function registerFeed(feedUrl: string, title: string): Promise<stri
  */
 export async function stampActivity(feedId: string): Promise<boolean> {
 	try {
-		let { affectedRows } = await connect().updateMany(
-			catalogFeeds,
-			{ last_active_at: Date.now() },
-			{ where: { id: feedId } },
-		);
-
-		return affectedRows > 0;
+		return await catalog().feeds.stamp(feedId, Date.now());
 	} catch {
 		return false;
 	}
@@ -123,13 +124,7 @@ export async function stampActivity(feedId: string): Promise<boolean> {
  */
 export async function renameFeed(feedId: string, title: string): Promise<boolean> {
 	try {
-		let { affectedRows } = await connect().updateMany(
-			catalogFeeds,
-			{ title },
-			{ where: { id: feedId } },
-		);
-
-		return affectedRows > 0;
+		return await catalog().feeds.rename(feedId, title);
 	} catch {
 		return false;
 	}
@@ -150,7 +145,7 @@ export async function renameFeed(feedId: string, title: string): Promise<boolean
  */
 export async function retireFeed(feedId: string): Promise<void> {
 	try {
-		await connect().updateMany(catalogFeeds, { retired_at: Date.now() }, { where: { id: feedId } });
+		await catalog().feeds.retire(feedId, Date.now());
 	} catch {
 		return;
 	}
@@ -168,7 +163,7 @@ export async function retireFeed(feedId: string): Promise<void> {
  */
 export async function reviveFeed(feedId: string): Promise<void> {
 	try {
-		await connect().updateMany(catalogFeeds, { retired_at: null }, { where: { id: feedId } });
+		await catalog().feeds.revive(feedId);
 	} catch {
 		return;
 	}
@@ -185,7 +180,7 @@ export async function reviveFeed(feedId: string): Promise<void> {
  * @returns Whether a row was there to delete
  */
 export async function deleteFeed(feedId: string): Promise<boolean> {
-	return await connect().delete(catalogFeeds, { id: feedId });
+	return await catalog().feeds.purge(feedId);
 }
 
 /**
@@ -199,7 +194,7 @@ export async function findBillingCustomer(
 	subject: string,
 	connection: string,
 ): Promise<SelectBillingCustomer | null> {
-	return await connect().findOne(billingCustomers, { where: { subject, connection } });
+	return await catalog().billingCustomers.forSubject(subject, connection);
 }
 
 /**
@@ -213,9 +208,7 @@ export async function findBillingCustomerByProviderId(
 	connection: string,
 	providerCustomerId: string,
 ): Promise<SelectBillingCustomer | null> {
-	return await connect().findOne(billingCustomers, {
-		where: { connection, provider_customer_id: providerCustomerId },
-	});
+	return await catalog().billingCustomers.forProviderId(connection, providerCustomerId);
 }
 
 /**
@@ -252,7 +245,7 @@ export async function linkBillingCustomer(
  * @param subject - The reader's OIDC subject
  */
 export async function readSubscription(subject: string): Promise<SelectBillingSubscription | null> {
-	return await connect().findOne(billingSubscriptions, { where: { subject } });
+	return await catalog().billingSubscriptions.forSubject(subject);
 }
 
 /** What one snapshot writes into the projection, as the platform reported it. */
@@ -323,13 +316,7 @@ export async function pageBillingCustomers(
 	limit: number,
 	after: string | null = null,
 ): Promise<SelectBillingCustomer[]> {
-	let where = after === null ? { connection } : and({ connection }, gt("subject", after));
-
-	return await connect().findMany(billingCustomers, {
-		where,
-		orderBy: [["subject", "asc"]],
-		limit,
-	});
+	return await catalog().billingCustomers.page(connection, limit, after);
 }
 
 /** One delivery row as D1 holds it, where the two verdicts are integers rather than booleans. */
@@ -357,7 +344,7 @@ export let deliveries: WebhookStore = {
 	 * @returns The row, or `null` when this delivery has never arrived
 	 */
 	async find(id: string): Promise<WebhookDelivery | null> {
-		let row = await connect().findOne(billingDeliveries, { where: { id } });
+		let row = await catalog().billingDeliveries.findBy({ id });
 		if (row === null) return null;
 
 		return {
@@ -397,6 +384,6 @@ export let deliveries: WebhookStore = {
 	 * @param id - The platform's delivery id
 	 */
 	async markProcessed(id: string): Promise<void> {
-		await connect().updateMany(billingDeliveries, { processed: true }, { where: { id } });
+		await catalog().billingDeliveries.markProcessed(id);
 	},
 };
