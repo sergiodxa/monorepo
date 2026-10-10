@@ -14,8 +14,8 @@ import type { Translate } from "@sdxc/i18n";
 import { streamify } from "@sdxc/csv";
 import { isWholeMonth } from "@sdxc/dates";
 
-import type Report from "~/app/data/report";
 import type { ReportDialect } from "~/app/lib/report-dialect";
+import type { Report } from "~/app/repositories/reports";
 
 import { numberCell } from "~/app/lib/report-dialect";
 
@@ -62,7 +62,7 @@ type DailyKey = (typeof DAILY_KEYS)[number];
 /**
  * Streams the uptime summary as CSV.
  *
- * @param rows - One row per monitor, as `Report.summaryRows` returns them
+ * @param rows - One row per monitor, as `summaryRows` returns them
  * @param dialect - How the file is written
  * @param t - Translates headers, types and statuses in the spreadsheet dialect
  * @returns The CSV bytes
@@ -85,7 +85,7 @@ export function summaryCsv(
 /**
  * Streams the daily report as CSV while the rows are read.
  *
- * @param rows - The daily rows, as `Report.dailyRows` yields them
+ * @param rows - The daily rows, as `dailyRows` yields them
  * @param dialect - How the file is written
  * @param t - Translates headers, types and statuses in the spreadsheet dialect
  * @returns The CSV bytes

@@ -12,12 +12,12 @@ import { isFailure } from "@sdxc/result";
 import { Zip } from "@sdxc/zip";
 import { createAction } from "remix/router";
 
-import Report from "~/app/data/report";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { dailyCsv, reportArchiveFilename, reportFilename, summaryCsv } from "~/app/lib/report-csv";
 import { reportDialect } from "~/app/lib/report-dialect";
 import { resolveReportRequest } from "~/app/lib/report-request";
+import { dailyRows, summaryRows } from "~/app/repositories/reports";
 import routes from "~/routes/web";
 
 /**
@@ -42,12 +42,12 @@ export default createAction(routes.app.team.reports.archive, {
 
 		let summary = zip.add(
 			reportFilename(ctx.team.slug, "uptime-summary", range),
-			summaryCsv(await Report.summaryRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t),
+			summaryCsv(await summaryRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t),
 			{ modified },
 		);
 		let daily = zip.add(
 			reportFilename(ctx.team.slug, "uptime-daily", range),
-			dailyCsv(Report.dailyRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t),
+			dailyCsv(dailyRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t),
 			{ modified },
 		);
 		for (let added of [summary, daily]) {

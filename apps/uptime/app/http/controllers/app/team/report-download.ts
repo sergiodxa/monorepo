@@ -13,12 +13,12 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Report from "~/app/data/report";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { dailyCsv, REPORT_KINDS, reportFilename, summaryCsv } from "~/app/lib/report-csv";
 import { reportDialect } from "~/app/lib/report-dialect";
 import { resolveReportRequest } from "~/app/lib/report-request";
+import { dailyRows, summaryRows } from "~/app/repositories/reports";
 import routes from "~/routes/web";
 
 /**
@@ -43,8 +43,8 @@ export default createAction(routes.app.team.reports.download, {
 		let dialect = reportDialect(ctx.locale, dialectName);
 		let body =
 			kind === "uptime-summary"
-				? summaryCsv(await Report.summaryRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t)
-				: dailyCsv(Report.dailyRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t);
+				? summaryCsv(await summaryRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t)
+				: dailyCsv(dailyRows(ctx.db, ctx.team.id, filter), dialect, ctx.intl.t);
 
 		return csv(body, {
 			headers: {

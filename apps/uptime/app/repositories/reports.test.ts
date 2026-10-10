@@ -9,21 +9,28 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
+import type { Report } from "~/app/repositories/reports";
 import type { InsertMaintenanceWindow, MonitorStatus } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import Report from "~/app/data/report";
-import StatusPage from "~/app/data/status-page";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { dailyRows, listMonitors, summaryRows } from "~/app/repositories/reports";
 import {
 	cronJobMonitors,
 	dnsMonitors,
 	flowMonitors,
 	maintenanceWindows,
 	monitors,
+	statusPageCronJobs,
+	statusPageDnsMonitors,
+	statusPageFlowMonitors,
+	statusPageMonitors,
+	statusPages,
+	statusPageTcpMonitors,
 	tcpMonitors,
 } from "~/database/schema";
 
@@ -126,17 +133,19 @@ async function seedDay(
 	let total = counts.total ?? 10;
 	let successful = counts.successful ?? total;
 
-	await MonitorDailyStats.upsertDay(db, {
-		monitor_id: monitor.id,
-		monitor_type: monitor.type,
-		date,
-		total_checks: total,
-		successful_checks: successful,
-		failed_checks: total - successful,
-		avg_response_time_ms: counts.avg === undefined ? 40 : counts.avg,
-		max_response_time_ms: counts.max === undefined ? 60 : counts.max,
-		status: counts.status ?? "up",
-	});
+	unwrap(
+		await bindModels(db).monitorDailyStats.upsertDay({
+			monitor_id: monitor.id,
+			monitor_type: monitor.type,
+			date,
+			total_checks: total,
+			successful_checks: successful,
+			failed_checks: total - successful,
+			avg_response_time_ms: counts.avg === undefined ? 40 : counts.avg,
+			max_response_time_ms: counts.max === undefined ? 60 : counts.max,
+			status: counts.status ?? "up",
+		}),
+	);
 }
 
 /** A maintenance window with its creation instant fixed, since a recurrence starts from it. */
@@ -162,19 +171,46 @@ async function seedWindow(
 
 /** A status page of `teamId` showing exactly `attached`, each through its own link table. */
 async function seedStatusPage(attached: Seeded[], teamId = TEAM) {
-	let page = await StatusPage.create(db, teamId, {
-		name: "Client",
-		slug: `client-${crypto.randomUUID()}`,
-		title: "Client status",
-	});
+	let page = await db.create(
+		statusPages,
+		{
+			id: crypto.randomUUID(),
+			team_id: teamId,
+			name: "Client",
+			slug: `client-${crypto.randomUUID()}`,
+			title: "Client status",
+		},
+		{ touch: true, returnRow: true },
+	);
 	let idsOf = (type: DailyStatsMonitorType) =>
 		attached.filter((monitor) => monitor.type === type).map((monitor) => monitor.id);
+	let link = { status_page_id: page.id };
 
-	await StatusPage.setMonitors(db, page.id, idsOf("http"));
-	await StatusPage.setDnsMonitors(db, page.id, idsOf("dns"));
-	await StatusPage.setTcpMonitors(db, page.id, idsOf("tcp"));
-	await StatusPage.setCronJobs(db, page.id, idsOf("cron"));
-	await StatusPage.setFlowMonitors(db, page.id, idsOf("flow"));
+	for (let id of idsOf("http")) await db.create(statusPageMonitors, { ...link, monitor_id: id });
+	for (let id of idsOf("dns")) {
+		await db.create(statusPageDnsMonitors, {
+			...link,
+			id: crypto.randomUUID(),
+			dns_monitor_id: id,
+		});
+	}
+	for (let id of idsOf("tcp")) {
+		await db.create(statusPageTcpMonitors, {
+			...link,
+			id: crypto.randomUUID(),
+			tcp_monitor_id: id,
+		});
+	}
+	for (let id of idsOf("cron")) {
+		await db.create(statusPageCronJobs, { ...link, cron_job_monitor_id: id });
+	}
+	for (let id of idsOf("flow")) {
+		await db.create(statusPageFlowMonitors, {
+			...link,
+			id: crypto.randomUUID(),
+			flow_monitor_id: id,
+		});
+	}
 
 	return page;
 }
@@ -182,7 +218,7 @@ async function seedStatusPage(attached: Seeded[], teamId = TEAM) {
 /** Every daily row for `filter`, drained from the stream. */
 async function collectDaily(filter: Report.Filter) {
 	let rows: Report.DailyRow[] = [];
-	for await (let row of Report.dailyRows(db, TEAM, filter)) rows.push(row);
+	for await (let row of dailyRows(db, TEAM, filter)) rows.push(row);
 	return rows;
 }
 
@@ -191,7 +227,7 @@ function at(iso: string) {
 	return Date.parse(iso);
 }
 
-describe("Report.listMonitors", () => {
+describe("listMonitors", () => {
 	test("lists every type with its target, ordered by type and then name", async () => {
 		await seedMonitor("flow", { name: "Checkout" });
 		await seedMonitor("http", { name: "Website" });
@@ -200,7 +236,7 @@ describe("Report.listMonitors", () => {
 		await seedMonitor("cron", { name: "Backups" });
 		await seedMonitor("dns", { name: "Zone" });
 
-		let listed = await Report.listMonitors(db, TEAM, RANGE);
+		let listed = await listMonitors(db, TEAM, RANGE);
 
 		expect(listed.map(({ type, name, target }) => ({ type, name, target }))).toEqual([
 			{ type: "http", name: "API", target: "https://example.com/health" },
@@ -216,7 +252,7 @@ describe("Report.listMonitors", () => {
 		let paused = await seedMonitor("http", { enabled: false });
 		let pausedTcp = await seedMonitor("tcp", { enabled: false });
 
-		let listed = await Report.listMonitors(db, TEAM, RANGE);
+		let listed = await listMonitors(db, TEAM, RANGE);
 
 		expect(listed.map((monitor) => monitor.id)).toEqual([paused.id, pausedTcp.id]);
 	});
@@ -225,7 +261,7 @@ describe("Report.listMonitors", () => {
 		let own = await seedMonitor("http");
 		await seedEveryType(OTHER_TEAM);
 
-		let listed = await Report.listMonitors(db, TEAM, RANGE);
+		let listed = await listMonitors(db, TEAM, RANGE);
 
 		expect(listed.map((monitor) => monitor.id)).toEqual([own.id]);
 	});
@@ -235,7 +271,7 @@ describe("Report.listMonitors", () => {
 		await seedEveryType();
 		let page = await seedStatusPage(Object.values(attached));
 
-		let listed = await Report.listMonitors(db, TEAM, { ...RANGE, statusPageId: page.id });
+		let listed = await listMonitors(db, TEAM, { ...RANGE, statusPageId: page.id });
 
 		expect(listed.map((monitor) => monitor.id)).toEqual([
 			attached.http.id,
@@ -250,20 +286,20 @@ describe("Report.listMonitors", () => {
 		let own = await seedEveryType();
 		let foreign = await seedStatusPage(Object.values(own), OTHER_TEAM);
 
-		expect(await Report.listMonitors(db, TEAM, { ...RANGE, statusPageId: foreign.id })).toEqual([]);
+		expect(await listMonitors(db, TEAM, { ...RANGE, statusPageId: foreign.id })).toEqual([]);
 	});
 
 	test("matches a status page link on type as well as id", async () => {
 		let http = await seedMonitor("http");
 		let page = await seedStatusPage([{ ...http, type: "dns" }]);
 
-		expect(await Report.listMonitors(db, TEAM, { ...RANGE, statusPageId: page.id })).toEqual([]);
+		expect(await listMonitors(db, TEAM, { ...RANGE, statusPageId: page.id })).toEqual([]);
 	});
 
 	test("narrows to one monitor type", async () => {
 		let every = await seedEveryType();
 
-		let listed = await Report.listMonitors(db, TEAM, { ...RANGE, monitorType: "tcp" });
+		let listed = await listMonitors(db, TEAM, { ...RANGE, monitorType: "tcp" });
 
 		expect(listed.map((monitor) => monitor.id)).toEqual([every.tcp.id]);
 	});
@@ -273,7 +309,7 @@ describe("Report.listMonitors", () => {
 		let otherHttp = await seedMonitor("http");
 		let page = await seedStatusPage([every.http, every.dns]);
 
-		let listed = await Report.listMonitors(db, TEAM, {
+		let listed = await listMonitors(db, TEAM, {
 			...RANGE,
 			statusPageId: page.id,
 			monitorType: "http",
@@ -284,7 +320,7 @@ describe("Report.listMonitors", () => {
 	});
 });
 
-describe("Report.summaryRows", () => {
+describe("summaryRows", () => {
 	test("sums every type's days across a month boundary, ignoring days outside the range", async () => {
 		let every = await seedEveryType();
 		for (let monitor of Object.values(every)) {
@@ -307,7 +343,7 @@ describe("Report.summaryRows", () => {
 			await seedDay(monitor, "2026-08-03", { total: 1000, successful: 0, status: "down" });
 		}
 
-		let rows = await Report.summaryRows(db, TEAM, RANGE);
+		let rows = await summaryRows(db, TEAM, RANGE);
 
 		expect(rows.map((row) => row.type)).toEqual(["http", "dns", "tcp", "cron", "flow"]);
 		expect(rows[0]).toEqual({
@@ -336,7 +372,7 @@ describe("Report.summaryRows", () => {
 		await seedDay(monitor, "2026-07-30");
 		await seedDay(monitor, "2026-08-02");
 
-		let [row] = await Report.summaryRows(db, TEAM, RANGE);
+		let [row] = await summaryRows(db, TEAM, RANGE);
 
 		expect(row).toMatchObject({ daysWithData: 2, totalChecks: 20, uptimePercent: 100 });
 	});
@@ -345,7 +381,7 @@ describe("Report.summaryRows", () => {
 		let monitor = await seedMonitor("cron");
 		await seedDay(monitor, "2026-07-30", { total: 0, successful: 0, status: "down" });
 
-		let [row] = await Report.summaryRows(db, TEAM, RANGE);
+		let [row] = await summaryRows(db, TEAM, RANGE);
 
 		expect(row).toMatchObject({ daysWithData: 1, totalChecks: 0, uptimePercent: null });
 	});
@@ -353,7 +389,7 @@ describe("Report.summaryRows", () => {
 	test("keeps a monitor with no roll-up rows at all, with nothing measured", async () => {
 		let monitor = await seedMonitor("dns");
 
-		let rows = await Report.summaryRows(db, TEAM, RANGE);
+		let rows = await summaryRows(db, TEAM, RANGE);
 
 		expect(rows).toEqual([
 			{
@@ -379,7 +415,7 @@ describe("Report.summaryRows", () => {
 		let monitor = await seedMonitor("cron");
 		await seedDay(monitor, "2026-07-30", { avg: 25 });
 
-		let [row] = await Report.summaryRows(db, TEAM, RANGE);
+		let [row] = await summaryRows(db, TEAM, RANGE);
 
 		expect(row?.avgResponseTimeMs).toBeNull();
 	});
@@ -389,7 +425,7 @@ describe("Report.summaryRows", () => {
 		await seedDay(monitor, "2026-07-30", { total: 10, avg: 100 });
 		await seedDay(monitor, "2026-07-31", { total: 90, avg: null, max: null });
 
-		let [row] = await Report.summaryRows(db, TEAM, RANGE);
+		let [row] = await summaryRows(db, TEAM, RANGE);
 
 		expect(row).toMatchObject({ avgResponseTimeMs: 100, maxResponseTimeMs: 60 });
 	});
@@ -402,7 +438,7 @@ describe("Report.summaryRows", () => {
 			seeded.push(monitor);
 		}
 
-		let rows = await Report.summaryRows(db, TEAM, RANGE);
+		let rows = await summaryRows(db, TEAM, RANGE);
 
 		expect(rows).toHaveLength(150);
 		expect(rows.map((row) => row.totalChecks)).toEqual(seeded.map((_, index) => index + 1));
@@ -416,9 +452,9 @@ describe("Report.summaryRows", () => {
 		}
 		let page = await seedStatusPage([every.dns, every.cron]);
 
-		let onPage = await Report.summaryRows(db, TEAM, { ...RANGE, statusPageId: page.id });
-		let dnsOnly = await Report.summaryRows(db, TEAM, { ...RANGE, monitorType: "dns" });
-		let all = await Report.summaryRows(db, TEAM, RANGE);
+		let onPage = await summaryRows(db, TEAM, { ...RANGE, statusPageId: page.id });
+		let dnsOnly = await summaryRows(db, TEAM, { ...RANGE, monitorType: "dns" });
+		let all = await summaryRows(db, TEAM, RANGE);
 
 		expect(onPage.map((row) => row.monitorId)).toEqual([every.dns.id, every.cron.id]);
 		expect(dnsOnly.map((row) => row.monitorId)).toEqual([every.dns.id]);
@@ -426,7 +462,7 @@ describe("Report.summaryRows", () => {
 	});
 });
 
-describe("Report.dailyRows", () => {
+describe("dailyRows", () => {
 	test("yields one row per roll-up row, by monitor and then date, across a month boundary", async () => {
 		let every = await seedEveryType();
 		for (let monitor of Object.values(every)) {
@@ -514,7 +550,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-07-31T02:45:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 		let [day] = await collectDaily(RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(180);
@@ -543,7 +579,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-07-30T02:30:00Z"),
 		});
 
-		let rows = await Report.summaryRows(db, TEAM, RANGE);
+		let rows = await summaryRows(db, TEAM, RANGE);
 
 		expect(rows.map((row) => [row.monitorId, row.maintenanceMinutes])).toEqual([
 			[http.id, 10],
@@ -569,7 +605,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-08-03T05:00:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 		let days = await collectDaily(RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(30 + 120 + 10);
@@ -597,7 +633,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-01-01T03:00:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 		let days = await collectDaily(RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(3 * 60 + 180);
@@ -617,7 +653,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-07-31T12:15:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(15 + 2 * 60);
 	});
@@ -636,7 +672,7 @@ describe("maintenance minutes", () => {
 			ended_early_at: at("2026-08-02T09:00:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 		let [day] = await collectDaily(RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(45);
@@ -651,7 +687,7 @@ describe("maintenance minutes", () => {
 			ended_early_at: at("2026-08-01T10:00:00Z") + 20 * MINUTE_MS + 40_000,
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(21);
 	});
@@ -664,7 +700,7 @@ describe("maintenance minutes", () => {
 			ends_at: at("2026-07-31T00:00:00Z"),
 		});
 
-		let [summary] = await Report.summaryRows(db, TEAM, RANGE);
+		let [summary] = await summaryRows(db, TEAM, RANGE);
 
 		expect(summary?.maintenanceMinutes).toBe(0);
 	});
