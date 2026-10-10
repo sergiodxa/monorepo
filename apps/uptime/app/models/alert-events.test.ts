@@ -1,94 +1,38 @@
 /**
- * Unit tests for the `AlertEvent` data-access model: recording and settling delivery
- * outcomes, the cooldown check and per-incident counts that gate re-firing (a queued
- * `pending` delivery counting as notified), the ref a recovery edits, and the listing.
+ * Tests the alert events model against a migrated in-memory database: recording and settling
+ * delivery outcomes, the cooldown and per-incident counts that gate re-firing (a queued
+ * `pending` delivery counting as notified), the ref a recovery edits, and the listings.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type {
-	Database,
-	DataManipulationOperation,
-	DataManipulationResult,
-	DatabaseDriver,
-} from "remix/data-table";
+import type { Database } from "remix/data-table";
 
+import { Pagination } from "@sdxc/pagination";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { AlertEventOutcome } from "~/app/models/alert-events";
 import type { SelectAlertEvent } from "~/database/schema";
 
-import AlertEvent from "~/app/data/alert-event";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { NEWEST_FIRST } from "~/app/services/pagination";
 import { alertEvents } from "~/database/schema";
 
-/**
- * The SQLite test adapter binds column values as-is, so a plain object bound into a
- * `c.json()` column throws at the binding layer. Encoding the named columns on write and
- * decoding on read lets `record()`'s snapshot branch run against the real database.
- */
-function patchJsonColumns(adapter: DatabaseDriver, columns: string[]): void {
-	let originalExecute = adapter.execute.bind(adapter);
-
-	adapter.execute = async (request) => {
-		let operation = encodeJsonColumns(request.operation, columns);
-		let result = await originalExecute({ ...request, operation });
-		return decodeJsonColumns(result, columns);
-	};
-}
-
-function encodeRow(row: Record<string, unknown>, columns: string[]): Record<string, unknown> {
-	let output = { ...row };
-	for (let column of columns) {
-		if (column in output && output[column] !== null && typeof output[column] !== "string") {
-			output[column] = JSON.stringify(output[column]);
-		}
-	}
-	return output;
-}
-
-function encodeJsonColumns(
-	operation: DataManipulationOperation,
-	columns: string[],
-): DataManipulationOperation {
-	if (operation.kind === "insert") {
-		return { ...operation, values: encodeRow(operation.values, columns) };
-	}
-	if (operation.kind === "update") {
-		return { ...operation, changes: encodeRow(operation.changes, columns) };
-	}
-	return operation;
-}
-
-function decodeJsonColumns(
-	result: DataManipulationResult,
-	columns: string[],
-): DataManipulationResult {
-	if (!result.rows) return result;
-
-	return {
-		...result,
-		rows: result.rows.map((row) => {
-			let output = { ...row };
-			for (let column of columns) {
-				if (column in output && typeof output[column] === "string") {
-					try {
-						output[column] = JSON.parse(output[column] as string);
-					} catch {}
-				}
-			}
-			return output;
-		}),
-	};
-}
-
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 
 beforeEach(() => {
-	let database = createTestDatabase();
-	db = database.db;
-	patchJsonColumns(database.adapter, ["snapshot", "delivery_ref"]);
+	db = createTestDatabase().db;
+	models = bindModels(db);
 });
+
+/** Records an outcome, failing the test when the write is refused. */
+async function record(values: AlertEventOutcome): Promise<SelectAlertEvent> {
+	return unwrap(await models.alertEvents.record(values));
+}
 
 /**
  * Records one event for `alert-1`/`monitor-1` backdated by `agoMs`, so a whole incident
@@ -99,7 +43,7 @@ async function recordAt(
 	event_type: SelectAlertEvent["event_type"],
 	status: SelectAlertEvent["status"],
 ): Promise<SelectAlertEvent> {
-	let row = await AlertEvent.record(db, {
+	let row = await record({
 		alert_id: "alert-1",
 		monitor_id: "monitor-1",
 		event_type,
@@ -113,9 +57,9 @@ async function recordAt(
 	return { ...row, sent_at: sentAt };
 }
 
-describe("AlertEvent.record", () => {
+describe("alertEvents.record", () => {
 	test("records a sent event and returns the created row", async () => {
-		let row = await AlertEvent.record(db, {
+		let row = await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -138,7 +82,7 @@ describe("AlertEvent.record", () => {
 	});
 
 	test("records a snapshot and round-trips it as an object", async () => {
-		let row = await AlertEvent.record(db, {
+		let row = await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -165,7 +109,7 @@ describe("AlertEvent.record", () => {
 	});
 
 	test("records a failed delivery with an error message", async () => {
-		let row = await AlertEvent.record(db, {
+		let row = await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "up",
@@ -180,9 +124,9 @@ describe("AlertEvent.record", () => {
 	});
 });
 
-describe("AlertEvent.isInCooldown", () => {
+describe("alertEvents.isInCooldown", () => {
 	test("returns false immediately when cooldownMinutes is 0, without matching any row", async () => {
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -192,17 +136,17 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_name: "My site",
 		});
 
-		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 0);
+		let inCooldown = await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 0);
 		expect(inCooldown).toBe(false);
 	});
 
 	test("returns false when no matching event exists", async () => {
-		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30);
+		let inCooldown = await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 30);
 		expect(inCooldown).toBe(false);
 	});
 
 	test("returns true when a matching sent event exists within the cooldown window", async () => {
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -212,12 +156,12 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_name: "My site",
 		});
 
-		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30);
+		let inCooldown = await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 30);
 		expect(inCooldown).toBe(true);
 	});
 
 	test("returns false when the matching event is outside the cooldown window", async () => {
-		let row = await AlertEvent.record(db, {
+		let row = await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -233,12 +177,12 @@ describe("AlertEvent.isInCooldown", () => {
 		 */
 		await db.update(alertEvents, row.id, { sent_at: Date.now() - 31 * 60_000 });
 
-		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30);
+		let inCooldown = await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 30);
 		expect(inCooldown).toBe(false);
 	});
 
 	test("ignores events for a different alert, monitor, or event type", async () => {
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -248,13 +192,13 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_name: "My site",
 		});
 
-		expect(await AlertEvent.isInCooldown(db, "alert-2", "monitor-1", "down", 30)).toBe(false);
-		expect(await AlertEvent.isInCooldown(db, "alert-1", "monitor-2", "down", 30)).toBe(false);
-		expect(await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "up", 30)).toBe(false);
+		expect(await models.alertEvents.isInCooldown("alert-2", "monitor-1", "down", 30)).toBe(false);
+		expect(await models.alertEvents.isInCooldown("alert-1", "monitor-2", "down", 30)).toBe(false);
+		expect(await models.alertEvents.isInCooldown("alert-1", "monitor-1", "up", 30)).toBe(false);
 	});
 
 	test("ignores events whose status isn't sent", async () => {
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -263,7 +207,7 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_type: "http",
 			monitor_name: "My site",
 		});
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -273,18 +217,18 @@ describe("AlertEvent.isInCooldown", () => {
 			monitor_name: "My site",
 		});
 
-		let inCooldown = await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30);
+		let inCooldown = await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 30);
 		expect(inCooldown).toBe(false);
 	});
 });
 
-describe("AlertEvent.listByAlertIds", () => {
+describe("alertEvents.latestForAlerts", () => {
 	test("returns an empty array for an empty id list without querying", async () => {
-		expect(await AlertEvent.listByAlertIds(db, [], 10)).toEqual([]);
+		expect(await models.alertEvents.latestForAlerts([], 10)).toEqual([]);
 	});
 
 	test("lists events across multiple alerts, newest first", async () => {
-		let first = await AlertEvent.record(db, {
+		let first = await record({
 			alert_id: "alert-1",
 			monitor_id: "monitor-1",
 			event_type: "down",
@@ -293,7 +237,7 @@ describe("AlertEvent.listByAlertIds", () => {
 			monitor_type: "http",
 			monitor_name: "My site",
 		});
-		let second = await AlertEvent.record(db, {
+		let second = await record({
 			alert_id: "alert-2",
 			monitor_id: "monitor-2",
 			event_type: "up",
@@ -303,7 +247,7 @@ describe("AlertEvent.listByAlertIds", () => {
 			monitor_name: "Other site",
 		});
 		/** A third alert, outside the requested ids, is the control for the scoping. */
-		await AlertEvent.record(db, {
+		await record({
 			alert_id: "alert-3",
 			monitor_id: "monitor-3",
 			event_type: "down",
@@ -315,13 +259,13 @@ describe("AlertEvent.listByAlertIds", () => {
 
 		await db.update(alertEvents, first.id, { sent_at: Date.now() - 60_000 });
 
-		let events = await AlertEvent.listByAlertIds(db, ["alert-1", "alert-2"], 10);
+		let events = await models.alertEvents.latestForAlerts(["alert-1", "alert-2"], 10);
 		expect(events.map((event) => event.id)).toEqual([second.id, first.id]);
 	});
 
 	test("respects the limit argument", async () => {
 		for (let index = 0; index < 3; index++) {
-			let row = await AlertEvent.record(db, {
+			let row = await record({
 				alert_id: "alert-1",
 				monitor_id: "monitor-1",
 				event_type: "down",
@@ -333,21 +277,25 @@ describe("AlertEvent.listByAlertIds", () => {
 			await db.update(alertEvents, row.id, { sent_at: Date.now() - index * 1000 });
 		}
 
-		let events = await AlertEvent.listByAlertIds(db, ["alert-1"], 2);
+		let events = await models.alertEvents.latestForAlerts(["alert-1"], 2);
 		expect(events).toHaveLength(2);
 	});
 });
 
-describe("AlertEvent.countSentSinceRecovery", () => {
+describe("alertEvents.countSentSinceRecovery", () => {
 	test("returns 0 when the pair has no events at all", async () => {
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(0);
+		expect(
+			await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 10),
+		).toBe(0);
 	});
 
 	test("counts every sent event when the pair has never recovered", async () => {
 		await recordAt(3000, "down", "sent");
 		await recordAt(2000, "down", "sent");
 
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(2);
+		expect(
+			await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 10),
+		).toBe(2);
 	});
 
 	test("counts only the sent events after the last recovery", async () => {
@@ -356,7 +304,9 @@ describe("AlertEvent.countSentSinceRecovery", () => {
 		await recordAt(3000, "up", "sent");
 		await recordAt(2000, "down", "sent");
 
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(1);
+		expect(
+			await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 10),
+		).toBe(1);
 	});
 
 	test("ignores suppressed and failed attempts, and other event types", async () => {
@@ -365,19 +315,23 @@ describe("AlertEvent.countSentSinceRecovery", () => {
 		await recordAt(2000, "down", "failed");
 		await recordAt(1000, "degraded", "sent");
 
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 10)).toBe(0);
+		expect(
+			await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 10),
+		).toBe(0);
 	});
 
 	test("stops counting at the limit instead of reading the whole incident", async () => {
 		for (let index = 0; index < 5; index++) await recordAt(5000 - index * 100, "down", "sent");
 
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 3)).toBe(3);
+		expect(await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 3)).toBe(
+			3,
+		);
 	});
 });
 
-describe("AlertEvent.summarizeIncident", () => {
+describe("alertEvents.summarizeIncident", () => {
 	test("reports zero for a monitor with no history", async () => {
-		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+		expect(await models.alertEvents.summarizeIncident("alert-1", "monitor-1")).toEqual({
 			sent: 0,
 			suppressed: 0,
 		});
@@ -393,7 +347,7 @@ describe("AlertEvent.summarizeIncident", () => {
 		await recordAt(3000, "degraded", "skipped_cap");
 		await recordAt(2000, "down", "failed");
 
-		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+		expect(await models.alertEvents.summarizeIncident("alert-1", "monitor-1")).toEqual({
 			sent: 1,
 			suppressed: 3,
 		});
@@ -404,13 +358,15 @@ describe("pending deliveries count as notified", () => {
 	test("a queued delivery holds the alert in its cooldown", async () => {
 		await recordAt(1000, "down", "pending");
 
-		expect(await AlertEvent.isInCooldown(db, "alert-1", "monitor-1", "down", 30)).toBe(true);
+		expect(await models.alertEvents.isInCooldown("alert-1", "monitor-1", "down", 30)).toBe(true);
 	});
 
 	test("a queued delivery makes the next check a repeat rather than the incident's first", async () => {
 		await recordAt(1000, "down", "pending");
 
-		expect(await AlertEvent.countSentSinceRecovery(db, "alert-1", "monitor-1", "down", 1)).toBe(1);
+		expect(await models.alertEvents.countSentSinceRecovery("alert-1", "monitor-1", "down", 1)).toBe(
+			1,
+		);
 	});
 
 	test("a recovery reports a queued delivery among the incident's sent notifications", async () => {
@@ -418,20 +374,20 @@ describe("pending deliveries count as notified", () => {
 		await recordAt(2000, "down", "sent");
 		await recordAt(1000, "down", "skipped_cooldown");
 
-		expect(await AlertEvent.summarizeIncident(db, "alert-1", "monitor-1")).toEqual({
+		expect(await models.alertEvents.summarizeIncident("alert-1", "monitor-1")).toEqual({
 			sent: 2,
 			suppressed: 1,
 		});
 	});
 });
 
-describe("AlertEvent.markSent / markFailed", () => {
+describe("alertEvents.markSent / markFailed", () => {
 	test("settles a pending delivery as sent and keeps the platform's ref", async () => {
 		let event = await recordAt(0, "down", "pending");
 
-		await AlertEvent.markSent(db, event.id, { provider: "discord-webhook", id: "m-1" });
+		await models.alertEvents.markSent(event.id, { provider: "discord-webhook", id: "m-1" });
 
-		let settled = await AlertEvent.findById(db, event.id);
+		let settled = await models.alertEvents.find(event.id);
 		expect(settled?.status).toBe("sent");
 		expect(settled?.delivery_ref).toEqual({ provider: "discord-webhook", id: "m-1" });
 	});
@@ -439,40 +395,78 @@ describe("AlertEvent.markSent / markFailed", () => {
 	test("settles a pending delivery as failed with the reason", async () => {
 		let event = await recordAt(0, "down", "pending");
 
-		await AlertEvent.markFailed(db, event.id, "Slack answered no_service (gone)");
+		await models.alertEvents.markFailed(event.id, "Slack answered no_service (gone)");
 
-		let settled = await AlertEvent.findById(db, event.id);
+		let settled = await models.alertEvents.find(event.id);
 		expect(settled?.status).toBe("failed");
 		expect(settled?.error_message).toBe("Slack answered no_service (gone)");
 	});
 });
 
-describe("AlertEvent.refForRecovery", () => {
+describe("alertEvents.refForRecovery", () => {
 	test("answers the ref of the newest delivered notification of the incident", async () => {
 		let first = await recordAt(5000, "down", "pending");
-		await AlertEvent.markSent(db, first.id, { provider: "memory", id: "1" });
+		await models.alertEvents.markSent(first.id, { provider: "memory", id: "1" });
 		let repeat = await recordAt(4000, "down", "pending");
-		await AlertEvent.markSent(db, repeat.id, { provider: "memory", id: "2" });
+		await models.alertEvents.markSent(repeat.id, { provider: "memory", id: "2" });
 		let recovery = await recordAt(1000, "up", "pending");
 
-		expect(await AlertEvent.refForRecovery(db, recovery)).toEqual({ provider: "memory", id: "2" });
+		expect(await models.alertEvents.refForRecovery(recovery)).toEqual({
+			provider: "memory",
+			id: "2",
+		});
 	});
 
 	test("answers null when the incident's notifications landed with no ref", async () => {
 		let down = await recordAt(5000, "down", "pending");
-		await AlertEvent.markSent(db, down.id, null);
+		await models.alertEvents.markSent(down.id, null);
 		let recovery = await recordAt(1000, "up", "pending");
 
-		expect(await AlertEvent.refForRecovery(db, recovery)).toBeNull();
+		expect(await models.alertEvents.refForRecovery(recovery)).toBeNull();
 	});
 
 	test("never reaches back into an incident a previous recovery closed", async () => {
 		let old = await recordAt(9000, "down", "pending");
-		await AlertEvent.markSent(db, old.id, { provider: "memory", id: "old" });
+		await models.alertEvents.markSent(old.id, { provider: "memory", id: "old" });
 		await recordAt(8000, "up", "sent");
 		await recordAt(5000, "down", "failed");
 		let recovery = await recordAt(1000, "up", "pending");
 
-		expect(await AlertEvent.refForRecovery(db, recovery)).toBeNull();
+		expect(await models.alertEvents.refForRecovery(recovery)).toBeNull();
+	});
+});
+
+describe("alertEvents.forAlert / forMonitor", () => {
+	test("pages one alert's events newest first, leaving the ordering to the pager", async () => {
+		let older = await recordAt(2000, "down", "sent");
+		let newer = await recordAt(1000, "up", "sent");
+		await record({
+			alert_id: "alert-2",
+			monitor_id: "monitor-1",
+			event_type: "down",
+			status: "sent",
+		});
+		await db.update(alertEvents, older.id, { created_at: Date.now() - 60_000 });
+
+		let page = unwrap(
+			await Pagination.byKeyset(models.alertEvents.forAlert("alert-1"), {
+				orderBy: NEWEST_FIRST,
+				limit: 10,
+			}),
+		);
+		expect(page.items.map((event) => event.id)).toEqual([newer.id, older.id]);
+	});
+
+	test("selects one monitor's events and none of another monitor's", async () => {
+		let mine = await recordAt(0, "down", "sent");
+		await record({
+			alert_id: "alert-1",
+			monitor_id: "monitor-2",
+			event_type: "down",
+			status: "sent",
+		});
+
+		let rows = await models.alertEvents.forMonitor("monitor-1").all();
+		expect(rows.map((event) => event.id)).toEqual([mine.id]);
 	});
 });

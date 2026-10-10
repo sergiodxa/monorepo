@@ -8,4 +8,9 @@
  */
 
 /** This domain's models, keyed by the name `ctx.models` binds each under. */
-export const ALERT_MODELS = {};
+export const ALERT_MODELS = {
+	alerts: () => import("../alerts"),
+	alertEvents: () => import("../alert-events"),
+	maintenanceWindows: () => import("../maintenance-windows"),
+	statusPages: () => import("../status-pages"),
+};

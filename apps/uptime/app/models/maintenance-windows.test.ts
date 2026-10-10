@@ -1,27 +1,44 @@
 /**
- * Unit tests for `MaintenanceWindow`: `parseRecurringPattern`, the iCalendar events a row
- * maps to, `isActiveAt` reading its recurrence off that RRULE, and the two queries that need
- * a real database — `isSuppressing`'s tenant isolation and `listForStatusPage`'s filters.
+ * Tests the maintenance windows model: `parseRecurringPattern`, the iCalendar events a row
+ * maps to, `isActiveAt` reading its recurrence off that RRULE, and the reads that need a
+ * real database — `isSuppressing`'s tenant isolation and `listForStatusPage`'s filters.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { parse, stringify } from "@sdxc/icalendar";
 import { stringifyRecurrence } from "@sdxc/icalendar/rrule";
-import { isSuccess } from "@sdxc/result";
+import { isSuccess, unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
-import MaintenanceWindow, {
+import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import {
+	isActiveAt,
 	oneOffEvent,
 	parseRecurringPattern,
 	recurringEvent,
-} from "~/app/data/maintenance-window";
-import { createTestDatabase } from "~/app/lib/test/db";
+} from "~/app/models/maintenance-windows";
+
+/** Creates a window for `teamId`, failing the test when the write is refused. */
+async function createWindowFor(
+	models: ReturnType<typeof bindModels>,
+	teamId: string,
+	values: Omit<InsertMaintenanceWindow, "team_id">,
+): Promise<SelectMaintenanceWindow> {
+	return unwrap(
+		await models.maintenanceWindows.create({
+			name: values.name ?? "Window",
+			starts_at: values.starts_at ?? Date.now(),
+			ends_at: values.ends_at ?? Date.now(),
+			...values,
+			team_id: teamId,
+		}),
+	);
+}
 
 describe("parseRecurringPattern", () => {
 	test("parses a daily pattern", () => {
@@ -89,7 +106,7 @@ function recurringRow(
 
 /** Whether the row is active at an ISO instant. */
 function activeAt(row: SelectMaintenanceWindow, iso: string): boolean {
-	return MaintenanceWindow.isActiveAt(row, Date.parse(iso));
+	return isActiveAt(row, Date.parse(iso));
 }
 
 describe("parseRecurringPattern day of month", () => {
@@ -200,7 +217,7 @@ describe("oneOffEvent", () => {
 	});
 });
 
-describe("MaintenanceWindow.isActiveAt", () => {
+describe("isActiveAt", () => {
 	test("covers a daily pattern within its time range, with an exclusive end", () => {
 		let row = recurringRow("daily:02:00-04:00");
 
@@ -248,21 +265,21 @@ describe("MaintenanceWindow.isActiveAt", () => {
 	test("covers the one-off range of a recurring row too", () => {
 		let row = recurringRow("daily:02:00-04:00");
 
-		expect(MaintenanceWindow.isActiveAt(row, row.starts_at + 1)).toBe(true);
+		expect(isActiveAt(row, row.starts_at + 1)).toBe(true);
 	});
 });
 
-describe("MaintenanceWindow.listForStatusPage", () => {
-	let db: Database;
+describe("maintenanceWindows.listForStatusPage", () => {
+	let models: ReturnType<typeof bindModels>;
 
 	beforeEach(() => {
-		db = createTestDatabase().db;
+		models = bindModels(createTestDatabase().db);
 	});
 
 	/** Creates a window for team-1 ending an hour from now. */
 	async function createWindow(overrides: Partial<InsertMaintenanceWindow> = {}) {
 		let now = Date.now();
-		return await MaintenanceWindow.create(db, "team-1", {
+		return await createWindowFor(models, "team-1", {
 			name: "Window",
 			starts_at: now,
 			ends_at: now + 3_600_000,
@@ -280,7 +297,7 @@ describe("MaintenanceWindow.listForStatusPage", () => {
 		await createWindow({ monitor_type: "http", monitor_id: "monitor-2" });
 		await createWindow({ monitor_type: "dns" });
 
-		let rows = await MaintenanceWindow.listForStatusPage(db, "team-1", services, Date.now());
+		let rows = await models.maintenanceWindows.listForStatusPage("team-1", services, Date.now());
 
 		expect(rows.map((row) => row.id).sort()).toEqual([teamWide.id, scoped.id, byType.id].sort());
 	});
@@ -288,21 +305,21 @@ describe("MaintenanceWindow.listForStatusPage", () => {
 	test("leaves out windows hidden from status pages", async () => {
 		await createWindow({ show_on_status_page: false });
 
-		expect(await MaintenanceWindow.listForStatusPage(db, "team-1", services, Date.now())).toEqual(
-			[],
-		);
+		expect(
+			await models.maintenanceWindows.listForStatusPage("team-1", services, Date.now()),
+		).toEqual([]);
 	});
 
 	test("leaves out another team's windows", async () => {
 		let now = Date.now();
-		await MaintenanceWindow.create(db, "team-2", {
+		await createWindowFor(models, "team-2", {
 			name: "Theirs",
 			starts_at: now,
 			ends_at: now + 60_000,
 			monitor_id: null,
 		});
 
-		expect(await MaintenanceWindow.listForStatusPage(db, "team-1", services, now)).toEqual([]);
+		expect(await models.maintenanceWindows.listForStatusPage("team-1", services, now)).toEqual([]);
 	});
 
 	test("keeps a one-off window for 30 days after it ends, and a recurring one always", async () => {
@@ -317,30 +334,48 @@ describe("MaintenanceWindow.listForStatusPage", () => {
 			recurring_pattern: "daily:02:00-04:00",
 		});
 
-		let rows = await MaintenanceWindow.listForStatusPage(db, "team-1", services, now);
+		let rows = await models.maintenanceWindows.listForStatusPage("team-1", services, now);
 
 		expect(rows.map((row) => row.id).sort()).toEqual([recent.id, recurring.id].sort());
 	});
 });
 
-describe("MaintenanceWindow.listByTeamQuery", () => {
+describe("maintenanceWindows.inTeam", () => {
 	test("selects the team's windows and none of another team's", async () => {
-		let db = createTestDatabase().db;
+		let models = bindModels(createTestDatabase().db);
 		let now = Date.now();
 		let window = { name: "Window", starts_at: now, ends_at: now + 60_000, monitor_id: null };
-		let mine = await MaintenanceWindow.create(db, "team-1", window);
-		await MaintenanceWindow.create(db, "team-2", window);
+		let mine = await createWindowFor(models, "team-1", window);
+		await createWindowFor(models, "team-2", window);
 
-		let rows = await MaintenanceWindow.listByTeamQuery(db, "team-1").all();
+		let rows = await models.maintenanceWindows.inTeam("team-1").all();
 		expect(rows.map((row) => row.id)).toEqual([mine.id]);
 	});
 });
 
-describe("MaintenanceWindow.isSuppressing", () => {
-	let db: Database;
+describe("maintenanceWindows.endEarly", () => {
+	test("ends a window now, which stops it suppressing", async () => {
+		let models = bindModels(createTestDatabase().db);
+		let now = Date.now();
+		let window = await createWindowFor(models, "team-1", {
+			name: "Window",
+			starts_at: now - 60_000,
+			ends_at: now + 60_000,
+			monitor_id: "monitor-1",
+		});
+
+		let ended = unwrap(await models.maintenanceWindows.endEarly(window.id));
+
+		expect(ended.ended_early_at).toEqual(expect.any(Number));
+		expect(isActiveAt(ended, Date.now() + 1)).toBe(false);
+	});
+});
+
+describe("maintenanceWindows.isSuppressing", () => {
+	let models: ReturnType<typeof bindModels>;
 
 	beforeEach(() => {
-		db = createTestDatabase().db;
+		models = bindModels(createTestDatabase().db);
 	});
 
 	/** Creates a window covering right now, suppressing alerts unless overridden. */
@@ -350,7 +385,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		overrides: Partial<InsertMaintenanceWindow> = {},
 	) {
 		let now = Date.now();
-		return await MaintenanceWindow.create(db, teamId, {
+		return await createWindowFor(models, teamId, {
 			monitor_id: monitorId,
 			name: "Window",
 			starts_at: now - 60_000,
@@ -363,7 +398,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "monitor-1");
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -376,7 +411,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 
 		for (let monitorType of ["http", "dns", "tcp", "cron"] as const) {
 			expect(
-				await MaintenanceWindow.isSuppressing(db, {
+				await models.maintenanceWindows.isSuppressing({
 					teamId: "team-1",
 					monitorId: "monitor-1",
 					monitorType,
@@ -389,7 +424,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "monitor-2");
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -402,7 +437,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-2", null);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -419,7 +454,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "monitor-1", { monitor_type: null });
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -427,7 +462,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		).toBe(true);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "dns",
@@ -439,7 +474,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", null, { monitor_type: "dns" });
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "dns-1",
 				monitorType: "dns",
@@ -447,7 +482,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		).toBe(true);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "dns-2",
 				monitorType: "dns",
@@ -455,7 +490,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		).toBe(true);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "http-1",
 				monitorType: "http",
@@ -467,7 +502,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "dns-1", { monitor_type: "dns" });
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "dns-1",
 				monitorType: "dns",
@@ -475,7 +510,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		).toBe(true);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "dns-2",
 				monitorType: "dns",
@@ -488,7 +523,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "monitor-1", { monitor_type: "http" });
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "dns",
@@ -500,7 +535,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 		await createActiveWindow("team-1", "monitor-1", { suppress_alerts: false });
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -510,10 +545,12 @@ describe("MaintenanceWindow.isSuppressing", () => {
 
 	test("a window ended early is no longer active", async () => {
 		let window = await createActiveWindow("team-1", "monitor-1");
-		await MaintenanceWindow.updateById(db, window.id, { ended_early_at: Date.now() - 1_000 });
+		unwrap(
+			await models.maintenanceWindows.update(window.id, { ended_early_at: Date.now() - 1_000 }),
+		);
 
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
@@ -523,7 +560,7 @@ describe("MaintenanceWindow.isSuppressing", () => {
 
 	test("returns false when the team has no windows at all", async () => {
 		expect(
-			await MaintenanceWindow.isSuppressing(db, {
+			await models.maintenanceWindows.isSuppressing({
 				teamId: "team-1",
 				monitorId: "monitor-1",
 				monitorType: "http",
