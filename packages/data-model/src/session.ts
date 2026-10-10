@@ -283,40 +283,31 @@ function replay(model: unknown, steps: readonly Step[]): unknown {
 }
 
 /**
- * A call on a model whose module has not loaded: it records each chained call and replays the
- * chain on the loaded model when awaited or when a terminal runs, so a scope chains and pages
- * as it does on an eager model, and an async method settles with its own result.
+ * A call on a model whose module has not loaded. It starts the import and replays the
+ * recorded calls on the loaded model right away, so an async method runs whether or not the
+ * caller awaits it, and it is a real `Promise` settling with the member's result. Chaining a
+ * further call records it and replays the longer chain, so a scope chains and pages as it does
+ * on an eager model.
  */
 function deferred(load: () => Promise<unknown>, steps: readonly Step[]): unknown {
-	let settle = () => load().then((model) => replay(model, steps));
+	let settled = load().then((model) => replay(model, steps));
 
-	return new Proxy(
-		{},
-		{
-			get(_, property) {
-				if (property === "then") {
-					return (
-						onFulfilled?: (value: unknown) => unknown,
-						onRejected?: (reason: unknown) => unknown,
-					) => settle().then(onFulfilled, onRejected);
-				}
-				if (property === "catch") {
-					return (onRejected?: (reason: unknown) => unknown) => settle().catch(onRejected);
-				}
-				if (property === "finally") {
-					return (onFinally?: () => void) => settle().finally(onFinally);
-				}
-				if (typeof property === "symbol") return undefined;
-				if (TERMINALS.has(property)) {
-					return (...args: unknown[]) =>
-						settle().then((query) =>
-							(query as Record<string, (...args: unknown[]) => unknown>)[property]?.(...args),
-						);
-				}
-				return (...args: unknown[]) => deferred(load, [...steps, { property, args }]);
-			},
+	return new Proxy(settled, {
+		get(target, property) {
+			if (property === "then" || property === "catch" || property === "finally") {
+				let method = Reflect.get(target, property, target) as (...args: unknown[]) => unknown;
+				return method.bind(target);
+			}
+			if (typeof property === "symbol") return Reflect.get(target, property, target);
+			if (TERMINALS.has(property)) {
+				return (...args: unknown[]) =>
+					settled.then((query) =>
+						(query as Record<string, (...args: unknown[]) => unknown>)[property]?.(...args),
+					);
+			}
+			return (...args: unknown[]) => deferred(load, [...steps, { property, args }]);
 		},
-	);
+	});
 }
 
 /**

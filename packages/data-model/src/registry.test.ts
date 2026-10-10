@@ -149,6 +149,31 @@ describe("registry", () => {
 		await expect(models.broken.query().count()).rejects.toThrow("chunk failed to load");
 	});
 
+	test("a lazy model's async method answers a real promise, so instanceof checks hold", async () => {
+		let { registry } = setup();
+		let { db } = openDatabase();
+		let models = registry.bind({ db });
+
+		let call = models.articles.query().count();
+		let firstDraft = models.articles.firstDraft();
+
+		expect(call).toBeInstanceOf(Promise);
+		expect(firstDraft).toBeInstanceOf(Promise);
+		expect(await firstDraft).toBeNull();
+	});
+
+	test("a lazy model's write runs even when the caller never awaits it", async () => {
+		let { registry } = setup();
+		let { db } = openDatabase();
+		let models = registry.bind({ db });
+		let author = unwrap(await models.users.create({ email: "a@example.com", name: "A" }));
+
+		void models.articles.create({ author_id: author.id, published_at: null });
+		await new Promise((resolve) => setTimeout(resolve, 20));
+
+		expect(await models.articles.query().count()).toBe(2);
+	});
+
 	test("inside a unit of work, a lazy model binds to it", async () => {
 		let { registry } = setup();
 		let { db } = openDatabase();

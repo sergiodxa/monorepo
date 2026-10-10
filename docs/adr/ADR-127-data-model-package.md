@@ -750,9 +750,10 @@ whether an entry is lazy or not, and an entry can move between the two without t
 
 - A lazy entry's module default-exports its model, the shape `dispatcher.map(job, () => import(...))`
   already uses for jobs.
-- An async member, such as `findBySlug()` or `create()`, awaits the import, binds the model, and
-  then calls the member with the same arguments. The returned promise settles with the member's
-  own result, or rejects when the import fails.
+- An async member, such as `findBySlug()` or `create()`, starts the import as it is called, binds
+  the model, and calls the member with the same arguments. What it returns is a real `Promise`,
+  so `instanceof Promise` holds and the call runs whether or not the caller awaits it; it settles
+  with the member's own result, or rejects when the import fails.
 - A member that returns a query, such as `query()`, a scope or `from()`, returns a deferred query
   synchronously. It records each chained call and replays the chain on the loaded model when a
   terminal method (`all()`, `first()`, `count()`, a write) runs, so it chains and pages exactly
