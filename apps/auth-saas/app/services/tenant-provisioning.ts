@@ -8,14 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { Region, TenantRow } from "~/app/models/tenant";
+import type { Models } from "~/app/models";
+import type { Region, TenantRow } from "~/app/models/tenants";
 
-import Domain from "~/app/models/domain";
-import Tenant from "~/app/models/tenant";
+import { generateTenantSlug } from "~/app/models/tenants";
 
 /** What creating a tenant needs: its owning customer, display name, and placement. */
 export interface ProvisionTenantInput {
@@ -30,29 +29,38 @@ export interface ProvisionTenantInput {
  * domain row, then provisions the tenant's Durable Object with that same issuer — the
  * choice ADR-005 makes once and never changes.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param input - The tenant's owning customer, display name, and optional region.
  * @returns A promise resolving to the newly-created tenant row.
  * @example
- * let tenant = await provisionTenant(db, { customerId: customer.id, name: "Acme, Inc." });
+ * let tenant = await provisionTenant(ctx.models, { customerId: customer.id, name: "Acme, Inc." });
  */
 export async function provisionTenant(
-	db: Database,
+	models: Models,
 	input: ProvisionTenantInput,
 ): Promise<TenantRow> {
-	let slug = Tenant.generateSlug(input.name);
+	let slug = generateTenantSlug(input.name);
 	let hostname = `${slug}.${env.PLATFORM_DOMAIN}`;
 	let issuer = `https://${hostname}`;
 
-	let tenant = await Tenant.create(db, {
-		customerId: input.customerId,
-		name: input.name,
-		slug,
-		issuer,
-		region: input.region,
-	});
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: input.customerId,
+			name: input.name,
+			slug,
+			issuer,
+			region: input.region,
+		}),
+	);
 
-	await Domain.create(db, { tenantId: tenant.id, hostname, kind: "platform", status: "active" });
+	unwrap(
+		await models.domains.create({
+			tenant_id: tenant.id,
+			hostname,
+			kind: "platform",
+			status: "active",
+		}),
+	);
 
 	await env.TENANT.getByName(tenant.id).provision({ tenantId: tenant.id, issuer });
 

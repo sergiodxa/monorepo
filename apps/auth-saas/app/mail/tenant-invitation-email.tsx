@@ -16,7 +16,7 @@ import type { RemixElement } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
-import type { TenantMemberInvitationRole } from "~/app/models/tenant-member-invitation";
+import type { TenantMemberInvitationRole } from "~/app/models/tenant-member-invitations";
 
 import { AuthMailLayout } from "~/app/mail/layout";
 

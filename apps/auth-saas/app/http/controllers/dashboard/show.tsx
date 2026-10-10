@@ -14,6 +14,7 @@
 
 import type { RequestContext } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
@@ -23,8 +24,6 @@ import {
 	dashboardSignInUrl,
 	resolveDashboardSession,
 } from "~/app/http/middleware/dashboard-session";
-import Customer from "~/app/models/customer";
-import Membership from "~/app/models/membership";
 import { provisionTenant } from "~/app/services/tenant-provisioning";
 import { DashboardHomePage } from "~/app/views/dashboard";
 import { PublicDocument } from "~/app/views/landing";
@@ -54,7 +53,7 @@ export const dashboardShow = createAction(routes.dashboard.show, async (ctx) => 
 	let session = await resolveDashboardSession(ctx);
 	if (!session) return redirect(dashboardSignInUrl(routes.dashboard.show.href()));
 
-	let tenants = await Membership.administeredTenants(ctx.db, session.subjectId);
+	let tenants = await ctx.models.memberships.administeredTenants(session.subjectId);
 
 	return ctx.render(
 		<PublicDocument title="Auth SaaS - Dashboard">
@@ -82,7 +81,7 @@ async function renderCreateTenantIssue(
 	subjectId: string,
 	input: { organizationName?: string; issues: ReadonlyArray<s.Issue> },
 ): Promise<Response> {
-	let tenants = await Membership.administeredTenants(ctx.db, subjectId);
+	let tenants = await ctx.models.memberships.administeredTenants(subjectId);
 
 	return ctx.render(
 		<PublicDocument title="Auth SaaS - Dashboard">
@@ -122,17 +121,19 @@ export const dashboardCreateTenant = createAction(routes.dashboard.createTenant,
 
 	let { organizationName } = parsed.value;
 
-	let administered = await Membership.administeredTenants(ctx.db, session.subjectId);
+	let administered = await ctx.models.memberships.administeredTenants(session.subjectId);
 	let customerId = administered[0]
 		? administered[0].tenant.customer_id
-		: (await Customer.create(ctx.db, { name: organizationName })).id;
+		: unwrap(await ctx.models.customers.create({ name: organizationName })).id;
 
-	let tenant = await provisionTenant(ctx.db, { customerId, name: organizationName });
-	await Membership.create(ctx.db, {
-		tenantId: tenant.id,
-		subjectId: session.subjectId,
-		role: "owner",
-	});
+	let tenant = await provisionTenant(ctx.models, { customerId, name: organizationName });
+	unwrap(
+		await ctx.models.memberships.create({
+			tenant_id: tenant.id,
+			subject_id: session.subjectId,
+			role: "owner",
+		}),
+	);
 
 	return redirect(routes.dashboard.show.href());
 });

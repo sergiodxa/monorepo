@@ -9,16 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
+import { NotFound } from "@sdxc/data-model";
 import { HostnameApiError, HostnameClient } from "@sdxc/hostname";
+import { unwrap } from "@sdxc/result";
 
-import type { DomainRow } from "~/app/models/domain";
+import type { Models } from "~/app/models";
+import type { DomainRow } from "~/app/models/domains";
 
-import { RecordNotFoundError } from "~/app/lib/db-errors";
 import { invalidateHostnameCache } from "~/app/lib/hostname-cache";
-import Domain from "~/app/models/domain";
-import Tenant from "~/app/models/tenant";
 
 /** How long a domain may sit `pending` before it is marked `failed`. */
 const PENDING_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
@@ -29,33 +27,37 @@ const PENDING_TIMEOUT_MS = 7 * 24 * 60 * 60 * 1000;
  * `pending` with the TXT record the customer has to publish. Whether the tenant may
  * attach one is the attach route's `custom_domain` entitlement gate.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param hostnameClient - Client for the Cloudflare zone the hostname is registered on.
  * @param tenantId - The tenant the domain is attached to.
  * @param hostname - The customer's own hostname (e.g. `auth.customer.example`).
  * @returns A promise resolving to the newly-created, `pending` domain row.
- * @throws {RecordNotFoundError} When no tenant exists for the given id.
+ * @throws {NotFound} When no tenant exists for the given id.
  * @example
- * let domain = await attachCustomDomain(db, hostnameClient, tenant.id, "auth.acme.com");
+ * let domain = await attachCustomDomain(ctx.models, hostnameClient, tenant.id, "auth.acme.com");
  */
 export async function attachCustomDomain(
-	db: Database,
+	models: Models,
 	hostnameClient: HostnameClient,
 	tenantId: string,
 	hostname: string,
 ): Promise<DomainRow> {
-	let tenant = await Tenant.findById(db, tenantId);
-	if (!tenant) throw new RecordNotFoundError(Tenant.table, { id: tenantId });
+	let tenant = await models.tenants.find(tenantId);
+	if (!tenant) throw new NotFound("tenants", tenantId);
 
 	let result = await hostnameClient.create(hostname, tenantId, tenant.region);
-	let domain = await Domain.create(db, { tenantId, hostname, kind: "custom" });
+	let domain = unwrap(
+		await models.domains.create({ tenant_id: tenantId, hostname, kind: "custom" }),
+	);
 
 	let record = HostnameClient.getValidationTxtRecord(result);
 	if (record) {
-		domain = await Domain.update(db, domain.id, {
-			verificationName: record.name,
-			verificationValue: record.value,
-		});
+		domain = unwrap(
+			await models.domains.update(domain.id, {
+				verification_name: record.name,
+				verification_value: record.value,
+			}),
+		);
 	}
 
 	return domain;
@@ -70,35 +72,37 @@ export async function attachCustomDomain(
  * are both active, and fails a domain still pending after seven days so the customer
  * can attach it again. Invalidates the hostname cache on either transition.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param hostnameClient - Client for the Cloudflare zone the hostname was registered on.
  * @param domain - The domain row to refresh.
  * @returns A promise resolving to the domain row: updated on a status transition, or
  * the row passed in when nothing changed yet.
  * @example
- * for (let domain of await Domain.listPending(db)) {
- * 	await refreshDomainStatus(db, hostnameClient, domain);
+ * for (let domain of await ctx.models.domains.pending().all()) {
+ * 	await refreshDomainStatus(ctx.models, hostnameClient, domain);
  * }
  */
 export async function refreshDomainStatus(
-	db: Database,
+	models: Models,
 	hostnameClient: HostnameClient,
 	domain: DomainRow,
 ): Promise<DomainRow> {
 	let result = await hostnameClient.getByName(domain.hostname);
 
 	if (result && HostnameClient.isActive(result)) {
-		let updated = await Domain.update(db, domain.id, {
-			status: "active",
-			certificateStatus: result.sslStatus,
-		});
+		let updated = unwrap(
+			await models.domains.update(domain.id, {
+				status: "active",
+				certificate_status: result.sslStatus,
+			}),
+		);
 		await invalidateHostnameCache(domain.hostname);
 		return updated;
 	}
 
 	let pendingFor = Date.now() - domain.created_at;
 	if (domain.status === "pending" && pendingFor > PENDING_TIMEOUT_MS) {
-		let updated = await Domain.update(db, domain.id, { status: "failed" });
+		let updated = unwrap(await models.domains.update(domain.id, { status: "failed" }));
 		await invalidateHostnameCache(domain.hostname);
 		return updated;
 	}
@@ -111,15 +115,15 @@ export async function refreshDomainStatus(
  * hostname already being gone — the same as success), deletes the `domains` row, and
  * invalidates the hostname cache so the next request re-reads D1.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param hostnameClient - Client for the Cloudflare zone the hostname was registered on.
  * @param domain - The domain row to remove.
  * @returns A promise that resolves once the domain has been removed.
  * @example
- * await removeDomain(db, hostnameClient, domain);
+ * await removeDomain(ctx.models, hostnameClient, domain);
  */
 export async function removeDomain(
-	db: Database,
+	models: Models,
 	hostnameClient: HostnameClient,
 	domain: DomainRow,
 ): Promise<void> {
@@ -132,6 +136,6 @@ export async function removeDomain(
 		}
 	}
 
-	await Domain.delete(db, domain.id);
+	await models.domains.delete(domain.id);
 	await invalidateHostnameCache(domain.hostname);
 }

@@ -15,11 +15,14 @@
  */
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
+
+import { bindModels } from "~/app/test/models";
 
 let hostnamesKv = createKVNamespace();
 
@@ -30,9 +33,6 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { buildTenantsHarness, HOSTNAME_ZONE_ID } =
 	await import("~/app/http/controllers/management/tenants/test-harness");
-let Domain = (await import("~/app/models/domain")).default;
-let Tenant = (await import("~/app/models/tenant")).default;
-let TenantEntitlement = (await import("~/app/models/tenant-entitlement")).default;
 
 /** The Cloudflare custom-hostnames collection the test zone's handlers answer for. */
 const API_URL = `https://api.cloudflare.com/client/v4/zones/${HOSTNAME_ZONE_ID}/custom_hostnames`;
@@ -45,12 +45,15 @@ afterAll(() => server.close());
 
 /** Puts the harness's own tenant on an active Pro subscription, whose projection grants `custom_domain`. */
 async function upgradeTenant(harness: TenantsHarness): Promise<void> {
-	await Tenant.update(harness.db, harness.tenantId, { planSlug: "pro" });
-	await TenantEntitlement.upsert(harness.db, harness.tenantId, {
-		products: ["pro"],
-		features: { custom_domain: true },
-		readAt: Date.now(),
-	});
+	unwrap(await bindModels(harness.db).tenants.update(harness.tenantId, { plan_slug: "pro" }));
+	unwrap(
+		await bindModels(harness.db).tenantEntitlements.upsert({
+			tenant_id: harness.tenantId,
+			products: ["pro"],
+			features: { custom_domain: true },
+			read_at: Date.now(),
+		}),
+	);
 }
 
 describe("GET /tenants/:tenantId/domains", () => {
@@ -58,12 +61,14 @@ describe("GET /tenants/:tenantId/domains", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		await Domain.create(harness.db, {
-			tenantId: harness.tenantId,
-			hostname: "acme.example.com",
-			kind: "platform",
-			status: "active",
-		});
+		unwrap(
+			await bindModels(harness.db).domains.create({
+				tenant_id: harness.tenantId,
+				hostname: "acme.example.com",
+				kind: "platform",
+				status: "active",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/domains`, token),
@@ -165,16 +170,21 @@ describe("POST /tenants/:tenantId/domains", () => {
 
 	test("refuses a lapsed tenant that still records its former paid tier", async () => {
 		let harness = await buildTenantsHarness();
-		await Tenant.update(harness.db, harness.tenantId, {
-			planSlug: "pro",
-			subscriptionStatus: "revoked",
-			lapsedAt: Date.now(),
-		});
-		await TenantEntitlement.upsert(harness.db, harness.tenantId, {
-			products: [],
-			features: {},
-			readAt: Date.now(),
-		});
+		unwrap(
+			await bindModels(harness.db).tenants.update(harness.tenantId, {
+				plan_slug: "pro",
+				subscription_status: "revoked",
+				lapsed_at: Date.now(),
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).tenantEntitlements.upsert({
+				tenant_id: harness.tenantId,
+				products: [],
+				features: {},
+				read_at: Date.now(),
+			}),
+		);
 		let token = await harness.signToken();
 
 		let response = await harness.router.fetch(
@@ -187,7 +197,7 @@ describe("POST /tenants/:tenantId/domains", () => {
 		expect(response.status).toBe(403);
 		let body = (await response.json()) as { type: string };
 		expect(body.type).toBe("https://docs.example.com/errors/entitlement-required");
-		expect(await Domain.findByHostname(harness.db, "auth.acme.com")).toBeNull();
+		expect(await bindModels(harness.db).domains.findByHostname("auth.acme.com")).toBeNull();
 	});
 });
 
@@ -196,15 +206,19 @@ describe("GET /tenants/:tenantId/domains/:domainId/verification", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let domain = await Domain.create(harness.db, {
-			tenantId: harness.tenantId,
-			hostname: "auth.acme.com",
-			kind: "custom",
-		});
-		await Domain.update(harness.db, domain.id, {
-			verificationName: "_cf-custom-hostname.auth.acme.com",
-			verificationValue: "abc123",
-		});
+		let domain = unwrap(
+			await bindModels(harness.db).domains.create({
+				tenant_id: harness.tenantId,
+				hostname: "auth.acme.com",
+				kind: "custom",
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).domains.update(domain.id, {
+				verification_name: "_cf-custom-hostname.auth.acme.com",
+				verification_value: "abc123",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/domains/${domain.id}/verification`, token),
@@ -224,12 +238,14 @@ describe("GET /tenants/:tenantId/domains/:domainId/verification", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let otherDomain = await Domain.create(harness.db, {
-			tenantId: harness.otherTenantId,
-			hostname: "other.example.com",
-			kind: "platform",
-			status: "active",
-		});
+		let otherDomain = unwrap(
+			await bindModels(harness.db).domains.create({
+				tenant_id: harness.otherTenantId,
+				hostname: "other.example.com",
+				kind: "platform",
+				status: "active",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/domains/${otherDomain.id}/verification`, token),
@@ -244,11 +260,13 @@ describe("DELETE /tenants/:tenantId/domains/:domainId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let domain = await Domain.create(harness.db, {
-			tenantId: harness.tenantId,
-			hostname: "auth.acme.com",
-			kind: "custom",
-		});
+		let domain = unwrap(
+			await bindModels(harness.db).domains.create({
+				tenant_id: harness.tenantId,
+				hostname: "auth.acme.com",
+				kind: "custom",
+			}),
+		);
 
 		server.use(
 			http.get(API_URL, () =>
@@ -279,19 +297,21 @@ describe("DELETE /tenants/:tenantId/domains/:domainId", () => {
 		);
 
 		expect(response.status).toBe(204);
-		expect(await Domain.findByHostname(harness.db, domain.hostname)).toBeNull();
+		expect(await bindModels(harness.db).domains.findByHostname(domain.hostname)).toBeNull();
 	});
 
 	test("answers 404 for a domain another tenant holds, leaving it untouched", async () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let otherDomain = await Domain.create(harness.db, {
-			tenantId: harness.otherTenantId,
-			hostname: "other.example.com",
-			kind: "platform",
-			status: "active",
-		});
+		let otherDomain = unwrap(
+			await bindModels(harness.db).domains.create({
+				tenant_id: harness.otherTenantId,
+				hostname: "other.example.com",
+				kind: "platform",
+				status: "active",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/domains/${otherDomain.id}`, token, {
@@ -300,6 +320,8 @@ describe("DELETE /tenants/:tenantId/domains/:domainId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await Domain.findByHostname(harness.db, otherDomain.hostname)).not.toBeNull();
+		expect(
+			await bindModels(harness.db).domains.findByHostname(otherDomain.hostname),
+		).not.toBeNull();
 	});
 });

@@ -10,11 +10,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
+import { isFailure } from "@sdxc/result";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
-
-import TenantModel from "~/app/models/tenant";
 
 /** How many tenants one page reads from the control plane, when a caller does not choose. */
 const DEFAULT_PAGE_SIZE = 100;
@@ -36,19 +35,19 @@ export interface ForEachProvisionedTenantResult {
  * Object stub by its tenant id the way every other per-tenant caller in this app
  * already does.
  *
- * @param db - The control-plane database.
+ * @param models - The control plane's models.
  * @param tenant - The tenant Durable Object namespace binding.
  * @param callback - The work to run against one tenant's own object.
  * @param options - An abort signal to stop paging early, and how many tenants to
  * read from the control plane per page.
  * @returns How many tenants the callback ran for.
  * @example
- * await forEachProvisionedTenant(ctx.database, env.TENANT, async (stub, tenantId) => {
+ * await forEachProvisionedTenant(ctx.models, env.TENANT, async (stub, tenantId) => {
  * 	await stub.sweepWebhookDeliveries({});
  * });
  */
 export async function forEachProvisionedTenant(
-	db: Database,
+	models: Models,
 	tenant: DurableObjectNamespace<Tenant>,
 	callback: (stub: DurableObjectStub<Tenant>, tenantId: string) => Promise<void>,
 	options: ForEachProvisionedTenantOptions = {},
@@ -60,14 +59,14 @@ export async function forEachProvisionedTenant(
 	while (true) {
 		if (options.signal?.aborted) break;
 
-		let page = await TenantModel.listProvisioned(db, { cursor, limit: pageSize });
-		if (!page.ok) {
+		let page = await models.tenants.listProvisioned({ cursor, limit: pageSize });
+		if (isFailure(page)) {
 			throw new Error(
-				`forEachProvisionedTenant: listProvisioned refused its own cursor (${page.reason})`,
+				`forEachProvisionedTenant: listProvisioned refused its own cursor (${page.error.message})`,
 			);
 		}
 
-		for (let row of page.tenants) {
+		for (let row of page.data.tenants) {
 			if (options.signal?.aborted) break;
 
 			try {
@@ -78,8 +77,8 @@ export async function forEachProvisionedTenant(
 			}
 		}
 
-		if (page.cursors.next === null) break;
-		cursor = page.cursors.next;
+		if (page.data.cursors.next === null) break;
+		cursor = page.data.cursors.next;
 	}
 
 	return { visited };

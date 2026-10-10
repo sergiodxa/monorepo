@@ -12,7 +12,7 @@
 import { describe, expect, test } from "vitest";
 
 import { buildTenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
-import TenantMemberInvitation from "~/app/models/tenant-member-invitation";
+import { bindModels } from "~/app/test/models";
 
 describe("POST /tenants/:tenantId/members/invite", () => {
 	test("mints an invitation and emails a token-bearing accept link", async () => {
@@ -37,11 +37,9 @@ describe("POST /tenants/:tenantId/members/invite", () => {
 		expect(sent?.to).toEqual([{ email: "Jane.Doe@Example.com" }]);
 		expect(String(sent?.html)).toContain("invitations/accept?token=");
 
-		let stored = await TenantMemberInvitation.findPendingByTenantAndEmail(
-			harness.db,
-			harness.tenantId,
-			"jane.doe@example.com",
-		);
+		let stored = await bindModels(harness.db)
+			.tenantMemberInvitations.pendingFor(harness.tenantId, "jane.doe@example.com")
+			.first();
 		expect(stored).toMatchObject({ id: body.id, role: "admin", accepted_at: null });
 	});
 
@@ -83,11 +81,9 @@ describe("POST /tenants/:tenantId/members/invite", () => {
 		expect(second.status).toBe(201);
 		expect(secondBody.id).not.toBe(firstBody.id);
 
-		let pending = await TenantMemberInvitation.findPendingByTenantAndEmail(
-			harness.db,
-			harness.tenantId,
-			"jane@example.com",
-		);
+		let pending = await bindModels(harness.db)
+			.tenantMemberInvitations.pendingFor(harness.tenantId, "jane@example.com")
+			.first();
 		expect(pending).toMatchObject({ id: secondBody.id, role: "admin" });
 
 		expect(harness.mailTransport.messages).toHaveLength(2);

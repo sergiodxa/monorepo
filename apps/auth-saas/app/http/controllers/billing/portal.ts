@@ -36,7 +36,7 @@ export default createAction(routes.billing.portal, {
 	handler: async (ctx) => {
 		let { tenantId } = s.parse(Params, ctx.params);
 
-		let opened = await openPortal(ctx.db, polar, { tenantId });
+		let opened = await openPortal(ctx.models, polar, { tenantId });
 
 		if (!opened.ok) {
 			if (opened.reason === "billing_error") {

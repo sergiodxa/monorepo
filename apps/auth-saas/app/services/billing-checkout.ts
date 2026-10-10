@@ -10,17 +10,14 @@
  */
 
 import type { Billing } from "@sdxc/billing";
-import type { Database } from "remix/data-table";
 
 import { BillingError } from "@sdxc/billing";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-import type { BillingCheckoutKind } from "~/app/models/billing-checkout";
-import type { TenantRow } from "~/app/models/tenant";
+import type { Models } from "~/app/models";
+import type { BillingCheckoutKind } from "~/app/models/billing-checkouts";
+import type { TenantRow } from "~/app/models/tenants";
 
-import BillingCheckout from "~/app/models/billing-checkout";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
 import { ensureProviderCustomer } from "~/app/services/billing-customer";
 import { attachCheckoutSubscription, reprojectTenant } from "~/app/services/billing-sync";
 
@@ -44,35 +41,37 @@ export type OpenCheckoutResult =
  * customer id, writes a `billing_checkouts` row before calling `checkouts.create`,
  * and records the provider's own checkout id onto that row once it answers.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param input - The tenant, buyer contact, and what is being bought.
  * @returns The hosted checkout URL to redirect the buyer to, or why one could
  * not be opened.
  */
 export async function openCheckout(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	input: OpenCheckoutInput,
 ): Promise<OpenCheckoutResult> {
-	let tenant = await Tenant.findById(db, input.tenantId);
+	let tenant = await models.tenants.find(input.tenantId);
 	if (!tenant) return { ok: false, reason: "tenant_not_found" };
 
-	let customer = await Customer.findById(db, tenant.customer_id);
+	let customer = await models.customers.find(tenant.customer_id);
 	if (!customer) return { ok: false, reason: "tenant_not_found" };
 
-	let joined = await ensureProviderCustomer(db, billing, customer, {
+	let joined = await ensureProviderCustomer(models, billing, customer, {
 		email: input.email,
 		name: input.name,
 	});
 	if (isFailure(joined)) return { ok: false, reason: "billing_error", error: joined.error };
 
-	let attempt = await BillingCheckout.open(db, {
-		tenantId: tenant.id,
-		customerId: customer.id,
-		productSlug: input.product,
-		kind: input.kind,
-	});
+	let attempt = unwrap(
+		await models.billingCheckouts.create({
+			tenant_id: tenant.id,
+			customer_id: customer.id,
+			product_slug: input.product,
+			kind: input.kind,
+		}),
+	);
 
 	let checkout = await billing.checkouts.create({
 		product: input.product,
@@ -96,7 +95,9 @@ export async function openCheckout(
 		};
 	}
 
-	await BillingCheckout.attachCheckoutId(db, attempt.attempt_id, checkout.data.id);
+	unwrap(
+		await models.billingCheckouts.update(attempt.attempt_id, { checkout_id: checkout.data.id }),
+	);
 
 	return { ok: true, url: checkout.data.url };
 }
@@ -111,28 +112,28 @@ export type FinishCheckoutResult =
  * the `billing_checkouts` row names, and reprojects that tenant's entitlements.
  * Safe to run twice for the same checkout — attaching and reprojecting both are.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param checkoutId - The checkout session id the return URL carried.
  * @returns The tenant the checkout was opened for (null when this checkout was
  * not opened through {@link openCheckout}), or the failure `finish` reported.
  */
 export async function finishCheckout(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	checkoutId: string,
 ): Promise<FinishCheckoutResult> {
 	let finished = await billing.checkouts.finish(checkoutId);
 	if (isFailure(finished)) return { ok: false, error: finished.error };
 
-	let checkout = await BillingCheckout.findByCheckoutId(db, checkoutId);
+	let checkout = await models.billingCheckouts.findByCheckoutId(checkoutId);
 	if (!checkout) return { ok: true, tenant: null };
 
 	if (finished.data.subscriptionId !== null) {
-		await attachCheckoutSubscription(db, checkout, finished.data.subscriptionId);
+		await attachCheckoutSubscription(models, checkout, finished.data.subscriptionId);
 	}
 
-	await reprojectTenant(db, billing, checkout.tenant_id);
+	await reprojectTenant(models, billing, checkout.tenant_id);
 
-	return { ok: true, tenant: await Tenant.findById(db, checkout.tenant_id) };
+	return { ok: true, tenant: await models.tenants.find(checkout.tenant_id) };
 }

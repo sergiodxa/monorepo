@@ -13,11 +13,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
+import { unwrap } from "@sdxc/result";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
-
-import TenantUsageDay from "~/app/models/tenant-usage-day";
 
 /** What a closed day is folded from the tenant's own record and into whom. */
 export interface CloseTenantMeteringDayInput {
@@ -32,15 +31,15 @@ export interface CloseTenantMeteringDayInput {
  * accumulating.
  *
  * @param stub - The tenant's Durable Object stub.
- * @param db - The control plane's database.
+ * @param models - The control plane's models.
  * @param input - The tenant and the day to close.
  * @returns The written row: the day and its subject, session and token counts.
  */
 export async function closeTenantMeteringDay(
 	stub: DurableObjectStub<Tenant>,
-	db: Database,
+	models: Models,
 	input: CloseTenantMeteringDayInput,
 ) {
 	let usage = await stub.closeMeteringDay({ day: input.day });
-	return TenantUsageDay.upsert(db, input.tenantId, usage);
+	return unwrap(await models.tenantUsageDays.upsert({ tenant_id: input.tenantId, ...usage }));
 }

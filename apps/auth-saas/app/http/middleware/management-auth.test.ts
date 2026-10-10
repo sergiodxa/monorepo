@@ -16,19 +16,19 @@ import type { RequestContext } from "remix/router";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { Base64Url, Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { Database as DataTableDatabase } from "remix/data-table";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { database } from "~/app/http/middleware/database";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
-import AgentClientBinding from "~/app/models/agent-client-binding";
-import Customer from "~/app/models/customer";
-import Membership from "~/app/models/membership";
-import Tenant from "~/app/models/tenant";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { authorizationCodes } from "~/database/authorization";
 import { openSession } from "~/database/sessions";
 import TenantObject from "~/database/tenant-do";
@@ -42,6 +42,7 @@ const PLATFORM_ISSUER = "https://platform.example.com";
 const METADATA_URL = "https://api.example.com/.well-known/oauth-protected-resource";
 
 let db: Database;
+let models: Models;
 let tenantId: string;
 let otherTenantId: string;
 let platformTenantDO: TenantObject;
@@ -49,21 +50,26 @@ let platformDb: Database;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-	});
+	models = bindModels(db);
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.auth.example.com",
+		}),
+	);
 	tenantId = tenant.id;
 
-	let other = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Other, Inc.",
-		slug: "other",
-		issuer: "https://other.auth.example.com",
-	});
+	let other = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Other, Inc.",
+			slug: "other",
+			issuer: "https://other.auth.example.com",
+		}),
+	);
 	otherTenantId = other.id;
 
 	let platformState = createDurableObjectState();
@@ -104,7 +110,12 @@ async function signMachineToken(
 	});
 	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
 
-	await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId: boundTenantId });
+	unwrap(
+		await models.agentClientBindings.create({
+			client_id: registered.client.id,
+			tenant_id: boundTenantId,
+		}),
+	);
 
 	let outcome = await platformTenantDO.issueClientCredentialsToken({
 		clientId: registered.client.id,
@@ -197,7 +208,7 @@ async function signHumanToken(input: {
 }
 
 function buildRouter(resolveDashboardSubjectId: (ctx: RequestContext) => Promise<string | null>) {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [database(() => db), modelsMiddleware()] });
 	router.get("/tenants/:tenantId/probe", {
 		middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId })],
 		handler: (ctx) => Response.json(ctx.managementCaller),
@@ -266,8 +277,20 @@ describe("human bearer token", () => {
 			scopes: ["subjects:read", "subjects:write"],
 		});
 
-		await Membership.create(db, { tenantId, subjectId, role: "owner" });
-		await Membership.create(db, { tenantId: otherTenantId, subjectId, role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenantId,
+				subject_id: subjectId,
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await models.memberships.create({
+				tenant_id: otherTenantId,
+				subject_id: subjectId,
+				role: "owner",
+			}),
+		);
 
 		let router = buildRouter(async () => null);
 
@@ -298,7 +321,13 @@ describe("human bearer token", () => {
 		let { subjectId, sessionId } = await createPlatformSubjectAndSession();
 		let token = await signHumanToken({ subjectId, sessionId, scopes: ["subjects:read"] });
 
-		await Membership.create(db, { tenantId, subjectId, role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenantId,
+				subject_id: subjectId,
+				role: "owner",
+			}),
+		);
 
 		let router = buildRouter(async () => null);
 
@@ -331,7 +360,9 @@ describe("human bearer token", () => {
 
 describe("dashboard session", () => {
 	test("resolves the caller from a member's role at the URL's tenant", async () => {
-		await Membership.create(db, { tenantId, subjectId: "sub_1", role: "admin" });
+		unwrap(
+			await models.memberships.create({ tenant_id: tenantId, subject_id: "sub_1", role: "admin" }),
+		);
 		let router = buildRouter(async () => "sub_1");
 
 		let response = await router.fetch(

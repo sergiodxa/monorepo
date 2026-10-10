@@ -9,13 +9,11 @@
  */
 
 import type { Billing, BillingError } from "@sdxc/billing";
-import type { Database } from "remix/data-table";
 
 import { supports } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
+import type { Models } from "~/app/models";
 
 export type OpenPortalResult =
 	| { ok: true; url: string }
@@ -27,23 +25,23 @@ export type OpenPortalResult =
 /**
  * Opens a portal session for the customer that owns a tenant.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param input - The tenant whose owning customer's portal to open, and where
  * to return them.
  * @returns The hosted portal URL to redirect to, or why one could not be opened.
  */
 export async function openPortal(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	input: { tenantId: string; returnTo?: string },
 ): Promise<OpenPortalResult> {
 	if (!supports(billing, "portal")) return { ok: false, reason: "unsupported" };
 
-	let tenant = await Tenant.findById(db, input.tenantId);
+	let tenant = await models.tenants.find(input.tenantId);
 	if (!tenant) return { ok: false, reason: "tenant_not_found" };
 
-	let customer = await Customer.findById(db, tenant.customer_id);
+	let customer = await models.customers.find(tenant.customer_id);
 	if (!customer || customer.provider_customer_id === null) {
 		return { ok: false, reason: "no_provider_customer" };
 	}

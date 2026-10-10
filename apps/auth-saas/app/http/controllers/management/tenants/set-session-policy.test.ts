@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import type { TenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
@@ -13,7 +14,7 @@ import {
 	buildTenantsHarness,
 	grantEntitlement,
 } from "~/app/http/controllers/management/tenants/test-harness";
-import TenantEntitlement from "~/app/models/tenant-entitlement";
+import { bindModels } from "~/app/test/models";
 
 /**
  * Grants the `session_policy` feature on both layers a real subscription
@@ -22,11 +23,14 @@ import TenantEntitlement from "~/app/models/tenant-entitlement";
  * tighten-only comparison.
  */
 async function grantSessionPolicyEntitlement(harness: TenantsHarness): Promise<void> {
-	await TenantEntitlement.upsert(harness.db, harness.tenantId, {
-		products: ["pro"],
-		features: { session_policy: true },
-		readAt: Date.now(),
-	});
+	unwrap(
+		await bindModels(harness.db).tenantEntitlements.upsert({
+			tenant_id: harness.tenantId,
+			products: ["pro"],
+			features: { session_policy: true },
+			read_at: Date.now(),
+		}),
+	);
 	await grantEntitlement(harness.tenantDO, "session_policy");
 }
 

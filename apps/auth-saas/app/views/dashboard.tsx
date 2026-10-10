@@ -14,8 +14,8 @@ import type { Handle } from "remix/component";
 
 import { css } from "remix/component";
 
-import type { AgentClientBindingRow } from "~/app/models/agent-client-binding";
-import type { AdministeredTenant, MembershipRole } from "~/app/models/membership";
+import type { AgentClientBindingRow } from "~/app/models/agent-client-bindings";
+import type { AdministeredTenant, MembershipRole } from "~/app/models/memberships";
 import type { ManagementScope } from "~/app/services/management-scopes";
 
 let pageWrap = css({

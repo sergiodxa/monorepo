@@ -17,9 +17,11 @@ import { createDurableObjectNamespace, createEnv } from "@sdxc/cloudflare-mocks"
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { FailedSignInsByHour, ReadFailedSignInsByHourInput } from "~/app/lib/attack-signals";
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 /** One hour, matching the job's own recent-window span. */
@@ -59,32 +61,33 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-let Membership = (await import("~/app/models/membership")).default;
-let AttackSignalAlert = (await import("~/app/models/attack-signal-alert")).default;
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { dayOf } = await import("~/database/metering");
 let checkAttackSignalBaseline = (await import("./check-attack-signal-baseline")).default;
 
 let db: Database;
+let models: Models;
 let transport: MemoryTransport;
 
 beforeEach(async () => {
 	readFailedSignInsByHour.mockReset();
 	readFailedSignInsByHour.mockResolvedValue([]);
 	db = await createTestDatabase();
+	models = bindModels(db);
 	transport = new MemoryTransport();
 });
 
 /** Creates a provisioned tenant row in the control plane. */
 async function makeTenant(name: string) {
-	let customer = await Customer.create(db, { name });
-	return TenantModel.create(db, {
-		customerId: customer.id,
-		name,
-		slug: name.toLowerCase(),
-		issuer: `https://${name.toLowerCase()}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name }));
+	return unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: name.toLowerCase(),
+			issuer: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 }
 
 /**
@@ -128,6 +131,7 @@ function makeContext(namespace: ReturnType<typeof makePlatformNamespace>) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkAttackSignalBaseline, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 	ctx.set(
 		Mail,
@@ -147,8 +151,20 @@ function makeContext(namespace: ReturnType<typeof makePlatformNamespace>) {
 describe("checkAttackSignalBaseline", () => {
 	test("mails every owner when the recent rate stands well above baseline, and records the day's alert", async () => {
 		let tenant = await makeTenant("Acme");
-		await Membership.create(db, { tenantId: tenant.id, subjectId: "sub_owner", role: "owner" });
-		await Membership.create(db, { tenantId: tenant.id, subjectId: "sub_admin", role: "admin" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: "sub_owner",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: "sub_admin",
+				role: "admin",
+			}),
+		);
 
 		stubSignals(tenant.id, {
 			recent: [{ hour: "2026-09-22 14:00:00", count: 10 }],
@@ -165,7 +181,7 @@ describe("checkAttackSignalBaseline", () => {
 		expect(transport.messages[0]?.subject).toContain("Acme");
 
 		let today = dayOf(Date.now());
-		let alert = await AttackSignalAlert.findByTenantAndDay(db, tenant.id, today);
+		let alert = await models.attackSignalAlerts.find({ tenant_id: tenant.id, day: today });
 		expect(alert).not.toBeNull();
 
 		expect(emit()).toMatchObject({ "alerts.sent": 1 });
@@ -173,10 +189,16 @@ describe("checkAttackSignalBaseline", () => {
 
 	test("skips a tenant already alerted today even though it is genuinely elevated", async () => {
 		let tenant = await makeTenant("Acme");
-		await Membership.create(db, { tenantId: tenant.id, subjectId: "sub_owner", role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: "sub_owner",
+				role: "owner",
+			}),
+		);
 
 		let today = dayOf(Date.now());
-		await AttackSignalAlert.create(db, tenant.id, today);
+		unwrap(await models.attackSignalAlerts.create({ tenant_id: tenant.id, day: today }));
 
 		stubSignals(tenant.id, {
 			recent: [{ hour: "2026-09-22 14:00:00", count: 999 }],
@@ -194,7 +216,13 @@ describe("checkAttackSignalBaseline", () => {
 
 	test("does not mail or record an alert when the recent rate is not elevated", async () => {
 		let tenant = await makeTenant("Acme");
-		await Membership.create(db, { tenantId: tenant.id, subjectId: "sub_owner", role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: "sub_owner",
+				role: "owner",
+			}),
+		);
 
 		stubSignals(tenant.id, {
 			recent: [{ hour: "2026-09-22 14:00:00", count: 2 }],
@@ -209,23 +237,27 @@ describe("checkAttackSignalBaseline", () => {
 		expect(transport.messages).toHaveLength(0);
 
 		let today = dayOf(Date.now());
-		let alert = await AttackSignalAlert.findByTenantAndDay(db, tenant.id, today);
+		let alert = await models.attackSignalAlerts.find({ tenant_id: tenant.id, day: today });
 		expect(alert).toBeNull();
 	});
 
 	test("visits every provisioned tenant, mailing only the one that is elevated", async () => {
 		let elevated = await makeTenant("Acme");
 		let quiet = await makeTenant("Bristle");
-		await Membership.create(db, {
-			tenantId: elevated.id,
-			subjectId: "sub_elevated_owner",
-			role: "owner",
-		});
-		await Membership.create(db, {
-			tenantId: quiet.id,
-			subjectId: "sub_quiet_owner",
-			role: "owner",
-		});
+		unwrap(
+			await models.memberships.create({
+				tenant_id: elevated.id,
+				subject_id: "sub_elevated_owner",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await models.memberships.create({
+				tenant_id: quiet.id,
+				subject_id: "sub_quiet_owner",
+				role: "owner",
+			}),
+		);
 
 		readFailedSignInsByHour.mockImplementation(async (_engine, input) => {
 			let isRecent = input.to - input.from <= HOUR_MS;

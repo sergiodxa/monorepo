@@ -3,7 +3,7 @@
  * registered against a tenant, and a form to register another one. Registration
  * itself is dogfooded through the real, public `POST /tenants/:tenantId/agent-clients`
  * Management API route, called over a self-referencing service binding, rather than
- * through `AgentClientBinding`/tenant-DO RPCs directly — the dashboard is the first
+ * through `ctx.models.agentClientBindings`/tenant-DO RPCs directly — the dashboard is the first
  * UI consumer of that API and exercises it exactly as any other caller would.
  *
  * The page-level guard (does the signed-in subject administer this tenant at all) is
@@ -23,7 +23,7 @@ import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
 import type { DashboardTenantMember } from "~/app/http/middleware/dashboard-session";
-import type { MembershipRole } from "~/app/models/membership";
+import type { MembershipRole } from "~/app/models/memberships";
 
 import {
 	DashboardSignInRequiredError,
@@ -31,7 +31,6 @@ import {
 	resolveTenantMember,
 } from "~/app/http/middleware/dashboard-session";
 import { callManagementApi } from "~/app/lib/management-client";
-import AgentClientBinding from "~/app/models/agent-client-binding";
 import {
 	MANAGEMENT_SCOPES,
 	MANAGEMENT_SCOPE_DESCRIPTIONS,
@@ -92,7 +91,7 @@ async function renderAgentClientsPage(
 		issues?: ReadonlyArray<s.Issue>;
 	} = {},
 ): Promise<Response> {
-	let clients = await AgentClientBinding.listByTenantId(ctx.db, resolved.tenant.id);
+	let clients = await ctx.models.agentClientBindings.ofTenant(resolved.tenant.id).all();
 
 	return ctx.render(
 		<PublicDocument title="Auth SaaS - Agent clients">

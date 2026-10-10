@@ -36,6 +36,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { publishModels } = await import("~/app/test/models");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let subjectsImport = (await import("~/app/jobs/subjects-import")).default;
 let { mintTransferDownloadTicket } = await import("~/app/lib/transfer-storage");
@@ -69,6 +70,7 @@ async function runImportJob(harness: {
 	let log = new Log({ kind: "job", sink: () => {} });
 	let ctx = createJobContext(jobs.subjectsImport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, harness.db, { property: "database" });
+	publishModels(ctx, harness.db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 
 	await subjectsImport(ctx);

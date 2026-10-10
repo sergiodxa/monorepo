@@ -28,7 +28,7 @@ export default createAction(routes.billing.checkoutReturn, async (ctx) => {
 	let checkoutId = ctx.url.searchParams.get("checkout_id");
 	if (!checkoutId) return badRequest({ error: "missing_checkout_id" });
 
-	let finished = await finishCheckout(ctx.db, polar, checkoutId);
+	let finished = await finishCheckout(ctx.models, polar, checkoutId);
 
 	if (!finished.ok) return badGateway({ error: "billing_error", message: finished.error.message });
 

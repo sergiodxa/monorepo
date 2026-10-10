@@ -36,6 +36,7 @@ import {
 	ISSUER,
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import routes from "~/routes/management";
 
 export { fakeHostnameClient, fakeLimiter, grantMembership, ISSUER };
@@ -58,7 +59,7 @@ export function buildClientsRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [conformance, database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
 
 	router.map(routes.clientsRegister, createClientsRegisterAction(controllerOptions));
 	router.map(routes.clientsList, createClientsListAction(controllerOptions));

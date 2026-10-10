@@ -13,6 +13,7 @@ import { BillingWebhook } from "@sdxc/billing";
 
 import { billingDeliveries, polar } from "~/app/lib/billing";
 import { createDatabase } from "~/app/lib/database";
+import { models } from "~/app/models";
 import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
 
 /**
@@ -21,6 +22,10 @@ import { createBillingWebhookHandlers } from "~/app/services/billing-sync";
  * @example
  * router.map(routes.billing.webhook, webhook);
  */
-export default new BillingWebhook(polar, createBillingWebhookHandlers(createDatabase(), polar), {
-	store: billingDeliveries,
-});
+export default new BillingWebhook(
+	polar,
+	createBillingWebhookHandlers(models.bind({ db: createDatabase() }), polar),
+	{
+		store: billingDeliveries,
+	},
+);

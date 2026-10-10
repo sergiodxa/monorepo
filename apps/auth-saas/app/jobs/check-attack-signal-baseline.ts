@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -24,9 +24,6 @@ import { readFailedSignInsByHour } from "~/app/lib/attack-signals";
 import { AttackSignalAlertEmail } from "~/app/mail/attack-signal-alert-email";
 import { mailTranslator } from "~/app/mail/locale";
 import { parseSenderAddress, tenantSenderAddress } from "~/app/mail/sender";
-import AttackSignalAlert from "~/app/models/attack-signal-alert";
-import Membership from "~/app/models/membership";
-import TenantModel from "~/app/models/tenant";
 import { dayOf } from "~/database/metering";
 
 /** One hour, in milliseconds — the recent window's own span. */
@@ -47,16 +44,15 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 	let alerted = 0;
 
 	let { visited } = await forEachProvisionedTenant(
-		ctx.database,
+		ctx.models,
 		ctx.tenant,
 		async (_stub, tenantId) => {
 			checked++;
 
-			let alreadyAlerted = await AttackSignalAlert.findByTenantAndDay(
-				ctx.database,
-				tenantId,
-				today,
-			);
+			let alreadyAlerted = await ctx.models.attackSignalAlerts.find({
+				tenant_id: tenantId,
+				day: today,
+			});
 			if (alreadyAlerted) return;
 
 			let recentRows = await readFailedSignInsByHour(engine, {
@@ -76,10 +72,10 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 			);
 			if (!comparison.elevated) return;
 
-			let tenantRow = await TenantModel.findById(ctx.database, tenantId);
+			let tenantRow = await ctx.models.tenants.find(tenantId);
 			if (!tenantRow) return;
 
-			let owners = (await Membership.listByTenant(ctx.database, tenantId)).filter(
+			let owners = (await ctx.models.memberships.ofTenant(tenantId).all()).filter(
 				(membership) => membership.role === "owner",
 			);
 			if (owners.length === 0) return;
@@ -112,7 +108,7 @@ export default createJobHandler(jobs.checkAttackSignalBaseline, async (ctx) => {
 			}
 
 			if (sentToAny) {
-				await AttackSignalAlert.create(ctx.database, tenantId, today);
+				unwrap(await ctx.models.attackSignalAlerts.create({ tenant_id: tenantId, day: today }));
 				alerted++;
 			}
 		},

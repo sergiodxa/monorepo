@@ -57,7 +57,7 @@ export default createAction(routes.billing.checkout, {
 		let { tenantId } = s.parse(Params, ctx.params);
 		let submitted = s.parse(CheckoutForm, ctx.formData);
 
-		let opened = await openCheckout(ctx.db, polar, {
+		let opened = await openCheckout(ctx.models, polar, {
 			tenantId,
 			email: submitted.email,
 			name: submitted.name === "" ? undefined : submitted.name,

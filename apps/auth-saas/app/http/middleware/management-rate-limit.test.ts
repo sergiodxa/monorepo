@@ -12,29 +12,36 @@ import type { RateLimiterBinding } from "@sdxc/rate-limit";
 import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { database } from "~/app/http/middleware/database";
 import { ManagementCallerContext } from "~/app/http/middleware/management-auth";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 
 import { managementRateLimit } from "./management-rate-limit";
 
 let db: Database;
+let models: Models;
 let tenantId: string;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-	});
+	models = bindModels(db);
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.auth.example.com",
+		}),
+	);
 	tenantId = tenant.id;
 });
 
@@ -59,6 +66,7 @@ function buildRouter(limiter: RateLimiterBinding, callerTenantId: string) {
 	let router = createRouter({
 		middleware: [
 			database(() => db),
+			modelsMiddleware(),
 			stubManagementCaller(callerTenantId),
 			managementRateLimit(limiter),
 		],
@@ -103,7 +111,7 @@ describe("managementRateLimit", () => {
 	});
 
 	test("reads the tenant's own plan tier", async () => {
-		await db.update(Tenant.table, { id: tenantId }, { plan_slug: "premium" });
+		unwrap(await models.tenants.update(tenantId, { plan_slug: "premium" }));
 		let router = buildRouter(fakeLimiter(false), tenantId);
 
 		let response = await router.fetch(new Request("https://api.example.com/probe"));

@@ -30,10 +30,12 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
@@ -90,6 +92,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 });
 
 let { database } = await import("~/app/http/middleware/database");
+let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let render = (await import("~/app/http/middleware/render")).default;
 let { dashboardShow, dashboardCreateTenant } =
 	await import("~/app/http/controllers/dashboard/show");
@@ -102,14 +105,15 @@ let { resolveDashboardSession, dashboardSignInUrl } =
 	await import("~/app/http/middleware/dashboard-session");
 let { serializeSessionCookie } = await import("~/app/http/middleware/hosted-session");
 let { sessionCookie } = await import("~/app/lib/session-cookie");
-let Customer = (await import("~/app/models/customer")).default;
-let Membership = (await import("~/app/models/membership")).default;
 let webRoutes = (await import("~/routes/web")).default;
 let managementRoutes = (await import("~/routes/management")).default;
 let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels } = await import("~/app/test/models");
 let TenantObject = (await import("~/database/tenant-do")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
+
+let models: Models;
 
 buildTenant = (state) =>
 	new TenantObject(state, { TOTP_SEAL_KEY: randomToken({ bytes: 32 }) } as Cloudflare.Env);
@@ -118,6 +122,7 @@ buildTenant = (state) =>
 function buildDashboardRouter() {
 	let middleware: Middleware[] = [
 		database(() => db) as Middleware,
+		modelsMiddleware() as Middleware,
 		render as Middleware,
 		formData() as Middleware,
 	];
@@ -134,7 +139,9 @@ function buildDashboardRouter() {
 
 /** Builds the management router mapping only `agentClientsRegister`, matching how `bootstrap/management-app.ts` mounts it. */
 function buildManagementRouter() {
-	let router = createRouter({ middleware: [database(() => db) as Middleware] });
+	let router = createRouter({
+		middleware: [database(() => db) as Middleware, modelsMiddleware() as Middleware],
+	});
 
 	router.map(
 		managementRoutes.agentClientsRegister,
@@ -154,6 +161,7 @@ function buildManagementRouter() {
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 
 	let state = createDurableObjectState();
 	platformTenantDO = new TenantObject(state, {
@@ -196,17 +204,19 @@ async function signIn(): Promise<{ subjectId: string; cookie: string }> {
 
 /** Provisions a tenant owned by a fresh customer, with `subjectId` as its owning member. */
 async function provisionOwnedTenant(subjectId: string, name = "Acme, Inc.") {
-	let customer = await Customer.create(db, { name });
+	let customer = unwrap(await models.customers.create({ name }));
 	let unique = crypto.randomUUID();
-	let tenant = await (
-		await import("~/app/models/tenant")
-	).default.create(db, {
-		customerId: customer.id,
-		name,
-		slug: `acme-${unique}`,
-		issuer: `https://acme-${unique}.example.com`,
-	});
-	await Membership.create(db, { tenantId: tenant.id, subjectId, role: "owner" });
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: `acme-${unique}`,
+			issuer: `https://acme-${unique}.example.com`,
+		}),
+	);
+	unwrap(
+		await models.memberships.create({ tenant_id: tenant.id, subject_id: subjectId, role: "owner" }),
+	);
 	return { customer, tenant };
 }
 
@@ -261,7 +271,7 @@ describe("GET /dashboard", () => {
 		expect(createResponse.status).toBe(302);
 		expect(createResponse.headers.get("Location")).toBe(webRoutes.dashboard.show.href());
 
-		let administered = await Membership.administeredTenants(db, subjectId);
+		let administered = await models.memberships.administeredTenants(subjectId);
 		expect(administered).toHaveLength(2);
 		let customerIds = new Set(administered.map((entry) => entry.tenant.customer_id));
 		expect(customerIds).toEqual(new Set([customer.id]));

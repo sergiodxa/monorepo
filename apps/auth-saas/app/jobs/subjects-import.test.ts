@@ -26,8 +26,10 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 /**
@@ -66,29 +68,31 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-let TenantImportRun = (await import("~/app/models/tenant-import-run")).default;
+let { bindModels, publishModels } = await import("~/app/test/models");
 let TenantObject = (await import("~/database/tenant-do")).default;
 let subjectsImport = (await import("./subjects-import")).default;
 
 let db: Database;
+let models: Models;
 
 beforeEach(async () => {
 	bucket.reset();
 	maxBatchesOverride = undefined;
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 /** Creates a provisioned tenant row in the control plane. */
 async function makeTenant(name: string) {
-	let customer = await Customer.create(db, { name });
-	return TenantModel.create(db, {
-		customerId: customer.id,
-		name,
-		slug: name.toLowerCase(),
-		issuer: `https://${name.toLowerCase()}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name }));
+	return unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: name.toLowerCase(),
+			issuer: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 }
 
 /** A real, freshly-provisioned `Tenant` Durable Object, isolated from any other test's own. */
@@ -128,6 +132,7 @@ function makeContext(namespace: ReturnType<typeof makeTenantNamespace>) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.subjectsImport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 
 	return {
@@ -167,14 +172,20 @@ describe("subjectsImport", () => {
 			"{not valid json",
 		]);
 
-		let run = await TenantImportRun.create(db, { tenantId: tenant.id, mode: "apply", sourceKey });
+		let run = unwrap(
+			await models.tenantImportRuns.create({
+				tenant_id: tenant.id,
+				mode: "apply",
+				source_key: sourceKey,
+			}),
+		);
 
 		let namespace = makeTenantNamespace(new Map([[tenant.id, tenantDO]]));
 		let { ctx, emit } = makeContext(namespace);
 
 		await subjectsImport(ctx);
 
-		let finished = await TenantImportRun.findById(db, run.id);
+		let finished = await models.tenantImportRuns.find(run.id);
 		expect(finished).toMatchObject({
 			status: "completed",
 			cursor: 4,
@@ -220,15 +231,21 @@ describe("subjectsImport", () => {
 			}),
 		]);
 
-		let run = await TenantImportRun.create(db, { tenantId: tenant.id, mode: "apply", sourceKey });
-		await db.update(TenantImportRun.table, { id: run.id }, { total: 10_000_000 });
+		let run = unwrap(
+			await models.tenantImportRuns.create({
+				tenant_id: tenant.id,
+				mode: "apply",
+				source_key: sourceKey,
+			}),
+		);
+		unwrap(await models.tenantImportRuns.update(run.id, { total: 10_000_000 }));
 
 		let namespace = makeTenantNamespace(new Map([[tenant.id, tenantDO]]));
 		let { ctx } = makeContext(namespace);
 
 		await subjectsImport(ctx);
 
-		let finished = await TenantImportRun.findById(db, run.id);
+		let finished = await models.tenantImportRuns.find(run.id);
 		expect(finished).toMatchObject({ status: "failed", processed: 0, cursor: 0 });
 		expect(finished?.finished_at).not.toBeNull();
 	});
@@ -245,7 +262,13 @@ describe("subjectsImport", () => {
 			}),
 		]);
 
-		let run = await TenantImportRun.create(db, { tenantId: tenant.id, mode: "apply", sourceKey });
+		let run = unwrap(
+			await models.tenantImportRuns.create({
+				tenant_id: tenant.id,
+				mode: "apply",
+				source_key: sourceKey,
+			}),
+		);
 		expect(run.total).toBeNull();
 
 		let namespace = makeTenantNamespace(new Map([[tenant.id, tenantDO]]));
@@ -253,7 +276,7 @@ describe("subjectsImport", () => {
 
 		await subjectsImport(ctx);
 
-		let finished = await TenantImportRun.findById(db, run.id);
+		let finished = await models.tenantImportRuns.find(run.id);
 		expect(finished).toMatchObject({ status: "completed", processed: 1, created: 1 });
 	});
 
@@ -272,20 +295,26 @@ describe("subjectsImport", () => {
 		);
 		await putSourceFile(sourceKey, lines);
 
-		let run = await TenantImportRun.create(db, { tenantId: tenant.id, mode: "apply", sourceKey });
+		let run = unwrap(
+			await models.tenantImportRuns.create({
+				tenant_id: tenant.id,
+				mode: "apply",
+				source_key: sourceKey,
+			}),
+		);
 
 		let namespace = makeTenantNamespace(new Map([[tenant.id, tenantDO]]));
 
 		maxBatchesOverride = 1;
 		await subjectsImport(makeContext(namespace).ctx);
 
-		let afterFirstTick = await TenantImportRun.findById(db, run.id);
+		let afterFirstTick = await models.tenantImportRuns.find(run.id);
 		expect(afterFirstTick).toMatchObject({ status: "running", cursor: 200, processed: 200 });
 
 		maxBatchesOverride = undefined;
 		await subjectsImport(makeContext(namespace).ctx);
 
-		let afterSecondTick = await TenantImportRun.findById(db, run.id);
+		let afterSecondTick = await models.tenantImportRuns.find(run.id);
 		expect(afterSecondTick).toMatchObject({
 			status: "completed",
 			cursor: 250,
@@ -307,14 +336,20 @@ describe("subjectsImport", () => {
 			}),
 		]);
 
-		let run = await TenantImportRun.create(db, { tenantId: tenant.id, mode: "apply", sourceKey });
+		let run = unwrap(
+			await models.tenantImportRuns.create({
+				tenant_id: tenant.id,
+				mode: "apply",
+				source_key: sourceKey,
+			}),
+		);
 
 		let namespace = makeTenantNamespace(new Map([[tenant.id, tenantDO]]));
 		let { ctx } = makeContext(namespace);
 
 		await subjectsImport(ctx);
 
-		let finished = await TenantImportRun.findById(db, run.id);
+		let finished = await models.tenantImportRuns.find(run.id);
 		expect(finished).toMatchObject({ status: "completed", processed: 2, created: 1, failed: 1 });
 
 		let reportKey = finished?.report_key as string;

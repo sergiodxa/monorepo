@@ -19,7 +19,6 @@ import {
 	tenantNotFound,
 } from "~/app/http/controllers/management/tenants/shared";
 import { requireScope } from "~/app/http/lib/require-scope";
-import Tenant from "~/app/models/tenant";
 import routes from "~/routes/management";
 
 /**
@@ -38,7 +37,7 @@ export function createTenantReadAction(options: ManagementControllerOptions) {
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let tenant = await Tenant.findById(ctx.db, ctx.managementCaller.tenantId);
+			let tenant = await ctx.models.tenants.find(ctx.managementCaller.tenantId);
 			if (!tenant) return tenantNotFound();
 
 			return json(serializeTenant(tenant), { status: 200 });

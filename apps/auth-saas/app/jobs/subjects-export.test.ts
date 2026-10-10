@@ -27,8 +27,10 @@ import { randomToken } from "@sdxc/crypto";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 /**
@@ -82,32 +84,33 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let Membership = (await import("~/app/models/membership")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-let TenantExportRun = (await import("~/app/models/tenant-export-run")).default;
+let { bindModels, publishModels } = await import("~/app/test/models");
 let TenantObject = (await import("~/database/tenant-do")).default;
 let subjectsExport = (await import("./subjects-export")).default;
 
 let db: Database;
+let models: Models;
 let transport: MemoryTransport;
 
 beforeEach(async () => {
 	bucket.reset();
 	maxPagesOverride = undefined;
 	db = await createTestDatabase();
+	models = bindModels(db);
 	transport = new MemoryTransport();
 });
 
 /** Creates a provisioned tenant row in the control plane. */
 async function makeTenant(name: string) {
-	let customer = await Customer.create(db, { name });
-	return TenantModel.create(db, {
-		customerId: customer.id,
-		name,
-		slug: name.toLowerCase(),
-		issuer: `https://${name.toLowerCase()}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name }));
+	return unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: name.toLowerCase(),
+			issuer: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 }
 
 /** A real, freshly-provisioned `Tenant` Durable Object, isolated from any other test's own. */
@@ -200,6 +203,7 @@ function makeContext(namespace: ReturnType<typeof makeNamespace>) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.subjectsExport, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 	ctx.set(
 		Mail,
@@ -233,17 +237,19 @@ describe("subjectsExport", () => {
 		let tenantDO = await makeTenantObject(tenant.id);
 		let subjectIds = await makeSubjects(tenantDO, 3, { withPassword: true });
 
-		let run = await TenantExportRun.create(db, {
-			tenantId: tenant.id,
-			includeCredentials: false,
-		});
+		let run = unwrap(
+			await models.tenantExportRuns.create({
+				tenant_id: tenant.id,
+				include_credentials: false,
+			}),
+		);
 
 		let namespace = makeNamespace(new Map([[tenant.id, tenantDO]]));
 		let { ctx, emit } = makeContext(namespace);
 
 		await subjectsExport(ctx);
 
-		let finished = await TenantExportRun.findById(db, run.id);
+		let finished = await models.tenantExportRuns.find(run.id);
 		expect(finished).toMatchObject({ status: "completed", cursor: null, processed: 3 });
 		expect(finished?.report_key).not.toBeNull();
 
@@ -273,14 +279,16 @@ describe("subjectsExport", () => {
 		let tenantDO = await makeTenantObject(tenant.id);
 		await makeSubjects(tenantDO, 2, { withPassword: true });
 
-		let run = await TenantExportRun.create(db, { tenantId: tenant.id, includeCredentials: true });
+		let run = unwrap(
+			await models.tenantExportRuns.create({ tenant_id: tenant.id, include_credentials: true }),
+		);
 
 		let namespace = makeNamespace(new Map([[tenant.id, tenantDO]]));
 		let { ctx } = makeContext(namespace);
 
 		await subjectsExport(ctx);
 
-		let finished = await TenantExportRun.findById(db, run.id);
+		let finished = await models.tenantExportRuns.find(run.id);
 		expect(finished?.status).toBe("completed");
 
 		let rows = await readNdjson(finished?.report_key as string);
@@ -299,9 +307,17 @@ describe("subjectsExport", () => {
 		let tenantDO = await makeTenantObject(tenant.id);
 		await makeSubjects(tenantDO, 150);
 
-		await Membership.create(db, { tenantId: tenant.id, subjectId: "sub_owner", role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: "sub_owner",
+				role: "owner",
+			}),
+		);
 
-		let run = await TenantExportRun.create(db, { tenantId: tenant.id, includeCredentials: true });
+		let run = unwrap(
+			await models.tenantExportRuns.create({ tenant_id: tenant.id, include_credentials: true }),
+		);
 
 		let namespace = makeNamespace(new Map([[tenant.id, tenantDO]]), {
 			sub_owner: "owner@acme.example.com",
@@ -310,7 +326,7 @@ describe("subjectsExport", () => {
 		maxPagesOverride = 1;
 		await subjectsExport(makeContext(namespace).ctx);
 
-		let afterFirstTick = await TenantExportRun.findById(db, run.id);
+		let afterFirstTick = await models.tenantExportRuns.find(run.id);
 		expect(afterFirstTick?.status).toBe("running");
 		expect(transport.messages).toHaveLength(1);
 		expect(transport.messages[0]?.to).toEqual([{ email: "owner@acme.example.com" }]);
@@ -318,7 +334,7 @@ describe("subjectsExport", () => {
 		maxPagesOverride = undefined;
 		await subjectsExport(makeContext(namespace).ctx);
 
-		let afterSecondTick = await TenantExportRun.findById(db, run.id);
+		let afterSecondTick = await models.tenantExportRuns.find(run.id);
 		expect(afterSecondTick?.status).toBe("completed");
 		expect(transport.messages).toHaveLength(1);
 	});
@@ -328,24 +344,26 @@ describe("subjectsExport", () => {
 		let tenantDO = await makeTenantObject(tenant.id);
 		let subjectIds = await makeSubjects(tenantDO, 150);
 
-		let run = await TenantExportRun.create(db, {
-			tenantId: tenant.id,
-			includeCredentials: false,
-		});
+		let run = unwrap(
+			await models.tenantExportRuns.create({
+				tenant_id: tenant.id,
+				include_credentials: false,
+			}),
+		);
 
 		let namespace = makeNamespace(new Map([[tenant.id, tenantDO]]));
 
 		maxPagesOverride = 1;
 		await subjectsExport(makeContext(namespace).ctx);
 
-		let afterFirstTick = await TenantExportRun.findById(db, run.id);
+		let afterFirstTick = await models.tenantExportRuns.find(run.id);
 		expect(afterFirstTick).toMatchObject({ status: "running", processed: 100 });
 		expect(afterFirstTick?.cursor).not.toBeNull();
 
 		maxPagesOverride = undefined;
 		await subjectsExport(makeContext(namespace).ctx);
 
-		let afterSecondTick = await TenantExportRun.findById(db, run.id);
+		let afterSecondTick = await models.tenantExportRuns.find(run.id);
 		expect(afterSecondTick).toMatchObject({ status: "completed", cursor: null, processed: 150 });
 
 		let rows = await readNdjson(afterSecondTick?.report_key as string);

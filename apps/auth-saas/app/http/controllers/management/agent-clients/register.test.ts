@@ -25,14 +25,17 @@ import {
 	ISSUER,
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
-import AgentClientBinding from "~/app/models/agent-client-binding";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
+import { bindModels } from "~/app/test/models";
 import routes from "~/routes/management";
 
 /** The provisioned tenant, and a router mapping only the registration route, resolving a dashboard session to `dashboardSubjectId`. */
 async function buildHarness(dashboardSubjectId: string | null = null) {
 	let core = await buildManagementTestCore({ defaultScope: "clients:write" });
 
-	let router = createRouter({ middleware: [conformance, database(() => core.db)] });
+	let router = createRouter({
+		middleware: [conformance, database(() => core.db), modelsMiddleware()],
+	});
 	router.map(
 		routes.agentClientsRegister,
 		createAgentClientsRegisterAction({
@@ -78,14 +81,14 @@ describe("POST /tenants/:tenantId/agent-clients", () => {
 
 		expect(response.status).toBe(201);
 		let body = (await response.json()) as { clientId: string };
-		let binding = await AgentClientBinding.findByClientId(harness.db, body.clientId);
+		let binding = await bindModels(harness.db).agentClientBindings.find(body.clientId);
 		expect(binding?.tenant_id).toBe(harness.tenantId);
 	});
 
 	test("refuses a bearer caller a scope its own token does not carry", async () => {
 		let harness = await buildHarness();
 		let token = await harness.signToken({ scope: "clients:write" });
-		let before = await AgentClientBinding.listByTenantId(harness.db, harness.tenantId);
+		let before = await bindModels(harness.db).agentClientBindings.ofTenant(harness.tenantId).all();
 
 		let response = await harness.router.fetch(
 			harness.request(
@@ -99,7 +102,9 @@ describe("POST /tenants/:tenantId/agent-clients", () => {
 		let body = (await response.json()) as { type: string; detail: string };
 		expect(body.type).toBe("https://docs.example.com/errors/scope-not-held");
 		expect(body.detail).toContain("members:write");
-		expect(await AgentClientBinding.listByTenantId(harness.db, harness.tenantId)).toEqual(before);
+		expect(
+			await bindModels(harness.db).agentClientBindings.ofTenant(harness.tenantId).all(),
+		).toEqual(before);
 	});
 
 	test("refuses a dashboard admin the owner-only scopes its role never carries", async () => {
@@ -116,7 +121,9 @@ describe("POST /tenants/:tenantId/agent-clients", () => {
 			expect(body.type).toBe("https://docs.example.com/errors/scope-not-held");
 		}
 
-		expect(await AgentClientBinding.listByTenantId(harness.db, harness.tenantId)).toEqual([]);
+		expect(
+			await bindModels(harness.db).agentClientBindings.ofTenant(harness.tenantId).all(),
+		).toEqual([]);
 	});
 
 	test("lets a dashboard owner mint any scope its role carries", async () => {

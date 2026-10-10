@@ -24,7 +24,7 @@ export default createJobHandler(jobs.sweepDueWebhookDeliveries, async (ctx) => {
 	let enqueued = 0;
 
 	let { visited } = await forEachProvisionedTenant(
-		ctx.database,
+		ctx.models,
 		ctx.tenant,
 		async (stub, tenantId) => {
 			let claimed = await stub.claimDueDeliveries({ before: now, limit: CLAIM_BATCH_SIZE });

@@ -11,15 +11,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { HostnameApiError } from "@sdxc/hostname";
 import { json } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { DomainRow } from "~/app/models/domain";
+import type { Models } from "~/app/models";
+import type { DomainRow } from "~/app/models/domains";
 
 import {
 	customDomainNotAllowed,
@@ -35,17 +34,16 @@ import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { managementEntitlement } from "~/app/http/middleware/management-entitlement";
 import { TENANT_DOMAINS_ATTACH } from "~/app/http/openapi/tenants";
-import Domain from "~/app/models/domain";
 import { attachCustomDomain, removeDomain } from "~/app/services/domain";
 import routes from "~/routes/management";
 
 /** Finds a domain by id, scoped to the caller's own tenant — a domain id alone names no tenant of its own. */
 async function findOwnDomain(
-	db: Database,
+	models: Models,
 	tenantId: string,
 	domainId: string,
 ): Promise<DomainRow | null> {
-	let domain = await Domain.findById(db, domainId);
+	let domain = await models.domains.find(domainId);
 	if (!domain || domain.tenant_id !== tenantId) return null;
 	return domain;
 }
@@ -66,7 +64,7 @@ export function createTenantDomainsListAction(options: ManagementControllerOptio
 			let refused = requireScope(ctx, "tenant:write");
 			if (refused) return refused;
 
-			let domains = await Domain.listByTenant(ctx.db, ctx.managementCaller.tenantId);
+			let domains = await ctx.models.domains.ofTenant(ctx.managementCaller.tenantId).all();
 
 			return json(domains.map(serializeDomain), { status: 200 });
 		},
@@ -99,7 +97,7 @@ export function createTenantDomainsAttachAction(options: ManagementControllerOpt
 
 			try {
 				let domain = await attachCustomDomain(
-					ctx.db,
+					ctx.models,
 					options.hostnameClient(),
 					ctx.managementCaller.tenantId,
 					body.hostname,
@@ -130,7 +128,7 @@ export function createTenantDomainsVerificationAction(options: ManagementControl
 			if (refused) return refused;
 
 			let domainId = domainIdParam(ctx);
-			let domain = await findOwnDomain(ctx.db, ctx.managementCaller.tenantId, domainId);
+			let domain = await findOwnDomain(ctx.models, ctx.managementCaller.tenantId, domainId);
 			if (!domain) return domainNotFound();
 
 			return json(serializeDomainVerification(domain), { status: 200 });
@@ -155,10 +153,10 @@ export function createTenantDomainsRemoveAction(options: ManagementControllerOpt
 			if (refused) return refused;
 
 			let domainId = domainIdParam(ctx);
-			let domain = await findOwnDomain(ctx.db, ctx.managementCaller.tenantId, domainId);
+			let domain = await findOwnDomain(ctx.models, ctx.managementCaller.tenantId, domainId);
 			if (!domain) return domainNotFound();
 
-			await removeDomain(ctx.db, options.hostnameClient(), domain);
+			await removeDomain(ctx.models, options.hostnameClient(), domain);
 
 			return new Response(null, { status: 204 });
 		},

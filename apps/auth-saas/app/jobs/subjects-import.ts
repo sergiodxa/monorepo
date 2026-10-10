@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createJobHandler } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import type { ImportRowOutcome, ImportSubjectRow } from "~/database/subject-import";
@@ -25,7 +26,6 @@ import {
 } from "~/app/jobs/lib/subjects-import-pacing";
 import { recordCost } from "~/app/lib/cost-ledger";
 import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-storage";
-import TenantImportRun from "~/app/models/tenant-import-run";
 
 /** Awaits a plain delay; the one pause this job ever inserts is small enough that a local wrapper covers it. */
 function sleep(ms: number): Promise<void> {
@@ -79,7 +79,7 @@ async function appendFailureReportLines(
 
 export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 	let deadline = Date.now() + TICK_TIME_BUDGET_MS;
-	let runs = await TenantImportRun.listActive(ctx.database);
+	let runs = await ctx.models.tenantImportRuns.active().all();
 
 	let runsAdvanced = 0;
 	let runsFailed = 0;
@@ -96,13 +96,13 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 				let began = await stub.beginImportRun({ estimatedRows: run.total });
 
 				if (!began.ok) {
-					await TenantImportRun.fail(ctx.database, run.id);
+					unwrap(await ctx.models.tenantImportRuns.fail(run.id));
 					runsFailed++;
 					continue;
 				}
 			}
 
-			await TenantImportRun.markRunning(ctx.database, run.id);
+			unwrap(await ctx.models.tenantImportRuns.markRunning(run.id));
 		}
 
 		runsAdvanced++;
@@ -139,14 +139,16 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 			cursor += batchLineCount;
 			rowsProcessed += batchLineCount;
 
-			await TenantImportRun.advance(ctx.database, {
-				id: run.id,
-				cursor,
-				processedDelta: batchLineCount,
-				createdDelta,
-				updatedDelta: 0,
-				failedDelta,
-			});
+			unwrap(
+				await ctx.models.tenantImportRuns.advance({
+					id: run.id,
+					cursor,
+					processedDelta: batchLineCount,
+					createdDelta,
+					updatedDelta: 0,
+					failedDelta,
+				}),
+			);
 
 			batchRows = [];
 			batchMalformed = [];
@@ -191,14 +193,14 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 		if (tickFailureLines.length > 0) {
 			if (reportKey === null) {
 				reportKey = reportKeyFor({ tenantId: run.tenant_id, runId: run.id });
-				await TenantImportRun.setReportKey(ctx.database, { id: run.id, reportKey });
+				unwrap(await ctx.models.tenantImportRuns.setReportKey(run.id, reportKey));
 			}
 
 			await appendFailureReportLines(env.R2, reportKey, tickFailureLines);
 		}
 
 		if (sourceExhausted) {
-			let final = await TenantImportRun.findById(ctx.database, run.id);
+			let final = await ctx.models.tenantImportRuns.find(run.id);
 
 			// A download ticket is single-use and its plaintext exists only at the
 			// moment it is minted — minting one here, with no request waiting to
@@ -212,7 +214,7 @@ export default createJobHandler(jobs.subjectsImport, async (ctx) => {
 				created: final?.created ?? 0,
 				failed: final?.failed ?? 0,
 			});
-			await TenantImportRun.complete(ctx.database, run.id);
+			unwrap(await ctx.models.tenantImportRuns.complete(run.id));
 			runsCompleted++;
 		}
 	}

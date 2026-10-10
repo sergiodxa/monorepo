@@ -16,20 +16,15 @@ import type {
 	BillingWebhookHandlers,
 	EntitlementState,
 } from "@sdxc/billing";
-import type { Database } from "remix/data-table";
 
 import { currentLog } from "@sdxc/logger";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { BillingCheckoutRow } from "~/app/models/billing-checkout";
-import type { TenantRow } from "~/app/models/tenant";
+import type { Models } from "~/app/models";
+import type { BillingCheckoutRow } from "~/app/models/billing-checkouts";
+import type { TenantRow } from "~/app/models/tenants";
 
-import BillingCheckout from "~/app/models/billing-checkout";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
-import TenantAddon from "~/app/models/tenant-addon";
-import TenantEntitlement from "~/app/models/tenant-entitlement";
 import { PLANS } from "~/app/services/billing/catalog";
 
 /** How long a projection may go unread before the sweep refreshes it. */
@@ -42,21 +37,21 @@ const GRACE_PERIOD_MS = 14 * 24 * 60 * 60 * 1000;
  * Finds the tenant a subscription id was recorded against, whether as its base
  * plan or as one of its add-ons.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param subscriptionId - The provider's own subscription id.
  * @returns The tenant it belongs to, or null when no tenant holds it yet.
  */
 export async function resolveTenantForSubscription(
-	db: Database,
+	models: Models,
 	subscriptionId: string,
 ): Promise<TenantRow | null> {
-	let tenant = await Tenant.findBySubscriptionId(db, subscriptionId);
+	let tenant = await models.tenants.findBySubscriptionId(subscriptionId);
 	if (tenant) return tenant;
 
-	let addon = await TenantAddon.findBySubscriptionId(db, subscriptionId);
+	let addon = await models.tenantAddons.findBySubscriptionId(subscriptionId);
 	if (!addon) return null;
 
-	return Tenant.findById(db, addon.tenant_id);
+	return models.tenants.find(addon.tenant_id);
 }
 
 /**
@@ -65,33 +60,37 @@ export async function resolveTenantForSubscription(
  * both the checkout-return route and the `checkout.completed` handler can call
  * it for the same checkout without producing two add-on rows.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param checkout - The checkout attempt row the subscription was opened for.
  * @param subscriptionId - The subscription the checkout produced.
  */
 export async function attachCheckoutSubscription(
-	db: Database,
+	models: Models,
 	checkout: BillingCheckoutRow,
 	subscriptionId: string,
 ): Promise<void> {
 	if (checkout.kind === "base") {
-		await Tenant.update(db, checkout.tenant_id, {
-			subscriptionId,
-			subscriptionStatus: "active",
-		});
+		unwrap(
+			await models.tenants.update(checkout.tenant_id, {
+				subscription_id: subscriptionId,
+				subscription_status: "active",
+			}),
+		);
 		return;
 	}
 
-	let existing = await TenantAddon.findBySubscriptionId(db, subscriptionId);
+	let existing = await models.tenantAddons.findBySubscriptionId(subscriptionId);
 	if (existing) return;
 
-	await TenantAddon.create(db, {
-		tenantId: checkout.tenant_id,
-		productSlug: checkout.product_slug,
-		subscriptionId,
-		status: "active",
-		currentPeriodEnd: null,
-	});
+	unwrap(
+		await models.tenantAddons.create({
+			tenant_id: checkout.tenant_id,
+			product_slug: checkout.product_slug,
+			subscription_id: subscriptionId,
+			status: "active",
+			current_period_end: null,
+		}),
+	);
 }
 
 /**
@@ -116,7 +115,7 @@ function basePlanSlug(tenant: TenantRow, snapshot: EntitlementState): keyof type
  * only the subscriptions the tenant itself holds — base plan plus add-ons — since the
  * snapshot's own `features` map is the union across every tenant the customer owns.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform, for reading each held
  * product's features.
  * @param tenantId - The tenant to reproject.
@@ -124,16 +123,16 @@ function basePlanSlug(tenant: TenantRow, snapshot: EntitlementState): keyof type
  * fresh from `entitlements.of()` when omitted.
  */
 export async function reprojectTenant(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	tenantId: string,
 	snapshot?: EntitlementState,
 ): Promise<void> {
-	let tenant = await Tenant.findById(db, tenantId);
+	let tenant = await models.tenants.find(tenantId);
 	if (!tenant) return;
 
 	if (snapshot === undefined) {
-		let customer = await Customer.findById(db, tenant.customer_id);
+		let customer = await models.customers.find(tenant.customer_id);
 		if (!customer || customer.provider_customer_id === null) return;
 
 		let read = await billing.entitlements.of({ id: customer.provider_customer_id });
@@ -142,7 +141,7 @@ export async function reprojectTenant(
 		snapshot = read.data;
 	}
 
-	let addons = await TenantAddon.listByTenant(db, tenant.id);
+	let addons = await models.tenantAddons.ofTenant(tenant.id).all();
 	let heldSubscriptionIds = new Set<string>();
 	if (tenant.subscription_id !== null) heldSubscriptionIds.add(tenant.subscription_id);
 	for (let addon of addons) heldSubscriptionIds.add(addon.subscription_id);
@@ -161,15 +160,18 @@ export async function reprojectTenant(
 		if (isSuccess(product)) Object.assign(features, product.data.features);
 	}
 
-	await TenantEntitlement.upsert(db, tenant.id, {
-		products,
-		features,
-		readAt: snapshot.readAt.getTime(),
-	});
+	unwrap(
+		await models.tenantEntitlements.upsert({
+			tenant_id: tenant.id,
+			products,
+			features,
+			read_at: snapshot.readAt.getTime(),
+		}),
+	);
 
 	let planSlug = basePlanSlug(tenant, snapshot);
 	if (planSlug !== null && planSlug !== tenant.plan_slug) {
-		tenant = await Tenant.update(db, tenant.id, { planSlug });
+		tenant = unwrap(await models.tenants.update(tenant.id, { plan_slug: planSlug }));
 	}
 
 	let plan = PLANS[tenant.plan_slug as keyof typeof PLANS] ?? PLANS.free;
@@ -202,12 +204,11 @@ export async function reprojectTenant(
  * event named, sharing the one entitlement read across all of them.
  */
 async function reprojectCustomerTenants(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	providerCustomerId: string,
 ): Promise<void> {
-	let customer = await Customer.findByProviderCustomerId(
-		db,
+	let customer = await models.customers.findByProviderCustomerId(
 		billing.connection,
 		providerCustomerId,
 	);
@@ -216,40 +217,40 @@ async function reprojectCustomerTenants(
 	let read = await billing.entitlements.of({ id: providerCustomerId });
 	if (isFailure(read)) return;
 
-	for (let tenant of await Tenant.listByCustomer(db, customer.id)) {
-		await reprojectTenant(db, billing, tenant.id, read.data);
+	for (let tenant of await models.tenants.ofCustomer(customer.id).all()) {
+		await reprojectTenant(models, billing, tenant.id, read.data);
 	}
 }
 
 /**
  * Builds the `BillingWebhookHandlers` map `POST /webhooks/billing` dispatches
- * to. Takes `db` and `billing` explicitly rather than closing over module-scope
+ * to. Takes `models` and `billing` explicitly rather than closing over module-scope
  * singletons, so a test builds the same handlers against `MemoryBilling` and an
  * isolated database.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @returns The handler map, keyed by delivery name.
  */
 export function createBillingWebhookHandlers(
-	db: Database,
+	models: Models,
 	billing: Billing,
 ): BillingWebhookHandlers {
 	return {
 		async "checkout.completed"(event: BillingEventOf<"checkout.completed">) {
-			let checkout = await BillingCheckout.findByCheckoutId(db, event.checkout.id);
+			let checkout = await models.billingCheckouts.findByCheckoutId(event.checkout.id);
 			if (!checkout) return;
 
 			if (event.checkout.subscriptionId !== null) {
-				await attachCheckoutSubscription(db, checkout, event.checkout.subscriptionId);
+				await attachCheckoutSubscription(models, checkout, event.checkout.subscriptionId);
 			}
 
-			await reprojectTenant(db, billing, checkout.tenant_id);
+			await reprojectTenant(models, billing, checkout.tenant_id);
 		},
 
 		async "subscription.activated"(event: BillingEventOf<"subscription.activated">) {
 			let subscription = event.subscription;
-			let tenant = await resolveTenantForSubscription(db, subscription.id);
+			let tenant = await resolveTenantForSubscription(models, subscription.id);
 
 			if (!tenant) {
 				/**
@@ -262,25 +263,27 @@ export function createBillingWebhookHandlers(
 				let tenantId = subscription.metadata.tenant;
 				if (tenantId === undefined) return;
 
-				let candidate = await Tenant.findById(db, tenantId);
+				let candidate = await models.tenants.find(tenantId);
 				if (!candidate || candidate.subscription_id !== null) return;
 
 				tenant = candidate;
 			}
 
-			tenant = await Tenant.update(db, tenant.id, {
-				subscriptionId: subscription.id,
-				subscriptionStatus: subscription.status,
-				currentPeriodEnd: subscription.currentPeriodEnd?.getTime() ?? null,
-				cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-			});
+			tenant = unwrap(
+				await models.tenants.update(tenant.id, {
+					subscription_id: subscription.id,
+					subscription_status: subscription.status,
+					current_period_end: subscription.currentPeriodEnd?.getTime() ?? null,
+					cancel_at_period_end: subscription.cancelAtPeriodEnd,
+				}),
+			);
 
-			await reprojectTenant(db, billing, tenant.id);
+			await reprojectTenant(models, billing, tenant.id);
 		},
 
 		async "subscription.updated"(event: BillingEventOf<"subscription.updated">) {
 			let subscription = event.subscription;
-			let tenant = await resolveTenantForSubscription(db, subscription.id);
+			let tenant = await resolveTenantForSubscription(models, subscription.id);
 			if (!tenant) return;
 
 			if (tenant.subscription_id === subscription.id) {
@@ -292,70 +295,82 @@ export function createBillingWebhookHandlers(
 					graceUntil = null;
 				}
 
-				await Tenant.update(db, tenant.id, {
-					subscriptionStatus: subscription.status,
-					currentPeriodEnd: subscription.currentPeriodEnd?.getTime() ?? null,
-					cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
-					graceUntil,
-				});
+				unwrap(
+					await models.tenants.update(tenant.id, {
+						subscription_status: subscription.status,
+						current_period_end: subscription.currentPeriodEnd?.getTime() ?? null,
+						cancel_at_period_end: subscription.cancelAtPeriodEnd,
+						grace_until: graceUntil,
+					}),
+				);
 			} else {
-				let addon = await TenantAddon.findBySubscriptionId(db, subscription.id);
+				let addon = await models.tenantAddons.findBySubscriptionId(subscription.id);
 				if (addon) {
-					await TenantAddon.update(db, addon.id, {
-						status: subscription.status,
-						currentPeriodEnd: subscription.currentPeriodEnd?.getTime() ?? null,
-					});
+					unwrap(
+						await models.tenantAddons.update(addon.id, {
+							status: subscription.status,
+							current_period_end: subscription.currentPeriodEnd?.getTime() ?? null,
+						}),
+					);
 				}
 			}
 
-			await reprojectTenant(db, billing, tenant.id);
+			await reprojectTenant(models, billing, tenant.id);
 		},
 
 		async "subscription.canceled"(event: BillingEventOf<"subscription.canceled">) {
 			let subscription = event.subscription;
-			let tenant = await resolveTenantForSubscription(db, subscription.id);
+			let tenant = await resolveTenantForSubscription(models, subscription.id);
 			if (!tenant) return;
 
 			if (tenant.subscription_id === subscription.id) {
-				await Tenant.update(db, tenant.id, {
-					subscriptionStatus: subscription.status,
-					currentPeriodEnd: subscription.currentPeriodEnd?.getTime() ?? null,
-					cancelAtPeriodEnd: true,
-				});
+				unwrap(
+					await models.tenants.update(tenant.id, {
+						subscription_status: subscription.status,
+						current_period_end: subscription.currentPeriodEnd?.getTime() ?? null,
+						cancel_at_period_end: true,
+					}),
+				);
 			} else {
-				let addon = await TenantAddon.findBySubscriptionId(db, subscription.id);
+				let addon = await models.tenantAddons.findBySubscriptionId(subscription.id);
 				if (addon) {
-					await TenantAddon.update(db, addon.id, {
-						status: subscription.status,
-						currentPeriodEnd: subscription.currentPeriodEnd?.getTime() ?? null,
-					});
+					unwrap(
+						await models.tenantAddons.update(addon.id, {
+							status: subscription.status,
+							current_period_end: subscription.currentPeriodEnd?.getTime() ?? null,
+						}),
+					);
 				}
 			}
 
-			await reprojectTenant(db, billing, tenant.id);
+			await reprojectTenant(models, billing, tenant.id);
 		},
 
 		async "subscription.revoked"(event: BillingEventOf<"subscription.revoked">) {
 			let subscription = event.subscription;
-			let tenant = await resolveTenantForSubscription(db, subscription.id);
+			let tenant = await resolveTenantForSubscription(models, subscription.id);
 			if (!tenant) return;
 
 			if (tenant.subscription_id === subscription.id) {
-				await Tenant.update(db, tenant.id, {
-					subscriptionStatus: subscription.status,
-					lapsedAt: tenant.lapsed_at ?? Date.now(),
-				});
+				unwrap(
+					await models.tenants.update(tenant.id, {
+						subscription_status: subscription.status,
+						lapsed_at: tenant.lapsed_at ?? Date.now(),
+					}),
+				);
 			} else {
-				let addon = await TenantAddon.findBySubscriptionId(db, subscription.id);
+				let addon = await models.tenantAddons.findBySubscriptionId(subscription.id);
 				if (addon) {
-					await TenantAddon.update(db, addon.id, {
-						status: subscription.status,
-						currentPeriodEnd: addon.current_period_end,
-					});
+					unwrap(
+						await models.tenantAddons.update(addon.id, {
+							status: subscription.status,
+							current_period_end: addon.current_period_end,
+						}),
+					);
 				}
 			}
 
-			await reprojectTenant(db, billing, tenant.id);
+			await reprojectTenant(models, billing, tenant.id);
 
 			/**
 			 * The day-45 and day-59 deletion notices ADR-018 calls for once a tenant
@@ -368,21 +383,25 @@ export function createBillingWebhookHandlers(
 			let customerId = event.order.customerId;
 			if (customerId === null) return;
 
-			let customer = await Customer.findByProviderCustomerId(db, billing.connection, customerId);
+			let customer = await models.customers.findByProviderCustomerId(
+				billing.connection,
+				customerId,
+			);
 			if (customer) {
-				for (let tenant of await Tenant.listByCustomer(db, customer.id)) {
-					if (tenant.grace_until !== null) await Tenant.update(db, tenant.id, { graceUntil: null });
+				for (let tenant of await models.tenants.ofCustomer(customer.id).all()) {
+					if (tenant.grace_until !== null)
+						unwrap(await models.tenants.update(tenant.id, { grace_until: null }));
 				}
 			}
 
-			await reprojectCustomerTenants(db, billing, customerId);
+			await reprojectCustomerTenants(models, billing, customerId);
 		},
 
 		async "order.refunded"(event: BillingEventOf<"order.refunded">) {
 			let customerId = event.order.customerId;
 			if (customerId === null) return;
 
-			await reprojectCustomerTenants(db, billing, customerId);
+			await reprojectCustomerTenants(models, billing, customerId);
 		},
 
 		async "customer.updated"(event: BillingEventOf<"customer.updated">) {
@@ -392,7 +411,7 @@ export function createBillingWebhookHandlers(
 			 * re-running the projection is what keeps a plan or feature change that
 			 * coincided with this delivery in step.
 			 */
-			await reprojectCustomerTenants(db, billing, event.customer.id);
+			await reprojectCustomerTenants(models, billing, event.customer.id);
 		},
 	};
 }
@@ -403,23 +422,23 @@ export function createBillingWebhookHandlers(
  * repeatedly and from anywhere: each row re-reads `entitlements.of()` the same
  * way a handler does.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param options - `olderThanMs` overrides the one-hour staleness window;
  * `now` overrides the clock, for tests.
  * @returns How many stale projections were refreshed.
  */
 export async function sweepStaleProjections(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	options: { olderThanMs?: number; now?: number } = {},
 ): Promise<{ swept: number }> {
 	let now = options.now ?? Date.now();
 	let cutoff = now - (options.olderThanMs ?? STALE_PROJECTION_MS);
 
-	let stale = await TenantEntitlement.listStale(db, cutoff);
+	let stale = await models.tenantEntitlements.staleBefore(cutoff).all();
 
-	for (let row of stale) await reprojectTenant(db, billing, row.tenant_id);
+	for (let row of stale) await reprojectTenant(models, billing, row.tenant_id);
 
 	return { swept: stale.length };
 }

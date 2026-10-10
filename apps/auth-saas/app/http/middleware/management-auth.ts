@@ -20,8 +20,6 @@ import type { ManagementResourceServer } from "~/app/lib/management-resource";
 import { managementProblem } from "~/app/http/lib/problem";
 import { managementResourceServer } from "~/app/lib/management-resource";
 import { platformTenantIssuer, platformTenantStub } from "~/app/lib/platform-tenant";
-import AgentClientBinding from "~/app/models/agent-client-binding";
-import Membership from "~/app/models/membership";
 import { scopesForRole } from "~/app/services/management-scopes";
 import { AccessToken } from "~/database/tokens";
 
@@ -130,7 +128,7 @@ export async function verifyManagementBearerToken(token: string): Promise<Access
 /**
  * Resolves a presented bearer token into who it speaks for. A machine
  * credential names its one reachable tenant at registration, in
- * {@link AgentClientBinding} — checked here the same way a membership is
+ * the agent client bindings model — checked here the same way a membership is
  * checked, since neither a machine credential nor a person's own token ever
  * needs to carry a tenant claim itself. A token with no binding is a person's
  * own, obtained through an ordinary authorization-code-with-PKCE consent:
@@ -155,7 +153,7 @@ async function resolveBearerCaller(
 
 	let scopes = verified.scope.split(" ").filter(Boolean);
 
-	let binding = await AgentClientBinding.findByClientId(ctx.db, verified.clientId);
+	let binding = await ctx.models.agentClientBindings.find(verified.clientId);
 	if (binding) {
 		return {
 			tenantId: binding.tenant_id,
@@ -170,7 +168,10 @@ async function resolveBearerCaller(
 		};
 	}
 
-	let membership = await Membership.findByTenantAndSubject(ctx.db, pathTenantId, verified.subject);
+	let membership = await ctx.models.memberships.findByTenantAndSubject(
+		pathTenantId,
+		verified.subject,
+	);
 	if (!membership) {
 		return { error: forbidden(api, "This member does not belong to this tenant.") };
 	}
@@ -235,7 +236,7 @@ export function managementAuth(options: ManagementAuthOptions): Middleware {
 			return unauthorized(api, "A bearer token or an authenticated dashboard session is required.");
 		}
 
-		let membership = await Membership.findByTenantAndSubject(ctx.db, pathTenantId, subjectId);
+		let membership = await ctx.models.memberships.findByTenantAndSubject(pathTenantId, subjectId);
 		if (!membership) return forbidden(api, "This member does not belong to this tenant.");
 
 		ctx.set(

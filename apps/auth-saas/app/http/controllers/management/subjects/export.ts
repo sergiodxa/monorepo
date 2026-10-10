@@ -17,7 +17,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -29,7 +29,6 @@ import { managementIdempotency } from "~/app/http/middleware/management-idempote
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { SUBJECTS_EXPORT_BEGIN } from "~/app/http/openapi/subjects";
-import TenantExportRun from "~/app/models/tenant-export-run";
 import routes from "~/routes/management";
 
 /**
@@ -67,7 +66,12 @@ export function createSubjectsExportBeginAction(options: ManagementControllerOpt
 			}
 
 			let tenantId = ctx.managementCaller.tenantId;
-			let run = await TenantExportRun.create(ctx.db, { tenantId, includeCredentials });
+			let run = unwrap(
+				await ctx.models.tenantExportRuns.create({
+					tenant_id: tenantId,
+					include_credentials: includeCredentials,
+				}),
+			);
 
 			return json({ id: run.id, status: run.status }, { status: 201 });
 		},

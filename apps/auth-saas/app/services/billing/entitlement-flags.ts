@@ -22,8 +22,8 @@ import type { EvaluationContext, Flag } from "@sdxc/flags";
 
 import { defineFlags, flag } from "@sdxc/flags/catalog";
 
-import type { TenantRow } from "~/app/models/tenant";
-import type { TenantEntitlementRow } from "~/app/models/tenant-entitlement";
+import type { TenantEntitlementRow } from "~/app/models/tenant-entitlements";
+import type { TenantRow } from "~/app/models/tenants";
 
 import { ADDONS, PLANS } from "./catalog";
 

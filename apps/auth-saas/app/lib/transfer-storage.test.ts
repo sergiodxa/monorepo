@@ -17,14 +17,16 @@
 import type { Database } from "remix/data-table";
 
 import { createAnalyticsEngine, createR2Bucket } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { gte } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { flush, runWithLedger } from "~/app/lib/cost-ledger";
 import { COST_RESOURCES } from "~/app/lib/cost-rates";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 
 import {
 	mintTransferDownloadTicket,
@@ -119,18 +121,22 @@ describe("writeTransferFile / readTransferFileLines", () => {
 
 describe("mintTransferDownloadTicket / spendTransferDownloadTicket", () => {
 	let db: Database;
+	let models: Models;
 	let tenantId: string;
 
 	beforeEach(async () => {
 		db = await createTestDatabase();
+		models = bindModels(db);
 
-		let customer = await Customer.create(db, { name: "Acme" });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme" }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 		tenantId = tenant.id;
 	});
 

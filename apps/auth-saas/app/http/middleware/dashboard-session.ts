@@ -14,13 +14,11 @@ import type { RequestContext } from "remix/router";
 import { failure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { MembershipRole } from "~/app/models/membership";
-import type { TenantRow } from "~/app/models/tenant";
+import type { MembershipRole } from "~/app/models/memberships";
+import type { TenantRow } from "~/app/models/tenants";
 
 import { requestOrigin } from "~/app/lib/request-origin";
 import { sessionCookie } from "~/app/lib/session-cookie";
-import Membership from "~/app/models/membership";
-import Tenant from "~/app/models/tenant";
 import tenantRoutes from "~/routes/tenant";
 
 /** A live platform dashboard session's subject and session id. */
@@ -95,10 +93,10 @@ export async function resolveTenantMember(
 	let session = await resolveDashboardSession(ctx);
 	if (!session) return failure(new DashboardSignInRequiredError());
 
-	let membership = await Membership.findByTenantAndSubject(ctx.db, tenantId, session.subjectId);
+	let membership = await ctx.models.memberships.findByTenantAndSubject(tenantId, session.subjectId);
 	if (!membership) return failure(new NotATenantMemberError(tenantId));
 
-	let tenant = await Tenant.findById(ctx.db, tenantId);
+	let tenant = await ctx.models.tenants.find(tenantId);
 	if (!tenant || tenant.status === "deleted") return failure(new NotATenantMemberError(tenantId));
 
 	return success({ subjectId: session.subjectId, role: membership.role, tenant });

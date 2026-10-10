@@ -10,14 +10,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
+import { NotFound } from "@sdxc/data-model";
 import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { MembershipRow } from "~/app/models/membership";
+import type { Models } from "~/app/models";
+import type { MembershipRow } from "~/app/models/memberships";
 
 import {
 	membershipIdParam,
@@ -29,8 +29,6 @@ import { operationInputProblem } from "~/app/http/lib/parse-body";
 import { managementProblem } from "~/app/http/lib/problem";
 import { requireScope } from "~/app/http/lib/require-scope";
 import { TENANT_MEMBERS_CREATE, TENANT_MEMBERS_UPDATE_ROLE } from "~/app/http/openapi/tenants";
-import { RecordNotFoundError } from "~/app/lib/db-errors";
-import Membership from "~/app/models/membership";
 import routes from "~/routes/management";
 
 /**
@@ -39,12 +37,11 @@ import routes from "~/routes/management";
  * this rather than trusting the path segment.
  */
 async function findOwnMembership(
-	db: Database,
+	models: Models,
 	tenantId: string,
 	membershipId: string,
 ): Promise<MembershipRow | null> {
-	let memberships = await Membership.listByTenant(db, tenantId);
-	return memberships.find((membership) => membership.id === membershipId) ?? null;
+	return models.memberships.ofTenant(tenantId).find(membershipId);
 }
 
 /** The refusal for a write that would leave the tenant without an owner. */
@@ -70,7 +67,7 @@ export function createTenantMembersListAction(options: ManagementControllerOptio
 			let refused = requireScope(ctx, "members:write");
 			if (refused) return refused;
 
-			let memberships = await Membership.listByTenant(ctx.db, ctx.managementCaller.tenantId);
+			let memberships = await ctx.models.memberships.ofTenant(ctx.managementCaller.tenantId).all();
 
 			return json(memberships.map(serializeMembership), { status: 200 });
 		},
@@ -97,11 +94,13 @@ export function createTenantMembersCreateAction(options: ManagementControllerOpt
 			if (isFailure(input)) return operationInputProblem(input.error);
 			let body = input.data.body;
 
-			let membership = await Membership.create(ctx.db, {
-				tenantId: ctx.managementCaller.tenantId,
-				subjectId: body.subjectId,
-				role: body.role,
-			});
+			let membership = unwrap(
+				await ctx.models.memberships.create({
+					tenant_id: ctx.managementCaller.tenantId,
+					subject_id: body.subjectId,
+					role: body.role,
+				}),
+			);
 
 			return json(serializeMembership(membership), { status: 201 });
 		},
@@ -129,12 +128,16 @@ export function createTenantMembersUpdateRoleAction(options: ManagementControlle
 			let input = await TENANT_MEMBERS_UPDATE_ROLE.parse(ctx.request, ctx.params);
 			if (isFailure(input)) return operationInputProblem(input.error);
 
-			let existing = await findOwnMembership(ctx.db, ctx.managementCaller.tenantId, membershipId);
+			let existing = await findOwnMembership(
+				ctx.models,
+				ctx.managementCaller.tenantId,
+				membershipId,
+			);
 			if (!existing) return membershipNotFound();
 
-			let updated = await Membership.update(ctx.db, membershipId, input.data.body.role);
+			let updated = await ctx.models.memberships.changeRole(membershipId, input.data.body.role);
 			if (isFailure(updated)) {
-				if (updated.error instanceof RecordNotFoundError) return membershipNotFound();
+				if (updated.error instanceof NotFound) return membershipNotFound();
 				return lastOwner();
 			}
 
@@ -161,10 +164,14 @@ export function createTenantMembersRemoveAction(options: ManagementControllerOpt
 
 			let membershipId = membershipIdParam(ctx);
 
-			let existing = await findOwnMembership(ctx.db, ctx.managementCaller.tenantId, membershipId);
+			let existing = await findOwnMembership(
+				ctx.models,
+				ctx.managementCaller.tenantId,
+				membershipId,
+			);
 			if (!existing) return membershipNotFound();
 
-			let deleted = await Membership.delete(ctx.db, membershipId);
+			let deleted = await ctx.models.memberships.revoke(membershipId);
 			if (isFailure(deleted)) return lastOwner();
 
 			return new Response(null, { status: 204 });

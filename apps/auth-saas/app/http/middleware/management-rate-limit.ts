@@ -16,7 +16,6 @@ import { CloudflareAdapter, tooManyRequests } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 
 import { managementProblem } from "~/app/http/lib/problem";
-import Tenant from "~/app/models/tenant";
 
 /** Which budget a route spends from. Import and export runs are their own bucket, opted into explicitly rather than inferred from the HTTP method. */
 export type ManagementRateLimitBucket = "read" | "write" | "import_export";
@@ -80,7 +79,7 @@ export function managementRateLimit(
 		let caller = ctx.managementCaller;
 		let bucket = options.bucket ?? bucketForMethod(ctx.request.method);
 
-		let tenant = await Tenant.findById(ctx.db, caller.tenantId);
+		let tenant = await ctx.models.tenants.find(caller.tenantId);
 		let tier = tenant ? (TIER_LIMITS[tenant.plan_slug] ?? DEFAULT_TIER) : DEFAULT_TIER;
 
 		let adapter = new CloudflareAdapter(limiter, {

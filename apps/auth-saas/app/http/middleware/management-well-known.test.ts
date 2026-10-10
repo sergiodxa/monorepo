@@ -19,13 +19,16 @@ import { parse as parseProtectedResource } from "@sdxc/well-known/oauth-protecte
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { requireScope } from "~/app/http/lib/require-scope";
 import { database } from "~/app/http/middleware/database";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
-import AgentClientBinding from "~/app/models/agent-client-binding";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import TenantObject from "~/database/tenant-do";
 import { AccessToken } from "~/database/tokens";
 
@@ -34,10 +37,12 @@ const ISSUER = "https://api.example.com";
 const PLATFORM_ISSUER = "https://platform.example.com";
 
 let db: Database;
+let models: Models;
 let platformTenantDO: TenantObject;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 
 	let state = createDurableObjectState();
 	platformTenantDO = new TenantObject(state, {
@@ -60,7 +65,9 @@ beforeEach(async () => {
 
 /** A management router carrying the discovery documents and one scope-guarded route. */
 function buildRouter() {
-	let router = createRouter({ middleware: [database(() => db), managementWellKnown(ISSUER)] });
+	let router = createRouter({
+		middleware: [database(() => db), modelsMiddleware(), managementWellKnown(ISSUER)],
+	});
 	router.get("/tenants/:tenantId/probe", {
 		middleware: [managementAuth({ issuer: ISSUER, resolveDashboardSubjectId: async () => null })],
 		handler: (ctx) => requireScope(ctx, "audit:read") ?? new Response(null, { status: 204 }),
@@ -83,7 +90,12 @@ async function signAgentToken(scope = "subjects:read"): Promise<string> {
 	});
 	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
 
-	await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId: "tnt_1" });
+	unwrap(
+		await models.agentClientBindings.create({
+			client_id: registered.client.id,
+			tenant_id: "tnt_1",
+		}),
+	);
 
 	let outcome = await platformTenantDO.issueClientCredentialsToken({
 		clientId: registered.client.id,

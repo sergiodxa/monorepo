@@ -13,8 +13,10 @@ import type { Database } from "remix/data-table";
 
 import { createDurableObjectNamespace, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 /** The `QUEUE` binding `dispatcher.enqueueMany` writes `deliverWebhook` messages through. */
@@ -29,26 +31,29 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
+let { bindModels, publishModels } = await import("~/app/test/models");
 let sweepDueWebhookDeliveries = (await import("./sweep-due-webhook-deliveries")).default;
 
 let db: Database;
+let models: Models;
 
 beforeEach(async () => {
 	queue.reset();
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 /** Creates a provisioned tenant row in the control plane. */
 async function makeTenant(name: string) {
-	let customer = await Customer.create(db, { name });
-	return TenantModel.create(db, {
-		customerId: customer.id,
-		name,
-		slug: name.toLowerCase(),
-		issuer: `https://${name.toLowerCase()}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name }));
+	return unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: name.toLowerCase(),
+			issuer: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 }
 
 /** Builds the context the handler receives, wired to the control-plane `db` and a stubbed tenant namespace. */
@@ -57,6 +62,7 @@ function makeContext(namespace: DurableObjectNamespace<Tenant>) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sweepDueWebhookDeliveries, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 
 	return {

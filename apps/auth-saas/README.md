@@ -59,7 +59,9 @@ Observability is enabled.
 
 ## Database
 
-Control-plane migrations live in `database/migrations/`.
+Control-plane migrations live in `database/migrations/`, the tables they create are
+defined in `database/schema.ts`, and the `@sdxc/data-model` models over them live in
+`app/models/`, reached from routes and jobs as `ctx.models`.
 
 ```bash
 bun run db:local:migrate  # Apply migrations locally

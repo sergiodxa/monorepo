@@ -19,7 +19,7 @@ import type { RequestContext } from "remix/router";
 import { checkDisposable } from "@sdxc/email-address/disposable";
 import { checkMailServer } from "@sdxc/email-address/mail-server";
 import { suggestDomain } from "@sdxc/email-address/typo";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
@@ -38,7 +38,6 @@ import { requestOrigin } from "~/app/lib/request-origin";
 import { mailTranslator } from "~/app/mail/locale";
 import { PlatformSignupVerifyEmail } from "~/app/mail/platform-signup-verify-email";
 import { parseSenderAddress } from "~/app/mail/sender";
-import PendingSignup from "~/app/models/pending-signup";
 import { PublicDocument } from "~/app/views/landing";
 import { SignUpForm } from "~/app/views/signup";
 import routes from "~/routes/web";
@@ -218,7 +217,12 @@ export const signupSubmit = createAction(routes.signup.submit, async (ctx) => {
 		});
 	}
 
-	await PendingSignup.create(ctx.db, { subjectId: created.subjectId, organizationName });
+	unwrap(
+		await ctx.models.pendingSignups.create({
+			subject_id: created.subjectId,
+			organization_name: organizationName,
+		}),
+	);
 
 	let sendFailed = false;
 

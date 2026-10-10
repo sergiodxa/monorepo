@@ -15,7 +15,7 @@
 
 import { Hex, sha256 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -24,8 +24,6 @@ import { managementProblem } from "~/app/http/lib/problem";
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { INVITATIONS_ACCEPT } from "~/app/http/openapi/public";
 import { requestOrigin } from "~/app/lib/request-origin";
-import Membership from "~/app/models/membership";
-import TenantMemberInvitation from "~/app/models/tenant-member-invitation";
 import routes from "~/routes/management";
 
 /**
@@ -55,7 +53,7 @@ export default createAction(routes.invitationsAccept, async (ctx) => {
 	if (isFailure(hashed)) return invalidInvitation();
 	let tokenHash = Hex.encode(hashed.data);
 
-	let invitation = await TenantMemberInvitation.accept(ctx.db, { tokenHash, now: Date.now() });
+	let invitation = await ctx.models.tenantMemberInvitations.accept({ tokenHash, now: Date.now() });
 	if (!invitation) return invalidInvitation();
 
 	let platform = env.TENANT.getByName(env.PLATFORM_DOMAIN);
@@ -71,11 +69,13 @@ export default createAction(routes.invitationsAccept, async (ctx) => {
 		subjectId = created.subjectId;
 	}
 
-	await Membership.create(ctx.db, {
-		tenantId: invitation.tenant_id,
-		subjectId,
-		role: invitation.role,
-	});
+	unwrap(
+		await ctx.models.memberships.create({
+			tenant_id: invitation.tenant_id,
+			subject_id: subjectId,
+			role: invitation.role,
+		}),
+	);
 
 	let session = await platform.openSessionForSubject({
 		subjectId,

@@ -46,6 +46,7 @@ import {
 	ISSUER,
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import routes from "~/routes/management";
 
 export { fakeHostnameClient, fakeLimiter, grantEntitlement, grantMembership, ISSUER };
@@ -68,7 +69,7 @@ export function buildRolesRouter(
 		r2: createR2Bucket(),
 	};
 
-	let router = createRouter({ middleware: [conformance, database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
 
 	router.map(routes.permissionsList, createPermissionsListAction(controllerOptions));
 	router.map(routes.permissionsDefine, createPermissionsDefineAction(controllerOptions));

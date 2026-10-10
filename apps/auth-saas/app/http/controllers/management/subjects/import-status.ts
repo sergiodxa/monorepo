@@ -23,7 +23,6 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { mintTransferDownloadTicket } from "~/app/lib/transfer-storage";
-import TenantImportRun from "~/app/models/tenant-import-run";
 import routes from "~/routes/management";
 
 /**
@@ -49,7 +48,7 @@ export function createSubjectsImportStatusAction(options: ManagementControllerOp
 			if (refused) return refused;
 
 			let runId = importRunIdParam(ctx);
-			let run = await TenantImportRun.findById(ctx.db, runId);
+			let run = await ctx.models.tenantImportRuns.find(runId);
 			if (!run || run.tenant_id !== ctx.managementCaller.tenantId) return importRunNotFound();
 
 			let body: Record<string, unknown> = {

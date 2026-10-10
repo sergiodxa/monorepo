@@ -20,6 +20,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import { conformance } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
 import { createTestDatabase } from "~/app/test/db";
 import TenantObject from "~/database/tenant-do";
@@ -60,7 +61,7 @@ beforeEach(async () => {
  * request body directly. */
 function buildRouter() {
 	let router = createRouter({
-		middleware: [conformance, formData() as Middleware, database(() => db)],
+		middleware: [conformance, formData() as Middleware, database(() => db), modelsMiddleware()],
 	});
 	router.map(routes.token, token);
 	return router;

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MembershipRole } from "~/app/models/membership";
+import type { MembershipRole } from "~/app/models/memberships";
 import type Tenant from "~/database/tenant-do";
 
 /** Every scope the management API ever checks, spelled `<resource>:<read|write>`. */

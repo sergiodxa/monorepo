@@ -17,10 +17,12 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
@@ -52,23 +54,28 @@ let billing = new MemoryBilling({
 vi.doMock("~/app/lib/billing", () => ({ polar: billing }));
 
 let { database } = await import("~/app/http/middleware/database");
+let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let billingCheckout = (await import("~/app/http/controllers/billing/checkout")).default;
 let billingPortal = (await import("~/app/http/controllers/billing/portal")).default;
 let { serializeSessionCookie } = await import("~/app/http/middleware/hosted-session");
-let Customer = (await import("~/app/models/customer")).default;
-let Membership = (await import("~/app/models/membership")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
 let { ensureProviderCustomer } = await import("~/app/services/billing-customer");
 let webRoutes = (await import("~/routes/web")).default;
 let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels } = await import("~/app/test/models");
 let TenantObject = (await import("~/database/tenant-do")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 
+let models: Models;
+
 /** Builds the platform web router mapping both billing routes, matching how `bootstrap/app.ts` mounts them. */
 function buildBillingRouter() {
 	let router = createRouter({
-		middleware: [database(() => db) as Middleware, formData() as Middleware],
+		middleware: [
+			database(() => db) as Middleware,
+			modelsMiddleware() as Middleware,
+			formData() as Middleware,
+		],
 	});
 
 	router.map(webRoutes.billing.checkout, billingCheckout);
@@ -79,6 +86,7 @@ function buildBillingRouter() {
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 	platformTenantDO = new TenantObject(createDurableObjectState(), {
 		TOTP_SEAL_KEY: randomToken({ bytes: 32 }),
 	} as Cloudflare.Env);
@@ -113,14 +121,16 @@ async function signIn(): Promise<{ subjectId: string; cookie: string }> {
  * fresh database and refuses one address joined to two customers.
  */
 async function provisionTenant() {
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await TenantModel.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: `acme-${crypto.randomUUID()}`,
-		issuer: `https://acme-${crypto.randomUUID()}.example.com`,
-	});
-	await ensureProviderCustomer(db, billing, customer, {
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: `acme-${crypto.randomUUID()}`,
+			issuer: `https://acme-${crypto.randomUUID()}.example.com`,
+		}),
+	);
+	await ensureProviderCustomer(models, billing, customer, {
 		email: `${crypto.randomUUID()}@example.com`,
 	});
 	return tenant;
@@ -183,7 +193,7 @@ describe.each(ROUTES)("POST /billing/tenants/:tenantId/$name", (route) => {
 	test.each(["admin", "member"] as const)("refuses a tenant %s", async (role) => {
 		let tenant = await provisionTenant();
 		let { subjectId, cookie } = await signIn();
-		await Membership.create(db, { tenantId: tenant.id, subjectId, role });
+		unwrap(await models.memberships.create({ tenant_id: tenant.id, subject_id: subjectId, role }));
 
 		let response = await buildBillingRouter().fetch(
 			billingPost(route.path(tenant.id), route.fields, cookie),
@@ -195,7 +205,13 @@ describe.each(ROUTES)("POST /billing/tenants/:tenantId/$name", (route) => {
 	test("redirects the tenant's owner to the billing platform's hosted page", async () => {
 		let tenant = await provisionTenant();
 		let { subjectId, cookie } = await signIn();
-		await Membership.create(db, { tenantId: tenant.id, subjectId, role: "owner" });
+		unwrap(
+			await models.memberships.create({
+				tenant_id: tenant.id,
+				subject_id: subjectId,
+				role: "owner",
+			}),
+		);
 
 		let response = await buildBillingRouter().fetch(
 			billingPost(route.path(tenant.id), route.fields, cookie),

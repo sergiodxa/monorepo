@@ -14,7 +14,7 @@
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
 import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
@@ -29,8 +29,6 @@ import { managementTenant } from "~/app/http/middleware/management-tenant";
 import { TENANT_MEMBERS_INVITE } from "~/app/http/openapi/tenants";
 import { mailTranslator } from "~/app/mail/locale";
 import { TenantInvitationEmail } from "~/app/mail/tenant-invitation-email";
-import Tenant from "~/app/models/tenant";
-import TenantMemberInvitation from "~/app/models/tenant-member-invitation";
 import { foldIdentifier } from "~/database/subject-identifiers";
 import routes from "~/routes/management";
 
@@ -76,7 +74,7 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			if (!folded.ok) return invalidEmail();
 
 			let tenantId = ctx.managementCaller.tenantId;
-			let tenant = await Tenant.findById(ctx.db, tenantId);
+			let tenant = await ctx.models.tenants.find(tenantId);
 			if (!tenant) throw new Error("management caller resolved to a tenant that no longer exists");
 
 			let token = randomToken({ bytes: 32 });
@@ -84,18 +82,20 @@ export function createTenantMembersInviteAction(options: ManagementControllerOpt
 			if (isFailure(hashed)) throw new Error("failed to hash the tenant invitation token");
 			let tokenHash = Hex.encode(hashed.data);
 
-			await TenantMemberInvitation.deletePendingByTenantAndEmail(ctx.db, tenantId, folded.folded);
+			await ctx.models.tenantMemberInvitations.pendingFor(tenantId, folded.folded).delete();
 
 			let expiresAt = Date.now() + TENANT_INVITATION_TTL_MS;
 
-			let invitation = await TenantMemberInvitation.create(ctx.db, {
-				tenantId,
-				email: folded.folded,
-				role: body.role,
-				tokenHash,
-				invitedBy: ctx.managementCaller.actor.id,
-				expiresAt,
-			});
+			let invitation = unwrap(
+				await ctx.models.tenantMemberInvitations.create({
+					tenant_id: tenantId,
+					email: folded.folded,
+					role: body.role,
+					token_hash: tokenHash,
+					invited_by: ctx.managementCaller.actor.id,
+					expires_at: expiresAt,
+				}),
+			);
 
 			let { t } = mailTranslator();
 			let url = `https://dashboard.${env.PLATFORM_DOMAIN}/invitations/accept?token=${token}`;

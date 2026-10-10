@@ -17,14 +17,12 @@
 
 import type { RequestContext } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import { requestOrigin } from "~/app/lib/request-origin";
-import Customer from "~/app/models/customer";
-import Membership from "~/app/models/membership";
-import PendingSignup from "~/app/models/pending-signup";
 import { provisionTenant } from "~/app/services/tenant-provisioning";
 import { PublicDocument } from "~/app/views/landing";
 import { SignUpCompletePage, SignUpInvalidPage, SignUpPendingPage } from "~/app/views/signup";
@@ -75,20 +73,22 @@ export default createAction(webRoutes.signup.verify, async (ctx) => {
 	let verified = await platform.verifyIdentifier({ ticket });
 	if (!verified.ok) return renderInvalid(ctx);
 
-	let pending = await PendingSignup.findBySubjectId(ctx.db, verified.subjectId);
+	let pending = await ctx.models.pendingSignups.find(verified.subjectId);
 	if (!pending) return renderInvalid(ctx);
 
-	let customer = await Customer.create(ctx.db, { name: pending.organization_name });
-	let tenant = await provisionTenant(ctx.db, {
+	let customer = unwrap(await ctx.models.customers.create({ name: pending.organization_name }));
+	let tenant = await provisionTenant(ctx.models, {
 		customerId: customer.id,
 		name: pending.organization_name,
 	});
-	await Membership.create(ctx.db, {
-		tenantId: tenant.id,
-		subjectId: verified.subjectId,
-		role: "owner",
-	});
-	await PendingSignup.deleteBySubjectId(ctx.db, verified.subjectId);
+	unwrap(
+		await ctx.models.memberships.create({
+			tenant_id: tenant.id,
+			subject_id: verified.subjectId,
+			role: "owner",
+		}),
+	);
+	await ctx.models.pendingSignups.delete(verified.subjectId);
 
 	let session = await platform.openSessionForSubject({
 		subjectId: verified.subjectId,

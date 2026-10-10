@@ -55,6 +55,7 @@ import {
 } from "~/app/http/controllers/management/test-harness";
 import { database } from "~/app/http/middleware/database";
 import { Mail } from "~/app/http/middleware/mail";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import routes from "~/routes/management";
 
 export {
@@ -96,6 +97,7 @@ export function buildTenantsRouter(
 		middleware: [
 			conformance,
 			database(() => db),
+			modelsMiddleware(),
 			(ctx, next) => {
 				ctx.set(Mail, mailer, { property: "mail" });
 				return next();

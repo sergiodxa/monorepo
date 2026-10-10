@@ -14,14 +14,13 @@ import type { EvaluationContext, FlagValue, MaybePromise, ResolutionDetails } fr
 import type { FlagStore, FlagStoreError, StoredFlagSet } from "@sdxc/flags-engine/store";
 import type { Result } from "@sdxc/result";
 import type { Issue } from "remix/data-schema";
-import type { Database } from "remix/data-table";
 
 import { evaluateAll, FLAG_DEFINITION_SCHEMA, parseFlagSet } from "@sdxc/flags-engine";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v7";
 import * as s from "remix/data-schema";
 
-import FlagChange from "~/app/models/flag-change";
+import type { Models } from "~/app/models";
 
 /** A store an admin write can commit to, on top of the read every store already answers. */
 export interface WritableFlagStore extends FlagStore {
@@ -58,13 +57,13 @@ export type WriteFlagDefinitionResult =
  * a freshly minted revision — recording the change once the write lands.
  *
  * @param store - The definition set to read from and write back to.
- * @param db - Database connection the `flag_change` row is appended through.
+ * @param models - The control plane's models.
  * @param input - The key, the draft, the version the caller read, and who is writing.
  * @returns The new revision on success, or which check declined the write.
  */
 export async function writeFlagDefinition(
 	store: WritableFlagStore,
-	db: Database,
+	models: Models,
 	input: WriteFlagDefinitionInput,
 ): Promise<WriteFlagDefinitionResult> {
 	let checked = s.parseSafe(FLAG_DEFINITION_SCHEMA, input.draft);
@@ -88,12 +87,14 @@ export async function writeFlagDefinition(
 	});
 	if (isFailure(written)) return { ok: false, reason: "store_error", error: written.error };
 
-	await FlagChange.record(db, {
-		key: input.key,
-		before: before === undefined ? null : JSON.stringify(before),
-		after: JSON.stringify(checked.value),
-		actor: input.actor,
-	});
+	unwrap(
+		await models.flagChanges.create({
+			key: input.key,
+			before: before === undefined ? null : JSON.stringify(before),
+			after: JSON.stringify(checked.value),
+			actor: input.actor,
+		}),
+	);
 
 	return { ok: true, version };
 }

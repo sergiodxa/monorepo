@@ -13,6 +13,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 import { createJobHandler } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import jobs from "~/app/jobs";
@@ -28,9 +29,6 @@ import { readTransferFileLines, writeTransferFile } from "~/app/lib/transfer-sto
 import { CredentialsExportStartedEmail } from "~/app/mail/credentials-export-started-email";
 import { mailTranslator } from "~/app/mail/locale";
 import { parseSenderAddress, tenantSenderAddress } from "~/app/mail/sender";
-import Membership from "~/app/models/membership";
-import TenantModel from "~/app/models/tenant";
-import TenantExportRun from "~/app/models/tenant-export-run";
 
 /** Awaits a plain delay; the one pause this job ever inserts is small enough that a local wrapper covers it. */
 function sleep(ms: number): Promise<void> {
@@ -82,7 +80,7 @@ async function appendExportOutputLines(
 
 export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 	let deadline = Date.now() + TICK_TIME_BUDGET_MS;
-	let runs = await TenantExportRun.listActive(ctx.database);
+	let runs = await ctx.models.tenantExportRuns.active().all();
 
 	let runsAdvanced = 0;
 	let runsFailed = 0;
@@ -98,13 +96,13 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 		let stub = ctx.tenant.getByName(run.tenant_id);
 
 		if (run.status === "queued") {
-			await TenantExportRun.markRunning(ctx.database, run.id);
+			unwrap(await ctx.models.tenantExportRuns.markRunning(run.id));
 
 			if (run.include_credentials) {
-				let tenantRow = await TenantModel.findById(ctx.database, run.tenant_id);
+				let tenantRow = await ctx.models.tenants.find(run.tenant_id);
 
 				if (tenantRow) {
-					let owners = (await Membership.listByTenant(ctx.database, run.tenant_id)).filter(
+					let owners = (await ctx.models.memberships.ofTenant(run.tenant_id).all()).filter(
 						(membership) => membership.role === "owner",
 					);
 
@@ -163,11 +161,13 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 			subjectsProcessed += page.subjects.length;
 			pagesThisRun++;
 
-			await TenantExportRun.advance(ctx.database, {
-				id: run.id,
-				cursor,
-				processedDelta: page.subjects.length,
-			});
+			unwrap(
+				await ctx.models.tenantExportRuns.advance({
+					id: run.id,
+					cursor,
+					processedDelta: page.subjects.length,
+				}),
+			);
 
 			if (durationMs > BACKPRESSURE_THRESHOLD_MS) await sleep(BACKPRESSURE_DELAY_MS);
 
@@ -180,14 +180,14 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 		if (tickOutputLines.length > 0) {
 			if (reportKey === null) {
 				reportKey = outputKeyFor({ tenantId: run.tenant_id, runId: run.id });
-				await TenantExportRun.setReportKey(ctx.database, { id: run.id, reportKey });
+				unwrap(await ctx.models.tenantExportRuns.setReportKey(run.id, reportKey));
 			}
 
 			await appendExportOutputLines(env.R2, reportKey, tickOutputLines);
 		}
 
 		if (refused) {
-			await TenantExportRun.fail(ctx.database, run.id);
+			unwrap(await ctx.models.tenantExportRuns.fail(run.id));
 			runsFailed++;
 			continue;
 		}
@@ -196,10 +196,10 @@ export default createJobHandler(jobs.subjectsExport, async (ctx) => {
 			if (reportKey === null) {
 				reportKey = outputKeyFor({ tenantId: run.tenant_id, runId: run.id });
 				await writeTransferFile(env.R2, reportKey, noLines());
-				await TenantExportRun.setReportKey(ctx.database, { id: run.id, reportKey });
+				unwrap(await ctx.models.tenantExportRuns.setReportKey(run.id, reportKey));
 			}
 
-			await TenantExportRun.complete(ctx.database, run.id);
+			unwrap(await ctx.models.tenantExportRuns.complete(run.id));
 			runsCompleted++;
 		}
 	}

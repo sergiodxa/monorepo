@@ -10,13 +10,11 @@
 import type { Billing, Customer as ProviderCustomer } from "@sdxc/billing";
 import type { BillingError } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
-import { isFailure, isSuccess, success } from "@sdxc/result";
+import { isFailure, isSuccess, success, unwrap } from "@sdxc/result";
 
-import type { CustomerRow } from "~/app/models/customer";
-
-import Customer from "~/app/models/customer";
+import type { Models } from "~/app/models";
+import type { CustomerRow } from "~/app/models/customers";
 
 /** What identifies the buyer when no provider customer exists for them yet. */
 export interface CustomerContactInfo {
@@ -53,7 +51,7 @@ async function adoptProviderCustomerByEmail(
  * already held under a different record, adopted instead by
  * `customers.findByEmail` and `customers.update({ externalId })`.
  *
- * @param db - Database connection.
+ * @param models - The control plane's models.
  * @param billing - The configured billing platform.
  * @param customer - The control-plane customer to join.
  * @param contact - The email (and optional name) to create a provider customer
@@ -61,10 +59,10 @@ async function adoptProviderCustomerByEmail(
  * @returns The provider's own customer id, or the failure the join could not
  * recover from.
  * @example
- * let joined = await ensureProviderCustomer(db, polar, customer, { email: "jane@example.com" });
+ * let joined = await ensureProviderCustomer(models, polar, customer, { email: "jane@example.com" });
  */
 export async function ensureProviderCustomer(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	customer: CustomerRow,
 	contact: CustomerContactInfo,
@@ -97,10 +95,12 @@ export async function ensureProviderCustomer(
 		return created;
 	}
 
-	await Customer.joinProviderCustomer(db, customer.id, {
-		connection: billing.connection,
-		providerCustomerId: providerCustomer.id,
-	});
+	unwrap(
+		await models.customers.update(customer.id, {
+			provider_connection: billing.connection,
+			provider_customer_id: providerCustomer.id,
+		}),
+	);
 
 	return success({ providerCustomerId: providerCustomer.id });
 }

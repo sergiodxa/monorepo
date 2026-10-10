@@ -15,9 +15,12 @@ import type { Database } from "remix/data-table";
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { HostnameClient } from "@sdxc/hostname";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { Models } from "~/app/models";
 
 let hostnamesKv = createKVNamespace();
 
@@ -27,9 +30,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { hostnameCacheKey } = await import("~/app/lib/hostname-cache");
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let Domain = (await import("~/app/models/domain")).default;
-let Tenant = (await import("~/app/models/tenant")).default;
+let { bindModels } = await import("~/app/test/models");
 let { attachCustomDomain, refreshDomainStatus, removeDomain } = await import("./domain");
 
 /** The Cloudflare custom-hostnames collection the test client is pointed at. */
@@ -50,28 +51,32 @@ function makeClient(): InstanceType<typeof HostnameClient> {
 }
 
 let db: Database;
+let models: Models;
 
 beforeEach(async () => {
 	hostnamesKv.reset();
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 /** Creates a tenant for a domain to belong to. */
 async function makeTenant() {
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	return await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-		region: "wnam",
-	});
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	return unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.auth.example.com",
+			region: "wnam",
+		}),
+	);
 }
 
 describe("attachCustomDomain", () => {
 	test("rejects an unknown tenant id", async () => {
 		await expect(
-			attachCustomDomain(db, makeClient(), "ten_missing", "auth.acme.com"),
+			attachCustomDomain(models, makeClient(), "ten_missing", "auth.acme.com"),
 		).rejects.toThrow();
 	});
 
@@ -102,7 +107,7 @@ describe("attachCustomDomain", () => {
 			),
 		);
 
-		let domain = await attachCustomDomain(db, makeClient(), tenant.id, "auth.acme.com");
+		let domain = await attachCustomDomain(models, makeClient(), tenant.id, "auth.acme.com");
 
 		expect(domain.kind).toBe("custom");
 		expect(domain.status).toBe("pending");
@@ -113,7 +118,7 @@ describe("attachCustomDomain", () => {
 
 describe("refreshDomainStatus", () => {
 	async function makePendingDomain(tenantId: string, hostname = "auth.acme.com") {
-		return Domain.create(db, { tenantId, hostname, kind: "custom" });
+		return unwrap(await models.domains.create({ tenant_id: tenantId, hostname, kind: "custom" }));
 	}
 
 	test("promotes a domain to active once Cloudflare reports it and its SSL as active", async () => {
@@ -139,7 +144,7 @@ describe("refreshDomainStatus", () => {
 			),
 		);
 
-		let updated = await refreshDomainStatus(db, makeClient(), domain);
+		let updated = await refreshDomainStatus(models, makeClient(), domain);
 
 		expect(updated.status).toBe("active");
 		expect(updated.certificate_status).toBe("active");
@@ -169,7 +174,7 @@ describe("refreshDomainStatus", () => {
 			),
 		);
 
-		await refreshDomainStatus(db, makeClient(), domain);
+		await refreshDomainStatus(models, makeClient(), domain);
 
 		expect(await hostnamesKv.get(hostnameCacheKey(domain.hostname))).toBeNull();
 	});
@@ -197,17 +202,17 @@ describe("refreshDomainStatus", () => {
 			),
 		);
 
-		let result = await refreshDomainStatus(db, makeClient(), domain);
+		let result = await refreshDomainStatus(models, makeClient(), domain);
 
 		expect(result).toBe(domain);
-		expect((await Domain.findByHostname(db, domain.hostname))?.status).toBe("pending");
+		expect((await models.domains.findByHostname(domain.hostname))?.status).toBe("pending");
 	});
 
 	test("fails a domain still pending more than seven days after creation", async () => {
 		let tenant = await makeTenant();
 		let domain = await makePendingDomain(tenant.id);
 		let eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-		domain = await db.update(Domain.table, { id: domain.id }, { created_at: eightDaysAgo });
+		domain = unwrap(await models.domains.update(domain.id, { created_at: eightDaysAgo }));
 
 		server.use(
 			http.get(API_URL, () =>
@@ -228,7 +233,7 @@ describe("refreshDomainStatus", () => {
 			),
 		);
 
-		let updated = await refreshDomainStatus(db, makeClient(), domain);
+		let updated = await refreshDomainStatus(models, makeClient(), domain);
 
 		expect(updated.status).toBe("failed");
 	});
@@ -237,7 +242,7 @@ describe("refreshDomainStatus", () => {
 		let tenant = await makeTenant();
 		let domain = await makePendingDomain(tenant.id);
 		let eightDaysAgo = Date.now() - 8 * 24 * 60 * 60 * 1000;
-		domain = await db.update(Domain.table, { id: domain.id }, { created_at: eightDaysAgo });
+		domain = unwrap(await models.domains.update(domain.id, { created_at: eightDaysAgo }));
 
 		server.use(
 			http.get(API_URL, () =>
@@ -251,7 +256,7 @@ describe("refreshDomainStatus", () => {
 			),
 		);
 
-		let updated = await refreshDomainStatus(db, makeClient(), domain);
+		let updated = await refreshDomainStatus(models, makeClient(), domain);
 
 		expect(updated.status).toBe("failed");
 	});
@@ -259,7 +264,7 @@ describe("refreshDomainStatus", () => {
 
 describe("removeDomain", () => {
 	async function makeDomain(tenantId: string, hostname = "auth.acme.com") {
-		return Domain.create(db, { tenantId, hostname, kind: "custom" });
+		return unwrap(await models.domains.create({ tenant_id: tenantId, hostname, kind: "custom" }));
 	}
 
 	test("deletes the Cloudflare hostname found by name, then the row", async () => {
@@ -290,10 +295,10 @@ describe("removeDomain", () => {
 			}),
 		);
 
-		await removeDomain(db, makeClient(), domain);
+		await removeDomain(models, makeClient(), domain);
 
 		expect(deleted).toEqual(["cf-1"]);
-		expect(await Domain.findByHostname(db, domain.hostname)).toBeNull();
+		expect(await models.domains.findByHostname(domain.hostname)).toBeNull();
 	});
 
 	test("removes the row without calling delete when Cloudflare has no matching hostname", async () => {
@@ -317,10 +322,10 @@ describe("removeDomain", () => {
 			}),
 		);
 
-		await removeDomain(db, makeClient(), domain);
+		await removeDomain(models, makeClient(), domain);
 
 		expect(deleteCalled).toBe(false);
-		expect(await Domain.findByHostname(db, domain.hostname)).toBeNull();
+		expect(await models.domains.findByHostname(domain.hostname)).toBeNull();
 	});
 
 	test("treats a 404 from Cloudflare's delete as the hostname already being gone", async () => {
@@ -354,9 +359,9 @@ describe("removeDomain", () => {
 			),
 		);
 
-		await removeDomain(db, makeClient(), domain);
+		await removeDomain(models, makeClient(), domain);
 
-		expect(await Domain.findByHostname(db, domain.hostname)).toBeNull();
+		expect(await models.domains.findByHostname(domain.hostname)).toBeNull();
 	});
 
 	test("invalidates the hostname cache", async () => {
@@ -379,7 +384,7 @@ describe("removeDomain", () => {
 			),
 		);
 
-		await removeDomain(db, makeClient(), domain);
+		await removeDomain(models, makeClient(), domain);
 
 		expect(await hostnamesKv.get(hostnameCacheKey(domain.hostname))).toBeNull();
 	});

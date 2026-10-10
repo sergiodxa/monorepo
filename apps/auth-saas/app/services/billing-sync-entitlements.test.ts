@@ -15,7 +15,10 @@ import type { Database } from "remix/data-table";
 
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { createDurableObjectNamespace, createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { Models } from "~/app/models";
 
 /** A snapshot naming only `subscriptions`; with none, `reprojectTenant` writes an empty feature map. */
 function emptySnapshot(subscriptions: EntitlementSubscription[] = []): EntitlementState {
@@ -59,16 +62,17 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let Tenant = (await import("~/app/models/tenant")).default;
+let { bindModels } = await import("~/app/test/models");
 let { PLANS } = await import("~/app/services/billing/catalog");
 let { reprojectTenant } = await import("./billing-sync");
 
 let db: Database;
+let models: Models;
 let billing: MemoryBilling;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 	billing = new MemoryBilling({ catalog: {} });
 	applyEntitlementsCalls = [];
 	stubFailure = null;
@@ -76,16 +80,18 @@ beforeEach(async () => {
 
 describe("reprojectTenant", () => {
 	test("pushes the tenant's plan cap and retention onto its own Durable Object", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
-		tenant = await Tenant.update(db, tenant.id, { planSlug: "pro" });
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
+		tenant = unwrap(await models.tenants.update(tenant.id, { plan_slug: "pro" }));
 
-		await reprojectTenant(db, billing, tenant.id, emptySnapshot());
+		await reprojectTenant(models, billing, tenant.id, emptySnapshot());
 
 		expect(applyEntitlementsCalls).toEqual([
 			{
@@ -102,17 +108,19 @@ describe("reprojectTenant", () => {
 	});
 
 	test("falls back to the Free plan's cap and retention for an unrecognized plan slug", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 		// An add-on-only slug is never a base tier, so the Free numbers stand in.
-		tenant = await Tenant.update(db, tenant.id, { planSlug: "sso_connections" });
+		tenant = unwrap(await models.tenants.update(tenant.id, { plan_slug: "sso_connections" }));
 
-		await reprojectTenant(db, billing, tenant.id, emptySnapshot());
+		await reprojectTenant(models, billing, tenant.id, emptySnapshot());
 
 		expect(applyEntitlementsCalls).toEqual([
 			expect.objectContaining({
@@ -125,23 +133,25 @@ describe("reprojectTenant", () => {
 	});
 
 	test("records the tier the tenant's base subscription names as its plan", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
-		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base" });
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
+		unwrap(await models.tenants.update(tenant.id, { subscription_id: "sub_base" }));
 
 		await reprojectTenant(
-			db,
+			models,
 			billing,
 			tenant.id,
 			emptySnapshot([subscription("sub_base", "premium", "active")]),
 		);
 
-		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("premium");
+		expect((await models.tenants.find(tenant.id))?.plan_slug).toBe("premium");
 		expect(applyEntitlementsCalls).toEqual([
 			expect.objectContaining({
 				input: expect.objectContaining({
@@ -154,56 +164,66 @@ describe("reprojectTenant", () => {
 	});
 
 	test("keeps a lapsed tenant on its former tier", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
-		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base", planSlug: "pro" });
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
+		unwrap(
+			await models.tenants.update(tenant.id, { subscription_id: "sub_base", plan_slug: "pro" }),
+		);
 
 		await reprojectTenant(
-			db,
+			models,
 			billing,
 			tenant.id,
 			emptySnapshot([subscription("sub_base", "pro", "revoked")]),
 		);
 
-		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("pro");
+		expect((await models.tenants.find(tenant.id))?.plan_slug).toBe("pro");
 	});
 
 	test("never records an add-on the tenant holds as its plan", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
-		await Tenant.update(db, tenant.id, { subscriptionId: "sub_base" });
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
+		unwrap(await models.tenants.update(tenant.id, { subscription_id: "sub_base" }));
 
 		await reprojectTenant(
-			db,
+			models,
 			billing,
 			tenant.id,
 			emptySnapshot([subscription("sub_base", "sso_connections", "active")]),
 		);
 
-		expect((await Tenant.findById(db, tenant.id))?.plan_slug).toBe("free");
+		expect((await models.tenants.find(tenant.id))?.plan_slug).toBe("free");
 	});
 
 	test("a stub the object cannot be reached through never aborts the projection write", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 		stubFailure = new Error("Durable Object unreachable");
 
-		await expect(reprojectTenant(db, billing, tenant.id, emptySnapshot())).resolves.toBeUndefined();
+		await expect(
+			reprojectTenant(models, billing, tenant.id, emptySnapshot()),
+		).resolves.toBeUndefined();
 
 		expect(applyEntitlementsCalls).toEqual([]);
 	});

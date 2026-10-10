@@ -16,20 +16,21 @@ import { unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import BillingCheckout from "~/app/models/billing-checkout";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
-import TenantEntitlement from "~/app/models/tenant-entitlement";
+import type { Models } from "~/app/models";
+
 import { ensureProviderCustomer } from "~/app/services/billing-customer";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 
 import { createBillingWebhookHandlers, sweepStaleProjections } from "./billing-sync";
 
 let db: Database;
+let models: Models;
 let billing: MemoryBilling;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 	billing = new MemoryBilling({
 		catalog: {
 			pro: { amount: 4900, currency: "usd", interval: "month", features: { sso: true } },
@@ -43,12 +44,14 @@ async function checkoutTenantOntoPro(
 	customerId: string,
 	providerCustomerId: string,
 ) {
-	let attempt = await BillingCheckout.open(db, {
-		tenantId,
-		customerId,
-		productSlug: "pro",
-		kind: "base",
-	});
+	let attempt = unwrap(
+		await models.billingCheckouts.create({
+			tenant_id: tenantId,
+			customer_id: customerId,
+			product_slug: "pro",
+			kind: "base",
+		}),
+	);
 
 	let opened = await unwrap(
 		billing.checkouts.create({
@@ -57,28 +60,30 @@ async function checkoutTenantOntoPro(
 			idempotencyKey: attempt.attempt_id,
 		}),
 	);
-	await BillingCheckout.attachCheckoutId(db, attempt.attempt_id, opened.id);
+	unwrap(await models.billingCheckouts.update(attempt.attempt_id, { checkout_id: opened.id }));
 
 	return unwrap(billing.checkouts.finish(opened.id));
 }
 
 describe("POST /webhooks/billing", () => {
 	test("a checkout completing provisions entitlements onto the right tenant", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 
 		let joined = await unwrap(
-			ensureProviderCustomer(db, billing, customer, { email: "jane@example.com" }),
+			ensureProviderCustomer(models, billing, customer, { email: "jane@example.com" }),
 		);
 		let finished = await checkoutTenantOntoPro(tenant.id, customer.id, joined.providerCustomerId);
 
 		let store = new MemoryWebhookStore();
-		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(db, billing), {
+		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(models, billing), {
 			store,
 		});
 
@@ -89,31 +94,33 @@ describe("POST /webhooks/billing", () => {
 
 		expect(response.status).toBe(200);
 
-		let updatedTenant = await Tenant.findById(db, tenant.id);
+		let updatedTenant = await models.tenants.find(tenant.id);
 		expect(updatedTenant?.subscription_id).toBe(finished.subscriptionId);
 		expect(updatedTenant?.subscription_status).toBe("active");
 
-		let entitlement = await TenantEntitlement.findByTenant(db, tenant.id);
+		let entitlement = await models.tenantEntitlements.find(tenant.id);
 		expect(entitlement?.products).toEqual(["pro"]);
 		expect(entitlement?.features).toEqual({ sso: true });
 	});
 
 	test("a webhook redelivery is deduplicated", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 
 		let joined = await unwrap(
-			ensureProviderCustomer(db, billing, customer, { email: "jane@example.com" }),
+			ensureProviderCustomer(models, billing, customer, { email: "jane@example.com" }),
 		);
 		let finished = await checkoutTenantOntoPro(tenant.id, customer.id, joined.providerCustomerId);
 
 		let store = new MemoryWebhookStore();
-		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(db, billing), {
+		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(models, billing), {
 			store,
 		});
 
@@ -141,22 +148,24 @@ describe("POST /webhooks/billing", () => {
 	});
 
 	test("subscription.revoked sets lapsed_at", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 
 		let joined = await unwrap(
-			ensureProviderCustomer(db, billing, customer, { email: "jane@example.com" }),
+			ensureProviderCustomer(models, billing, customer, { email: "jane@example.com" }),
 		);
 		let finished = await checkoutTenantOntoPro(tenant.id, customer.id, joined.providerCustomerId);
 		if (finished.subscriptionId === null) throw new Error("unreachable: base plan is recurring");
 
 		let store = new MemoryWebhookStore();
-		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(db, billing), {
+		let endpoint = new BillingWebhook(billing, createBillingWebhookHandlers(models, billing), {
 			store,
 		});
 
@@ -191,7 +200,7 @@ describe("POST /webhooks/billing", () => {
 
 		expect(response.status).toBe(200);
 
-		let updatedTenant = await Tenant.findById(db, tenant.id);
+		let updatedTenant = await models.tenants.find(tenant.id);
 		expect(updatedTenant?.subscription_status).toBe("revoked");
 		expect(updatedTenant?.lapsed_at).not.toBeNull();
 	});
@@ -199,54 +208,64 @@ describe("POST /webhooks/billing", () => {
 
 describe("sweepStaleProjections", () => {
 	test("refreshes only the projections read before the cutoff", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 
 		let joined = await unwrap(
-			ensureProviderCustomer(db, billing, customer, { email: "jane@example.com" }),
+			ensureProviderCustomer(models, billing, customer, { email: "jane@example.com" }),
 		);
 		let finished = await checkoutTenantOntoPro(tenant.id, customer.id, joined.providerCustomerId);
 		if (finished.subscriptionId === null) throw new Error("unreachable: base plan is recurring");
-		await Tenant.update(db, tenant.id, { subscriptionId: finished.subscriptionId });
+		unwrap(await models.tenants.update(tenant.id, { subscription_id: finished.subscriptionId }));
 
-		await TenantEntitlement.upsert(db, tenant.id, {
-			products: [],
-			features: {},
-			readAt: 1_000,
-		});
+		unwrap(
+			await models.tenantEntitlements.upsert({
+				tenant_id: tenant.id,
+				products: [],
+				features: {},
+				read_at: 1_000,
+			}),
+		);
 
-		let swept = await sweepStaleProjections(db, billing, {
+		let swept = await sweepStaleProjections(models, billing, {
 			now: 10_000_000,
 			olderThanMs: 60 * 60 * 1000,
 		});
 		expect(swept).toEqual({ swept: 1 });
 
-		let entitlement = await TenantEntitlement.findByTenant(db, tenant.id);
+		let entitlement = await models.tenantEntitlements.find(tenant.id);
 		expect(entitlement?.products).toEqual(["pro"]);
 		expect(entitlement?.read_at).toBeGreaterThan(1_000);
 	});
 
 	test("leaves a freshly-read projection alone", async () => {
-		let customer = await Customer.create(db, { name: "Acme, Inc." });
-		let tenant = await Tenant.create(db, {
-			customerId: customer.id,
-			name: "Acme, Inc.",
-			slug: "acme",
-			issuer: "https://acme.example.com",
-		});
+		let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+		let tenant = unwrap(
+			await models.tenants.create({
+				customer_id: customer.id,
+				name: "Acme, Inc.",
+				slug: "acme",
+				issuer: "https://acme.example.com",
+			}),
+		);
 
-		await TenantEntitlement.upsert(db, tenant.id, {
-			products: [],
-			features: {},
-			readAt: Date.now(),
-		});
+		unwrap(
+			await models.tenantEntitlements.upsert({
+				tenant_id: tenant.id,
+				products: [],
+				features: {},
+				read_at: Date.now(),
+			}),
+		);
 
-		let swept = await sweepStaleProjections(db, billing);
+		let swept = await sweepStaleProjections(models, billing);
 		expect(swept).toEqual({ swept: 0 });
 	});
 });

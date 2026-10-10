@@ -30,6 +30,8 @@ bun run db:remote:migrate # Apply migrations to remote database
 - MUST use `remix/*` packages for the app, not React or React Router
 - MUST check Remix docs on https://github.com/remix-run/remix for any questions about how to do things in Remix way
 - MUST follow MVC, use models for business logic, use controllers for handling requests and responses, use `remix/component` for UI
+- MUST read and write the control plane through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware after `database()` in every router and in the job dispatcher), never ad-hoc queries on `ctx.db` for a table a model covers. A service that touches the control plane takes the bound registry (`Models` from `~/app/models`) as its first argument. Model writes answer `@sdxc/result` Results; a test binds the same registry with `bindModels(db)` from `app/test/models.ts`, seeds a tenant with `seedTenant`, and publishes models on a hand-built job context with `publishModels(ctx, db)`
+- MUST define a control-plane table in `database/schema.ts` and its model in `app/models/`, registered in `app/models/index.ts`; tenant state stays in the tenant Durable Object's own SqlStorage repositories under `database/`, which the control-plane models never reach
 - MUST link the hosted document's stylesheets and client entry through `documentAssets()` in `app/services/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `app/views/hosted/document.tsx`, in cascade order.
 - MUST give the import map, every `modulepreload` and every module script the document writes the response's CSP nonce, which the renderer in `app/http/middleware/render.tsx` hands the document; the policies allow scripts by `'self'` and nonce, and the import map is inline.
 - MUST list every module that calls `clientEntry()` in `bootstrap/browser.ts`'s glob, and only those: a view or route module in the client bundle ships a chunk no page asks for and lengthens every page's import map.
@@ -48,8 +50,9 @@ relative path is only for a sibling inside the same directory.
   middleware + route mapping).
 - `routes/web.ts` — the route registry mapped in `bootstrap/app.ts`.
 - `app/http/controllers/` and `app/http/middleware/` — the HTTP layer.
-- `app/models/` — control-plane data + business-logic models (`remix/data-table`
-  tables over the `PLATFORM_DB` D1 binding).
+- `app/models/` — control-plane models (`@sdxc/data-model` over the tables in
+  `database/schema.ts`, on the `PLATFORM_DB` D1 binding), bound per request and job
+  as `ctx.models`.
 - `app/services/` — service classes (analytics, email, tenant Durable Object API).
 - `app/jobs/` — scheduled jobs.
 - `app/lib/` — app-internal helpers (fetch-router action/middleware/form wrappers,
@@ -59,6 +62,7 @@ relative path is only for a sibling inside the same directory.
   no `fetch` handler, over its own SqlStorage database.
 - `database/tenant-migrations/` and `database/tenant-migrations.ts` — the tenant
   object's schema registry and the runner that applies it on boot.
+- `database/schema.ts` — the control plane's `remix/data-table` table definitions.
 - `database/migrations/` — D1 control-plane migrations (`migrations_dir`).
 - `config/` — ambient `*.d.ts` (env + router-context augmentations).
 

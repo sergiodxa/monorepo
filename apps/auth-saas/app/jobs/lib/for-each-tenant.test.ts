@@ -11,21 +11,23 @@
 import type { Database } from "remix/data-table";
 
 import { createDurableObjectNamespace } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 
 import { forEachProvisionedTenant } from "./for-each-tenant";
 
-let Customer = (await import("~/app/models/customer")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-
 let db: Database;
+let models: Models;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 afterEach(() => {
@@ -34,16 +36,18 @@ afterEach(() => {
 
 /** Creates a tenant row, optionally overriding its status once created. */
 async function makeTenant(name: string, status?: "active" | "suspended" | "deleted") {
-	let customer = await Customer.create(db, { name });
-	let tenant = await TenantModel.create(db, {
-		customerId: customer.id,
-		name,
-		slug: name.toLowerCase(),
-		issuer: `https://${name.toLowerCase()}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name,
+			slug: name.toLowerCase(),
+			issuer: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 
 	if (status !== undefined) {
-		tenant = await db.update(TenantModel.table, { id: tenant.id }, { status });
+		tenant = unwrap(await models.tenants.update(tenant.id, { status }));
 	}
 
 	return tenant;
@@ -58,7 +62,7 @@ describe("forEachProvisionedTenant", () => {
 		let namespace = createDurableObjectNamespace<Tenant>(() => ({}));
 		let visitedIds: string[] = [];
 
-		let result = await forEachProvisionedTenant(db, namespace, async (_stub, tenantId) => {
+		let result = await forEachProvisionedTenant(models, namespace, async (_stub, tenantId) => {
 			visitedIds.push(tenantId);
 		});
 
@@ -70,7 +74,7 @@ describe("forEachProvisionedTenant", () => {
 		let tenant = await makeTenant("Acme");
 		let namespace = createDurableObjectNamespace<Tenant>(() => ({}));
 
-		await forEachProvisionedTenant(db, namespace, async () => {});
+		await forEachProvisionedTenant(models, namespace, async () => {});
 
 		expect(namespace.names).toEqual([tenant.id]);
 	});
@@ -84,7 +88,7 @@ describe("forEachProvisionedTenant", () => {
 		let visitedIds: string[] = [];
 
 		let result = await forEachProvisionedTenant(
-			db,
+			models,
 			namespace,
 			async (_stub, tenantId) => {
 				visitedIds.push(tenantId);
@@ -104,7 +108,7 @@ describe("forEachProvisionedTenant", () => {
 		let visitedIds: string[] = [];
 		vi.spyOn(console, "error").mockImplementation(() => {});
 
-		let result = await forEachProvisionedTenant(db, namespace, async (_stub, tenantId) => {
+		let result = await forEachProvisionedTenant(models, namespace, async (_stub, tenantId) => {
 			if (tenantId === failing.id) throw new Error("this tenant's object is unavailable");
 			visitedIds.push(tenantId);
 		});
@@ -127,7 +131,7 @@ describe("forEachProvisionedTenant", () => {
 		let visited = 0;
 
 		let result = await forEachProvisionedTenant(
-			db,
+			models,
 			namespace,
 			async () => {
 				visited++;

@@ -1,7 +1,7 @@
 /**
  * What every route in this directory shares: the auth and rate-limit
  * middleware a control-plane route mounts, reading and writing a tenant,
- * membership or domain row straight through `ctx.db` since each already
+ * membership or domain row straight through `ctx.models` since each already
  * lives in the control plane. Also serializes a row into the camelCase shape
  * the management API answers with, parses the `:membershipId`/`:domainId`
  * path params, and builds the `problem+json` responses for a membership or
@@ -16,9 +16,9 @@ import type { Middleware } from "remix/router";
 import * as s from "remix/data-schema";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
-import type { DomainRow } from "~/app/models/domain";
-import type { MembershipRow } from "~/app/models/membership";
-import type { TenantRow } from "~/app/models/tenant";
+import type { DomainRow } from "~/app/models/domains";
+import type { MembershipRow } from "~/app/models/memberships";
+import type { TenantRow } from "~/app/models/tenants";
 
 import { managementProblem } from "~/app/http/lib/problem";
 import { managementAuth } from "~/app/http/middleware/management-auth";

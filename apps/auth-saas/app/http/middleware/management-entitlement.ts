@@ -15,8 +15,6 @@ import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { NoopProvider } from "@sdxc/flags/provider/noop";
 
 import { EntitlementProvider } from "~/app/lib/entitlement-provider";
-import Tenant from "~/app/models/tenant";
-import TenantEntitlement from "~/app/models/tenant-entitlement";
 import { buildTenantFlagContext, entitlementFlags } from "~/app/services/billing/entitlement-flags";
 
 /**
@@ -40,10 +38,10 @@ async function resolveFeature(
 	ctx: RequestContext,
 	feature: string,
 ): Promise<EntitlementSnapshot | null> {
-	let tenant = await Tenant.findById(ctx.db, ctx.managementCaller.tenantId);
+	let tenant = await ctx.models.tenants.find(ctx.managementCaller.tenantId);
 	if (!tenant) return null;
 
-	let entitlement = await TenantEntitlement.findByTenant(ctx.db, tenant.id);
+	let entitlement = await ctx.models.tenantEntitlements.find(tenant.id);
 
 	let flag = entitlementFlags[feature];
 	let entitled = false;

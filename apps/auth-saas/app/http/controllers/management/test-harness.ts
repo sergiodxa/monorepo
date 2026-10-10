@@ -24,17 +24,17 @@ import { randomToken } from "@sdxc/crypto";
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { HostnameClient } from "@sdxc/hostname";
 import { createConformanceRecorder } from "@sdxc/openapi/testing";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { afterAll, expect } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { buildManagementDocument } from "~/app/http/openapi/document";
 import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
-import AgentClientBinding from "~/app/models/agent-client-binding";
-import Customer from "~/app/models/customer";
-import Membership from "~/app/models/membership";
-import Tenant from "~/app/models/tenant";
 import { MANAGEMENT_SCOPES } from "~/app/services/management-scopes";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import TenantObject from "~/database/tenant-do";
 
 export const ISSUER = "https://api.example.com";
@@ -82,6 +82,8 @@ export function fakeHostnameClient(): HostnameClient {
 /** What every resource area's own harness wraps its own router around. */
 export interface ManagementTestCore {
 	db: Database;
+	/** The control plane's models, bound to `db`. */
+	models: Models;
 	tenantId: string;
 	otherTenantId: string;
 	tenantDO: TenantObject;
@@ -117,21 +119,26 @@ export async function buildManagementTestCore(
 	options: BuildManagementTestCoreOptions,
 ): Promise<ManagementTestCore> {
 	let db = await createTestDatabase();
+	let models = bindModels(db);
 
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-	});
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.auth.example.com",
+		}),
+	);
 
-	let other = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Other, Inc.",
-		slug: "other",
-		issuer: "https://other.auth.example.com",
-	});
+	let other = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Other, Inc.",
+			slug: "other",
+			issuer: "https://other.auth.example.com",
+		}),
+	);
 
 	let state = createDurableObjectState();
 	let tenantDO = new TenantObject(state, {
@@ -212,7 +219,12 @@ export async function buildManagementTestCore(
 			throw new Error("unreachable: test agent client registration failed");
 		}
 
-		await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId });
+		unwrap(
+			await models.agentClientBindings.create({
+				client_id: registered.client.id,
+				tenant_id: tenantId,
+			}),
+		);
 
 		let created = { clientId: registered.client.id, secret: registered.secret, scopes };
 		agentClients.set(tenantId, created);
@@ -221,6 +233,7 @@ export async function buildManagementTestCore(
 
 	return {
 		db,
+		models,
 		tenantId: tenant.id,
 		otherTenantId: other.id,
 		tenantDO,
@@ -263,7 +276,9 @@ export async function grantMembership(
 	subjectId: string,
 	role: "owner" | "admin" | "member",
 ): Promise<void> {
-	await Membership.create(db, { tenantId, subjectId, role });
+	unwrap(
+		await bindModels(db).memberships.create({ tenant_id: tenantId, subject_id: subjectId, role }),
+	);
 }
 
 /**

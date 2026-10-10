@@ -23,6 +23,8 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
+
 let CF_ACCOUNT_ID = "acct_1";
 
 vi.doMock("cloudflare:workers", () => ({
@@ -30,9 +32,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { createTestDatabase } = await import("~/app/test/db");
-let Customer = (await import("~/app/models/customer")).default;
-let Tenant = (await import("~/app/models/tenant")).default;
-let TenantUsageDay = (await import("~/app/models/tenant-usage-day")).default;
+let { bindModels } = await import("~/app/test/models");
 let { reportDailyUsage } = await import("./usage-reporting");
 
 /** The Analytics Engine SQL API endpoint the job queries cost from. */
@@ -49,32 +49,38 @@ function mockDailyCost(rows: Array<{ tenant_id: string; cents: number }>): void 
 }
 
 let db: Database;
+let models: Models;
 let day = 20_345;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 /** Creates a tenant on a real plan, whose customer optionally already checked out. */
 async function makeTenant(options: { hasProviderCustomer: boolean; plan?: string }) {
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
 
 	if (options.hasProviderCustomer) {
-		customer = await Customer.joinProviderCustomer(db, customer.id, {
-			connection: "polar",
-			providerCustomerId: "cus_polar_1",
-		});
+		customer = unwrap(
+			await models.customers.update(customer.id, {
+				provider_connection: "polar",
+				provider_customer_id: "cus_polar_1",
+			}),
+		);
 	}
 
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.example.com",
-	});
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.example.com",
+		}),
+	);
 
 	if (options.plan)
-		tenant = await db.update(Tenant.table, { id: tenant.id }, { plan_slug: options.plan });
+		tenant = unwrap(await models.tenants.update(tenant.id, { plan_slug: options.plan }));
 
 	return { customer, tenant };
 }
@@ -82,12 +88,20 @@ async function makeTenant(options: { hasProviderCustomer: boolean; plan?: string
 describe("reportDailyUsage", () => {
 	test("reports auth.dau and infra.cost for a tenant with a settled day and a resolvable customer", async () => {
 		let { customer, tenant } = await makeTenant({ hasProviderCustomer: true, plan: "pro" });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 42, sessions: 10, tokens: 5 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 42,
+				sessions: 10,
+				tokens: 5,
+			}),
+		);
 		mockDailyCost([{ tenant_id: tenant.id, cents: 0.0000027 }]);
 
 		let billing = new MemoryBilling();
 
-		let result = await reportDailyUsage(db, billing, { day });
+		let result = await reportDailyUsage(models, billing, { day });
 
 		expect(result).toEqual({ day, reported: 1, skipped: [] });
 
@@ -112,7 +126,15 @@ describe("reportDailyUsage", () => {
 
 	test("sums the ledger's cents column over cost points only, leaving attack signals out", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: true });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 1, sessions: 0, tokens: 0 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 1,
+				sessions: 0,
+				tokens: 0,
+			}),
+		);
 
 		let queries: string[] = [];
 		server.use(
@@ -122,7 +144,7 @@ describe("reportDailyUsage", () => {
 			}),
 		);
 
-		await reportDailyUsage(db, new MemoryBilling(), { day });
+		await reportDailyUsage(models, new MemoryBilling(), { day });
 
 		expect(queries).toHaveLength(1);
 		expect(queries[0]).toContain("SUM(double1)");
@@ -131,12 +153,20 @@ describe("reportDailyUsage", () => {
 
 	test("skips a tenant whose customer has no provider_customer_id, reporting it as skipped rather than sent", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: false });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 7, sessions: 1, tokens: 1 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 7,
+				sessions: 1,
+				tokens: 1,
+			}),
+		);
 		mockDailyCost([]);
 
 		let billing = new MemoryBilling();
 
-		let result = await reportDailyUsage(db, billing, { day });
+		let result = await reportDailyUsage(models, billing, { day });
 
 		expect(result).toEqual({
 			day,
@@ -150,26 +180,42 @@ describe("reportDailyUsage", () => {
 
 	test("rethrows a retryable usage.ingest failure so the day can be retried", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: true });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 3, sessions: 0, tokens: 0 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 3,
+				sessions: 0,
+				tokens: 0,
+			}),
+		);
 		mockDailyCost([]);
 
 		let billing = new MemoryBilling();
 		billing.fail("usage.ingest", "rate_limited");
 
-		await expect(reportDailyUsage(db, billing, { day })).rejects.toMatchObject({
+		await expect(reportDailyUsage(models, billing, { day })).rejects.toMatchObject({
 			retryable: true,
 		});
 	});
 
 	test("logs and swallows a non-retryable usage.ingest failure", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: true });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 3, sessions: 0, tokens: 0 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 3,
+				sessions: 0,
+				tokens: 0,
+			}),
+		);
 		mockDailyCost([]);
 
 		let billing = new MemoryBilling();
 		billing.fail("usage.ingest");
 
-		let result = await reportDailyUsage(db, billing, { day });
+		let result = await reportDailyUsage(models, billing, { day });
 
 		expect(result).toEqual({ day, reported: 0, skipped: [] });
 	});
@@ -177,19 +223,27 @@ describe("reportDailyUsage", () => {
 	test("reports zero tenant-days cleanly for a day with no tenant_usage_day rows", async () => {
 		let billing = new MemoryBilling();
 
-		let result = await reportDailyUsage(db, billing, { day });
+		let result = await reportDailyUsage(models, billing, { day });
 
 		expect(result).toEqual({ day, reported: 0, skipped: [] });
 	});
 
 	test("logs and returns early when the provider does not support usage", async () => {
 		let { tenant } = await makeTenant({ hasProviderCustomer: true });
-		await TenantUsageDay.upsert(db, tenant.id, { day, subjects: 3, sessions: 0, tokens: 0 });
+		unwrap(
+			await models.tenantUsageDays.upsert({
+				tenant_id: tenant.id,
+				day,
+				subjects: 3,
+				sessions: 0,
+				tokens: 0,
+			}),
+		);
 
 		let billing = new MemoryBilling();
 		let unsupported = billing.with({ usage: undefined });
 
-		let result = await reportDailyUsage(db, unsupported, { day });
+		let result = await reportDailyUsage(models, unsupported, { day });
 
 		expect(result).toEqual({ day, reported: 0, skipped: [] });
 	});
@@ -198,7 +252,7 @@ describe("reportDailyUsage", () => {
 		let billing = new MemoryBilling();
 		let before = Math.floor(Date.now() / 1000);
 
-		let result = await reportDailyUsage(db, billing, {});
+		let result = await reportDailyUsage(models, billing, {});
 
 		let expectedDay = Math.floor(before / 86_400) - 1;
 		expect(result.day).toBe(expectedDay);

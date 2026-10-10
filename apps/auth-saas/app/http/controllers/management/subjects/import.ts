@@ -12,6 +12,7 @@
  */
 
 import { json } from "@sdxc/http/response";
+import { unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -21,7 +22,6 @@ import { requireScope } from "~/app/http/lib/require-scope";
 import { managementAuth } from "~/app/http/middleware/management-auth";
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { writeTransferFile } from "~/app/lib/transfer-storage";
-import TenantImportRun from "~/app/models/tenant-import-run";
 import routes from "~/routes/management";
 
 /** Narrows a `mode` query value to the two modes an import run accepts. */
@@ -144,8 +144,14 @@ export function createSubjectsImportBeginAction(options: ManagementControllerOpt
 				return emptySourceFile();
 			}
 
-			let run = await TenantImportRun.create(ctx.db, { tenantId, mode, sourceKey });
-			run = await TenantImportRun.setTotal(ctx.db, { id: run.id, total });
+			let run = unwrap(
+				await ctx.models.tenantImportRuns.create({
+					tenant_id: tenantId,
+					mode,
+					source_key: sourceKey,
+				}),
+			);
+			run = unwrap(await ctx.models.tenantImportRuns.update(run.id, { total }));
 
 			return json({ id: run.id, status: run.status, total: run.total }, { status: 201 });
 		},

@@ -15,8 +15,11 @@ import type { Database } from "remix/data-table";
 import { success } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import FlagChange from "~/app/models/flag-change";
+import type { Models } from "~/app/models";
+
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
+import { flagChanges as flagChangesTable } from "~/database/schema";
 
 import type { WritableFlagStore } from "./write-flag-definition";
 
@@ -43,16 +46,18 @@ class FakeFlagStore implements WritableFlagStore {
 let VALID_DRAFT = { variants: { on: true, off: false }, defaultVariant: "off" };
 
 let db: Database;
+let models: Models;
 
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 });
 
 describe("writeFlagDefinition", () => {
 	test("accepts a valid draft, writes it, and records the change", async () => {
 		let store = new FakeFlagStore();
 
-		let result = await writeFlagDefinition(store, db, {
+		let result = await writeFlagDefinition(store, models, {
 			key: "release.example",
 			draft: VALID_DRAFT,
 			expectedVersion: undefined,
@@ -64,7 +69,7 @@ describe("writeFlagDefinition", () => {
 		let read = store.read();
 		expect(read.status === "success" && read.data.flags["release.example"]).toEqual(VALID_DRAFT);
 
-		let changes = await db.findMany(FlagChange.table, { where: { key: "release.example" } });
+		let changes = await db.findMany(flagChangesTable, { where: { key: "release.example" } });
 		expect(changes).toHaveLength(1);
 		expect(changes[0]).toMatchObject({
 			key: "release.example",
@@ -78,7 +83,7 @@ describe("writeFlagDefinition", () => {
 		let previous = { variants: { on: true, off: false }, defaultVariant: "on" };
 		let store = new FakeFlagStore({ flags: { "release.example": previous }, version: "v1" });
 
-		let result = await writeFlagDefinition(store, db, {
+		let result = await writeFlagDefinition(store, models, {
 			key: "release.example",
 			draft: VALID_DRAFT,
 			expectedVersion: "v1",
@@ -87,14 +92,14 @@ describe("writeFlagDefinition", () => {
 
 		expect(result.ok).toBe(true);
 
-		let changes = await db.findMany(FlagChange.table, { where: { key: "release.example" } });
+		let changes = await db.findMany(flagChangesTable, { where: { key: "release.example" } });
 		expect(changes[0]?.before).toBe(JSON.stringify(previous));
 	});
 
 	test("refuses a draft the schema would refuse, recording nothing", async () => {
 		let store = new FakeFlagStore();
 
-		let result = await writeFlagDefinition(store, db, {
+		let result = await writeFlagDefinition(store, models, {
 			key: "release.example",
 			draft: { variants: {} },
 			expectedVersion: undefined,
@@ -105,13 +110,13 @@ describe("writeFlagDefinition", () => {
 
 		let read = store.read();
 		expect(read.status === "success" && read.data.flags).toEqual({});
-		expect(await db.findMany(FlagChange.table, {})).toHaveLength(0);
+		expect(await db.findMany(flagChangesTable, {})).toHaveLength(0);
 	});
 
 	test("refuses a write whose expectedVersion has moved, recording nothing", async () => {
 		let store = new FakeFlagStore({ flags: {}, version: "v2" });
 
-		let result = await writeFlagDefinition(store, db, {
+		let result = await writeFlagDefinition(store, models, {
 			key: "release.example",
 			draft: VALID_DRAFT,
 			expectedVersion: "v1",
@@ -119,13 +124,13 @@ describe("writeFlagDefinition", () => {
 		});
 
 		expect(result).toEqual({ ok: false, reason: "stale_version", currentVersion: "v2" });
-		expect(await db.findMany(FlagChange.table, {})).toHaveLength(0);
+		expect(await db.findMany(flagChangesTable, {})).toHaveLength(0);
 	});
 
 	test("mints a new version on every accepted write", async () => {
 		let store = new FakeFlagStore({ flags: {}, version: "v1" });
 
-		let first = await writeFlagDefinition(store, db, {
+		let first = await writeFlagDefinition(store, models, {
 			key: "release.example",
 			draft: VALID_DRAFT,
 			expectedVersion: "v1",

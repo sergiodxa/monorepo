@@ -25,10 +25,11 @@ import {
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
@@ -75,21 +76,22 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { conformance } = await import("~/app/http/controllers/management/test-harness");
 let { database } = await import("~/app/http/middleware/database");
+let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { sessionCookie } = await import("~/app/lib/session-cookie");
-let Customer = (await import("~/app/models/customer")).default;
-let Membership = (await import("~/app/models/membership")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-let TenantMemberInvitation = (await import("~/app/models/tenant-member-invitation")).default;
 let invitationsAccept = (await import("~/app/http/controllers/management/invitations/accept"))
 	.default;
 let routes = (await import("~/routes/management")).default;
 let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels } = await import("~/app/test/models");
 let TenantObject = (await import("~/database/tenant-do")).default;
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
 
+let models: Models;
+
 beforeEach(async () => {
 	db = await createTestDatabase();
+	models = bindModels(db);
 
 	let state = createDurableObjectState();
 	platformTenantDO = new TenantObject(state, {
@@ -100,7 +102,7 @@ beforeEach(async () => {
 
 /** Builds a router mapping only `invitationsAccept`, with no auth middleware, matching how it is mounted for real. */
 function buildRouter() {
-	let router = createRouter({ middleware: [conformance, database(() => db)] });
+	let router = createRouter({ middleware: [conformance, database(() => db), modelsMiddleware()] });
 	router.map(routes.invitationsAccept, invitationsAccept);
 	return router;
 }
@@ -114,27 +116,31 @@ async function mintInvitation(
 	} = {},
 ) {
 	let unique = crypto.randomUUID();
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await TenantModel.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: `acme-${unique}`,
-		issuer: `https://${unique}.example.com`,
-	});
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: `acme-${unique}`,
+			issuer: `https://${unique}.example.com`,
+		}),
+	);
 
 	let token = randomToken({ bytes: 32 });
 	let hashed = await sha256(token);
 	if (isFailure(hashed)) throw new Error("unreachable: token hashing failed");
 	let tokenHash = Hex.encode(hashed.data);
 
-	let invitation = await TenantMemberInvitation.create(db, {
-		tenantId: tenant.id,
-		email: overrides.email ?? "jane@example.com",
-		role: overrides.role ?? "admin",
-		tokenHash,
-		invitedBy: "sub_1",
-		expiresAt: overrides.expiresAt ?? Date.now() + 60_000,
-	});
+	let invitation = unwrap(
+		await models.tenantMemberInvitations.create({
+			tenant_id: tenant.id,
+			email: overrides.email ?? "jane@example.com",
+			role: overrides.role ?? "admin",
+			token_hash: tokenHash,
+			invited_by: "sub_1",
+			expires_at: overrides.expiresAt ?? Date.now() + 60_000,
+		}),
+	);
 
 	return { tenant, invitation, token };
 }
@@ -176,7 +182,10 @@ describe("POST /invitations/accept", () => {
 		expect(resolved.status).toBe("active");
 		let subjectId = resolved.status === "active" ? resolved.subjectId : null;
 
-		let membership = await Membership.findByTenantAndSubject(db, tenant.id, subjectId as string);
+		let membership = await models.memberships.findByTenantAndSubject(
+			tenant.id,
+			subjectId as string,
+		);
 		expect(membership).toMatchObject({
 			tenant_id: tenant.id,
 			subject_id: subjectId,
@@ -237,13 +246,11 @@ describe("POST /invitations/accept", () => {
 		expect(subjects.ok).toBe(true);
 		if (subjects.ok) expect(subjects.subjects).toHaveLength(1);
 
-		let firstMembership = await Membership.findByTenantAndSubject(
-			db,
+		let firstMembership = await models.memberships.findByTenantAndSubject(
 			first.tenant.id,
 			subjects.ok ? subjects.subjects[0]!.id : "",
 		);
-		let secondMembership = await Membership.findByTenantAndSubject(
-			db,
+		let secondMembership = await models.memberships.findByTenantAndSubject(
 			second.tenant.id,
 			subjects.ok ? subjects.subjects[0]!.id : "",
 		);

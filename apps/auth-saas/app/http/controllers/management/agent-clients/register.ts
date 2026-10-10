@@ -9,7 +9,7 @@
  */
 
 import { json } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import type { ManagementControllerOptions } from "~/app/http/controllers/management/shared";
@@ -27,7 +27,6 @@ import { managementIdempotency } from "~/app/http/middleware/management-idempote
 import { managementRateLimit } from "~/app/http/middleware/management-rate-limit";
 import { AGENT_CLIENTS_REGISTER } from "~/app/http/openapi/agent-clients";
 import { platformTenantStub } from "~/app/lib/platform-tenant";
-import AgentClientBinding from "~/app/models/agent-client-binding";
 import { seedManagementScopes } from "~/app/services/management-scopes";
 import routes from "~/routes/management";
 
@@ -99,10 +98,12 @@ export function createAgentClientsRegisterAction(options: ManagementControllerOp
 				throw new Error("a confidential client registered with no secret");
 			}
 
-			await AgentClientBinding.create(ctx.db, {
-				clientId: result.client.id,
-				tenantId: ctx.managementCaller.tenantId,
-			});
+			unwrap(
+				await ctx.models.agentClientBindings.create({
+					client_id: result.client.id,
+					tenant_id: ctx.managementCaller.tenantId,
+				}),
+			);
 
 			return json({ clientId: result.client.id, secret: result.secret }, { status: 201 });
 		},

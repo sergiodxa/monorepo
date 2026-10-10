@@ -15,17 +15,19 @@ import type { Database } from "remix/data-table";
 import { createDurableObjectState } from "@sdxc/cloudflare-mocks";
 import { randomToken } from "@sdxc/crypto";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { unwrap } from "@sdxc/result";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import type { Models } from "~/app/models";
+
 import { createSubjectsListAction } from "~/app/http/controllers/management/subjects/list";
 import { database } from "~/app/http/middleware/database";
+import { models as modelsMiddleware } from "~/app/http/middleware/models";
 import { usePlatformTenantForTesting } from "~/app/lib/platform-tenant";
 import { useManagementDispatchForTesting } from "~/app/mcp/dispatch";
-import AgentClientBinding from "~/app/models/agent-client-binding";
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
 import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { mcpRouter } from "~/bootstrap/mcp-app";
 import TenantObject from "~/database/tenant-do";
 import routes from "~/routes/management";
@@ -33,6 +35,7 @@ import routes from "~/routes/management";
 const PLATFORM_ISSUER = "https://platform.example.com";
 
 let db: Database;
+let models: Models;
 let tenantId: string;
 let platformTenantDO: TenantObject;
 let tenantDO: TenantObject;
@@ -61,7 +64,12 @@ async function signMachineToken(scope = "subjects:read"): Promise<string> {
 	});
 	if (!registered.ok || registered.secret === null) throw new Error("unreachable");
 
-	await AgentClientBinding.create(db, { clientId: registered.client.id, tenantId });
+	unwrap(
+		await models.agentClientBindings.create({
+			client_id: registered.client.id,
+			tenant_id: tenantId,
+		}),
+	);
 
 	let outcome = await platformTenantDO.issueClientCredentialsToken({
 		clientId: registered.client.id,
@@ -132,13 +140,16 @@ function listToolsRequest(token?: string): Request {
 
 beforeEach(async () => {
 	db = await createTestDatabase();
-	let customer = await Customer.create(db, { name: "Acme, Inc." });
-	let tenant = await Tenant.create(db, {
-		customerId: customer.id,
-		name: "Acme, Inc.",
-		slug: "acme",
-		issuer: "https://acme.auth.example.com",
-	});
+	models = bindModels(db);
+	let customer = unwrap(await models.customers.create({ name: "Acme, Inc." }));
+	let tenant = unwrap(
+		await models.tenants.create({
+			customer_id: customer.id,
+			name: "Acme, Inc.",
+			slug: "acme",
+			issuer: "https://acme.auth.example.com",
+		}),
+	);
 	tenantId = tenant.id;
 
 	let platformState = createDurableObjectState();
@@ -169,7 +180,9 @@ beforeEach(async () => {
 	if (!created.ok) throw new Error("unreachable");
 	subjectId = created.subjectId;
 
-	let managementActionRouter = createRouter({ middleware: [database(() => db)] });
+	let managementActionRouter = createRouter({
+		middleware: [database(() => db), modelsMiddleware()],
+	});
 	managementActionRouter.map(
 		routes.subjectsList,
 		createSubjectsListAction({

@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 import { forbidden, unauthorized } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 
-import type { MembershipRole } from "~/app/models/membership";
+import type { MembershipRole } from "~/app/models/memberships";
 
 import {
 	DashboardSignInRequiredError,

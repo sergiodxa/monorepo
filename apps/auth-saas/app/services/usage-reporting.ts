@@ -21,7 +21,6 @@
  */
 
 import type { Billing, UsageEvent } from "@sdxc/billing";
-import type { Database } from "remix/data-table";
 
 import { supports } from "@sdxc/billing";
 import { currentLog } from "@sdxc/logger";
@@ -29,10 +28,8 @@ import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import type { LedgerSource } from "~/app/lib/cost-ledger";
+import type { Models } from "~/app/models";
 
-import Customer from "~/app/models/customer";
-import Tenant from "~/app/models/tenant";
-import TenantUsageDay from "~/app/models/tenant-usage-day";
 import { dayOf } from "~/database/metering";
 
 /** One UTC day, in milliseconds — the same unit `metering.ts`'s `dayOf` keys against. */
@@ -170,7 +167,7 @@ function costToDecimalString(cents: number): string {
  * delivery and a re-run of the same day both collapse to one counted event
  * at the provider.
  *
- * @param db - The control plane's database.
+ * @param models - The control plane's models.
  * @param billing - The configured billing provider.
  * @param options - The day to report; defaults to yesterday, UTC.
  * @returns How many tenant-days were reported, and every one left out and why.
@@ -180,7 +177,7 @@ function costToDecimalString(cents: number): string {
  * costs nothing.
  */
 export async function reportDailyUsage(
-	db: Database,
+	models: Models,
 	billing: Billing,
 	options: ReportDailyUsageOptions = {},
 ): Promise<ReportDailyUsageResult> {
@@ -191,7 +188,7 @@ export async function reportDailyUsage(
 		return { day, reported: 0, skipped: [] };
 	}
 
-	let usageRows = await TenantUsageDay.listByDay(db, day);
+	let usageRows = await models.tenantUsageDays.onDay(day).all();
 	if (usageRows.length === 0) return { day, reported: 0, skipped: [] };
 
 	let costByTenant = await queryDailyCostByTenant(day);
@@ -200,14 +197,14 @@ export async function reportDailyUsage(
 	let skipped: SkippedTenantDay[] = [];
 
 	for (let row of usageRows) {
-		let tenant = await Tenant.findById(db, row.tenant_id);
+		let tenant = await models.tenants.find(row.tenant_id);
 		if (!tenant) {
 			skipped.push({ tenantId: row.tenant_id, day, reason: "tenant_not_found" });
 			currentLog()?.warn("usage_reporting.tenant_not_found", { tenantId: row.tenant_id, day });
 			continue;
 		}
 
-		let customer = await Customer.findById(db, tenant.customer_id);
+		let customer = await models.customers.find(tenant.customer_id);
 		if (!customer || customer.provider_customer_id === null) {
 			skipped.push({ tenantId: tenant.id, day, reason: "no_provider_customer" });
 			currentLog()?.warn("usage_reporting.no_provider_customer", { tenantId: tenant.id, day });

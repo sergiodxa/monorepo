@@ -9,21 +9,24 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { buildTenantsHarness } from "~/app/http/controllers/management/tenants/test-harness";
-import Membership from "~/app/models/membership";
+import { bindModels } from "~/app/test/models";
 
 describe("GET /tenants/:tenantId/members", () => {
 	test("lists the tenant's own memberships", async () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "admin",
-		});
+		unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "admin",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members`, token),
@@ -84,11 +87,13 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let membership = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "member",
-		});
+		let membership = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "member",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${membership.id}`, token, {
@@ -106,11 +111,13 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let otherMembership = await Membership.create(harness.db, {
-			tenantId: harness.otherTenantId,
-			subjectId: "sub_1",
-			role: "member",
-		});
+		let otherMembership = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.otherTenantId,
+				subject_id: "sub_1",
+				role: "member",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${otherMembership.id}`, token, {
@@ -126,16 +133,20 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let owner = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "owner",
-		});
-		await Membership.create(harness.db, {
-			tenantId: harness.otherTenantId,
-			subjectId: "sub_2",
-			role: "owner",
-		});
+		let owner = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.otherTenantId,
+				subject_id: "sub_2",
+				role: "owner",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
@@ -148,7 +159,7 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 		let body = (await response.json()) as { type: string };
 		expect(body.type).toBe("https://docs.example.com/errors/last-owner");
 		expect(
-			await Membership.findByTenantAndSubject(harness.db, harness.tenantId, "sub_1"),
+			await bindModels(harness.db).memberships.findByTenantAndSubject(harness.tenantId, "sub_1"),
 		).toMatchObject({ role: "owner" });
 	});
 
@@ -156,16 +167,20 @@ describe("PUT /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let owner = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "owner",
-		});
-		await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_2",
-			role: "owner",
-		});
+		let owner = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_2",
+				role: "owner",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
@@ -184,11 +199,13 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let membership = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "member",
-		});
+		let membership = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "member",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${membership.id}`, token, {
@@ -198,7 +215,7 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 
 		expect(response.status).toBe(204);
 
-		let remaining = await Membership.listByTenant(harness.db, harness.tenantId);
+		let remaining = await bindModels(harness.db).memberships.ofTenant(harness.tenantId).all();
 		expect(remaining.find((row) => row.id === membership.id)).toBeUndefined();
 	});
 
@@ -206,11 +223,13 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let otherMembership = await Membership.create(harness.db, {
-			tenantId: harness.otherTenantId,
-			subjectId: "sub_1",
-			role: "member",
-		});
+		let otherMembership = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.otherTenantId,
+				subject_id: "sub_1",
+				role: "member",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${otherMembership.id}`, token, {
@@ -219,23 +238,29 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await Membership.listByTenant(harness.db, harness.otherTenantId)).toHaveLength(1);
+		expect(
+			await bindModels(harness.db).memberships.ofTenant(harness.otherTenantId).all(),
+		).toHaveLength(1);
 	});
 
 	test("refuses to remove the tenant's last owner, keeping the membership", async () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let owner = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "owner",
-		});
-		await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_2",
-			role: "admin",
-		});
+		let owner = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_2",
+				role: "admin",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
@@ -246,23 +271,29 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 		expect(response.status).toBe(409);
 		let body = (await response.json()) as { type: string };
 		expect(body.type).toBe("https://docs.example.com/errors/last-owner");
-		expect(await Membership.listByTenant(harness.db, harness.tenantId)).toHaveLength(2);
+		expect(await bindModels(harness.db).memberships.ofTenant(harness.tenantId).all()).toHaveLength(
+			2,
+		);
 	});
 
 	test("removes an owner while another owner remains", async () => {
 		let harness = await buildTenantsHarness();
 		let token = await harness.signToken();
 
-		let owner = await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_1",
-			role: "owner",
-		});
-		await Membership.create(harness.db, {
-			tenantId: harness.tenantId,
-			subjectId: "sub_2",
-			role: "owner",
-		});
+		let owner = unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_1",
+				role: "owner",
+			}),
+		);
+		unwrap(
+			await bindModels(harness.db).memberships.create({
+				tenant_id: harness.tenantId,
+				subject_id: "sub_2",
+				role: "owner",
+			}),
+		);
 
 		let response = await harness.router.fetch(
 			harness.request(`/tenants/${harness.tenantId}/members/${owner.id}`, token, {
@@ -271,8 +302,8 @@ describe("DELETE /tenants/:tenantId/members/:membershipId", () => {
 		);
 
 		expect(response.status).toBe(204);
-		expect(await Membership.listByTenant(harness.db, harness.tenantId)).toMatchObject([
-			{ subject_id: "sub_2" },
-		]);
+		expect(await bindModels(harness.db).memberships.ofTenant(harness.tenantId).all()).toMatchObject(
+			[{ subject_id: "sub_2" }],
+		);
 	});
 });

@@ -9,18 +9,17 @@
 import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
-import Domain from "~/app/models/domain";
 import { refreshDomainStatus } from "~/app/services/domain";
 
 export default createJobHandler(jobs.refreshPendingDomains, async (ctx) => {
-	let pending = await Domain.listPending(ctx.database);
+	let pending = await ctx.models.domains.pending().all();
 	ctx.log.set({ domains: { pending: pending.length } });
 
 	for (let domain of pending) {
 		if (ctx.signal.aborted) ctx.ack("The next sweep refreshes the domains left.");
 
 		try {
-			await refreshDomainStatus(ctx.database, ctx.hostnames, domain);
+			await refreshDomainStatus(ctx.models, ctx.hostnames, domain);
 			ctx.log.inc("domains.refreshed");
 		} catch (error) {
 			ctx.log.inc("domains.failed");

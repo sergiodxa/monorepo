@@ -11,10 +11,11 @@
 import type { Billing, WebhookDelivery, WebhookStore } from "@sdxc/billing";
 
 import { PolarBilling } from "@sdxc/billing/providers/polar";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import { createDatabase } from "~/app/lib/database";
-import BillingDelivery from "~/app/models/billing-delivery";
+import { models } from "~/app/models";
 import { buildFeatureMap, buildProductMap } from "~/app/services/billing/catalog";
 
 /**
@@ -62,13 +63,18 @@ export const polar: Billing = new PolarBilling({
 	meters: parseIdMap(env.POLAR_METER_IDS),
 });
 
+/** The billing deliveries model, bound to the platform database the isolate shares. */
+function deliveries() {
+	return models.bind({ db: createDatabase() }).billingDeliveries;
+}
+
 /**
  * The `billing_deliveries` table as a `WebhookStore`, so `BillingWebhook` keeps
  * its deduplication trail in D1 rather than in memory.
  */
 export class D1WebhookStore implements WebhookStore {
 	async find(id: string): Promise<WebhookDelivery | null> {
-		let row = await BillingDelivery.findById(createDatabase(), id);
+		let row = await deliveries().find(id);
 		if (!row) return null;
 
 		return {
@@ -81,11 +87,11 @@ export class D1WebhookStore implements WebhookStore {
 	}
 
 	async record(delivery: WebhookDelivery): Promise<void> {
-		await BillingDelivery.record(createDatabase(), delivery);
+		unwrap(await deliveries().record(delivery));
 	}
 
 	async markProcessed(id: string): Promise<void> {
-		await BillingDelivery.markProcessed(createDatabase(), id);
+		unwrap(await deliveries().markProcessed(id));
 	}
 }
 

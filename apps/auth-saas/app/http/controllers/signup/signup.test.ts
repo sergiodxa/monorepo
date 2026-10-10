@@ -35,6 +35,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
+import type { Models } from "~/app/models";
 import type Tenant from "~/database/tenant-do";
 
 const PLATFORM_DOMAIN = "auth.sergiodxa.com";
@@ -99,6 +100,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 });
 
 let { database } = await import("~/app/http/middleware/database");
+let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { Mail } = await import("~/app/http/middleware/mail");
 let render = (await import("~/app/http/middleware/render")).default;
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
@@ -108,18 +110,18 @@ let signupPending = (await import("~/app/http/controllers/signup/pending")).defa
 let signupVerify = (await import("~/app/http/controllers/signup/verify")).default;
 let signupResend = (await import("~/app/http/controllers/signup/resend")).default;
 let { sessionCookie } = await import("~/app/lib/session-cookie");
-let Customer = (await import("~/app/models/customer")).default;
-let Membership = (await import("~/app/models/membership")).default;
-let TenantModel = (await import("~/app/models/tenant")).default;
-let PendingSignup = (await import("~/app/models/pending-signup")).default;
 let routes = (await import("~/routes/web")).default;
 let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels } = await import("~/app/test/models");
+let { customers: customersTable } = await import("~/database/schema");
 let TenantObject = (await import("~/database/tenant-do")).default;
 
 buildTenant = (state) =>
 	new TenantObject(state, { TOTP_SEAL_KEY: randomToken({ bytes: 32 }) } as Cloudflare.Env);
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
+
+let models: Models;
 let mailTransport: MemoryTransport;
 
 /** Cloudflare's DoH endpoint, which the owner-address mail-server check asks. */
@@ -154,6 +156,7 @@ beforeEach(async () => {
 	turnstile.reset();
 	dnsAnswers = new Map([["example.com", ["10 mx.example.com."]]]);
 	db = await createTestDatabase();
+	models = bindModels(db);
 
 	let state = createDurableObjectState();
 	platformTenantDO = new TenantObject(state, {
@@ -173,6 +176,7 @@ function buildRouter() {
 
 	let middleware: Middleware[] = [
 		database(() => db) as Middleware,
+		modelsMiddleware() as Middleware,
 		(ctx, next) => {
 			ctx.set(Mail, mailer, { property: "mail" });
 			return next();
@@ -235,7 +239,7 @@ describe("signup", () => {
 		let subjectId = pendingLocation.searchParams.get("subject");
 		expect(subjectId).toBeTruthy();
 
-		let pending = await PendingSignup.findBySubjectId(db, subjectId ?? "");
+		let pending = await models.pendingSignups.find(subjectId ?? "");
 		expect(pending).toMatchObject({ subject_id: subjectId, organization_name: "Acme, Inc." });
 
 		let ticket = ticketFromLastMessage();
@@ -264,16 +268,19 @@ describe("signup", () => {
 		let resolvedSubjectId = resolved.status === "active" ? resolved.subjectId : null;
 		expect(resolvedSubjectId).toBe(subjectId);
 
-		let customers = await db.findMany(Customer.table, { where: { name: "Acme, Inc." } });
+		let customers = await db.findMany(customersTable, { where: { name: "Acme, Inc." } });
 		expect(customers).toHaveLength(1);
 
-		let tenants = await TenantModel.listByCustomer(db, customers[0]!.id);
+		let tenants = await models.tenants.ofCustomer(customers[0]!.id).all();
 		expect(tenants).toHaveLength(1);
 
-		let membership = await Membership.findByTenantAndSubject(db, tenants[0]!.id, subjectId ?? "");
+		let membership = await models.memberships.findByTenantAndSubject(
+			tenants[0]!.id,
+			subjectId ?? "",
+		);
 		expect(membership).toMatchObject({ role: "owner", subject_id: subjectId });
 
-		let stillPending = await PendingSignup.findBySubjectId(db, subjectId ?? "");
+		let stillPending = await models.pendingSignups.find(subjectId ?? "");
 		expect(stillPending).toBeNull();
 	});
 
@@ -296,7 +303,7 @@ describe("signup", () => {
 		let body = await second.text();
 		expect(body).toContain("already exists");
 
-		let customers = await db.findMany(Customer.table, { where: { name: "Second Org" } });
+		let customers = await db.findMany(customersTable, { where: { name: "Second Org" } });
 		expect(customers).toHaveLength(0);
 	});
 
@@ -311,7 +318,7 @@ describe("signup", () => {
 		let body = await response.text();
 		expect(body).toContain("no longer works");
 
-		let customers = await db.findMany(Customer.table, {});
+		let customers = await db.findMany(customersTable, {});
 		expect(customers).toHaveLength(0);
 	});
 
@@ -337,9 +344,9 @@ describe("signup", () => {
 		let secondBody = await second.text();
 		expect(secondBody).toContain("no longer works");
 
-		let customers = await db.findMany(Customer.table, { where: { name: "Acme, Inc." } });
+		let customers = await db.findMany(customersTable, { where: { name: "Acme, Inc." } });
 		expect(customers).toHaveLength(1);
-		let tenants = await TenantModel.listByCustomer(db, customers[0]!.id);
+		let tenants = await models.tenants.ofCustomer(customers[0]!.id).all();
 		expect(tenants).toHaveLength(1);
 	});
 
@@ -361,7 +368,7 @@ describe("signup", () => {
 		);
 
 		expect(response.status).toBe(400);
-		let customers = await db.findMany(Customer.table, {});
+		let customers = await db.findMany(customersTable, {});
 		expect(customers).toHaveLength(0);
 	});
 
@@ -392,7 +399,7 @@ describe("signup", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain("Enter a valid email address.");
-		expect(await db.findMany(Customer.table, {})).toHaveLength(0);
+		expect(await db.findMany(customersTable, {})).toHaveLength(0);
 	});
 
 	test("refuses a disposable owner address", async () => {
