@@ -18,7 +18,7 @@ import { Feed, FeedFetchError } from "@sdxc/feed";
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, getTableColumns, getTableName, gt, lt, lte } from "remix/data-table";
 
 import type { InsertItem, SelectFeed } from "~/database/feed-schema";

@@ -16,7 +16,7 @@ import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
 
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 import { and, Database, gt, sql } from "remix/data-table";
 

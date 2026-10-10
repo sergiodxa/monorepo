@@ -29,7 +29,7 @@ import { DataTableAdapter } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { DurableObject, env } from "cloudflare:workers";
 import {
 	and,

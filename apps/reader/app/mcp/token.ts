@@ -13,7 +13,7 @@
 import { Base64Url, Hex, hmac, sha256 } from "@sdxc/crypto";
 import { isFailure } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:workers";
 
 /** What a token starts with, so a reader who finds one in a file knows what they have. */
