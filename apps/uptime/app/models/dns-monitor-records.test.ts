@@ -1,8 +1,7 @@
 /**
- * Unit tests for the `DnsMonitorRecord` data-access model, and above all for the
- * classification: a record that vanished, one that appeared, the single attributable
- * one-to-one change, an RRset that grew, one that shrank, an unchanged sweep, and the
- * two cases the classification stays silent on — a declined record, and a failed query.
+ * Tests the DNS monitor records model, above all the classification: a record that vanished,
+ * one that appeared, the one attributable change, an RRset that grew or shrank, an unchanged
+ * sweep, and the two cases it stays silent on — a declined record and a failed query.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,23 +9,30 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { DnsQueryAnswer, DnsRecordImport } from "~/app/data/dns-monitor-record";
+import type { UptimeModels } from "~/app/models";
+import type { DnsQueryAnswer, DnsRecordImport } from "~/app/models/dns-monitor-records";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { summarizeDnsRecordDiff } from "~/app/models/dns-monitor-records";
 
 let db: Database;
+let models: UptimeModels;
 let monitorId: string;
 
 beforeEach(async () => {
 	db = createTestDatabase().db;
-	let monitor = await DnsMonitor.create(db, "team-1", {
-		name: "Example domain",
-		domain: "example.com",
-	});
+	models = bindModels(db, recordJobs().jobs);
+	let monitor = unwrap(
+		await models.dnsMonitors.create({
+			team_id: "team-1",
+			name: "Example domain",
+			domain: "example.com",
+		}),
+	);
 	monitorId = monitor.id;
 });
 
@@ -51,13 +57,13 @@ function answer(recordType: DnsQueryAnswer["record_type"], values: string[]): Dn
 
 /** The stored record with this value, for asserting on what a diff wrote. */
 async function stored(value: string) {
-	let records = await DnsMonitorRecord.listByMonitor(db, monitorId);
+	let records = await models.dnsMonitorRecords.listByMonitor(monitorId);
 	return records.find((record) => record.value === value) ?? null;
 }
 
-describe("DnsMonitorRecord.importMany", () => {
+describe("dnsMonitorRecords.importMany", () => {
 	test("imports records with the state the importing channel gave them", async () => {
-		let imported = await DnsMonitorRecord.importMany(db, monitorId, [
+		let imported = await models.dnsMonitorRecords.importMany(monitorId, [
 			watched(),
 			watched({
 				name: "_dmarc.example.com",
@@ -72,7 +78,7 @@ describe("DnsMonitorRecord.importMany", () => {
 
 		expect(imported).toBe(2);
 
-		let records = await DnsMonitorRecord.listByMonitor(db, monitorId);
+		let records = await models.dnsMonitorRecords.listByMonitor(monitorId);
 		expect(records.map((record) => record.name)).toEqual(["_dmarc.example.com", "example.com"]);
 		expect(records[0]?.source).toBe("zone_file");
 		expect(records[0]?.is_enabled).toBeFalsy();
@@ -94,10 +100,10 @@ describe("DnsMonitorRecord.importMany", () => {
 			source: "zone_file",
 		});
 
-		let imported = await DnsMonitorRecord.importMany(db, monitorId, [line, line]);
+		let imported = await models.dnsMonitorRecords.importMany(monitorId, [line, line]);
 
 		expect(imported).toBe(1);
-		expect(await DnsMonitorRecord.countByMonitor(db, monitorId)).toBe(1);
+		expect(await models.dnsMonitorRecords.forMonitor(monitorId).count()).toBe(1);
 	});
 
 	/**
@@ -105,9 +111,9 @@ describe("DnsMonitorRecord.importMany", () => {
 	 * declined, so the choice outlives every later import.
 	 */
 	test("never overwrites the state of a record it already has", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched({ is_enabled: false })]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched({ is_enabled: false })]);
 
-		let imported = await DnsMonitorRecord.importMany(db, monitorId, [
+		let imported = await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ is_enabled: true }),
 		]);
 
@@ -120,41 +126,45 @@ describe("DnsMonitorRecord.importMany", () => {
 			watched({ record_type: "A", value: `10.0.0.${index}` }),
 		);
 
-		expect(await DnsMonitorRecord.importMany(db, monitorId, records)).toBe(25);
-		expect(await DnsMonitorRecord.countByMonitor(db, monitorId)).toBe(25);
+		expect(await models.dnsMonitorRecords.importMany(monitorId, records)).toBe(25);
+		expect(await models.dnsMonitorRecords.forMonitor(monitorId).count()).toBe(25);
 	});
 });
 
-describe("DnsMonitorRecord.listNames", () => {
+describe("dnsMonitorRecords.listNames", () => {
 	test("lists each tracked name once, which is the set a sweep queries", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ record_type: "A", value: "1.2.3.4" }),
 			watched({ record_type: "A", value: "5.6.7.8" }),
 			watched({ name: "_dmarc.example.com", record_type: "TXT", value: "v=DMARC1; p=none;" }),
 		]);
 
-		expect(await DnsMonitorRecord.listNames(db, monitorId)).toEqual([
+		expect(await models.dnsMonitorRecords.listNames(monitorId)).toEqual([
 			"_dmarc.example.com",
 			"example.com",
 		]);
 	});
 
 	test("lists nothing for a monitor whose records belong to another monitor", async () => {
-		let other = await DnsMonitor.create(db, "team-1", { name: "Other", domain: "other.com" });
-		await DnsMonitorRecord.importMany(db, other.id, [watched({ name: "other.com" })]);
+		let other = unwrap(
+			await models.dnsMonitors.create({ team_id: "team-1", name: "Other", domain: "other.com" }),
+		);
+		await models.dnsMonitorRecords.importMany(other.id, [watched({ name: "other.com" })]);
 
-		expect(await DnsMonitorRecord.listNames(db, monitorId)).toEqual([]);
+		expect(await models.dnsMonitorRecords.listNames(monitorId)).toEqual([]);
 	});
 });
 
-describe("DnsMonitorRecord.diff", () => {
+describe("dnsMonitorRecords.diff", () => {
 	test("classifies a watched record that still resolves as ok", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
 
 		expect(diff.ok.map((record) => record.value)).toEqual(["10 mx1.example.com"]);
-		expect(DnsMonitorRecord.summarize(diff)).toEqual({
+		expect(summarizeDnsRecordDiff(diff)).toEqual({
 			recordsChecked: 1,
 			recordsChanged: 0,
 			recordsMissing: 0,
@@ -163,22 +173,24 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	test("classifies a watched record that stopped resolving as missing", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", [])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [answer("MX", [])]);
 
 		expect(diff.missing.map((record) => record.value)).toEqual(["10 mx1.example.com"]);
 		expect(diff.ok).toEqual([]);
-		expect(DnsMonitorRecord.summarize(diff).recordsMissing).toBe(1);
+		expect(summarizeDnsRecordDiff(diff).recordsMissing).toBe(1);
 	});
 
 	test("classifies a value with no stored record as new", async () => {
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
 
 		expect(diff.created).toEqual([
 			{ name: "example.com", record_type: "MX", value: "10 mx1.example.com" },
 		]);
-		expect(DnsMonitorRecord.summarize(diff).recordsNew).toBe(1);
+		expect(summarizeDnsRecordDiff(diff).recordsNew).toBe(1);
 	});
 
 	/**
@@ -187,9 +199,11 @@ describe("DnsMonitorRecord.diff", () => {
 	 * value is the only identity it has.
 	 */
 	test("pairs a lone stored record with a lone resolved value as changed", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["20 mx2.example.com"])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["20 mx2.example.com"]),
+		]);
 
 		expect(diff.changed).toHaveLength(1);
 		expect(diff.changed[0]?.record.value).toBe("10 mx1.example.com");
@@ -205,13 +219,12 @@ describe("DnsMonitorRecord.diff", () => {
 	 */
 	test("attributes a grown RRset to the record that appeared", async () => {
 		let values = ["10 a.example.com", "20 b.example.com", "30 c.example.com"];
-		await DnsMonitorRecord.importMany(
-			db,
+		await models.dnsMonitorRecords.importMany(
 			monitorId,
 			values.map((value) => watched({ value })),
 		);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("MX", [...values, "40 d.example.com"]),
 		]);
 
@@ -225,13 +238,12 @@ describe("DnsMonitorRecord.diff", () => {
 
 	test("attributes a shrunk RRset to the record that went", async () => {
 		let values = ["10 a.example.com", "20 b.example.com", "30 c.example.com"];
-		await DnsMonitorRecord.importMany(
-			db,
+		await models.dnsMonitorRecords.importMany(
 			monitorId,
 			values.map((value) => watched({ value })),
 		);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", values.slice(0, 2))]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [answer("MX", values.slice(0, 2))]);
 
 		expect(diff.missing.map((record) => record.value)).toEqual(["30 c.example.com"]);
 		expect(diff.ok).toHaveLength(2);
@@ -244,12 +256,12 @@ describe("DnsMonitorRecord.diff", () => {
 	 * protocol level, indistinguishable from a delete plus an add, so that is what it reads as.
 	 */
 	test("reads an edit inside a multi-record RRset as one missing plus one new", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ value: "10 a.example.com" }),
 			watched({ value: "20 b.example.com" }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("MX", ["10 a.example.com", "20 renamed.example.com"]),
 		]);
 
@@ -259,14 +271,14 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	test("finds nothing in an unchanged sweep across several names and types", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ record_type: "A", value: "1.2.3.4" }),
 			watched({ record_type: "A", value: "5.6.7.8" }),
 			watched({ record_type: "NS", value: "ns1.example.com" }),
 			watched({ name: "_dmarc.example.com", record_type: "TXT", value: "v=DMARC1; p=none;" }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("A", ["1.2.3.4", "5.6.7.8"]),
 			answer("NS", ["ns1.example.com"]),
 			{ name: "_dmarc.example.com", record_type: "TXT", values: ["v=DMARC1; p=none;"] },
@@ -284,12 +296,12 @@ describe("DnsMonitorRecord.diff", () => {
 	 * answered.
 	 */
 	test("classifies nothing for a name and type the sweep never answered", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ record_type: "A", value: "1.2.3.4" }),
 			watched({ record_type: "MX", value: "10 mx1.example.com" }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("A", ["1.2.3.4"])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [answer("A", ["1.2.3.4"])]);
 
 		expect(diff.ok).toHaveLength(1);
 		expect(diff.missing).toEqual([]);
@@ -297,9 +309,9 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	test("classifies nothing at all for a sweep that answered no query", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
 
-		expect(await DnsMonitorRecord.diff(db, monitorId, [])).toEqual({
+		expect(await models.dnsMonitorRecords.diff(monitorId, [])).toEqual({
 			ok: [],
 			missing: [],
 			changed: [],
@@ -314,12 +326,12 @@ describe("DnsMonitorRecord.diff", () => {
 	 * still an appearance worth announcing.
 	 */
 	test("never reports a declined record as missing or changed", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ record_type: "A", value: "1.2.3.4", is_enabled: false, status: "new" }),
 			watched({ record_type: "NS", value: "ns1.example.com", is_enabled: false, status: "new" }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("A", ["1.2.3.4"]),
 			answer("NS", ["ns9.example.com"]),
 		]);
@@ -329,7 +341,7 @@ describe("DnsMonitorRecord.diff", () => {
 		expect(diff.missing).toEqual([]);
 		expect(diff.changed).toEqual([]);
 		expect(diff.created.map((record) => record.value)).toEqual(["ns9.example.com"]);
-		expect(DnsMonitorRecord.summarize(diff)).toEqual({
+		expect(summarizeDnsRecordDiff(diff)).toEqual({
 			recordsChecked: 3,
 			recordsChanged: 0,
 			recordsMissing: 0,
@@ -343,7 +355,7 @@ describe("DnsMonitorRecord.diff", () => {
 	 * pure function of the two sets, and a declined record stays declined.
 	 */
 	test("classifies an imported zone against a first sweep that shares nothing with it", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({
 				record_type: "A",
 				value: "203.0.113.10",
@@ -354,7 +366,7 @@ describe("DnsMonitorRecord.diff", () => {
 			}),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("A", ["104.16.0.1", "104.16.0.2"]),
 		]);
 
@@ -364,7 +376,7 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	test("reads a repeated value in one answer as the single record it is", async () => {
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
 			answer("TXT", ["v=spf1 -all", "v=spf1 -all"]),
 		]);
 
@@ -372,26 +384,30 @@ describe("DnsMonitorRecord.diff", () => {
 	});
 
 	test("reads only the records of the monitor being diffed", async () => {
-		let other = await DnsMonitor.create(db, "team-1", { name: "Other", domain: "example.com" });
-		await DnsMonitorRecord.importMany(db, other.id, [watched()]);
+		let other = unwrap(
+			await models.dnsMonitors.create({ team_id: "team-1", name: "Other", domain: "example.com" }),
+		);
+		await models.dnsMonitorRecords.importMany(other.id, [watched()]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
 
 		expect(diff.ok).toEqual([]);
 		expect(diff.created).toHaveLength(1);
 	});
 });
 
-describe("DnsMonitorRecord.applyDiff", () => {
+describe("dnsMonitorRecords.applyDiff", () => {
 	/** A missing record advances `last_checked_at`, and `last_seen_at` holds. */
 	test("stamps a record that resolved and marks one that did not", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ value: "10 a.example.com", last_seen_at: 1000 }),
 			watched({ value: "20 b.example.com", last_seen_at: 1000 }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 a.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, diff, 5000);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [answer("MX", ["10 a.example.com"])]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, diff, 5000);
 
 		expect(await stored("10 a.example.com")).toMatchObject({
 			status: "ok",
@@ -406,8 +422,10 @@ describe("DnsMonitorRecord.applyDiff", () => {
 	});
 
 	test("imports a newly discovered record disabled, so accepting it is a decision", async () => {
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, diff, 5000);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, diff, 5000);
 
 		let record = await stored("10 mx1.example.com");
 		expect(record).toMatchObject({
@@ -425,11 +443,15 @@ describe("DnsMonitorRecord.applyDiff", () => {
 	 * of what needs attention.
 	 */
 	test("leaves a declined record's status alone on a later check", async () => {
-		let first = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, first, 5000);
+		let first = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, first, 5000);
 
-		let second = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, second, 9000);
+		let second = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, second, 9000);
 
 		let record = await stored("10 mx1.example.com");
 		expect(record).toMatchObject({
@@ -438,17 +460,19 @@ describe("DnsMonitorRecord.applyDiff", () => {
 			last_checked_at: 9000,
 		});
 		expect(record?.is_enabled).toBeFalsy();
-		expect(await DnsMonitorRecord.countByMonitor(db, monitorId)).toBe(1);
+		expect(await models.dnsMonitorRecords.forMonitor(monitorId).count()).toBe(1);
 	});
 
 	test("rewrites the paired record in place rather than replacing it", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
-		let [before] = await DnsMonitorRecord.listByMonitor(db, monitorId);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
+		let [before] = await models.dnsMonitorRecords.listByMonitor(monitorId);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["20 mx2.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, diff, 5000);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["20 mx2.example.com"]),
+		]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, diff, 5000);
 
-		let records = await DnsMonitorRecord.listByMonitor(db, monitorId);
+		let records = await models.dnsMonitorRecords.listByMonitor(monitorId);
 		expect(records).toHaveLength(1);
 		expect(records[0]?.id).toBe(before?.id ?? "");
 		expect(records[0]).toMatchObject({
@@ -459,12 +483,14 @@ describe("DnsMonitorRecord.applyDiff", () => {
 	});
 
 	test("stamps a declined record it saw without touching its status", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ is_enabled: false, status: "new", last_seen_at: 1000 }),
 		]);
 
-		let diff = await DnsMonitorRecord.diff(db, monitorId, [answer("MX", ["10 mx1.example.com"])]);
-		await DnsMonitorRecord.applyDiff(db, monitorId, diff, 5000);
+		let diff = await models.dnsMonitorRecords.diff(monitorId, [
+			answer("MX", ["10 mx1.example.com"]),
+		]);
+		await models.dnsMonitorRecords.applyDiff(monitorId, diff, 5000);
 
 		expect(await stored("10 mx1.example.com")).toMatchObject({
 			status: "new",
@@ -474,15 +500,15 @@ describe("DnsMonitorRecord.applyDiff", () => {
 	});
 });
 
-describe("DnsMonitorRecord.setEnabled", () => {
+describe("dnsMonitorRecords.setEnabled", () => {
 	test("settles a record accepted from review, and leaves the rest of the review alone", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ value: "10 a.example.com", is_enabled: false, status: "new" }),
 			watched({ value: "20 b.example.com", is_enabled: false, status: "new" }),
 		]);
 		let accepted = await stored("10 a.example.com");
 
-		await DnsMonitorRecord.setEnabled(db, monitorId, [accepted?.id ?? ""], true);
+		await models.dnsMonitorRecords.setEnabled(monitorId, [accepted?.id ?? ""], true);
 
 		let enabled = await stored("10 a.example.com");
 		expect(enabled?.is_enabled).toBeTruthy();
@@ -498,12 +524,12 @@ describe("DnsMonitorRecord.setEnabled", () => {
 	 * which is true and is the reason the user enabled it.
 	 */
 	test("keeps every status other than new when enabling", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [
+		await models.dnsMonitorRecords.importMany(monitorId, [
 			watched({ is_enabled: false, status: "missing", source: "zone_file", last_seen_at: null }),
 		]);
 		let record = await stored("10 mx1.example.com");
 
-		await DnsMonitorRecord.setEnabled(db, monitorId, [record?.id ?? ""], true);
+		await models.dnsMonitorRecords.setEnabled(monitorId, [record?.id ?? ""], true);
 
 		let enabled = await stored("10 mx1.example.com");
 		expect(enabled?.is_enabled).toBeTruthy();
@@ -511,10 +537,10 @@ describe("DnsMonitorRecord.setEnabled", () => {
 	});
 
 	test("disables without rewriting the status", async () => {
-		await DnsMonitorRecord.importMany(db, monitorId, [watched()]);
+		await models.dnsMonitorRecords.importMany(monitorId, [watched()]);
 		let record = await stored("10 mx1.example.com");
 
-		await DnsMonitorRecord.setEnabled(db, monitorId, [record?.id ?? ""], false);
+		await models.dnsMonitorRecords.setEnabled(monitorId, [record?.id ?? ""], false);
 
 		let disabled = await stored("10 mx1.example.com");
 		expect(disabled?.is_enabled).toBeFalsy();
@@ -522,15 +548,17 @@ describe("DnsMonitorRecord.setEnabled", () => {
 	});
 
 	test("ignores an id belonging to another monitor", async () => {
-		let other = await DnsMonitor.create(db, "team-1", { name: "Other", domain: "other.com" });
-		await DnsMonitorRecord.importMany(db, other.id, [
+		let other = unwrap(
+			await models.dnsMonitors.create({ team_id: "team-1", name: "Other", domain: "other.com" }),
+		);
+		await models.dnsMonitorRecords.importMany(other.id, [
 			watched({ name: "other.com", is_enabled: false, status: "new" }),
 		]);
-		let [record] = await DnsMonitorRecord.listByMonitor(db, other.id);
+		let [record] = await models.dnsMonitorRecords.listByMonitor(other.id);
 
-		await DnsMonitorRecord.setEnabled(db, monitorId, [record?.id ?? ""], true);
+		await models.dnsMonitorRecords.setEnabled(monitorId, [record?.id ?? ""], true);
 
-		let [unchanged] = await DnsMonitorRecord.listByMonitor(db, other.id);
+		let [unchanged] = await models.dnsMonitorRecords.listByMonitor(other.id);
 		expect(unchanged?.is_enabled).toBeFalsy();
 		expect(unchanged?.status).toBe("new");
 	});

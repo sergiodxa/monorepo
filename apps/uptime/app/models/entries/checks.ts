@@ -8,4 +8,14 @@
  */
 
 /** This domain's models, keyed by the name `ctx.models` binds each under. */
-export const CHECK_MODELS = {};
+export const CHECK_MODELS = {
+	dnsMonitors: () => import("../dns-monitors"),
+	dnsMonitorRecords: () => import("../dns-monitor-records"),
+	dnsMonitorResults: () => import("../dns-monitor-results"),
+	tcpMonitors: () => import("../tcp-monitors"),
+	tcpMonitorResults: () => import("../tcp-monitor-results"),
+	flowMonitors: () => import("../flow-monitors"),
+	flowMonitorResults: () => import("../flow-monitor-results"),
+	cronJobMonitors: () => import("../cron-job-monitors"),
+	cronJobPings: () => import("../cron-job-pings"),
+};
