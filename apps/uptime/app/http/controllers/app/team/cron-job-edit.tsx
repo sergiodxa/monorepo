@@ -18,7 +18,6 @@ import { AlertDialog, Button, LinkButton, Select, Switch, TextField } from "@sdx
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -50,7 +49,10 @@ export default createAction(routes.app.team.cronJobs.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.cronJobMonitors
+			.inTeam(ctx.team.id)
+			.where({ id: monitorId })
+			.first();
 		if (!monitor) return notFound("Not Found");
 
 		let t = withPrefix(ctx.intl.t, "page.editCronJob");

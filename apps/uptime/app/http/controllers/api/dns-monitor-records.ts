@@ -22,8 +22,6 @@ import { createController } from "remix/router";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -82,7 +80,10 @@ export default createController(dnsMonitorRecordsRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId } = s.parse(DNS_MONITOR_ID_PARAMS, ctx.params);
 
-				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await ctx.models.dnsMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: dnsMonitorId })
+					.first();
 				if (!monitor)
 					return apiProblems.notFound({
 						detail: "DNS monitor not found",
@@ -97,7 +98,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = DnsMonitorRecord.byMonitorQuery(ctx.db, dnsMonitorId);
+				let query = ctx.models.dnsMonitorRecords.forMonitor(dnsMonitorId);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: BY_RECORD_IDENTITY,
@@ -133,7 +134,10 @@ export default createController(dnsMonitorRecordsRoutes, {
 			handler: async (ctx) => {
 				let { dnsMonitorId, recordId } = s.parse(DNS_MONITOR_RECORD_PARAMS, ctx.params);
 
-				let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, dnsMonitorId);
+				let monitor = await ctx.models.dnsMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: dnsMonitorId })
+					.first();
 				if (!monitor)
 					return apiProblems.notFound({
 						detail: "DNS monitor not found",
@@ -155,7 +159,11 @@ export default createController(dnsMonitorRecordsRoutes, {
 					});
 				}
 
-				await DnsMonitorRecord.setEnabled(ctx.db, dnsMonitorId, [recordId], result.data.isEnabled);
+				await ctx.models.dnsMonitorRecords.setEnabled(
+					dnsMonitorId,
+					[recordId],
+					result.data.isEnabled,
+				);
 
 				let record = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
 				if (!record)

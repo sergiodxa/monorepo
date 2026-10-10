@@ -24,7 +24,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DnsRecordType } from "~/app/data/dns-monitor-record";
+import type { DnsRecordType } from "~/app/models/dns-monitor-records";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
@@ -72,7 +72,7 @@ let {
 	toggleDnsMonitorRecord,
 	importDnsMonitorZoneFile,
 } = await import("./dns-monitors");
-let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/data/dns-monitor");
+let { MAX_DNS_MONITORS_PER_TEAM } = await import("~/app/models/dns-monitors");
 
 const DOH_URL = CLOUDFLARE.url;
 

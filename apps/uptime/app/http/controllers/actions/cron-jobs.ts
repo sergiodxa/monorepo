@@ -11,18 +11,18 @@
 import { Schedule } from "@sdxc/cron";
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import {
 	CreateCronJobSchema,
 	CronJobIdSchema,
 	UpdateCronJobSchema,
 } from "~/app/http/validators/cron-job";
 import { invalidCronMessage } from "~/app/lib/cron-text";
+import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import routes from "~/routes/web";
 
 /**
@@ -56,12 +56,15 @@ export const createCronJob = createAction(routes.actions.cronJob.create, async (
 		});
 	}
 
-	let monitor = await CronJobMonitor.create(ctx.db, ctx.team.id, {
-		...values,
-		cron_expression: schedule.data.toString(),
-		description: description || null,
-		enabled_at: is_enabled ? Date.now() : null,
-	});
+	let monitor = unwrap(
+		await ctx.models.cronJobMonitors.create({
+			team_id: ctx.team.id,
+			...values,
+			cron_expression: schedule.data.toString(),
+			description: description || null,
+			enabled_at: is_enabled ? Date.now() : null,
+		}),
+	);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -95,7 +98,10 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 
 	let { monitor_id, description, is_enabled, ...values } = result.data;
 
-	let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.cronJobMonitors
+		.inTeam(ctx.team.id)
+		.where({ id: monitor_id })
+		.first();
 	if (!existing) return notFound("Not Found");
 
 	let schedule = Schedule.parse(values.cron_expression);
@@ -115,17 +121,19 @@ export const updateCronJob = createAction(routes.actions.cronJob.update, async (
 	let scheduleChanged =
 		existing.cron_expression !== cronExpression || existing.timezone !== values.timezone;
 
-	await CronJobMonitor.updateById(ctx.db, monitor_id, {
-		...values,
-		cron_expression: cronExpression,
-		description: description || null,
-		enabled_at: is_enabled ? (wasEnabled ? existing.enabled_at : Date.now()) : null,
-		next_expected_at: is_enabled
-			? scheduleChanged || !wasEnabled
-				? CronJobMonitor.calculateNextExpected(cronExpression, values.timezone)
-				: existing.next_expected_at
-			: null,
-	});
+	unwrap(
+		await ctx.models.cronJobMonitors.update(monitor_id, {
+			...values,
+			cron_expression: cronExpression,
+			description: description || null,
+			enabled_at: is_enabled ? (wasEnabled ? existing.enabled_at : Date.now()) : null,
+			next_expected_at: is_enabled
+				? scheduleChanged || !wasEnabled
+					? calculateNextExpected(cronExpression, values.timezone)
+					: existing.next_expected_at
+				: null,
+		}),
+	);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -148,10 +156,13 @@ export const deleteCronJob = createAction(routes.actions.cronJob.delete, async (
 		});
 	}
 
-	let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let existing = await ctx.models.cronJobMonitors
+		.inTeam(ctx.team.id)
+		.where({ id: result.data.monitor_id })
+		.first();
 	if (!existing) return notFound("Not Found");
 
-	await CronJobMonitor.deleteById(ctx.db, result.data.monitor_id);
+	unwrap(await ctx.models.cronJobMonitors.delete(result.data.monitor_id));
 
 	session?.flash("toast", {
 		intent: "success",

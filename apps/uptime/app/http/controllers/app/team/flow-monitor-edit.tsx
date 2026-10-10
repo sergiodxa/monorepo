@@ -23,7 +23,6 @@ import { AlertDialog, Button, LinkButton } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import FlowMonitor from "~/app/data/flow-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -45,7 +44,10 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.flowMonitors
+			.inTeam(ctx.team.id)
+			.where({ id: monitorId })
+			.first();
 		if (!monitor) return notFound("Not Found");
 
 		let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);

@@ -13,13 +13,12 @@ import { Schedule } from "@sdxc/cron";
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectCronJobMonitor } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -64,7 +63,7 @@ export default createController(cronJobsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = CronJobMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.cronJobMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -111,15 +110,18 @@ export default createController(cronJobsRoutes, {
 					return invalidField(schedule.error.message, "/cronExpression");
 				}
 
-				let cronJob = await CronJobMonitor.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					description: result.data.description ?? null,
-					cron_expression: schedule.data.toString(),
-					grace_period_seconds: result.data.gracePeriodSeconds,
-					timezone: result.data.timezone,
-					alert_on_late: result.data.alertOnLate,
-					enabled_at: result.data.enabled ? Date.now() : null,
-				});
+				let cronJob = unwrap(
+					await ctx.models.cronJobMonitors.create({
+						team_id: ctx.apiTeam.id,
+						name: result.data.name,
+						description: result.data.description ?? null,
+						cron_expression: schedule.data.toString(),
+						grace_period_seconds: result.data.gracePeriodSeconds,
+						timezone: result.data.timezone,
+						alert_on_late: result.data.alertOnLate,
+						enabled_at: result.data.enabled ? Date.now() : null,
+					}),
+				);
 
 				return apiSuccess({ cronJob: serializeCronJob(cronJob) }, Created);
 			},

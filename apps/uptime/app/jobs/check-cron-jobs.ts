@@ -15,19 +15,20 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 
 import { createJobHandler } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { CronJobStatus, SelectCronJobMonitor } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { shouldNotifyCronJobResult } from "~/app/services/alerts";
 import { apportionCostByTeam } from "~/app/services/cost";
 
 export default createJobHandler(jobs.checkCronJobs, async (ctx) => {
-	let monitors = await CronJobMonitor.listActionable(ctx.database);
+	let monitors = await ctx.models.cronJobMonitors.actionable().all();
 	/**
 	 * The evaluation sweep produces no billable ping, so its cost has nowhere else to
 	 * land: it is split across the teams whose cron monitors were actionable this minute
@@ -86,7 +87,7 @@ async function evaluate(
 	 * indefinitely because nothing ever forced a next-expected time to exist.
 	 */
 	if (monitor.next_expected_at === null) {
-		let repaired = CronJobMonitor.calculateNextExpected(monitor.cron_expression, monitor.timezone);
+		let repaired = calculateNextExpected(monitor.cron_expression, monitor.timezone);
 
 		if (repaired === null) {
 			/**
@@ -100,7 +101,7 @@ async function evaluate(
 			return null;
 		}
 
-		await CronJobMonitor.setNextExpected(ctx.database, monitor.id, repaired);
+		unwrap(await ctx.models.cronJobMonitors.update(monitor.id, { next_expected_at: repaired }));
 		ctx.log.note("monitors.next_expected_repaired", {
 			"monitor.id": monitor.id,
 			next_expected_at: repaired,
@@ -119,7 +120,7 @@ async function evaluate(
 	 * from the schedule itself so the meaning holds whether a job runs every minute or once
 	 * a week. An unparseable schedule leaves it `null`, keeping the monitor merely late.
 	 */
-	let followingExpected = CronJobMonitor.calculateNextExpected(
+	let followingExpected = calculateNextExpected(
 		monitor.cron_expression,
 		monitor.timezone,
 		new Date(monitor.next_expected_at),
@@ -138,7 +139,7 @@ async function evaluate(
 	if (newStatus === null) return null;
 
 	let previousStatus = monitor.status;
-	await CronJobMonitor.updateStatus(ctx.database, monitor.id, newStatus);
+	unwrap(await ctx.models.cronJobMonitors.update(monitor.id, { status: newStatus }));
 
 	if (!shouldNotifyCronJobResult(previousStatus, newStatus, monitor)) {
 		return { notification: null };

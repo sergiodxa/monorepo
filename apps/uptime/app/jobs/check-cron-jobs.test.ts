@@ -1,13 +1,8 @@
 /**
- * Unit tests for the `checkCronJobs` job, covering the healthy → late → missed
- * status-transition sweep: the grace-period arithmetic behind each transition, which
- * monitors `CronJobMonitor.listActionable` excludes entirely, and that a `notify` message
- * carries the status held before `updateStatus` overwrote it, which is what makes the
- * transition classifiable downstream.
- *
- * The `QUEUE` binding is an in-memory queue installed through `cloudflare:workers`, so the
- * assertions are about the messages that really landed on it; alert delivery itself now
- * happens in the `notify` job and has its own tests.
+ * Tests the `checkCronJobs` sweep: the grace-period arithmetic behind each healthy → late →
+ * missed transition, the monitors the `actionable` scope leaves out, and that a `notify`
+ * message carries the status held before the sweep overwrote it. `QUEUE` is an in-memory
+ * queue installed through `cloudflare:workers`, so assertions read what really landed on it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,13 +15,13 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { InsertCronJobMonitor } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
@@ -49,6 +44,7 @@ let sendBatch = vi.spyOn(queue, "sendBatch");
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let jobs = (await import("~/app/jobs")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkCronJobs = (await import("./check-cron-jobs")).default;
@@ -64,6 +60,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkCronJobs, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -79,20 +76,24 @@ function noteOf(record: Record<string, unknown>, name: string): Log.Note | undef
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertCronJobMonitor> = {}) {
+	let models = bindModels(db);
 	let now = Date.now();
-	return await CronJobMonitor.create(db, "team-1", {
-		name: "Nightly backup",
-		description: null,
-		cron_expression: "0 0 * * *",
-		grace_period_seconds: 300,
-		timezone: "UTC",
-		status: "healthy",
-		alert_on_late: false,
-		last_ping_at: null,
-		next_expected_at: now - 1000,
-		enabled_at: now,
-		...overrides,
-	});
+	return unwrap(
+		await models.cronJobMonitors.create({
+			team_id: "team-1",
+			name: "Nightly backup",
+			description: null,
+			cron_expression: "0 0 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			status: "healthy",
+			alert_on_late: false,
+			last_ping_at: null,
+			next_expected_at: now - 1000,
+			enabled_at: now,
+			...overrides,
+		}),
+	);
 }
 
 beforeEach(() => {
@@ -108,11 +109,12 @@ describe("checkCronJobs", () => {
 		 * reported green for ten days while nothing pinged them.
 		 */
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, { status: "healthy", next_expected_at: null });
 
 		await runJob(db);
 
-		let repaired = await CronJobMonitor.findById(db, monitor.id);
+		let repaired = await models.cronJobMonitors.find(monitor.id);
 		expect(repaired?.next_expected_at).not.toBeNull();
 		expect(repaired?.next_expected_at ?? 0).toBeGreaterThan(Date.now());
 		/** Repair is not a health verdict, and there is nothing to be late for yet. */
@@ -122,6 +124,7 @@ describe("checkCronJobs", () => {
 
 	test("goes late on the pass after a repair once the repaired deadline passes", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
 			alert_on_late: true,
@@ -129,21 +132,22 @@ describe("checkCronJobs", () => {
 		});
 
 		await runJob(db);
-		let repaired = await CronJobMonitor.findById(db, monitor.id);
+		let repaired = await models.cronJobMonitors.find(monitor.id);
 
 		/** Wind the repaired deadline into the past; the next sweep must now judge it. */
-		await CronJobMonitor.setNextExpected(
-			db,
-			monitor.id,
-			Date.now() - (repaired?.grace_period_seconds ?? 300) * 1000 - 1000,
+		unwrap(
+			await models.cronJobMonitors.update(monitor.id, {
+				next_expected_at: Date.now() - (repaired?.grace_period_seconds ?? 300) * 1000 - 1000,
+			}),
 		);
 		await runJob(db);
 
-		expect((await CronJobMonitor.findById(db, monitor.id))?.status).toBe("late");
+		expect((await models.cronJobMonitors.find(monitor.id))?.status).toBe("late");
 	});
 
 	test("leaves an enabled monitor alone when its schedule cannot be parsed", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
 			next_expected_at: null,
@@ -152,7 +156,7 @@ describe("checkCronJobs", () => {
 
 		let record = await runJob(db);
 
-		let untouched = await CronJobMonitor.findById(db, monitor.id);
+		let untouched = await models.cronJobMonitors.find(monitor.id);
 		expect(untouched?.next_expected_at).toBeNull();
 		expect(untouched?.status).toBe("healthy");
 		expect(noteOf(record, "monitors.unschedulable")?.["monitor.id"]).toBe(monitor.id);
@@ -160,6 +164,7 @@ describe("checkCronJobs", () => {
 
 	test("leaves a healthy monitor alone while it is still inside its grace period", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
@@ -170,13 +175,14 @@ describe("checkCronJobs", () => {
 
 		await runJob(db);
 
-		let stillHealthy = await CronJobMonitor.findById(db, monitor.id);
+		let stillHealthy = await models.cronJobMonitors.find(monitor.id);
 		expect(stillHealthy?.status).toBe("healthy");
 		expect(enqueued()).toEqual([]);
 	});
 
 	test("transitions a healthy monitor whose grace period has elapsed to late", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
@@ -187,7 +193,7 @@ describe("checkCronJobs", () => {
 
 		let record = await runJob(db);
 
-		let updated = await CronJobMonitor.findById(db, monitor.id);
+		let updated = await models.cronJobMonitors.find(monitor.id);
 		expect(updated?.status).toBe("late");
 
 		expect(enqueued()).toEqual([
@@ -211,6 +217,7 @@ describe("checkCronJobs", () => {
 
 	test("records the late transition but enqueues nothing when alert_on_late is off", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
@@ -225,7 +232,7 @@ describe("checkCronJobs", () => {
 		 * The status still moves — `missed` is reached from `late`, so suppressing the
 		 * transition would break the timeline; only the notification is withheld.
 		 */
-		let updated = await CronJobMonitor.findById(db, monitor.id);
+		let updated = await models.cronJobMonitors.find(monitor.id);
 		expect(updated?.status).toBe("late");
 
 		expect(enqueued()).toHaveLength(0);
@@ -265,6 +272,7 @@ describe("checkCronJobs", () => {
 
 	test("transitions a healthy monitor whose grace period has also elapsed directly to missed", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
@@ -274,7 +282,7 @@ describe("checkCronJobs", () => {
 
 		await runJob(db);
 
-		let updated = await CronJobMonitor.findById(db, monitor.id);
+		let updated = await models.cronJobMonitors.find(monitor.id);
 		expect(updated?.status).toBe("missed");
 		expect(enqueued()).toEqual([
 			{
@@ -291,6 +299,7 @@ describe("checkCronJobs", () => {
 
 	test("transitions a late monitor whose grace period elapses to missed", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "late",
@@ -300,7 +309,7 @@ describe("checkCronJobs", () => {
 
 		await runJob(db);
 
-		let updated = await CronJobMonitor.findById(db, monitor.id);
+		let updated = await models.cronJobMonitors.find(monitor.id);
 		expect(updated?.status).toBe("missed");
 		expect(enqueued()).toEqual([
 			{
@@ -317,6 +326,7 @@ describe("checkCronJobs", () => {
 
 	test("leaves a monitor whose expected time hasn't arrived yet untouched", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let now = Date.now();
 		let monitor = await seedMonitor(db, {
 			status: "healthy",
@@ -325,7 +335,7 @@ describe("checkCronJobs", () => {
 
 		let record = await runJob(db);
 
-		let updated = await CronJobMonitor.findById(db, monitor.id);
+		let updated = await models.cronJobMonitors.find(monitor.id);
 		expect(updated?.status).toBe("healthy");
 		expect(sendBatch).not.toHaveBeenCalled();
 

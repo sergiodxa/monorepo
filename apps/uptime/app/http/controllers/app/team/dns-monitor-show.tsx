@@ -25,8 +25,6 @@ import { createAction } from "remix/router";
 import type { SelectDnsMonitor, SelectDnsMonitorRecord } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -83,10 +81,10 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
 		if (!monitor) return notFound("Not Found");
 
-		let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
+		let records = await ctx.models.dnsMonitorRecords.listByMonitor(monitor.id);
 		let watchedCount = records.filter((record) => record.is_enabled).length;
 		let registrationReason = registrationReasonKey(monitor);
 

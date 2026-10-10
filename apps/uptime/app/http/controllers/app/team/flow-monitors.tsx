@@ -25,7 +25,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import FlowMonitor from "~/app/data/flow-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -56,7 +55,10 @@ export default createAction(routes.app.team.flowMonitors.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await FlowMonitor.listByTeam(ctx.db, ctx.team.id);
+		let monitors = await ctx.models.flowMonitors
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 		let newHref = routes.app.team.flowMonitors.new.href({ team: ctx.team.slug });
 
 		return ctx.render(

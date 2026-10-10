@@ -14,7 +14,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -38,7 +37,10 @@ export default createAction(routes.app.team.cronJobs.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
+		let monitors = await ctx.models.cronJobMonitors
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.cronJobs.header.title")}`}>

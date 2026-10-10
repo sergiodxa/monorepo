@@ -20,14 +20,13 @@ import { Created } from "@sdxc/http/status-code";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { UptimeModels } from "~/app/models";
 import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
 
-import FlowMonitor from "~/app/data/flow-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -88,7 +87,10 @@ function writableFlowMonitor(monitor: SelectFlowMonitor) {
  */
 async function patchFlowMonitor(ctx: RequestContext): Promise<Response> {
 	let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
-	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+	let existing = await ctx.models.flowMonitors
+		.inTeam(ctx.apiTeam.id)
+		.where({ id: flowMonitorId })
+		.first();
 	if (!existing)
 		return apiProblems.notFound({ detail: "Flow monitor not found", instance: problemInstance() });
 
@@ -111,7 +113,7 @@ async function patchFlowMonitor(ctx: RequestContext): Promise<Response> {
 	if (changed.has("intervalSeconds")) changes.interval_seconds = value.intervalSeconds;
 	if (changed.has("isEnabled")) changes.is_enabled = value.isEnabled;
 
-	let monitor = await FlowMonitor.updateById(ctx.db, flowMonitorId, changes);
+	let monitor = unwrap(await ctx.models.flowMonitors.update(flowMonitorId, changes));
 	return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 }
 
@@ -130,7 +132,7 @@ export default createController(flowMonitorsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = FlowMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.flowMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -171,12 +173,15 @@ export default createController(flowMonitorsRoutes, {
 				let refusal = await refuseUnreachableSource(ctx.models, ctx.apiTeam.id, result.data.source);
 				if (refusal) return refusal;
 
-				let monitor = await FlowMonitor.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					source: result.data.source,
-					interval_seconds: result.data.intervalSeconds,
-					is_enabled: result.data.isEnabled,
-				});
+				let monitor = unwrap(
+					await ctx.models.flowMonitors.create({
+						team_id: ctx.apiTeam.id,
+						name: result.data.name,
+						source: result.data.source,
+						interval_seconds: result.data.intervalSeconds,
+						is_enabled: result.data.isEnabled,
+					}),
+				);
 
 				return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) }, Created);
 			},
@@ -187,7 +192,10 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+				let monitor = await ctx.models.flowMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: flowMonitorId })
+					.first();
 				if (!monitor)
 					return apiProblems.notFound({
 						detail: "Flow monitor not found",
@@ -208,7 +216,10 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
-				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+				let existing = await ctx.models.flowMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: flowMonitorId })
+					.first();
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Flow monitor not found",
@@ -239,7 +250,7 @@ export default createController(flowMonitorsRoutes, {
 					changes.interval_seconds = result.data.intervalSeconds;
 				if (result.data.isEnabled !== undefined) changes.is_enabled = result.data.isEnabled;
 
-				let monitor = await FlowMonitor.updateById(ctx.db, flowMonitorId, changes);
+				let monitor = unwrap(await ctx.models.flowMonitors.update(flowMonitorId, changes));
 				return apiSuccess({ flowMonitor: serializeFlowMonitor(monitor) });
 			},
 		},
@@ -249,14 +260,17 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:write")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
-				let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+				let existing = await ctx.models.flowMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: flowMonitorId })
+					.first();
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Flow monitor not found",
 						instance: problemInstance(),
 					});
 
-				await FlowMonitor.deleteById(ctx.db, flowMonitorId);
+				unwrap(await ctx.models.flowMonitors.delete(flowMonitorId));
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -266,7 +280,10 @@ export default createController(flowMonitorsRoutes, {
 			middleware: [requireApiKey("flow-monitors:read")],
 			handler: async (ctx) => {
 				let { flowMonitorId } = s.parse(FLOW_MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, flowMonitorId);
+				let monitor = await ctx.models.flowMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: flowMonitorId })
+					.first();
 				if (!monitor)
 					return apiProblems.notFound({
 						detail: "Flow monitor not found",
@@ -280,11 +297,14 @@ export default createController(flowMonitorsRoutes, {
 						instance: problemInstance(),
 					});
 
-				let page = await Pagination.byKeyset(FlowMonitor.resultsQuery(ctx.db, flowMonitorId), {
-					orderBy: newestFirst("checked_at"),
-					cursor: params.data.cursor,
-					limit: params.data.perPage,
-				});
+				let page = await Pagination.byKeyset(
+					ctx.models.flowMonitorResults.forMonitor(flowMonitorId),
+					{
+						orderBy: newestFirst("checked_at"),
+						cursor: params.data.cursor,
+						limit: params.data.perPage,
+					},
+				);
 
 				if (isFailure(page)) {
 					if (page.error instanceof InvalidCursorError) {

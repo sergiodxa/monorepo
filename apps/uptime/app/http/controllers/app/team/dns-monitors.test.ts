@@ -1,9 +1,7 @@
 /**
- * Tests for the DNS monitors list page controller. `~/app/data/dns-monitor` imports
- * only the database layer, so no module mock is needed here. `getViewer()`/`ctx.team`/
- * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for
- * the real `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the DNS monitors list page against models bound to an in-memory database. A fake
+ * middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place of
+ * the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +11,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,7 +27,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { dnsMonitorRecords, dnsMonitors, memberships, teams } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitors")).default as { handler: RequestHandler<any> };
@@ -113,15 +113,14 @@ describe("dnsMonitors", () => {
 
 	test("lists a team's DNS monitors with their name and domain", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			dnsMonitors,
-			{
+		let models = bindModels(db);
+		unwrap(
+			await models.dnsMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Production DNS",
 				domain: "example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership);
@@ -134,22 +133,24 @@ describe("dnsMonitors", () => {
 
 	test("shows each monitor's registration status and expiry date", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			dnsMonitors,
-			{
+		let models = bindModels(db);
+		unwrap(
+			await models.dnsMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Expiring DNS",
 				domain: "example.com",
 				registration_status: "expiring",
 				registration_expires_at: Date.UTC(2026, 10, 1),
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
-		await db.create(
-			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "New DNS", domain: "example.org" },
-			{ touch: true, returnRow: true },
+		unwrap(
+			await models.dnsMonitors.create({
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "New DNS",
+				domain: "example.org",
+			}),
 		);
 
 		let body = await (await send(db, team, membership)).text();
@@ -167,16 +168,23 @@ describe("dnsMonitors", () => {
 	 */
 	test("counts each monitor's records, and says so per monitor", async () => {
 		let { db, team, membership } = await createFixture();
+		let models = bindModels(db);
 
-		let watched = await db.create(
-			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
-			{ touch: true, returnRow: true },
+		let watched = unwrap(
+			await models.dnsMonitors.create({
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme DNS",
+				domain: "acme.test",
+			}),
 		);
-		await db.create(
-			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Spare DNS", domain: "spare.test" },
-			{ touch: true },
+		unwrap(
+			await models.dnsMonitors.create({
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Spare DNS",
+				domain: "spare.test",
+			}),
 		);
 
 		for (let [value, isEnabled] of [
@@ -184,9 +192,8 @@ describe("dnsMonitors", () => {
 			["192.0.2.2", true],
 			["192.0.2.3", false],
 		] as const) {
-			await db.create(
-				dnsMonitorRecords,
-				{
+			unwrap(
+				await models.dnsMonitorRecords.create({
 					id: crypto.randomUUID(),
 					dns_monitor_id: watched.id,
 					name: "acme.test",
@@ -198,8 +205,7 @@ describe("dnsMonitors", () => {
 					first_seen_at: 0,
 					last_seen_at: 0,
 					last_checked_at: 0,
-				},
-				{ touch: true, returnRow: true },
+				}),
 			);
 		}
 

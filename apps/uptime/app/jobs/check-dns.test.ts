@@ -18,17 +18,16 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { failure } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DnsRecordImport } from "~/app/data/dns-monitor-record";
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { DnsRecordImport } from "~/app/models/dns-monitor-records";
 import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 import type { InsertDnsMonitor } from "~/database/schema";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/lib/test/billing";
@@ -123,6 +122,7 @@ vi.doMock("~/app/services/dns-check", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("./check-dns")).default;
@@ -140,6 +140,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -164,17 +165,22 @@ async function seedMonitor(
 	overrides: Partial<InsertDnsMonitor> = {},
 	teamId = "team-1",
 ) {
-	return await DnsMonitor.create(db, teamId, {
-		name: "Example domain",
-		domain: "example.com",
-		is_enabled: true,
-		...overrides,
-	});
+	let models = bindModels(db);
+	return unwrap(
+		await models.dnsMonitors.create({
+			team_id: teamId,
+			name: "Example domain",
+			domain: "example.com",
+			is_enabled: true,
+			...overrides,
+		}),
+	);
 }
 
 /** A watched record as discovery imported it: resolved, enabled, `ok`. */
 async function seedRecord(db: Database, monitorId: string, overrides: Partial<DnsRecordImport>) {
-	await DnsMonitorRecord.importMany(db, monitorId, [
+	let models = bindModels(db);
+	await models.dnsMonitorRecords.importMany(monitorId, [
 		{
 			name: "example.com",
 			record_type: "A",
@@ -190,8 +196,8 @@ async function seedRecord(db: Database, monitorId: string, overrides: Partial<Dn
 
 /** Gives a monitor `count` distinct tracked names, for the budget and cap assertions. */
 async function seedNames(db: Database, monitorId: string, count: number, suffix: string) {
-	await DnsMonitorRecord.importMany(
-		db,
+	let models = bindModels(db);
+	await models.dnsMonitorRecords.importMany(
 		monitorId,
 		Array.from({ length: count }, (_, index) => ({
 			name: `n${index}.${suffix}`,
@@ -220,7 +226,8 @@ async function seedTeam(db: Database, teamId: string, ownerId: string) {
 
 /** The single result row a monitor's check wrote. */
 async function onlyResult(db: Database, monitorId: string) {
-	let results = await DnsMonitor.listResults(db, monitorId);
+	let models = bindModels(db);
+	let results = await models.dnsMonitorResults.recent(monitorId);
 	expect(results).toHaveLength(1);
 	return results[0]!;
 }
@@ -238,6 +245,7 @@ beforeEach(() => {
 describe("checkDns", () => {
 	test("sweeps a monitor's tracked names, records the diff's counters, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		await seedRecord(db, monitor.id, {});
 
@@ -249,7 +257,7 @@ describe("checkDns", () => {
 
 		expect(sweepDnsNameMock).toHaveBeenCalledWith("example.com");
 
-		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await models.dnsMonitors.inTeam("team-1").where({ id: monitor.id }).first();
 		expect(updated?.last_status).toBe("changed");
 		expect(updated?.last_checked_at).not.toBeNull();
 
@@ -358,6 +366,7 @@ describe("checkDns", () => {
 
 	test("continues sweeping remaining monitors and counts an error when one monitor's check throws", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
 		let healthy = await seedMonitor(db, { domain: "ok.example.com", last_status: "error" });
 
@@ -380,9 +389,9 @@ describe("checkDns", () => {
 			});
 
 			/** The failing monitor's cached fields are untouched — recordCheckResult never ran. */
-			let failedRow = await DnsMonitor.findByIdForTeam(db, "team-1", failing.id);
+			let failedRow = await models.dnsMonitors.inTeam("team-1").where({ id: failing.id }).first();
 			expect(failedRow?.last_status).toBeNull();
-			expect(await DnsMonitor.listResults(db, failing.id)).toHaveLength(0);
+			expect(await models.dnsMonitorResults.recent(failing.id)).toHaveLength(0);
 
 			expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
 		} finally {
@@ -416,6 +425,7 @@ describe("checkDns", () => {
 describe("checkDns failed queries", () => {
 	test("omits a failed query from the diff instead of passing it as an empty answer", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		await seedRecord(db, monitor.id, { record_type: "MX", value: "10 mx1.example.com" });
 
@@ -436,13 +446,14 @@ describe("checkDns failed queries", () => {
 		expect(result.records_checked).toBe(0);
 		expect(result.error_message).toBe("DNS query returned status code 2");
 
-		let [stored] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let [stored] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		expect(stored?.status).toBe("ok");
 		expect(stored?.last_checked_at).toBeNull();
 	});
 
 	test("diffs an empty answer as missing, since empty is a fact and a failure is not", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		await seedRecord(db, monitor.id, { record_type: "MX", value: "10 mx1.example.com" });
 
@@ -457,7 +468,7 @@ describe("checkDns failed queries", () => {
 		expect(result.records_missing).toBe(1);
 		expect(result.queries_failed).toBe(0);
 
-		let [stored] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let [stored] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		expect(stored?.status).toBe("missing");
 	});
 
@@ -484,6 +495,7 @@ describe("checkDns failed queries", () => {
 
 	test("imports a newly resolved record disabled and counts it as new", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 
 		sweepDnsNameMock.mockImplementation(async (name: string) =>
@@ -496,7 +508,7 @@ describe("checkDns failed queries", () => {
 		expect(result.status).toBe("changed");
 		expect(result.records_new).toBe(1);
 
-		let [stored] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let [stored] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		expect(stored?.status).toBe("new");
 		expect(stored?.is_enabled).toBeFalsy();
 	});
@@ -548,6 +560,7 @@ describe("checkDns query budget", () => {
 
 	test("defers a monitor the invocation has no query budget left for instead of failing it", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitors = [];
 		for (let index = 0; index < 4; index++) {
 			let monitor = await seedMonitor(db, { domain: `d${index}.example.com` });
@@ -568,8 +581,11 @@ describe("checkDns query budget", () => {
 
 		let deferredId = deferred[0]?.["monitor.id"];
 		/** Deferred entirely: no result row, no cached status, and nothing billed for it. */
-		expect(await DnsMonitor.listResults(db, String(deferredId))).toHaveLength(0);
-		let row = await DnsMonitor.findByIdForTeam(db, "team-1", String(deferredId));
+		expect(await models.dnsMonitorResults.recent(String(deferredId))).toHaveLength(0);
+		let row = await models.dnsMonitors
+			.inTeam("team-1")
+			.where({ id: String(deferredId) })
+			.first();
 		expect(row?.last_status).toBeNull();
 		/** Re-armed so the very next cron delivery gets another try, keeping the retry close. */
 		expect(row?.next_due_at).not.toBeNull();
@@ -611,7 +627,8 @@ describe("checkDns ping reporting", () => {
 
 	/** The id of the result row a monitor's check wrote, which its ping is keyed on. */
 	async function resultId(db: Database, monitorId: string) {
-		let [result] = await DnsMonitor.listResults(db, monitorId);
+		let models = bindModels(db);
+		let [result] = await models.dnsMonitorResults.recent(monitorId);
 		if (!result) throw new Error(`No result recorded for monitor ${monitorId}`);
 		return result.id;
 	}
@@ -701,6 +718,7 @@ describe("checkDns ping reporting", () => {
 
 	test("skips a monitor whose team names no owner without failing the sweep", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		await seedTeam(db, "team-1", "owner-1");
 		let billable = await seedMonitor(db, { domain: "billable.example.com" });
 		/** A team row that's gone, leaving the ping without a billing customer to charge. */
@@ -720,7 +738,7 @@ describe("checkDns ping reporting", () => {
 		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
-		expect(await DnsMonitor.listResults(db, orphan.id)).toHaveLength(1);
+		expect(await models.dnsMonitorResults.recent(orphan.id)).toHaveLength(1);
 		expect(record).toMatchObject({ "checks.succeeded": 2, "checks.ingested": 1 });
 	});
 
@@ -759,6 +777,7 @@ describe("checkDns ping reporting", () => {
 
 	test("a rejected ingestion doesn't fail the sweep or its recorded results", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		await seedTeam(db, "team-1", "owner-1");
 		let monitor = await seedMonitor(db);
 		ingestMock.mockImplementation(async () =>
@@ -767,7 +786,7 @@ describe("checkDns ping reporting", () => {
 
 		let record = await runJob(db);
 
-		expect(await DnsMonitor.listResults(db, monitor.id)).toHaveLength(1);
+		expect(await models.dnsMonitorResults.recent(monitor.id)).toHaveLength(1);
 		expect(record).toMatchObject({ "checks.succeeded": 1 });
 	});
 });

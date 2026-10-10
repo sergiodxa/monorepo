@@ -10,10 +10,9 @@
 import { createJobHandler } from "@sdxc/jobs";
 import { isSuccess } from "@sdxc/result";
 
-import type { ClaimedRegistration } from "~/app/data/dns-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { ClaimedRegistration } from "~/app/models/dns-monitors";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import jobs from "~/app/jobs";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
@@ -31,8 +30,7 @@ const MAX_LOOKUPS_PER_SWEEP = 200;
 const LOOKUPS_PER_REGISTRY = 2;
 
 export default createJobHandler(jobs.checkDomainRegistrations, async (ctx) => {
-	let monitors = await DnsMonitor.claimRegistrationDue(
-		ctx.database,
+	let monitors = await ctx.models.dnsMonitors.claimRegistrationDue(
 		Date.now(),
 		MAX_LOOKUPS_PER_SWEEP,
 	);

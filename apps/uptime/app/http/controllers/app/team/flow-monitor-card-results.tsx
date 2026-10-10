@@ -32,7 +32,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import FlowMonitor from "~/app/data/flow-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
@@ -52,10 +51,13 @@ export default createAction(routes.app.team.flowMonitors.cards.results, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.flowMonitors
+			.inTeam(ctx.team.id)
+			.where({ id: monitorId })
+			.first();
 		if (!monitor) return notFound("Not Found");
 
-		let results = await FlowMonitor.listResults(ctx.db, monitor.id);
+		let results = await ctx.models.flowMonitorResults.recent(monitor.id);
 		let last = results[0];
 
 		let totalRuns = results.length;

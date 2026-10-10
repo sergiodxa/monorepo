@@ -13,18 +13,18 @@ import { Created } from "@sdxc/http/status-code";
 import { currentLog } from "@sdxc/logger";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { ZoneFileImport } from "~/app/services/zone-file";
 import type { SelectDnsMonitor } from "~/database/schema";
 
-import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
+import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import {
@@ -106,7 +106,7 @@ export default createController(dnsMonitorsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = DnsMonitor.byTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.dnsMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -141,7 +141,7 @@ export default createController(dnsMonitorsRoutes, {
 				 * a team owns, so an unbounded collection is a cost problem before it is an untidy one, and
 				 * a key cannot use this endpoint to walk around the web flow's cap.
 				 */
-				let existingCount = await DnsMonitor.countByTeam(ctx.db, ctx.apiTeam.id);
+				let existingCount = await ctx.models.dnsMonitors.inTeam(ctx.apiTeam.id).count();
 				if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
 					return apiProblems.limitExceeded({
 						detail: `Maximum of ${MAX_DNS_MONITORS_PER_TEAM} DNS monitors per team`,
@@ -183,14 +183,17 @@ export default createController(dnsMonitorsRoutes, {
 					);
 				}
 
-				let dnsMonitor = await DnsMonitor.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					domain: result.data.domain,
-					zone_file_imported_at: zoneFile === null ? null : Date.now(),
-					interval_seconds: result.data.intervalSeconds,
-					is_enabled: result.data.isEnabled,
-					registration_warning_days: result.data.registrationWarningDays,
-				});
+				let dnsMonitor = unwrap(
+					await ctx.models.dnsMonitors.create({
+						team_id: ctx.apiTeam.id,
+						name: result.data.name,
+						domain: result.data.domain,
+						zone_file_imported_at: zoneFile === null ? null : Date.now(),
+						interval_seconds: result.data.intervalSeconds,
+						is_enabled: result.data.isEnabled,
+						registration_warning_days: result.data.registrationWarningDays,
+					}),
+				);
 
 				/**
 				 * Awaited, so the response reflects a monitor whose records already exist, since a script

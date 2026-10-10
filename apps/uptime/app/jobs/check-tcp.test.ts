@@ -1,9 +1,8 @@
 /**
- * Unit tests for the `checkTcp` job: which due monitors a run claims,
- * result recording via `TcpMonitor.recordCheckResult`, the `notify` message
- * an alert-worthy transition enqueues, and that one monitor's failure doesn't
- * stop the sweep. Also covers per-check Analytics Engine points and billing.
- * `checkTcpConnection` is mocked since raw TCP needs `cloudflare:sockets`.
+ * Tests the `checkTcp` job: which due monitors a run claims, the result each check records,
+ * the `notify` message an alert-worthy transition enqueues, a sweep that outlives one
+ * monitor's failure, and per-check analytics and billing. `checkTcpConnection` is mocked
+ * since raw TCP needs `cloudflare:sockets`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -18,7 +17,7 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
-import { failure } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -26,7 +25,6 @@ import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
 
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -79,6 +77,7 @@ let realBillingModule = await import("~/app/lib/billing");
 vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let jobs = (await import("~/app/jobs")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkTcp = (await import("./check-tcp")).default;
@@ -94,6 +93,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkTcp, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
@@ -114,14 +114,18 @@ async function seedMonitor(
 	overrides: Partial<InsertTcpMonitor> = {},
 	teamId = "team-1",
 ) {
-	return await TcpMonitor.create(db, teamId, {
-		name: "Example host",
-		host: "example.com",
-		port: 443,
-		timeout_ms: 5000,
-		is_enabled: true,
-		...overrides,
-	});
+	let models = bindModels(db);
+	return unwrap(
+		await models.tcpMonitors.create({
+			team_id: teamId,
+			name: "Example host",
+			host: "example.com",
+			port: 443,
+			timeout_ms: 5000,
+			is_enabled: true,
+			...overrides,
+		}),
+	);
 }
 
 /**
@@ -150,6 +154,7 @@ beforeEach(() => {
 describe("checkTcp", () => {
 	test("checks an enabled monitor, records the result, and enqueues a notification with no previous status", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 
 		checkTcpConnectionMock.mockImplementation(async () => ({
@@ -159,12 +164,12 @@ describe("checkTcp", () => {
 
 		let record = await runJob(db);
 
-		let updated = await TcpMonitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await models.tcpMonitors.inTeam("team-1").where({ id: monitor.id }).first();
 		expect(updated?.last_status).toBe("down");
 		expect(updated?.last_response_time_ms).toBeNull();
 		expect(updated?.last_checked_at).not.toBeNull();
 
-		let results = await TcpMonitor.listResults(db, monitor.id);
+		let results = await models.tcpMonitorResults.recent(monitor.id);
 		expect(results).toHaveLength(1);
 		expect(results[0]!.status).toBe("down");
 
@@ -225,11 +230,12 @@ describe("checkTcp", () => {
 
 	test("records a still-up monitor without enqueuing a notification", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, { last_status: "up", last_response_time_ms: 10 });
 
 		let record = await runJob(db);
 
-		let results = await TcpMonitor.listResults(db, monitor.id);
+		let results = await models.tcpMonitorResults.recent(monitor.id);
 		expect(results).toHaveLength(1);
 		expect(sendBatch).not.toHaveBeenCalled();
 
@@ -257,6 +263,7 @@ describe("checkTcp", () => {
 
 	test("continues checking remaining monitors and counts an error when one check throws", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let failing = await seedMonitor(db, { host: "fails.example.com", last_status: "up" });
 		let healthy = await seedMonitor(db, { host: "ok.example.com", last_status: "down" });
 
@@ -276,7 +283,7 @@ describe("checkTcp", () => {
 		});
 
 		/** The failing monitor's cached fields are untouched — recordCheckResult never ran for it. */
-		let failedRow = await TcpMonitor.findByIdForTeam(db, "team-1", failing.id);
+		let failedRow = await models.tcpMonitors.inTeam("team-1").where({ id: failing.id }).first();
 		expect(failedRow?.last_status).toBe("up");
 		expect(failedRow?.last_checked_at).toBeNull();
 
@@ -309,7 +316,8 @@ describe("checkTcp ping reporting", () => {
 
 	/** The id of the result row a monitor's check wrote, which its ping is keyed on. */
 	async function resultId(db: Database, monitorId: string) {
-		let [result] = await TcpMonitor.listResults(db, monitorId);
+		let models = bindModels(db);
+		let [result] = await models.tcpMonitorResults.recent(monitorId);
 		if (!result) throw new Error(`No result recorded for monitor ${monitorId}`);
 		return result.id;
 	}
@@ -386,6 +394,7 @@ describe("checkTcp ping reporting", () => {
 
 	test("skips a monitor whose team names no owner without failing the sweep", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		await seedTeam(db, "team-1", "owner-1");
 		let billable = await seedMonitor(db, { host: "billable.example.com" });
 		let orphan = await seedMonitor(db, { host: "orphan.example.com" }, "team-2");
@@ -400,7 +409,7 @@ describe("checkTcp ping reporting", () => {
 		expect(pingedMonitorIds().sort((a, b) => a.localeCompare(b))).toEqual(
 			[billable.id, orphan.id].sort((a, b) => a.localeCompare(b)),
 		);
-		expect(await TcpMonitor.listResults(db, orphan.id)).toHaveLength(1);
+		expect(await models.tcpMonitorResults.recent(orphan.id)).toHaveLength(1);
 		expect(record).toMatchObject({ "checks.succeeded": 2, "checks.ingested": 1 });
 	});
 
@@ -432,6 +441,7 @@ describe("checkTcp ping reporting", () => {
 
 	test("a rejected ingestion doesn't fail the sweep or its recorded results", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		await seedTeam(db, "team-1", "owner-1");
 		let monitor = await seedMonitor(db);
 		ingestMock.mockImplementation(async () =>
@@ -440,7 +450,7 @@ describe("checkTcp ping reporting", () => {
 
 		let record = await runJob(db);
 
-		expect(await TcpMonitor.listResults(db, monitor.id)).toHaveLength(1);
+		expect(await models.tcpMonitorResults.recent(monitor.id)).toHaveLength(1);
 		expect(record).toMatchObject({ "checks.succeeded": 1 });
 	});
 });

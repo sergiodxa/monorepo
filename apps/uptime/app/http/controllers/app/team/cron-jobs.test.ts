@@ -1,10 +1,8 @@
 /**
- * Tests for the cron-job monitors list page controller, exercising only
- * `~/app/data/cron-job` so it needs no `cloudflare:workers` mock. Status and
- * schedule rendering is what's covered here, since per-row ping URLs are
- * exercised on the detail page (`cron-job-show.tsx`). `getViewer()`,
- * `ctx.team`, `ctx.membership`, and `ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
+ * Tests the cron-job monitors list page against models bound to an in-memory database,
+ * covering status and schedule rendering; ping URLs belong to the detail page. A fake
+ * middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place of
+ * the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +12,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -29,7 +28,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { cronJobMonitors, memberships, teams } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./cron-jobs")).default as { handler: RequestHandler<any> };
@@ -114,9 +114,9 @@ describe("cronJobs", () => {
 
 	test("lists a team's cron-job monitors with their name, schedule, and status", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			cronJobMonitors,
-			{
+		let models = bindModels(db);
+		unwrap(
+			await models.cronJobMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Nightly Backup",
@@ -124,8 +124,7 @@ describe("cronJobs", () => {
 				timezone: "UTC",
 				status: "healthy",
 				enabled_at: Date.now(),
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership);
@@ -139,9 +138,9 @@ describe("cronJobs", () => {
 
 	test("shows a Disabled badge for a monitor with no enabled_at", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			cronJobMonitors,
-			{
+		let models = bindModels(db);
+		unwrap(
+			await models.cronJobMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Paused Job",
@@ -149,8 +148,7 @@ describe("cronJobs", () => {
 				timezone: "UTC",
 				status: "new",
 				enabled_at: null,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership);

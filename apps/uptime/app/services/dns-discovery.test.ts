@@ -17,6 +17,7 @@ import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-
 import { createJobContext } from "@sdxc/jobs";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -24,8 +25,6 @@ import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -108,18 +107,22 @@ let {
 	sweepNames,
 } = await import("./dns-discovery");
 let jobs = (await import("~/app/jobs")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("~/app/jobs/check-dns")).default;
 
 async function seedMonitor(db: Database, domain: string, teamId = "team-1") {
-	return await DnsMonitor.create(db, teamId, { name: domain, domain, is_enabled: true });
+	let models = bindModels(db);
+	return unwrap(
+		await models.dnsMonitors.create({ team_id: teamId, name: domain, domain, is_enabled: true }),
+	);
 }
 
 /** Gives a monitor tracked names, which is what a check plans its sweep from. */
 async function seedNames(db: Database, monitorId: string, names: readonly string[]) {
-	await DnsMonitorRecord.importMany(
-		db,
+	let models = bindModels(db);
+	await models.dnsMonitorRecords.importMany(
 		monitorId,
 		names.map((name, index) => ({
 			name,
@@ -241,6 +244,7 @@ describe("importDiscovery", () => {
 	 */
 	test("watches what resolved and stores what the zone only declared unwatched", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, "example.com");
 
 		sweepDnsNameMock.mockImplementation(async (name: string) =>
@@ -256,7 +260,7 @@ describe("importDiscovery", () => {
 
 		expect(discovery.imported).toBe(2);
 
-		let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let records = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		let resolved = records.find((record) => record.record_type === "A");
 		let declared = records.find((record) => record.record_type === "TXT");
 
@@ -272,6 +276,7 @@ describe("importDiscovery", () => {
 	 */
 	test("never re-enables a record the user declined", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, "example.com");
 
 		sweepDnsNameMock.mockImplementation(async (name: string) =>
@@ -279,13 +284,13 @@ describe("importDiscovery", () => {
 		);
 
 		await importDiscovery(db, monitor.id, ["example.com"]);
-		let [record] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
-		await DnsMonitorRecord.setEnabled(db, monitor.id, [record!.id], false);
+		let [record] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
+		await models.dnsMonitorRecords.setEnabled(monitor.id, [record!.id], false);
 
 		let discovery = await importDiscovery(db, monitor.id, ["example.com"]);
 
 		expect(discovery.imported).toBe(0);
-		let [after] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let [after] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		expect(after?.is_enabled).toBeFalsy();
 	});
 });
@@ -298,6 +303,7 @@ describe("recordDnsCheck", () => {
 	 */
 	test("counts names the caller could not afford as queries that did not answer", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, "example.com");
 		await seedNames(db, monitor.id, ["example.com"]);
 
@@ -307,7 +313,7 @@ describe("recordDnsCheck", () => {
 		expect(run.status).toBe("error");
 		expect(run.counts.recordsMissing).toBe(0);
 
-		let [result] = await DnsMonitor.listResults(db, monitor.id);
+		let [result] = await models.dnsMonitorResults.recent(monitor.id);
 		expect(result?.queries_failed).toBe(3 * QUERIES_PER_NAME);
 		expect(result?.error_message).toBeNull();
 	});
@@ -318,6 +324,7 @@ describe("recordDnsCheck", () => {
 	 */
 	test("imports a record discovered by a later check disabled", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, "example.com");
 
 		sweepDnsNameMock.mockImplementation(async (name: string) =>
@@ -328,7 +335,7 @@ describe("recordDnsCheck", () => {
 
 		expect(run.status).toBe("changed");
 		expect(run.counts.recordsNew).toBe(1);
-		let [stored] = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+		let [stored] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		expect(stored?.is_enabled).toBeFalsy();
 		expect(stored?.status).toBe("new");
 	});
@@ -358,7 +365,8 @@ describe("recordDnsCheck", () => {
 describe("scheduled and on-demand checks", () => {
 	/** The result row's contents, minus the ids and timestamps two checks cannot share. */
 	async function resultOf(db: Database, monitorId: string) {
-		let results = await DnsMonitor.listResults(db, monitorId);
+		let models = bindModels(db);
+		let results = await models.dnsMonitorResults.recent(monitorId);
 		expect(results).toHaveLength(1);
 		let [result] = results;
 
@@ -376,7 +384,8 @@ describe("scheduled and on-demand checks", () => {
 
 	/** What the check left in the record table, which is the other half of its output. */
 	async function recordsOf(db: Database, monitorId: string) {
-		let records = await DnsMonitorRecord.listByMonitor(db, monitorId);
+		let models = bindModels(db);
+		let records = await models.dnsMonitorRecords.listByMonitor(monitorId);
 
 		return records.map((record) => ({
 			name: record.name,
@@ -402,6 +411,7 @@ describe("scheduled and on-demand checks", () => {
 		seed: (db: Database, monitorId: string) => Promise<void>,
 	) {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let scheduled = await seedMonitor(db, "example.com");
 		let onDemand = await seedMonitor(db, "example.com", "team-2");
 		await seed(db, scheduled.id);
@@ -415,6 +425,7 @@ describe("scheduled and on-demand checks", () => {
 
 		let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1 });
 		ctx.set(JobDatabase, db, { property: "database" });
+		publishModels(ctx, db);
 		ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 			property: "mailer",
 		});
@@ -425,8 +436,8 @@ describe("scheduled and on-demand checks", () => {
 		expect(await resultOf(db, onDemand.id)).toEqual(await resultOf(db, scheduled.id));
 		expect(await recordsOf(db, onDemand.id)).toEqual(await recordsOf(db, scheduled.id));
 
-		let checked = await DnsMonitor.findByIdForTeam(db, "team-2", onDemand.id);
-		let swept = await DnsMonitor.findByIdForTeam(db, "team-1", scheduled.id);
+		let checked = await models.dnsMonitors.inTeam("team-2").where({ id: onDemand.id }).first();
+		let swept = await models.dnsMonitors.inTeam("team-1").where({ id: scheduled.id }).first();
 		expect(checked?.last_status).toBe(swept?.last_status ?? null);
 		expect(String(run.status)).toBe(String(swept?.last_status));
 		expect(run.status).toBe(expected);

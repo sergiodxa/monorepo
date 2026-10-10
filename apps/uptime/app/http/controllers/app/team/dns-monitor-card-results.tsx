@@ -14,7 +14,6 @@ import { flex, flexWrap, gap } from "@sdxc/u/layout";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import StatCard from "~/resources/components/stat-card";
@@ -26,10 +25,10 @@ export default createAction(routes.app.team.dnsMonitors.cards.results, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
 		if (!monitor) return notFound("Not Found");
 
-		let results = await DnsMonitor.listResults(ctx.db, monitor.id);
+		let results = await ctx.models.dnsMonitorResults.recent(monitor.id);
 
 		let totalChecks = results.length;
 		let okChecks = results.filter((result) => result.status === "ok").length;

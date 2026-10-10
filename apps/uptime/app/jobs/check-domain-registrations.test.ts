@@ -16,6 +16,7 @@ import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
@@ -46,10 +47,10 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDomainRegistrations = (await import("./check-domain-registrations")).default;
-let { default: DnsMonitor } = await import("~/app/data/dns-monitor");
 
 const server = setupServer();
 
@@ -104,6 +105,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkDomainRegistrations, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -114,22 +116,27 @@ async function runJob(db: Database) {
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertDnsMonitor> = {}) {
-	return await DnsMonitor.create(db, "team-1", {
-		name: "Acme",
-		domain: "acme-widgets.com",
-		...overrides,
-	});
+	let models = bindModels(db);
+	return unwrap(
+		await models.dnsMonitors.create({
+			team_id: "team-1",
+			name: "Acme",
+			domain: "acme-widgets.com",
+			...overrides,
+		}),
+	);
 }
 
 describe("checkDomainRegistrations", () => {
 	test("stores the registration and schedules the next lookup a day later", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		server.use(registryAnswers("acme-widgets.com", 200, ["clientTransferProhibited"]));
 
 		let record = await runJob(db);
 
-		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await models.dnsMonitors.inTeam("team-1").where({ id: monitor.id }).first();
 		expect(updated?.registration_status).toBe("valid");
 		expect(updated?.registrar).toBe("Example Registrar, LLC");
 		expect(updated?.registration_epp_statuses).toEqual(["clientTransferProhibited"]);
@@ -171,6 +178,7 @@ describe("checkDomainRegistrations", () => {
 
 	test("records a domain the registry does not hold as unavailable, without alerting", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		server.use(
 			http.get(`${VERISIGN}/acme-widgets.com`, () => new HttpResponse(null, { status: 404 })),
@@ -178,7 +186,7 @@ describe("checkDomainRegistrations", () => {
 
 		await runJob(db);
 
-		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await models.dnsMonitors.inTeam("team-1").where({ id: monitor.id }).first();
 		expect(updated?.registration_status).toBe("unavailable");
 		expect(updated?.registration_error).toBe("not-found");
 		expect(enqueued()).toEqual([]);
@@ -186,6 +194,7 @@ describe("checkDomainRegistrations", () => {
 
 	test("records an outage as a retry and alerts once it has never succeeded", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db);
 		server.use(
 			http.get(`${VERISIGN}/acme-widgets.com`, () => new HttpResponse(null, { status: 503 })),
@@ -193,7 +202,7 @@ describe("checkDomainRegistrations", () => {
 
 		let record = await runJob(db);
 
-		let updated = await DnsMonitor.findByIdForTeam(db, "team-1", monitor.id);
+		let updated = await models.dnsMonitors.inTeam("team-1").where({ id: monitor.id }).first();
 		expect(updated?.registration_status).toBe("error");
 		expect(updated?.registration_error).toBe("server-error");
 		expect(updated?.registration_failures).toBe(1);

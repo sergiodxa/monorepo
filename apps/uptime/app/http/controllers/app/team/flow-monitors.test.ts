@@ -1,9 +1,7 @@
 /**
- * Tests for the flow monitors list page controller. `~/app/data/flow-monitor` doesn't import
- * `cloudflare:workers`, so no module mock is needed here. `getViewer()`/`ctx.team`/
- * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for the real
- * `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the flow monitors list page against models bound to an in-memory database. A fake
+ * middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place of
+ * the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +11,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,7 +27,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { flowMonitors, memberships, teams } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./flow-monitors")).default as { handler: RequestHandler<any> };
@@ -100,17 +100,16 @@ async function send(
 
 /** Seeds one flow monitor, with whatever the case cares about overridden. */
 async function seedMonitor(db: Database, teamId: string, changes: Record<string, unknown> = {}) {
-	return await db.create(
-		flowMonitors,
-		{
+	let models = bindModels(db);
+	return unwrap(
+		await models.flowMonitors.create({
 			id: crypto.randomUUID(),
 			team_id: teamId,
 			name: "Sign in",
 			source: 'test "signs in" {\n\tthen {\n\t\texpect true\n\t}\n}',
 			interval_seconds: 3600,
 			...changes,
-		},
-		{ touch: true, returnRow: true },
+		}),
 	);
 }
 

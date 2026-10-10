@@ -14,6 +14,7 @@ import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
@@ -21,7 +22,6 @@ import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { InsertFlowMonitor } from "~/database/schema";
 
-import FlowMonitor from "~/app/data/flow-monitor";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
@@ -97,7 +97,7 @@ vi.doMock("~/app/services/flow-check", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
-let { publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let checkFlows = (await import("./check-flows")).default;
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
@@ -120,12 +120,16 @@ async function runJob(db: Database) {
 }
 
 async function seedMonitor(db: Database, overrides: Partial<InsertFlowMonitor> = {}) {
-	return await FlowMonitor.create(db, "team-1", {
-		name: "Checkout",
-		source: 'test "checkout" { }',
-		is_enabled: true,
-		...overrides,
-	});
+	let models = bindModels(db);
+	return unwrap(
+		await models.flowMonitors.create({
+			team_id: "team-1",
+			name: "Checkout",
+			source: 'test "checkout" { }',
+			is_enabled: true,
+			...overrides,
+		}),
+	);
 }
 
 beforeEach(() => {
@@ -181,6 +185,7 @@ describe("checkFlows", () => {
 
 	test("tells nobody about a run that could not find out, and still records it", async () => {
 		let { db } = createTestDatabase();
+		let models = bindModels(db);
 		let monitor = await seedMonitor(db, { last_status: "up" });
 		runFlowCheckMock.mockImplementation(async () =>
 			passing({
@@ -197,7 +202,7 @@ describe("checkFlows", () => {
 
 		expect(enqueued()).toEqual([]);
 
-		let [result] = await FlowMonitor.listResults(db, monitor.id);
+		let [result] = await models.flowMonitorResults.recent(monitor.id);
 		expect(result?.status).toBe("error");
 
 		expect(record).toMatchObject({ "checks.succeeded": 1, "checks.notified": 0 });

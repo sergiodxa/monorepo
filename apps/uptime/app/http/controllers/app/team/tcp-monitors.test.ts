@@ -1,9 +1,7 @@
 /**
- * Tests for the TCP monitors list page controller. `~/app/data/tcp-monitor` only
- * touches the database, so these tests run directly against `createTestDatabase`.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching
- * the template in `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the TCP monitors list page against models bound to an in-memory database. A fake
+ * middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place of
+ * the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,6 +11,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,7 +27,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { memberships, teams, tcpMonitors } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./tcp-monitors")).default as { handler: RequestHandler<any> };
@@ -113,16 +113,15 @@ describe("tcpMonitors", () => {
 
 	test("lists a team's TCP monitors with their name and host:port", async () => {
 		let { db, team, membership } = await createFixture();
-		await db.create(
-			tcpMonitors,
-			{
+		let models = bindModels(db);
+		unwrap(
+			await models.tcpMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Database",
 				host: "db.example.com",
 				port: 5432,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership);

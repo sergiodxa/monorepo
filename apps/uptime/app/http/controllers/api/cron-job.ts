@@ -13,13 +13,12 @@ import type { RequestContext } from "remix/router";
 import { Schedule } from "@sdxc/cron";
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { InsertCronJobMonitor, SelectCronJobMonitor } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -27,6 +26,7 @@ import {
 	UPDATE_CRON_JOB_BODY,
 	WRITABLE_CRON_JOB,
 } from "~/app/http/openapi/cron-jobs";
+import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
@@ -78,7 +78,10 @@ function writableCronJob(monitor: SelectCronJobMonitor) {
  */
 async function patchCronJob(ctx: RequestContext): Promise<Response> {
 	let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
-	let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
+	let existing = await ctx.models.cronJobMonitors
+		.inTeam(ctx.apiTeam.id)
+		.where({ id: cronJobId })
+		.first();
 	if (!existing)
 		return apiProblems.notFound({ detail: "Cron job not found", instance: problemInstance() });
 
@@ -98,18 +101,12 @@ async function patchCronJob(ctx: RequestContext): Promise<Response> {
 		let schedule = Schedule.parse(value.cronExpression);
 		if (isFailure(schedule)) return invalidField(schedule.error.message, "/cronExpression");
 		changes.cron_expression = schedule.data.toString();
-		changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-			changes.cron_expression,
-			value.timezone,
-		);
+		changes.next_expected_at = calculateNextExpected(changes.cron_expression, value.timezone);
 	} else if (changed.has("timezone")) {
-		changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-			existing.cron_expression,
-			value.timezone,
-		);
+		changes.next_expected_at = calculateNextExpected(existing.cron_expression, value.timezone);
 	}
 
-	let cronJob = await CronJobMonitor.updateById(ctx.db, cronJobId, changes);
+	let cronJob = unwrap(await ctx.models.cronJobMonitors.update(cronJobId, changes));
 	return apiSuccess({ cronJob: serializeCronJob(cronJob) });
 }
 
@@ -121,7 +118,10 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:read")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
-				let cronJob = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
+				let cronJob = await ctx.models.cronJobMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: cronJobId })
+					.first();
 				if (!cronJob)
 					return apiProblems.notFound({
 						detail: "Cron job not found",
@@ -146,7 +146,10 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
-				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
+				let existing = await ctx.models.cronJobMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: cronJobId })
+					.first();
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Cron job not found",
@@ -178,21 +181,18 @@ export default createController(cronJobRoutes, {
 						return invalidField(schedule.error.message, "/cronExpression");
 					}
 					changes.cron_expression = schedule.data.toString();
-					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
-						changes.cron_expression,
-						timezone,
-					);
+					changes.next_expected_at = calculateNextExpected(changes.cron_expression, timezone);
 				} else if (
 					result.data.timezone !== undefined &&
 					result.data.timezone !== existing.timezone
 				) {
-					changes.next_expected_at = CronJobMonitor.calculateNextExpected(
+					changes.next_expected_at = calculateNextExpected(
 						existing.cron_expression,
 						result.data.timezone,
 					);
 				}
 
-				let cronJob = await CronJobMonitor.updateById(ctx.db, cronJobId, changes);
+				let cronJob = unwrap(await ctx.models.cronJobMonitors.update(cronJobId, changes));
 				return apiSuccess({ cronJob: serializeCronJob(cronJob) });
 			},
 		},
@@ -202,14 +202,17 @@ export default createController(cronJobRoutes, {
 			middleware: [requireApiKey("cron-jobs:write")],
 			handler: async (ctx) => {
 				let { cronJobId } = s.parse(CRON_JOB_ID_PARAMS, ctx.params);
-				let existing = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
+				let existing = await ctx.models.cronJobMonitors
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: cronJobId })
+					.first();
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Cron job not found",
 						instance: problemInstance(),
 					});
 
-				await CronJobMonitor.deleteById(ctx.db, cronJobId);
+				unwrap(await ctx.models.cronJobMonitors.delete(cronJobId));
 				return apiSuccess({ deleted: true });
 			},
 		},

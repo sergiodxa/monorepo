@@ -1,10 +1,8 @@
 /**
- * Tests for the TCP monitor detail page controller. `~/app/data/tcp-monitor` only
- * touches the database, so these tests run directly against `createTestDatabase`.
- * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
- * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain. The
- * page's two data fetches live behind `Frame`s, so the assertions target the frames
- * themselves.
+ * Tests the TCP monitor detail page against models bound to an in-memory database. Its two
+ * data fetches live behind `Frame`s, so the assertions target the frames themselves. A fake
+ * middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place of
+ * the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -14,6 +12,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -29,7 +28,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { memberships, teams, tcpMonitors } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./tcp-monitor-show")).default as { handler: RequestHandler<any> };
@@ -109,16 +109,15 @@ async function send(
 describe("tcpMonitorShow", () => {
 	test("renders the monitor's configuration and the fragment frames", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			tcpMonitors,
-			{
+		let models = bindModels(db);
+		let monitor = unwrap(
+			await models.tcpMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Database",
 				host: "db.example.com",
 				port: 5432,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership, monitor.id);

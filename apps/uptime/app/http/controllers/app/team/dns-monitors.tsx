@@ -24,7 +24,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -93,7 +92,10 @@ export default createAction(routes.app.team.dnsMonitors.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let monitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
+		let monitors = await ctx.models.dnsMonitors
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 		let counts = await countRecords(
 			ctx.db,
 			monitors.map((monitor) => monitor.id),

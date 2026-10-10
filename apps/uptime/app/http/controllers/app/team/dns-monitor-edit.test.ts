@@ -1,11 +1,8 @@
 /**
- * Tests for the DNS monitor edit page controller. `~/app/data/dns-monitor` imports
- * only portable runtime APIs, so this suite loads it directly. The controller renders
- * a pure GET page behind a 404 guard; inline validation-error rendering belongs to the
- * `update-dns-monitor` action's own tests. `getViewer()`/`ctx.team`/`ctx.membership`/
- * `ctx.teams` are seeded directly by a fake middleware standing in for the real
- * `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the DNS monitor edit page against models bound to an in-memory database: a GET
+ * render behind a 404 guard, with inline validation errors left to the update action's tests.
+ * A fake middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in
+ * place of the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +12,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -30,7 +28,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { dnsMonitors, memberships, teams } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./dns-monitor-edit")).default as { handler: RequestHandler<any> };
@@ -107,15 +106,14 @@ async function send(
 describe("dnsMonitorEdit", () => {
 	test("renders the edit form pre-filled with the monitor's values", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			dnsMonitors,
-			{
+		let models = bindModels(db);
+		let monitor = unwrap(
+			await models.dnsMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Production DNS",
 				domain: "example.com",
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership, monitor.id);
@@ -135,10 +133,14 @@ describe("dnsMonitorEdit", () => {
 	 */
 	test("offers a zone-file re-import as its own form, with nothing pre-filled", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			dnsMonitors,
-			{ id: crypto.randomUUID(), team_id: team.id, name: "Acme DNS", domain: "acme.test" },
-			{ touch: true, returnRow: true },
+		let models = bindModels(db);
+		let monitor = unwrap(
+			await models.dnsMonitors.create({
+				id: crypto.randomUUID(),
+				team_id: team.id,
+				name: "Acme DNS",
+				domain: "acme.test",
+			}),
 		);
 
 		let body = await (await send(db, team, membership, monitor.id)).text();
@@ -151,16 +153,15 @@ describe("dnsMonitorEdit", () => {
 
 	test("dates the last import when there has been one", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			dnsMonitors,
-			{
+		let models = bindModels(db);
+		let monitor = unwrap(
+			await models.dnsMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Acme DNS",
 				domain: "acme.test",
 				zone_file_imported_at: Date.UTC(2026, 0, 2, 3, 4),
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let body = await (await send(db, team, membership, monitor.id)).text();

@@ -24,7 +24,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
@@ -43,10 +42,10 @@ export default createAction(routes.app.team.tcpMonitors.cards.results, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.tcpMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
 		if (!monitor) return notFound("Not Found");
 
-		let results = await TcpMonitor.listResults(ctx.db, monitor.id);
+		let results = await ctx.models.tcpMonitorResults.recent(monitor.id);
 
 		let totalChecks = results.length;
 		let upChecks = results.filter((result) => result.status === "up").length;

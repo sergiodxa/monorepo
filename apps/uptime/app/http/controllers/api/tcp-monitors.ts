@@ -10,13 +10,12 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
-import TcpMonitor from "~/app/data/tcp-monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -60,7 +59,7 @@ export default createController(tcpMonitorsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = TcpMonitor.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.tcpMonitors.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -100,14 +99,17 @@ export default createController(tcpMonitorsRoutes, {
 					});
 				}
 
-				let monitor = await TcpMonitor.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					host: result.data.host,
-					port: result.data.port,
-					timeout_ms: result.data.timeoutMs,
-					interval_seconds: result.data.intervalSeconds,
-					is_enabled: result.data.isEnabled,
-				});
+				let monitor = unwrap(
+					await ctx.models.tcpMonitors.create({
+						team_id: ctx.apiTeam.id,
+						name: result.data.name,
+						host: result.data.host,
+						port: result.data.port,
+						timeout_ms: result.data.timeoutMs,
+						interval_seconds: result.data.intervalSeconds,
+						is_enabled: result.data.isEnabled,
+					}),
+				);
 
 				return apiSuccess({ monitor: serializeTcpMonitor(monitor) }, Created);
 			},

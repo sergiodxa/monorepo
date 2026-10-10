@@ -1,9 +1,7 @@
 /**
- * Tests for the new-DNS-monitor form page controller. `~/app/data/dns-monitor` imports
- * only portable runtime APIs, so this suite loads it directly. `getViewer()`/
- * `ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
- * standing in for the real `auth`/`requireUser`/`requireTeam` chain, matching the
- * template in `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the new-DNS-monitor form page against models bound to an in-memory database. A
+ * fake middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in place
+ * of the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

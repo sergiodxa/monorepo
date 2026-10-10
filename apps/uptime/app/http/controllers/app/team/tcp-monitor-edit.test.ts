@@ -1,12 +1,8 @@
 /**
- * Tests for the TCP monitor edit page controller. `~/app/data/tcp-monitor` doesn't
- * import `cloudflare:workers`, so no module mock is needed here. This controller is a
- * pure GET render with a 404 guard; it doesn't re-render the form with validation
- * errors inline (that only happens in the separate `update-tcp-monitor` action), so
- * there's no inline-error case to cover here. `getViewer()`/`ctx.team`/`ctx.membership`/
- * `ctx.teams` are seeded directly by a fake middleware standing in for the real
- * `auth`/`requireUser`/`requireTeam` chain, matching the template in
- * `app/http/controllers/actions/monitors.test.ts`.
+ * Tests the TCP monitor edit page against models bound to an in-memory database: a GET
+ * render behind a 404 guard, with inline validation errors left to the update action's tests.
+ * A fake middleware seeds `getViewer()`, `ctx.team`, `ctx.membership` and `ctx.teams` in
+ * place of the real `auth`/`requireUser`/`requireTeam` chain.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,6 +11,7 @@
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -28,7 +25,8 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { htmlRendering } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { memberships, teams, tcpMonitors } from "~/database/schema";
+import { bindModels } from "~/app/lib/test/models";
+import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { handler } = (await import("./tcp-monitor-edit")).default as { handler: RequestHandler<any> };
@@ -95,16 +93,15 @@ async function send(
 describe("tcpMonitorEdit", () => {
 	test("renders the edit form pre-filled with the monitor's values", async () => {
 		let { db, team, membership } = await createFixture();
-		let monitor = await db.create(
-			tcpMonitors,
-			{
+		let models = bindModels(db);
+		let monitor = unwrap(
+			await models.tcpMonitors.create({
 				id: crypto.randomUUID(),
 				team_id: team.id,
 				name: "Database",
 				host: "db.example.com",
 				port: 5432,
-			},
-			{ touch: true, returnRow: true },
+			}),
 		);
 
 		let response = await send(db, team, membership, monitor.id);

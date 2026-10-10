@@ -20,7 +20,6 @@ import { createAction } from "remix/router";
 import type { SelectDnsMonitorResult } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { badgeVariant } from "~/resources/components/badge";
@@ -51,10 +50,10 @@ export default createAction(routes.app.team.dnsMonitors.cards.checkHistory, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).where({ id: monitorId }).first();
 		if (!monitor) return notFound("Not Found");
 
-		let results = await DnsMonitor.listResults(ctx.db, monitor.id);
+		let results = await ctx.models.dnsMonitorResults.recent(monitor.id);
 
 		return ctx.render(
 			<section>

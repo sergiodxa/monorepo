@@ -10,33 +10,41 @@
 
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
+import type { UptimeModels } from "~/app/models";
+
 import jobs from "~/app/jobs";
 import cleanCronJobPings from "~/app/jobs/clean-cron-job-pings";
 import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { cronJobPings } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 describe("cleanCronJobPings", () => {
 	let db: ReturnType<typeof createTestDatabase>["db"];
+	let models: UptimeModels;
 
 	beforeEach(() => {
 		({ db } = createTestDatabase());
+		models = bindModels(db);
 	});
 
 	function seedPing(id: string, createdAt: number) {
-		return db.create(cronJobPings, {
-			id,
-			created_at: createdAt,
-			cron_job_monitor_id: "monitor-1",
-			was_on_time: true,
-			source_ip: "203.0.113.1",
-			user_agent: "curl/8.0",
-		});
+		return unwrap(
+			models.cronJobPings.create({
+				id,
+				created_at: createdAt,
+				cron_job_monitor_id: "monitor-1",
+				was_on_time: true,
+				source_ip: "203.0.113.1",
+				user_agent: "curl/8.0",
+			}),
+		);
 	}
 
 	/** Runs the handler over a context carrying the test's database, and returns its record. */
