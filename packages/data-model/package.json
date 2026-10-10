@@ -1,0 +1,45 @@
+{
+	"name": "@sdxc/data-model",
+	"version": "0.0.1",
+	"description": "Models over remix/data-table tables with scopes, async callbacks and typed meta fields",
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts",
+		"./jobs": "./src/jobs.ts",
+		"./router": "./src/router.ts",
+		"./testing": "./src/testing.ts"
+	},
+	"scripts": {
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@sdxc/result": "workspace:*",
+		"@sdxc/validate": "workspace:*",
+		"@standard-schema/spec": "^1.1.0",
+		"remix": "3.0.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^5.20260901.1",
+		"@sdxc/cloudflare-mocks": "workspace:*",
+		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/data-table-sqlstorage": "workspace:*",
+		"@sdxc/jobs": "workspace:*",
+		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/mcp": "workspace:*",
+		"@sdxc/pagination": "workspace:*",
+		"@sdxc/sample": "workspace:*"
+	},
+	"peerDependencies": {
+		"@sdxc/jobs": "workspace:*",
+		"@sdxc/sample": "workspace:*"
+	},
+	"peerDependenciesMeta": {
+		"@sdxc/jobs": {
+			"optional": true
+		},
+		"@sdxc/sample": {
+			"optional": true
+		}
+	}
+}

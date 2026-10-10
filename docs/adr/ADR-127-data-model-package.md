@@ -2,7 +2,7 @@
 
 ## Status
 
-**Proposed** - 2026-10-09
+**Accepted** - 2026-10-09
 
 ## Background
 
@@ -121,7 +121,7 @@ them. Scopes are restricted to the methods that keep all five fixed.
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
-import { Jobs } from "@sdxc/jobs";
+import { Jobs } from "@sdxc/jobs/router";
 
 import { users } from "./schema.js";
 
@@ -170,7 +170,10 @@ let page = await Pagination.byOffset(query, { page: 1, perPage: 25 });
 ```
 
 For a model loaded up front, the wrapped value is still a `Query` (`instanceof` holds), so
-pagination, search refinement and eager loading accept it unchanged. A lazily loaded model hands
+pagination, search refinement and eager loading accept it unchanged. Its static type is the
+model query interface rather than data-table's class: `Query` keeps private fields, so no other
+type is assignable to it, and `db.exec(query)` on a wrapped query works at runtime but needs a
+cast to `AnyQuery`. A lazily loaded model hands
 out a deferred query instead, described under [Loading models on demand](#loading-models-on-demand).
 
 - A scope preserves the query it receives: it may call `where`, `having`, `orderBy`, `groupBy`,
@@ -192,29 +195,38 @@ out a deferred query instead, described under [Loading models on demand](#loadin
 | --------------------- | ------------------------------------------ | --------- |
 | `query()`, scopes     | Scoped `Query`                             | No        |
 | `from(query)`         | The given query, scoped                    | No        |
+| `withMeta(keys)`      | `query().withMeta(keys)`                   | No        |
+| `whereMeta(key, v)`   | `query().whereMeta(key, v)`                | No        |
 | `find(key)`           | `Row \| null`                              | No        |
 | `findBy(where)`       | `Row \| null`                              | No        |
 | `create(values)`      | `Result<Row, ValidationError>`             | Yes       |
 | `update(key, values)` | `Result<Row, ValidationError \| NotFound>` | Yes       |
 | `upsert(values)`      | `Result<Row, ValidationError>`             | Yes       |
-| `delete(key)`         | `Result<Row, NotFound>`                    | Yes       |
+| `delete(key)`         | `Result<Row, ValidationError \| NotFound>` | Yes       |
 | `transaction(fn)`     | Whatever `fn` returns                      | Defers    |
 | `load()`              | The bound model, once its module loaded    | No        |
 | Custom `methods`      | A promise or a model query                 | —         |
 
 Reads answer `null` for a missing row. Writes answer a `Result` from `@sdxc/result`, because a
-validation failure or a missing row is an expected outcome the caller branches on. `key` is the
+validation failure or a missing row is an expected outcome the caller branches on. `delete`
+fails with a `ValidationError` too, when a `beforeDelete` callback refuses or another table's
+foreign key still references the row. `key` is the
 table's primary key input, a value for a single-column key and an object for a composite one.
 
 `ValidationError` is the class `@sdxc/validate` exports, so a model failure and a form-schema
-failure carry the same Standard Schema issues and render through the same code. A unique or
-foreign-key violation the database raises as `DataTableConstraintError` is mapped into it as
-well, with the path taken from the constraint's name (`idx_users_email` to `["email"]`), so the
-caller branches on one failure type whether the model's `validate` or the index caught it.
+failure carry the same Standard Schema issues and render through the same code. A unique,
+foreign-key, not-null or check violation is mapped into it as well, so the caller branches on
+one failure type whether the model's `validate` or the index caught it. data-table wraps every
+driver failure as `DataTableDatabaseError` with the driver's error as `cause`, so the mapping
+reads the cause chain: SQLite and D1 name the columns (`UNIQUE constraint failed: users.email`
+to `["email"]`), Postgres names the constraint (`idx_users_email` to `["email"]`).
 
 `upsert` is the D1-safe form of a create-or-update: one statement, as `db.upsert` runs it.
-Its callbacks are the create ones when the row did not exist and the update ones when it did,
-decided from the returned row's timestamps, and `afterCommit` names the operation that happened.
+Its callbacks are the create ones when the row did not exist and the update ones when it did.
+Like every write it reads first: the conflicting row is looked up by the conflict target's
+values (the primary key unless `conflictTarget` names others), which decides the callbacks
+before the statement and names the operation `afterCommit` receives. A conflicting row the
+model's constraints exclude is refused rather than updated across types.
 
 Every write reads the row first. `db.delete` answers a boolean and `db.update` takes a key, so
 the row a `delete` returns, `event.before`, `event.changed` and the constraint joined to the
@@ -264,8 +276,10 @@ await registerUser(ctx.models.users, { email, name });
   `UserModel` whether the registry imports it up front or on demand, and a test passes
   `Users.bind({ db }, context)` to the same function.
 - `CreateValues` requires every column the row type does, except the ones it can see are
-  supplied elsewhere: a constrained column is omitted, a nullable column and the table's declared
-  `timestamps` columns are optional. Column types carry nullability but not defaults, so a column
+  supplied elsewhere: a constrained column is omitted, a nullable column and the `created_at`
+  and `updated_at` columns are optional. data-table types a table's `timestamps` names as plain
+  strings, so the default names are the ones the type can see; a table with other timestamp
+  names lists them in `optional`. Column types carry nullability but not defaults, so a column
   a `beforeCreate` fills (`slug` from `title`) or the database defaults is named in the model's
   `optional` list to be optional in the input; data-table itself types every write as a partial.
 - The types are plain generics over the definition, so a model module exports its aliases next
@@ -331,7 +345,9 @@ context instead of a request.
 
 `models` is how a callback reaches another model: inside a unit of work it is the set bound to
 that scope, and outside a host it is the registry `bind` was called on, so a single model bound
-on its own has a registry of one.
+on its own has a registry of one. Its type is open (`AnyBoundModels`), because the package does
+not know the app's registry and a model module typing it from the registry would import every
+other model.
 
 Anything a callback should read as a property, such as `ctx.log`, the app adds by augmenting the
 interface, the same way it types `RequestContext` in `config/router-context.d.ts`:
@@ -374,6 +390,9 @@ an `undefined`; an app that augments nothing returns `{ db }` alone.
 | `afterCreate`, `afterUpdate`, `afterDelete`     | After the statement succeeds              | Read and write the db |
 | `afterCommit(event)`                            | After the enclosing unit of work resolves | Dispatch side effects |
 
+- `validate` receives the values with `meta`; on an update the primary key is merged in, so a
+  uniqueness check can exclude the row itself. `beforeUpdate` and `afterUpdate` receive the
+  row before the write as a third argument.
 - The model `validate` callback is async and runs in addition to the table's synchronous one,
   so a uniqueness check or a lookup against another table lives on the model. The table's own
   hooks keep running inside data-table; a failure they raise as `DataTableValidationError` is
@@ -451,7 +470,7 @@ export const Posts = createModel(posts, {
 	inheritance: "type",
 	scopes: {
 		live: (query) => query.where({ deleted_at: null }),
-		published: (query) => query.where(sql`"published_at" <= ${new Date().toISOString()}`),
+		published: (query) => query.where(lte("published_at", new Date().toISOString())),
 	},
 	callbacks: {
 		async beforeDelete(row, ctx) {
@@ -528,7 +547,8 @@ export const Articles = Posts.extend("article", {
 ```
 
 `metaTable` names the storage: the table, the column pointing at the owner, and optionally the
-`key` and `value` column names, which default to `key` and `value`. `meta` declares the fields.
+`key` and `value` column names, which default to `key` and `value`, and `generateId` for a meta
+table whose database assigns no primary key. `meta` declares the fields.
 A sub-model inherits its base's `metaTable` and declares the fields its type uses, so articles
 and likes keep different metadata in the same table, as they do in blog today.
 
@@ -580,20 +600,25 @@ let page = await Pagination.byOffset(ctx.models.articles.published().withMeta(["
 
 #### Querying by meta
 
-Meta values are not columns, so they filter through `whereMeta`, which compiles to an `EXISTS`
-over the companion table:
+Meta values are not columns, so they filter through `whereMeta`. data-table's predicates carry
+no raw SQL, so a filter cannot compile to an `EXISTS` inside the owner query; it resolves when
+the query runs, as one query over the companion table for the matching owners, and the owner
+query then filters by their keys:
 
 ```typescript
 let article = await ctx.models.articles.whereMeta("slug", slug).first();
-let spanish = ctx.models.articles.whereMeta("locale", "es").whereMeta("tags", inList(["remix"]));
+let spanish = ctx.models.articles.whereMeta("locale", "es").whereMeta("tags", ["remix", "data"]);
 ```
 
-- It matches any row under the key, for a list field any item. Writes prune a key's older
-  rows right after inserting the new one, so a superseded value is matchable only in the window
-  between those two statements; matching the latest row alone would need a correlated subquery
-  ordered by `updated_at` that no index serves, and reads still resolve each key to its latest
-  row, so a row matched through a stale value comes back with the current one.
-- Equality and `inList` are served by an index on `(key, value)`, which blog already has.
+- It matches any row under the key, for a list field any item; a list of values matches any of
+  them. Several filters intersect. Writes prune a key's older rows right after inserting the new
+  one, so a superseded value is matchable only in the window between those two statements, and
+  reads still resolve each key to its latest row, so a row matched through a stale value comes
+  back with the current one.
+- The owners' keys are bound as parameters of the owner query, and D1 allows 100 per query, so
+  `whereMeta` suits selective keys (a slug, an external id); a filter matching hundreds of
+  owners belongs in a column.
+- The lookup is served by an index on `(key, value)`, which blog already has.
 - Ordering by a meta value is out of scope: a value that lists sort or page by belongs in a
   column, where keyset pagination can seek on it.
 
@@ -609,10 +634,12 @@ await ctx.models.articles.update(id, { meta: { title: "Hello, world", excerpt: n
 ```
 
 - `meta` in a write is a partial: an update touches only the keys it names, and `null` removes a
-  key. Field validation failures come back in the same `ValidationError`, with paths such as
+  key. An update naming only meta keys leaves the row's columns, `updated_at` included, as they
+  are. Field validation failures come back in the same `ValidationError`, with paths such as
   `["meta", "title"]`.
-- A write inserts the new rows for every named key in one multi-row statement, then deletes the
-  older rows of those keys in a second. Because reads resolve each key to its latest row, a
+- A write inserts the new rows for every named key in one multi-row statement, split only when
+  a long list would pass D1's parameter limit, then deletes the older rows of those keys in a
+  second. Because reads resolve each key to its latest row, a
   failure between the two leaves reads correct, and the next write of that key removes the
   leftovers. On D1, where the two statements commit separately, this ordering is what keeps a
   post's meta consistent; inside a transaction both run atomically.
@@ -797,8 +824,8 @@ are ordinary `remix/data-table` declarations; only the model files are new.
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
-import { Jobs } from "@sdxc/jobs";
-import { fail, sql } from "remix/data-table";
+import { Jobs } from "@sdxc/jobs/router";
+import { fail, lte } from "remix/data-table";
 
 import jobs from "~/app/jobs";
 import { Mail } from "~/app/middleware/mail";
@@ -806,7 +833,7 @@ import { articleComments, articles, users } from "~/app/schema";
 
 export const Articles = createModel(articles, {
 	scopes: {
-		published: (query) => query.where(sql`"published_at" <= ${Date.now()}`),
+		published: (query) => query.where(lte("published_at", Date.now())),
 		drafts: (query) => query.where({ published_at: null }),
 		by: (query, authorId: string) => query.where({ author_id: authorId }),
 		newest: (query) => query.orderBy("published_at", "desc"),
@@ -1096,10 +1123,7 @@ for (let post of feed) if (post.type === "article") renderArticle(post);
 ### Bulk writes, without callbacks
 
 ```typescript
-await ctx.models.articles
-	.drafts()
-	.where(sql`"created_at" < ${cutoff}`)
-	.delete();
+await ctx.models.articles.drafts().where(lt("created_at", cutoff)).delete();
 ```
 
 A delete built from a query runs as one statement and fires no model callbacks, which is what a
@@ -1266,11 +1290,13 @@ and recursion guards on top.
 
 ## Current Progress
 
-- [ ] Phase 1: Spec
-- [ ] Phase 2: Core
-- [ ] Phase 3: Hosts
-- [ ] Phase 4: Testing
-- [ ] Phase 5: Package chores
+- [x] Phase 1: Spec: acceptance and type tests on SQLite, and the unit-of-work contract on
+      SQLite, Durable Object SQLite and a real D1 binding in the Workers pool
+- [x] Phase 2: Core, including the `byKeyset` guard in `@sdxc/pagination`
+- [x] Phase 3: Hosts
+- [ ] Phase 4: Testing: `./testing` is done; replacing hand-built rows waits for the first port
+- [ ] Phase 5: Package chores: README, LICENSE and the root README row are done; the
+      `apps/sdxc` group and guide, the npm bootstrap and the app ports remain
 
 ## Notes
 
@@ -1280,7 +1306,10 @@ and recursion guards on top.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
 - The AGENTS.md rule stating `db.transaction()` is atomic on `@sdxc/data-table-sqlstorage`
-  predates the adapter refusing transactions and is corrected alongside this package.
+  predated the adapter refusing transactions and was corrected alongside this ADR.
+- The unit-of-work tests for Durable Object SQLite run the real adapter over
+  `@sdxc/cloudflare-mocks`' `SqlStorage`, since the packages Workers pool declares no Durable
+  Object; D1 runs against the pool's real binding.
 - An atomic multi-statement meta write on D1 would need the driver to expose D1's `batch()`,
   which runs its statements in one transaction; data-table's driver interface has no such
   operation today, so insert-then-prune stays the D1 strategy until it does.

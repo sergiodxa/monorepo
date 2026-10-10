@@ -666,6 +666,36 @@
         "@sdxc/result": "workspace:*",
       },
     },
+    "packages/data-model": {
+      "name": "@sdxc/data-model",
+      "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/result": "workspace:*",
+        "@sdxc/validate": "workspace:*",
+        "@standard-schema/spec": "^1.1.0",
+        "remix": "3.0.0",
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260901.1",
+        "@sdxc/cloudflare-mocks": "workspace:*",
+        "@sdxc/data-table-d1": "workspace:*",
+        "@sdxc/data-table-sqlstorage": "workspace:*",
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/json-schema": "workspace:*",
+        "@sdxc/mcp": "workspace:*",
+        "@sdxc/pagination": "workspace:*",
+        "@sdxc/random": "workspace:*",
+        "@sdxc/sample": "workspace:*",
+      },
+      "peerDependencies": {
+        "@sdxc/jobs": "workspace:*",
+        "@sdxc/sample": "workspace:*",
+      },
+      "optionalPeers": [
+        "@sdxc/jobs",
+        "@sdxc/sample",
+      ],
+    },
     "packages/data-table-d1": {
       "name": "@sdxc/data-table-d1",
       "version": "0.0.0",
@@ -2259,6 +2289,8 @@
     "@sdxc/crypto": ["@sdxc/crypto@workspace:packages/crypto"],
 
     "@sdxc/csv": ["@sdxc/csv@workspace:packages/csv"],
+
+    "@sdxc/data-model": ["@sdxc/data-model@workspace:packages/data-model"],
 
     "@sdxc/data-table-d1": ["@sdxc/data-table-d1@workspace:packages/data-table-d1"],
 
