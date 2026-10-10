@@ -126,6 +126,7 @@ import { apiVersioning } from "~/app/http/lib/api-version";
 import { database } from "~/app/http/middleware/database";
 import { mail } from "~/app/http/middleware/mail";
 import { managementWellKnown } from "~/app/http/middleware/management-well-known";
+import { models } from "~/app/http/middleware/models";
 import { buildManagementDocument } from "~/app/http/openapi/document";
 import { MANAGEMENT_SECURITY_POLICY } from "~/app/http/security-policy";
 import { createDatabase } from "~/app/lib/database";
@@ -166,6 +167,7 @@ let globalMiddleware: Middleware[] = [
 	securityHeaders(MANAGEMENT_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
+	models() as Middleware,
 	managementWellKnown(issuer),
 	formData() as Middleware,
 	apiVersioning(),

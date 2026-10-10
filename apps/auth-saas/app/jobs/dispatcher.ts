@@ -18,17 +18,18 @@ import { logger } from "~/bootstrap/logger";
 import { database } from "./middleware/database";
 import { hostnames } from "./middleware/hostnames";
 import { mail } from "./middleware/mail";
+import { models } from "./middleware/models";
 import { tenant } from "./middleware/tenant";
 
 /**
  * The registry both worker handlers run through. Every job gets the control-plane
- * database, the custom-hostname client, the tenant Durable Object namespace and a
+ * database and its models, the custom-hostname client, the tenant Durable Object namespace and a
  * mailer, since building each is a constructor call apiece and no job pays for I/O
  * it skips.
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), hostnames(), tenant(), mail()],
+	middleware: [database(), models(), hostnames(), tenant(), mail()],
 	timeout: "5 minutes",
 
 	/**

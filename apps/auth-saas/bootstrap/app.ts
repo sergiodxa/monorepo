@@ -44,6 +44,7 @@ import signupVerify from "~/app/http/controllers/signup/verify";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { mail } from "~/app/http/middleware/mail";
+import { models } from "~/app/http/middleware/models";
 import render from "~/app/http/middleware/render";
 import {
 	TENANT_ID_HEADER,
@@ -145,6 +146,7 @@ let globalMiddleware: Middleware[] = [
 	securityHeaders(PLATFORM_SECURITY_POLICY) as Middleware,
 	wellKnown({ "security.txt": securityTxtEntry }),
 	database(createDatabase),
+	models() as Middleware,
 	mail(),
 	render as Middleware,
 	formData() as Middleware,
