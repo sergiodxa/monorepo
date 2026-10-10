@@ -1,6 +1,6 @@
 # @sdxc/uuid
 
-Validate, assert and generate UUIDs behind a branded UUID type.
+Validate and assert UUIDs behind a branded UUID type, and generate v4 or v7 values.
 
 A UUID reaches your code as a `string`, and every layer below re-checks it because the type
 says nothing. This package checks once and hands back a `UUID`: the same string, carrying
@@ -13,24 +13,38 @@ raw path segment it came from.
 npm add @sdxc/uuid
 ```
 
-`generateUUID` calls the platform's
-[`crypto.randomUUID()`](https://developer.mozilla.org/en-US/docs/Web/API/Crypto/randomUUID).
-[`@sdxc/typeid`](https://www.npmjs.com/package/@sdxc/typeid) installs alongside it when you
+The generators use the platform's Web Crypto API, available in browsers, Node, Bun, Deno and
+Cloudflare Workers. [`@sdxc/typeid`](https://www.npmjs.com/package/@sdxc/typeid) installs alongside it when you
 want prefixed identifiers built on these values.
 
 ## Usage
 
 ### Generate An Identifier
 
+Each UUID version is its own entry point, and each exports the same `generateUUID()`. The
+import path picks the version, so switching an identifier to the other one changes only that
+line.
+
 ```typescript
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
+
+let id = generateUUID();
+// "019a6f3e-5c21-7a4b-9d3e-8f1a2b3c4d5e" as UUID
+```
+
+A v7 value starts with the millisecond it was created, so identifiers sort in creation order
+and new database rows append to the end of their primary-key index. Import from
+`@sdxc/uuid/v4` instead when the identifier must not reveal when it was created:
+
+```typescript
+import { generateUUID } from "@sdxc/uuid/v4";
 
 let id = generateUUID();
 // "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" as UUID
 ```
 
-The longhand is `crypto.randomUUID()` followed by the check that brands its result, which is
-what lets the value flow into anything typed as `UUID` without a cast.
+Either way the result is already branded, so it flows into anything typed as `UUID` without a
+cast.
 
 ### Narrow A String You Received
 
@@ -112,21 +126,23 @@ Narrows a string to `UUID` for the rest of the enclosing scope, throwing when it
 `InvalidUUIDTypeError` for a non-string, `InvalidUUIDLengthError` for a string that is not 36
 characters, and `InvalidUUIDFormatError` for 36 characters in the wrong shape.
 
-### `generateUUID(): UUID`
+### `generateUUID(): UUID` from `@sdxc/uuid/v7`
 
-Returns a new random UUID from `crypto.randomUUID()`, already narrowed to `UUID`. That is a
-version 4 UUID as defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562), random in
-every position the format leaves free — including when it was created, so two values carry
-no ordering.
+Returns a new version 7 UUID as defined by [RFC 9562](https://www.rfc-editor.org/rfc/rfc9562):
+a 48-bit millisecond timestamp, a 12-bit counter and 62 random bits. Values sort in the order
+they were generated, including several created in the same millisecond, which matters on
+runtimes such as Cloudflare Workers where `Date.now()` holds still until the next I/O. The
+guarantee holds within one process or isolate; values from two processes in the same
+millisecond are unique and share no defined order.
 
-### `generateUUIDv7(): UUID`
+The timestamp is readable by anyone holding the value, including through a
+[`@sdxc/typeid`](https://www.npmjs.com/package/@sdxc/typeid) prefix. Use it for identifiers
+whose creation time is fine to expose, and keep secrets on random values.
 
-Returns a new version 7 UUID: a 48-bit millisecond timestamp followed by 74 random bits, so
-values sort the way they were created. Use this one where
-[`@sdxc/typeid`](https://www.npmjs.com/package/@sdxc/typeid) is going to prefix the result
-and something reads that prefixed id's order — a paginated listing, a table with no separate
-`created_at` to sort by. Reach for `generateUUID` instead when the id must not reveal when it
-was minted, such as a value handed to someone outside the system.
+### `generateUUID(): UUID` from `@sdxc/uuid/v4`
+
+Returns a new version 4 UUID from `crypto.randomUUID()`: 122 random bits, so two values carry
+no ordering and none reveals when it was created.
 
 ### Errors
 
@@ -198,7 +214,7 @@ takes a `UUID` and a prefix and encodes them as one sortable, self-describing st
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 let accountId = TypeID.fromUUID("account", generateUUID());
 
@@ -207,7 +223,8 @@ accountId.toString();
 ```
 
 It asks for a `UUID` rather than a `string`, so the value you generate here is accepted and a
-random 36 characters is not.
+random 36 characters is not. TypeID keeps the UUID's sort order, so a v7 identifier stays
+time-ordered once it is prefixed.
 
 ## Versioning
 

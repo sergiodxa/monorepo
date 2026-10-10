@@ -1,11 +1,13 @@
 {
 	"name": "@sdxc/uuid",
 	"version": "0.0.1",
-	"description": "Validate, assert and generate UUIDs behind a branded UUID type",
+	"description": "Validate and assert UUIDs behind a branded UUID type, and generate v4 or v7 values",
 	"license": "MIT",
 	"type": "module",
 	"exports": {
-		".": "./src/index.ts"
+		".": "./src/index.ts",
+		"./v4": "./src/v4.ts",
+		"./v7": "./src/v7.ts"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit"
