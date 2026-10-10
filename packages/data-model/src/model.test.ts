@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyQuery } from "remix/data-table";
+import type { AnyQuery, Database } from "remix/data-table";
 
 import { InvalidOrderingError, Pagination } from "@sdxc/pagination";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
@@ -32,10 +32,14 @@ function setup() {
 			admins: (query) => query.where({ role: "admin" }),
 			named: (query, name: string) => query.where({ name }),
 		},
-		methods: (model) => ({
-			findByEmail: (email: string) => model.active().where({ email: email.toLowerCase() }).first(),
-			newest: () => model.query().orderBy("created_at", "desc"),
-		}),
+		methods: {
+			findByEmail(email: string) {
+				return this.active().where({ email: email.toLowerCase() }).first();
+			},
+			newest() {
+				return this.query().orderBy("created_at", "desc");
+			},
+		},
 		callbacks: {
 			async validate(values) {
 				calls.push("validate");
@@ -89,10 +93,11 @@ function setup() {
 
 	let Articles = Posts.extend("article", {
 		scopes: { by: (query, authorId: string) => query.where({ author_id: authorId }) },
-		methods: (model) => ({
-			withComments: (id: string) =>
-				model.query().where({ id }).with({ comments: postComments }).first(),
-		}),
+		methods: {
+			withComments(id: string) {
+				return this.query().where({ id }).with({ comments: postComments }).first();
+			},
+		},
 	});
 
 	let Likes = Posts.extend("like", {});
@@ -377,6 +382,90 @@ describe("writes", () => {
 
 		expect(calls).toEqual([]);
 		expect((await users.query().all()).map((user) => user.name)).toEqual(["Renamed"]);
+	});
+});
+
+describe("default scopes", () => {
+	/** A user model hiding soft-deleted rows from every read, and a sub-model stacking another. */
+	function softDeleting() {
+		let Users = createModel(users, {
+			defaultScope: (query) => query.where({ deleted_at: null }),
+			methods: {
+				listAll() {
+					return this.query().orderBy("id", "asc").all();
+				},
+				async countAll() {
+					let rows = await this.listAll();
+					return rows.length;
+				},
+			},
+		});
+		let Posts = createModel(posts, {
+			inheritance: "type",
+			defaultScope: (query) => query.where({ deleted_at: null }),
+		});
+		let Published = Posts.extend("article", {
+			defaultScope: (query) => query.where(lte("published_at", "2026-06-01T00:00:00.000Z")),
+		});
+		let { db } = openDatabase();
+		return { users: Users.bind({ db }), published: Published.bind({ db }), db };
+	}
+
+	/** Seeds one live and one soft-deleted user. */
+	async function seed(db: Database) {
+		await db.create(users, { id: "live", email: "l@example.com", name: "L", role: "member" });
+		await db.create(users, {
+			id: "gone",
+			email: "g@example.com",
+			name: "G",
+			role: "member",
+			deleted_at: "2026-01-01T00:00:00.000Z",
+		});
+	}
+
+	test("every read applies it, and unscoped() leaves it off", async () => {
+		let { users: model, db } = softDeleting();
+		await seed(db);
+
+		expect((await model.query().all()).map((user) => user.id)).toEqual(["live"]);
+		expect(await model.find("gone")).toBeNull();
+		expect(await model.findBy({ email: "g@example.com" })).toBeNull();
+		expect(await model.unscoped().count()).toBe(2);
+	});
+
+	test("an update or delete of a row it hides answers NotFound", async () => {
+		let { users: model, db } = softDeleting();
+		await seed(db);
+
+		let updated = await model.update("gone", { name: "Back" });
+		let deleted = await model.delete("gone");
+
+		expect(isFailure(updated) && updated.error).toBeInstanceOf(NotFound);
+		expect(isFailure(deleted) && deleted.error).toBeInstanceOf(NotFound);
+		expect(await model.unscoped().where({ id: "gone" }).count()).toBe(1);
+	});
+
+	test("a method calls another method of the same model through this", async () => {
+		let { users: model, db } = softDeleting();
+		await seed(db);
+
+		expect(await model.countAll()).toBe(1);
+	});
+
+	test("a sub-model's default scope applies after the base's", async () => {
+		let { published, db } = softDeleting();
+		await seed(db);
+		let row = { author_id: "live", type: "article" as const };
+		await db.create(posts, { ...row, id: "draft", published_at: null });
+		await db.create(posts, { ...row, id: "out", published_at: "2026-01-01T00:00:00.000Z" });
+		await db.create(posts, {
+			...row,
+			id: "removed",
+			published_at: "2026-01-01T00:00:00.000Z",
+			deleted_at: "2026-02-01T00:00:00.000Z",
+		});
+
+		expect((await published.query().all()).map((post) => post.id)).toEqual(["out"]);
 	});
 });
 

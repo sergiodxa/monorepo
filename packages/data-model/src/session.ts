@@ -94,27 +94,17 @@ export function deriveSession(session: Session, db: Database, uow: UnitOfWork | 
 	return derived;
 }
 
-/** Describes a context key for an error message, by its name when it has one. */
-function describeKey(key: object): string {
-	let name = (key as { name?: unknown }).name;
-	return typeof name === "string" && name !== "" ? name : "a context key";
-}
-
-/** The context a binding's callbacks receive, built once per binding. */
+/**
+ * The context a binding's callbacks receive, built once per binding: the members the binding
+ * supplied, its database, the registry bound alongside it, and `get` reading the host.
+ */
 export function modelContext(session: Session): ModelContext {
 	session.context ??= {
 		...session.init,
 		db: session.db,
 		models: session.models,
 		get: (key) => session.host?.get(key) as never,
-		require: (key) => {
-			let value = session.host?.get(key);
-			if (value === undefined || value === null) {
-				throw new Error(`A model callback read ${describeKey(key)}, which nothing published`);
-			}
-			return value as never;
-		},
-	};
+	} as ModelContext;
 	return session.context;
 }
 

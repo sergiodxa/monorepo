@@ -13,10 +13,9 @@ import type { ModelConfig, RawOptions } from "./config.js";
 import type { FieldMap } from "./fields.js";
 import type {
 	BindOptions,
+	CheckedDefinition,
 	ContextHost,
-	MethodMap,
 	ModelContextInit,
-	ModelDefinition,
 	ModelOptions,
 	Scope,
 	Shape,
@@ -58,21 +57,21 @@ function define(config: ModelConfig): unknown {
  * @example
  * export const Users = createModel(users, {
  * 	scopes: { active: (query) => query.where({ deleted_at: null }) },
- * 	methods: (model) => ({ findByEmail: (email: string) => model.active().where({ email }).first() }),
+ * 	methods: { findByEmail(email: string) { return this.active().where({ email }).first(); } },
  * });
  */
 export function createModel<
 	T extends AnyTable,
+	Methods extends object,
 	const Constraints extends Partial<TableRow<T>> = {},
 	Scopes extends Record<string, Scope<SingleTableColumn<T>>> = {},
-	Methods extends MethodMap = {},
 	Fields extends FieldMap = {},
 	const Optional extends keyof TableRow<T> & string = never,
 	const Inheritance extends keyof TableRow<T> & string = never,
 >(
 	table: T,
 	options?: ModelOptions<
-		Shape<T, Constraints, Scopes, {}, Fields, Optional, Inheritance>,
+		Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance>,
 		Constraints,
 		Scopes,
 		Methods,
@@ -80,6 +79,9 @@ export function createModel<
 		Optional,
 		Inheritance
 	>,
-): ModelDefinition<Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance>> {
+): CheckedDefinition<
+	Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance>,
+	Methods
+> {
 	return define(resolveConfig(table, (options ?? {}) as RawOptions)) as never;
 }

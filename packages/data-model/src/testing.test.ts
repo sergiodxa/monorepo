@@ -34,7 +34,7 @@ function setup(seed: number) {
 				return { ...values, id: values.id ?? ids() };
 			},
 			async afterCommit(event, ctx) {
-				if (event.operation === "create") ctx.require(OUTBOX).push(event.row.email);
+				if (event.operation === "create") ctx.get(OUTBOX)?.push(event.row.email);
 			},
 		},
 	});

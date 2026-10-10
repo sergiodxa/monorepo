@@ -59,3 +59,33 @@ test("a failed prune on D1 leaves reads on the latest value until the next write
 	expect((await articles.find("p1"))?.meta.title).toBe("Three");
 	expect(await db.count(postMeta, { where: { key: "title" } })).toBe(1);
 });
+
+test("whereMeta filters more owners than D1 binds parameters for, through a join", async () => {
+	await reset();
+	for (let statement of SCHEMA_STATEMENTS) await env.DB.prepare(statement).run();
+	let db = new Database(createD1DatabaseAdapter(env.DB), { now: createClock() });
+	let ids = createIds();
+	let Articles = createModel(posts, {
+		constraints: { type: "article" },
+		optional: ["id"],
+		metaTable: { table: postMeta, foreignKey: "post_id", generateId: createIds("meta") },
+		meta: { locale: field.enum(["en", "es"]) },
+		callbacks: {
+			async beforeCreate(values) {
+				return { ...values, id: values.id ?? ids() };
+			},
+		},
+	});
+	let articles = Articles.bind({ db });
+	await db.create(users, { id: "author", email: "a@example.com", name: "A", role: "member" });
+	for (let index = 0; index < 120; index++) {
+		unwrap(
+			await articles.create({ author_id: "author", published_at: null, meta: { locale: "es" } }),
+		);
+	}
+
+	let spanish = articles.whereMeta("locale", "es");
+
+	expect(await spanish.count()).toBe(120);
+	expect(await spanish.orderBy("id", "desc").limit(5).all()).toHaveLength(5);
+});

@@ -276,6 +276,20 @@ function intersect(
 }
 
 /**
+ * Encodes a filter's values as the texts the meta table stores, an item at a time for a list
+ * field. A value the field cannot encode matches nothing, so it is left out.
+ */
+export function filterTexts(config: ModelConfig, filter: MetaFilter): string[] {
+	let field = config.fields[filter.key];
+	let texts: string[] = [];
+	for (let value of filter.values) {
+		let encoded = field?.isList ? field.encode([value]) : field?.encode(value);
+		if (encoded?.ok) texts.push(...encoded.texts);
+	}
+	return texts;
+}
+
+/**
  * Resolves `whereMeta` filters into the owners matching all of them, one query per filter.
  * A value its field cannot encode matches nothing.
  *
@@ -292,12 +306,7 @@ export async function resolveMetaFilters(
 	let matched: ReadonlySet<unknown> | undefined;
 
 	for (let filter of filters) {
-		let field = config.fields[filter.key];
-		let texts: string[] = [];
-		for (let value of filter.values) {
-			let encoded = field?.isList ? field.encode([value]) : field?.encode(value);
-			if (encoded?.ok) texts.push(...encoded.texts);
-		}
+		let texts = filterTexts(config, filter);
 
 		let found = new Set<unknown>();
 		for (let run of chunk(texts, MAX_PARAMETERS - 1)) {

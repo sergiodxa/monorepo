@@ -21,6 +21,8 @@ import { openDatabase } from "./fixtures/sqlite.js";
 import { models as jobModels } from "./jobs.js";
 import { models as routerModels } from "./router.js";
 
+import type { AnyBoundModels } from "./index.js";
+
 import { createModel, createModels, Models } from "./index.js";
 
 /** Builds the models and counts how often the lazy module is imported. */
@@ -31,15 +33,18 @@ function setup() {
 	let Users = createModel(users, {
 		optional: ["id", "role"],
 		scopes: { active: (query) => query.where({ deleted_at: null }) },
-		methods: (model) => ({
-			findByEmail: (email: string) => model.active().where({ email }).first(),
-		}),
+		methods: {
+			findByEmail(email: string) {
+				return this.active().where({ email }).first();
+			},
+		},
 		callbacks: {
 			async beforeCreate(values) {
 				return { ...values, id: values.id ?? ids(), role: values.role ?? "member" };
 			},
 			async afterCreate(row, ctx) {
-				await ctx.models.articles.create({ author_id: row.id, published_at: null });
+				let models = (ctx as typeof ctx & { models: AnyBoundModels }).models;
+				await models.articles.create({ author_id: row.id, published_at: null });
 			},
 		},
 	});
@@ -51,9 +56,11 @@ function setup() {
 			drafts: (query) => query.where({ published_at: null }),
 			newest: (query) => query.orderBy("id", "desc"),
 		},
-		methods: (model) => ({
-			firstDraft: () => model.drafts().first(),
-		}),
+		methods: {
+			firstDraft() {
+				return this.drafts().first();
+			},
+		},
 		callbacks: {
 			async beforeCreate(values) {
 				return { ...values, id: values.id ?? ids() };
@@ -253,7 +260,7 @@ describe("job middleware", () => {
 		let Probe = createModel(users, {
 			callbacks: {
 				async afterCommit(_event, ctx) {
-					seen.push(ctx.require(Greeting));
+					seen.push(ctx.get(Greeting) ?? "missing");
 				},
 			},
 		});

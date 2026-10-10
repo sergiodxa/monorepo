@@ -121,13 +121,12 @@ them. Scopes are restricted to the methods that keep all five fixed.
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
-import { Jobs } from "@sdxc/jobs/router";
 
 import { users } from "./schema.js";
 
 export const Users = createModel(users, {
+	defaultScope: (query) => query.where({ deleted_at: null }),
 	scopes: {
-		active: (query) => query.where({ deleted_at: null }),
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
 	},
 	callbacks: {
@@ -136,16 +135,18 @@ export const Users = createModel(users, {
 		},
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx.require(Jobs).enqueue(jobs.sendWelcome, { userId: event.row.id });
+			await ctx.jobs.enqueue(jobs.sendWelcome, { userId: event.row.id });
 		},
 	},
-	methods: (model) => ({
-		findByEmail: (email: string) => model.query().where({ email: email.toLowerCase() }).first(),
-	}),
+	methods: {
+		findByEmail(email: string) {
+			return this.query().where({ email: email.toLowerCase() }).first();
+		},
+	},
 });
 
-let users = Users.bind({ db }, context);
-await users.active().inTeam(teamId).orderBy("name", "asc").all();
+let users = Users.bind({ db, jobs }, context);
+await users.inTeam(teamId).orderBy("name", "asc").all();
 ```
 
 - `createModel(table, options)` returns an unbound definition. `definition.bind(context, host?)`
@@ -154,8 +155,29 @@ await users.active().inTeam(teamId).orderBy("name", "asc").all();
   `db` on every call.
 - Rows are the plain typed objects data-table returns. There are no record instances, no
   `user.save()` and no identity map; writes go through the bound model.
-- `methods` receives the bound model, so custom methods compose scopes, queries and other
-  methods with full inference, and appear on the bound model next to the built-ins.
+- `methods` is an object whose methods run with `this` bound to the model, so a method composes
+  scopes, queries and the model's other methods with full inference, and appears on the bound
+  model next to the built-ins. A factory `(model) => ({ ... })` could not type a method calling
+  another, because the factory's parameter would depend on its own return type; an object typed
+  through `ThisType` can.
+
+### A default scope hides rows from every read
+
+```typescript
+export const Users = createModel(users, {
+	defaultScope: (query) => query.where({ deleted_at: null }),
+});
+
+await users.find(id); // null for a soft-deleted user
+await users.update(id, { name }); // NotFound for one
+await users.unscoped().where({ id }).first(); // reads it, for the code that restores it
+```
+
+- The default scope applies to `query()`, every scope, `find`, `findBy`, `from()` and the row an
+  update or delete targets, so soft-deleted rows stay out of every path without each call site
+  remembering a scope. `unscoped()` answers a query with the model's constraints and without
+  the default scope.
+- A sub-model's default scope applies after the base's; both hold.
 
 ### Scopes return a real data-table `Query`
 
@@ -164,7 +186,7 @@ callable on it, and every `Query` method it returns is wrapped again. Scopes the
 each other and with data-table's own methods in any order:
 
 ```typescript
-let query = users.active().inTeam(teamId).where({ role: "admin" }).with({ posts: userPosts });
+let query = users.inTeam(teamId).where({ role: "admin" }).with({ posts: userPosts });
 
 let page = await Pagination.byOffset(query, { page: 1, perPage: 25 });
 ```
@@ -319,48 +341,48 @@ await forPost(ctx.models.users, id); // type error: users rows have no post_id
 
 ### Callbacks
 
-Callbacks are async and receive a `ModelContext`. The database and the registry are the members
-the package guarantees; everything else is the app's to attach:
+Callbacks are async and receive a `ModelContext`, which is extended the way a router's context
+is. The package declares the database and `get`; everything else is the app's to attach:
 
 ```typescript
 interface ModelContext {
 	/** The database this model is bound to, or the transaction it runs in. */
 	readonly db: Database;
-	/** Every model in the registry, bound to the same database and scope as this one. */
-	readonly models: BoundModels;
 	/** Reads a value the host context published, or `undefined` when nothing did. */
 	get<Key extends object>(key: Key): ContextValue<Key> | undefined;
-	/** Reads a value the host context published, throwing when nothing did. */
-	require<Key extends object>(key: Key): NonNullable<ContextValue<Key>>;
 }
 ```
 
-`get` and `require` read through to the host context, so a callback reaches the job enqueuer,
-the mail transport or the billing provider by the same keys the app's middleware already
-publishes (`ctx.require(Jobs)`, `ctx.require(Mail)`). Their contracts are the hosts' own:
-`RequestContext.get` and `JobContext.get` both answer `undefined` for a key nothing published,
-and `JobContext.require` throws, so a callback reading a service the middleware chain forgot
-fails at the read rather than at `.enqueue` of `undefined`. A script or test binds with its own
-context instead of a request.
-
-`models` is how a callback reaches another model: inside a unit of work it is the set bound to
-that scope, and outside a host it is the registry `bind` was called on, so a single model bound
-on its own has a registry of one. Its type is open (`AnyBoundModels`), because the package does
-not know the app's registry and a model module typing it from the registry would import every
-other model.
-
-Anything a callback should read as a property, such as `ctx.log`, the app adds by augmenting the
-interface, the same way it types `RequestContext` in `config/router-context.d.ts`:
+`get` reads through to the host context with `RequestContext.get`'s contract, answering
+`undefined` for a key nothing published. A service a callback depends on is not read by key: the
+app adds it to the interface, as router middleware adds `ctx.jobs` to `RequestContext`, and
+every binding supplies it, so a binding that forgets one fails to type-check rather than a
+callback finding `undefined` at runtime:
 
 ```typescript
 /** config/model-context.d.ts */
 declare module "@sdxc/data-model" {
 	interface ModelContext {
-		/** The invocation's log, read from the host context by the models middleware. */
+		/** Enqueues jobs from the app's map, the request's or the job's own enqueuer. */
+		jobs: JobEnqueuer;
+		/** The invocation's log. */
 		log: Log;
+		/** Every model, bound to the same database and unit of work as this one. */
+		models: BoundRegistry<typeof models>;
 	}
 }
 ```
+
+`models` is how a callback reaches another model: inside a unit of work it is the set bound to
+that scope, and outside a host it is the registry `bind` was called on, so a single model bound
+on its own has a registry of one. The package always supplies it at runtime, and the app types
+it with `BoundRegistry<typeof models>`; TypeScript resolves the registry's type lazily, so a
+model whose callback reads the registry that contains it type-checks.
+
+A model context carries services, never the invocation's language or translator. A callback
+runs for every caller of the model, scripts and jobs included, so wording a message for a
+reader is the controller's or the job's work: the controller enqueues the confirmation with the
+request's locale, and the job renders it.
 
 ```typescript
 export const Users = createModel(users, {
@@ -371,12 +393,12 @@ export const Users = createModel(users, {
 	},
 });
 
-router.use(modelsMiddleware(models, (ctx) => ({ db: ctx.db, log: ctx.log })));
-let bound = Users.bind({ db, log }, context);
+router.use(modelsMiddleware(models, (ctx) => ({ db: ctx.db, jobs: ctx.jobs, log: ctx.log })));
+let bound = Users.bind({ db, jobs, log }, context);
 ```
 
 The middleware's function and `bind`'s first argument are typed as every `ModelContext` member
-besides `get`, which always reads through to the host. Once the app augments the interface, a
+besides `get` and `models`, which the package supplies. Once the app augments the interface, a
 middleware or a binding that leaves out `log` fails to type-check rather than handing a callback
 an `undefined`; an app that augments nothing returns `{ db }` alone.
 
@@ -410,7 +432,7 @@ an `undefined`; an app that augments nothing returns `{ db }` alone.
   `Failure`, so a signup whose second step fails never sends a welcome email, on every adapter.
   Outside a unit of work, `afterCommit` runs right after the write's `after*` callback.
 - Callbacks run for writes made through the model. A bulk write built from a query
-  (`users.active().update({...})`) is data-table's own operation and runs no model callbacks; it
+  (`users.inTeam(teamId).update({...})`) is data-table's own operation and runs no model callbacks; it
   is the explicit escape hatch for set-based writes.
 
 ### Units of work
@@ -480,13 +502,15 @@ export const Posts = createModel(posts, {
 });
 
 export const Articles = Posts.extend("article", {
-	methods: (model) => ({
-		findBySlug: (slug: string) => model.live().published().whereMeta("slug", slug).first(),
-	}),
+	methods: {
+		findBySlug(slug: string) {
+			return this.live().published().whereMeta("slug", slug).first();
+		},
+	},
 	callbacks: {
 		async afterCommit(event, ctx) {
 			if (event.operation === "create") {
-				await ctx.require(Jobs).enqueue(jobs.webmentions.send, { postId: event.row.id });
+				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: event.row.id });
 			}
 		},
 	},
@@ -601,9 +625,12 @@ let page = await Pagination.byOffset(ctx.models.articles.published().withMeta(["
 #### Querying by meta
 
 Meta values are not columns, so they filter through `whereMeta`. data-table's predicates carry
-no raw SQL, so a filter cannot compile to an `EXISTS` inside the owner query; it resolves when
-the query runs, as one query over the companion table for the matching owners, and the owner
-query then filters by their keys:
+no raw SQL, so a filter cannot compile to an `EXISTS`. The first filter on a read joins the
+companion table instead: when the query runs, it is rebuilt from its snapshot with the meta
+table joined on the owner's key, the filter's key and its values, every column of the owner
+qualified so the shared `id` and timestamps stay unambiguous, the owner's columns selected
+explicitly and the rows grouped by the owner's key, so a row matching several meta rows comes
+back once and `count()` counts owners:
 
 ```typescript
 let article = await ctx.models.articles.whereMeta("slug", slug).first();
@@ -615,9 +642,12 @@ let spanish = ctx.models.articles.whereMeta("locale", "es").whereMeta("tags", ["
   one, so a superseded value is matchable only in the window between those two statements, and
   reads still resolve each key to its latest row, so a row matched through a stale value comes
   back with the current one.
-- The owners' keys are bound as parameters of the owner query, and D1 allows 100 per query, so
-  `whereMeta` suits selective keys (a slug, an external id); a filter matching hundreds of
-  owners belongs in a column.
+- The join binds only the filter's values, so a broad key such as a locale matching thousands
+  of rows stays one statement within D1's 100 parameters. Each further filter on the same query
+  reads its matching owners from the companion table first and filters by their keys, which
+  binds one parameter per owner, so chain the broad key first and selective ones after it.
+  `find(key)` and bulk writes take that second path for every filter: the key `find` adds and a
+  bulk statement cannot carry a join.
 - The lookup is served by an index on `(key, value)`, which blog already has.
 - Ordering by a meta value is out of scope: a value that lists sort or page by belongs in a
   column, where keyset pagination can seek on it.
@@ -634,8 +664,9 @@ await ctx.models.articles.update(id, { meta: { title: "Hello, world", excerpt: n
 ```
 
 - `meta` in a write is a partial: an update touches only the keys it names, and `null` removes a
-  key. An update naming only meta keys leaves the row's columns, `updated_at` included, as they
-  are. Field validation failures come back in the same `ValidationError`, with paths such as
+  key. An update naming only meta keys still touches the table's declared `updatedAt` column at
+  the database's clock, which is what a column update touches too, so a post whose title
+  changed reads as updated. Field validation failures come back in the same `ValidationError`, with paths such as
   `["meta", "title"]`.
 - A write inserts the new rows for every named key in one multi-row statement, split only when
   a long list would pass D1's parameter limit, then deletes the older rows of those keys in a
@@ -839,15 +870,17 @@ export const Articles = createModel(articles, {
 		newest: (query) => query.orderBy("published_at", "desc"),
 	},
 
-	methods: (model) => ({
-		findBySlug: (slug: string) => model.published().where({ slug }).first(),
-		withComments: (id: string) =>
-			model
-				.query()
+	methods: {
+		findBySlug(slug: string) {
+			return this.published().where({ slug }).first();
+		},
+		withComments(id: string) {
+			return this.query()
 				.where({ id })
 				.with({ comments: articleComments.orderBy("created_at", "asc") })
-				.first(),
-	}),
+				.first();
+		},
+	},
 
 	callbacks: {
 		async validate(values, ctx) {
@@ -862,20 +895,20 @@ export const Articles = createModel(articles, {
 
 		async afterCommit(event, ctx) {
 			if (event.operation === "update" && event.changed.includes("published_at")) {
-				await ctx.require(Jobs).enqueue(jobs.notifySubscribers, { articleId: event.row.id });
+				await ctx.jobs.enqueue(jobs.notifySubscribers, { articleId: event.row.id });
 			}
 		},
 	},
 });
 
 export const Users = createModel(users, {
-	scopes: {
-		active: (query) => query.where({ deleted_at: null }),
-	},
+	defaultScope: (query) => query.where({ deleted_at: null }),
 
-	methods: (model) => ({
-		findByEmail: (email: string) => model.active().where({ email: email.toLowerCase() }).first(),
-	}),
+	methods: {
+		findByEmail(email: string) {
+			return this.query().where({ email: email.toLowerCase() }).first();
+		},
+	},
 
 	callbacks: {
 		async beforeCreate(values) {
@@ -884,7 +917,7 @@ export const Users = createModel(users, {
 
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx.require(Mail).send({ to: event.row.email, template: "welcome" });
+			await ctx.mail.send({ to: event.row.email, template: "welcome" });
 		},
 	},
 });
@@ -914,13 +947,18 @@ export const router = createRouter({
 		database(),
 		jobsMiddleware(queue),
 		mail(),
-		modelsMiddleware(models, (ctx) => ({ db: ctx.db, log: ctx.log })),
+		modelsMiddleware(models, (ctx) => ({
+			db: ctx.db,
+			jobs: ctx.jobs,
+			mail: ctx.mail,
+			log: ctx.log,
+		})),
 	],
 });
 ```
 
 `modelsMiddleware` runs after the middleware that publish the database and the services the
-callbacks read, so its function and every `ctx.require(...)` in a callback find their values.
+callbacks read, so its function finds every value the app's `ModelContext` declares.
 
 ### Listing with pagination
 
@@ -1043,7 +1081,12 @@ export const dispatcher = createJobDispatcher({
 	middleware: [
 		database(),
 		mail(),
-		modelsJobMiddleware(models, (ctx) => ({ db: ctx.database, log: ctx.log })),
+		modelsJobMiddleware(models, (ctx) => ({
+			db: ctx.require(Database),
+			jobs: ctx.require(Jobs),
+			mail: ctx.require(Mail),
+			log: ctx.log,
+		})),
 	],
 });
 ```
@@ -1053,7 +1096,7 @@ export default async function notifySubscribers(ctx: JobContext<{ articleId: str
 	let article = await ctx.models.articles.find(ctx.input.articleId);
 	if (article === null) ctx.exit("Article no longer exists");
 
-	let subscribers = await ctx.models.users.active().where({ subscribed: true }).all();
+	let subscribers = await ctx.models.users.query().where({ subscribed: true }).all();
 	await ctx.require(Mail).sendMany(subscribers.map((user) => digestFor(user, article)));
 }
 ```
@@ -1272,7 +1315,7 @@ has a home:
 | Need                                       | Where it lives                                                              |
 | ------------------------------------------ | --------------------------------------------------------------------------- |
 | Work before a write, querying other models | `validate` and `before*` callbacks, which receive `ctx.db` and `ctx.models` |
-| A filter every read applies (soft deletes) | A `defaultScope` option, applied in `query()`, added when a port needs it   |
+| A filter every read applies (soft deletes) | The `defaultScope` option, with `unscoped()` to read past it                |
 | Per-tenant isolation                       | The tenant's database, bound by the models middleware                       |
 | Authorization                              | The route, job or tool boundary that receives the traffic                   |
 | Logging or timing every query              | The database adapter, or the host's own middleware                          |
@@ -1304,6 +1347,9 @@ and recursion guards on top.
 - Meta tables replace blog's per-type `MetaCodec` and its `articleMetaValue` duplicate
   resolution; the port of blog's posts is the acceptance case for both.
 - Bulk writes skip model callbacks by design; a test pins that behavior so it reads as a contract.
+- `ModelContext` had a `require(key)` and a fixed `models: AnyBoundModels` in the first version.
+  Both were removed: services became augmented properties supplied at binding, like the
+  router's own, and `models` is typed by the app through `BoundRegistry`.
 - The name `Models` for the context key and `ctx.models` for the property are the defaults; the
   middleware accepts a different property name for an app that already uses `models`.
 - The AGENTS.md rule stating `db.transaction()` is atomic on `@sdxc/data-table-sqlstorage`

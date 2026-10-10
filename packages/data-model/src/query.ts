@@ -7,14 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
+import type { AnyTable, Database, Predicate } from "remix/data-table";
 
-import { inList, Query } from "remix/data-table";
+import { getTableColumns, inList, Query } from "remix/data-table";
 
-import type { ModelConfig, Row } from "./config.js";
+import type { LooseQuery, ModelConfig, Row } from "./config.js";
 import type { MetaFilter } from "./meta.js";
 
-import { attachMeta, resolveMetaFilters } from "./meta.js";
+import { queryOf } from "./config.js";
+import { attachMeta, filterTexts, resolveMetaFilters } from "./meta.js";
 
 /** What a wrapped query carries beside the query itself. */
 export interface QueryState {
@@ -41,6 +42,12 @@ function isWrapped(value: object): boolean {
 /** Terminals whose rows carry meta. */
 const ROW_TERMINALS = new Set(["all", "first", "find"]);
 
+/**
+ * Terminals a `whereMeta` join can serve. `find` adds an unqualified key the join would make
+ * ambiguous, and a bulk write cannot carry a join, so both resolve owners first.
+ */
+const JOINABLE_TERMINALS = new Set(["all", "first", "count", "exists"]);
+
 /** Terminals that only need `whereMeta` resolved first. */
 const PLAIN_TERMINALS = new Set(["count", "exists", "update", "delete"]);
 
@@ -56,13 +63,154 @@ function isQuery(value: unknown, structural: boolean): value is object {
 	return typeof (value as { all?: unknown }).all === "function";
 }
 
-/** Narrows the target to the owners the pending `whereMeta` filters match. */
-async function applyMetaFilters(target: object, state: QueryState): Promise<object> {
+/**
+ * data-table keeps a query's state behind a symbol it does not export; it is found once, by
+ * description, on the class that defines it.
+ */
+const QUERY_SNAPSHOT = Object.getOwnPropertySymbols(Query.prototype).find(
+	(symbol) => symbol.description === "querySnapshot",
+);
+
+/** The part of a data-table query's state a join rebuild reads. */
+interface QueryStateSnapshot {
+	select: "*" | Array<{ column: string; alias: string }>;
+	distinct: boolean;
+	joins: Array<{ type: string; table: AnyTable; on: Predicate }>;
+	where: Predicate[];
+	groupBy: string[];
+	having: Predicate[];
+	orderBy: Array<{ column: string; direction: "asc" | "desc" }>;
+	limit?: number;
+	offset?: number;
+	with: Record<string, unknown>;
+}
+
+/** Qualifies the model's own columns with its table name, leaving every other name as it is. */
+function qualifier(config: ModelConfig): (column: string) => string {
+	let columns = new Set(Object.keys(getTableColumns(config.table)));
+	return (column) =>
+		column.includes(".") || !columns.has(column) ? column : `${config.tableName}.${column}`;
+}
+
+/** Qualifies every column a predicate names, so it stays unambiguous once another table joins. */
+function qualifyPredicate(predicate: Predicate, qualify: (column: string) => string): Predicate {
+	if (predicate.type === "logical") {
+		return {
+			...predicate,
+			predicates: predicate.predicates.map((p) => qualifyPredicate(p, qualify)),
+		};
+	}
+	if (predicate.type === "comparison" && predicate.valueType === "column") {
+		return { ...predicate, column: qualify(predicate.column), value: qualify(predicate.value) };
+	}
+	return { ...predicate, column: qualify(predicate.column) } as Predicate;
+}
+
+/**
+ * Rebuilds a model query with the meta table joined on one filter, which keeps the filter in
+ * the database: the owner's columns are selected explicitly and grouped by its key, so a row
+ * matching several meta rows comes back once and `count()` counts owners.
+ */
+function joinFilter(
+	target: object,
+	state: QueryState,
+	filter: MetaFilter,
+	texts: string[],
+): object {
+	let { config } = state;
+	let meta = config.metaTable;
+	let [ownerKey] = config.primaryKey;
+	let snapshot = (target as Record<symbol, () => { state: QueryStateSnapshot }>)[
+		QUERY_SNAPSHOT as symbol
+	]?.call(target);
+	if (meta === undefined || ownerKey === undefined || snapshot === undefined) return target;
+
+	let qualify = qualifier(config);
+	let s = snapshot.state;
+	let query: LooseQuery = queryOf(state.db, config.table);
+
+	for (let join of s.joins) query = query.join(join.table, join.on, join.type);
+	query = query.join(meta.table, {
+		type: "logical",
+		operator: "and",
+		predicates: [
+			{
+				type: "comparison",
+				operator: "eq",
+				column: `${meta.tableName}.${meta.foreignKey}`,
+				value: `${config.tableName}.${ownerKey}`,
+				valueType: "column",
+			},
+			{
+				type: "comparison",
+				operator: "eq",
+				column: `${meta.tableName}.${meta.key}`,
+				value: filter.key,
+				valueType: "value",
+			},
+			{
+				type: "comparison",
+				operator: "in",
+				column: `${meta.tableName}.${meta.value}`,
+				value: texts,
+				valueType: "value",
+			},
+		],
+	});
+
+	for (let predicate of s.where) query = query.where(qualifyPredicate(predicate, qualify));
+	query = query.groupBy(...s.groupBy.map(qualify), `${config.tableName}.${ownerKey}`);
+	for (let predicate of s.having) query = query.having(qualifyPredicate(predicate, qualify));
+	for (let clause of s.orderBy) query = query.orderBy(qualify(clause.column), clause.direction);
+	if (s.limit !== undefined) query = query.limit(s.limit);
+	if (s.offset !== undefined) query = query.offset(s.offset);
+	if (s.distinct) query = query.distinct();
+	if (Object.keys(s.with).length > 0) query = query.with(s.with);
+
+	let selection =
+		s.select === "*"
+			? Object.keys(getTableColumns(config.table)).map((column) => ({ column, alias: column }))
+			: s.select;
+	return query.select(
+		Object.fromEntries(selection.map((field) => [field.alias, qualify(field.column)])),
+	);
+}
+
+/**
+ * Narrows the target to the owners the pending `whereMeta` filters match. A read joins the
+ * meta table on the first filter, so a broad key such as a locale stays one statement; every
+ * further filter, and every bulk write, resolves its owners first and filters by their keys.
+ */
+async function applyMetaFilters(
+	target: object,
+	state: QueryState,
+	joinable: boolean,
+): Promise<object> {
 	if (state.metaFilters.length === 0) return target;
-	let owners = await resolveMetaFilters(state.db, state.config, state.metaFilters);
+
+	let [first, ...rest] = state.metaFilters;
+	let prepared = target;
+	let pending = state.metaFilters;
+
+	if (
+		joinable &&
+		first !== undefined &&
+		!state.structural &&
+		state.config.metaTable !== undefined
+	) {
+		let texts = filterTexts(state.config, first);
+		if (texts.length > 0) {
+			prepared = joinFilter(target, state, first, texts);
+			pending = rest;
+		}
+	}
+
+	if (pending.length === 0) return prepared;
+
+	let owners = await resolveMetaFilters(state.db, state.config, pending);
 	let [ownerKey] = state.config.primaryKey;
 	let column = state.structural ? ownerKey : `${state.config.tableName}.${ownerKey}`;
-	return (target as { where(input: unknown): object }).where(inList(column ?? "id", owners));
+	return (prepared as { where(input: unknown): object }).where(inList(column ?? "id", owners));
 }
 
 /** Attaches meta to a terminal's rows, when the model declares fields and the rows are whole. */
@@ -119,7 +267,8 @@ export function wrapQuery(target: object, state: QueryState): object {
 
 			if (ROW_TERMINALS.has(property) || PLAIN_TERMINALS.has(property)) {
 				return async (...args: unknown[]) => {
-					let prepared = await applyMetaFilters(object, state);
+					let joinable = JOINABLE_TERMINALS.has(property);
+					let prepared = await applyMetaFilters(object, state, joinable);
 					let method = Reflect.get(prepared, property, prepared) as Method;
 					let result = await method.apply(prepared, args);
 					return ROW_TERMINALS.has(property) ? decorate(result, state) : result;

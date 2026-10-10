@@ -12,12 +12,14 @@ import type { ValidationError } from "@sdxc/validate";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { failure, success } from "@sdxc/result";
+import { getTableTimestamps } from "remix/data-table";
 
 import type { ModelConfig, Row } from "./config.js";
+import type { LooseQuery } from "./config.js";
 import type { Commit, Session, WriteOutcome } from "./session.js";
 import type { ModelContext, ModelEvent } from "./types.js";
 
-import { keyWhere, queryOf } from "./config.js";
+import { keyWhere, queryOf, scopeQuery } from "./config.js";
 import { fromWriteError, isCallbackFailure, NotFound, toValidationError } from "./errors.js";
 import { attachMeta, deleteMeta, namedKeys, validateMeta, writeMeta } from "./meta.js";
 import { modelContext, runWrite } from "./session.js";
@@ -37,9 +39,13 @@ function split(config: ModelConfig, values: Row): { columns: Row; meta: Row | un
 	return { columns, meta: meta === undefined || meta === null ? undefined : (meta as Row) };
 }
 
-/** Reads one row of the model with its meta, or `null`. */
-async function readRow(session: Session, config: ModelConfig, where: Row): Promise<Row | null> {
-	let row = await queryOf(session.db, config.table).where(where).first();
+/** Reads the row a query selects, with its meta, or `null`. */
+async function readRow(
+	session: Session,
+	config: ModelConfig,
+	query: LooseQuery,
+): Promise<Row | null> {
+	let row = await query.first();
 	if (row === null || Object.keys(config.fields).length === 0) return row;
 	let [decorated] = await attachMeta(session.db, config, [row]);
 	return decorated ?? null;
@@ -273,18 +279,36 @@ export function updateRow(
 	values: Row,
 ): Promise<Result<Row, Error>> {
 	return runWrite(session, async (scoped) => {
-		let where = { ...keyWhere(config, key), ...config.constraints };
-		let before = await readRow(scoped, config, where);
+		let target = () => modelRows(scoped, config).where(keyWhere(config, key));
+		let before = await readRow(scoped, config, target());
 		if (before === null) return failed(new NotFound(config.name, key));
-		return change(scoped, config, where, before, values);
+		return change(scoped, config, target, before, values);
 	});
 }
 
-/** The body of an update, also used by `upsert` when a row conflicts. */
+/** The model's rows as a write sees them: constrained, with its default scopes applied. */
+function modelRows(session: Session, config: ModelConfig): LooseQuery {
+	return scopeQuery(queryOf(session.db, config.table), config);
+}
+
+/**
+ * The columns that mark a row as changed when only its meta was written: the table's declared
+ * `updatedAt` column at the database's clock, which is what a column update touches too.
+ */
+function touch(session: Session, config: ModelConfig): Row {
+	let timestamps = getTableTimestamps(config.table);
+	return timestamps === null ? {} : { [timestamps.updatedAt]: session.db.now() };
+}
+
+/**
+ * The body of an update, also used by `upsert` when a row conflicts.
+ *
+ * @param target Selects the row the statement updates, scoped the way the caller read it.
+ */
 async function change(
 	scoped: Session,
 	config: ModelConfig,
-	where: Row,
+	target: () => LooseQuery,
 	before: Row,
 	values: Row,
 ): Promise<Outcome> {
@@ -309,12 +333,14 @@ async function change(
 	let metaIssues = validateMeta(config, meta, "update");
 	if (metaIssues.length > 0) return failed(toValidationError(metaIssues));
 
+	if (Object.keys(columns).length === 0 && namedKeys(config, meta).length > 0) {
+		columns = touch(scoped, config);
+	}
+
 	let row: Row = withoutMeta(before);
 	if (Object.keys(columns).length > 0) {
 		try {
-			let result = await queryOf(scoped.db, config.table)
-				.where(where)
-				.update(columns, { returning: "*" });
+			let result = await target().update(columns, { returning: "*" });
 			let [updated] = result.rows ?? [];
 			if (updated === undefined) return failed(new NotFound(config.name, key));
 			row = updated;
@@ -359,7 +385,9 @@ export function upsertRow(
 		let lookup: Row = {};
 		for (let column of target) lookup[column] = input[column];
 
-		let before = present ? await readRow(scoped, config, lookup) : null;
+		let before = present
+			? await readRow(scoped, config, queryOf(scoped.db, config.table).where(lookup))
+			: null;
 		if (before === null) {
 			return insert(scoped, config, values, async (columns) => {
 				let result = await queryOf(scoped.db, config.table).upsert(columns, {
@@ -384,7 +412,14 @@ export function upsertRow(
 			);
 		}
 
-		return change(scoped, config, { ...lookup, ...config.constraints }, before, values);
+		let owner = { ...lookup, ...config.constraints };
+		return change(
+			scoped,
+			config,
+			() => queryOf(scoped.db, config.table).where(owner),
+			before,
+			values,
+		);
 	});
 }
 
@@ -399,8 +434,8 @@ export function deleteRow(
 ): Promise<Result<Row, Error>> {
 	return runWrite(session, async (scoped) => {
 		let ctx = modelContext(scoped);
-		let where = { ...keyWhere(config, key), ...config.constraints };
-		let before = await readRow(scoped, config, where);
+		let target = () => modelRows(scoped, config).where(keyWhere(config, key));
+		let before = await readRow(scoped, config, target());
 		if (before === null) return failed(new NotFound(config.name, key));
 
 		for (let callbacks of config.callbacks) {
@@ -409,7 +444,7 @@ export function deleteRow(
 		}
 
 		try {
-			await queryOf(scoped.db, config.table).where(where).delete();
+			await target().delete();
 		} catch (error) {
 			return statementFailure(error, config.tableName);
 		}

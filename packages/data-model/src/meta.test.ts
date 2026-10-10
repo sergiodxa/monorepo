@@ -266,6 +266,44 @@ describe("writing", () => {
 		).toEqual([{ message: "Required", path: ["meta", "slug"] }]);
 	});
 
+	test("an update naming only meta keys still touches updated_at", async () => {
+		let { db } = openDatabase();
+		let { articles } = await setup(db);
+		let article = unwrap(
+			await articles.create({ author_id: "author", published_at: null, meta: { slug: "a" } }),
+		);
+
+		let updated = unwrap(await articles.update(article.id, { meta: { title: "New" } }));
+
+		expect(updated.updated_at > article.updated_at).toBe(true);
+		expect(updated.meta.title).toBe("New");
+	});
+
+	test("whereMeta joins the meta table, so columns both tables share stay unambiguous", async () => {
+		let { db, operations } = openInterceptedD1();
+		let { articles } = await setup(await db);
+		for (let index = 1; index <= 3; index++) {
+			await articles.create({
+				author_id: "author",
+				published_at: null,
+				meta: { slug: `post-${index}`, tags: ["remix", "data"] },
+			});
+		}
+		operations.length = 0;
+
+		let rows = await articles
+			.whereMeta("tags", ["remix", "data"])
+			.where({ id: "id_0002" })
+			.orderBy("created_at", "desc")
+			.all();
+		let count = await articles.whereMeta("tags", ["remix", "data"]).count();
+
+		expect(rows.map((row) => row.id)).toEqual(["id_0002"]);
+		expect(rows[0]?.meta.tags).toEqual(["remix", "data"]);
+		expect(count).toBe(3);
+		expect(operations[0]).toEqual({ kind: "select", table: "posts" });
+	});
+
 	test("keys the model does not declare are left alone", async () => {
 		let { db } = openDatabase();
 		let { articles } = await setup(db);
@@ -302,7 +340,7 @@ describe("writing", () => {
 
 		await tracked.update("p1", { meta: { title: "New", slug: "a" } });
 
-		expect(changes).toEqual([["meta.title"]]);
+		expect(changes).toEqual([["updated_at", "meta.title"]]);
 	});
 
 	test("a JSON field is validated by its schema", async () => {

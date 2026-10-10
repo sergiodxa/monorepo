@@ -23,7 +23,15 @@ export type Row = Record<string, unknown>;
  */
 export interface LooseQuery {
 	where(input: unknown): LooseQuery;
+	having(input: unknown): LooseQuery;
+	join(table: AnyTable, on: unknown, type?: string): LooseQuery;
+	groupBy(...columns: string[]): LooseQuery;
+	orderBy(column: string, direction?: "asc" | "desc"): LooseQuery;
+	limit(value: number): LooseQuery;
+	offset(value: number): LooseQuery;
+	with(relations: Record<string, unknown>): LooseQuery;
 	select(...columns: string[]): LooseQuery;
+	select(selection: Record<string, string>): LooseQuery;
 	distinct(value?: boolean): LooseQuery;
 	all(): Promise<Row[]>;
 	first(): Promise<Row | null>;
@@ -44,8 +52,8 @@ export function queryOf(db: Database, table: AnyTable): LooseQuery {
 /** A scope as the runtime calls it. */
 export type RuntimeScope = (query: unknown, ...args: unknown[]) => unknown;
 
-/** Builds a model's custom methods from the bound model. */
-export type MethodFactory = (model: never) => Record<string, unknown>;
+/** A model's custom methods, each called with the bound model as `this`. */
+export type MethodSet = Record<string, (...args: unknown[]) => unknown>;
 
 /** Where a model's meta rows live, with every default filled in. */
 export interface ResolvedMetaTable {
@@ -69,8 +77,10 @@ export interface ModelConfig {
 	constraints: Row;
 	inheritance: string | undefined;
 	scopes: Record<string, RuntimeScope>;
-	/** Base factories first, so a sub-model's methods see the base's. */
-	methods: MethodFactory[];
+	/** Applied to every read, base first; `unscoped()` leaves them off. */
+	defaultScopes: RuntimeScope[];
+	/** Base sets first, so a sub-model's methods see the base's. */
+	methods: MethodSet[];
 	/** Base callbacks first, which is the order they run in. */
 	// oxlint-disable-next-line typescript/no-explicit-any -- callbacks are typed per model shape
 	callbacks: Callbacks<any>[];
@@ -83,7 +93,8 @@ export interface RawOptions {
 	constraints?: Row;
 	inheritance?: string;
 	scopes?: Record<string, RuntimeScope>;
-	methods?: MethodFactory;
+	defaultScope?: RuntimeScope;
+	methods?: MethodSet;
 	// oxlint-disable-next-line typescript/no-explicit-any -- callbacks are typed per model shape
 	callbacks?: Callbacks<any>;
 	metaTable?: MetaTableOptions;
@@ -125,6 +136,7 @@ const RESERVED_NAMES = new Set([
 	"create",
 	"transaction",
 	"load",
+	"unscoped",
 	"then",
 	"catch",
 	"finally",
@@ -169,6 +181,7 @@ function checkScopeNames(scopes: Record<string, RuntimeScope>, existing: Record<
 export function resolveConfig(table: AnyTable, options: RawOptions): ModelConfig {
 	let scopes = options.scopes ?? {};
 	checkScopeNames(scopes, {});
+	checkMethodNames(options.methods ?? {}, []);
 
 	let primaryKey = getTablePrimaryKey(table);
 	let fields = options.meta ?? {};
@@ -189,6 +202,7 @@ export function resolveConfig(table: AnyTable, options: RawOptions): ModelConfig
 		constraints: { ...options.constraints },
 		inheritance: options.inheritance,
 		scopes,
+		defaultScopes: options.defaultScope === undefined ? [] : [options.defaultScope],
 		methods: options.methods === undefined ? [] : [options.methods],
 		callbacks: options.callbacks === undefined ? [] : [options.callbacks],
 		metaTable,
@@ -209,6 +223,7 @@ export function extendConfig(base: ModelConfig, value: unknown, options: RawOpti
 
 	let scopes = options.scopes ?? {};
 	checkScopeNames(scopes, base.scopes);
+	checkMethodNames(options.methods ?? {}, base.methods);
 
 	let fields = { ...base.fields, ...options.meta };
 	if (Object.keys(fields).length > 0 && base.metaTable === undefined) {
@@ -221,11 +236,43 @@ export function extendConfig(base: ModelConfig, value: unknown, options: RawOpti
 		constraints: { ...base.constraints, [base.inheritance]: value },
 		inheritance: undefined,
 		scopes: { ...base.scopes, ...scopes },
+		defaultScopes:
+			options.defaultScope === undefined
+				? base.defaultScopes
+				: [...base.defaultScopes, options.defaultScope],
 		methods: options.methods === undefined ? base.methods : [...base.methods, options.methods],
 		callbacks:
 			options.callbacks === undefined ? base.callbacks : [...base.callbacks, options.callbacks],
 		fields,
 	};
+}
+
+/**
+ * Refuses a sub-model method named like one of the base's, which would replace the base's for
+ * every caller of the sub-model.
+ */
+function checkMethodNames(methods: MethodSet, base: readonly MethodSet[]) {
+	for (let name of Object.keys(methods)) {
+		if (RESERVED_NAMES.has(name)) {
+			throw new TypeError(`A method cannot be named "${name}", which a model already defines`);
+		}
+		if (base.some((set) => name in set)) {
+			throw new TypeError(`The method "${name}" is already defined by the base model`);
+		}
+	}
+}
+
+/**
+ * Applies a model's constraints and default scopes to a query, so every read starts within
+ * the rows the model owns.
+ */
+export function scopeQuery<Query>(query: Query, config: ModelConfig, unscoped = false): Query {
+	let scoped: unknown = query;
+	if (Object.keys(config.constraints).length > 0) {
+		scoped = (scoped as { where(input: Row): unknown }).where(config.constraints);
+	}
+	if (!unscoped) for (let scope of config.defaultScopes) scoped = scope(scoped);
+	return scoped as Query;
 }
 
 /** The `WHERE` object a primary-key input selects, for a single or a composite key. */

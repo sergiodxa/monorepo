@@ -95,8 +95,28 @@ type ScopeArguments<S> = S extends (query: never, ...args: infer Args) => unknow
 // oxlint-disable-next-line typescript/no-explicit-any -- each method declares its own arguments
 export type ModelMethod = (...args: any[]) => Promise<unknown> | { readonly "~modelQuery"?: true };
 
-/** A model's custom methods, keyed by name. */
-export type MethodMap = Record<string, ModelMethod>;
+/**
+ * The names of a model's methods that answer neither a promise nor a model query, which a
+ * lazily loaded model could not produce before its module loads.
+ */
+type InvalidMethodNames<Methods> = {
+	[Name in keyof Methods]: Methods[Name] extends ModelMethod ? never : Name & string;
+}[keyof Methods];
+
+/**
+ * What `createModel` and `extend` answer in place of a definition when a custom method breaks
+ * the rule, so registering or binding the model fails with the method named in the error.
+ */
+export interface InvalidModel<Reason extends string> {
+	readonly "~error": Reason;
+}
+
+/** A definition, or the error naming the methods that answer a plain value. */
+export type CheckedDefinition<S extends ModelShape, Methods> = [
+	InvalidMethodNames<Methods>,
+] extends [never]
+	? ModelDefinition<S>
+	: InvalidModel<`Custom methods must answer a promise or a model query: ${InvalidMethodNames<Methods>}`>;
 
 /** Rows a relation map loads, keyed by relation name. */
 type LoadedRelations<Relations> = Pretty<{
@@ -336,6 +356,8 @@ export interface BoundModelMethods<S extends ModelShape> {
 	 * resolves with something other than a `Failure`.
 	 */
 	transaction<Value>(fn: (models: AnyBoundModels) => Promise<Value>): Promise<Value>;
+	/** A query over the model's rows with its constraints applied and its default scope left off. */
+	unscoped(): ModelQueryOf<S>;
 	/** The bound model once its module has loaded; an eager model answers itself. */
 	load(): Promise<BoundModelView<S>>;
 }
@@ -379,8 +401,8 @@ export interface ModelBase<S extends ModelShape> {
 	/**
 	 * Binds the model to a database and a host context, for a script, a seed or a test.
 	 *
-	 * @param context The model context's members besides `get`, `require` and `models`.
-	 * @param host What `get` and `require` read through to, such as a `RequestContext`.
+	 * @param context The model context's members besides `get` and `models`.
+	 * @param host What `get` reads through to, such as a `RequestContext`.
 	 * @param options Whether the database has real transactions.
 	 */
 	bind(context: ModelContextInit, host?: ContextHost, options?: BindOptions): BoundModelOf<S>;
@@ -402,30 +424,29 @@ export interface ModelDefinition<S extends ModelShape> extends ModelBase<S> {
 	 */
 	extend<
 		const Value extends DiscriminatorValue<S>,
+		Methods extends object,
 		Scopes extends ScopeMap = {},
-		Methods extends MethodMap = {},
 		Fields extends FieldMap = {},
 		Optional extends keyof TableRow<S["table"]> & string = never,
 	>(
 		value: Value,
 		options: ExtendOptions<
-			SubShape<S, Value, Scopes, {}, Fields, Optional>,
+			SubShape<S, Value, Scopes, Methods, Fields, Optional>,
 			Scopes,
 			Methods,
 			Fields,
 			Optional
 		> &
-			NoRedeclaration<S>,
-	): ModelDefinition<SubShape<S, Value, Scopes, Methods, Fields, Optional>>;
+			NoScopeRedeclaration<S>,
+	): CheckedDefinition<SubShape<S, Value, Scopes, Methods, Fields, Optional>, Methods>;
 }
 
 /**
- * Refuses a sub-model scope or method named like one of the base's, so a name means the same
- * query on every model sharing it.
+ * Refuses a sub-model scope named like one of the base's, so a name means the same query on
+ * every model sharing it.
  */
-interface NoRedeclaration<S extends ModelShape> {
+interface NoScopeRedeclaration<S extends ModelShape> {
 	scopes?: { [Name in keyof S["scopes"]]?: never };
-	methods?: (model: never) => { [Name in keyof S["methods"]]?: never };
 }
 
 /** The values a base model's discriminator column takes. */
@@ -694,7 +715,7 @@ export interface ModelOptions<
 	S extends ModelShape,
 	Constraints,
 	Scopes extends ScopeMap,
-	Methods extends MethodMap,
+	Methods extends object,
 	Fields extends FieldMap,
 	Optional extends string,
 	Inheritance extends string,
@@ -710,8 +731,16 @@ export interface ModelOptions<
 	 * what gives each scope's `query` parameter its type while `Scopes` is inferred.
 	 */
 	scopes?: Scopes & Record<string, Scope<SingleTableColumn<S["table"]>>>;
-	/** Custom methods, built from the bound model so they compose its scopes and queries. */
-	methods?: (model: BoundModelView<S>) => Methods;
+	/**
+	 * A scope every read applies: queries, scopes, `find`, and the row an update or delete
+	 * targets. `unscoped()` reads without it, for the code that restores what it hides.
+	 */
+	defaultScope?: Scope<SingleTableColumn<S["table"]>>;
+	/**
+	 * Custom methods. `this` is the bound model, so a method composes its scopes, its queries
+	 * and the other methods; each answers a promise or a model query.
+	 */
+	methods?: Methods & ThisType<BoundModelView<S>>;
 	callbacks?: Callbacks<S>;
 	/** The key/value companion table `meta` fields are stored in. */
 	metaTable?: MetaTableOptions;
@@ -726,36 +755,38 @@ export interface ModelOptions<
 export interface ExtendOptions<
 	S extends ModelShape,
 	Scopes extends ScopeMap,
-	Methods extends MethodMap,
+	Methods extends object,
 	Fields extends FieldMap,
 	Optional extends string,
 > {
 	optional?: readonly Optional[];
 	/** The sub-model's own scopes, none of them named like one of the base's. */
 	scopes?: Scopes & Record<string, Scope<SingleTableColumn<S["table"]>>>;
-	methods?: (model: BoundModelView<S>) => Methods;
+	/** A default scope applied after the base's. */
+	defaultScope?: Scope<SingleTableColumn<S["table"]>>;
+	/** The sub-model's own methods, with `this` the bound sub-model. */
+	methods?: Methods & ThisType<BoundModelView<S>>;
 	callbacks?: Callbacks<S>;
 	meta?: Fields;
 }
 
 /**
- * What a model's callbacks receive. The database and the registry are the members the package
- * guarantees; an app adds its own, such as `log`, by augmenting this interface, and supplies
- * them where it binds.
+ * What a model's callbacks receive, extended the way a router's context is: an app augments
+ * this interface with the properties its callbacks read, such as `jobs` or `log`, and every
+ * binding then has to supply them. `models` is always present at runtime; augmenting it with
+ * `BoundRegistry<typeof models>` types the other models a callback reaches.
+ *
+ * @example declare module "@sdxc/data-model" { interface ModelContext { jobs: JobEnqueuer } }
  */
 export interface ModelContext {
 	/** The database this model is bound to, or the transaction it runs in. */
 	readonly db: Database;
-	/** Every model in the registry, bound to the same database and scope as this one. */
-	readonly models: AnyBoundModels;
 	/** Reads a value the host context published, or `undefined` when nothing did. */
 	get<Key extends object>(key: Key): ContextValue<Key> | undefined;
-	/** Reads a value the host context published, throwing when nothing did. */
-	require<Key extends object>(key: Key): NonNullable<ContextValue<Key>>;
 }
 
 /** What binding supplies: every model-context member besides the ones the package provides. */
-export type ModelContextInit = Omit<ModelContext, "get" | "require" | "models">;
+export type ModelContextInit = Omit<ModelContext, "get" | "models">;
 
 /** What a model context reads through to: a `RequestContext`, a `JobContext`, or any `get`. */
 export interface ContextHost {
@@ -799,7 +830,16 @@ export type BoundModels<Entries extends RegistryEntries> = {
 	transaction<Value>(fn: (models: BoundModels<Entries>) => Promise<Value>): Promise<Value>;
 };
 
-/** A bound registry whatever its entries, as a model context sees it. */
+/**
+ * The bound type of a registry, for augmenting `ModelContext` and the router's context.
+ *
+ * @example declare module "@sdxc/data-model" { interface ModelContext { models: BoundRegistry<typeof models> } }
+ */
+export type BoundRegistry<Registry extends { readonly entries: RegistryEntries }> = BoundModels<
+	Registry["entries"]
+>;
+
+/** A bound registry whatever its entries, as a unit of work hands it to a single model. */
 export interface AnyBoundModels {
 	// oxlint-disable-next-line typescript/no-explicit-any -- the app's registry is not known here
 	readonly [name: string]: any;

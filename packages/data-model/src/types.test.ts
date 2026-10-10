@@ -18,6 +18,8 @@ import { openDatabase } from "./fixtures/sqlite.js";
 import type {
 	AnyModel,
 	BoundModel,
+	BoundRegistry,
+	InvalidModel,
 	CreateValues,
 	ModelQuery,
 	ModelRow,
@@ -30,9 +32,11 @@ import { createModel, createModels, field } from "./index.js";
 const USERS = createModel(users, {
 	optional: ["id", "role"],
 	scopes: { active: (query) => query.where({ deleted_at: null }) },
-	methods: (model) => ({
-		findByEmail: (email: string) => model.active().where({ email }).first(),
-	}),
+	methods: {
+		findByEmail(email: string) {
+			return this.active().where({ email }).first();
+		},
+	},
 });
 
 const COMMENTS = createModel(comments, { optional: ["id"] });
@@ -179,11 +183,49 @@ describe("scopes", () => {
 		expectTypeOf(wrapped).not.toHaveProperty("grouped");
 	});
 
-	test("a custom method returning a plain value fails to type-check", () => {
-		createModel(users, {
-			// @ts-expect-error a lazily loaded model could not produce a plain value before loading
-			methods: () => ({ answer: () => 42 }),
+	test("a custom method returning a plain value turns the definition into an error", () => {
+		let Bad = createModel(users, {
+			methods: {
+				answer() {
+					return 42;
+				},
+			},
 		});
+
+		expectTypeOf(Bad).toEqualTypeOf<
+			InvalidModel<"Custom methods must answer a promise or a model query: answer">
+		>();
+	});
+
+	test("a method reaches the model's scopes and its other methods through this", () => {
+		let Composed = createModel(users, {
+			scopes: { active: (query) => query.where({ deleted_at: null }) },
+			methods: {
+				listActive() {
+					return this.active().all();
+				},
+				async firstActive() {
+					let rows = await this.listActive();
+					return rows[0] ?? null;
+				},
+			},
+		});
+		let bound = Composed.bind({ db: DB });
+
+		expectTypeOf<Awaited<ReturnType<(typeof bound)["firstActive"]>>>().toEqualTypeOf<ModelRow<
+			typeof Composed
+		> | null>();
+	});
+
+	test("unscoped() answers the same query type as query()", () => {
+		expectTypeOf(userModel.unscoped()).toEqualTypeOf<ModelQuery<typeof USERS>>();
+	});
+
+	test("BoundRegistry names a registry's bound type, for augmenting a context", () => {
+		let registry = createModels({ users: USERS, comments: COMMENTS });
+		expectTypeOf<BoundRegistry<typeof registry>["users"]>().toEqualTypeOf<
+			BoundModel<typeof USERS>
+		>();
 	});
 
 	test("a sub-model scope named like a base scope fails to type-check", () => {

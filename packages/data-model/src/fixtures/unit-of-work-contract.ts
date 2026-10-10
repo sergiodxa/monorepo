@@ -51,7 +51,7 @@ async function setup(subject: UnitOfWorkSubject) {
 			},
 			async afterCommit(event, ctx) {
 				seen.push(ctx.db);
-				if (event.operation === "create") await ctx.require(MAIL).send(event.row.email);
+				if (event.operation === "create") await ctx.get(MAIL)?.send(event.row.email);
 			},
 		},
 	});

@@ -33,13 +33,15 @@ import { users } from "./schema.js";
 
 export const Users = createModel(users, {
 	optional: ["id"],
+	defaultScope: (query) => query.where({ deleted_at: null }),
 	scopes: {
-		active: (query) => query.where({ deleted_at: null }),
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
 	},
-	methods: (model) => ({
-		findByEmail: (email: string) => model.active().where({ email: email.toLowerCase() }).first(),
-	}),
+	methods: {
+		findByEmail(email: string) {
+			return this.query().where({ email: email.toLowerCase() }).first();
+		},
+	},
 	callbacks: {
 		async validate(values) {
 			if (values.name === "") return fail("Name is required", ["name"]);
@@ -62,7 +64,8 @@ let created = await users.create({ email: "Pat@Example.com", name: "Pat" });
 if (isFailure(created)) return created.error.issues; // ValidationError issues
 
 await users.find(created.data.id); // the row, or null
-await users.active().inTeam(teamId).orderBy("name", "asc").all();
+await users.inTeam(teamId).orderBy("name", "asc").all(); // deleted users left out
+await users.unscoped().where({ id }).first(); // including deleted ones
 ```
 
 Reads answer `null` for a missing row. `create`, `update`, `upsert` and `delete` answer a
@@ -95,17 +98,35 @@ published. An entry written as an import loads on its first call in each invocat
 
 ### Dispatch Side Effects After Commit
 
-```typescript
-import { Jobs } from "@sdxc/jobs/router";
+Callbacks receive a `ModelContext`. It carries `db` and `get(key)`, which reads what the host
+context published; anything else a callback reads, the app adds to the interface the way
+middleware adds properties to a router's context, and supplies wherever it binds:
 
+```typescript
+import type { BoundRegistry } from "@sdxc/data-model";
+import type { JobEnqueuer } from "@sdxc/jobs";
+
+import type { models } from "./models/index.js";
+
+declare module "@sdxc/data-model" {
+	interface ModelContext {
+		jobs: JobEnqueuer;
+		models: BoundRegistry<typeof models>;
+	}
+}
+```
+
+```typescript
 export const Users = createModel(users, {
 	callbacks: {
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx.require(Jobs).enqueue(jobs.sendWelcome, { userId: event.row.id });
+			await ctx.jobs.enqueue(jobs.sendWelcome, { userId: event.row.id });
 		},
 	},
 });
+
+router.use(models(registry, (ctx) => ({ db: ctx.db, jobs: ctx.jobs })));
 
 let result = await ctx.models.transaction(async (models) => {
 	let user = await models.users.create({ email, name });
@@ -129,8 +150,11 @@ Defines a model. Options:
   every query from it. A scope may call `where`, `having`, `orderBy`, `groupBy`, `limit`,
   `offset` and `distinct`; `with()` and `select()` change the row type, so they belong in
   `methods`.
-- `methods`: `(model) => ({ ... })`, custom methods built from the bound model. Each returns a
-  promise or a model query.
+- `defaultScope`: a scope every read applies, including the row an update or delete targets.
+  `unscoped()` reads without it.
+- `methods`: custom methods, with `this` bound to the model, so a method composes its scopes,
+  its queries and the other methods. Each answers a promise or a model query; a method
+  answering a plain value turns the definition into an `InvalidModel` naming it.
 - `callbacks`: `validate`, `beforeCreate`, `beforeUpdate`, `beforeDelete`, `afterCreate`,
   `afterUpdate`, `afterDelete` and `afterCommit`, all async and all receiving the
   `ModelContext`. `validate` and the `before*` callbacks fail with `fail(...)` from
@@ -144,7 +168,7 @@ Defines a model. Options:
 ### `definition.bind(context, host?, options?)`
 
 Binds a model for a script, a seed or a test. `context` holds `db` and any member the app adds
-to `ModelContext`; `host` is what `ctx.get` and `ctx.require` read through to, such as a
+to `ModelContext`; `host` is what `ctx.get` reads through to, such as a
 `RequestContext`; `options.transactions` is `"database"` for an adapter with real transactions
 and `"none"`, the default, for D1 and Durable Object SQLite.
 
@@ -159,6 +183,7 @@ of the base's is a type error.
 | Member                 | Answers                                                    |
 | ---------------------- | ---------------------------------------------------------- |
 | `query()`, scopes      | A data-table `Query` with the model's scopes chainable     |
+| `unscoped()`           | The same, without the default scope                        |
 | `withMeta(keys)`       | A query loading only those meta keys                       |
 | `whereMeta(key, v)`    | A query keeping rows holding `v` under the key             |
 | `from(query)`          | Another package's query, with constraints and scopes added |
@@ -171,7 +196,7 @@ of the base's is a type error.
 | `transaction(fn)`      | Whatever `fn` returns, with `afterCommit` deferred         |
 | `load()`               | The bound model once a lazily loaded module has loaded     |
 
-A bulk write built from a query, `users.active().update({ ... })`, is data-table's own
+A bulk write built from a query, `users.inTeam(teamId).update({ ... })`, is data-table's own
 statement and runs no model callbacks.
 
 ### `createModels(entries)`
@@ -204,7 +229,8 @@ Factories whose attributes draw from `@sdxc/sample` and write through the bound 
 `BoundModel<M>`, `ModelQuery<M>`, `ModelRow<M>`, `CreateValues<M>` and `UpdateValues<M>` name
 a model's bound type, query, row and write inputs from `typeof Model`. `AnyModel<Shape>`
 constrains a helper to models whose rows have `Shape`. `ModelContext` is what callbacks
-receive; augment it to type members the app supplies at binding.
+receive; augment it to type members the app supplies at binding. `BoundRegistry<typeof models>`
+names a bound registry, for typing `ctx.models` in callbacks and in the router's context.
 
 ## Patterns
 
@@ -225,9 +251,11 @@ export const Articles = Posts.extend("article", {
 		locale: field.enum(["en", "es"]).default("en"),
 		tags: field.list(field.text()),
 	},
-	methods: (model) => ({
-		findBySlug: (slug: string) => model.live().whereMeta("slug", slug).first(),
-	}),
+	methods: {
+		findBySlug(slug: string) {
+			return this.live().whereMeta("slug", slug).first();
+		},
+	},
 });
 
 let article = await articles.create({ author_id, meta: { slug: "hello", tags: ["remix"] } });
@@ -235,10 +263,12 @@ article.data.type; // "article"
 article.data.meta.locale; // "en"
 ```
 
-An update's `meta` touches only the keys it names, and `null` removes one. Writes insert the
-new meta rows before deleting the older ones, so a failure between the two still reads the
-latest value. `whereMeta` reads the matching owners from the meta table first and then filters
-by their keys, which suits selective keys such as a slug.
+An update's `meta` touches only the keys it names, and `null` removes one; an update naming only
+meta keys still touches the table's `updatedAt` column. Writes insert the new meta rows before
+deleting the older ones, so a failure between the two still reads the latest value.
+`whereMeta` joins the meta table into the read, so a broad key such as a locale stays one
+statement; each further `whereMeta` on the same query reads its matching owners first, so
+chain the broad key first and selective ones after it.
 
 ### Pattern: Helpers Over Any Model
 

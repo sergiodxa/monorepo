@@ -1,7 +1,7 @@
 /**
  * Builds the bound model a definition becomes in one binding: its queries, scopes, writes and
- * custom methods, all reading the binding's database. Methods are built from the bound model
- * itself, so they compose its scopes and each other.
+ * custom methods, all reading the binding's database. Methods are bound with the model as
+ * `this`, so they compose its scopes and each other.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@ import type { ModelConfig, Row } from "./config.js";
 import type { Session } from "./session.js";
 import type { AnyBoundModels } from "./types.js";
 
-import { keyWhere } from "./config.js";
+import { keyWhere, scopeQuery } from "./config.js";
 import { wrapQuery } from "./query.js";
 import { runUnitOfWork } from "./session.js";
 import { createRow, deleteRow, updateRow, upsertRow } from "./writes.js";
@@ -20,12 +20,6 @@ import { createRow, deleteRow, updateRow, upsertRow } from "./writes.js";
 type RuntimeModel = Record<string, unknown> & {
 	query(): { where(input: unknown): { first(): Promise<unknown> } };
 };
-
-/** Applies a model's constraints to a query, so every read starts within the model's rows. */
-function constrain(query: object, config: ModelConfig): object {
-	if (Object.keys(config.constraints).length === 0) return query;
-	return (query as { where(input: Row): object }).where(config.constraints);
-}
 
 /**
  * Binds a model's config to a binding.
@@ -45,8 +39,10 @@ export function bindModel(config: ModelConfig, session: Session): RuntimeModel {
 
 	let model: RuntimeModel = {
 		query: () =>
-			wrapQuery(constrain(session.db.query(config.table as never), config), state(false)) as never,
-		from: (query: object) => wrapQuery(constrain(query, config), state(true)),
+			wrapQuery(scopeQuery(session.db.query(config.table as never), config), state(false)) as never,
+		unscoped: () =>
+			wrapQuery(scopeQuery(session.db.query(config.table as never), config, true), state(false)),
+		from: (query: object) => wrapQuery(scopeQuery(query, config), state(true)),
 		withMeta: (keys: readonly string[]) =>
 			(model.query() as unknown as { withMeta(keys: readonly string[]): unknown }).withMeta(keys),
 		whereMeta: (key: string, value: unknown) =>
@@ -72,7 +68,9 @@ export function bindModel(config: ModelConfig, session: Session): RuntimeModel {
 			);
 	}
 
-	for (let factory of config.methods) Object.assign(model, factory(model as never));
+	for (let methods of config.methods) {
+		for (let [name, method] of Object.entries(methods)) model[name] = method.bind(model);
+	}
 
 	return model;
 }
