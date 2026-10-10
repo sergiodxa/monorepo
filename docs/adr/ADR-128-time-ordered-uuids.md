@@ -167,6 +167,11 @@ private.
 
 **Priority:** High
 
+Phase 2a moves every app to the version entry points with no behavior change: root
+`generateUUID()` callers import from `@sdxc/uuid/v4`, and auth-saas's `generateUUIDv7()`
+callers import `generateUUID` from `@sdxc/uuid/v7`. Phase 2b, below, switches entity IDs to v7
+one app at a time.
+
 1. auth-saas: import `generateUUID` from `@sdxc/uuid/v7` in place of `generateUUIDv7()`
 2. blog: replace `crypto.randomUUID()` with `generateUUID()` from `@sdxc/uuid/v7` in the `post`, `post-meta`,
    `user`, `webmention`, and `webmention-send` repositories
@@ -222,6 +227,7 @@ so the ordering guarantee would fail exactly where batches of related rows are c
 
 ## Current Progress
 
-- [ ] Phase 1: `@sdxc/uuid`
-- [ ] Phase 2: Apps
+- [x] Phase 1: `@sdxc/uuid`
+- [x] Phase 2a: Apps import from the version entry points, keeping their current versions
+- [ ] Phase 2b: Apps switch entity IDs to `@sdxc/uuid/v7`
 - [ ] Phase 3: Repo rule
