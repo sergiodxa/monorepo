@@ -1,44 +1,58 @@
 /**
- * Unit tests for the `Lead` data-access model: the create-or-update the trial form runs, the
- * per-lead daily digest schedule, and the cleanup sweep that removes a lead once its watches
- * are gone. Most cover {@link Lead.upsertByEmail}, where every field a repeat submission
- * touches follows its own rule; the rest cover ordering, since the orphan sweep is correct
- * only because the watch sweep has already run.
+ * Tests the leads model: the create-or-update the trial form runs, the per-lead daily digest
+ * schedule, and the cleanup sweep that removes a lead once its watches are gone. The orphan
+ * sweep is correct only because the watch sweep has already run, so ordering is covered too.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CreateValues } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { LeadInput } from "~/app/data/lead";
+import type { LeadInput } from "~/app/models/leads";
+import type { TrialWatches } from "~/app/models/trial-watches";
 
-import Lead, { ORPHANED_LEAD_GRACE_MS, shouldSendDigest } from "~/app/data/lead";
-import TrialWatch from "~/app/data/trial-watch";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { ORPHANED_LEAD_GRACE_MS, hasMarketingConsent, shouldSendDigest } from "~/app/models/leads";
+import { isConvertible } from "~/app/models/trial-watches";
 import { leads, trialWatchResults, trialWatches } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 });
 
 /** A valid trial-form submission, with any field overridable per test. */
 async function upsert(overrides: Partial<LeadInput> = {}) {
-	return await Lead.upsertByEmail(db, {
-		email: "visitor@example.com",
-		locale: "en",
-		consented: false,
-		...overrides,
-	});
+	return unwrap(
+		await models.leads.upsertByEmail({
+			email: "visitor@example.com",
+			locale: "en",
+			consented: false,
+			...overrides,
+		}),
+	);
 }
 
-describe("Lead.upsertByEmail", () => {
+/** Starts a trial watch for a lead, failing the test when the write is refused. */
+async function startWatch(
+	leadId: string,
+	values: Omit<CreateValues<typeof TrialWatches>, "lead_id">,
+) {
+	return unwrap(await models.trialWatches.create({ lead_id: leadId, ...values }));
+}
+
+describe("leads.upsertByEmail", () => {
 	test("records a new lead with no digest history", async () => {
 		let lead = await upsert();
 
@@ -92,7 +106,7 @@ describe("Lead.upsertByEmail", () => {
 	test("does not hand out a second digest by resetting the stamp", async () => {
 		let lead = await upsert();
 		let sentAt = Date.now();
-		await Lead.markDigestSent(db, lead.id, sentAt);
+		await models.leads.markDigestSent(lead.id, sentAt);
 
 		expect((await upsert({ locale: "fr" })).last_digest_at).toBe(sentAt);
 	});
@@ -110,7 +124,7 @@ describe("Lead.upsertByEmail", () => {
  * keep working as an address, so the row is keyed on the person while the mail still goes to
  * the spelling they used.
  */
-describe("Lead.upsertByEmail identity", () => {
+describe("leads.upsertByEmail identity", () => {
 	test("resolves every tagged and cased spelling to one lead", async () => {
 		let first = await upsert({ email: "hello+a@sergiodxa.com" });
 		let second = await upsert({ email: "hello+b@sergiodxa.com" });
@@ -152,64 +166,66 @@ describe("Lead.upsertByEmail identity", () => {
 	});
 });
 
-describe("Lead.findByEmail", () => {
+describe("leads.findByEmail", () => {
 	test("finds the lead behind an address", async () => {
 		let created = await upsert();
 
-		expect((await Lead.findByEmail(db, "visitor@example.com"))?.id).toBe(created.id);
+		expect((await models.leads.findByEmail("visitor@example.com"))?.id).toBe(created.id);
 	});
 
 	test("returns null for an address that never tried the tool", async () => {
-		expect(await Lead.findByEmail(db, "stranger@example.com")).toBeNull();
+		expect(await models.leads.findByEmail("stranger@example.com")).toBeNull();
 	});
 
 	/** What makes signing up as `hello@` claim the targets tried as `hello+test@`. */
 	test("finds a lead created under a tagged spelling from the untagged one", async () => {
 		let created = await upsert({ email: "hello+test@sergiodxa.com" });
 
-		expect((await Lead.findByEmail(db, "hello@sergiodxa.com"))?.id).toBe(created.id);
-		expect((await Lead.findByEmail(db, "HELLO@SERGIODXA.COM"))?.id).toBe(created.id);
+		expect((await models.leads.findByEmail("hello@sergiodxa.com"))?.id).toBe(created.id);
+		expect((await models.leads.findByEmail("HELLO@SERGIODXA.COM"))?.id).toBe(created.id);
 	});
 });
 
-describe("Lead.findById", () => {
+describe("leads.find", () => {
 	test("finds the lead a watch belongs to", async () => {
 		let created = await upsert();
 
-		expect((await Lead.findById(db, created.id))?.email).toBe("visitor@example.com");
+		expect((await models.leads.find(created.id))?.email).toBe("visitor@example.com");
 	});
 });
 
-describe("Lead.findByUnsubscribeToken", () => {
+describe("leads.findByUnsubscribeToken", () => {
 	test("resolves the lead an unsubscribe link identifies", async () => {
 		let lead = await upsert();
 
-		expect((await Lead.findByUnsubscribeToken(db, lead.unsubscribe_token))?.id).toBe(lead.id);
+		expect((await models.leads.findBy({ unsubscribe_token: lead.unsubscribe_token }))?.id).toBe(
+			lead.id,
+		);
 	});
 
 	test("returns null for an unknown token rather than guessing", async () => {
 		await upsert();
 
-		expect(await Lead.findByUnsubscribeToken(db, "not-a-token")).toBeNull();
+		expect(await models.leads.findBy({ unsubscribe_token: "not-a-token" })).toBeNull();
 	});
 
 	test("a second click on the same link is a no-op, not an error", async () => {
 		let lead = await upsert();
-		await Lead.forget(db, lead.id);
+		await models.leads.forget(lead.id);
 
-		expect(await Lead.findByUnsubscribeToken(db, lead.unsubscribe_token)).toBeNull();
+		expect(await models.leads.findBy({ unsubscribe_token: lead.unsubscribe_token })).toBeNull();
 	});
 });
 
-describe("Lead.forget", () => {
+describe("leads.forget", () => {
 	test("removes the lead, its watches and every result behind them", async () => {
 		let lead = await upsert();
-		let first = await TrialWatch.create(db, lead.id, { url: "https://a.example" });
-		let second = await TrialWatch.create(db, lead.id, { url: "https://b.example" });
-		await TrialWatch.recordCheck(db, first, { status: "up", responseTimeMs: 100 });
-		await TrialWatch.recordCheck(db, second, { status: "down", responseTimeMs: null });
+		let first = await startWatch(lead.id, { url: "https://a.example" });
+		let second = await startWatch(lead.id, { url: "https://b.example" });
+		await models.trialWatches.recordCheck(first, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(second, { status: "down", responseTimeMs: null });
 
-		await Lead.forget(db, lead.id);
+		await models.leads.forget(lead.id);
 
 		expect(await db.count(leads)).toBe(0);
 		expect(await db.count(trialWatches)).toBe(0);
@@ -218,45 +234,45 @@ describe("Lead.forget", () => {
 
 	test("takes convertible watches too, so unsubscribing forfeits the offer", async () => {
 		let lead = await upsert();
-		let watch = await TrialWatch.create(db, lead.id, { url: "https://a.example" });
+		let watch = await startWatch(lead.id, { url: "https://a.example" });
 
-		expect(TrialWatch.isConvertible(watch, Date.now())).toBe(true);
-		await Lead.forget(db, lead.id);
+		expect(isConvertible(watch, Date.now())).toBe(true);
+		await models.leads.forget(lead.id);
 
-		expect(await TrialWatch.listConvertibleByLead(db, lead.id, Date.now())).toHaveLength(0);
+		expect(await models.trialWatches.listConvertibleByLead(lead.id, Date.now())).toHaveLength(0);
 	});
 
 	/** The distinction the two names carry: the sweep honours windows, `forget` removes. */
 	test("removes a lead the scheduled sweep would have refused to touch", async () => {
 		let lead = await upsert();
-		await TrialWatch.create(db, lead.id, { url: "https://a.example" });
+		await startWatch(lead.id, { url: "https://a.example" });
 
-		await Lead.deleteOrphaned(db, Date.now());
-		expect(await Lead.findById(db, lead.id)).not.toBeNull();
+		await models.leads.deleteOrphaned(Date.now());
+		expect(await models.leads.find(lead.id)).not.toBeNull();
 
-		await Lead.forget(db, lead.id);
-		expect(await Lead.findById(db, lead.id)).toBeNull();
+		await models.leads.forget(lead.id);
+		expect(await models.leads.find(lead.id)).toBeNull();
 	});
 
 	test("never touches another lead's data", async () => {
 		let gone = await upsert({ email: "gone@example.com" });
 		let kept = await upsert({ email: "kept@example.com" });
-		await TrialWatch.create(db, gone.id, { url: "https://a.example" });
-		let keptWatch = await TrialWatch.create(db, kept.id, {
+		await startWatch(gone.id, { url: "https://a.example" });
+		let keptWatch = await startWatch(kept.id, {
 			url: "https://b.example",
 		});
-		await TrialWatch.recordCheck(db, keptWatch, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(keptWatch, { status: "up", responseTimeMs: 100 });
 
-		await Lead.forget(db, gone.id);
+		await models.leads.forget(gone.id);
 
-		expect(await Lead.findById(db, kept.id)).not.toBeNull();
-		expect(await TrialWatch.listByLead(db, kept.id)).toHaveLength(1);
+		expect(await models.leads.find(kept.id)).not.toBeNull();
+		expect(await models.trialWatches.listByLead(kept.id)).toHaveLength(1);
 		expect(await db.count(trialWatchResults)).toBe(1);
 	});
 
 	test("handing the address over again starts a fresh lead with a fresh token", async () => {
 		let first = await upsert();
-		await Lead.forget(db, first.id);
+		await models.leads.forget(first.id);
 
 		let second = await upsert();
 
@@ -297,11 +313,11 @@ describe("shouldSendDigest", () => {
 	});
 });
 
-describe("Lead.listDueForDigest", () => {
+describe("leads.listDueForDigest", () => {
 	/** A lead with one active watch, created far enough back to be due a digest. */
 	async function leadWithActiveWatch(email: string) {
 		let lead = await upsert({ email });
-		await TrialWatch.create(db, lead.id, { url: `https://${email}` });
+		await startWatch(lead.id, { url: `https://${email}` });
 		await db.update(leads, lead.id, { created_at: Date.now() - 2 * MS_PER_DAY });
 		return lead;
 	}
@@ -309,17 +325,17 @@ describe("Lead.listDueForDigest", () => {
 	test("returns a lead with an active watch that has had no digest today", async () => {
 		let lead = await leadWithActiveWatch("one@example.com");
 
-		let due = await Lead.listDueForDigest(db, Date.now());
+		let due = await models.leads.listDueForDigest(Date.now());
 
 		expect(due.map((each) => each.id)).toEqual([lead.id]);
 	});
 
 	test("returns a lead once, however many targets they are watching", async () => {
 		let lead = await leadWithActiveWatch("one@example.com");
-		await TrialWatch.create(db, lead.id, { url: "https://two.example" });
-		await TrialWatch.create(db, lead.id, { url: "three.example" });
+		await startWatch(lead.id, { url: "https://two.example" });
+		await startWatch(lead.id, { url: "three.example" });
 
-		let due = await Lead.listDueForDigest(db, Date.now());
+		let due = await models.leads.listDueForDigest(Date.now());
 
 		expect(due).toHaveLength(1);
 	});
@@ -330,31 +346,31 @@ describe("Lead.listDueForDigest", () => {
 			created_at: Date.now() - 2 * MS_PER_DAY,
 		});
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
+		expect(await models.leads.listDueForDigest(Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead whose every watch has finished", async () => {
 		let lead = await leadWithActiveWatch("done@example.com");
-		let [watch] = await TrialWatch.listByLead(db, lead.id);
-		if (watch) await TrialWatch.finish(db, watch.id);
+		let [watch] = await models.trialWatches.listByLead(lead.id);
+		if (watch) await models.trialWatches.finish(watch.id);
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
+		expect(await models.leads.listDueForDigest(Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead on the day they signed up", async () => {
 		let lead = await upsert({ email: "fresh@example.com" });
-		await TrialWatch.create(db, lead.id, { url: "https://fresh.example" });
+		await startWatch(lead.id, { url: "https://fresh.example" });
 
-		expect(await Lead.listDueForDigest(db, Date.now())).toHaveLength(0);
+		expect(await models.leads.listDueForDigest(Date.now())).toHaveLength(0);
 	});
 
 	test("skips a lead already sent a digest today, and returns them again tomorrow", async () => {
 		let lead = await leadWithActiveWatch("one@example.com");
 		let now = Date.now();
-		await Lead.markDigestSent(db, lead.id, now);
+		await models.leads.markDigestSent(lead.id, now);
 
-		expect(await Lead.listDueForDigest(db, now)).toHaveLength(0);
-		expect((await Lead.listDueForDigest(db, now + MS_PER_DAY)).map((each) => each.id)).toEqual([
+		expect(await models.leads.listDueForDigest(now)).toHaveLength(0);
+		expect((await models.leads.listDueForDigest(now + MS_PER_DAY)).map((each) => each.id)).toEqual([
 			lead.id,
 		]);
 	});
@@ -362,27 +378,27 @@ describe("Lead.listDueForDigest", () => {
 	test("agrees with the predicate it is the SQL form of", async () => {
 		let lead = await leadWithActiveWatch("one@example.com");
 		let now = Date.now();
-		let [due] = await Lead.listDueForDigest(db, now);
+		let [due] = await models.leads.listDueForDigest(now);
 
 		expect(due?.id).toBe(lead.id);
 		expect(due ? shouldSendDigest(due, now) : false).toBe(true);
 	});
 });
 
-describe("Lead.markDigestSent", () => {
+describe("leads.markDigestSent", () => {
 	test("stamping the digest is what closes the day's bound", async () => {
 		let lead = await upsert();
 		let now = Date.now();
 
-		await Lead.markDigestSent(db, lead.id, now);
-		let stored = await Lead.findById(db, lead.id);
+		await models.leads.markDigestSent(lead.id, now);
+		let stored = await models.leads.find(lead.id);
 
 		expect(stored?.last_digest_at).toBe(now);
 		expect(stored ? shouldSendDigest(stored, now) : true).toBe(false);
 	});
 });
 
-describe("Lead.recordEmailSent", () => {
+describe("leads.recordEmailSent", () => {
 	test("a new lead has received nothing", async () => {
 		expect((await upsert()).emails_sent).toBe(0);
 	});
@@ -390,10 +406,10 @@ describe("Lead.recordEmailSent", () => {
 	test("counts one email at a time", async () => {
 		let lead = await upsert();
 
-		await Lead.recordEmailSent(db, lead.id);
-		await Lead.recordEmailSent(db, lead.id);
+		await models.leads.recordEmailSent(lead.id);
+		await models.leads.recordEmailSent(lead.id);
 
-		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(2);
+		expect((await models.leads.find(lead.id))?.emails_sent).toBe(2);
 	});
 
 	/**
@@ -404,23 +420,23 @@ describe("Lead.recordEmailSent", () => {
 	test("loses no count when several sends land at once", async () => {
 		let lead = await upsert();
 
-		await Promise.all(Array.from({ length: 10 }, () => Lead.recordEmailSent(db, lead.id)));
+		await Promise.all(Array.from({ length: 10 }, () => models.leads.recordEmailSent(lead.id)));
 
-		expect((await Lead.findById(db, lead.id))?.emails_sent).toBe(10);
+		expect((await models.leads.find(lead.id))?.emails_sent).toBe(10);
 	});
 
 	test("counts against one lead and not another", async () => {
 		let one = await upsert({ email: "one@example.com" });
 		let two = await upsert({ email: "two@example.com" });
 
-		await Lead.recordEmailSent(db, one.id);
+		await models.leads.recordEmailSent(one.id);
 
-		expect((await Lead.findById(db, one.id))?.emails_sent).toBe(1);
-		expect((await Lead.findById(db, two.id))?.emails_sent).toBe(0);
+		expect((await models.leads.find(one.id))?.emails_sent).toBe(1);
+		expect((await models.leads.find(two.id))?.emails_sent).toBe(0);
 	});
 });
 
-describe("Lead.countFunnelActivity", () => {
+describe("leads.countFunnelActivity", () => {
 	test("counts creations and digests inside the window and nothing outside it", async () => {
 		let day = 24 * 60 * 60 * 1000;
 		let start = Date.UTC(2026, 6, 1);
@@ -429,33 +445,33 @@ describe("Lead.countFunnelActivity", () => {
 		let outside = await upsert({ email: "outside@example.com" });
 		await db.update(leads, inside.id, { created_at: start + 1000 }, { touch: false });
 		await db.update(leads, outside.id, { created_at: start - 1000 }, { touch: false });
-		await Lead.markDigestSent(db, outside.id, start + 2000);
+		await models.leads.markDigestSent(outside.id, start + 2000);
 
-		let counts = await Lead.countFunnelActivity(db, start, start + day);
+		let counts = await models.leads.countFunnelActivity(start, start + day);
 
 		expect(counts.created).toBe(1);
 		expect(counts.digestsSent).toBe(1);
 	});
 
 	test("answers with zeroes when there are no leads at all", async () => {
-		expect(await Lead.countFunnelActivity(db, 0, Date.now())).toEqual({
+		expect(await models.leads.countFunnelActivity(0, Date.now())).toEqual({
 			created: 0,
 			digestsSent: 0,
 		});
 	});
 });
 
-describe("Lead.hasMarketingConsent", () => {
+describe("hasMarketingConsent", () => {
 	test("separates an email given for the watch from consent to be marketed to", async () => {
 		let withoutConsent = await upsert({ email: "quiet@example.com", consented: false });
 		let withConsent = await upsert({ email: "loud@example.com", consented: true });
 
-		expect(Lead.hasMarketingConsent(withoutConsent)).toBe(false);
-		expect(Lead.hasMarketingConsent(withConsent)).toBe(true);
+		expect(hasMarketingConsent(withoutConsent)).toBe(false);
+		expect(hasMarketingConsent(withConsent)).toBe(true);
 	});
 });
 
-describe("Lead.deleteOrphaned", () => {
+describe("leads.deleteOrphaned", () => {
 	/** A lead old enough to be past the anti-race grace period. */
 	async function agedLead(email: string, overrides: Partial<LeadInput> = {}) {
 		let lead = await upsert({ email, ...overrides });
@@ -466,7 +482,7 @@ describe("Lead.deleteOrphaned", () => {
 	test("deletes a lead that has no watches left", async () => {
 		await agedLead("gone@example.com");
 
-		let swept = await Lead.deleteOrphaned(db, Date.now());
+		let swept = await models.leads.deleteOrphaned(Date.now());
 
 		expect(swept.rowsAffected).toBe(1);
 		expect(swept.reachedCeiling).toBe(false);
@@ -475,11 +491,11 @@ describe("Lead.deleteOrphaned", () => {
 
 	test("keeps a lead that still has a watch, however old the watch is", async () => {
 		let lead = await agedLead("kept@example.com");
-		await TrialWatch.create(db, lead.id, { url: "https://kept.example" });
+		await startWatch(lead.id, { url: "https://kept.example" });
 
-		await Lead.deleteOrphaned(db, Date.now());
+		await models.leads.deleteOrphaned(Date.now());
 
-		expect(await Lead.findById(db, lead.id)).not.toBeNull();
+		expect(await models.leads.find(lead.id)).not.toBeNull();
 	});
 
 	/**
@@ -491,19 +507,19 @@ describe("Lead.deleteOrphaned", () => {
 		let lead = await agedLead("partial@example.com");
 		let now = Date.now();
 
-		let first = await TrialWatch.create(db, lead.id, { url: "https://a.example" });
-		let second = await TrialWatch.create(db, lead.id, { url: "https://b.example" });
-		let third = await TrialWatch.create(db, lead.id, { url: "https://c.example" });
+		let first = await startWatch(lead.id, { url: "https://a.example" });
+		let second = await startWatch(lead.id, { url: "https://b.example" });
+		let third = await startWatch(lead.id, { url: "https://c.example" });
 
 		await db.update(trialWatches, first.id, { converts_until: now - 2 * MS_PER_DAY });
 		await db.update(trialWatches, second.id, { converts_until: now + 1 * MS_PER_DAY });
 		await db.update(trialWatches, third.id, { converts_until: now + 4 * MS_PER_DAY });
 
-		await TrialWatch.deleteExpired(db, now);
-		await Lead.deleteOrphaned(db, now);
+		await models.trialWatches.deleteExpired(now);
+		await models.leads.deleteOrphaned(now);
 
-		expect(await Lead.findById(db, lead.id)).not.toBeNull();
-		expect((await TrialWatch.listByLead(db, lead.id)).map((watch) => watch.id).sort()).toEqual(
+		expect(await models.leads.find(lead.id)).not.toBeNull();
+		expect((await models.trialWatches.listByLead(lead.id)).map((watch) => watch.id).sort()).toEqual(
 			[second.id, third.id].sort(),
 		);
 	});
@@ -511,13 +527,13 @@ describe("Lead.deleteOrphaned", () => {
 	test("deletes the lead only once its last attempt has expired too", async () => {
 		let lead = await agedLead("finally@example.com");
 		let now = Date.now();
-		let watch = await TrialWatch.create(db, lead.id, { url: "https://a.example" });
+		let watch = await startWatch(lead.id, { url: "https://a.example" });
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 
-		await TrialWatch.deleteExpired(db, now);
-		await Lead.deleteOrphaned(db, now);
+		await models.trialWatches.deleteExpired(now);
+		await models.leads.deleteOrphaned(now);
 
-		expect(await Lead.findById(db, lead.id)).toBeNull();
+		expect(await models.leads.find(lead.id)).toBeNull();
 	});
 
 	/**
@@ -528,27 +544,27 @@ describe("Lead.deleteOrphaned", () => {
 	test("deletes a lead who gave marketing consent, once no watch is left to email about", async () => {
 		let lead = await agedLead("consented@example.com", { consented: true });
 
-		await Lead.deleteOrphaned(db, Date.now());
+		await models.leads.deleteOrphaned(Date.now());
 
-		expect(await Lead.findById(db, lead.id)).toBeNull();
+		expect(await models.leads.find(lead.id)).toBeNull();
 	});
 
 	test("still keeps a consented lead while a watch of theirs survives", async () => {
 		let lead = await agedLead("consented@example.com", { consented: true });
-		await TrialWatch.create(db, lead.id, { url: "https://a.example" });
+		await startWatch(lead.id, { url: "https://a.example" });
 
-		await Lead.deleteOrphaned(db, Date.now());
+		await models.leads.deleteOrphaned(Date.now());
 
-		expect(await Lead.findById(db, lead.id)).not.toBeNull();
+		expect(await models.leads.find(lead.id)).not.toBeNull();
 	});
 
 	test("never deletes a lead whose first watch is still being written", async () => {
 		let lead = await upsert({ email: "racing@example.com" });
 
-		await Lead.deleteOrphaned(db, Date.now());
+		await models.leads.deleteOrphaned(Date.now());
 
-		expect(await Lead.findById(db, lead.id)).not.toBeNull();
-		await Lead.deleteOrphaned(db, Date.now() + ORPHANED_LEAD_GRACE_MS + 1);
-		expect(await Lead.findById(db, lead.id)).toBeNull();
+		expect(await models.leads.find(lead.id)).not.toBeNull();
+		await models.leads.deleteOrphaned(Date.now() + ORPHANED_LEAD_GRACE_MS + 1);
+		expect(await models.leads.find(lead.id)).toBeNull();
 	});
 });

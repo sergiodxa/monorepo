@@ -1,11 +1,7 @@
 /**
- * Unit tests for the `TeamDigest` read model: who is owed a digest, what a team's monitors
- * did over a window, and the stamp that says one went out. Three things carry the weight —
- * the due-list's two independent guards, the separate daily and weekly stamps, and the outer
- * join that keeps a monitor with no stats rows in the report.
- *
- * Rows are seeded directly so the disabled halves of the SQL union stay reachable, and a
- * team is only a `team_id` to the queries under test.
+ * Tests the team digest reads: who is owed a digest, what a team's monitors did over a window,
+ * and the stamp that says one went out. Rows are seeded directly, so the disabled halves of the
+ * SQL union stay reachable and a team is only a `team_id` to the queries under test.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,30 +11,27 @@ import type { Database } from "remix/data-table";
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
-import type { DigestPeriod } from "~/app/data/team-digest";
-import type { MonitorStatus } from "~/database/schema";
+import type { DigestMonitorType, DigestPeriod } from "~/app/repositories/team-digests";
+import type { SelectMonitorDailyStats } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import TeamDigest from "~/app/data/team-digest";
 import { createTestDatabase } from "~/app/lib/test/db";
+import {
+	listDigestMonitors,
+	listDigestRecipients,
+	markDigestSent,
+} from "~/app/repositories/team-digests";
 import {
 	cronJobMonitors,
 	dnsMonitors,
 	flowMonitors,
 	memberships,
+	monitorDailyStats,
 	monitors,
 	tcpMonitors,
 } from "~/database/schema";
 
 /** Every type the union covers, so a case that must hold for all of them is written once. */
-const MONITOR_TYPES = [
-	"http",
-	"dns",
-	"tcp",
-	"cron",
-	"flow",
-] as const satisfies DailyStatsMonitorType[];
+const MONITOR_TYPES = ["http", "dns", "tcp", "cron", "flow"] as const satisfies DigestMonitorType[];
 
 /** Both periods, for the cases that must hold whichever stamp is in play. */
 const PERIODS = ["daily", "weekly"] as const satisfies DigestPeriod[];
@@ -96,7 +89,7 @@ async function seedMembership(
  * null `enabled_at`, `dns_monitors`, `tcp_monitors` and `flow_monitors` by `is_enabled = 0`.
  */
 async function seedMonitor(
-	type: DailyStatsMonitorType,
+	type: DigestMonitorType,
 	teamId: string,
 	options: { id?: string; name?: string; enabled?: boolean } = {},
 ) {
@@ -152,34 +145,39 @@ async function seedMonitor(
 
 /** One day of the roll-up for a monitor, which is the only place the report reads from. */
 async function seedDay(
-	monitor: { id: string; type: DailyStatsMonitorType },
+	monitor: { id: string; type: DigestMonitorType },
 	date: string,
-	counts: { total?: number; successful?: number; status?: MonitorStatus } = {},
+	counts: { total?: number; successful?: number; status?: SelectMonitorDailyStats["status"] } = {},
 ) {
 	let total = counts.total ?? 10;
 	let successful = counts.successful ?? total;
 
-	return await MonitorDailyStats.upsertDay(db, {
-		monitor_id: monitor.id,
-		monitor_type: monitor.type,
-		date,
-		total_checks: total,
-		successful_checks: successful,
-		failed_checks: total - successful,
-		avg_response_time_ms: 40,
-		max_response_time_ms: 60,
-		status: counts.status ?? "up",
-	});
+	return await db.create(
+		monitorDailyStats,
+		{
+			id: crypto.randomUUID(),
+			monitor_id: monitor.id,
+			monitor_type: monitor.type,
+			date,
+			total_checks: total,
+			successful_checks: successful,
+			failed_checks: total - successful,
+			avg_response_time_ms: 40,
+			max_response_time_ms: 60,
+			status: counts.status ?? "up",
+		},
+		{ touch: true, returnRow: true },
+	);
 }
 
-describe("TeamDigest.listDue", () => {
+describe("listDigestRecipients", () => {
 	let cutoff = Date.parse("2026-08-03T00:00:00Z");
 
 	test("returns a membership that has never been sent this digest", async () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a");
 
-		let due = await TeamDigest.listDue(db, "daily", cutoff);
+		let due = await listDigestRecipients(db, "daily", cutoff);
 
 		expect(due).toEqual([
 			{ id: membership.id, teamId: "team-a", subjectId: membership.subject_id },
@@ -190,7 +188,7 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a", { lastDailyDigestAt: cutoff - 1 });
 
-		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
+		expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
 	});
@@ -200,14 +198,14 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		await seedMembership("team-a", { lastDailyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	test("excludes a membership stamped after the cutoff", async () => {
 		await seedMonitor("http", "team-a");
 		await seedMembership("team-a", { lastDailyDigestAt: cutoff + MS_PER_DAY });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	/**
@@ -218,8 +216,8 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a", { lastDailyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
-		expect((await TeamDigest.listDue(db, "weekly", cutoff)).map((each) => each.id)).toEqual([
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
+		expect((await listDigestRecipients(db, "weekly", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
 	});
@@ -228,8 +226,8 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("http", "team-a");
 		let membership = await seedMembership("team-a", { lastWeeklyDigestAt: cutoff });
 
-		expect(await TeamDigest.listDue(db, "weekly", cutoff)).toHaveLength(0);
-		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
+		expect(await listDigestRecipients(db, "weekly", cutoff)).toHaveLength(0);
+		expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
 	});
@@ -239,7 +237,7 @@ describe("TeamDigest.listDue", () => {
 		let second = await seedMembership("team-a", { createdAt: cutoff - MS_PER_DAY });
 		let first = await seedMembership("team-a", { createdAt: cutoff - 2 * MS_PER_DAY });
 
-		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
+		expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 			first.id,
 			second.id,
 		]);
@@ -253,7 +251,7 @@ describe("TeamDigest.listDue", () => {
 		await seedMembership("team-b", { createdAt: cutoff - 2 * MS_PER_DAY });
 		await seedMembership("team-a", { createdAt: cutoff - 1 * MS_PER_DAY });
 
-		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.teamId)).toEqual([
+		expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.teamId)).toEqual([
 			"team-a",
 			"team-a",
 			"team-b",
@@ -264,14 +262,14 @@ describe("TeamDigest.listDue", () => {
 	test("excludes a membership of a team with no monitors at all", async () => {
 		await seedMembership("team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	test("excludes a membership of a team whose only monitor belongs to another team", async () => {
 		await seedMonitor("http", "team-b");
 		await seedMembership("team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 	});
 
 	for (let type of MONITOR_TYPES) {
@@ -279,7 +277,7 @@ describe("TeamDigest.listDue", () => {
 			await seedMonitor(type, "team-a");
 			let membership = await seedMembership("team-a");
 
-			expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
+			expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 				membership.id,
 			]);
 		});
@@ -288,7 +286,7 @@ describe("TeamDigest.listDue", () => {
 			await seedMonitor(type, "team-a", { enabled: false });
 			await seedMembership("team-a");
 
-			expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+			expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 		});
 	}
 
@@ -297,7 +295,7 @@ describe("TeamDigest.listDue", () => {
 		await seedMonitor("tcp", "team-a", { enabled: true });
 		let membership = await seedMembership("team-a");
 
-		expect((await TeamDigest.listDue(db, "daily", cutoff)).map((each) => each.id)).toEqual([
+		expect((await listDigestRecipients(db, "daily", cutoff)).map((each) => each.id)).toEqual([
 			membership.id,
 		]);
 	});
@@ -310,17 +308,17 @@ describe("TeamDigest.listDue", () => {
 		}
 		await seedMembership("team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(1);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(1);
 	});
 
 	test("returns nothing when there are no memberships at all", async () => {
 		await seedMonitor("http", "team-a");
 
-		expect(await TeamDigest.listDue(db, "daily", cutoff)).toHaveLength(0);
+		expect(await listDigestRecipients(db, "daily", cutoff)).toHaveLength(0);
 	});
 });
 
-describe("TeamDigest.listMonitors", () => {
+describe("listDigestMonitors", () => {
 	let since = "2026-07-27";
 	let until = "2026-08-02";
 
@@ -331,7 +329,7 @@ describe("TeamDigest.listMonitors", () => {
 		await seedDay(monitor, "2026-07-27", { total: 10, successful: 10 });
 		await seedDay(monitor, "2026-07-30", { total: 15, successful: 0, status: "down" });
 
-		let [report] = await TeamDigest.listMonitors(db, "team-a", since, until);
+		let [report] = await listDigestMonitors(db, "team-a", since, until);
 
 		expect(report?.id).toBe(monitor.id);
 		expect(report?.type).toBe("http");
@@ -350,7 +348,7 @@ describe("TeamDigest.listMonitors", () => {
 	test("returns an enabled monitor with no stats rows at all, with no days", async () => {
 		let monitor = await seedMonitor("http", "team-a", { name: "Fresh" });
 
-		expect(await TeamDigest.listMonitors(db, "team-a", since, until)).toEqual([
+		expect(await listDigestMonitors(db, "team-a", since, until)).toEqual([
 			{ id: monitor.id, type: "http", name: "Fresh", days: [] },
 		]);
 	});
@@ -362,7 +360,7 @@ describe("TeamDigest.listMonitors", () => {
 		await seedDay(monitor, until);
 		await seedDay(monitor, "2026-08-03");
 
-		let [report] = await TeamDigest.listMonitors(db, "team-a", since, until);
+		let [report] = await listDigestMonitors(db, "team-a", since, until);
 
 		expect(report?.days.map((day) => day.date)).toEqual([since, until]);
 	});
@@ -372,7 +370,7 @@ describe("TeamDigest.listMonitors", () => {
 		let monitor = await seedMonitor("http", "team-a", { name: "Old" });
 		await seedDay(monitor, "2026-07-01");
 
-		expect(await TeamDigest.listMonitors(db, "team-a", since, until)).toEqual([
+		expect(await listDigestMonitors(db, "team-a", since, until)).toEqual([
 			{ id: monitor.id, type: "http", name: "Old", days: [] },
 		]);
 	});
@@ -383,9 +381,9 @@ describe("TeamDigest.listMonitors", () => {
 		await seedDay(mine, since);
 		await seedDay(theirs, since);
 
-		expect(
-			(await TeamDigest.listMonitors(db, "team-a", since, until)).map((each) => each.name),
-		).toEqual(["Mine"]);
+		expect((await listDigestMonitors(db, "team-a", since, until)).map((each) => each.name)).toEqual(
+			["Mine"],
+		);
 	});
 
 	test("excludes a disabled monitor even when it has days in the window", async () => {
@@ -393,9 +391,9 @@ describe("TeamDigest.listMonitors", () => {
 		await seedMonitor("dns", "team-a", { name: "On" });
 		await seedDay(disabled, since);
 
-		expect(
-			(await TeamDigest.listMonitors(db, "team-a", since, until)).map((each) => each.name),
-		).toEqual(["On"]);
+		expect((await listDigestMonitors(db, "team-a", since, until)).map((each) => each.name)).toEqual(
+			["On"],
+		);
 	});
 
 	test("reports all four monitor types, ordered by name", async () => {
@@ -404,7 +402,7 @@ describe("TeamDigest.listMonitors", () => {
 		await seedMonitor("cron", "team-a", { name: "Nightly" });
 		await seedMonitor("dns", "team-a", { name: "Apex" });
 
-		let report = await TeamDigest.listMonitors(db, "team-a", since, until);
+		let report = await listDigestMonitors(db, "team-a", since, until);
 
 		expect(report.map((each) => [each.name, each.type])).toEqual([
 			["Apex", "dns"],
@@ -425,7 +423,7 @@ describe("TeamDigest.listMonitors", () => {
 		await seedMonitor("dns", "team-a", { id: shared, name: "Dns" });
 		await seedDay(http, since);
 
-		let report = await TeamDigest.listMonitors(db, "team-a", since, until);
+		let report = await listDigestMonitors(db, "team-a", since, until);
 
 		expect(report.map((each) => [each.name, each.days.length])).toEqual([
 			["Dns", 0],
@@ -436,7 +434,7 @@ describe("TeamDigest.listMonitors", () => {
 	test("returns nothing for a team with no monitors", async () => {
 		await seedMonitor("http", "team-b");
 
-		expect(await TeamDigest.listMonitors(db, "team-a", since, until)).toHaveLength(0);
+		expect(await listDigestMonitors(db, "team-a", since, until)).toHaveLength(0);
 	});
 
 	/** The one-day window both bounds collapse to, which is what the daily digest asks for. */
@@ -445,20 +443,20 @@ describe("TeamDigest.listMonitors", () => {
 		await seedDay(monitor, "2026-08-01");
 		await seedDay(monitor, "2026-08-02");
 
-		let [report] = await TeamDigest.listMonitors(db, "team-a", "2026-08-02", "2026-08-02");
+		let [report] = await listDigestMonitors(db, "team-a", "2026-08-02", "2026-08-02");
 
 		expect(report?.days.map((day) => day.date)).toEqual(["2026-08-02"]);
 	});
 });
 
-describe("TeamDigest.markSent", () => {
+describe("markDigestSent", () => {
 	let sentAt = Date.parse("2026-08-03T01:15:00Z");
 
 	for (let period of PERIODS) {
 		test(`stamps the ${period} digest and leaves the other one alone`, async () => {
 			let membership = await seedMembership("team-a");
 
-			await TeamDigest.markSent(db, membership.id, period, sentAt);
+			await markDigestSent(db, membership.id, period, sentAt);
 			let stored = await db.findOne(memberships, { where: { id: membership.id } });
 
 			expect(stored?.[period === "daily" ? "last_daily_digest_at" : "last_weekly_digest_at"]).toBe(
@@ -475,10 +473,10 @@ describe("TeamDigest.markSent", () => {
 			let today = Date.parse("2026-08-03T00:00:00Z");
 			let tomorrow = Date.parse("2026-08-04T00:00:00Z");
 
-			await TeamDigest.markSent(db, membership.id, period, sentAt);
+			await markDigestSent(db, membership.id, period, sentAt);
 
-			expect(await TeamDigest.listDue(db, period, today)).toHaveLength(0);
-			expect((await TeamDigest.listDue(db, period, tomorrow)).map((each) => each.id)).toEqual([
+			expect(await listDigestRecipients(db, period, today)).toHaveLength(0);
+			expect((await listDigestRecipients(db, period, tomorrow)).map((each) => each.id)).toEqual([
 				membership.id,
 			]);
 		});
@@ -488,7 +486,7 @@ describe("TeamDigest.markSent", () => {
 		let earlier = sentAt - 7 * MS_PER_DAY;
 		let membership = await seedMembership("team-a", { lastWeeklyDigestAt: earlier });
 
-		await TeamDigest.markSent(db, membership.id, "daily", sentAt);
+		await markDigestSent(db, membership.id, "daily", sentAt);
 		let stored = await db.findOne(memberships, { where: { id: membership.id } });
 
 		expect(stored?.last_daily_digest_at).toBe(sentAt);
@@ -498,7 +496,7 @@ describe("TeamDigest.markSent", () => {
 	test("moves the stamp forward on a later send", async () => {
 		let membership = await seedMembership("team-a", { lastDailyDigestAt: sentAt - MS_PER_DAY });
 
-		await TeamDigest.markSent(db, membership.id, "daily", sentAt);
+		await markDigestSent(db, membership.id, "daily", sentAt);
 
 		expect(
 			(await db.findOne(memberships, { where: { id: membership.id } }))?.last_daily_digest_at,
@@ -509,7 +507,7 @@ describe("TeamDigest.markSent", () => {
 		let mailed = await seedMembership("team-a");
 		let other = await seedMembership("team-a");
 
-		await TeamDigest.markSent(db, mailed.id, "daily", sentAt);
+		await markDigestSent(db, mailed.id, "daily", sentAt);
 
 		expect(
 			(await db.findOne(memberships, { where: { id: other.id } }))?.last_daily_digest_at,

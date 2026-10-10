@@ -1,9 +1,7 @@
 /**
- * Unit tests for the `TrialConversion` data-access model: the once-only snapshot
- * written when a lead becomes an account, and the once-only stamp written when that
- * account starts paying. Both run repeatedly with the same subject in production —
- * conversion on every sign-in, entitlement on every renewal — so what is pinned here
- * is that a second call leaves the row exactly as the first one wrote it.
+ * Tests the trial conversions model: the once-only snapshot written when a lead becomes an
+ * account, and the once-only stamp written when that account starts paying. Both run again
+ * with the same subject in production, so a second call must leave the row as the first wrote it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,24 +11,27 @@ import type { Database } from "remix/data-table";
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { TrialSignup } from "~/app/data/trial-conversion";
+import type { TrialSignup } from "~/app/models/trial-conversions";
 
-import TrialConversion, { trialConversionUrls } from "~/app/data/trial-conversion";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { trialConversionUrls } from "~/app/models/trial-conversions";
 import { trialConversions } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const OWNER_ID = "subject-1";
 
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 });
 
 /** A signup snapshot, with any field overridable per test. */
 async function record(overrides: Partial<TrialSignup> = {}) {
-	return await TrialConversion.recordSignup(db, {
+	return await models.trialConversions.recordSignup({
 		ownerId: OWNER_ID,
 		leadCreatedAt: Date.now() - 5 * MS_PER_DAY,
 		emailsSent: 4,
@@ -41,7 +42,7 @@ async function record(overrides: Partial<TrialSignup> = {}) {
 	});
 }
 
-describe("TrialConversion.recordSignup", () => {
+describe("trialConversions.recordSignup", () => {
 	test("stores the snapshot the report is drawn from", async () => {
 		let leadCreatedAt = Date.now() - 9 * MS_PER_DAY;
 		let signedUpAt = Date.now();
@@ -54,7 +55,7 @@ describe("TrialConversion.recordSignup", () => {
 			watchCount: 3,
 		});
 
-		let row = await TrialConversion.findByOwner(db, OWNER_ID);
+		let row = await models.trialConversions.findBy({ owner_id: OWNER_ID });
 		expect(row?.lead_created_at).toBe(leadCreatedAt);
 		expect(row?.signed_up_at).toBe(signedUpAt);
 		expect(row?.emails_sent).toBe(7);
@@ -66,7 +67,7 @@ describe("TrialConversion.recordSignup", () => {
 	test("stores no address, so unsubscribing still deletes every trace of the lead", async () => {
 		await record();
 
-		let row = await TrialConversion.findByOwner(db, OWNER_ID);
+		let row = await models.trialConversions.findBy({ owner_id: OWNER_ID });
 		expect(JSON.stringify(row)).not.toContain("@");
 	});
 
@@ -87,7 +88,7 @@ describe("TrialConversion.recordSignup", () => {
 		});
 
 		expect(createdAgain).toBe(false);
-		let row = await TrialConversion.findByOwner(db, OWNER_ID);
+		let row = await models.trialConversions.findBy({ owner_id: OWNER_ID });
 		expect(row?.signed_up_at).toBe(firstSignUp);
 		expect(row?.emails_sent).toBe(2);
 		expect(row?.watch_count).toBe(1);
@@ -103,18 +104,18 @@ describe("TrialConversion.recordSignup", () => {
 		await record();
 		await record({ ownerId: "subject-2", emailsSent: 1 });
 
-		expect((await TrialConversion.findByOwner(db, "subject-2"))?.emails_sent).toBe(1);
+		expect((await models.trialConversions.findBy({ owner_id: "subject-2" }))?.emails_sent).toBe(1);
 		expect(await db.findMany(trialConversions, {})).toHaveLength(2);
 	});
 });
 
-describe("TrialConversion.markPaid", () => {
+describe("trialConversions.markPaid", () => {
 	test("stamps the first payment", async () => {
 		await record();
 		let paidAt = Date.now();
 
-		expect(await TrialConversion.markPaid(db, OWNER_ID, paidAt)).toBe(true);
-		expect((await TrialConversion.findByOwner(db, OWNER_ID))?.paid_at).toBe(paidAt);
+		expect(await models.trialConversions.markPaid(OWNER_ID, paidAt)).toBe(true);
+		expect((await models.trialConversions.findBy({ owner_id: OWNER_ID }))?.paid_at).toBe(paidAt);
 	});
 
 	/**
@@ -125,16 +126,18 @@ describe("TrialConversion.markPaid", () => {
 	test("a second entitlement event does not move the stamp", async () => {
 		await record();
 		let firstPayment = Date.now() - 30 * MS_PER_DAY;
-		await TrialConversion.markPaid(db, OWNER_ID, firstPayment);
+		await models.trialConversions.markPaid(OWNER_ID, firstPayment);
 
-		let movedIt = await TrialConversion.markPaid(db, OWNER_ID, Date.now());
+		let movedIt = await models.trialConversions.markPaid(OWNER_ID, Date.now());
 
 		expect(movedIt).toBe(false);
-		expect((await TrialConversion.findByOwner(db, OWNER_ID))?.paid_at).toBe(firstPayment);
+		expect((await models.trialConversions.findBy({ owner_id: OWNER_ID }))?.paid_at).toBe(
+			firstPayment,
+		);
 	});
 
 	test("is a silent no-op for an account that never came through the trial", async () => {
-		expect(await TrialConversion.markPaid(db, "stranger", Date.now())).toBe(false);
+		expect(await models.trialConversions.markPaid("stranger", Date.now())).toBe(false);
 	});
 });
 
@@ -146,19 +149,19 @@ describe("the report's two windows", () => {
 		await record({ ownerId: "early", signedUpAt: base });
 		await record({ ownerId: "inside", signedUpAt: base + day });
 		await record({ ownerId: "late", signedUpAt: base + 2 * day });
-		await TrialConversion.markPaid(db, "early", base + day + 60_000);
+		await models.trialConversions.markPaid("early", base + day + 60_000);
 
-		let signedUp = await TrialConversion.listSignedUpBetween(db, base + day, base + 2 * day);
+		let signedUp = await models.trialConversions.listSignedUpBetween(base + day, base + 2 * day);
 		expect(signedUp.map((row) => row.owner_id)).toEqual(["inside"]);
 
-		let paid = await TrialConversion.listPaidBetween(db, base + day, base + 2 * day);
+		let paid = await models.trialConversions.listPaidBetween(base + day, base + 2 * day);
 		expect(paid.map((row) => row.owner_id)).toEqual(["early"]);
 	});
 
 	test("an unpaid account is never in the paid window, however wide it is", async () => {
 		await record();
 
-		expect(await TrialConversion.listPaidBetween(db, 0, Date.now() + 1)).toHaveLength(0);
+		expect(await models.trialConversions.listPaidBetween(0, Date.now() + 1)).toHaveLength(0);
 	});
 });
 

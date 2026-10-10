@@ -1,43 +1,56 @@
 /**
- * Unit tests for the `TrialWatch` data-access model: the hourly `next_due_at` claim, the
- * `recordCheck` write path, the change-email bound that stops a flapping target emailing 168
- * times in a week, the two independent deadlines (checking ends at 7 days, the conversion offer
- * at 30), and the cleanup sweeps. The predicates are exercised as pure functions against
- * literal rows, because that is how the sweep calls them — on the row the claim just handed it.
+ * Tests the trial watches model: the hourly `next_due_at` claim, the `recordCheck` write path,
+ * the change-email bound that stops a flapping target emailing 168 times a week, the two
+ * independent deadlines (checking ends at 7 days, the offer at 30) and the cleanup sweeps. The
+ * predicates run as pure functions against literal rows, the way the sweep calls them.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { CreateValues } from "@sdxc/data-model";
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { NewTrialWatch } from "~/app/data/trial-watch";
+import type { TrialWatches } from "~/app/models/trial-watches";
 
-import TrialWatch, {
+import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
 	TRIAL_WATCH_INTERVAL_SECONDS,
+	isConvertible,
 	isHealthyTrialStatus,
 	shouldNotifyChange,
 	shouldSendSummary,
-} from "~/app/data/trial-watch";
-import { createTestDatabase } from "~/app/lib/test/db";
+} from "~/app/models/trial-watches";
 import { trialWatchResults, trialWatches } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 const MS_PER_DAY = 24 * MS_PER_HOUR;
 
+/** What starting a watch takes besides the lead it belongs to. */
+type WatchValues = Omit<CreateValues<typeof TrialWatches>, "lead_id">;
+
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 });
 
-/** A valid `TrialWatch.create` input for `lead-1`, with any field overridable per test. */
-async function createWatch(overrides: Partial<NewTrialWatch> = {}) {
-	return await TrialWatch.create(db, "lead-1", {
+/** Starts a trial watch for a lead, failing the test when the write is refused. */
+async function startWatch(leadId: string, values: WatchValues) {
+	return unwrap(await models.trialWatches.create({ lead_id: leadId, ...values }));
+}
+
+/** A valid watch for `lead-1`, with any field overridable per test. */
+async function createWatch(overrides: Partial<WatchValues> = {}) {
+	return await startWatch("lead-1", {
 		url: "https://example.com",
 		...overrides,
 	});
@@ -49,7 +62,7 @@ async function nextDueAt(watchId: string) {
 	return watch?.next_due_at ?? null;
 }
 
-describe("TrialWatch.create", () => {
+describe("trialWatches.create", () => {
 	test("stamps both deadlines, seven days apart from thirty", async () => {
 		let before = Date.now();
 		let watch = await createWatch();
@@ -121,32 +134,38 @@ describe("TrialWatch.create", () => {
  * The report page's only read, and its whole authorization: a token in a URL is everything the
  * page has to go on, so an unknown token must answer `null` for the page to 404.
  */
-describe("TrialWatch.findByReportToken", () => {
+describe("trialWatches.findByReportToken", () => {
 	test("finds the watch its token was issued for", async () => {
 		let watch = await createWatch();
 
-		expect((await TrialWatch.findByReportToken(db, watch.report_token))?.id).toBe(watch.id);
+		expect((await models.trialWatches.findBy({ report_token: watch.report_token }))?.id).toBe(
+			watch.id,
+		);
 	});
 
 	test("finds a watch whose week is over, which is what a report describes", async () => {
 		let watch = await createWatch();
 		await db.update(trialWatches, watch.id, { next_due_at: null, summary_sent_at: Date.now() });
 
-		expect(await TrialWatch.findByReportToken(db, watch.report_token)).not.toBeNull();
+		expect(await models.trialWatches.findBy({ report_token: watch.report_token })).not.toBeNull();
 	});
 
 	test("answers null for a token nothing issued", async () => {
 		await createWatch();
 
-		expect(await TrialWatch.findByReportToken(db, "not-a-real-token")).toBeNull();
+		expect(await models.trialWatches.findBy({ report_token: "not-a-real-token" })).toBeNull();
 	});
 
 	test("never answers with another watch's row", async () => {
 		let mine = await createWatch({ url: "https://mine.example" });
-		let theirs = await TrialWatch.create(db, "lead-2", { url: "https://theirs.example" });
+		let theirs = await startWatch("lead-2", { url: "https://theirs.example" });
 
-		expect((await TrialWatch.findByReportToken(db, mine.report_token))?.id).toBe(mine.id);
-		expect((await TrialWatch.findByReportToken(db, theirs.report_token))?.id).toBe(theirs.id);
+		expect((await models.trialWatches.findBy({ report_token: mine.report_token }))?.id).toBe(
+			mine.id,
+		);
+		expect((await models.trialWatches.findBy({ report_token: theirs.report_token }))?.id).toBe(
+			theirs.id,
+		);
 	});
 });
 
@@ -154,20 +173,20 @@ describe("TrialWatch.findByReportToken", () => {
  * `claimDue` takes the watches whose next check has arrived and advances that column in the
  * same call, so what matters is the state it leaves behind.
  */
-describe("TrialWatch.claimDue", () => {
+describe("trialWatches.claimDue", () => {
 	test("claims nothing before the first check is due", async () => {
 		await createWatch();
 
-		expect(await TrialWatch.claimDue(db, Date.now())).toHaveLength(0);
+		expect(await models.trialWatches.claimDue(Date.now())).toHaveLength(0);
 	});
 
 	test("claims every watch that has come due, across leads", async () => {
 		let first = await createWatch();
-		let second = await TrialWatch.create(db, "lead-2", {
+		let second = await startWatch("lead-2", {
 			url: "https://other.example",
 		});
 
-		let claimed = await TrialWatch.claimDue(db, Date.now() + MS_PER_HOUR);
+		let claimed = await models.trialWatches.claimDue(Date.now() + MS_PER_HOUR);
 
 		expect(new Set(claimed.map((watch) => watch.id))).toEqual(new Set([first.id, second.id]));
 	});
@@ -176,15 +195,15 @@ describe("TrialWatch.claimDue", () => {
 		await createWatch();
 		let scheduledAt = Date.now() + MS_PER_HOUR;
 
-		expect(await TrialWatch.claimDue(db, scheduledAt)).toHaveLength(1);
-		expect(await TrialWatch.claimDue(db, scheduledAt)).toHaveLength(0);
+		expect(await models.trialWatches.claimDue(scheduledAt)).toHaveLength(1);
+		expect(await models.trialWatches.claimDue(scheduledAt)).toHaveLength(0);
 	});
 
 	test("advances by one whole hour rather than catching up on every missed check", async () => {
 		let watch = await createWatch();
 
 		let scheduledAt = Date.now() + 6 * MS_PER_HOUR;
-		let claimed = await TrialWatch.claimDue(db, scheduledAt);
+		let claimed = await models.trialWatches.claimDue(scheduledAt);
 
 		expect(claimed).toHaveLength(1);
 		let advanced = await nextDueAt(watch.id);
@@ -194,15 +213,15 @@ describe("TrialWatch.claimDue", () => {
 
 	test("never claims a finished watch", async () => {
 		let watch = await createWatch();
-		await TrialWatch.finish(db, watch.id);
+		await models.trialWatches.finish(watch.id);
 
-		expect(await TrialWatch.claimDue(db, Date.now() + 8 * MS_PER_DAY)).toHaveLength(0);
+		expect(await models.trialWatches.claimDue(Date.now() + 8 * MS_PER_DAY)).toHaveLength(0);
 	});
 
 	test("still claims an expired watch, which is how the wrap-up gets sent", async () => {
 		let watch = await createWatch();
 
-		let claimed = await TrialWatch.claimDue(db, Date.now() + 8 * MS_PER_DAY);
+		let claimed = await models.trialWatches.claimDue(Date.now() + 8 * MS_PER_DAY);
 
 		expect(claimed.map((each) => each.id)).toEqual([watch.id]);
 	});
@@ -210,7 +229,7 @@ describe("TrialWatch.claimDue", () => {
 	test("projects the columns the sweep decides with, so it needs no follow-up read", async () => {
 		await createWatch({ last_status: "up" });
 
-		let [claimed] = await TrialWatch.claimDue(db, Date.now() + MS_PER_HOUR);
+		let [claimed] = await models.trialWatches.claimDue(Date.now() + MS_PER_HOUR);
 
 		expect(claimed?.url).toBe("https://example.com");
 		expect(claimed?.lead_id).toBe("lead-1");
@@ -220,12 +239,12 @@ describe("TrialWatch.claimDue", () => {
 	});
 });
 
-describe("TrialWatch.recordCheck", () => {
+describe("trialWatches.recordCheck", () => {
 	test("appends a history row and returns its id", async () => {
 		let watch = await createWatch();
 
-		let id = await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 120 });
-		let [result] = await TrialWatch.listResults(db, watch.id);
+		let id = await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 120 });
+		let [result] = await models.trialWatchResults.listByWatch(watch.id);
 
 		expect(result?.id).toBe(id);
 		expect(result?.status).toBe("up");
@@ -235,11 +254,11 @@ describe("TrialWatch.recordCheck", () => {
 	test("bumps the counters a digest reads without re-reading the history", async () => {
 		let watch = await createWatch();
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 120 });
-		await TrialWatch.recordCheck(db, watch, { status: "down", responseTimeMs: null });
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 340 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 120 });
+		await models.trialWatches.recordCheck(watch, { status: "down", responseTimeMs: null });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 340 });
 
-		let stored = await TrialWatch.findById(db, watch.id);
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.checks_run).toBe(3);
 		expect(stored?.checks_ok).toBe(2);
@@ -250,8 +269,8 @@ describe("TrialWatch.recordCheck", () => {
 	test("does not count a degraded check as ok, and does not count it as down either", async () => {
 		let watch = await createWatch();
 
-		await TrialWatch.recordCheck(db, watch, { status: "degraded", responseTimeMs: 8000 });
-		let stored = await TrialWatch.findById(db, watch.id);
+		await models.trialWatches.recordCheck(watch, { status: "degraded", responseTimeMs: 8000 });
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.checks_run).toBe(1);
 		expect(stored?.checks_ok).toBe(0);
@@ -261,18 +280,18 @@ describe("TrialWatch.recordCheck", () => {
 	test("keeps the slowest response, not the latest one", async () => {
 		let watch = await createWatch();
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 900 });
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 900 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 100 });
 
-		expect((await TrialWatch.findById(db, watch.id))?.max_response_time_ms).toBe(900);
+		expect((await models.trialWatches.find(watch.id))?.max_response_time_ms).toBe(900);
 	});
 
 	test("leaves the scheduling the claim did alone rather than advancing it twice", async () => {
 		let watch = await createWatch();
-		await TrialWatch.claimDue(db, Date.now() + MS_PER_HOUR);
+		await models.trialWatches.claimDue(Date.now() + MS_PER_HOUR);
 		let afterClaim = await nextDueAt(watch.id);
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 120 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 120 });
 
 		expect(await nextDueAt(watch.id)).toBe(afterClaim);
 	});
@@ -281,7 +300,7 @@ describe("TrialWatch.recordCheck", () => {
 		let watch = await createWatch();
 		await db.update(trialWatches, watch.id, { expires_at: Date.now() - 1 });
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 120 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 120 });
 
 		expect(await nextDueAt(watch.id)).toBeNull();
 	});
@@ -290,36 +309,36 @@ describe("TrialWatch.recordCheck", () => {
 		let watch = await createWatch();
 		await db.update(trialWatches, watch.id, { expires_at: Date.now() - 1 });
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 120 });
-		let stored = await TrialWatch.findById(db, watch.id);
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 120 });
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.next_due_at).toBeNull();
-		expect(stored ? TrialWatch.isConvertible(stored, Date.now()) : false).toBe(true);
+		expect(stored ? isConvertible(stored, Date.now()) : false).toBe(true);
 	});
 });
 
-describe("TrialWatch.finish", () => {
+describe("trialWatches.finish", () => {
 	test("ends a watch without recording a check", async () => {
 		let watch = await createWatch();
 
-		await TrialWatch.finish(db, watch.id);
-		let stored = await TrialWatch.findById(db, watch.id);
+		await models.trialWatches.finish(watch.id);
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.next_due_at).toBeNull();
 		expect(stored?.checks_run).toBe(0);
 	});
 });
 
-describe("TrialWatch result history", () => {
+describe("trialWatches result history", () => {
 	test("lists a watch's results newest first, and only that watch's", async () => {
 		let watch = await createWatch();
 		let other = await createWatch({ url: "https://other.example" });
 
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 100 });
-		await TrialWatch.recordCheck(db, other, { status: "down", responseTimeMs: null });
-		await TrialWatch.recordCheck(db, watch, { status: "degraded", responseTimeMs: 700 });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(other, { status: "down", responseTimeMs: null });
+		await models.trialWatches.recordCheck(watch, { status: "degraded", responseTimeMs: 700 });
 
-		let results = await TrialWatch.listResults(db, watch.id);
+		let results = await models.trialWatchResults.listByWatch(watch.id);
 
 		expect(results).toHaveLength(2);
 		expect(results.map((result) => result.status)).toContain("degraded");
@@ -340,23 +359,23 @@ describe("TrialWatch result history", () => {
 			});
 		}
 
-		let inRange = await TrialWatch.listResultsBetween(db, watch.id, now, now + 2 * MS_PER_HOUR);
+		let inRange = await models.trialWatchResults.listBetween(watch.id, now, now + 2 * MS_PER_HOUR);
 
 		expect(inRange.map((result) => result.id)).toEqual(["result-0", "result-1"]);
 		expect(inRange.map((result) => result.status)).toEqual(["up", "down"]);
 	});
 });
 
-describe("TrialWatch.listDigestForLead", () => {
+describe("trialWatches.listDigestForLead", () => {
 	test("returns every active target with its own results, oldest first", async () => {
 		let first = await createWatch({ url: "https://a.example" });
 		let second = await createWatch({ url: "https://b.example" });
 
-		await TrialWatch.recordCheck(db, first, { status: "up", responseTimeMs: 100 });
-		await TrialWatch.recordCheck(db, first, { status: "down", responseTimeMs: null });
-		await TrialWatch.recordCheck(db, second, { status: "up", responseTimeMs: 200 });
+		await models.trialWatches.recordCheck(first, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(first, { status: "down", responseTimeMs: null });
+		await models.trialWatches.recordCheck(second, { status: "up", responseTimeMs: 200 });
 
-		let digest = await TrialWatch.listDigestForLead(db, "lead-1", 0);
+		let digest = await models.trialWatches.listDigestForLead("lead-1", 0);
 
 		expect(digest.map((entry) => entry.watch.id)).toEqual([first.id, second.id]);
 		expect(digest[0]?.results.map((result) => result.status)).toEqual(["up", "down"]);
@@ -365,10 +384,10 @@ describe("TrialWatch.listDigestForLead", () => {
 
 	test("carries the row's own totals, so a digest needs no aggregate query", async () => {
 		let watch = await createWatch();
-		await TrialWatch.recordCheck(db, watch, { status: "up", responseTimeMs: 100 });
-		await TrialWatch.recordCheck(db, watch, { status: "down", responseTimeMs: null });
+		await models.trialWatches.recordCheck(watch, { status: "up", responseTimeMs: 100 });
+		await models.trialWatches.recordCheck(watch, { status: "down", responseTimeMs: null });
 
-		let [entry] = await TrialWatch.listDigestForLead(db, "lead-1", 0);
+		let [entry] = await models.trialWatches.listDigestForLead("lead-1", 0);
 
 		expect(entry?.watch.checks_run).toBe(2);
 		expect(entry?.watch.checks_ok).toBe(1);
@@ -393,7 +412,7 @@ describe("TrialWatch.listDigestForLead", () => {
 			checked_at: now,
 		});
 
-		let [entry] = await TrialWatch.listDigestForLead(db, "lead-1", now - MS_PER_DAY);
+		let [entry] = await models.trialWatches.listDigestForLead("lead-1", now - MS_PER_DAY);
 
 		expect(entry?.results.map((result) => result.id)).toEqual(["recent"]);
 	});
@@ -401,25 +420,25 @@ describe("TrialWatch.listDigestForLead", () => {
 	test("leaves out a target whose week has ended, since it had its own wrap-up", async () => {
 		let active = await createWatch({ url: "https://a.example" });
 		let finished = await createWatch({ url: "https://b.example" });
-		await TrialWatch.markSummarySent(db, finished.id);
+		await models.trialWatches.markSummarySent(finished.id);
 
-		let digest = await TrialWatch.listDigestForLead(db, "lead-1", 0);
+		let digest = await models.trialWatches.listDigestForLead("lead-1", 0);
 
 		expect(digest.map((entry) => entry.watch.id)).toEqual([active.id]);
 	});
 
 	test("returns nothing for a lead with no active targets", async () => {
 		let watch = await createWatch();
-		await TrialWatch.finish(db, watch.id);
+		await models.trialWatches.finish(watch.id);
 
-		expect(await TrialWatch.listDigestForLead(db, "lead-1", 0)).toHaveLength(0);
+		expect(await models.trialWatches.listDigestForLead("lead-1", 0)).toHaveLength(0);
 	});
 
 	test("never mixes in another lead's targets", async () => {
 		await createWatch();
-		await TrialWatch.create(db, "lead-2", { url: "https://other.example" });
+		await startWatch("lead-2", { url: "https://other.example" });
 
-		let digest = await TrialWatch.listDigestForLead(db, "lead-1", 0);
+		let digest = await models.trialWatches.listDigestForLead("lead-1", 0);
 
 		expect(digest).toHaveLength(1);
 		expect(digest[0]?.watch.lead_id).toBe("lead-1");
@@ -515,7 +534,7 @@ describe("shouldSendSummary", () => {
 		await db.update(trialWatches, second.id, { expires_at: second.expires_at + 3 * MS_PER_DAY });
 
 		let atDaySeven = first.expires_at + 1;
-		let stored = await TrialWatch.listByLead(db, "lead-1");
+		let stored = await models.trialWatches.listByLead("lead-1");
 		let firstStored = stored.find((watch) => watch.id === first.id);
 		let secondStored = stored.find((watch) => watch.id === second.id);
 
@@ -524,56 +543,56 @@ describe("shouldSendSummary", () => {
 	});
 });
 
-describe("TrialWatch.markChangeNotified", () => {
+describe("trialWatches.markChangeNotified", () => {
 	test("stamping the change email is what closes the day's bound", async () => {
 		let watch = await createWatch({ last_status: "up" });
 		let now = Date.now();
 
 		expect(shouldNotifyChange(watch, "down", now)).toBe(true);
-		await TrialWatch.markChangeNotified(db, watch.id, now);
-		let stored = await TrialWatch.findById(db, watch.id);
+		await models.trialWatches.markChangeNotified(watch.id, now);
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.change_notified_at).toBe(now);
 		expect(stored ? shouldNotifyChange(stored, "down", now) : true).toBe(false);
 	});
 });
 
-describe("TrialWatch.markSummarySent", () => {
+describe("trialWatches.markSummarySent", () => {
 	test("the wrap-up and the end of the watch are one write", async () => {
 		let watch = await createWatch();
 		let sentAt = Date.now();
 
-		await TrialWatch.markSummarySent(db, watch.id, sentAt);
-		let stored = await TrialWatch.findById(db, watch.id);
+		await models.trialWatches.markSummarySent(watch.id, sentAt);
+		let stored = await models.trialWatches.find(watch.id);
 
 		expect(stored?.summary_sent_at).toBe(sentAt);
 		expect(stored?.next_due_at).toBeNull();
 	});
 });
 
-describe("TrialWatch conversion", () => {
+describe("trialWatches conversion", () => {
 	test("a watch is convertible inside its own window and never converted", async () => {
 		let watch = await createWatch();
 
-		expect(TrialWatch.isConvertible(watch, Date.now() + 29 * MS_PER_DAY)).toBe(true);
-		expect(TrialWatch.isConvertible(watch, Date.now() + 31 * MS_PER_DAY)).toBe(false);
+		expect(isConvertible(watch, Date.now() + 29 * MS_PER_DAY)).toBe(true);
+		expect(isConvertible(watch, Date.now() + 31 * MS_PER_DAY)).toBe(false);
 	});
 
 	test("offers every unexpired unconverted watch a lead started, oldest first", async () => {
 		let first = await createWatch({ url: "https://one.example" });
 		let second = await createWatch({ url: "https://two.example" });
-		await TrialWatch.create(db, "lead-2", { url: "https://other.example" });
+		await startWatch("lead-2", { url: "https://other.example" });
 
-		let convertible = await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now());
+		let convertible = await models.trialWatches.listConvertibleByLead("lead-1", Date.now());
 
 		expect(convertible.map((watch) => watch.id)).toEqual([first.id, second.id]);
 	});
 
 	test("still offers a watch whose seven days ran out, since the offer outlives the checking", async () => {
 		let watch = await createWatch();
-		await TrialWatch.markSummarySent(db, watch.id);
+		await models.trialWatches.markSummarySent(watch.id);
 
-		let convertible = await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now());
+		let convertible = await models.trialWatches.listConvertibleByLead("lead-1", Date.now());
 
 		expect(convertible.map((each) => each.id)).toEqual([watch.id]);
 	});
@@ -595,7 +614,7 @@ describe("TrialWatch conversion", () => {
 			converts_until: day6.converts_until + 6 * MS_PER_DAY,
 		});
 
-		let convertible = await TrialWatch.listConvertibleByLead(db, "lead-1", signUp);
+		let convertible = await models.trialWatches.listConvertibleByLead("lead-1", signUp);
 
 		expect(convertible.map((watch) => watch.id)).toEqual([day3.id, day6.id]);
 		expect(convertible.map((watch) => watch.id)).not.toContain(day0.id);
@@ -603,32 +622,32 @@ describe("TrialWatch conversion", () => {
 
 	test("stops offering a watch once it names its monitor, so a second sign-in creates nothing", async () => {
 		let watch = await createWatch();
-		await TrialWatch.markConverted(db, watch.id, "monitor-1");
+		await models.trialWatches.markConverted(watch.id, "monitor-1");
 
-		let stored = await TrialWatch.findById(db, watch.id);
+		let stored = await models.trialWatches.find(watch.id);
 
-		expect(await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now())).toHaveLength(0);
+		expect(await models.trialWatches.listConvertibleByLead("lead-1", Date.now())).toHaveLength(0);
 		expect(stored?.converted_monitor_id).toBe("monitor-1");
 		expect(stored?.converted_at).not.toBeNull();
 	});
 
 	test("offers a watch started after an earlier conversion", async () => {
 		let converted = await createWatch({ url: "https://one.example" });
-		await TrialWatch.markConverted(db, converted.id, "monitor-1");
+		await models.trialWatches.markConverted(converted.id, "monitor-1");
 		let later = await createWatch({ url: "https://two.example" });
 
-		let convertible = await TrialWatch.listConvertibleByLead(db, "lead-1", Date.now());
+		let convertible = await models.trialWatches.listConvertibleByLead("lead-1", Date.now());
 
 		expect(convertible.map((watch) => watch.id)).toEqual([later.id]);
 	});
 });
 
-describe("TrialWatch.listByLead", () => {
+describe("trialWatches.listByLead", () => {
 	test("lists every watch a lead started", async () => {
 		let first = await createWatch({ url: "https://one.example" });
 		let second = await createWatch({ url: "https://two.example" });
 
-		let watches = await TrialWatch.listByLead(db, "lead-1");
+		let watches = await models.trialWatches.listByLead("lead-1");
 
 		expect(new Set(watches.map((watch) => watch.id))).toEqual(new Set([first.id, second.id]));
 	});
@@ -639,7 +658,7 @@ describe("TrialWatch.listByLead", () => {
  * days": the existence of a row for the pair decides it, so the spellings that once slipped
  * past the lookup are the point of every case here.
  */
-describe("TrialWatch.findByNormalizedUrl", () => {
+describe("trialWatches.findByNormalizedUrl", () => {
 	test("stores the key beside the URL, derived and not supplied", async () => {
 		let watch = await createWatch({ url: "https://Example.com/a/?b=2&a=1#top" });
 
@@ -650,13 +669,15 @@ describe("TrialWatch.findByNormalizedUrl", () => {
 	test("finds nothing for a lead who has never submitted this URL", async () => {
 		await createWatch({ url: "https://example.com" });
 
-		expect(await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://other.example")).toBeNull();
+		expect(
+			await models.trialWatches.findByNormalizedUrl("lead-1", "https://other.example"),
+		).toBeNull();
 	});
 
 	test("finds the existing watch for the same URL", async () => {
 		let watch = await createWatch({ url: "https://example.com" });
 
-		let found = await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com");
+		let found = await models.trialWatches.findByNormalizedUrl("lead-1", "https://example.com");
 		expect(found?.id).toBe(watch.id);
 	});
 
@@ -668,15 +689,14 @@ describe("TrialWatch.findByNormalizedUrl", () => {
 	])("caps %s against the same target", async (_label, spelling) => {
 		let watch = await createWatch({ url: "https://example.com" });
 
-		let found = await TrialWatch.findByNormalizedUrl(db, "lead-1", spelling);
+		let found = await models.trialWatches.findByNormalizedUrl("lead-1", spelling);
 		expect(found?.id).toBe(watch.id);
 	});
 
 	test("caps reordered query parameters against the same target", async () => {
 		let watch = await createWatch({ url: "https://example.com/api?b=2&a=1" });
 
-		let found = await TrialWatch.findByNormalizedUrl(
-			db,
+		let found = await models.trialWatches.findByNormalizedUrl(
 			"lead-1",
 			"https://example.com/api?a=1&b=2",
 		);
@@ -686,8 +706,7 @@ describe("TrialWatch.findByNormalizedUrl", () => {
 	test("caps a trailing slash in front of a query string too", async () => {
 		let watch = await createWatch({ url: "https://example.com/health/?deep=1" });
 
-		let found = await TrialWatch.findByNormalizedUrl(
-			db,
+		let found = await models.trialWatches.findByNormalizedUrl(
 			"lead-1",
 			"https://example.com/health?deep=1",
 		);
@@ -701,29 +720,31 @@ describe("TrialWatch.findByNormalizedUrl", () => {
 	test("does not collide http with https on the same host", async () => {
 		await createWatch({ url: "https://example.com" });
 
-		expect(await TrialWatch.findByNormalizedUrl(db, "lead-1", "http://example.com")).toBeNull();
+		expect(
+			await models.trialWatches.findByNormalizedUrl("lead-1", "http://example.com"),
+		).toBeNull();
 	});
 
 	test("does not collide two paths that differ only in case", async () => {
 		await createWatch({ url: "https://example.com/Status" });
 
 		expect(
-			await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com/status"),
+			await models.trialWatches.findByNormalizedUrl("lead-1", "https://example.com/status"),
 		).toBeNull();
 	});
 
 	test("is scoped to the lead, so two people may each watch the same URL", async () => {
 		await createWatch({ url: "https://example.com" });
-		await TrialWatch.create(db, "lead-2", { url: "https://example.com" });
+		await startWatch("lead-2", { url: "https://example.com" });
 
-		let first = await TrialWatch.findByNormalizedUrl(db, "lead-1", "https://example.com");
-		let second = await TrialWatch.findByNormalizedUrl(db, "lead-2", "https://example.com");
+		let first = await models.trialWatches.findByNormalizedUrl("lead-1", "https://example.com");
+		let second = await models.trialWatches.findByNormalizedUrl("lead-2", "https://example.com");
 
 		expect(first?.id).not.toBe(second?.id);
 	});
 });
 
-describe("TrialWatch.deleteExpiredResults", () => {
+describe("trialWatchResults.deleteExpired", () => {
 	/** Writes a result at an arbitrary instant, which `recordCheck` always stamps as now. */
 	async function resultAt(watchId: string, id: string, checkedAt: number) {
 		return await db.create(trialWatchResults, {
@@ -741,7 +762,7 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 		await resultAt(watch.id, "old", now - 8 * MS_PER_DAY);
 
-		let swept = await TrialWatch.deleteExpiredResults(db, now);
+		let swept = await models.trialWatchResults.deleteExpired(now);
 
 		expect(swept.rowsAffected).toBe(1);
 		expect(await db.count(trialWatchResults)).toBe(0);
@@ -758,7 +779,7 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		await resultAt(watch.id, "day-one", now - 20 * MS_PER_DAY);
 		await resultAt(watch.id, "an-hour-ago", now - MS_PER_HOUR);
 
-		await TrialWatch.deleteExpiredResults(db, now);
+		await models.trialWatchResults.deleteExpired(now);
 
 		expect(await db.count(trialWatchResults)).toBe(2);
 	});
@@ -769,9 +790,9 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 		await resultAt(watch.id, "old", now - 8 * MS_PER_DAY);
 
-		await TrialWatch.deleteExpiredResults(db, now);
+		await models.trialWatchResults.deleteExpired(now);
 
-		expect(await TrialWatch.findById(db, watch.id)).not.toBeNull();
+		expect(await models.trialWatches.find(watch.id)).not.toBeNull();
 	});
 
 	/** One lapsed watch's history goes; another lead's live watch keeps all of its own. */
@@ -784,23 +805,23 @@ describe("TrialWatch.deleteExpiredResults", () => {
 		await resultAt(lapsed.id, "lapsed-result", now - 20 * MS_PER_DAY);
 		await resultAt(live.id, "live-result", now - 20 * MS_PER_DAY);
 
-		await TrialWatch.deleteExpiredResults(db, now);
+		await models.trialWatchResults.deleteExpired(now);
 
 		let remaining = await db.findMany(trialWatchResults, {});
 		expect(remaining.map((row) => row.id)).toEqual(["live-result"]);
 	});
 });
 
-describe("TrialWatch.deleteExpired", () => {
+describe("trialWatches.deleteExpired", () => {
 	test("deletes a watch whose conversion window has closed", async () => {
 		let watch = await createWatch();
 		let now = Date.now();
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 
-		let swept = await TrialWatch.deleteExpired(db, now);
+		let swept = await models.trialWatches.deleteExpired(now);
 
 		expect(swept.rowsAffected).toBe(1);
-		expect(await TrialWatch.findById(db, watch.id)).toBeNull();
+		expect(await models.trialWatches.find(watch.id)).toBeNull();
 	});
 
 	test("keeps a watch whose checking is over but whose offer is not", async () => {
@@ -808,20 +829,20 @@ describe("TrialWatch.deleteExpired", () => {
 		let now = Date.now();
 		await db.update(trialWatches, watch.id, { expires_at: now - MS_PER_DAY });
 
-		await TrialWatch.deleteExpired(db, now);
+		await models.trialWatches.deleteExpired(now);
 
-		expect(await TrialWatch.findById(db, watch.id)).not.toBeNull();
+		expect(await models.trialWatches.find(watch.id)).not.toBeNull();
 	});
 
 	test("deletes an already-converted watch once its window closes", async () => {
 		let watch = await createWatch();
 		let now = Date.now();
-		await TrialWatch.markConverted(db, watch.id, "monitor-1");
+		await models.trialWatches.markConverted(watch.id, "monitor-1");
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 
-		await TrialWatch.deleteExpired(db, now);
+		await models.trialWatches.deleteExpired(now);
 
-		expect(await TrialWatch.findById(db, watch.id)).toBeNull();
+		expect(await models.trialWatches.find(watch.id)).toBeNull();
 	});
 
 	test("orphans nothing, because a 30-day-old watch's history is already 7 days gone", async () => {
@@ -836,8 +857,8 @@ describe("TrialWatch.deleteExpired", () => {
 		});
 		await db.update(trialWatches, watch.id, { converts_until: now - 1 });
 
-		await TrialWatch.deleteExpiredResults(db, now);
-		await TrialWatch.deleteExpired(db, now);
+		await models.trialWatchResults.deleteExpired(now);
+		await models.trialWatches.deleteExpired(now);
 
 		expect(await db.count(trialWatchResults)).toBe(0);
 		expect(await db.count(trialWatches)).toBe(0);
