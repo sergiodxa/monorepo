@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 
 import type { FlowStatus, InsertStatusPage } from "~/database/schema";

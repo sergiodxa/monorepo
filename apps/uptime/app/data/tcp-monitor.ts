@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor, SelectTcpMonitor } from "~/database/schema";

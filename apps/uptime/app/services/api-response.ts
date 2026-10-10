@@ -12,7 +12,7 @@ import type { StatusCode } from "@sdxc/http/status-code";
 
 import { json } from "@sdxc/http/response";
 import { Ok } from "@sdxc/http/status-code";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 /** Where a paginated response advertises the pages around this one. */
 export interface PageMeta {

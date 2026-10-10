@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { Schedule } from "@sdxc/cron";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { CronJobStatus, InsertCronJobMonitor } from "~/database/schema";

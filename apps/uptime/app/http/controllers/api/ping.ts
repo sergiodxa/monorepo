@@ -15,7 +15,7 @@ import { issuesFrom } from "@sdxc/problem";
 import { CloudflareAdapter, MemoryAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";

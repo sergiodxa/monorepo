@@ -13,7 +13,8 @@ import type { IdToken } from "@sdxc/auth/id-token";
 import type { Database } from "remix/data-table";
 
 import { systemRandom } from "@sdxc/random";
-import { generateUUID, isUUID } from "@sdxc/uuid";
+import { isUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { inList } from "remix/data-table";
 
 import type { InsertTeam, SelectTeam } from "~/database/schema";

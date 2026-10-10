@@ -11,7 +11,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, eq, isNull } from "remix/data-table";
 
 import { invites, memberships } from "~/database/schema";

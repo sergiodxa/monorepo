@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, eq, gte } from "remix/data-table";
 
 import { monitorDailyStats } from "~/database/schema";

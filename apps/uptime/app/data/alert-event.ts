@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, eq, gt, gte, inList, lt, lte, ne, notNull } from "remix/data-table";
 
 import type {

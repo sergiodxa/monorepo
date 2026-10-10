@@ -15,7 +15,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { inList } from "remix/data-table";
 
 import type { OptionalEmail, SelectUserPreferences, SupportedLanguage } from "~/database/schema";

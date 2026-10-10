@@ -17,7 +17,7 @@ import type { EntitlementState } from "@sdxc/billing";
 import type { AnyTable, Database } from "remix/data-table";
 
 import { currentLog } from "@sdxc/logger";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 
 import type { SelectSubscription } from "~/database/schema";

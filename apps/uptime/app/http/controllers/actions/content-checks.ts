@@ -9,7 +9,7 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";

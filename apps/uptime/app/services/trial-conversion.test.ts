@@ -11,7 +11,7 @@
 import type { Database } from "remix/data-table";
 
 import { Log } from "@sdxc/logger";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";

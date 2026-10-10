@@ -13,7 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 
 import type { BatchedSweepResult } from "~/app/lib/retention";

@@ -15,7 +15,7 @@ import { Schedule } from "@sdxc/cron";
 import { endOfMonth, startOfDay, startOfMonth, toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, eq, inList, notNull } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
