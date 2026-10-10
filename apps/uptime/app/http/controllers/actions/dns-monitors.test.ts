@@ -62,6 +62,7 @@ vi.doMock("cloudflare:workers", () => ({
 	},
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let {
 	createDnsMonitor,
 	updateDnsMonitor,
@@ -189,6 +190,7 @@ async function postDnsMonitorAction(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }),
 			formData(),
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),

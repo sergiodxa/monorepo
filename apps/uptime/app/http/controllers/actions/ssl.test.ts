@@ -31,6 +31,7 @@ import routes from "~/routes/web";
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { updateSsl } = await import("./ssl");
 
 /** Creates an in-memory database seeded with one team, a membership, and a monitor. */
@@ -80,7 +81,7 @@ async function send(
 	params: Record<string, string>,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), formData() as Middleware],
+		middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
 	});
 	router.map(routes.actions.monitor.http.updateSsl, {
 		middleware: [seedTeam(team, membership)],

@@ -22,6 +22,7 @@ import type { InsertTrialWatch, MonitorStatus } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { trialWatchResults, trialWatches } from "~/database/schema";
@@ -106,6 +107,7 @@ async function visit(db: Db, token: string) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			i18n as Middleware,
 			renderWith(createTestRenderer) as Middleware,
 		],

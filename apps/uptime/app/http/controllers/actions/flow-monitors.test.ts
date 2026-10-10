@@ -85,6 +85,7 @@ async function ingestedEvents() {
 	return await billedEvents(testBilling);
 }
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { checkFlowMonitor, createFlowMonitor, deleteFlowMonitor, updateFlowMonitor } =
 	await import("./flow-monitors");
 
@@ -152,6 +153,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,
 			i18n,

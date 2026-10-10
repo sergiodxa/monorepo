@@ -114,6 +114,7 @@ vi.doMock("cloudflare:workers", () => ({
  * Imported after the binding mock, since the middleware chain reaches the shared
  * issuer, which reads the KV binding the moment it is built.
  */
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: auth } = await import("~/app/http/middleware/auth");
 let { default: i18n } = await import("~/app/http/middleware/i18n");
 let { default: authController } = await import("./auth");
@@ -223,6 +224,7 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 			headRequests(),
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			billing({ provider: platform }),
 			seedSession(session),

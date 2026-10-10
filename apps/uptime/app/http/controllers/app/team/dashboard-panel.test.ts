@@ -57,6 +57,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let dashboardPanelModule = await import("./dashboard-panel");
 
 /** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
@@ -125,7 +126,12 @@ async function fetchPanel(
 	type: string,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.dashboard.panel, {
 		middleware: [seedTeam(team, membership)],

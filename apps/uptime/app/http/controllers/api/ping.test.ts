@@ -109,6 +109,7 @@ vi.doMock("cloudflare:sockets", () => ({
 	connect: () => ({ opened: openSocket(), close: async () => {} }),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: pingCreate } = await import("./ping");
 
 /** Silences whatever a refused request writes, so the assertions read the response bodies. */
@@ -200,6 +201,7 @@ async function dispatch(
 			CONFORMANCE,
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }),
 			featureFlags(flags),
 		],

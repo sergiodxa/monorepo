@@ -27,6 +27,7 @@ import { describe, expect, test, vi } from "vitest";
 import UserPreferences from "~/app/data/user-preferences";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
@@ -87,6 +88,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST", oneClick = t
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

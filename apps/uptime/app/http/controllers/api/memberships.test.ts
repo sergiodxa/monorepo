@@ -16,6 +16,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -57,7 +58,9 @@ async function createMembershipRow(db: Db, teamId: string, role: "member" | "adm
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(routes.api.v1.memberships, membershipsIndex);
 
 	return router.fetch(request);

@@ -51,6 +51,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: statusPageNewAction } = await import("./status-page-new");
 
 /**
@@ -134,6 +135,7 @@ describe("GET /app/:team/status-pages/new", () => {
 			middleware: [
 				asyncContext(),
 				database(() => db),
+				models(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -172,6 +174,7 @@ describe("GET /app/:team/status-pages/new", () => {
 			middleware: [
 				asyncContext(),
 				database(() => db),
+				models(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -198,6 +201,7 @@ describe("GET /app/:team/status-pages/new", () => {
 			middleware: [
 				asyncContext(),
 				database(() => db),
+				models(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -241,6 +245,7 @@ describe("GET /app/:team/status-pages/new", () => {
 			middleware: [
 				asyncContext(),
 				database(() => db),
+				models(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -272,6 +277,7 @@ describe("GET /app/:team/status-pages/new", () => {
 			middleware: [
 				asyncContext(),
 				database(() => db),
+				models(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});

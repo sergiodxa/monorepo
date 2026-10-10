@@ -61,6 +61,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: statusPageEditAction } = await import("./status-page-edit");
 
 /**
@@ -177,7 +178,12 @@ async function get(
 	statusPageId: string,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.statusPages.edit, {
 		middleware: [seedTeam(team, membership)],

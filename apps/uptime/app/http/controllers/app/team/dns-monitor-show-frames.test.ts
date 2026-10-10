@@ -21,6 +21,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { htmlRendering } from "~/app/http/render";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
@@ -221,6 +222,7 @@ async function createHarness(options: createHarness.Options = {}) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			seedTeam(team, membership),
 			i18n,
 			...htmlRendering(),

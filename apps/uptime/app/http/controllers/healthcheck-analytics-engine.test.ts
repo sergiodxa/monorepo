@@ -22,13 +22,14 @@ import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 
 describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 503 when the PING_RESULTS binding is not configured", async () => {
 		let { db } = createTestDatabase();
 
-		let router = createRouter({ middleware: [database(() => db)] });
+		let router = createRouter({ middleware: [database(() => db), models()] });
 		router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 
 		let request = new Request(`https://example.com${routes.healthcheckAnalyticsEngine.href()}`);

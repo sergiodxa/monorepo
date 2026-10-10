@@ -33,6 +33,7 @@ import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./alert-edit")).default as { handler: RequestHandler<any> };
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
@@ -88,7 +89,7 @@ async function send(
 	membership: SelectMembership,
 	alertId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
 	router.map(routes.app.team.alerts.edit, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,

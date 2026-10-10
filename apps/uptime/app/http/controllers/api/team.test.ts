@@ -15,6 +15,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -53,7 +54,9 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(teamRoutes, teamController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
@@ -240,7 +243,9 @@ describe("PATCH /api/v1/team", () => {
 
 	/** Sends `request` through the team controller, bypassing the JSON-body `dispatch`. */
 	async function send(db: Db, request: Request) {
-		let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+		let router = createRouter({
+			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		});
 		router.map(teamRoutes, teamController);
 		return router.fetch(request);
 	}

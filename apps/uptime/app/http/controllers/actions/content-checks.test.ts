@@ -29,6 +29,7 @@ import routes from "~/routes/web";
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
 let { default: Monitor } = await import("~/app/data/monitor");
 
@@ -50,7 +51,9 @@ async function postContentCheckAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string>,
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), formData()],
+	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.

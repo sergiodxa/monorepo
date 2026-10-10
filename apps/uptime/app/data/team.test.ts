@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 
 import { IdToken } from "@sdxc/auth/id-token";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { describe, expect, test, vi } from "vitest";
 
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
@@ -21,8 +22,8 @@ import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import TcpMonitor from "~/app/data/tcp-monitor";
 import Team, { generateTeamSlug } from "~/app/data/team";
-import TeamDomain from "~/app/data/team-domain";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels, recordJobs } from "~/app/lib/test/models";
 import {
 	alertEvents,
 	alerts,
@@ -236,7 +237,12 @@ async function seedFullTeam(db: Database, ownerSubjectId: string) {
 		{ touch: true, returnRow: true },
 	);
 
-	let domain = await TeamDomain.create(db, team.id, "example.com");
+	let domain = unwrap(
+		await bindModels(db, recordJobs().jobs).teamDomains.create({
+			team_id: team.id,
+			hostname: "example.com",
+		}),
+	);
 
 	let invite = await db.create(
 		invites,
@@ -415,8 +421,13 @@ describe("Team.joinByDomain", () => {
 	test("joins the subject to every team whose verified domain matches their email, and returns the first", async () => {
 		let { db } = createTestDatabase();
 		let ownerTeam = await Team.createTeam(db, buildIdToken());
-		let domain = await TeamDomain.create(db, ownerTeam.id, "acme.com");
-		await TeamDomain.markVerified(db, domain.id);
+		let domain = unwrap(
+			await bindModels(db, recordJobs().jobs).teamDomains.create({
+				team_id: ownerTeam.id,
+				hostname: "acme.com",
+			}),
+		);
+		unwrap(await bindModels(db).teamDomains.update(domain.id, { verified_at: Date.now() }));
 
 		let joiner = buildIdToken({ email: "person@acme.com" });
 		let joined = await Team.joinByDomain(db, joiner);
@@ -428,7 +439,12 @@ describe("Team.joinByDomain", () => {
 	test("returns null and joins nothing when the domain isn't verified", async () => {
 		let { db } = createTestDatabase();
 		let ownerTeam = await Team.createTeam(db, buildIdToken());
-		await TeamDomain.create(db, ownerTeam.id, "acme.com");
+		unwrap(
+			await bindModels(db, recordJobs().jobs).teamDomains.create({
+				team_id: ownerTeam.id,
+				hostname: "acme.com",
+			}),
+		);
 
 		let joiner = buildIdToken({ email: "person@acme.com" });
 		expect(await Team.joinByDomain(db, joiner)).toBeNull();
@@ -445,10 +461,20 @@ describe("Team.joinByDomain", () => {
 		let { db } = createTestDatabase();
 		let teamA = await Team.createTeam(db, buildIdToken());
 		let teamB = await Team.createTeam(db, buildIdToken());
-		let domainA = await TeamDomain.create(db, teamA.id, "acme.com");
-		let domainB = await TeamDomain.create(db, teamB.id, "acme.com");
-		await TeamDomain.markVerified(db, domainA.id);
-		await TeamDomain.markVerified(db, domainB.id);
+		let domainA = unwrap(
+			await bindModels(db, recordJobs().jobs).teamDomains.create({
+				team_id: teamA.id,
+				hostname: "acme.com",
+			}),
+		);
+		let domainB = unwrap(
+			await bindModels(db, recordJobs().jobs).teamDomains.create({
+				team_id: teamB.id,
+				hostname: "acme.com",
+			}),
+		);
+		unwrap(await bindModels(db).teamDomains.update(domainA.id, { verified_at: Date.now() }));
+		unwrap(await bindModels(db).teamDomains.update(domainB.id, { verified_at: Date.now() }));
 
 		let joiner = buildIdToken({ email: "person@acme.com" });
 		await Team.joinByDomain(db, joiner);

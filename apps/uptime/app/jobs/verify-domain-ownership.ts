@@ -11,9 +11,8 @@
 
 import { verifyTxtRecord } from "@sdxc/doh";
 import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-import TeamDomain from "~/app/data/team-domain";
 import jobs from "~/app/jobs";
 import { apportionCostByTeam } from "~/app/services/cost";
 
@@ -24,7 +23,7 @@ import { apportionCostByTeam } from "~/app/services/cost";
  * `domains.lookup_failed` without `domain.verified` and leaves the retry to the sweep.
  */
 export default createJobHandler(jobs.verifyDomainOwnership, async (ctx) => {
-	let domain = await TeamDomain.findById(ctx.database, ctx.input.teamDomainId);
+	let domain = await ctx.models.teamDomains.find(ctx.input.teamDomainId);
 	if (!domain || domain.verified_at !== null) return;
 
 	apportionCostByTeam([domain.team_id]);
@@ -39,6 +38,7 @@ export default createJobHandler(jobs.verifyDomainOwnership, async (ctx) => {
 		return;
 	}
 
-	if (verified.data) await TeamDomain.markVerified(ctx.database, domain.id);
+	if (verified.data)
+		unwrap(await ctx.models.teamDomains.update(domain.id, { verified_at: Date.now() }));
 	ctx.log.set({ domain: { verified: verified.data } });
 });

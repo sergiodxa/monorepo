@@ -13,6 +13,7 @@ import { describe, expect, test } from "vitest";
 
 import healthcheck from "~/app/http/controllers/healthcheck";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import routes from "~/routes/web";
 
@@ -33,7 +34,7 @@ function withFailingCount(db: Db): Db {
 }
 
 async function dispatch(db: Db) {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [database(() => db), models()] });
 	router.map(routes.healthcheck, healthcheck);
 
 	let request = new Request(`https://example.com${routes.healthcheck.href()}`);

@@ -23,6 +23,7 @@ import type {
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -93,7 +94,9 @@ async function createRecordRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(dnsMonitorRecordsRoutes, dnsMonitorRecordsController);
 
 	return router.fetch(request);

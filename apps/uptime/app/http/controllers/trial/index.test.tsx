@@ -117,6 +117,7 @@ vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstile
 
 let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
 	await import("~/app/http/controllers/trial/session");
+let { default: models } = await import("~/app/http/middleware/models");
 let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
 let { default: trialCheck } = await import("./index");
 
@@ -211,6 +212,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }) as Middleware,
 			((ctx, next) => {
 				if (actor === undefined) ctx.set(Auth, { ok: false });

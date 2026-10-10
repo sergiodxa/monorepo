@@ -22,6 +22,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import Subscription from "~/app/data/subscription";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -85,7 +86,7 @@ async function subscribe(externalId: string, product = MONITORING_PRODUCT) {
  */
 async function dispatch(delivery: { body: string; headers: Headers }) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), log() as Middleware],
+		middleware: [asyncContext(), database(() => db), models(), log() as Middleware],
 	});
 	router.map(routes.webhooks.polar, polarWebhook);
 

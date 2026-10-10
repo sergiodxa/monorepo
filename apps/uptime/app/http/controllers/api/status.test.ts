@@ -32,6 +32,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { statusShow } = await import("./status");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -95,7 +96,9 @@ async function createMonitorResultRow(
 }
 
 async function dispatch(db: Db, key?: string) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(routes.api.v1.status, statusShow);
 
 	let headers: Record<string, string> = {};

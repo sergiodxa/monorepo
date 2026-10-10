@@ -18,6 +18,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import Invite from "~/app/data/invite";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
 import { useMailServerDns } from "~/app/lib/test/mail-servers";
@@ -59,7 +60,9 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(invitesRoutes, invitesController);
 
 	return router.fetch(request);

@@ -22,6 +22,7 @@ import type { InsertMaintenanceWindow } from "~/database/schema";
 
 import MaintenanceWindow from "~/app/data/maintenance-window";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import en from "~/app/locales/en";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
@@ -108,7 +109,9 @@ async function createWindow(
 
 /** Sends a GET through a router mapping both calendar routes. */
 async function get(db: Database, path: string): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), seedLocale()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), seedLocale()],
+	});
 	router.map(routes.statusPageCalendar, statusPageCalendar as RequestHandler<any>);
 	router.map(routes.statusPageMaintenanceEvent, statusPageMaintenanceEvent as RequestHandler<any>);
 	return router.fetch(new Request(new URL(path, "https://uptime.test")));

@@ -21,6 +21,7 @@ import { language } from "~/app/http/cookies";
 import { auth, type Viewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
 
@@ -59,6 +60,7 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			session(cookie, storage),
 			(_ctx, next) => {
 				if (options.viewer) signIn(options.viewer);

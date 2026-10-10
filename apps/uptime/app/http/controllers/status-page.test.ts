@@ -66,6 +66,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: publicStatusPageModule } = await import("./status-page");
 
 /** The Analytics Engine SQL API endpoint the page's summaries are queried through. */
@@ -131,7 +132,12 @@ async function createFixture() {
 /** Sends a GET request through a minimal router mapping the public status page route. */
 async function get(db: Database, slug: string, headers?: HeadersInit): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.statusPage, {
 		middleware: [seedLocale()],

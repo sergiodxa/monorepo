@@ -18,6 +18,7 @@ import { describe, expect, test } from "vitest";
 
 import { auth, type Viewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import requireTeam from "~/app/http/middleware/require-team";
 import { signIn } from "~/app/lib/test/auth";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -57,6 +58,7 @@ async function dispatch(db: Db, idOrSlug: string, viewer?: Viewer) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			session(cookie, storage),
 			(_ctx, next) => {
 				if (viewer) signIn(viewer);

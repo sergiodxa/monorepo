@@ -37,6 +37,7 @@ const CONFORMANCE = checkConformance(monitorsRoutes);
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: monitorsController } = await import("~/app/http/controllers/api/monitors");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -89,7 +90,9 @@ async function createMonitorRow(db: Db, teamId: string, overrides: Record<string
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(monitorsRoutes, monitorsController);
 
 	return router.fetch(request);

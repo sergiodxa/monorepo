@@ -30,6 +30,7 @@ import type { InsertDnsMonitorRecord, SelectMembership, SelectTeam } from "~/dat
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import en from "~/app/locales/en";
@@ -152,7 +153,12 @@ async function send(
 	report?: DnsZoneFileReport,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), session(sessionCookie, sessionStorage)],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			session(sessionCookie, sessionStorage),
+		],
 	});
 	router.map(routes.app.team.dnsMonitors.review, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],

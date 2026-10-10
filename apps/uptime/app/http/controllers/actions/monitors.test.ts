@@ -57,6 +57,7 @@ vi.doMock("cloudflare:workers", () => ({
  * as invalid — a real, separately-flagged bug in `@sdxc/validate`. This mock
  * forwards the form data unflattened so these tests exercise real branching.
  */
+let { default: models } = await import("~/app/http/middleware/models");
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /**
@@ -121,6 +122,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			billing({ provider: () => testBilling }) as Middleware,
 			formData() as Middleware,
@@ -504,7 +506,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 		monitorId: string,
 	): Promise<Response> {
 		let router = createRouter({
-			middleware: [asyncContext(), database(() => db), formData() as Middleware],
+			middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
 		});
 		router.map(routes.actions.monitor.http.play, {
 			middleware: [seedTeam(team, membership)],

@@ -8,7 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { AnyJobDefinition, JobArgs, JobInput, JobMessage, JobQueue } from "@sdxc/jobs";
+import type {
+	AnyJobDefinition,
+	JobArgs,
+	JobEnqueuer,
+	JobInput,
+	JobMessage,
+	JobQueue,
+} from "@sdxc/jobs";
 
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { unwrap } from "@sdxc/result";
@@ -74,3 +81,19 @@ export async function enqueueMany<Definition extends AnyJobDefinition>(
 ): Promise<void> {
 	await sendMessages(inputs.map((input) => ({ job: job.name, body: input as JobMessage["body"] })));
 }
+
+/**
+ * The enqueuer for code that runs outside a request, such as a job or a model callback bound
+ * there: the same billed writes as {@link enqueue} and {@link enqueueMany}, in the shape
+ * `ctx.jobs` has, so either one serves a callback that enqueues.
+ */
+export const enqueuer: JobEnqueuer = {
+	async enqueue(job, ...input) {
+		await sendMessages([{ job: job.name, body: input[0] as JobMessage["body"] }]);
+	},
+	async enqueueMany(job, inputs) {
+		await sendMessages(
+			inputs.map((input) => ({ job: job.name, body: input as JobMessage["body"] })),
+		);
+	},
+};

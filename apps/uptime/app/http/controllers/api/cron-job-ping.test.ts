@@ -69,6 +69,7 @@ vi.doMock("cloudflare:workers", () => ({
 	},
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job-ping");
 
 /**
@@ -158,6 +159,7 @@ async function dispatch(db: Db, request: Request) {
 			CONFORMANCE,
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			getClientIP(),
 			billing({ provider: () => testBilling }),

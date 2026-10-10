@@ -46,6 +46,7 @@ import defaultHandler from "~/app/http/controllers/default-handler";
 import auth, { getViewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -157,6 +158,11 @@ export default function application(options: application.Options) {
 		 * writes through, so a controller enqueues without importing the dispatcher.
 		 */
 		jobEnqueuer(jobQueue) as Middleware,
+		/**
+		 * Publishes `ctx.models` on every surface, bound to the `ctx.db` and `ctx.jobs` above
+		 * on the first model a request reads, so a request that reads none binds nothing.
+		 */
+		models(),
 		/**
 		 * Publishes `ctx.email` on every surface, including machine ones — the
 		 * cron-job ping endpoint dispatches alerts too. Sits after the log so

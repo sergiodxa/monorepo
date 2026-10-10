@@ -53,6 +53,7 @@ beforeEach(() => {
  * `remix/data-schema/form-data`'s `f.object()` rejects — a real bug that fails every
  * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */
+let { default: models } = await import("~/app/http/middleware/models");
 let { addDomain, removeDomain, retryDomainVerification } = await import("./team-domains");
 let { jobQueue } = await import("~/app/lib/queue");
 
@@ -97,6 +98,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			jobEnqueuer(jobQueue),
 			formData() as Middleware,
 		],

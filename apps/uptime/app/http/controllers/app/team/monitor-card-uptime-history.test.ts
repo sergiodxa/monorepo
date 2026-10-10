@@ -35,6 +35,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardUptimeHistory = (await import("./monitor-card-uptime-history")).default as {
 	handler: RequestHandler<any>;
 };
@@ -104,7 +105,7 @@ async function send(
 	membership: SelectMembership,
 	monitorId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
 	router.map(routes.app.team.monitors.cards.uptimeHistory, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler: monitorCardUptimeHistory.handler,

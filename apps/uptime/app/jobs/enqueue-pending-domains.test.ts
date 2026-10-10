@@ -14,6 +14,7 @@ import type { QueueMock } from "@sdxc/cloudflare-mocks";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /**
@@ -28,8 +29,8 @@ let sendBatch = vi.spyOn(queue, "sendBatch");
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
-let TeamDomain = (await import("~/app/data/team-domain")).default;
 let { createTestDatabase } = await import("~/app/lib/test/db");
+let { bindModels, publishModels, recordJobs } = await import("~/app/lib/test/models");
 let jobs = (await import("~/app/jobs")).default;
 let { Database } = await import("~/app/jobs/middleware/database");
 let enqueuePendingDomains = (await import("./enqueue-pending-domains")).default;
@@ -43,6 +44,12 @@ describe("enqueuePendingDomains", () => {
 		sendBatch.mockClear();
 	});
 
+	/** Adds a pending domain to team `team-1` without queueing its verification. */
+	async function addDomain(hostname: string) {
+		let models = bindModels(db, recordJobs().jobs);
+		return unwrap(await models.teamDomains.create({ team_id: "team-1", hostname }));
+	}
+
 	/** Runs the handler over a context carrying the test's database, and returns its record. */
 	async function run() {
 		let record: Record<string, unknown> = {};
@@ -53,14 +60,15 @@ describe("enqueuePendingDomains", () => {
 			log,
 		});
 		ctx.set(Database, db, { property: "database" });
+		publishModels(ctx, db);
 		await enqueuePendingDomains(ctx);
 		log.emit();
 		return record;
 	}
 
 	test("does nothing when there are no unverified domains", async () => {
-		let domain = await TeamDomain.create(db, "team-1", "verified.example.com");
-		await TeamDomain.markVerified(db, domain.id);
+		let domain = await addDomain("verified.example.com");
+		unwrap(await bindModels(db).teamDomains.update(domain.id, { verified_at: Date.now() }));
 
 		let record = await run();
 
@@ -70,10 +78,10 @@ describe("enqueuePendingDomains", () => {
 	});
 
 	test("batches one verifyDomainOwnership message per unverified domain", async () => {
-		let first = await TeamDomain.create(db, "team-1", "pending-one.example.com");
-		let second = await TeamDomain.create(db, "team-1", "pending-two.example.com");
-		let verified = await TeamDomain.create(db, "team-1", "verified.example.com");
-		await TeamDomain.markVerified(db, verified.id);
+		let first = await addDomain("pending-one.example.com");
+		let second = await addDomain("pending-two.example.com");
+		let verified = await addDomain("verified.example.com");
+		unwrap(await bindModels(db).teamDomains.update(verified.id, { verified_at: Date.now() }));
 
 		let record = await run();
 

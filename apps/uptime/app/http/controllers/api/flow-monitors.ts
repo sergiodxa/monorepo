@@ -14,7 +14,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { Created } from "@sdxc/http/status-code";
@@ -25,10 +24,10 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import type { UptimeModels } from "~/app/models";
 import type { InsertFlowMonitor, SelectFlowMonitor } from "~/database/schema";
 
 import FlowMonitor from "~/app/data/flow-monitor";
-import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -102,7 +101,7 @@ async function patchFlowMonitor(ctx: RequestContext): Promise<Response> {
 	let { value, changed } = update;
 
 	if (changed.has("source")) {
-		let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, value.source);
+		let refusal = await refuseUnreachableSource(ctx.models, ctx.apiTeam.id, value.source);
 		if (refusal) return refusal;
 	}
 
@@ -169,7 +168,7 @@ export default createController(flowMonitorsRoutes, {
 					});
 				}
 
-				let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, result.data.source);
+				let refusal = await refuseUnreachableSource(ctx.models, ctx.apiTeam.id, result.data.source);
 				if (refusal) return refusal;
 
 				let monitor = await FlowMonitor.create(ctx.db, ctx.apiTeam.id, {
@@ -225,7 +224,11 @@ export default createController(flowMonitorsRoutes, {
 				}
 
 				if (result.data.source !== undefined) {
-					let refusal = await refuseUnreachableSource(ctx.db, ctx.apiTeam.id, result.data.source);
+					let refusal = await refuseUnreachableSource(
+						ctx.models,
+						ctx.apiTeam.id,
+						result.data.source,
+					);
 					if (refusal) return refusal;
 				}
 
@@ -326,11 +329,11 @@ export default createController(flowMonitorsRoutes, {
  * @returns The refusal to return, or `null` when the source is one this team may run.
  */
 async function refuseUnreachableSource(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	source: string,
 ): Promise<Response | null> {
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(db, teamId);
+	let verifiedDomains = await models.teamDomains.verifiedHostnames(teamId);
 	let inspection = inspectFlowSource(source, verifiedDomains);
 	if (inspection.ok) return null;
 	return invalidField(inspection.message, "/source");

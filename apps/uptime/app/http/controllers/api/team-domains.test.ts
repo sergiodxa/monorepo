@@ -7,9 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { QueueMock } from "@sdxc/cloudflare-mocks";
+
+import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
@@ -28,7 +31,20 @@ import routes from "~/routes/web";
 /** Checks every exchange against the API document; see `checkConformance`. */
 const CONFORMANCE = checkConformance(teamDomainsRoutes);
 
+/**
+ * The queue a new domain's verification lands on. Module scope because the queue module
+ * captures `env` on import, so `beforeEach` empties it rather than re-creating it.
+ */
+let queue: QueueMock = createQueue();
+
+vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
+
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: teamDomainsController } = await import("./team-domains");
+
+beforeEach(() => {
+	queue.reset();
+});
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -69,7 +85,9 @@ async function dispatch(
 		headers?: Record<string, string>;
 	},
 ) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(teamDomainsRoutes, teamDomainsController);
 
 	let headers: Record<string, string> = {
@@ -227,6 +245,9 @@ describe("POST /api/v1/team-domains", () => {
 
 		let created = await db.findOne(teamDomains, { where: { team_id: team.id } });
 		expect(created?.hostname).toBe("acme.example.com");
+		expect(queue.sent.map((message) => message.body)).toEqual([
+			{ job: "verifyDomainOwnership", body: { teamDomainId: created?.id } },
+		]);
 	});
 
 	test("answers 409 conflict for a hostname the team already added", async () => {

@@ -37,6 +37,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => promise,
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: statusPageController } = await import("./status-page");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
@@ -99,7 +100,9 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(statusPageRoutes, statusPageController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
@@ -520,7 +523,9 @@ describe("PATCH /api/v1/status-pages/:statusPageId", () => {
 
 	/** Runs `request` through the item controller behind the conformance check. */
 	async function send(db: Db, request: Request) {
-		let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+		let router = createRouter({
+			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		});
 		router.map(statusPageRoutes, statusPageController);
 		return router.fetch(request);
 	}

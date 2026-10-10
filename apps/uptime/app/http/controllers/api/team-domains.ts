@@ -9,13 +9,12 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectTeamDomain } from "~/database/schema";
 
-import TeamDomain from "~/app/data/team-domain";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -53,7 +52,7 @@ export default createController(teamDomainsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = TeamDomain.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.teamDomains.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -94,14 +93,17 @@ export default createController(teamDomainsRoutes, {
 					});
 				}
 
-				if (await TeamDomain.findByHostnameForTeam(ctx.db, ctx.apiTeam.id, result.data.hostname)) {
+				let hostname = result.data.hostname;
+				if (await ctx.models.teamDomains.inTeam(ctx.apiTeam.id).where({ hostname }).first()) {
 					return apiProblems.conflict({
 						detail: "This domain was already added to the team",
 						instance: problemInstance(),
 					});
 				}
 
-				let teamDomain = await TeamDomain.create(ctx.db, ctx.apiTeam.id, result.data.hostname);
+				let teamDomain = unwrap(
+					await ctx.models.teamDomains.create({ team_id: ctx.apiTeam.id, hostname }),
+				);
 				return apiSuccess({ teamDomain: serializeTeamDomain(teamDomain) }, Created);
 			},
 		},
@@ -118,14 +120,17 @@ export default createController(teamDomainsRoutes, {
 					});
 				}
 
-				let teamDomain = await TeamDomain.findByIdForTeam(ctx.db, ctx.apiTeam.id, result.data.id);
+				let teamDomain = await ctx.models.teamDomains
+					.inTeam(ctx.apiTeam.id)
+					.where({ id: result.data.id })
+					.first();
 				if (!teamDomain)
 					return apiProblems.notFound({
 						detail: "Team domain not found",
 						instance: problemInstance(),
 					});
 
-				await TeamDomain.deleteById(ctx.db, result.data.id);
+				unwrap(await ctx.models.teamDomains.delete(result.data.id));
 				return apiSuccess({ deleted: true });
 			},
 		},

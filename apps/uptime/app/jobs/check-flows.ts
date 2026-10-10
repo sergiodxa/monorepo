@@ -20,7 +20,6 @@ import type { FlowStatus } from "~/database/schema";
 
 import FlowMonitor from "~/app/data/flow-monitor";
 import Team from "~/app/data/team";
-import TeamDomain from "~/app/data/team-domain";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
@@ -59,7 +58,7 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	 */
 	let [ownerIds, verifiedDomains] = await Promise.all([
 		Team.ownerIdsByTeamIds(ctx.database, teamIds),
-		TeamDomain.verifiedHostnamesByTeamIds(ctx.database, teamIds),
+		ctx.models.teamDomains.verifiedHostnamesByTeam(teamIds),
 	]);
 
 	let notifications: NotifyMessage[] = [];

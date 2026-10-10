@@ -43,6 +43,7 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { QUICK_PING_RESULT } = await import("~/app/http/controllers/actions/ping");
 let quickPing = (await import("./dashboard-quick-ping")).default as {
 	handler: RequestHandler<RequestContext>;
@@ -148,6 +149,7 @@ async function render(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			session(sessionCookie, sessionStorage),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

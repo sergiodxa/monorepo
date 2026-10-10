@@ -31,6 +31,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let monitorRunStatus = (await import("./monitor-run-status")).default as {
 	handler: RequestHandler<any>;
 };
@@ -91,7 +92,7 @@ async function send(
 	membership: SelectMembership,
 	monitorId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
 	router.map(routes.app.team.monitors.runStatus, {
 		middleware: [seedTeam(team, membership)],
 		handler: monitorRunStatus.handler,

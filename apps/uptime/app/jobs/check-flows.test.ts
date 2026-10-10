@@ -97,6 +97,7 @@ vi.doMock("~/app/services/flow-check", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { publishModels } = await import("~/app/lib/test/models");
 let checkFlows = (await import("./check-flows")).default;
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
@@ -110,6 +111,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkFlows, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	await installFlags(ctx);
 
 	await checkFlows(ctx);

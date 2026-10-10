@@ -21,6 +21,7 @@ import { describe, expect, test } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import {
 	BASE_PRICE_USD,
 	formatPings,
@@ -53,6 +54,7 @@ async function getAudience(slug: string) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

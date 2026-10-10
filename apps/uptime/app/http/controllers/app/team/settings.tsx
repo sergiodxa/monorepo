@@ -54,7 +54,6 @@ import { Session } from "remix/session";
 
 import Invite from "~/app/data/invite";
 import Team from "~/app/data/team";
-import TeamDomain from "~/app/data/team-domain";
 import { admin } from "~/app/http/middleware/admin";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireRole from "~/app/http/middleware/require-role";
@@ -146,7 +145,7 @@ export default createAction(routes.app.team.settings, {
 		let [members, pendingInvites, domains] = await Promise.all([
 			Team.listMembersByTeam(ctx.db, ctx.team.id),
 			Invite.listPendingByTeam(ctx.db, ctx.team.id),
-			TeamDomain.listByTeam(ctx.db, ctx.team.id),
+			ctx.models.teamDomains.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
 		]);
 
 		let subjectsById = await resolveSubjects(

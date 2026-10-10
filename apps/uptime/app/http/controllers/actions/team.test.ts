@@ -33,6 +33,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -136,6 +137,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			billing({ provider: platform }),
 			session(sessionCookie, sessionStorage),

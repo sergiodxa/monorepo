@@ -18,6 +18,7 @@ import type { ApiKeyScope, SelectDnsMonitor, SelectTeam } from "~/database/schem
 import ApiKey from "~/app/data/api-key";
 import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -68,7 +69,9 @@ async function createDnsMonitorRow(
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(dnsMonitorRoutes, dnsMonitorController);
 
 	return router.fetch(request);

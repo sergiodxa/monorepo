@@ -1,7 +1,7 @@
 /**
  * Tests for the team settings page controller. No `cloudflare:workers` mock is
  * needed since this controller only touches `~/app/data/invite`, `~/app/data/team`,
- * `~/app/data/team-domain`, and `~/app/services/subjects`, none of which depend on
+ * and `~/app/services/subjects`, none of which depend on
  * a queue binding. A fake `ManagementClient` answers that it holds no record for the
  * seeded members, so the page renders them by raw `subject_id`.
  *
@@ -16,7 +16,7 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { createTranslator } from "@sdxc/i18n";
-import { failure } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
@@ -32,11 +32,12 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import Invite from "~/app/data/invite";
-import TeamDomain from "~/app/data/team-domain";
 import { admin } from "~/app/http/middleware/admin";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { bindModels, recordJobs } from "~/app/lib/test/models";
 import en from "~/app/locales/en";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -118,6 +119,7 @@ async function renderSettings(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			admin(() => fakeAdmin),
 			session(sessionCookie, sessionStorage),
 			renderWith(createHtmlRenderer) as Middleware,
@@ -278,7 +280,12 @@ describe("settings page", () => {
 			ownerMembership.subject_id,
 			"invitee@example.com",
 		);
-		let domain = await TeamDomain.create(db, team.id, "example.com");
+		let domain = unwrap(
+			await bindModels(db, recordJobs().jobs).teamDomains.create({
+				team_id: team.id,
+				hostname: "example.com",
+			}),
+		);
 
 		let response = await renderSettings(db, team, ownerMembership);
 		let body = await response.text();

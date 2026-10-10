@@ -33,6 +33,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createActiveSubscription, createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
@@ -114,6 +115,7 @@ async function renderCheckout(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			billing({ provider: platform }),
 			attribution({ store: "session" }),

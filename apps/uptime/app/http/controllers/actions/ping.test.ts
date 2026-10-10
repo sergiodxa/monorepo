@@ -74,6 +74,7 @@ vi.doMock("cloudflare:workers", () => ({
 	DurableObject: class {},
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { runPing, QUICK_PING_RESULT } = await import("./ping");
 
 /** The entitlement gate logs every inconclusive lookup; the assertions read the flash. */
@@ -149,6 +150,7 @@ function createTestRouter(db: Db) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }),
 			session(sessionCookie, sessionStorage),
 			(_ctx, next) => {

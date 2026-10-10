@@ -39,6 +39,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./http-monitors")).default as { handler: RequestHandler<any> };
 
 /** Creates an in-memory database seeded with one team and a member's membership. */
@@ -93,7 +94,7 @@ async function send(
 	team: SelectTeam,
 	membership: SelectMembership,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
 	router.map(routes.app.team.monitors.index, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,

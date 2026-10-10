@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey, { MAX_API_KEYS_PER_TEAM } from "~/app/data/api-key";
 import apiKeysController from "~/app/http/controllers/api/api-keys";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -53,7 +54,9 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(apiKeysRoutes, apiKeysController);
 
 	return router.fetch(request);

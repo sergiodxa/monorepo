@@ -21,7 +21,6 @@ import type { BillablePing } from "~/app/services/ping-meter";
 
 import FlowMonitor from "~/app/data/flow-monitor";
 import Subscription from "~/app/data/subscription";
-import TeamDomain from "~/app/data/team-domain";
 import {
 	CreateFlowMonitorSchema,
 	FlowMonitorIdSchema,
@@ -46,7 +45,7 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 		return redirect(newHref, { status: redirect.Status.SeeOther });
 	}
 
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
+	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(result.data.source, verifiedDomains);
 	if (!inspection.ok) {
 		session?.flash("toast", { intent: "error", message: inspection.message });
@@ -100,7 +99,7 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		monitorId: monitor_id,
 	});
 
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
+	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let inspection = inspectFlowSource(values.source, verifiedDomains);
 	if (!inspection.ok) {
 		session?.flash("toast", { intent: "error", message: inspection.message });
@@ -184,7 +183,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 		return redirect(showHref, { status: redirect.Status.SeeOther });
 	}
 
-	let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
+	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let checkResult = await runFlowCheck({ source: monitor.source, verifiedDomains });
 	let resultId = await FlowMonitor.recordCheckResult(ctx.db, monitor.id, checkResult);
 

@@ -39,6 +39,7 @@ const CONFORMANCE = checkConformance(alertsRoutes);
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: alertsController } = await import("./alerts");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
@@ -66,7 +67,9 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(alertsRoutes, alertsController);
 
 	return router.fetch(request);

@@ -9,13 +9,12 @@
 
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import TeamDomain from "~/app/data/team-domain";
 import {
 	AddDomainSchema,
 	RemoveDomainSchema,
@@ -38,13 +37,17 @@ export const addDomain = createAction(routes.teamAdminActions.domain.add, async 
 
 	let { hostname } = result.data;
 
-	let existing = await TeamDomain.findByHostnameForTeam(ctx.db, ctx.team.id, hostname);
+	let existing = await ctx.models.teamDomains.inTeam(ctx.team.id).where({ hostname }).first();
 	if (existing && existing.verified_at !== null) {
 		return badRequest(`${hostname} is already verified for this team.`);
 	}
 
-	let domain = existing ?? (await TeamDomain.create(ctx.db, ctx.team.id, hostname));
-	waitUntil(ctx.jobs.enqueue(jobs.verifyDomainOwnership, { teamDomainId: domain.id }));
+	/** A new domain queues its own verification once written; a pending one is retried here. */
+	if (existing) {
+		waitUntil(ctx.jobs.enqueue(jobs.verifyDomainOwnership, { teamDomainId: existing.id }));
+	} else {
+		unwrap(await ctx.models.teamDomains.create({ team_id: ctx.team.id, hostname }));
+	}
 
 	session?.flash("toast", {
 		intent: "success",
@@ -66,10 +69,13 @@ export const removeDomain = createAction(routes.teamAdminActions.domain.remove, 
 		});
 	}
 
-	let domain = await TeamDomain.findByIdForTeam(ctx.db, ctx.team.id, result.data.domain_id);
+	let domain = await ctx.models.teamDomains
+		.inTeam(ctx.team.id)
+		.where({ id: result.data.domain_id })
+		.first();
 	if (!domain) return notFound("Not Found");
 
-	await TeamDomain.deleteById(ctx.db, domain.id);
+	unwrap(await ctx.models.teamDomains.delete(domain.id));
 
 	session?.flash("toast", { intent: "success", message: `${domain.hostname} removed.` });
 	return redirect(routes.app.team.settings.href({ team: ctx.team.slug }), {
@@ -90,7 +96,10 @@ export const retryDomainVerification = createAction(
 			});
 		}
 
-		let domain = await TeamDomain.findByIdForTeam(ctx.db, ctx.team.id, result.data.domain_id);
+		let domain = await ctx.models.teamDomains
+			.inTeam(ctx.team.id)
+			.where({ id: result.data.domain_id })
+			.first();
 		if (!domain) return notFound("Not Found");
 
 		if (domain.verified_at === null) {

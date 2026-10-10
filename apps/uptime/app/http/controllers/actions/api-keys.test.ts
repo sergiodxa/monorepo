@@ -15,6 +15,7 @@ import { describe, expect, test } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { apiKeys, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -53,7 +54,9 @@ async function postApiKeyAction(
 	db: ReturnType<typeof createTestDatabase>["db"],
 	body: Record<string, string | string[]>,
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), formData()],
+	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.

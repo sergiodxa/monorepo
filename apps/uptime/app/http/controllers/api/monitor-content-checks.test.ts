@@ -38,6 +38,7 @@ const CONFORMANCE = checkConformance(monitorContentChecksRoutes);
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: monitorContentChecksController } =
 	await import("~/app/http/controllers/api/monitor-content-checks");
 
@@ -110,7 +111,9 @@ async function createContentCheckRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(monitorContentChecksRoutes, monitorContentChecksController);
 
 	return router.fetch(request);

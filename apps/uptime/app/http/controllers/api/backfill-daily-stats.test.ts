@@ -31,6 +31,7 @@ let queue = createQueue({ name: "uptime" });
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: ApiKey } = await import("~/app/data/api-key");
 let { createTestDatabase } = await import("~/app/lib/test/db");
 let { teams } = await import("~/database/schema");
@@ -61,7 +62,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), jobEnqueuer(jobQueue)],
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models(), jobEnqueuer(jobQueue)],
 	});
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 

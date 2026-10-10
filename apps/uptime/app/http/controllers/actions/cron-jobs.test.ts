@@ -17,6 +17,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -46,7 +47,9 @@ async function postCronJobAction(
 	body: Record<string, string>,
 	headers: Record<string, string> = {},
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData(), i18n] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), formData(), i18n],
+	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped
 	 * routes without losing type-checking elsewhere.

@@ -28,6 +28,7 @@ import Lead from "~/app/data/lead";
 import TrialWatch from "~/app/data/trial-watch";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import routes from "~/routes/web";
@@ -66,6 +67,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST", body?: strin
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

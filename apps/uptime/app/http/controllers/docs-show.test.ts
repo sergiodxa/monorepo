@@ -21,6 +21,7 @@ import { describe, expect, test } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
@@ -47,6 +48,7 @@ async function getDocsShow(slug: string) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

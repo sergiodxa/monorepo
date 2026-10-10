@@ -35,6 +35,7 @@ const CONFORMANCE = checkConformance(maintenanceWindowRoutes);
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: maintenanceWindowController } =
 	await import("~/app/http/controllers/api/maintenance-window");
 
@@ -112,7 +113,9 @@ async function createMaintenanceWindowRow(
 }
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(maintenanceWindowRoutes, maintenanceWindowController);
 
 	return router.fetch(request);

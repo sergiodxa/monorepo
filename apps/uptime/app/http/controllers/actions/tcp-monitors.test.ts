@@ -100,6 +100,7 @@ async function ingestedEvents() {
  * `remix/data-schema/form-data`'s `f.object()` rejects — a real bug that fails every
  * call. This mock forwards the form container to the schema unflattened, exercising real branching.
  */
+let { default: models } = await import("~/app/http/middleware/models");
 let { checkTcpMonitor, createTcpMonitor, deleteTcpMonitor, updateTcpMonitor } =
 	await import("./tcp-monitors");
 
@@ -144,6 +145,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,
 			mail({ transport: new MemoryTransport(), from: MAIL_FROM }),

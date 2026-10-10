@@ -17,6 +17,7 @@ import { describe, expect, test } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -42,7 +43,9 @@ async function postSetDashboardTab(
 	team: SelectTeam,
 	body: Record<string, string>,
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), formData()],
+	});
 	router.map(routes.actions.setDashboardTab, {
 		middleware: [teamContextMiddleware(team, null) as never],
 		handler: (setDashboardTab as { handler: RequestHandler }).handler,

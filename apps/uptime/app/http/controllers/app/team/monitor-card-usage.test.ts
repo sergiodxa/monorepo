@@ -46,6 +46,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardUsage = (await import("./monitor-card-usage")).default as {
 	handler: RequestHandler<any>;
 };
@@ -174,6 +175,7 @@ async function send(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			renderWith(createHtmlRenderer) as Middleware,
 		],

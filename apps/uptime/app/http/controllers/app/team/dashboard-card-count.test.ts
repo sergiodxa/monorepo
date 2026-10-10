@@ -59,6 +59,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 	handler: RequestHandler<any>;
 };
@@ -127,7 +128,12 @@ async function send(
 	resource: string,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.dashboard.cards.count, {
 		middleware: [seedTeam(team, membership)],

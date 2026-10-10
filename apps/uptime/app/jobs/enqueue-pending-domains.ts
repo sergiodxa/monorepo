@@ -10,13 +10,12 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
-import TeamDomain from "~/app/data/team-domain";
 import jobs from "~/app/jobs";
 import { enqueueMany } from "~/app/lib/queue";
 import { apportionCostByTeam } from "~/app/services/cost";
 
 export default createJobHandler(jobs.enqueuePendingDomains, async (ctx) => {
-	let pending = await TeamDomain.listUnverified(ctx.database);
+	let pending = await ctx.models.teamDomains.unverified().all();
 
 	if (pending.length === 0) {
 		ctx.log.set({ domains: { enqueued: 0 } });

@@ -18,6 +18,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -36,7 +37,7 @@ function seedAuth(viewer: Viewer | null): Middleware {
 /** Dispatches a real GET request to `/app` for the given signed-in state. */
 async function getAppIndex(db: ReturnType<typeof createTestDatabase>["db"], viewer: Viewer | null) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), seedAuth(viewer)],
+		middleware: [asyncContext(), database(() => db), models(), seedAuth(viewer)],
 	});
 	router.map(routes.app.index, appIndex);
 

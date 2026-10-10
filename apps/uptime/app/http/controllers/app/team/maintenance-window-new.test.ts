@@ -33,6 +33,7 @@ import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./maintenance-window-new")).default as {
 	handler: RequestHandler<any>;
 };
@@ -89,7 +90,7 @@ async function send(
 	team: SelectTeam,
 	membership: SelectMembership,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db)] });
+	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
 	router.map(routes.app.team.maintenanceWindows.new, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,

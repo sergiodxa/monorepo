@@ -76,6 +76,7 @@ vi.doMock("cloudflare:workers", () => ({
  */
 type Mapped = { handler: RequestHandler<RequestContext> };
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { runPing } = (await import("~/app/http/controllers/actions/ping")) as unknown as {
 	runPing: Mapped;
 };
@@ -202,6 +203,7 @@ async function createHarness() {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			billing({ provider: createTestBilling() }),
 			session(sessionCookie, sessionStorage),
 			formData(),

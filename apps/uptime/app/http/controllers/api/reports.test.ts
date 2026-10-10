@@ -22,6 +22,7 @@ import ApiKey from "~/app/data/api-key";
 import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import StatusPage from "~/app/data/status-page";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
@@ -183,7 +184,9 @@ async function seedDay(
 }
 
 async function dispatch(path: string, options: { key?: string; accept?: string } = {}) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(reportsRoutes, reportsController);
 
 	let headers: Record<string, string> = {};

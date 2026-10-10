@@ -16,6 +16,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
 import { checkConformance } from "~/app/lib/test/openapi";
@@ -75,7 +76,9 @@ async function dispatch(
 	db: Db,
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(statusPagesRoutes, statusPagesController);
 
 	let headers: Record<string, string> = { "content-type": "application/json" };
@@ -315,7 +318,9 @@ describe("POST /api/v1/status-pages with an Idempotency-Key", () => {
 
 	/** Runs `request` through the collection controller behind the conformance check. */
 	async function send(db: Db, request: Request) {
-		let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+		let router = createRouter({
+			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		});
 		router.map(statusPagesRoutes, statusPagesController);
 		return router.fetch(request);
 	}

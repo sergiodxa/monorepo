@@ -13,7 +13,6 @@
 import { Button } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import TeamDomain from "~/app/data/team-domain";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -31,7 +30,7 @@ export default createAction(routes.app.team.flowMonitors.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
+		let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · New flow monitor`}>

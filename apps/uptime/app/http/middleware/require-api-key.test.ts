@@ -21,6 +21,7 @@ import type { ApiKeyScope } from "~/database/schema";
 import ApiKey from "~/app/data/api-key";
 import protectedResource from "~/app/http/controllers/api/protected-resource";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { apiKeys, apiKeyScopes, teams } from "~/database/schema";
@@ -52,7 +53,7 @@ async function seedApiKey(
 }
 
 async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, string> = {}) {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [database(() => db), models()] });
 
 	router.get("/test", {
 		middleware: [requireApiKey(scope)],
@@ -135,7 +136,7 @@ describe("requireApiKey", () => {
 
 /** Serves a guarded API path beside the metadata controller, as the worker maps them. */
 async function dispatchApi(db: Db, url: string, headers: Record<string, string> = {}) {
-	let router = createRouter({ middleware: [database(() => db)] });
+	let router = createRouter({ middleware: [database(() => db), models()] });
 	router.map(routes.api.metadata, protectedResource);
 	router.get("/api/v1/monitors", {
 		middleware: [requireApiKey("monitors:write")],

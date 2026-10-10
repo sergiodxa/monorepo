@@ -51,6 +51,7 @@ beforeEach(() => {
 	queue.reset();
 });
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { MONITOR_IMPORT_REPORT, importMonitors } = await import("./monitors-import");
 
 let sessionCookie = createCookie("uptime-test-session", { secrets: ["test-secret"] });
@@ -121,6 +122,7 @@ async function submit(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			session(sessionCookie, sessionStorage),
 			seedTeam(team, membership),
 			i18n,

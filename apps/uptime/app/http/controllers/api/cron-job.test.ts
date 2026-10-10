@@ -18,6 +18,7 @@ import type { ApiKeyScope, SelectCronJobMonitor, SelectTeam } from "~/database/s
 import ApiKey from "~/app/data/api-key";
 import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
@@ -70,7 +71,9 @@ async function createCronJobRow(
 }
 
 async function dispatch(db: Db, request: Request) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(cronJobRoutes, cronJobController);
 
 	return router.fetch(request);

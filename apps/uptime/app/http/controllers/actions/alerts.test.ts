@@ -18,6 +18,7 @@ import { describe, expect, test } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import en from "~/app/locales/en";
@@ -62,7 +63,7 @@ async function postAlertAction(
 	records: Record<string, unknown>[] = [],
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), log() as Middleware, formData()],
+		middleware: [asyncContext(), database(() => db), models(), log() as Middleware, formData()],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped

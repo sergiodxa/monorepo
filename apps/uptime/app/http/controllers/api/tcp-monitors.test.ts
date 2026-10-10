@@ -15,6 +15,7 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
 import { checkConformance } from "~/app/lib/test/openapi";
@@ -74,7 +75,9 @@ async function dispatch(
 		headers?: Record<string, string>;
 	},
 ) {
-	let router = createRouter({ middleware: [CONFORMANCE, asyncContext(), database(() => db)] });
+	let router = createRouter({
+		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+	});
 	router.map(tcpMonitorsRoutes, tcpMonitorsController);
 
 	let headers: Record<string, string> = { "content-type": "application/json", ...request.headers };

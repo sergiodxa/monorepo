@@ -22,6 +22,7 @@ import { costLedger } from "~/app/jobs/middleware/cost-ledger";
 import { database } from "~/app/jobs/middleware/database";
 import { destinations } from "~/app/jobs/middleware/destinations";
 import { mailer } from "~/app/jobs/middleware/mailer";
+import { models } from "~/app/jobs/middleware/models";
 import { flags } from "~/app/lib/flags";
 import { jobQueue } from "~/app/lib/queue";
 import { logger } from "~/bootstrap/logger";
@@ -85,6 +86,7 @@ export const dispatcher = createJobDispatcher({
 	middleware: [
 		costLedger(),
 		database(),
+		models(),
 		mailer(),
 		destinations(),
 		admin(),

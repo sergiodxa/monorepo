@@ -28,6 +28,7 @@ import type { MarketingContent } from "~/resources/content/marketing";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { withDocumentAssets } from "~/app/lib/test/document-assets";
 import { comparisons } from "~/resources/content/marketing";
@@ -57,6 +58,7 @@ async function getComparison(slug: string) {
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			(ctx, next) => {
 				ctx.set(Auth, { ok: false });
 				return next();

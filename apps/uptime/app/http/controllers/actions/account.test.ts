@@ -26,6 +26,7 @@ import type { SelectTeam } from "~/database/schema";
 
 import AccountDeletion from "~/app/data/account-deletion";
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import routes from "~/routes/web";
@@ -83,7 +84,9 @@ async function postAccountAction(
 		session?: ReturnType<typeof createFakeSession>;
 	} = {},
 ) {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), formData()] });
+	let router = createRouter({
+		middleware: [asyncContext(), database(() => db), models(), formData()],
+	});
 	(router.map as LooseRouterMap)(route, {
 		middleware: [viewerMiddleware(viewer, options.session)],
 		handler: action,

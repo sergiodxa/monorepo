@@ -24,7 +24,6 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import FlowMonitor from "~/app/data/flow-monitor";
-import TeamDomain from "~/app/data/team-domain";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -49,7 +48,7 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 		let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let verifiedDomains = await TeamDomain.verifiedHostnamesForTeam(ctx.db, ctx.team.id);
+		let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 		let listHref = routes.app.team.flowMonitors.index.href({ team: ctx.team.slug });
 		let showHref = routes.app.team.flowMonitors.show.href({
 			team: ctx.team.slug,

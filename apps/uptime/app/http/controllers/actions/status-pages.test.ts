@@ -20,6 +20,7 @@ import { describe, expect, test } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import {
 	flowMonitors,
@@ -105,7 +106,7 @@ async function send(
 	params: [string, string][],
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), formData() as Middleware],
+		middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 

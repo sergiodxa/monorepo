@@ -32,6 +32,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: healthcheckAnalyticsEngine } = await import("./healthcheck-analytics-engine");
 
 /** The Analytics Engine SQL API endpoint the read probe POSTs to. */
@@ -51,7 +52,7 @@ describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 200 degraded when the write binding works but the read API fails", async () => {
 		let { db } = createTestDatabase();
 
-		let router = createRouter({ middleware: [database(() => db)] });
+		let router = createRouter({ middleware: [database(() => db), models()] });
 		router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 
 		let request = new Request(`https://example.com${routes.healthcheckAnalyticsEngine.href()}`);

@@ -56,6 +56,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardSlowestResult = (await import("./monitor-card-slowest-result")).default as {
 	handler: RequestHandler<any>;
 };
@@ -134,7 +135,12 @@ async function send(
 	monitorId: string,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			asyncContext(),
+			database(() => db),
+			models(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 	});
 	router.map(routes.app.team.monitors.cards.slowestResult, {
 		middleware: [seedTeam(team, membership)],

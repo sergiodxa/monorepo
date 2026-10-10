@@ -65,6 +65,7 @@ vi.doMock("~/app/services/trial-guard", () => ({
 	trialTurnstileSiteKey: () => null,
 }));
 
+let { default: models } = await import("~/app/http/middleware/models");
 let { default: trialLead } = await import("./lead");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
@@ -122,6 +123,7 @@ async function submit(
 		middleware: [
 			asyncContext(),
 			database(() => db),
+			models(),
 			log() as Middleware,
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });
