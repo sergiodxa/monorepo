@@ -7,8 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-import type { Middleware } from "remix/router";
+import type { Middleware, RequestContext } from "remix/router";
 
 import { sessionScheme } from "@sdxc/auth/remix/schemes";
 import { getContext } from "remix/middleware/async-context";
@@ -19,7 +18,6 @@ import { Session } from "remix/session";
 import type * as schema from "~/database/schema";
 
 import { relyingParty } from "~/app/auth/relying-party";
-import { User } from "~/app/repositories/user";
 
 /**
  * Session key used to store the authenticated user id.
@@ -35,7 +33,7 @@ let authUserKey = createContextKey<schema.SelectUser | null>();
  */
 export let auth: Middleware = (ctx, next) => {
 	let middleware = createAuthMiddleware({
-		schemes: [sessionScheme(relyingParty(ctx.url), { verify: () => readSessionUser(ctx.db) })],
+		schemes: [sessionScheme(relyingParty(ctx.url), { verify: () => readSessionUser(ctx.models) })],
 	});
 
 	return middleware(ctx, next);
@@ -104,12 +102,12 @@ export function logout() {
  * Reads the account the login recorded, so a handler sees the row as it stands now
  * rather than a copy captured when the person signed in.
  *
- * @param db The request's database, taken from the context the middleware runs in.
+ * @param models The request's models, taken from the context the middleware runs in.
  */
-function readSessionUser(db: Database) {
+function readSessionUser(models: RequestContext["models"]) {
 	let userId = readSession().get(AUTH_SESSION_USER_ID_KEY);
 	if (typeof userId !== "string") return null;
-	return User.findById(db, userId);
+	return models.users.find(userId);
 }
 
 function readSession() {

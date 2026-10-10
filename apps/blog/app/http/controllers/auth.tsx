@@ -16,7 +16,7 @@ import { createAction, createController, type Middleware } from "remix/router";
 import { relyingParty } from "~/app/auth/relying-party";
 import { isAuthenticated, login, logout } from "~/app/http/middleware/auth";
 import { parseReturnPath, requestedReturnPath } from "~/app/http/return-path";
-import { UnverifiedEmailError, User } from "~/app/repositories/user";
+import { UnverifiedEmailError } from "~/app/models/users";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";
 import routes from "~/routes/web";
@@ -191,7 +191,7 @@ export let callbackAction = createAction(routes.auth.callback, {
 		}
 
 		let grant = result.data;
-		let user = await User.findOrCreateFromAuthProfile(ctx.db, {
+		let user = await ctx.models.users.findOrCreateFromAuthProfile({
 			subjectId: grant.subject,
 			...grant.profile,
 		});

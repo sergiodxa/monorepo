@@ -12,7 +12,7 @@ import { RelyingParty } from "@sdxc/auth/relying-party";
 import { JWK } from "@sdxc/jwt";
 import * as s from "remix/data-schema";
 
-import type { User } from "~/app/repositories/user";
+import type { AuthProfile as UserProfile } from "~/app/models/users";
 
 import { issuer } from "~/app/auth/issuer";
 import { getEnv } from "~/app/http/middleware/env";
@@ -35,7 +35,7 @@ const PROFILE_CLAIMS = s.object({
  * What a completed login carries about the person: a local account without the subject
  * id, which the flow resolves separately and the callback pairs it with.
  */
-export type AuthProfile = Omit<User.AuthProfile, "subjectId">;
+export type AuthProfile = Omit<UserProfile, "subjectId">;
 
 /**
  * The client for the request's own origin, so a local run and production each present

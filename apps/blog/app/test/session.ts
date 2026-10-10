@@ -9,10 +9,11 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { createCookie } from "remix/cookie";
 
-import { User } from "~/app/repositories/user";
+import { bindModels } from "~/app/test/models";
 
 /** The session cookie's name, as the session middleware sets it. */
 const SESSION_COOKIE_NAME = "r3:session";
@@ -31,15 +32,16 @@ const LIFETIME_SECONDS = 60 * 60;
  */
 export async function seedAdmin(db: Database): Promise<string> {
 	let suffix = crypto.randomUUID().slice(0, 8);
-	let user = await User.create(db, {
-		subjectId: crypto.randomUUID(),
-		role: "admin",
-		email: `admin-${suffix}@example.com`,
-		avatar: "https://example.com/avatar.png",
-		username: `admin-${suffix}`,
-		displayName: "Admin",
-	});
-	if (!user) throw new Error("Seeding the admin failed");
+	let user = unwrap(
+		await bindModels(db).users.create({
+			subject_id: crypto.randomUUID(),
+			role: "admin",
+			email: `admin-${suffix}@example.com`,
+			avatar: "https://example.com/avatar.png",
+			username: `admin-${suffix}`,
+			display_name: "Admin",
+		}),
+	);
 	return user.id;
 }
 

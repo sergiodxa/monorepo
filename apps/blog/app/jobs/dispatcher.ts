@@ -16,6 +16,7 @@ import { logger } from "~/bootstrap/logger";
 import { activityPub } from "./middleware/activitypub";
 import { database } from "./middleware/database";
 import { mail } from "./middleware/mail";
+import { models } from "./middleware/models";
 import { jobQueue } from "./queue";
 
 /**
@@ -25,7 +26,7 @@ import { jobQueue } from "./queue";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), mail(), activityPub(enqueuer)],
+	middleware: [database(), models(), mail(), activityPub(enqueuer)],
 	timeout: "2 minutes",
 	queue: jobQueue,
 });

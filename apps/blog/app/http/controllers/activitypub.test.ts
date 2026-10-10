@@ -29,6 +29,7 @@ import type { AppContext } from "~/app/http/context";
 
 import activityPub, { ActivityPub } from "~/app/http/middleware/activitypub";
 import database, { Database } from "~/app/http/middleware/database";
+import models from "~/app/http/middleware/models";
 import jobs from "~/app/jobs";
 import publish from "~/app/jobs/activitypub/publish";
 import { FollowerRepository } from "~/app/repositories/follower";
@@ -108,6 +109,7 @@ async function fetchPath(path: string, init?: RequestInit): Promise<Response> {
 		middleware: [
 			log(createLogger({ service: "blog", sink: () => undefined })),
 			database(() => db),
+			models(),
 			jobEnqueuer(jobQueue),
 			activityPub((ctx) => testFederation(db, keys, federationQueue(ctx.jobs))),
 		],

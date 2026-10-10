@@ -9,7 +9,9 @@
 
 import type { Database } from "remix/data-table";
 
-import { User } from "~/app/repositories/user";
+import { unwrap } from "@sdxc/result";
+
+import { bindModels } from "~/app/test/models";
 
 /** Every migration's SQL, keyed by path, bundled at build time so workerd needs no filesystem. */
 const MIGRATIONS = import.meta.glob<string>("../../database/migrations/*.sql", {
@@ -73,13 +75,14 @@ export async function applyMigrations(
  */
 export async function seedAuthor(db: Database): Promise<string> {
 	let suffix = crypto.randomUUID().slice(0, 8);
-	let user = await User.create(db, {
-		subjectId: crypto.randomUUID(),
-		email: `author-${suffix}@example.com`,
-		avatar: "https://example.com/avatar.png",
-		username: `author-${suffix}`,
-		displayName: "Author",
-	});
-	if (!user) throw new Error("Seeding the author failed");
+	let user = unwrap(
+		await bindModels(db).users.create({
+			subject_id: crypto.randomUUID(),
+			email: `author-${suffix}@example.com`,
+			avatar: "https://example.com/avatar.png",
+			username: `author-${suffix}`,
+			display_name: "Author",
+		}),
+	);
 	return user.id;
 }

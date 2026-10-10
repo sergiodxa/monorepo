@@ -50,6 +50,7 @@ import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
+import models from "~/app/http/middleware/models";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
 import redirects from "~/app/http/middleware/redirects";
@@ -210,6 +211,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 		}),
 		asyncContext(),
 		database(createDatabase),
+		models(),
 		jobEnqueuer(jobQueue),
 		workersCache({ cache: () => platformCache }),
 		/**

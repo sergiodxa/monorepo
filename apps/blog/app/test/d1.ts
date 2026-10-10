@@ -7,9 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
+import type { Database } from "remix/data-table";
+
 import { env } from "cloudflare:test";
-import { Database } from "remix/data-table";
+
+import { openDatabase } from "~/app/services/database";
 
 import { applyMigrations } from "./fixtures";
 
@@ -26,5 +28,5 @@ export async function migratedDatabase(): Promise<Database> {
 
 	if ((existing.results ?? []).length === 0) await applyMigrations(env.DB);
 
-	return new Database(createD1DatabaseAdapter(env.DB));
+	return openDatabase(env.DB);
 }

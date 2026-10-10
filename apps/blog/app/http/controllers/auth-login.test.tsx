@@ -13,6 +13,7 @@ import { createKVNamespace } from "@sdxc/cloudflare-mocks";
 import { JWK, JWT } from "@sdxc/jwt";
 import { createLogger } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createCookie } from "remix/cookie";
@@ -25,9 +26,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 import auth from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
-import { User } from "~/app/repositories/user";
+import models from "~/app/http/middleware/models";
 import { testDatabase } from "~/app/test/database";
 import { blankSearchFrame } from "~/app/test/frames";
+import { bindModels } from "~/app/test/models";
 import routes from "~/routes/web";
 
 import { htmlRenderer } from "../../../bootstrap/app";
@@ -156,6 +158,7 @@ function openBrowser(db: Database): Browser {
 				createMemorySessionStorage(),
 			),
 			database(() => db),
+			models(),
 			auth,
 			...htmlRenderer(),
 		],
@@ -283,16 +286,16 @@ describe("opening the login screen while signed in", () => {
 describe("signing in with the email an existing account holds", () => {
 	/** Creates the admin account registered under the fixture profile's email. */
 	async function seedAdmin(db: Database) {
-		let admin = await User.create(db, {
-			subjectId: "subject-admin",
-			role: "admin",
-			email: "sergio@example.com",
-			avatar: "https://example.com/admin.png",
-			username: "admin",
-			displayName: "Admin",
-		});
-		if (!admin) throw new Error("Seeding the admin failed");
-		return admin;
+		return unwrap(
+			await bindModels(db).users.create({
+				subject_id: "subject-admin",
+				role: "admin",
+				email: "sergio@example.com",
+				avatar: "https://example.com/admin.png",
+				username: "admin",
+				display_name: "Admin",
+			}),
+		);
 	}
 
 	test("refuses an unverified email and leaves the visitor signed out", async () => {
@@ -306,7 +309,7 @@ describe("signing in with the email an existing account holds", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("Verify it with the identity provider");
-		expect(await User.findById(db, admin.id)).toEqual(admin);
+		expect(await bindModels(db).users.find(admin.id)).toEqual(admin);
 
 		let screen = await browser.visit(routes.auth.login.index.href());
 		expect(screen.status).toBe(200);
@@ -321,6 +324,6 @@ describe("signing in with the email an existing account holds", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.cms.dashboard.href());
-		expect((await User.findById(db, admin.id))?.subject_id).toBe("subject-1");
+		expect((await bindModels(db).users.find(admin.id))?.subject_id).toBe("subject-1");
 	});
 });

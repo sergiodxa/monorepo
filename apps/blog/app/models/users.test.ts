@@ -9,12 +9,15 @@
 
 import type { Database } from "remix/data-table";
 
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { testDatabase } from "~/app/test/database";
+import { bindModels } from "~/app/test/models";
 
-import { UnverifiedEmailError, User } from "./user";
+import type { AuthProfile } from "./users";
+
+import { UnverifiedEmailError } from "./users";
 
 /** The address the existing admin account is registered under. */
 const ADMIN_EMAIL = "sergio@example.com";
@@ -23,7 +26,7 @@ const ADMIN_EMAIL = "sergio@example.com";
 const ADMIN_SUBJECT = "subject-admin";
 
 /** A profile for `subjectId`, claiming `email` with the given verification. */
-function profileOf(subjectId: string, email: string, emailVerified: boolean): User.AuthProfile {
+function profileOf(subjectId: string, email: string, emailVerified: boolean): AuthProfile {
 	return {
 		subjectId,
 		email,
@@ -36,52 +39,49 @@ function profileOf(subjectId: string, email: string, emailVerified: boolean): Us
 
 /** Creates the admin account a first login could try to claim. */
 async function seedAdmin(db: Database, subjectId: string | undefined = ADMIN_SUBJECT) {
-	let admin = await User.create(db, {
-		subjectId,
-		role: "admin",
-		email: ADMIN_EMAIL,
-		avatar: "https://example.com/admin.png",
-		username: "sergiodxa",
-		displayName: "Sergio",
-	});
-	if (!admin) throw new Error("Seeding the admin failed");
-	return admin;
+	return unwrap(
+		await bindModels(db).users.create({
+			subject_id: subjectId ?? null,
+			role: "admin",
+			email: ADMIN_EMAIL,
+			avatar: "https://example.com/admin.png",
+			username: "sergiodxa",
+			display_name: "Sergio",
+		}),
+	);
 }
 
-describe("User.findOrCreateFromAuthProfile", () => {
+describe("users.findOrCreateFromAuthProfile", () => {
 	test("refuses an unverified email naming an existing admin account, leaving it untouched", async () => {
 		let db = await testDatabase();
 		let admin = await seedAdmin(db);
 
-		let result = await User.findOrCreateFromAuthProfile(
-			db,
+		let result = await bindModels(db).users.findOrCreateFromAuthProfile(
 			profileOf("subject-stranger", ADMIN_EMAIL, false),
 		);
 
 		expect(isFailure(result) && result.error).toBeInstanceOf(UnverifiedEmailError);
-		expect(await User.findById(db, admin.id)).toEqual(admin);
-		expect(await User.findBySubjectId(db, "subject-stranger")).toBeNull();
+		expect(await bindModels(db).users.find(admin.id)).toEqual(admin);
+		expect(await bindModels(db).users.findBySubjectId("subject-stranger")).toBeNull();
 	});
 
 	test("refuses an unverified email naming an admin account no subject has linked yet", async () => {
 		let db = await testDatabase();
 		let admin = await seedAdmin(db, undefined);
 
-		let result = await User.findOrCreateFromAuthProfile(
-			db,
+		let result = await bindModels(db).users.findOrCreateFromAuthProfile(
 			profileOf("subject-stranger", ADMIN_EMAIL, false),
 		);
 
 		expect(isFailure(result) && result.error).toBeInstanceOf(UnverifiedEmailError);
-		expect(await User.findById(db, admin.id)).toEqual(admin);
+		expect(await bindModels(db).users.find(admin.id)).toEqual(admin);
 	});
 
 	test("links a first login to the account holding its verified email", async () => {
 		let db = await testDatabase();
 		let admin = await seedAdmin(db, undefined);
 
-		let result = await User.findOrCreateFromAuthProfile(
-			db,
+		let result = await bindModels(db).users.findOrCreateFromAuthProfile(
 			profileOf("subject-new", ADMIN_EMAIL, true),
 		);
 
@@ -93,8 +93,7 @@ describe("User.findOrCreateFromAuthProfile", () => {
 		let db = await testDatabase();
 		await seedAdmin(db);
 
-		let result = await User.findOrCreateFromAuthProfile(
-			db,
+		let result = await bindModels(db).users.findOrCreateFromAuthProfile(
 			profileOf("subject-guest", "guest@example.com", false),
 		);
 
@@ -106,8 +105,7 @@ describe("User.findOrCreateFromAuthProfile", () => {
 		let db = await testDatabase();
 		let admin = await seedAdmin(db);
 
-		let result = await User.findOrCreateFromAuthProfile(
-			db,
+		let result = await bindModels(db).users.findOrCreateFromAuthProfile(
 			profileOf(ADMIN_SUBJECT, ADMIN_EMAIL, false),
 		);
 

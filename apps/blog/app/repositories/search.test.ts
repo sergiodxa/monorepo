@@ -7,16 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { succeeded } from "@sdxc/result";
-import { Database, sql } from "remix/data-table";
+import { sql } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import { ArticlePost } from "~/app/repositories/posts/article";
 import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { LikePost } from "~/app/repositories/posts/like";
 import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { openDatabase } from "~/app/services/database";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
 
@@ -84,7 +86,7 @@ describe("the 0006 migration", () => {
 	test("backfills the searchable text of every live post, and indexes it", async () => {
 		let binding = createD1Database();
 		await applyMigrations(binding, (file) => file < SEARCH_MIGRATION);
-		let legacy = new Database(createD1DatabaseAdapter(binding));
+		let legacy = openDatabase(binding);
 		let user = await seedAuthor(legacy);
 
 		await binding
@@ -159,7 +161,7 @@ describe("the 0007 migration", () => {
 	test("backfills every live bookmark by its title and scheme-less address, leaving other rows alone", async () => {
 		let binding = createD1Database();
 		await applyMigrations(binding, (file) => file < BOOKMARK_MIGRATION);
-		let legacy = new Database(createD1DatabaseAdapter(binding));
+		let legacy = openDatabase(binding);
 		let user = await seedAuthor(legacy);
 		let saved = await LikePost.create(legacy, {
 			author_id: user,
@@ -221,7 +223,7 @@ describe("the 0008 migration", () => {
 	test("drops the rows of posts with no metadata or no text, keeping every real one", async () => {
 		let binding = createD1Database();
 		await applyMigrations(binding, (file) => file < BLANK_MIGRATION);
-		let legacy = new Database(createD1DatabaseAdapter(binding));
+		let legacy = openDatabase(binding);
 		let user = await seedAuthor(legacy);
 		let real = await LikePost.create(legacy, {
 			author_id: user,

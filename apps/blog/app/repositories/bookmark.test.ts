@@ -8,11 +8,10 @@
  */
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import { Database } from "remix/data-table";
 import { describe, expect, test } from "vitest";
 
 import { LikePost } from "~/app/repositories/posts/like";
+import { openDatabase } from "~/app/services/database";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
 
@@ -110,7 +109,7 @@ describe(BOOKMARKS_MIGRATION, () => {
 	test("computes every address as LikePost.address does", async () => {
 		let binding = createD1Database();
 		await applyMigrations(binding, (file) => file < BOOKMARKS_MIGRATION);
-		let db = new Database(createD1DatabaseAdapter(binding));
+		let db = openDatabase(binding);
 		let author = await seedAuthor(db);
 
 		let ids: string[] = [];
@@ -133,7 +132,7 @@ describe(BOOKMARKS_MIGRATION, () => {
 	test("keeps the oldest of two bookmarks of one page and tombstones the other", async () => {
 		let binding = createD1Database();
 		await applyMigrations(binding, (file) => file < BOOKMARKS_MIGRATION);
-		let db = new Database(createD1DatabaseAdapter(binding));
+		let db = openDatabase(binding);
 		let author = await seedAuthor(db);
 
 		let older = await LikePost.create(db, {

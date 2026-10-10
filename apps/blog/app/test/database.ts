@@ -7,9 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { Database } from "remix/data-table";
+
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
-import { Database } from "remix/data-table";
+
+import { openDatabase } from "~/app/services/database";
 
 import { applyMigrations } from "./fixtures";
 
@@ -19,5 +21,5 @@ import { applyMigrations } from "./fixtures";
 export async function testDatabase(): Promise<Database> {
 	let binding = createD1Database();
 	await applyMigrations(binding);
-	return new Database(createD1DatabaseAdapter(binding));
+	return openDatabase(binding);
 }
