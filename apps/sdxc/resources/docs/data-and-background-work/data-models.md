@@ -29,8 +29,8 @@ npm add -D @sdxc/sample
 ## Define a model
 
 `createModel` takes a table and returns a definition. Scopes are named refinements of a query;
-methods are built from the bound model, so they compose its scopes; callbacks run around every
-write made through the model:
+a default scope is one every read applies; methods run with `this` bound to the model, so they
+compose its scopes and each other; callbacks run around every write made through the model:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
@@ -41,14 +41,15 @@ import { users } from "~/database/schema";
 
 export const Users = createModel(users, {
 	optional: ["id"],
+	defaultScope: (query) => query.where({ deleted_at: null }),
 	scopes: {
-		active: (query) => query.where({ deleted_at: null }),
 		inTeam: (query, teamId: string) => query.where({ team_id: teamId }),
 	},
-	methods: (model) => ({
-		findByEmail: (email: string) =>
-			model.active().where({ email: email.toLowerCase() }).first(),
-	}),
+	methods: {
+		findByEmail(email: string) {
+			return this.query().where({ email: email.toLowerCase() }).first();
+		},
+	},
 	callbacks: {
 		async validate(values) {
 			if (values.name === "") return fail("Name is required", ["name"]);
@@ -69,6 +70,12 @@ them; every other non-null column is required by the type of `create`. A scope r
 it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row type, and
 answers it. `with()` and `select()` change the row, so they belong in a method.
 
+The default scope keeps soft-deleted users out of every read without each call site
+remembering a filter: queries, scopes and `find` leave them out, and an update or delete of one
+answers `NotFound`. `unscoped()` reads past it, for the code that restores a user. A method
+answers a promise or a model query, so a model loaded on demand can answer it before its module
+loads; one answering a plain value turns the definition into a type error naming it.
+
 Bind the definition to a database and use it:
 
 ```typescript
@@ -80,7 +87,8 @@ let created = await users.create({ email: "Pat@Example.com", name: "Pat" });
 if (isFailure(created)) return created.error.issues;
 
 await users.find(created.data.id); // the row, or null
-await users.active().inTeam(teamId).orderBy("name", "asc").all();
+await users.inTeam(teamId).orderBy("name", "asc").all(); // deleted users left out
+await users.unscoped().where({ id }).first(); // including a deleted one
 ```
 
 Reads answer `null` for a missing row. Writes answer a `Result`: a `ValidationError` from
@@ -95,7 +103,7 @@ unchanged:
 ```typescript
 import { Pagination } from "@sdxc/pagination";
 
-let page = await Pagination.byOffset(users.active().orderBy("name", "asc"), {
+let page = await Pagination.byOffset(users.inTeam(teamId).orderBy("name", "asc"), {
 	page: 1,
 	perPage: 25,
 });
@@ -155,23 +163,47 @@ An MCP tool mounted on the router runs on the same request context, so it reads
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { Database, database } from "~/jobs/middleware/database";
+import { models } from "~/models";
+
 export const dispatcher = createJobDispatcher({
 	middleware: [
 		database(),
-		modelsMiddleware(models, (ctx) => ({ db: ctx.database })),
+		modelsMiddleware(models, (ctx) => ({ db: ctx.require(Database) })),
 	],
 });
 ```
 
+A job's middleware sees the bare job context, so it reads the database by its key rather than
+through `ctx.database`, which only the job's handler sees.
+
 ## Dispatch side effects after commit
 
-Callbacks receive a model context. Its `db` is the database the model is bound to, `models` is
-the rest of the registry bound to the same request, and `get` and `require` read whatever the
-host context published, which is how a callback reaches the job queue:
+Callbacks receive a model context, which you extend the way middleware extends a router's
+context. It starts with `db`, the database the model is bound to, and `get(key)`, which reads
+what the host context published. Anything a callback depends on, you declare on the interface,
+and every binding then has to supply it:
+
+```typescript {% title="config/model-context.d.ts" %}
+import type { BoundRegistry } from "@sdxc/data-model";
+import type { JobEnqueuer } from "@sdxc/jobs";
+
+import type { models } from "~/models";
+
+declare module "@sdxc/data-model" {
+	interface ModelContext {
+		jobs: JobEnqueuer;
+		models: BoundRegistry<typeof models>;
+	}
+}
+```
+
+`models` is always there at runtime: the rest of the registry, bound to the same request. The
+declaration types it, so a callback calling another model is checked like any other call. A
+callback then reads `ctx.jobs` directly:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
-import { Jobs } from "@sdxc/jobs/router";
 
 import jobs from "~/jobs";
 
@@ -179,13 +211,23 @@ export const Users = createModel(users, {
 	callbacks: {
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
-			await ctx
-				.require(Jobs)
-				.enqueue(jobs.sendWelcome, { userId: event.row.id });
+			await ctx.jobs.enqueue(jobs.sendWelcome, { userId: event.row.id });
 		},
 	},
 });
 ```
+
+Each binding supplies it, the router's from `ctx.jobs` and the dispatcher's from itself, so a
+binding that leaves it out fails to type-check:
+
+```typescript
+modelsMiddleware(models, (ctx) => ({ db: ctx.db, jobs: ctx.jobs }));
+modelsMiddleware(models, (ctx) => ({ db: ctx.require(Database), jobs: dispatcher }));
+```
+
+Keep the language out of the model context. A callback runs for every caller of the model,
+scripts and jobs included, so an email worded for the visitor is the controller's to enqueue,
+with the request's locale, after the write it follows.
 
 `afterCommit` runs right after a write made on its own. Inside `ctx.models.transaction(...)` it
 waits for the whole callback, and runs only when the callback resolves with something other than
@@ -211,7 +253,7 @@ adapter with real transactions, such as SQLite in tests, and the user rolls back
 On D1 their database work has already committed, so keep them to work the model can repeat, and
 put anything with consequences outside the database in `afterCommit`.
 
-An update or delete built from a query, `ctx.models.users.active().update({ ... })`, is one
+An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
 statement over every matching row and runs no model callbacks. It is the escape hatch for
 set-based writes; iterate and call `update(key, values)` per row when each row needs its
 callbacks.
@@ -270,9 +312,11 @@ export const Articles = Posts.extend("article", {
 		locale: field.enum(["en", "es"]).default("en"),
 		tags: field.list(field.text()),
 	},
-	methods: (model) => ({
-		findBySlug: (slug: string) => model.live().whereMeta("slug", slug).first(),
-	}),
+	methods: {
+		findBySlug(slug: string) {
+			return this.live().whereMeta("slug", slug).first();
+		},
+	},
 });
 
 export default Articles;
@@ -294,8 +338,13 @@ Every field reads as possibly missing unless it declares a default, since any ke
 absent for any row; `required()` makes `create` refuse a write without it, with the issue at
 `["meta", "slug"]`. A value the field's codec rejects reads as missing. `withMeta(["title"])`
 loads only the keys a list shows, and `whereMeta(key, value)` keeps the rows holding a value.
-`whereMeta` looks the matching rows up in the meta table first, so use it for selective keys
-such as a slug; a value a listing filters or sorts on by the hundreds belongs in a column.
+The first `whereMeta` on a query joins the meta table into the read, so filtering every article
+by locale stays one statement however many match. Each further `whereMeta` looks its matches up
+first, so chain the broad key first and the selective ones after it. A value a listing sorts by
+belongs in a column, where keyset paging can seek on it.
+
+An update that names only meta keys still touches `updated_at`, when the table declares
+`timestamps`, so a post whose title changed reads as updated in a feed or a sitemap.
 
 A write inserts the new meta rows before deleting the old ones, and reads take each key's
 latest row, so a failure between the two statements on D1 still reads the new value.
