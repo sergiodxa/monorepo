@@ -11,13 +11,12 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { SelectStatusPage } from "~/database/schema";
 
-import StatusPage from "~/app/data/status-page";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -60,7 +59,7 @@ export default createController(statusPagesRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = StatusPage.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.statusPages.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -98,23 +97,26 @@ export default createController(statusPagesRoutes, {
 					});
 				}
 
-				if (await StatusPage.isSlugTaken(ctx.db, result.data.slug)) {
+				if (await ctx.models.statusPages.isSlugTaken(result.data.slug)) {
 					return apiProblems.conflict({
 						detail: "Slug is already in use",
 						instance: problemInstance(),
 					});
 				}
 
-				let statusPage = await StatusPage.create(ctx.db, ctx.apiTeam.id, {
-					name: result.data.name,
-					slug: result.data.slug,
-					title: result.data.title ?? result.data.name,
-					description: result.data.description ?? null,
-					logo_url: result.data.logoUrl ?? null,
-					custom_domain: result.data.customDomain ?? null,
-					is_public: result.data.isPublic,
-					show_overall_status: result.data.showOverallStatus,
-				});
+				let statusPage = unwrap(
+					await ctx.models.statusPages.create({
+						team_id: ctx.apiTeam.id,
+						name: result.data.name,
+						slug: result.data.slug,
+						title: result.data.title ?? result.data.name,
+						description: result.data.description ?? null,
+						logo_url: result.data.logoUrl ?? null,
+						custom_domain: result.data.customDomain ?? null,
+						is_public: result.data.isPublic,
+						show_overall_status: result.data.showOverallStatus,
+					}),
+				);
 
 				return apiSuccess({ statusPage: serializeStatusPage(statusPage) }, Created);
 			},

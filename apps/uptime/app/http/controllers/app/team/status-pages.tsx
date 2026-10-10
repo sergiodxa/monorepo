@@ -12,7 +12,6 @@ import { textDecoration } from "@sdxc/u/typography";
 import { Badge, Empty, LinkButton, Table } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import StatusPage from "~/app/data/status-page";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -28,10 +27,13 @@ export default createAction(routes.app.team.statusPages.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let pages = await StatusPage.listByTeam(ctx.db, ctx.team.id);
+		let pages = await ctx.models.statusPages
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 		let attachedCounts = await Promise.all(
 			pages.map(async (page) => {
-				let ids = await StatusPage.getAttachedIds(ctx.db, page.id);
+				let ids = await ctx.models.statusPages.getAttachedIds(page.id);
 				return (
 					ids.monitorIds.length +
 					ids.dnsMonitorIds.length +

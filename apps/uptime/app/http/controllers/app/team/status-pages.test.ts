@@ -1,7 +1,7 @@
 /**
  * Tests for the status pages list controller. No `cloudflare:workers` mock is
- * needed — this controller only imports `~/app/data/status-page`, which has no
- * Cloudflare dependency. `requireUser`/`requireTeam`/`i18n` are bypassed the same
+ * needed: this controller reads only `ctx.models`, which has no Cloudflare
+ * dependency. `requireUser`/`requireTeam`/`i18n` are bypassed the same
  * way `monitors.test.ts` bypasses auth: a stand-in middleware seeds
  * `ctx.team`/`ctx.membership`/`ctx.intl` directly, and `ctx.render` is backed by
  * a minimal renderer mirroring the app's `htmlRendering()` chain.

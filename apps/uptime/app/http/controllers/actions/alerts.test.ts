@@ -26,7 +26,7 @@ import { alerts, dnsMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 let { createAlert, updateAlert, deleteAlert } = await import("./alerts");
-let { MAX_ALERTS_PER_TEAM } = await import("~/app/data/alert");
+let { MAX_ALERTS_PER_TEAM } = await import("~/app/models/alerts");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
 let dns = useMailServerDns();

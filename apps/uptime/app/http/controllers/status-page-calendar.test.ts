@@ -13,17 +13,17 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { createTranslator } from "@sdxc/i18n";
 import { parse } from "@sdxc/icalendar";
 import { stringifyRecurrence } from "@sdxc/icalendar/rrule";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { InsertMaintenanceWindow } from "~/database/schema";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import en from "~/app/locales/en";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -98,13 +98,16 @@ async function createWindow(
 	overrides: Partial<InsertMaintenanceWindow> = {},
 ) {
 	let now = Date.now();
-	return await MaintenanceWindow.create(db, teamId, {
-		name: "Database upgrade",
-		starts_at: now,
-		ends_at: now + 3_600_000,
-		monitor_id: null,
-		...overrides,
-	});
+	return unwrap(
+		await bindModels(db).maintenanceWindows.create({
+			name: "Database upgrade",
+			starts_at: now,
+			ends_at: now + 3_600_000,
+			monitor_id: null,
+			...overrides,
+			team_id: teamId,
+		}),
+	);
 }
 
 /** Sends a GET through a router mapping both calendar routes. */

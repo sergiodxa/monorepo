@@ -9,12 +9,11 @@
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import StatusPage from "~/app/data/status-page";
 import {
 	CreateStatusPageSchema,
 	StatusPageIdSchema,
@@ -48,7 +47,7 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		...values
 	} = result.data;
 
-	if (await StatusPage.isSlugTaken(ctx.db, values.slug)) {
+	if (await ctx.models.statusPages.isSlugTaken(values.slug)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: `Slug "${values.slug}" is already taken.`,
@@ -58,19 +57,22 @@ export const createStatusPage = createAction(routes.actions.statusPage.create, a
 		});
 	}
 
-	let page = await StatusPage.create(ctx.db, ctx.team.id, {
-		...values,
-		description: description || null,
-		logo_url: logo_url || null,
-		custom_domain: null,
-	});
+	let page = unwrap(
+		await ctx.models.statusPages.create({
+			...values,
+			team_id: ctx.team.id,
+			description: description || null,
+			logo_url: logo_url || null,
+			custom_domain: null,
+		}),
+	);
 
 	await Promise.all([
-		StatusPage.setMonitors(ctx.db, page.id, monitor_ids),
-		StatusPage.setDnsMonitors(ctx.db, page.id, dns_monitor_ids),
-		StatusPage.setTcpMonitors(ctx.db, page.id, tcp_monitor_ids),
-		StatusPage.setFlowMonitors(ctx.db, page.id, flow_monitor_ids),
-		StatusPage.setCronJobs(ctx.db, page.id, cron_job_ids),
+		ctx.models.statusPages.setMonitors(page.id, monitor_ids),
+		ctx.models.statusPages.setDnsMonitors(page.id, dns_monitor_ids),
+		ctx.models.statusPages.setTcpMonitors(page.id, tcp_monitor_ids),
+		ctx.models.statusPages.setFlowMonitors(page.id, flow_monitor_ids),
+		ctx.models.statusPages.setCronJobs(page.id, cron_job_ids),
 	]);
 
 	session?.flash("toast", { intent: "success", message: `Status page "${page.name}" created.` });
@@ -108,10 +110,13 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		...values
 	} = result.data;
 
-	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, status_page_id);
+	let existing = await ctx.models.statusPages
+		.inTeam(ctx.team.id)
+		.where({ id: status_page_id })
+		.first();
 	if (!existing) return notFound("Not Found");
 
-	if (await StatusPage.isSlugTaken(ctx.db, values.slug, status_page_id)) {
+	if (await ctx.models.statusPages.isSlugTaken(values.slug, status_page_id)) {
 		session?.flash("toast", {
 			intent: "error",
 			message: `Slug "${values.slug}" is already taken.`,
@@ -122,18 +127,20 @@ export const updateStatusPage = createAction(routes.actions.statusPage.update, a
 		);
 	}
 
-	await StatusPage.updateById(ctx.db, status_page_id, {
-		...values,
-		description: description || null,
-		logo_url: logo_url || null,
-	});
+	unwrap(
+		await ctx.models.statusPages.update(status_page_id, {
+			...values,
+			description: description || null,
+			logo_url: logo_url || null,
+		}),
+	);
 
 	await Promise.all([
-		StatusPage.setMonitors(ctx.db, status_page_id, monitor_ids),
-		StatusPage.setDnsMonitors(ctx.db, status_page_id, dns_monitor_ids),
-		StatusPage.setTcpMonitors(ctx.db, status_page_id, tcp_monitor_ids),
-		StatusPage.setFlowMonitors(ctx.db, status_page_id, flow_monitor_ids),
-		StatusPage.setCronJobs(ctx.db, status_page_id, cron_job_ids),
+		ctx.models.statusPages.setMonitors(status_page_id, monitor_ids),
+		ctx.models.statusPages.setDnsMonitors(status_page_id, dns_monitor_ids),
+		ctx.models.statusPages.setTcpMonitors(status_page_id, tcp_monitor_ids),
+		ctx.models.statusPages.setFlowMonitors(status_page_id, flow_monitor_ids),
+		ctx.models.statusPages.setCronJobs(status_page_id, cron_job_ids),
 	]);
 
 	session?.flash("toast", { intent: "success", message: "Status page updated." });
@@ -153,10 +160,13 @@ export const deleteStatusPage = createAction(routes.actions.statusPage.delete, a
 		});
 	}
 
-	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, result.data.status_page_id);
+	let existing = await ctx.models.statusPages
+		.inTeam(ctx.team.id)
+		.where({ id: result.data.status_page_id })
+		.first();
 	if (!existing) return notFound("Not Found");
 
-	await StatusPage.deleteById(ctx.db, result.data.status_page_id);
+	unwrap(await ctx.models.statusPages.delete(result.data.status_page_id));
 
 	session?.flash("toast", {
 		intent: "success",

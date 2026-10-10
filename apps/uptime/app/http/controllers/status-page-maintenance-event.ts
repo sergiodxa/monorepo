@@ -12,7 +12,6 @@ import { calendarResponse } from "@sdxc/icalendar";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import StatusPage from "~/app/data/status-page";
 import { apportionCostByTeam } from "~/app/services/cost";
 import {
 	listPageServices,
@@ -32,7 +31,7 @@ export default createAction(routes.statusPageMaintenanceEvent, async (ctx) => {
 		ctx.params,
 	);
 
-	let page = await StatusPage.findBySlugPublic(ctx.db, slug);
+	let page = await ctx.models.statusPages.findPublic(slug);
 	if (!page) return notFound("Not Found");
 
 	apportionCostByTeam([page.team_id]);

@@ -20,6 +20,7 @@ import {
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
 import { createTranslator } from "@sdxc/i18n";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { renderToStream } from "remix/component/server";
@@ -28,7 +29,6 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
 import { database } from "~/app/http/middleware/database";
 import { SEO } from "~/app/lib/seo";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -67,6 +67,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: publicStatusPageModule } = await import("./status-page");
 
 /** The Analytics Engine SQL API endpoint the page's summaries are queried through. */
@@ -610,19 +611,26 @@ describe("GET /status/:slug", () => {
 		let { db, team } = await createFixture();
 		let page = await createPublicPage(db, team.id, "acme-maintenance");
 		let now = Date.now();
-		let shown = await MaintenanceWindow.create(db, team.id, {
-			name: "Database upgrade",
-			starts_at: now + 3_600_000,
-			ends_at: now + 7_200_000,
-			monitor_id: null,
-		});
-		await MaintenanceWindow.create(db, team.id, {
-			name: "Internal rotation",
-			starts_at: now + 3_600_000,
-			ends_at: now + 7_200_000,
-			monitor_id: null,
-			show_on_status_page: false,
-		});
+		let maintenanceWindows = bindModels(db).maintenanceWindows;
+		let shown = unwrap(
+			await maintenanceWindows.create({
+				team_id: team.id,
+				name: "Database upgrade",
+				starts_at: now + 3_600_000,
+				ends_at: now + 7_200_000,
+				monitor_id: null,
+			}),
+		);
+		unwrap(
+			await maintenanceWindows.create({
+				team_id: team.id,
+				name: "Internal rotation",
+				starts_at: now + 3_600_000,
+				ends_at: now + 7_200_000,
+				monitor_id: null,
+				show_on_status_page: false,
+			}),
+		);
 
 		serveSummaries([]);
 

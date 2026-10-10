@@ -15,17 +15,15 @@ import type {
 	Sent,
 } from "@sdxc/messaging";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
 import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { supports } from "@sdxc/messaging";
-import { isFailure, isSuccess } from "@sdxc/result";
+import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 
+import type { UptimeModels } from "~/app/models";
 import type { SelectAlertEvent } from "~/database/schema";
 
-import Alert from "~/app/data/alert";
-import AlertEvent from "~/app/data/alert-event";
 import jobs from "~/app/jobs";
 
 /**
@@ -45,32 +43,32 @@ const UPDATE_FALLBACK_CODES: ReadonlySet<MessagingErrorCode> = new Set<Messaging
 ]);
 
 export default createJobHandler(jobs.deliverAlert, async (ctx) => {
-	let db: Database = ctx.database;
+	let models = ctx.models;
 	let { alertId, eventId, message } = ctx.input;
 	ctx.log.set({ alert: { id: alertId }, alert_event: { id: eventId } });
 
-	let event = await AlertEvent.findById(db, eventId);
+	let event = await models.alertEvents.find(eventId);
 	if (!event) return ctx.ack("The alert event no longer exists");
 	/** A redelivery of a run that already settled its event sends nothing twice. */
 	if (event.status !== "pending") return ctx.ack(`The alert event is already ${event.status}`);
 
-	let alert = await Alert.findById(db, alertId);
+	let alert = await models.alerts.find(alertId);
 	if (!alert) {
-		await AlertEvent.markFailed(db, eventId, "The alert was deleted before delivery");
+		unwrap(await models.alertEvents.markFailed(eventId, "The alert was deleted before delivery"));
 		return ctx.ack("The alert no longer exists");
 	}
 
 	if (alert.config.strategy === "email") {
-		await AlertEvent.markFailed(db, eventId, "The alert's channel changed to email");
+		unwrap(await models.alertEvents.markFailed(eventId, "The alert's channel changed to email"));
 		return ctx.ack("The alert's channel is delivered inline");
 	}
 
 	let destination = ctx.destinations(alert.config);
 	ctx.log.set({ alert: { id: alertId, provider: destination.provider } });
 
-	let sent = await deliver(db, destination, event, message);
+	let sent = await deliver(models, destination, event, message);
 	if (isSuccess(sent)) {
-		await AlertEvent.markSent(db, eventId, sent.data.ref);
+		unwrap(await models.alertEvents.markSent(eventId, sent.data.ref));
 		return;
 	}
 
@@ -85,8 +83,8 @@ export default createJobHandler(jobs.deliverAlert, async (ctx) => {
 		});
 	}
 
-	if (error.code === "gone") await Alert.markBroken(db, alert.id, error.message);
-	await AlertEvent.markFailed(db, eventId, `${error.message} (${error.code})`);
+	if (error.code === "gone") await models.alerts.markBroken(alert.id, error.message);
+	unwrap(await models.alertEvents.markFailed(eventId, `${error.message} (${error.code})`));
 	return ctx.ack(error.message);
 });
 
@@ -96,7 +94,7 @@ export default createJobHandler(jobs.deliverAlert, async (ctx) => {
  * refuses falls back to a send, so the recovery always reaches the channel.
  */
 async function deliver(
-	db: Database,
+	models: UptimeModels,
 	destination: Destination,
 	event: SelectAlertEvent,
 	message: Message,
@@ -106,7 +104,7 @@ async function deliver(
 		return await destination.send(message, options);
 	}
 
-	let ref = await AlertEvent.refForRecovery(db, event);
+	let ref = await models.alertEvents.refForRecovery(event);
 	if (!ref || ref.provider !== destination.provider) {
 		return await destination.send(message, options);
 	}

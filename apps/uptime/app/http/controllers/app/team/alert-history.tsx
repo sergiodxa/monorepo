@@ -16,8 +16,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import Alert from "~/app/data/alert";
-import AlertEvent from "~/app/data/alert-event";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -61,9 +59,12 @@ export default createAction(routes.app.team.alerts.history, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let alerts = await Alert.listByTeam(ctx.db, ctx.team.id);
+		let alerts = await ctx.models.alerts.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
 		let alertsById = new Map(alerts.map((alert) => [alert.id, alert]));
-		let events = await AlertEvent.listByAlertIds(ctx.db, [...alertsById.keys()], HISTORY_LIMIT);
+		let events = await ctx.models.alertEvents.latestForAlerts(
+			[...alertsById.keys()],
+			HISTORY_LIMIT,
+		);
 
 		return ctx.render(
 			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.alertHistory.header.title")}`}>

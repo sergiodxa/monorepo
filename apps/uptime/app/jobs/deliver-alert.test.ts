@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
 import { MemoryDestination } from "@sdxc/messaging/memory";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { AlertConfig, SelectAlert, SelectAlertEvent } from "~/database/schema";
@@ -25,8 +26,7 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Destinations } = await import("~/app/jobs/middleware/destinations");
 let { default: deliverAlert, MAX_ATTEMPTS } = await import("./deliver-alert");
-let { default: Alert } = await import("~/app/data/alert");
-let { default: AlertEvent } = await import("~/app/data/alert-event");
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 let { alertMessage } = await import("~/app/services/alert-message");
 let { createTestDatabase } = await import("~/app/lib/test/db");
 let { alertEvents } = await import("~/database/schema");
@@ -37,18 +37,22 @@ const SLACK: AlertConfig = {
 };
 
 let db: Database;
+let models: ReturnType<typeof bindModels>;
 let destination: MemoryDestination;
 /** Every config the job asked the factory for, so a test can tell which channel it built. */
 let built: AlertConfig[] = [];
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 	destination = new MemoryDestination();
 	built = [];
 });
 
 async function createAlert(config: AlertConfig = SLACK): Promise<SelectAlert> {
-	return await Alert.create(db, "team-1", { monitor_id: null, name: "On call", config });
+	return unwrap(
+		await models.alerts.create({ team_id: "team-1", monitor_id: null, name: "On call", config }),
+	);
 }
 
 /** Records the event `dispatchAlerts` would have, `agoMs` in the past. */
@@ -58,15 +62,17 @@ async function recordEvent(
 	status: SelectAlertEvent["status"] = "pending",
 	agoMs = 0,
 ): Promise<SelectAlertEvent> {
-	let row = await AlertEvent.record(db, {
-		alert_id: alert.id,
-		monitor_id: "monitor-1",
-		event_type: eventType,
-		status,
-		error_message: null,
-		monitor_type: "http",
-		monitor_name: "Homepage",
-	});
+	let row = unwrap(
+		await models.alertEvents.record({
+			alert_id: alert.id,
+			monitor_id: "monitor-1",
+			event_type: eventType,
+			status,
+			error_message: null,
+			monitor_type: "http",
+			monitor_name: "Homepage",
+		}),
+	);
 	let sentAt = Date.now() - agoMs;
 	await db.update(alertEvents, row.id, { sent_at: sentAt });
 	return { ...row, sent_at: sentAt };
@@ -106,6 +112,7 @@ async function run(
 		input: { alertId: alert.id, eventId: event.id, message: messageFor(event.event_type) },
 	});
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(
 		Destinations,
 		(config) => {
@@ -137,7 +144,7 @@ describe("deliverAlert", () => {
 		expect(destination.last?.message.title).toBe("Homepage is DOWN");
 		expect(destination.last?.options?.id).toBe(event.id);
 
-		let settled = await AlertEvent.findById(db, event.id);
+		let settled = await models.alertEvents.find(event.id);
 		expect(settled?.status).toBe("sent");
 		expect(settled?.delivery_ref).toEqual({ provider: "memory", id: "1" });
 	});
@@ -149,7 +156,7 @@ describe("deliverAlert", () => {
 
 		expect(await run(alert, event)).toEqual({ type: "retry", delay: 42_000 });
 
-		expect((await AlertEvent.findById(db, event.id))?.status).toBe("pending");
+		expect((await models.alertEvents.find(event.id))?.status).toBe("pending");
 	});
 
 	test("retries a failure with no named delay on the backoff schedule", async () => {
@@ -172,7 +179,7 @@ describe("deliverAlert", () => {
 		let outcome = await run(alert, event, { attempts: MAX_ATTEMPTS });
 
 		expect(outcome.type).toBe("ack");
-		let settled = await AlertEvent.findById(db, event.id);
+		let settled = await models.alertEvents.find(event.id);
 		expect(settled?.status).toBe("failed");
 		expect(settled?.error_message).toContain("(timeout)");
 	});
@@ -184,11 +191,11 @@ describe("deliverAlert", () => {
 
 		expect((await run(alert, event)).type).toBe("ack");
 
-		let broken = await Alert.findById(db, alert.id);
+		let broken = await models.alerts.find(alert.id);
 		expect(broken?.broken_at).toEqual(expect.any(Number));
 		expect(broken?.broken_reason).toBe("slack-webhook answered no_service");
 
-		let settled = await AlertEvent.findById(db, event.id);
+		let settled = await models.alertEvents.find(event.id);
 		expect(settled?.status).toBe("failed");
 		expect(settled?.error_message).toBe("slack-webhook answered no_service (gone)");
 	});
@@ -200,19 +207,19 @@ describe("deliverAlert", () => {
 
 		expect((await run(alert, event)).type).toBe("ack");
 
-		expect((await Alert.findById(db, alert.id))?.broken_at).toBeNull();
-		expect((await AlertEvent.findById(db, event.id))?.status).toBe("failed");
+		expect((await models.alerts.find(alert.id))?.broken_at).toBeNull();
+		expect((await models.alertEvents.find(event.id))?.status).toBe("failed");
 	});
 
 	test("acks without sending when the alert was deleted after queueing", async () => {
 		let alert = await createAlert();
 		let event = await recordEvent(alert, "down");
-		await Alert.deleteById(db, alert.id);
+		unwrap(await models.alerts.delete(alert.id));
 
 		expect((await run(alert, event)).type).toBe("ack");
 
 		expect(destination.messages).toHaveLength(0);
-		expect((await AlertEvent.findById(db, event.id))?.status).toBe("failed");
+		expect((await models.alertEvents.find(event.id))?.status).toBe("failed");
 	});
 
 	test("sends nothing twice when a settled event is redelivered", async () => {
@@ -239,7 +246,7 @@ describe("deliverAlert — recovery", () => {
 		expect(destination.messages.map((entry) => entry.kind)).toEqual(["send", "update"]);
 		expect(destination.last?.parent).toEqual({ provider: "memory", id: "1" });
 		expect(destination.last?.message.state).toBe("resolved");
-		expect((await AlertEvent.findById(db, recovery.id))?.status).toBe("sent");
+		expect((await models.alertEvents.find(recovery.id))?.status).toBe("sent");
 	});
 
 	test("sends the recovery as its own message on a platform that cannot edit", async () => {
@@ -267,7 +274,7 @@ describe("deliverAlert — recovery", () => {
 	test("sends the recovery when the stored ref belongs to another provider", async () => {
 		let alert = await createAlert();
 		let down = await recordEvent(alert, "down", "pending", 60_000);
-		await AlertEvent.markSent(db, down.id, { provider: "discord-webhook", id: "9" });
+		unwrap(await models.alertEvents.markSent(down.id, { provider: "discord-webhook", id: "9" }));
 		let recovery = await recordEvent(alert, "up");
 		destination = new MemoryDestination({ capabilities: ["update"] });
 
