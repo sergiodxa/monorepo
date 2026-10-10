@@ -1341,8 +1341,8 @@ and recursion guards on top.
 - [x] Phase 3: Hosts
 - [x] Phase 4: Testing: `./testing`, and demo's tests seed postings through a factory
 - [ ] Phase 5: Package chores: README, LICENSE, the root README row and the `apps/sdxc` group
-      and guide are done, and demo is ported; the npm bootstrap and the remaining apps'
-      `data/`, `models/` and `repositories/` modules remain
+      and guide are done, and demo and blog are ported; the npm bootstrap and the remaining
+      apps' `data/`, `models/` and `repositories/` modules remain
 
 ## Notes
 
