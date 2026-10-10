@@ -16,17 +16,17 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 
 import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 
-import MonitorDailyStats, {
+import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
+
+import jobs from "~/app/jobs";
+import { mapWithConcurrency } from "~/app/lib/concurrency";
+import {
 	calculateDailyStatus,
 	getYesterdayDateUtc,
 	utcDayBounds,
-	type DailyStatsInput,
-} from "~/app/data/monitor-daily-stats";
-import Team from "~/app/data/team";
-import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
+} from "~/app/models/monitor-daily-stats";
 import { getHttpDailyAggregate } from "~/app/services/analytics";
 import { apportionCost } from "~/app/services/cost";
 
@@ -64,7 +64,7 @@ export default createJobHandler(jobs.aggregateDailyStats, async (ctx) => {
 	 * per monitor, and the aggregate queries it writes them from cannot be attributed
 	 * any other way.
 	 */
-	apportionCost(await Team.countMonitorsByTeam(ctx.database));
+	apportionCost(await ctx.models.teams.countMonitorsByTeam());
 
 	let written = 0;
 	written += await aggregateHttp(ctx, date);
@@ -241,9 +241,11 @@ async function write(
 	ctx: CurrentJobContext,
 	input: Omit<DailyStatsInput, "failed_checks" | "status">,
 ): Promise<void> {
-	await MonitorDailyStats.upsertDay(ctx.database, {
-		...input,
-		failed_checks: input.total_checks - input.successful_checks,
-		status: calculateDailyStatus(input.successful_checks, input.total_checks),
-	});
+	unwrap(
+		await ctx.models.monitorDailyStats.upsertDay({
+			...input,
+			failed_checks: input.total_checks - input.successful_checks,
+			status: calculateDailyStatus(input.successful_checks, input.total_checks),
+		}),
+	);
 }

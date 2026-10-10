@@ -1,7 +1,7 @@
 /**
  * Tests for the maintenance windows list page controller. `cloudflare:workers` is
- * mocked because `~/app/data/monitor` reads `env` at module load, and the mocked env
- * is strict with no bindings, so any binding lookup here would fail by name.
+ * mocked with a strict env holding no bindings, so any binding lookup here would fail
+ * by name.
  * `ctx.team`/`ctx.membership`/`ctx.teams`/auth state are seeded directly by a fake
  * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *

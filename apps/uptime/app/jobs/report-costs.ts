@@ -11,7 +11,6 @@
 
 import type { UsageEvent } from "@sdxc/billing";
 import type { CurrentJobContext } from "@sdxc/jobs";
-import type { Database } from "remix/data-table";
 
 import { supports } from "@sdxc/billing";
 import { createJobHandler } from "@sdxc/jobs";
@@ -20,10 +19,9 @@ import { underscore } from "@sdxc/strings";
 import { inList } from "remix/data-table";
 
 import type { CostQuantities } from "~/app/lib/cost-rates";
+import type { UptimeModels } from "~/app/models";
 import type { DailyTeamCost } from "~/app/services/cost";
 
-import { getYesterdayDateUtc, utcDayBounds } from "~/app/data/monitor-daily-stats";
-import Subscription from "~/app/data/subscription";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import {
@@ -35,6 +33,7 @@ import {
 	priceCostQuantities,
 	RATE_CARD_VERSION,
 } from "~/app/lib/cost-rates";
+import { getYesterdayDateUtc, utcDayBounds } from "~/app/models/monitor-daily-stats";
 import { queryAnalytics } from "~/app/services/analytics";
 import {
 	apportionCost,
@@ -44,7 +43,6 @@ import {
 	recordCost,
 	toDailyTeamCost,
 } from "~/app/services/cost";
-import { teams } from "~/database/schema";
 
 /** The event name cost rides on — a name reserved for cost, apart from revenue events. */
 const EVENT_NAME = "infra.cost.daily";
@@ -88,7 +86,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
 		byTeam.delete(teamId);
 	}
 
-	let owners = await resolveOwners(ctx.database, [...byTeam.keys()]);
+	let owners = await resolveOwners(ctx.models, [...byTeam.keys()]);
 	let timestamp = new Date(utcDayBounds(day).end - 1);
 	let events: UsageEvent[] = [];
 	let reportedCents = 0;
@@ -190,11 +188,15 @@ async function recordStorage(ctx: CurrentJobContext): Promise<void> {
  * projection as the source of truth — a row exists for every owner billing has
  * touched, and one event naming a customer the platform cannot resolve rejects the batch.
  */
-async function resolveOwners(db: Database, teamIds: string[]): Promise<Map<string, string>> {
+async function resolveOwners(
+	models: UptimeModels,
+	teamIds: string[],
+): Promise<Map<string, string>> {
 	if (teamIds.length === 0) return new Map();
 
-	let rows = await db.findMany(teams, { where: inList("id", teamIds) });
-	let known = new Set((await Subscription.listAll(db)).map((row) => row.external_customer_id));
+	let rows = await models.teams.query().where(inList("id", teamIds)).all();
+	let subscriptions = await models.subscriptions.query().all();
+	let known = new Set(subscriptions.map((row) => row.external_customer_id));
 
 	let owners = new Map<string, string>();
 	for (let row of rows) {

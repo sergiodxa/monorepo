@@ -2,20 +2,20 @@
  * Tests the `/api/v1/alerts/:alertId` item endpoints: get/update/delete a single
  * alert scoped to the calling team, returning 404 for any other team's alert, and
  * its delivery-event history. Every action is guarded by `requireApiKey`, so each
- * test authenticates with a real bearer key minted through `ApiKey.create`.
+ * test authenticates with a real bearer key minted through `apiKeys.issue`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -31,14 +31,15 @@ import { alertRoutes } from "~/routes/api-groups";
 const CONFORMANCE = checkConformance(alertRoutes);
 
 /**
- * `~/app/data/monitor`, imported transitively for `monitorId` validation, reads `env`
- * from `cloudflare:workers` at module load, so this mock must resolve here too. The
+ * `~/app/lib/queue`, imported transitively through the models, reads `env` from
+ * `cloudflare:workers` at module load, so this mock must resolve here too. The
  * endpoints touch no binding — the empty strict env would throw by name if they did.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: alertController } = await import("./alert");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
 let dns = useMailServerDns();
@@ -60,7 +61,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test key", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test key", scopes, expires_at: null }),
+	);
 	return key;
 }
 

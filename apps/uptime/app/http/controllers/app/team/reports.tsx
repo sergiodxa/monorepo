@@ -14,8 +14,6 @@ import { fontSize } from "@sdxc/u/typography";
 import { Alert, Button, DateField, LinkButton, RadioGroup, Select } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import { getYesterdayDateUtc } from "~/app/data/monitor-daily-stats";
-import StatusPage from "~/app/data/status-page";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -23,6 +21,7 @@ import { withPrefix } from "~/app/lib/prefixed-translate";
 import { REPORT_DIALECTS } from "~/app/lib/report-dialect";
 import { presetRange, REPORT_PRESETS } from "~/app/lib/report-range";
 import { isSubmitted, REPORT_MONITOR_TYPES, resolveReportRequest } from "~/app/lib/report-request";
+import { getYesterdayDateUtc } from "~/app/models/monitor-daily-stats";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";
@@ -43,7 +42,7 @@ export default createAction(routes.app.team.reports.index, {
 
 		let t = withPrefix(ctx.intl.t, "page.reports");
 		let params = ctx.url.searchParams;
-		let request = await resolveReportRequest(ctx.db, ctx.team.id, params);
+		let request = await resolveReportRequest(ctx.models, ctx.team.id, params);
 		let problem = isFailure(request) && isSubmitted(params) ? request.error.problem : null;
 
 		let fallback = presetRange("lastMonth");
@@ -61,7 +60,10 @@ export default createAction(routes.app.team.reports.index, {
 					dialect: request.data.dialect,
 				};
 
-		let statusPages = await StatusPage.listByTeam(ctx.db, ctx.team.id);
+		let statusPages = await ctx.models.statusPages
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 		let yesterday = getYesterdayDateUtc();
 		let team = ctx.team.slug;
 

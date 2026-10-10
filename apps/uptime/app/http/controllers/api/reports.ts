@@ -22,15 +22,15 @@ import { createController } from "remix/router";
 
 import type { ReportKind } from "~/app/lib/report-csv";
 import type { ReportRangeProblem } from "~/app/lib/report-range";
+import type { Report } from "~/app/repositories/reports";
 
-import Report from "~/app/data/report";
-import StatusPage from "~/app/data/status-page";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { REPORT_QUERY } from "~/app/http/openapi/reports";
 import { dailyCsv, reportFilename, summaryCsv } from "~/app/lib/report-csv";
 import { reportDialect } from "~/app/lib/report-dialect";
 import { checkRange, MAX_REPORT_DAYS, presetRange } from "~/app/lib/report-range";
 import { REPORT_MONITOR_TYPES } from "~/app/lib/report-request";
+import { dailyRows, summaryRows } from "~/app/repositories/reports";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, PAGING } from "~/app/services/pagination";
@@ -115,7 +115,7 @@ async function readFilter(ctx: RequestContext): Promise<Report.Filter | Response
 	}
 
 	if (statusPageId !== undefined) {
-		let page = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+		let page = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
 		if (!page) {
 			return apiProblems.notFound({ detail: "Status page not found", instance: problemInstance() });
 		}
@@ -212,7 +212,7 @@ function dailyKey(row: Report.DailyRow): DailyKey {
 
 /**
  * Orders two strings by code point, which is how SQLite's default collation orders the
- * UTF-8 names `Report.listMonitors` sorts by, so the cursor agrees with the query.
+ * UTF-8 names `listMonitors` sorts by, so the cursor agrees with the query.
  */
 function compareCodePoints(a: string, b: string): number {
 	let left = Array.from(a, (char) => char.codePointAt(0) ?? 0);
@@ -283,7 +283,7 @@ function dailyCursor(direction: "after" | "before", row: Report.DailyRow): strin
  * forward boundary are read and dropped; a backward page keeps a window of `limit + 1` rows
  * and stops at the boundary, so memory stays bounded by the page either way.
  *
- * @param rows - The report's rows, as `Report.dailyRows` yields them.
+ * @param rows - The report's rows, as `dailyRows` yields them.
  * @param boundary - The decoded cursor, or `null` for the first page.
  * @param limit - Rows per page.
  */
@@ -327,7 +327,7 @@ export default createController(reportsRoutes, {
 				let filter = await readFilter(ctx);
 				if (filter instanceof Response) return filter;
 
-				let rows = await Report.summaryRows(ctx.db, ctx.apiTeam.id, filter);
+				let rows = await summaryRows(ctx.db, ctx.apiTeam.id, filter);
 				if (wantsCsv(ctx.request)) {
 					let body = summaryCsv(rows, STANDARD_DIALECT, untranslated);
 					return csvDownload(body, ctx.apiTeam.slug, "uptime-summary", filter);
@@ -355,7 +355,7 @@ export default createController(reportsRoutes, {
 
 				if (wantsCsv(ctx.request)) {
 					let body = dailyCsv(
-						Report.dailyRows(ctx.db, ctx.apiTeam.id, filter),
+						dailyRows(ctx.db, ctx.apiTeam.id, filter),
 						STANDARD_DIALECT,
 						untranslated,
 					);
@@ -383,7 +383,7 @@ export default createController(reportsRoutes, {
 				}
 
 				let page = await readDailyPage(
-					Report.dailyRows(ctx.db, ctx.apiTeam.id, filter),
+					dailyRows(ctx.db, ctx.apiTeam.id, filter),
 					boundary,
 					params.data.perPage,
 				);

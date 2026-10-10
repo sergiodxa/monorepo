@@ -1,7 +1,7 @@
 /**
  * Tests for the edit maintenance window page controller. `cloudflare:workers`
- * is mocked because `~/app/data/monitor`, used to populate the monitor-scope
- * dropdown, reads `env` at module load. `getViewer()`/`ctx.team`/
+ * is mocked with a strict empty env, so populating the monitor-scope dropdown
+ * reads the database alone. `getViewer()`/`ctx.team`/
  * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware
  * standing in for the real auth chain.
  *

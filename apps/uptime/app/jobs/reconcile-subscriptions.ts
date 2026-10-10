@@ -24,9 +24,6 @@ import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import Subscription from "~/app/data/subscription";
-import TrialConversion from "~/app/data/trial-conversion";
-import WebhookDeliveries from "~/app/data/webhook-delivery";
 import jobs from "~/app/jobs";
 import { MONITORING_PRODUCT, polar } from "~/app/lib/billing";
 import { syncEntitlements } from "~/app/services/entitlements";
@@ -48,7 +45,7 @@ const LIVE_STATUSES = ["active", "trialing"] as const;
 const DELIVERY_RETENTION_DAYS = 30;
 
 export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
-	let stored = await Subscription.listAll(ctx.database);
+	let stored = await ctx.models.subscriptions.query().all();
 
 	/**
 	 * Keyed by how each customer is addressed, so an owner already in the projection is asked
@@ -100,7 +97,7 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 	let repaired = 0;
 
 	for (let customer of customers.values()) {
-		let synced = await syncEntitlements(ctx.database, customer);
+		let synced = await syncEntitlements(ctx.models, customer);
 
 		if (isFailure(synced)) {
 			ctx.log.warn("subscriptions.read_failed", {
@@ -133,15 +130,14 @@ export default createJobHandler(jobs.reconcileSubscriptions, async (ctx) => {
 		 * otherwise leave a converted customer counted as a free signup. `markPaid` only sets an
 		 * unset stamp, dating the payment to the day of repair.
 		 */
-		if (entitled) await TrialConversion.markPaid(ctx.database, ownerId);
+		if (entitled) await ctx.models.trialConversions.markPaid(ownerId);
 
 		repaired += 1;
 
 		ctx.log.note("subscriptions.repaired", { "owner.id": ownerId, entitled, monitors });
 	}
 
-	let pruned = await WebhookDeliveries.prune(
-		ctx.database,
+	let pruned = await ctx.models.billingWebhookDeliveries.prune(
 		Date.now() - DELIVERY_RETENTION_DAYS * DAY_MS,
 	);
 

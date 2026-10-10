@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
@@ -20,11 +21,10 @@ import type {
 	SelectTeam,
 } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
@@ -55,17 +55,22 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
 async function createDnsMonitorRow(db: Db, teamId: string): Promise<SelectDnsMonitor> {
-	return await DnsMonitor.create(db, teamId, {
-		name: "example.com",
-		domain: "example.com",
-		interval_seconds: 86_400,
-		is_enabled: true,
-	});
+	return unwrap(
+		await bindModels(db).dnsMonitors.create({
+			team_id: teamId,
+			name: "example.com",
+			domain: "example.com",
+			interval_seconds: 86_400,
+			is_enabled: true,
+		}),
+	);
 }
 
 async function createRecordRow(

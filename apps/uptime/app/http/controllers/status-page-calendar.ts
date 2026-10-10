@@ -34,8 +34,8 @@ export default createAction(routes.statusPageCalendar, async (ctx) => {
 
 	apportionCostByTeam([page.team_id]);
 
-	let services = await listPageServices(ctx.db, page);
-	let entries = await listPublishedMaintenance(ctx.db, page, services, Date.now());
+	let services = await listPageServices(ctx.models, page);
+	let entries = await listPublishedMaintenance(ctx.models, page, services, Date.now());
 	let url = new URL(routes.statusPage.href({ slug }), ctx.url).toString();
 
 	let calendar = maintenanceCalendar(

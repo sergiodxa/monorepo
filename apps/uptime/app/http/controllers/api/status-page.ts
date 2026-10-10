@@ -7,20 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import type { UptimeModels } from "~/app/models";
 import type { InsertStatusPage, SelectStatusPage } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import Monitor from "~/app/data/monitor";
-import StatusPage from "~/app/data/status-page";
 import { serializeStatusPage } from "~/app/http/controllers/api/status-pages";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -37,10 +34,10 @@ import { encodeId } from "~/app/services/typed-id";
 import { statusPageRoutes } from "~/routes/api-groups";
 
 /** Loads a page plus its curated HTTP-monitor/cron-job id lists. */
-async function loadWithAttachments(db: Database, teamId: string, statusPageId: string) {
-	let statusPage = await StatusPage.findByIdForTeam(db, teamId, statusPageId);
+async function loadWithAttachments(models: UptimeModels, teamId: string, statusPageId: string) {
+	let statusPage = await models.statusPages.inTeam(teamId).find(statusPageId);
 	if (!statusPage) return null;
-	let attached = await StatusPage.getAttachedIds(db, statusPageId);
+	let attached = await models.statusPages.getAttachedIds(statusPageId);
 	return {
 		...serializeStatusPage(statusPage),
 		monitors: attached.monitorIds.map((id) => encodeId("mon", id)),
@@ -76,7 +73,7 @@ function writableStatusPage(page: SelectStatusPage) {
  */
 async function patchStatusPage(ctx: RequestContext): Promise<Response> {
 	let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
-	let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+	let existing = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
 	if (!existing)
 		return apiProblems.notFound({ detail: "Status page not found", instance: problemInstance() });
 
@@ -84,7 +81,7 @@ async function patchStatusPage(ctx: RequestContext): Promise<Response> {
 	if (update instanceof Response) return update;
 	let { value, changed } = update;
 
-	if (changed.has("slug") && (await StatusPage.isSlugTaken(ctx.db, value.slug, existing.id))) {
+	if (changed.has("slug") && (await ctx.models.statusPages.isSlugTaken(value.slug, existing.id))) {
 		return apiProblems.conflict({ detail: "Slug is already in use", instance: problemInstance() });
 	}
 
@@ -98,9 +95,10 @@ async function patchStatusPage(ctx: RequestContext): Promise<Response> {
 	if (changed.has("isPublic")) changes.is_public = value.isPublic;
 	if (changed.has("showOverallStatus")) changes.show_overall_status = value.showOverallStatus;
 
-	if (Object.keys(changes).length > 0) await StatusPage.updateById(ctx.db, statusPageId, changes);
+	if (Object.keys(changes).length > 0)
+		unwrap(await ctx.models.statusPages.update(statusPageId, changes));
 
-	let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
+	let statusPage = await loadWithAttachments(ctx.models, ctx.apiTeam.id, statusPageId);
 	if (!statusPage)
 		return apiProblems.internalError({
 			detail: "Failed to load updated status page",
@@ -117,7 +115,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:read")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
-				let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await loadWithAttachments(ctx.models, ctx.apiTeam.id, statusPageId);
 				if (!statusPage)
 					return apiProblems.notFound({
 						detail: "Status page not found",
@@ -138,7 +136,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
-				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+				let existing = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Status page not found",
@@ -155,7 +153,7 @@ export default createController(statusPageRoutes, {
 
 				if (
 					result.data.slug !== undefined &&
-					(await StatusPage.isSlugTaken(ctx.db, result.data.slug, existing.id))
+					(await ctx.models.statusPages.isSlugTaken(result.data.slug, existing.id))
 				) {
 					return apiProblems.conflict({
 						detail: "Slug is already in use",
@@ -177,9 +175,9 @@ export default createController(statusPageRoutes, {
 					changes.show_overall_status = result.data.showOverallStatus;
 
 				if (Object.keys(changes).length > 0)
-					await StatusPage.updateById(ctx.db, statusPageId, changes);
+					unwrap(await ctx.models.statusPages.update(statusPageId, changes));
 
-				let statusPage = await loadWithAttachments(ctx.db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await loadWithAttachments(ctx.models, ctx.apiTeam.id, statusPageId);
 				if (!statusPage)
 					return apiProblems.internalError({
 						detail: "Failed to load updated status page",
@@ -194,14 +192,14 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
-				let existing = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+				let existing = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Status page not found",
 						instance: problemInstance(),
 					});
 
-				await StatusPage.deleteById(ctx.db, statusPageId);
+				unwrap(await ctx.models.statusPages.delete(statusPageId));
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -211,7 +209,7 @@ export default createController(statusPageRoutes, {
 			middleware: [requireApiKey("status-pages:write")],
 			handler: async (ctx) => {
 				let { statusPageId } = s.parse(STATUS_PAGE_ID_PARAMS, ctx.params);
-				let statusPage = await StatusPage.findByIdForTeam(ctx.db, ctx.apiTeam.id, statusPageId);
+				let statusPage = await ctx.models.statusPages.inTeam(ctx.apiTeam.id).find(statusPageId);
 				if (!statusPage)
 					return apiProblems.notFound({
 						detail: "Status page not found",
@@ -231,7 +229,7 @@ export default createController(statusPageRoutes, {
 				let cronJobIds = [...new Set(result.data.cronJobIds)];
 
 				if (monitorIds.length > 0) {
-					let found = await Monitor.findManyByIdsForTeam(ctx.db, ctx.apiTeam.id, monitorIds);
+					let found = await ctx.models.monitors.findManyInTeam(ctx.apiTeam.id, monitorIds);
 					if (found.length !== monitorIds.length) {
 						return apiProblems.notFound({
 							detail: "One or more monitors not found",
@@ -241,7 +239,7 @@ export default createController(statusPageRoutes, {
 				}
 
 				if (cronJobIds.length > 0) {
-					let found = await CronJobMonitor.findManyByIdsForTeam(ctx.db, ctx.apiTeam.id, cronJobIds);
+					let found = await ctx.models.cronJobMonitors.inTeamWithIds(ctx.apiTeam.id, cronJobIds);
 					if (found.length !== cronJobIds.length) {
 						return apiProblems.notFound({
 							detail: "One or more cron jobs not found",
@@ -250,8 +248,8 @@ export default createController(statusPageRoutes, {
 					}
 				}
 
-				await StatusPage.setMonitors(ctx.db, statusPageId, monitorIds);
-				await StatusPage.setCronJobs(ctx.db, statusPageId, cronJobIds);
+				await ctx.models.statusPages.setMonitors(statusPageId, monitorIds);
+				await ctx.models.statusPages.setCronJobs(statusPageId, cronJobIds);
 
 				return apiSuccess({
 					statusPage: serializeStatusPage(statusPage),

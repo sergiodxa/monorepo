@@ -67,7 +67,7 @@ async function erase(
 	admin: ManagementClient,
 	request: SelectAccountDeletion,
 ): Promise<boolean> {
-	let erased = await eraseAccount(ctx.database, polar, request.subject_id, request.email);
+	let erased = await eraseAccount(ctx.models, polar, request.subject_id, request.email);
 
 	if (isFailure(erased)) {
 		/**

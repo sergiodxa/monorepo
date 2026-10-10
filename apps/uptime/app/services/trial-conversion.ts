@@ -9,18 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { currentLog } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 
-import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
+import type { UptimeModels } from "~/app/models";
+import type { TrialSignupAttribution } from "~/app/models/trial-conversions";
 import type { SelectLead, SelectTrialWatch } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import Monitor from "~/app/data/monitor";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import TrialConversion from "~/app/data/trial-conversion";
-import TrialWatch from "~/app/data/trial-watch";
 import { dailyStatsFromChecks } from "~/app/lib/trial-history";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 
@@ -34,7 +29,7 @@ const CONVERTED_INTERVAL_SECONDS = 600;
 /**
  * How many of a watch's checks the carried history reads: 168 covers a full week of hourly
  * checks with room for the boundary check a claim can add, kept as its own bound so a change
- * to `listResults`'s unrelated default cannot silently truncate somebody's carried week.
+ * to `listByWatch`'s unrelated default cannot silently truncate somebody's carried week.
  */
 const CARRIED_RESULT_LIMIT = 200;
 
@@ -60,29 +55,29 @@ export interface TrialConversionSubject {
 
 /**
  * Claims every trial target this address is still owed a monitor for, into `teamId`. Runs on
- * every sign-in and is idempotent on `TrialWatch.markConverted`'s stamp, so a repeat sign-in
+ * every sign-in and is idempotent on `trialWatches.markConverted`'s stamp, so a repeat sign-in
  * costs one indexed read and claims nothing twice.
  *
  * @returns Resolves once every claimable target has been converted or logged and skipped;
  * never rejects, so a failure here cannot block sign-in.
  */
 export async function convertTrialWatches(
-	db: Database,
+	models: UptimeModels,
 	subject: TrialConversionSubject,
 ): Promise<void> {
 	try {
-		let lead = await Lead.findByEmail(db, subject.email);
+		let lead = await models.leads.findByEmail(subject.email);
 		if (!lead) return;
 
 		let now = Date.now();
-		let watches = await TrialWatch.listConvertibleByLead(db, lead.id, now);
+		let watches = await models.trialWatches.listConvertibleByLead(lead.id, now);
 
 		let converted = 0;
 		for (let watch of watches) {
-			if (await convertWatch(db, subject, watch)) converted += 1;
+			if (await convertWatch(models, subject, watch)) converted += 1;
 		}
 
-		await recordSignup(db, subject, lead, now);
+		await recordSignup(models, subject, lead, now);
 
 		if (watches.length === 0) return;
 
@@ -101,16 +96,16 @@ export async function convertTrialWatches(
  * target, and runs even when nothing was claimable, since a lapsed trial is still a signup.
  */
 async function recordSignup(
-	db: Database,
+	models: UptimeModels,
 	subject: TrialConversionSubject,
 	lead: SelectLead,
 	now: number,
 ): Promise<void> {
 	try {
 		/** Reversed to oldest first, which is the order they tried them and the order to read. */
-		let watches = [...(await TrialWatch.listByLead(db, lead.id))].reverse();
+		let watches = [...(await models.trialWatches.listByLead(lead.id))].reverse();
 
-		let created = await TrialConversion.recordSignup(db, {
+		let created = await models.trialConversions.recordSignup({
 			ownerId: subject.authorId,
 			leadCreatedAt: lead.created_at,
 			emailsSent: lead.emails_sent,
@@ -157,19 +152,23 @@ async function recordSignup(
  * the watch is stamped so a failure between the two leaves a visible monitor, not a lost claim.
  */
 async function convertWatch(
-	db: Database,
+	models: UptimeModels,
 	subject: TrialConversionSubject,
 	watch: SelectTrialWatch,
 ): Promise<boolean> {
 	try {
-		let monitor = await Monitor.create(db, subject.teamId, subject.authorId, {
-			name: monitorName(watch.url),
-			url: watch.url,
-			interval_seconds: CONVERTED_INTERVAL_SECONDS,
-		});
+		let monitor = unwrap(
+			await models.monitors.create({
+				team_id: subject.teamId,
+				author_id: subject.authorId,
+				name: monitorName(watch.url),
+				url: watch.url,
+				interval_seconds: CONVERTED_INTERVAL_SECONDS,
+			}),
+		);
 
-		await carryHistory(db, watch, monitor.id);
-		await TrialWatch.markConverted(db, watch.id, monitor.id);
+		await carryHistory(models, watch, monitor.id);
+		unwrap(await models.trialWatches.markConverted(watch.id, monitor.id));
 		return true;
 	} catch (error) {
 		currentLog()?.warn("trial.watch_conversion_failed", {
@@ -187,26 +186,28 @@ async function convertWatch(
  * here, since a monitor with no carried history is still a monitor.
  */
 async function carryHistory(
-	db: Database,
+	models: UptimeModels,
 	watch: SelectTrialWatch,
 	monitorId: string,
 ): Promise<void> {
 	try {
-		let results = await TrialWatch.listResults(db, watch.id, CARRIED_RESULT_LIMIT);
+		let results = await models.trialWatchResults.listByWatch(watch.id, CARRIED_RESULT_LIMIT);
 		if (results.length === 0) return;
 
 		for (let day of dailyStatsFromChecks(results, monitorId)) {
-			await MonitorDailyStats.upsertDay(db, day);
+			unwrap(await models.monitorDailyStats.upsertDay(day));
 		}
 
-		/** Newest first out of `listResults`, so the head is the watch's most recent check. */
+		/** Newest first out of `listByWatch`, so the head is the watch's most recent check. */
 		let latest = results[0];
 		if (latest) {
-			await Monitor.updateById(db, monitorId, {
-				last_status: latest.status,
-				last_checked_at: latest.checked_at,
-				last_response_time_ms: latest.response_time_ms,
-			});
+			unwrap(
+				await models.monitors.update(monitorId, {
+					last_status: latest.status,
+					last_checked_at: latest.checked_at,
+					last_response_time_ms: latest.response_time_ms,
+				}),
+			);
 		}
 
 		currentLog()?.note("trial.history_carried", {

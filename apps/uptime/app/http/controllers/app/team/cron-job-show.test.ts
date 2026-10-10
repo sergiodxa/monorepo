@@ -1,5 +1,5 @@
 /**
- * Tests for the cron-job monitor detail page controller. Skips `~/app/data/monitor`,
+ * Tests for the cron-job monitor detail page controller. It reads no binding,
  * so no `cloudflare:workers` mock is needed. Checks the ping URL's relative path,
  * since the origin is request-specific, and guards decisions an ordinary edit could
  * silently undo: the status badge living in the shell header, and the bare `POST

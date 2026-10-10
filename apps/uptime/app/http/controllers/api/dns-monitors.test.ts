@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
@@ -17,16 +18,15 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
+import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
 import { dnsMonitorRecords, teams } from "~/database/schema";
 import { dnsMonitorsRoutes } from "~/routes/api-groups";
@@ -90,7 +90,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -132,12 +134,15 @@ describe("GET /api/v1/dns-monitors", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 
-		await DnsMonitor.create(db, team.id, {
-			name: "Apex A record",
-			domain: "example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: team.id,
+				name: "Apex A record",
+				domain: "example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 
@@ -153,18 +158,24 @@ describe("GET /api/v1/dns-monitors", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 
-		await DnsMonitor.create(db, team.id, {
-			name: "Mine",
-			domain: "mine.example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
-		await DnsMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			domain: "theirs.example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: team.id,
+				name: "Mine",
+				domain: "mine.example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				domain: "theirs.example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		let body = (await response.json()) as { data: { dnsMonitors: { name: string }[] } };
@@ -177,18 +188,24 @@ describe("GET /api/v1/dns-monitors", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 
-		await DnsMonitor.create(db, team.id, {
-			name: "First",
-			domain: "first.example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
-		await DnsMonitor.create(db, team.id, {
-			name: "Second",
-			domain: "second.example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: team.id,
+				name: "First",
+				domain: "first.example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: team.id,
+				name: "Second",
+				domain: "second.example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -277,7 +294,7 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.dnsMonitor.domain).toBe("example.com");
 		expect(body.data.dnsMonitor.zoneFileImportedAt).toBeNull();
 
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(1);
 	});
 
 	/**
@@ -348,7 +365,9 @@ describe("POST /api/v1/dns-monitors", () => {
 		expect(body.data.discovery.rejectedLines).toEqual([{ line: 1, reason: "includeDirective" }]);
 
 		let dnsMonitorId = TypeID.fromString(body.data.dnsMonitor.id, "dns").toUUID();
-		expect(await DnsMonitorRecord.countByMonitor(db, dnsMonitorId)).toBeGreaterThan(1);
+		expect(await bindModels(db).dnsMonitorRecords.forMonitor(dnsMonitorId).count()).toBeGreaterThan(
+			1,
+		);
 	});
 
 	/**
@@ -371,7 +390,9 @@ describe("POST /api/v1/dns-monitors", () => {
 		let text = await response.text();
 		expect(text).not.toContain("secret-comment");
 
-		let monitor = (await DnsMonitor.listByTeam(db, team.id))[0]!;
+		let monitor = (
+			await bindModels(db).dnsMonitors.inTeam(team.id).orderBy("created_at", "desc").all()
+		)[0]!;
 		let records = await db.findMany(dnsMonitorRecords, { where: { dns_monitor_id: monitor.id } });
 		expect(JSON.stringify({ monitor, records })).not.toContain("secret-comment");
 	});
@@ -399,7 +420,7 @@ describe("POST /api/v1/dns-monitors", () => {
 
 		expect(response.status).toBe(400);
 		expect(queries).toBe(0);
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(0);
 	});
 
 	/**
@@ -483,7 +504,7 @@ describe("POST /api/v1/dns-monitors", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(0);
 	});
 
 	test("returns 400 for an out-of-range interval", async () => {
@@ -513,12 +534,15 @@ describe("POST /api/v1/dns-monitors", () => {
 		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
 
 		for (let index = 0; index < MAX_DNS_MONITORS_PER_TEAM - 1; index++) {
-			await DnsMonitor.create(db, team.id, {
-				name: `Monitor ${index}`,
-				domain: `example-${index}.com`,
-				interval_seconds: 86_400,
-				is_enabled: true,
-			});
+			unwrap(
+				await bindModels(db).dnsMonitors.create({
+					team_id: team.id,
+					name: `Monitor ${index}`,
+					domain: `example-${index}.com`,
+					interval_seconds: 86_400,
+					is_enabled: true,
+				}),
+			);
 		}
 
 		let response = await dispatch(
@@ -527,7 +551,9 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(response.status).toBe(201);
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(
+			MAX_DNS_MONITORS_PER_TEAM,
+		);
 	});
 
 	/**
@@ -540,12 +566,15 @@ describe("POST /api/v1/dns-monitors", () => {
 		let key = await createApiKey(db, team.id, ["dns-monitors:write"]);
 
 		for (let index = 0; index < MAX_DNS_MONITORS_PER_TEAM; index++) {
-			await DnsMonitor.create(db, team.id, {
-				name: `Monitor ${index}`,
-				domain: `example-${index}.com`,
-				interval_seconds: 86_400,
-				is_enabled: true,
-			});
+			unwrap(
+				await bindModels(db).dnsMonitors.create({
+					team_id: team.id,
+					name: `Monitor ${index}`,
+					domain: `example-${index}.com`,
+					interval_seconds: 86_400,
+					is_enabled: true,
+				}),
+			);
 		}
 
 		let response = await dispatch(
@@ -560,7 +589,9 @@ describe("POST /api/v1/dns-monitors", () => {
 		);
 
 		expect(queries).toBe(0);
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(MAX_DNS_MONITORS_PER_TEAM);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(
+			MAX_DNS_MONITORS_PER_TEAM,
+		);
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -602,7 +633,7 @@ describe("POST /api/v1/dns-monitors with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(409);
 		await expectProblem(response, "idempotencyKeyInUse");
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("reusing a key for a different body answers idempotency-key-reused", async () => {
@@ -619,7 +650,7 @@ describe("POST /api/v1/dns-monitors with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(422);
 		await expectProblem(response, "idempotencyKeyReused");
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(1);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
@@ -632,7 +663,7 @@ describe("POST /api/v1/dns-monitors with an Idempotency-Key", () => {
 		expect(response.status).toBe(400);
 		await expectProblem(response, "idempotencyKeyInvalid");
 		expect(queries).toBe(0);
-		expect(await DnsMonitor.countByTeam(db, team.id)).toBe(0);
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).count()).toBe(0);
 	});
 });
 
@@ -644,21 +675,27 @@ describe("GET /api/v1/dns-monitors total", () => {
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 
 		for (let domain of ["one.example.com", "two.example.com", "three.example.com"]) {
-			await DnsMonitor.create(db, team.id, {
-				name: domain,
-				domain,
-				interval_seconds: 3600,
-				is_enabled: true,
-			});
+			unwrap(
+				await bindModels(db).dnsMonitors.create({
+					team_id: team.id,
+					name: domain,
+					domain,
+					interval_seconds: 3600,
+					is_enabled: true,
+				}),
+			);
 		}
 
 		// A monitor the key cannot see must not reach the total either.
-		await DnsMonitor.create(db, otherTeam.id, {
-			name: "theirs.example.com",
-			domain: "theirs.example.com",
-			interval_seconds: 3600,
-			is_enabled: true,
-		});
+		unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: otherTeam.id,
+				name: "theirs.example.com",
+				domain: "theirs.example.com",
+				interval_seconds: 3600,
+				is_enabled: true,
+			}),
+		);
 
 		let response = await dispatch(
 			db,

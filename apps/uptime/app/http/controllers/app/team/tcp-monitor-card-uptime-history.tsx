@@ -14,8 +14,6 @@ import { overflowX } from "@sdxc/u/overflow";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import UptimeBar from "~/resources/views/shared/uptime-bar";
@@ -31,10 +29,10 @@ export default createAction(routes.app.team.tcpMonitors.cards.uptimeHistory, {
 	handler: async (ctx) => {
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
 
-		let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.tcpMonitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "tcp");
+		let dailyStats = await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "tcp");
 
 		let labels = {
 			daysAgo: ctx.intl.t("statusPage.uptimeBar.daysAgo"),

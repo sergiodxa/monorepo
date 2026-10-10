@@ -12,14 +12,12 @@ import type { RequestContext } from "remix/router";
 
 import * as s from "@sdxc/json-schema";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
-import { isResolvableScope } from "~/app/data/scope-monitors";
 import { apiScopeFrom, serializeMaintenanceWindow } from "~/app/http/controllers/api/maintenance";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -32,6 +30,7 @@ import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
+import { isResolvableScope } from "~/app/services/scope-monitors";
 import { encodeMonitorId } from "~/app/services/typed-id";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
 
@@ -63,7 +62,7 @@ function writableMaintenanceWindow(window: SelectMaintenanceWindow) {
  */
 async function patchMaintenanceWindow(ctx: RequestContext): Promise<Response> {
 	let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
-	let existing = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.apiTeam.id, maintenanceId);
+	let existing = await ctx.models.maintenanceWindows.inTeam(ctx.apiTeam.id).find(maintenanceId);
 	if (!existing)
 		return apiProblems.notFound({
 			detail: "Maintenance window not found",
@@ -90,7 +89,7 @@ async function patchMaintenanceWindow(ctx: RequestContext): Promise<Response> {
 			monitorType: changed.has("monitorType") ? value.monitorType : undefined,
 			monitorId: changed.has("monitorId") ? (value.monitorId ?? null) : undefined,
 		});
-		if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+		if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 			return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 		}
 
@@ -103,7 +102,7 @@ async function patchMaintenanceWindow(ctx: RequestContext): Promise<Response> {
 	if (changed.has("suppressAlerts")) changes.suppress_alerts = value.suppressAlerts;
 	if (changed.has("showOnStatusPage")) changes.show_on_status_page = value.showOnStatusPage;
 
-	let window = await MaintenanceWindow.updateById(ctx.db, maintenanceId, changes);
+	let window = unwrap(await ctx.models.maintenanceWindows.update(maintenanceId, changes));
 	return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
 }
 
@@ -115,7 +114,7 @@ export default createController(maintenanceWindowRoutes, {
 			middleware: [requireApiKey("maintenance:read")],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
-				let window = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.apiTeam.id, maintenanceId);
+				let window = await ctx.models.maintenanceWindows.inTeam(ctx.apiTeam.id).find(maintenanceId);
 				if (!window)
 					return apiProblems.notFound({
 						detail: "Maintenance window not found",
@@ -136,11 +135,9 @@ export default createController(maintenanceWindowRoutes, {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
-				let existing = await MaintenanceWindow.findByIdForTeam(
-					ctx.db,
-					ctx.apiTeam.id,
-					maintenanceId,
-				);
+				let existing = await ctx.models.maintenanceWindows
+					.inTeam(ctx.apiTeam.id)
+					.find(maintenanceId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Maintenance window not found",
@@ -171,7 +168,7 @@ export default createController(maintenanceWindowRoutes, {
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
-					if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+					if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 						return apiProblems.notFound({
 							detail: "Monitor not found",
 							instance: problemInstance(),
@@ -189,7 +186,7 @@ export default createController(maintenanceWindowRoutes, {
 				if (result.data.showOnStatusPage !== undefined)
 					changes.show_on_status_page = result.data.showOnStatusPage;
 
-				let window = await MaintenanceWindow.updateById(ctx.db, maintenanceId, changes);
+				let window = unwrap(await ctx.models.maintenanceWindows.update(maintenanceId, changes));
 				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
 			},
 		},
@@ -199,18 +196,16 @@ export default createController(maintenanceWindowRoutes, {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
-				let existing = await MaintenanceWindow.findByIdForTeam(
-					ctx.db,
-					ctx.apiTeam.id,
-					maintenanceId,
-				);
+				let existing = await ctx.models.maintenanceWindows
+					.inTeam(ctx.apiTeam.id)
+					.find(maintenanceId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Maintenance window not found",
 						instance: problemInstance(),
 					});
 
-				await MaintenanceWindow.deleteById(ctx.db, maintenanceId);
+				unwrap(await ctx.models.maintenanceWindows.delete(maintenanceId));
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -220,18 +215,16 @@ export default createController(maintenanceWindowRoutes, {
 			middleware: [requireApiKey("maintenance:write")],
 			handler: async (ctx) => {
 				let { maintenanceId } = s.parse(MAINTENANCE_ID_PARAMS, ctx.params);
-				let existing = await MaintenanceWindow.findByIdForTeam(
-					ctx.db,
-					ctx.apiTeam.id,
-					maintenanceId,
-				);
+				let existing = await ctx.models.maintenanceWindows
+					.inTeam(ctx.apiTeam.id)
+					.find(maintenanceId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "Maintenance window not found",
 						instance: problemInstance(),
 					});
 
-				let window = await MaintenanceWindow.endEarly(ctx.db, maintenanceId);
+				let window = unwrap(await ctx.models.maintenanceWindows.endEarly(maintenanceId));
 				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) });
 			},
 		},

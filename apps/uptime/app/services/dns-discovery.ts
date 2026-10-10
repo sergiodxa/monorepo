@@ -13,21 +13,19 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
+import type { UptimeModels } from "~/app/models";
 import type {
 	DnsQueryAnswer,
 	DnsRecordCounts,
 	DnsRecordDiff,
 	DnsRecordImport,
-} from "~/app/data/dns-monitor-record";
+} from "~/app/models/dns-monitor-records";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { normalizeDnsName } from "~/app/lib/dns-record-value";
+import { summarizeDnsRecordDiff } from "~/app/models/dns-monitor-records";
 import { QUERIES_PER_NAME, sweepDnsName } from "~/app/services/dns-check";
 
 /**
@@ -187,11 +185,11 @@ export async function sweepNames(names: readonly string[]): Promise<DnsSweep> {
  * zone file declared without a matching answer is stored as an unwatched finding —
  * high-signal once at import (ADR-026 §8), ordinary on a proxied zone forever after.
  *
- * @see DnsMonitorRecord.importMany for why a record the user already declined stays declined
+ * @see DnsMonitorRecords.importMany for why a record the user already declined stays declined
  * on a re-import.
  */
 export async function importDiscovery(
-	db: Database,
+	models: UptimeModels,
 	monitorId: string,
 	names: readonly string[],
 	zoneRecords: readonly ZoneFileRecord[] = [],
@@ -234,7 +232,7 @@ export async function importDiscovery(
 		});
 	}
 
-	let imported = await DnsMonitorRecord.importMany(db, monitorId, imports, now);
+	let imported = await models.dnsMonitorRecords.importMany(monitorId, imports, now);
 
 	return { names: [...names], imported, queriesFailed: sweep.queriesFailed };
 }
@@ -245,11 +243,11 @@ export async function importDiscovery(
  * being told, so a domain whose records were all declined can still surface something new.
  */
 export async function planDnsCheck(
-	db: Database,
+	models: UptimeModels,
 	monitorId: string,
 	domain: string,
 ): Promise<DnsCheckPlan> {
-	let tracked = await DnsMonitorRecord.listNames(db, monitorId);
+	let tracked = await models.dnsMonitorRecords.listNames(monitorId);
 	let names = [...new Set(discoveryNames(domain, []).concat(tracked))];
 
 	return {
@@ -270,7 +268,7 @@ export async function planDnsCheck(
  * needs to meter, report and alert on it.
  */
 export async function recordDnsCheck(
-	db: Database,
+	models: UptimeModels,
 	monitorId: string,
 	names: readonly string[],
 	unsweptNames = 0,
@@ -283,17 +281,17 @@ export async function recordDnsCheck(
 	 * and its consumer reads the findings back off these rows, so the write must land before
 	 * any message referencing it is enqueued.
 	 */
-	let diff = await DnsMonitorRecord.diff(db, monitorId, sweep.answers);
-	await DnsMonitorRecord.applyDiff(db, monitorId, diff);
+	let diff = await models.dnsMonitorRecords.diff(monitorId, sweep.answers);
+	await models.dnsMonitorRecords.applyDiff(monitorId, diff);
 
-	let counts = DnsMonitorRecord.summarize(diff);
+	let counts = summarizeDnsRecordDiff(diff);
 	let status: DnsCheckStatus = "ok";
 	if (queriesFailed > 0) status = "error";
 	else if (counts.recordsChanged + counts.recordsMissing + counts.recordsNew > 0) {
 		status = "changed";
 	}
 
-	let resultId = await DnsMonitor.recordCheckResult(db, monitorId, {
+	let resultId = await models.dnsMonitors.recordCheckResult(monitorId, {
 		status,
 		responseTimeMs: sweep.responseTimeMs,
 		/**
@@ -321,10 +319,10 @@ export async function recordDnsCheck(
  * sweep does for every monitor it has the budget for.
  */
 export async function runDnsCheck(
-	db: Database,
+	models: UptimeModels,
 	monitorId: string,
 	domain: string,
 ): Promise<DnsCheckRun> {
-	let plan = await planDnsCheck(db, monitorId, domain);
-	return await recordDnsCheck(db, monitorId, plan.names, plan.overflow);
+	let plan = await planDnsCheck(models, monitorId, domain);
+	return await recordDnsCheck(models, monitorId, plan.names, plan.overflow);
 }

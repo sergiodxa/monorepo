@@ -17,14 +17,15 @@ import type { Mailer } from "@sdxc/mail";
 import { startOfDay, subDays, toDayKey } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 
-import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/data/team-digest";
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
+import type {
+	DigestPeriod,
+	DigestRecipient,
+	TeamDigestMonitor,
+} from "~/app/repositories/team-digests";
 import type { OptionalEmail, SelectTeam, SelectUserPreferences } from "~/database/schema";
 
-import Team from "~/app/data/team";
-import TeamDigest from "~/app/data/team-digest";
-import UserPreferences from "~/app/data/user-preferences";
 import { emailTranslator } from "~/app/emails/locale";
 import {
 	teamDigestDashboardUrl,
@@ -37,6 +38,12 @@ import { mapWithConcurrency } from "~/app/lib/concurrency";
 import { features } from "~/app/lib/flags";
 import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import { formatUptime, uptimeRatio, worstStatus } from "~/app/lib/uptime-report";
+import { wantsEmail } from "~/app/models/user-preferences";
+import {
+	listDigestMonitors,
+	listDigestRecipients,
+	markDigestSent,
+} from "~/app/repositories/team-digests";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
 
@@ -89,7 +96,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	 */
 	let now = Date.now();
 	let reported = digestWindow(period, now);
-	let recipients = await TeamDigest.listDue(
+	let recipients = await listDigestRecipients(
 		ctx.database,
 		period,
 		startOfDay(new Date(now), BOUND_ZONE).getTime(),
@@ -101,12 +108,11 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	 * a member's address comes from the auth server one request at a time, so filtering here
 	 * turns a team of ten with two subscribers into just two requests.
 	 */
-	let preferences = await UserPreferences.findBySubjectIds(
-		ctx.database,
+	let preferences = await ctx.models.userPreferences.findBySubjectIds(
 		recipients.map((recipient) => recipient.subjectId),
 	);
 	let wanted = recipients.filter((recipient) =>
-		UserPreferences.wants(preferences.get(recipient.subjectId) ?? null, PREFERENCE[period]),
+		wantsEmail(preferences.get(recipient.subjectId) ?? null, PREFERENCE[period]),
 	);
 	ctx.log.set({ digests: { wanted: wanted.length } });
 
@@ -117,7 +123,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 
 	let byTeam = groupByTeam(wanted);
 	let [teams, profiles] = await Promise.all([
-		Team.findByIds(ctx.database, [...byTeam.keys()]),
+		ctx.models.teams.findByIds([...byTeam.keys()]),
 		resolveSubjects(
 			ctx.admin,
 			wanted.map((recipient) => recipient.subjectId),
@@ -200,17 +206,12 @@ async function digestTeam(
 		return { sent: 0, skipped: members.length };
 	}
 
-	let monitors = await TeamDigest.listMonitors(
-		ctx.database,
-		team.id,
-		reported.since,
-		reported.until,
-	);
+	let monitors = await listDigestMonitors(ctx.database, team.id, reported.since, reported.until);
 
 	/**
 	 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
 	 * reportable again tomorrow. Covers both a lapsed subscription, which unschedules every
-	 * monitor (ADR-005), and a monitor disabled mid-run, which `TeamDigest.listDue`'s `EXISTS` misses.
+	 * monitor (ADR-005), and a monitor disabled mid-run, which `listDigestRecipients`'s `EXISTS` misses.
 	 */
 	if (monitors.every((monitor) => monitor.days.length === 0)) {
 		ctx.log.note("digests.nothing_to_report", {
@@ -294,7 +295,7 @@ async function digestTeam(
 		}
 
 		/** Only now: the stamp is what keeps a redelivered trigger from sending a second copy. */
-		await TeamDigest.markSent(ctx.database, member.id, period, now);
+		await markDigestSent(ctx.database, member.id, period, now);
 		sent++;
 	}
 

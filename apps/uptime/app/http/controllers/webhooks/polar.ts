@@ -24,9 +24,8 @@ import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 
-import TrialConversion from "~/app/data/trial-conversion";
-import WebhookDeliveries from "~/app/data/webhook-delivery";
 import { polar } from "~/app/lib/billing";
+import { webhookStore } from "~/app/models/billing-webhook-deliveries";
 import { syncEntitlements } from "~/app/services/entitlements";
 import { attributionProperties, trackSubscriptionStarted } from "~/app/services/funnel-events";
 
@@ -34,10 +33,10 @@ import { attributionProperties, trackSubscriptionStarted } from "~/app/services/
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /**
- * The delivery log, opened per call from the request's own database so the endpoint costs no
+ * The delivery log, read per call through the request's own models so the endpoint costs no
  * connection at module scope and its statements land on the request's cost ledger.
  */
-const deliveries = new WebhookDeliveries(() => getContext().db);
+const DELIVERIES = webhookStore(() => getContext().models.billingWebhookDeliveries);
 
 /**
  * Re-reads the customer the delivery named and writes what the platform says, then records a
@@ -57,7 +56,7 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 	ctx.log.set({ webhook: { customer_id: customerId } });
 
 	let customer: CustomerRef = { id: customerId };
-	let synced = await syncEntitlements(ctx.db, customer);
+	let synced = await syncEntitlements(ctx.models, customer);
 
 	if (isFailure(synced)) throw synced.error;
 
@@ -77,7 +76,7 @@ async function apply(ctx: RequestContext, customerId: string | null): Promise<vo
 	 * `paid_at` is null, so monthly renewals can't move the conversion instant; a missing trial
 	 * row is a routine no-op.
 	 */
-	let firstPayment = entitled && (await TrialConversion.markPaid(ctx.db, ownerId));
+	let firstPayment = entitled && (await ctx.models.trialConversions.markPaid(ownerId));
 
 	if (firstPayment) await trackConversion(ctx, ownerId, monitors);
 
@@ -97,7 +96,7 @@ async function trackConversion(
 	ownerId: string,
 	monitors: number,
 ): Promise<void> {
-	let conversion = await TrialConversion.findByOwner(ctx.db, ownerId);
+	let conversion = await ctx.models.trialConversions.findBy({ owner_id: ownerId });
 
 	trackSubscriptionStarted(ctx.log, {
 		ownerId,
@@ -151,5 +150,5 @@ export default new BillingWebhook(
 			await apply(ctx, event.order.customerId);
 		},
 	},
-	{ store: deliveries },
+	{ store: DELIVERIES },
 );

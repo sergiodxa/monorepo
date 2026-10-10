@@ -9,13 +9,13 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
@@ -31,14 +31,15 @@ import routes from "~/routes/web";
 const CONFORMANCE = checkConformance(monitorsRoutes);
 
 /**
- * `app/data/monitor.ts` reads `env` from `cloudflare:workers` at module load time, so it
- * must resolve under the test runner. An empty strict env proves these endpoints touch no
+ * `~/app/lib/queue`, imported through the models, reads `env` from `cloudflare:workers` at
+ * module load, so it must resolve under the test runner. An empty strict env proves these endpoints touch no
  * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: monitorsController } = await import("~/app/http/controllers/api/monitors");
+let { bindModels } = await import("~/app/lib/test/models");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -57,7 +58,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 

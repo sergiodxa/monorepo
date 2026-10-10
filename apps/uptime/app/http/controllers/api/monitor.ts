@@ -13,14 +13,12 @@ import type { RequestContext } from "remix/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { InsertMonitor, SelectMonitor } from "~/database/schema";
 
-import AlertEvent from "~/app/data/alert-event";
-import Monitor from "~/app/data/monitor";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import {
@@ -88,7 +86,7 @@ function writableMonitor(monitor: SelectMonitor) {
  */
 async function patchMonitor(ctx: RequestContext): Promise<Response> {
 	let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-	let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+	let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 	if (!existing)
 		return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -111,7 +109,7 @@ async function patchMonitor(ctx: RequestContext): Promise<Response> {
 	if (changed.has("sslExpiryWarningDays"))
 		changes.ssl_expiry_warning_days = value.sslExpiryWarningDays;
 
-	let monitor = await Monitor.updateById(ctx.db, monitorId, changes);
+	let monitor = unwrap(await ctx.models.monitors.update(monitorId, changes));
 	return apiSuccess({ monitor: serializeMonitor(monitor) });
 }
 
@@ -123,7 +121,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
@@ -141,7 +139,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -174,7 +172,7 @@ export default createController(monitorRoutes, {
 				if (result.data.sslExpiryWarningDays !== undefined)
 					changes.ssl_expiry_warning_days = result.data.sslExpiryWarningDays;
 
-				let monitor = await Monitor.updateById(ctx.db, monitorId, changes);
+				let monitor = unwrap(await ctx.models.monitors.update(monitorId, changes));
 				return apiSuccess({ monitor: serializeMonitor(monitor) });
 			},
 		},
@@ -184,11 +182,11 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:write")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let existing = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let existing = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
-				await Monitor.deleteById(ctx.db, monitorId);
+				unwrap(await ctx.models.monitors.delete(monitorId));
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -198,11 +196,11 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
-				let stats = await Monitor.getStatsById(ctx.db, monitorId);
+				let stats = await ctx.models.monitors.statsForMonitor(monitorId);
 				return apiSuccess({ stats });
 			},
 		},
@@ -212,7 +210,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("monitors:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -223,7 +221,7 @@ export default createController(monitorRoutes, {
 						instance: problemInstance(),
 					});
 
-				let page = await Pagination.byKeyset(Monitor.resultsQuery(ctx.db, monitorId), {
+				let page = await Pagination.byKeyset(ctx.models.monitorResults.ofMonitor(monitorId), {
 					orderBy: NEWEST_FIRST,
 					cursor: params.data.cursor,
 					limit: params.data.perPage,
@@ -241,7 +239,7 @@ export default createController(monitorRoutes, {
 
 				let results = page.data.items.map((row) => ({
 					/**
-					 * A check result is keyed by `Monitor.scheduledJobId` — the monitor id and
+					 * A check result is keyed by `scheduledJobId` — the monitor id and
 					 * the minute the check was scheduled for — which is what lets repeated
 					 * deliveries of one minute's cron collapse onto a single row. That key
 					 * travels as stored, since a TypeID encodes a UUID and this is a pair.
@@ -265,7 +263,7 @@ export default createController(monitorRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { monitorId } = s.parse(MONITOR_ID_PARAMS, ctx.params);
-				let monitor = await Monitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, monitorId);
+				let monitor = await ctx.models.monitors.inTeam(ctx.apiTeam.id).find(monitorId);
 				if (!monitor)
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 
@@ -276,7 +274,7 @@ export default createController(monitorRoutes, {
 						instance: problemInstance(),
 					});
 
-				let page = await Pagination.byKeyset(AlertEvent.eventsByMonitorQuery(ctx.db, monitorId), {
+				let page = await Pagination.byKeyset(ctx.models.alertEvents.forMonitor(monitorId), {
 					orderBy: newestFirst("sent_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

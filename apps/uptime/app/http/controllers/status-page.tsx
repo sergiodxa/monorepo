@@ -40,12 +40,6 @@ import { createAction } from "remix/router";
 import type { ServiceStatus } from "~/app/services/status-page";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import Monitor from "~/app/data/monitor";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import StatusPage from "~/app/data/status-page";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { SEO } from "~/app/lib/seo";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
@@ -141,24 +135,24 @@ function CardStatusIcon(handle: Handle<CardStatusIcon.Props>) {
 export default createAction(routes.statusPage, async (ctx) => {
 	let { slug } = s.parse(s.object({ slug: s.string() }), ctx.params);
 
-	let page = await StatusPage.findBySlugPublic(ctx.db, slug);
+	let page = await ctx.models.statusPages.findPublic(slug);
 	if (!page) return notFound("Not Found");
 
 	apportionCostByTeam([page.team_id]);
 
-	let attachments = await StatusPage.listAttachments(ctx.db, page.id);
+	let attachments = await ctx.models.statusPages.listAttachments(page.id);
 
 	let [allMonitors, allDnsMonitors, allTcpMonitors, allFlowMonitors, allCronJobs, httpSummaries] =
 		await Promise.all([
-			Monitor.listByTeam(ctx.db, page.team_id),
-			DnsMonitor.listByTeam(ctx.db, page.team_id),
-			TcpMonitor.listByTeam(ctx.db, page.team_id),
+			ctx.models.monitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
+			ctx.models.dnsMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
+			ctx.models.tcpMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
 			/**
 			 * Projected to `id`/`name`/`last_status` in the query itself: a flow's spec source
 			 * holds the credentials it signs in with, and this page renders to the world.
 			 */
-			StatusPage.listPublicFlowMonitors(ctx.db, page.team_id),
-			CronJobMonitor.listByTeam(ctx.db, page.team_id),
+			ctx.models.statusPages.listPublicFlowMonitors(page.team_id),
+			ctx.models.cronJobMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
 			getTeamHttpSummaries(page.team_id),
 		]);
 
@@ -185,7 +179,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 					id: monitor.id,
 					name: publicName(displayName, monitor.name),
 					status: deriveHttpStatus(healthByMonitorId.get(monitor.id) ?? "pending"),
-					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "http"),
+					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "http"),
 				})),
 		),
 		Promise.all(
@@ -199,7 +193,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 					id: monitor.id,
 					name: publicName(displayName, monitor.name),
 					status: deriveDnsStatus(monitor.last_status),
-					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "dns"),
+					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "dns"),
 				})),
 		),
 		Promise.all(
@@ -213,7 +207,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 					id: monitor.id,
 					name: publicName(displayName, monitor.name),
 					status: deriveTcpStatus(monitor.last_status),
-					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "tcp"),
+					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "tcp"),
 				})),
 		),
 		Promise.all(
@@ -227,7 +221,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 					id: monitor.id,
 					name: publicName(displayName, monitor.name),
 					status: deriveFlowStatus(monitor.last_status),
-					days: await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "flow"),
+					days: await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "flow"),
 				})),
 		),
 	]);
@@ -259,7 +253,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 	let now = Date.now();
 	let maintenance = (
 		await listPublishedMaintenance(
-			ctx.db,
+			ctx.models,
 			page,
 			[...barServices, ...cronServices].map((service) => ({
 				type: service.kind,

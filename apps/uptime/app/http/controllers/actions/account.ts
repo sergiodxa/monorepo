@@ -113,7 +113,6 @@ export const exportData = createAction(routes.accountActions.exportData, async (
 
 	let now = new Date();
 	let document = await buildAccountExport(
-		ctx.db,
 		ctx.models,
 		{ id: viewer.id, name: viewer.name, email: viewer.email },
 		now,

@@ -12,13 +12,13 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 
 import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { ValidationError } from "@sdxc/validate";
 
 import type { CheckHttpInput } from "~/app/jobs";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
-import Monitor from "~/app/data/monitor";
-import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { notifyHttpResult } from "~/app/services/alerts";
@@ -26,7 +26,6 @@ import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { HttpCheck } from "~/app/services/http-check";
 import { ingestPings } from "~/app/services/ping-meter";
-import { monitorContentChecks, monitorResults, monitors } from "~/database/schema";
 
 /** The context this job's handler and the helpers it splits its work across share. */
 type CheckHttpContext = CurrentJobContext & { readonly input: CheckHttpInput };
@@ -48,12 +47,12 @@ export default createJobHandler(jobs.checkHttp, async (ctx) => {
 });
 
 async function execute(ctx: CheckHttpContext): Promise<void> {
-	if (await ctx.database.findOne(monitorResults, { where: { id: ctx.input.id } })) {
+	if (await ctx.models.monitorResults.find(ctx.input.id)) {
 		ctx.log.note("checks.duplicate");
 		return;
 	}
 
-	let monitor = await ctx.database.findOne(monitors, { where: { id: ctx.input.monitorId } });
+	let monitor = await ctx.models.monitors.find(ctx.input.monitorId);
 	if (!monitor) {
 		ctx.log.note("monitors.not_found");
 		return;
@@ -66,9 +65,10 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 	 */
 	apportionCostByTeam([monitor.team_id]);
 
-	let contentChecks = await ctx.database.findMany(monitorContentChecks, {
-		where: { monitor_id: ctx.input.monitorId, is_enabled: true },
-	});
+	let contentChecks = await ctx.models.contentChecks
+		.ofMonitor(ctx.input.monitorId)
+		.where({ is_enabled: true })
+		.all();
 
 	/**
 	 * The probe, evaluation, and classification steps live in `HttpCheck`,
@@ -99,8 +99,7 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
 		 * point a redelivery short-circuits on the job id, so throwing here would
 		 * only ask for a retry that can only spin.
 		 */
-		await Monitor.recordCheckStatus(
-			ctx.database,
+		await ctx.models.monitors.recordCheckStatus(
 			ctx.input.monitorId,
 			status,
 			outcome.responseTimeMs,
@@ -145,23 +144,16 @@ async function execute(ctx: CheckHttpContext): Promise<void> {
  * the commit has been handled (or will be) by that one.
  */
 async function record(ctx: CheckHttpContext, outcome: HttpProbeOutcome): Promise<boolean> {
-	try {
-		await ctx.database.create(
-			monitorResults,
-			{
-				id: ctx.input.id,
-				monitor_id: ctx.input.monitorId,
-				response_status: outcome.responseStatus,
-				response_time_ms: outcome.responseTimeMs,
-				completed_at: Date.now(),
-			},
-			{ touch: true, returnRow: true },
-		);
-		return true;
-	} catch (error) {
-		if (isDuplicateKey(error)) return false;
-		throw error;
-	}
+	let created = await ctx.models.monitorResults.create({
+		id: ctx.input.id,
+		monitor_id: ctx.input.monitorId,
+		response_status: outcome.responseStatus,
+		response_time_ms: outcome.responseTimeMs,
+		completed_at: Date.now(),
+	});
+	if (!isFailure(created)) return true;
+	if (isDuplicateKey(created.error)) return false;
+	throw created.error;
 }
 
 /**
@@ -170,7 +162,7 @@ async function record(ctx: CheckHttpContext, outcome: HttpProbeOutcome): Promise
  * since a Polar outage must not fail an already-recorded check.
  */
 async function meter(ctx: CheckHttpContext, teamId: string): Promise<void> {
-	let owners = await Team.ownerIdsByTeamIds(ctx.database, [teamId]);
+	let owners = await ctx.models.teams.ownerIdsByTeamIds([teamId]);
 	let ownerId = owners.get(teamId);
 
 	/**
@@ -207,7 +199,7 @@ async function notify(
 	status: MonitorStatus,
 ): Promise<void> {
 	try {
-		await notifyHttpResult(ctx.database, ctx.mailer, monitor, previousStatus, {
+		await notifyHttpResult(ctx.models, ctx.mailer, monitor, previousStatus, {
 			status,
 			responseStatus: outcome.responseStatus ?? 0,
 			responseTimeMs: outcome.responseTimeMs ?? 0,
@@ -219,8 +211,8 @@ async function notify(
 	}
 }
 
-/** Whether `error` is SQLite rejecting an insert whose primary key is already taken. */
-function isDuplicateKey(error: unknown): boolean {
-	let message = error instanceof Error ? error.message : String(error);
-	return message.includes("UNIQUE constraint failed");
+/** Whether `error` is the database rejecting an insert whose primary key is already taken. */
+function isDuplicateKey(error: Error): boolean {
+	if (!(error instanceof ValidationError)) return false;
+	return error.issues.some((issue) => issue.path?.[0] === "id");
 }

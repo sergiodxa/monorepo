@@ -10,20 +10,18 @@
 import type { Database } from "remix/data-table";
 
 import { parse } from "@sdxc/csv";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { ApiKeyScope, MonitorStatus } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
-import StatusPage from "~/app/data/status-page";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
@@ -122,7 +120,9 @@ async function createTeamRow(slug = `acme-${crypto.randomUUID().slice(0, 8)}`) {
 }
 
 async function createApiKey(teamId: string, scopes: ApiKeyScope[] = ["reports:read"]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -170,17 +170,19 @@ async function seedDay(
 ) {
 	let total = counts.total ?? 10;
 	let successful = counts.successful ?? total;
-	await MonitorDailyStats.upsertDay(db, {
-		monitor_id: monitor.id,
-		monitor_type: monitor.type,
-		date,
-		total_checks: total,
-		successful_checks: successful,
-		failed_checks: total - successful,
-		avg_response_time_ms: monitor.type === "cron" ? null : 40.5,
-		max_response_time_ms: monitor.type === "cron" ? null : 60,
-		status: counts.status ?? "up",
-	});
+	unwrap(
+		await bindModels(db).monitorDailyStats.upsertDay({
+			monitor_id: monitor.id,
+			monitor_type: monitor.type,
+			date,
+			total_checks: total,
+			successful_checks: successful,
+			failed_checks: total - successful,
+			avg_response_time_ms: monitor.type === "cron" ? null : 40.5,
+			max_response_time_ms: monitor.type === "cron" ? null : 60,
+			status: counts.status ?? "up",
+		}),
+	);
 }
 
 async function dispatch(path: string, options: { key?: string; accept?: string } = {}) {
@@ -257,11 +259,14 @@ describe.each([
 		let team = await createTeamRow();
 		let other = await createTeamRow();
 		let key = await createApiKey(team.id);
-		let page = await StatusPage.create(db, other.id, {
-			name: "Other",
-			slug: `other-${crypto.randomUUID()}`,
-			title: "Other",
-		});
+		let page = unwrap(
+			await bindModels(db).statusPages.create({
+				team_id: other.id,
+				name: "Other",
+				slug: `other-${crypto.randomUUID()}`,
+				title: "Other",
+			}),
+		);
 
 		let response = await dispatch(`${path}?status_page_id=${encodeId("sp", page.id)}`, { key });
 
@@ -351,12 +356,15 @@ describe("GET /api/v1/reports/uptime-summary", () => {
 		let key = await createApiKey(team.id);
 		let shown = await seedMonitor(team.id, "http", "Shown");
 		await seedMonitor(team.id, "http", "Hidden");
-		let page = await StatusPage.create(db, team.id, {
-			name: "Client",
-			slug: `client-${crypto.randomUUID()}`,
-			title: "Client",
-		});
-		await StatusPage.setMonitors(db, page.id, [shown.id]);
+		let page = unwrap(
+			await bindModels(db).statusPages.create({
+				team_id: team.id,
+				name: "Client",
+				slug: `client-${crypto.randomUUID()}`,
+				title: "Client",
+			}),
+		);
+		await bindModels(db).statusPages.setMonitors(page.id, [shown.id]);
 
 		let response = await dispatch(`${SUMMARY_PATH}?status_page_id=${encodeId("sp", page.id)}`, {
 			key,

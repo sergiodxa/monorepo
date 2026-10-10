@@ -12,10 +12,9 @@
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
-import { PING_RETENTION_DAYS } from "~/app/data/cron-job";
-import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { deleteOlderThan, redactOlderThan } from "~/app/lib/retention";
+import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { apportionCost } from "~/app/services/cost";
 
 /**
@@ -35,7 +34,7 @@ const PING_DETAIL_COLUMNS = ["source_ip", "user_agent"];
 export default createJobHandler(jobs.cleanCronJobPings, async (ctx) => {
 	let now = Date.now();
 
-	apportionCost(await Team.countMonitorsByTeam(ctx.database));
+	apportionCost(await ctx.models.teams.countMonitorsByTeam());
 
 	let deleted = await deleteOlderThan(
 		ctx.database,

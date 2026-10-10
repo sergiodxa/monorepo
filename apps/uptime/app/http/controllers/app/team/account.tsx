@@ -108,7 +108,7 @@ export default createAction(routes.app.team.account, {
 		let [memberships, preferences, plan, queuedDeletion] = await Promise.all([
 			ctx.models.teams.listWithRoleForSubject(viewer.id),
 			ctx.models.userPreferences.findBy({ subject_id: viewer.id }),
-			planAccountErasure(ctx.db, viewer.id),
+			planAccountErasure(ctx.models, viewer.id),
 			ctx.models.accountDeletions.findBy({ subject_id: viewer.id }),
 		]);
 

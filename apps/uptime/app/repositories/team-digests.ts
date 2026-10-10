@@ -11,7 +11,8 @@ import type { Database } from "remix/data-table";
 
 import { getTableName } from "remix/data-table";
 
-import type { MonitorStatus, SelectMonitorDailyStats } from "~/database/schema";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
+import type { MonitorStatus } from "~/database/schema";
 
 import {
 	cronJobMonitors,
@@ -27,7 +28,7 @@ import {
 export type DigestPeriod = "daily" | "weekly";
 
 /** The kind of monitor a digest lists, as the daily roll-up records it. */
-export type DigestMonitorType = SelectMonitorDailyStats["monitor_type"];
+export type DigestMonitorType = DailyStatsMonitorType;
 
 /** One membership owed a digest, projected down to what sending one needs. */
 export interface DigestRecipient {

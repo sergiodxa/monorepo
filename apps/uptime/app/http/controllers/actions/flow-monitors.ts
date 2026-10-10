@@ -11,7 +11,7 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { ok } from "@sdxc/http/response/json";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
@@ -19,8 +19,6 @@ import { Session } from "remix/session";
 
 import type { BillablePing } from "~/app/services/ping-meter";
 
-import FlowMonitor from "~/app/data/flow-monitor";
-import Subscription from "~/app/data/subscription";
 import {
 	CreateFlowMonitorSchema,
 	FlowMonitorIdSchema,
@@ -52,12 +50,15 @@ export const createFlowMonitor = createAction(routes.actions.monitor.flow.create
 		return redirect(newHref, { status: redirect.Status.SeeOther });
 	}
 
-	let monitor = await FlowMonitor.create(ctx.db, ctx.team.id, {
-		name: result.data.name,
-		source: result.data.source,
-		is_enabled: result.data.is_enabled,
-		interval_seconds: Number(result.data.interval_seconds),
-	});
+	let monitor = unwrap(
+		await ctx.models.flowMonitors.create({
+			team_id: ctx.team.id,
+			name: result.data.name,
+			source: result.data.source,
+			is_enabled: result.data.is_enabled,
+			interval_seconds: Number(result.data.interval_seconds),
+		}),
+	);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -87,7 +88,7 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 	}
 
 	let { monitor_id, interval_seconds, ...values } = result.data;
-	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.flowMonitors.inTeam(ctx.team.id).find(monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let showHref = routes.app.team.flowMonitors.show.href({
@@ -106,10 +107,12 @@ export const updateFlowMonitor = createAction(routes.actions.monitor.flow.update
 		return redirect(editHref, { status: redirect.Status.SeeOther });
 	}
 
-	await FlowMonitor.updateById(ctx.db, monitor_id, {
-		...values,
-		interval_seconds: Number(interval_seconds),
-	});
+	unwrap(
+		await ctx.models.flowMonitors.update(monitor_id, {
+			...values,
+			interval_seconds: Number(interval_seconds),
+		}),
+	);
 
 	session?.flash("toast", { intent: "success", message: "Flow monitor updated." });
 	return redirect(showHref, { status: redirect.Status.SeeOther });
@@ -125,10 +128,10 @@ export const deleteFlowMonitor = createAction(routes.actions.monitor.flow.delete
 		return redirect(listHref, { status: redirect.Status.SeeOther });
 	}
 
-	let existing = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let existing = await ctx.models.flowMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await FlowMonitor.deleteById(ctx.db, result.data.monitor_id);
+	unwrap(await ctx.models.flowMonitors.delete(result.data.monitor_id));
 
 	session?.flash("toast", {
 		intent: "success",
@@ -149,7 +152,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	if (isFailure(result)) return redirect(listHref, { status: redirect.Status.SeeOther });
 
-	let monitor = await FlowMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let monitor = await ctx.models.flowMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	let showHref = routes.app.team.flowMonitors.show.href({
@@ -162,7 +165,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 	 * refusing a paying customer over an inconclusive lookup is the worse mistake — the same
 	 * reading every other manual check takes.
 	 */
-	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
+	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
 		if (wantsJson(ctx.request)) {
 			return ok({
 				status: null,
@@ -185,7 +188,7 @@ export const checkFlowMonitor = createAction(routes.actions.monitor.flow.check, 
 
 	let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 	let checkResult = await runFlowCheck({ source: monitor.source, verifiedDomains });
-	let resultId = await FlowMonitor.recordCheckResult(ctx.db, monitor.id, checkResult);
+	let resultId = await ctx.models.flowMonitors.recordCheckResult(monitor.id, checkResult);
 
 	/**
 	 * Written here, between the history row and the meter, exactly where the sweep writes it, so a

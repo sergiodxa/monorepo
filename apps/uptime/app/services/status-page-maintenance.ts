@@ -8,22 +8,17 @@
  */
 
 import type { ICalendar } from "@sdxc/icalendar";
-import type { Database } from "remix/data-table";
 
 import { DAY_MS } from "@sdxc/dates/zone";
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
 
-import type { StatusPageService } from "~/app/data/maintenance-window";
+import type { UptimeModels } from "~/app/models";
+import type { StatusPageService } from "~/app/models/maintenance-windows";
 import type { SelectMaintenanceWindow, SelectStatusPage } from "~/database/schema";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import MaintenanceWindow, { oneOffEvent, recurringEvent } from "~/app/data/maintenance-window";
-import Monitor from "~/app/data/monitor";
-import StatusPage from "~/app/data/status-page";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
+import { oneOffEvent, recurringEvent } from "~/app/models/maintenance-windows";
 
 /** The `PRODID` of every calendar the status pages publish. */
 const PRODUCT_ID = "-//sergiodxa//uptime//EN";
@@ -60,16 +55,16 @@ export function publicName(displayName: string | null, fallback: string): string
 
 /** Every service a page shows, named the way the page names it, in the page's order. */
 export async function listPageServices(
-	db: Database,
+	models: UptimeModels,
 	page: SelectStatusPage,
 ): Promise<NamedStatusPageService[]> {
 	let [attachments, monitors, dnsMonitors, tcpMonitors, flows, cronJobs] = await Promise.all([
-		StatusPage.listAttachments(db, page.id),
-		Monitor.listByTeam(db, page.team_id),
-		DnsMonitor.listByTeam(db, page.team_id),
-		TcpMonitor.listByTeam(db, page.team_id),
-		StatusPage.listPublicFlowMonitors(db, page.team_id),
-		CronJobMonitor.listByTeam(db, page.team_id),
+		models.statusPages.listAttachments(page.id),
+		models.monitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
+		models.dnsMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
+		models.tcpMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
+		models.statusPages.listPublicFlowMonitors(page.team_id),
+		models.cronJobMonitors.inTeam(page.team_id).orderBy("created_at", "desc").all(),
 	]);
 
 	let names = new Map<string, string>([
@@ -114,12 +109,12 @@ export async function listPageServices(
  * occurrence running now or next. A team-wide window affects every service on the page.
  */
 export async function listPublishedMaintenance(
-	db: Database,
+	models: UptimeModels,
 	page: SelectStatusPage,
 	services: NamedStatusPageService[],
 	now: number,
 ): Promise<PublishedMaintenance[]> {
-	let windows = await MaintenanceWindow.listForStatusPage(db, page.team_id, services, now);
+	let windows = await models.maintenanceWindows.listForStatusPage(page.team_id, services, now);
 
 	return windows.map((window) => {
 		let scope = storedMonitorScope(window);

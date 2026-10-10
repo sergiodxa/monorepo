@@ -1,8 +1,9 @@
 /**
  * Unit tests for the alert-dispatch pipeline: maintenance suppression, candidate
  * resolution, the repeat policy, recovery suppression totals, outcome recording, inline
- * email, and the message queued for every other channel. `Alert` and `AlertEvent` are
- * mocked so each test states the history it needs; the queue is an in-memory binding.
+ * email, and the message queued for every other channel. Each test seeds the alerts and
+ * history it needs into a real database and reads back the outcome rows the pipeline wrote;
+ * the queue is an in-memory binding.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -20,6 +21,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type {
 	AlertEventSnapshot,
 	SelectAlert,
+	SelectAlertEvent,
 	SelectCronJobMonitor,
 	SelectDnsMonitor,
 	SelectDnsMonitorRecord,
@@ -62,60 +64,10 @@ vi.doMock("cloudflare:workers", () => ({
 	),
 }));
 
-/** Ids `AlertEvent.record` hands out, so a test can match a queued delivery to its row. */
-let recordedIds = 0;
-
-let listForMonitorMock = vi.fn(async (..._args: unknown[]) => [] as SelectAlert[]);
-let recordMock = vi.fn(
-	async (..._args: unknown[]) => ({ id: `event-${++recordedIds}` }) as unknown,
-);
-let markFailedMock = vi.fn(async (..._args: unknown[]) => {});
-let isInCooldownMock = vi.fn(async (..._args: unknown[]) => false);
-let countSentSinceRecoveryMock = vi.fn(async (..._args: unknown[]) => 0);
-let summarizeIncidentMock = vi.fn(async (..._args: unknown[]) => ({ sent: 0, suppressed: 0 }));
-
-/**
- * The real classes, imported before the `vi.doMock` calls below so this file keeps a handle
- * on the implementations being replaced. A mock registered with `vi.doMock` only reaches
- * imports that run after it, so the subject module is imported dynamically further down.
- */
-let realAlertModule = await import("~/app/data/alert");
-let realAlertEventModule = await import("~/app/data/alert-event");
-
-/**
- * The two history reads, captured as function values before the mocks take their place —
- * reaching for them through the fake classes later would find the mocks and recurse. Bound to
- * the real class so any static they reach for is the real one too.
- */
-let realIsInCooldown = realAlertEventModule.default.isInCooldown.bind(realAlertEventModule.default);
-let realCountSentSinceRecovery = realAlertEventModule.default.countSentSinceRecovery.bind(
-	realAlertEventModule.default,
-);
-
-/**
- * The fakes subclass the real classes rather than object-spreading them, so every static
- * this file doesn't fake stays equal to the real class's own — object spread silently
- * drops class statics, since they are non-enumerable.
- */
-class FakeAlert extends realAlertModule.default {
-	static override listForMonitor = listForMonitorMock;
-}
-
-/** See `FakeAlert`: the history statics `dispatchAlerts` calls, and nothing else. */
-class FakeAlertEvent extends realAlertEventModule.default {
-	static override record =
-		recordMock as unknown as (typeof realAlertEventModule)["default"]["record"];
-	static override isInCooldown = isInCooldownMock;
-	static override countSentSinceRecovery = countSentSinceRecoveryMock;
-	static override summarizeIncident = summarizeIncidentMock;
-	static override markFailed = markFailedMock;
-}
-
-vi.doMock("~/app/data/alert", () => ({ default: FakeAlert }));
-vi.doMock("~/app/data/alert-event", () => ({ default: FakeAlertEvent }));
-
 let { createTestDatabase } = await import("~/app/lib/test/db");
-let { alertEvents, teams, monitors, maintenanceWindows } = await import("~/database/schema");
+let { bindModels } = await import("~/app/lib/test/models");
+let { alertEvents, alerts, teams, monitors, maintenanceWindows } =
+	await import("~/database/schema");
 let {
 	dashboardUrl,
 	dispatchAlerts,
@@ -136,6 +88,25 @@ let {
 } = await import("~/app/services/alerts");
 
 type Db = Awaited<ReturnType<typeof createTestDatabase>>["db"];
+
+/** Stores fixture alert rows as they are, ids included, for the pipeline to resolve. */
+async function seedAlerts(db: Db, ...rows: SelectAlert[]): Promise<void> {
+	for (let row of rows) await db.create(alerts, row);
+}
+
+/** Every outcome the pipeline recorded, oldest first. */
+async function recorded(db: Db): Promise<SelectAlertEvent[]> {
+	return await db.findMany(alertEvents, { orderBy: ["sent_at", "asc"] });
+}
+
+/** The one outcome a single-alert dispatch is expected to have recorded. */
+async function onlyRecorded(db: Db): Promise<SelectAlertEvent> {
+	let rows = await recorded(db);
+	expect(rows).toHaveLength(1);
+	let [row] = rows;
+	if (!row) throw new Error("expected exactly one recorded outcome");
+	return row;
+}
 
 /** Builds a fixture alert row; defaults to an unconditional, cooldown-free email alert. */
 function makeAlert(overrides: Partial<SelectAlert> = {}): SelectAlert {
@@ -211,17 +182,6 @@ function makeDnsSnapshot(
 }
 
 beforeEach(() => {
-	listForMonitorMock.mockClear();
-	recordMock.mockClear();
-	markFailedMock.mockClear();
-	isInCooldownMock.mockClear();
-	countSentSinceRecoveryMock.mockClear();
-	summarizeIncidentMock.mockClear();
-	listForMonitorMock.mockImplementation(async () => []);
-	recordMock.mockImplementation(async () => ({ id: `event-${++recordedIds}` }));
-	isInCooldownMock.mockImplementation(async () => false);
-	countSentSinceRecoveryMock.mockImplementation(async () => 0);
-	summarizeIncidentMock.mockImplementation(async () => ({ sent: 0, suppressed: 0 }));
 	queue.reset();
 });
 
@@ -243,6 +203,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			name: "Homepage",
 			url: "https://example.com",
 		});
+		await seedAlerts(db, makeAlert());
 	}
 
 	test("skips resolving and delivering alerts entirely when a suppressing window covers the monitor", async () => {
@@ -260,7 +221,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -271,8 +232,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
-		expect(recordMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("does not suppress when the window has suppress_alerts disabled", async () => {
@@ -290,7 +250,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -301,7 +261,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
+		expect(await recorded(db)).toHaveLength(1);
 	});
 
 	test("does not suppress once the window's time range has already ended", async () => {
@@ -319,7 +279,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -330,7 +290,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
+		expect(await recorded(db)).toHaveLength(1);
 	});
 
 	test("a team-wide window (monitor_id null) suppresses any HTTP monitor in the team", async () => {
@@ -348,7 +308,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -359,7 +319,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("a monitor-specific window never suppresses a non-HTTP monitor type, even with a matching monitor_id", async () => {
@@ -377,7 +337,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -388,7 +348,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).toHaveBeenCalledTimes(1);
+		expect(await recorded(db)).toHaveLength(1);
 	});
 
 	test("an 'ssl' monitor type is suppressed like 'http' (same monitor id, same windows)", async () => {
@@ -406,7 +366,7 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 		});
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -423,16 +383,52 @@ describe("dispatchAlerts — maintenance-window suppression", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 });
+
+/**
+ * Writes one past outcome into the history at an exact instant, the record the cooldown and
+ * incident reads look back on.
+ */
+async function seedEvent(
+	db: Db,
+	alertId: string,
+	eventType: "down" | "up" | "degraded",
+	sentAt: number,
+	status: SelectAlertEvent["status"] = "sent",
+): Promise<void> {
+	await db.create(alertEvents, {
+		id: crypto.randomUUID(),
+		created_at: sentAt,
+		sent_at: sentAt,
+		alert_id: alertId,
+		monitor_id: "monitor-1",
+		event_type: eventType,
+		status,
+		error_message: null,
+		monitor_type: "http",
+		monitor_name: "Homepage",
+		snapshot: null,
+	});
+}
+
+/** The ids of the alerts that recorded an outcome, sorted so a test compares sets. */
+async function recordedAlertIds(db: Db): Promise<string[]> {
+	return (await recorded(db)).map((row) => row.alert_id).sort((a, b) => a.localeCompare(b));
+}
 
 describe("dispatchAlerts — candidate resolution", () => {
 	test("resolves an 'ssl' event as 'http', so it reaches whatever watches that monitor", async () => {
 		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
+			makeAlert({ id: "http-alert", monitor_type: "http", monitor_id: "monitor-1" }),
+			makeAlert({ id: "dns-alert", monitor_type: "dns", monitor_id: "monitor-1" }),
+		);
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -449,14 +445,21 @@ describe("dispatchAlerts — candidate resolution", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", "http", "monitor-1");
+		expect(await recordedAlertIds(db)).toEqual(["http-alert"]);
 	});
 
 	test("resolves monitor-specific + team-wide alerts for an HTTP monitor", async () => {
 		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
+			makeAlert({ id: "a-team-wide" }),
+			makeAlert({ id: "b-this-monitor", monitor_type: "http", monitor_id: "monitor-1" }),
+			makeAlert({ id: "c-other-monitor", monitor_type: "http", monitor_id: "monitor-2" }),
+			makeAlert({ id: "d-other-team", team_id: "team-2" }),
+		);
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -467,17 +470,20 @@ describe("dispatchAlerts — candidate resolution", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", "http", "monitor-1");
+		expect(await recordedAlertIds(db)).toEqual(["a-team-wide", "b-this-monitor"]);
 	});
 
 	test("resolves alerts by the monitor's own type for a DNS, TCP, or cron-job monitor", async () => {
-		let { db } = createTestDatabase();
-
 		for (let monitorType of ["dns", "tcp", "cron"] as const) {
-			listForMonitorMock.mockClear();
+			let { db } = createTestDatabase();
+			await seedAlerts(
+				db,
+				makeAlert({ id: "own-type", monitor_type: monitorType, monitor_id: "monitor-1" }),
+				makeAlert({ id: "http-type", monitor_type: "http", monitor_id: "monitor-1" }),
+			);
 
 			await dispatchAlerts({
-				db,
+				models: bindModels(db),
 				mailer: makeMailer(),
 				teamId: "team-1",
 				monitorId: "monitor-1",
@@ -488,7 +494,7 @@ describe("dispatchAlerts — candidate resolution", () => {
 				dashboardUrl: "https://uptime.sergiodxa.com/x",
 			});
 
-			expect(listForMonitorMock).toHaveBeenCalledWith(db, "team-1", monitorType, "monitor-1");
+			expect(await recordedAlertIds(db)).toEqual(["own-type"]);
 		}
 	});
 });
@@ -498,11 +504,12 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 		let { db } = createTestDatabase();
 		let recovers = makeAlert({ id: "recovers", notify_on_recovery: true });
 		let silent = makeAlert({ id: "silent", notify_on_recovery: false });
-		listForMonitorMock.mockImplementation(async () => [recovers, silent]);
+		await seedAlerts(db, recovers, silent);
+		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
+			models: bindModels(db),
+			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -512,19 +519,19 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(isInCooldownMock).toHaveBeenCalledTimes(1);
-		expect(isInCooldownMock).toHaveBeenCalledWith(db, "recovers", "monitor-1", "up", 0);
+		expect(transport.messages).toHaveLength(1);
+		expect(await recordedAlertIds(db)).toEqual(["recovers"]);
 	});
 
 	test("a 'down' or 'degraded' event delivers to every candidate regardless of notify_on_recovery", async () => {
 		let { db } = createTestDatabase();
 		let a = makeAlert({ id: "a", notify_on_recovery: true });
 		let b = makeAlert({ id: "b", notify_on_recovery: false });
-		listForMonitorMock.mockImplementation(async () => [a, b]);
+		await seedAlerts(db, a, b);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -540,43 +547,11 @@ describe("dispatchAlerts — notify_on_recovery filtering", () => {
 });
 
 describe("dispatchAlerts — cooldown", () => {
-	test("skips delivery and records skipped_cooldown when the alert is in cooldown", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({ cooldown_minutes: 30 });
-		listForMonitorMock.mockImplementation(async () => [alert]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 1);
-		isInCooldownMock.mockImplementation(async () => true);
-		let transport = new MemoryTransport();
-
+	/** Dispatches one `degraded` event for `alert` and reports the outcome it recorded last. */
+	async function dispatchDegraded(db: Db, alert: SelectAlert, transport = new MemoryTransport()) {
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
-			teamId: "team-1",
-			monitorId: "monitor-1",
-			monitorType: "http",
-			monitorName: "Homepage",
-			eventType: "down",
-			snapshot: httpSnapshot,
-			dashboardUrl: "https://uptime.sergiodxa.com/x",
-		});
-
-		expect(transport.messages).toHaveLength(0);
-		expect(recordMock).toHaveBeenCalledTimes(1);
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("skipped_cooldown");
-		expect(call.error_message).toBeNull();
-		expect(call.alert_id).toBe(alert.id);
-	});
-
-	test("delivers and checks cooldown per-alert-id/monitor/event-type with the alert's own cooldown_minutes", async () => {
-		let { db } = createTestDatabase();
-		let alert = makeAlert({ id: "alert-7", cooldown_minutes: 15 });
-		listForMonitorMock.mockImplementation(async () => [alert]);
-		countSentSinceRecoveryMock.mockImplementation(async () => 1);
-
-		await dispatchAlerts({
-			db,
-			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
 			monitorType: "http",
@@ -586,59 +561,67 @@ describe("dispatchAlerts — cooldown", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(isInCooldownMock).toHaveBeenCalledWith(db, "alert-7", "monitor-1", "degraded", 15);
+		return (await recorded(db)).at(-1);
+	}
+
+	test("skips delivery and records skipped_cooldown when the alert is in cooldown", async () => {
+		let { db } = createTestDatabase();
+		let alert = makeAlert({ cooldown_minutes: 30 });
+		await seedAlerts(db, alert);
+		await seedEvent(db, alert.id, "degraded", Date.now() - 60_000);
+		let transport = new MemoryTransport();
+
+		let call = await dispatchDegraded(db, alert, transport);
+
+		expect(transport.messages).toHaveLength(0);
+		expect(await recorded(db)).toHaveLength(2);
+		expect(call?.status).toBe("skipped_cooldown");
+		expect(call?.error_message).toBeNull();
+		expect(call?.alert_id).toBe(alert.id);
+	});
+
+	test("measures the cooldown with the alert's own cooldown_minutes", async () => {
+		let alert = makeAlert({ id: "alert-7", cooldown_minutes: 15 });
+
+		let inside = createTestDatabase().db;
+		await seedAlerts(inside, alert);
+		await seedEvent(inside, alert.id, "degraded", Date.now() - 14 * 60_000);
+		expect((await dispatchDegraded(inside, alert))?.status).toBe("skipped_cooldown");
+
+		let after = createTestDatabase().db;
+		await seedAlerts(after, alert);
+		await seedEvent(after, alert.id, "degraded", Date.now() - 16 * 60_000);
+		expect((await dispatchDegraded(after, alert))?.status).toBe("sent");
+	});
+
+	test("keys the cooldown on the alert, the monitor, and the event type", async () => {
+		let { db } = createTestDatabase();
+		let alert = makeAlert({ id: "alert-7", cooldown_minutes: 15 });
+		await seedAlerts(db, alert);
+		await seedEvent(db, alert.id, "degraded", Date.now() - 20 * 60_000);
+		await seedEvent(db, "another-alert", "degraded", Date.now() - 60_000);
+		await seedEvent(db, alert.id, "down", Date.now() - 60_000);
+
+		expect((await dispatchDegraded(db, alert))?.status).toBe("sent");
 	});
 });
 
 /**
  * The alert repeat policy: alert immediately when a monitor goes down, stay quiet during
- * the cooldown, and always alert on recovery. These tests run the real `isInCooldown` and
- * `countSentSinceRecovery` against a seeded database, since mocking both would only assert the mocks.
+ * the cooldown, and always alert on recovery, read off a seeded history.
  */
 describe("dispatchAlerts — repeat policy", () => {
-	/** Points the two history reads at their real implementations for this test. */
-	function useRealHistoryReads(): void {
-		isInCooldownMock.mockImplementation(async (...args: unknown[]) =>
-			realIsInCooldown(...(args as Parameters<typeof realIsInCooldown>)),
-		);
-		countSentSinceRecoveryMock.mockImplementation(async (...args: unknown[]) =>
-			realCountSentSinceRecovery(...(args as Parameters<typeof realCountSentSinceRecovery>)),
-		);
-	}
-
-	/** Writes one delivered event into the history at an exact instant. */
-	async function seedSent(
-		db: Db,
-		alertId: string,
-		eventType: "down" | "up" | "degraded",
-		sentAt: number,
-	): Promise<void> {
-		await db.create(alertEvents, {
-			id: crypto.randomUUID(),
-			created_at: sentAt,
-			sent_at: sentAt,
-			alert_id: alertId,
-			monitor_id: "monitor-1",
-			event_type: eventType,
-			status: "sent",
-			error_message: null,
-			monitor_type: "http",
-			monitor_name: "Homepage",
-			snapshot: null,
-		});
-	}
-
 	/** Dispatches one event for `alert` and reports what came of it. */
 	async function dispatchOne(
 		db: Db,
 		alert: SelectAlert,
 		eventType: "down" | "up" | "degraded",
 	): Promise<{ delivered: number; status: unknown }> {
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -649,8 +632,8 @@ describe("dispatchAlerts — repeat policy", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let call = recordMock.mock.calls.at(-1)?.[1] as Record<string, unknown>;
-		return { delivered: transport.messages.length, status: call.status };
+		let call = (await recorded(db)).at(-1);
+		return { delivered: transport.messages.length, status: call?.status };
 	}
 
 	/**
@@ -659,11 +642,10 @@ describe("dispatchAlerts — repeat policy", () => {
 	 */
 	test("alerts immediately the first time a monitor is detected down", async () => {
 		let { db } = createTestDatabase();
-		useRealHistoryReads();
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-first", cooldown_minutes: 60 });
-		await seedSent(db, alert.id, "down", now - 10 * 60_000);
-		await seedSent(db, alert.id, "up", now - 9 * 60_000);
+		await seedEvent(db, alert.id, "down", now - 10 * 60_000);
+		await seedEvent(db, alert.id, "up", now - 9 * 60_000);
 
 		expect(await dispatchOne(db, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
@@ -673,15 +655,14 @@ describe("dispatchAlerts — repeat policy", () => {
 		let alert = makeAlert({ id: "alert-repeat", cooldown_minutes: 60 });
 
 		let inside = createTestDatabase().db;
-		useRealHistoryReads();
-		await seedSent(inside, alert.id, "down", now - 30 * 60_000);
+		await seedEvent(inside, alert.id, "down", now - 30 * 60_000);
 		expect(await dispatchOne(inside, alert, "down")).toEqual({
 			delivered: 0,
 			status: "skipped_cooldown",
 		});
 
 		let after = createTestDatabase().db;
-		await seedSent(after, alert.id, "down", now - 61 * 60_000);
+		await seedEvent(after, alert.id, "down", now - 61 * 60_000);
 		expect(await dispatchOne(after, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
@@ -691,13 +672,12 @@ describe("dispatchAlerts — repeat policy", () => {
 	 */
 	test("alerts on recovery however long the outage lasted, with no ceiling to stop it", async () => {
 		let { db } = createTestDatabase();
-		useRealHistoryReads();
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-recovers", cooldown_minutes: 60 });
 		for (let hour = 12; hour >= 1; hour--) {
-			await seedSent(db, alert.id, "down", now - hour * 60 * 60_000);
+			await seedEvent(db, alert.id, "down", now - hour * 60 * 60_000);
 		}
-		await seedSent(db, alert.id, "down", now - 60_000);
+		await seedEvent(db, alert.id, "down", now - 60_000);
 
 		expect(await dispatchOne(db, alert, "up")).toEqual({ delivered: 1, status: "sent" });
 	});
@@ -711,8 +691,7 @@ describe("dispatchAlerts — repeat policy", () => {
 		 * so a check one minute after the previous down alert still falls inside that floor.
 		 */
 		let perCheck = createTestDatabase().db;
-		useRealHistoryReads();
-		await seedSent(perCheck, alert.id, "down", now - 60_000);
+		await seedEvent(perCheck, alert.id, "down", now - 60_000);
 		expect(await dispatchOne(perCheck, alert, "down")).toEqual({
 			delivered: 0,
 			status: "skipped_cooldown",
@@ -723,21 +702,20 @@ describe("dispatchAlerts — repeat policy", () => {
 		 * past that floor is delivered on the next dispatch.
 		 */
 		let afterFloor = createTestDatabase().db;
-		await seedSent(afterFloor, alert.id, "down", now - 6 * 60_000);
+		await seedEvent(afterFloor, alert.id, "down", now - 6 * 60_000);
 		expect(await dispatchOne(afterFloor, alert, "down")).toEqual({ delivered: 1, status: "sent" });
 	});
 
 	test("repeats an SSL reminder on its cooldown, even though nothing ever recovers it", async () => {
 		let { db } = createTestDatabase();
-		useRealHistoryReads();
 		let now = Date.now();
 		let alert = makeAlert({ id: "alert-ssl", cooldown_minutes: 60 });
-		await seedSent(db, alert.id, "degraded", now - 30 * 60_000);
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedEvent(db, alert.id, "degraded", now - 30 * 60_000);
+		await seedAlerts(db, alert);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -755,8 +733,7 @@ describe("dispatchAlerts — repeat policy", () => {
 		});
 
 		expect(transport.messages).toHaveLength(0);
-		let call = recordMock.mock.calls.at(-1)?.[1] as Record<string, unknown>;
-		expect(call.status).toBe("skipped_cooldown");
+		expect((await recorded(db)).at(-1)?.status).toBe("skipped_cooldown");
 	});
 });
 
@@ -768,16 +745,26 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 	 */
 	test("adds the incident's sent and suppressed totals to the recovery message", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [
+		await seedAlerts(
+			db,
 			makeAlert({
 				id: "alert-11",
 				config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
 			}),
-		]);
-		summarizeIncidentMock.mockImplementation(async () => ({ sent: 10, suppressed: 300 }));
+		);
+		let start = Date.now() - 24 * 60 * 60_000;
+		for (let index = 0; index < 310; index++) {
+			await seedEvent(
+				db,
+				"alert-11",
+				"down",
+				start + index * 60_000,
+				index % 31 === 0 ? "sent" : "skipped_cooldown",
+			);
+		}
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -788,7 +775,6 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(summarizeIncidentMock).toHaveBeenCalledWith(db, "alert-11", "monitor-1");
 		let { message } = onlyQueued();
 		expect(message.text).toContain(
 			"Notifications for this incident: 10 sent, 300 held back by the alert's cooldown.",
@@ -798,12 +784,13 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 
 	test("leaves a recovery message alone when nothing was suppressed", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
-		summarizeIncidentMock.mockImplementation(async () => ({ sent: 1, suppressed: 0 }));
+		let alert = makeAlert();
+		await seedAlerts(db, alert);
+		await seedEvent(db, alert.id, "down", Date.now() - 60_000);
 		let transport = new MemoryTransport();
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -819,10 +806,14 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 
 	test("doesn't summarize an incident for a non-recovery event", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		let alert = makeAlert({
+			config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } },
+		});
+		await seedAlerts(db, alert);
+		await seedEvent(db, alert.id, "down", Date.now() - 2 * 60 * 60_000, "skipped_cooldown");
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -833,7 +824,9 @@ describe("dispatchAlerts — recovery reports what was suppressed", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(summarizeIncidentMock).not.toHaveBeenCalled();
+		let { message } = onlyQueued();
+		expect(message.text).not.toContain("held back");
+		expect(message.data?.["incident"]).toBeUndefined();
 	});
 });
 
@@ -841,10 +834,10 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("records 'sent' with a null error_message on a successful delivery", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -855,7 +848,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.status).toBe("sent");
 		expect(call.error_message).toBeNull();
 		expect(call.monitor_type).toBe("http");
@@ -866,11 +859,11 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("records 'failed' with the error message when the transport refuses the message", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 		let transport = failingTransport("bad recipient");
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -881,7 +874,7 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.status).toBe("failed");
 		expect(call.error_message).toBe("bad recipient");
 	});
@@ -893,11 +886,11 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			id: "succeeding",
 			config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
 		});
-		listForMonitorMock.mockImplementation(async () => [failing, succeeding]);
+		await seedAlerts(db, failing, succeeding);
 		let transport = failingTransport("boom");
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -908,8 +901,8 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 			dashboardUrl: "https://uptime.sergiodxa.com/x",
 		});
 
-		expect(recordMock).toHaveBeenCalledTimes(2);
-		let statuses = recordMock.mock.calls.map((call) => (call[1] as { status: string }).status);
+		let statuses = (await recorded(db)).map((call) => call.status);
+		expect(statuses).toHaveLength(2);
 		expect(statuses.sort((a, b) => a.localeCompare(b))).toEqual(["failed", "pending"]);
 	});
 
@@ -919,10 +912,10 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 		let alert = makeAlert({
 			config: { strategy: "email", config: { to: "ops@example.com", subjectPrefix: "[PROD]" } },
 		});
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -942,10 +935,10 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("sends the alert email itself, identified by type rather than by its copy", async () => {
 		let { db } = createTestDatabase();
 		let transport = new MemoryTransport();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -962,10 +955,10 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 	test("reports the monitor, the snapshot, and the dashboard link in both body parts", async () => {
 		let { db } = createTestDatabase();
 		let transport = new MemoryTransport();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(transport),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -991,12 +984,13 @@ describe("dispatchAlerts — delivery outcome recording", () => {
 describe("dispatchAlerts — the DNS body", () => {
 	async function slackText(snapshot: AlertEventSnapshot): Promise<string> {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
-		]);
+		);
 
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "dns-monitor-1",
@@ -1079,10 +1073,9 @@ describe("dispatchAlerts — the DNS body", () => {
 });
 
 describe("dispatchAlerts — queued delivery", () => {
-	async function dispatchDown(eventType: "down" | "degraded" | "up" = "down") {
-		let { db } = createTestDatabase();
+	async function dispatchDown(db: Db, eventType: "down" | "degraded" | "up" = "down") {
 		await dispatchAlerts({
-			db,
+			models: bindModels(db),
 			mailer: makeMailer(),
 			teamId: "team-1",
 			monitorId: "monitor-1",
@@ -1095,35 +1088,38 @@ describe("dispatchAlerts — queued delivery", () => {
 	}
 
 	test("records a messaging channel as pending and queues its delivery with that event", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({
 				id: "alert-slack",
 				config: { strategy: "slack", config: { webhookUrl: SLACK_URL } },
 			}),
-		]);
+		);
 
-		await dispatchDown();
+		await dispatchDown(db);
 
-		expect(recordMock).toHaveBeenCalledTimes(1);
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.status).toBe("pending");
 		expect(call.error_message).toBeNull();
 
 		let queued = onlyQueued();
 		expect(queued.alertId).toBe("alert-slack");
-		expect(queued.eventId).toBe(`event-${recordedIds}`);
+		expect(queued.eventId).toBe(call.id);
 	});
 
 	test("keeps every credential out of the queue payload", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
 			makeAlert({
 				config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "shh-secret" } },
 			}),
 			makeAlert({ config: { strategy: "pagerduty", config: { routingKey: "routing-key-123" } } }),
-		]);
+		);
 
-		await dispatchDown();
+		await dispatchDown(db);
 
 		let payload = JSON.stringify(queue.sent.map((sent) => sent.body));
 		expect(queue.sent).toHaveLength(3);
@@ -1134,32 +1130,36 @@ describe("dispatchAlerts — queued delivery", () => {
 	});
 
 	test("marks the event failed when the delivery cannot be queued", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
-		]);
+		);
 		let sendBatch = vi.spyOn(queue, "sendBatch").mockRejectedValueOnce(new Error("queue down"));
 		let send = vi.spyOn(queue, "send").mockRejectedValueOnce(new Error("queue down"));
 
-		await dispatchDown();
+		await dispatchDown(db);
 
-		expect(markFailedMock).toHaveBeenCalledTimes(1);
-		expect(markFailedMock.mock.calls[0]?.[1]).toBe(`event-${recordedIds}`);
-		expect(String(markFailedMock.mock.calls[0]?.[2])).toContain("Could not queue the delivery");
+		let call = await onlyRecorded(db);
+		expect(call.status).toBe("failed");
+		expect(call.error_message).toContain("Could not queue the delivery");
 		sendBatch.mockRestore();
 		send.mockRestore();
 	});
 
 	test("titles the message with the transition and links the dashboard", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({
 				config: {
 					strategy: "discord",
 					config: { webhookUrl: "https://discord.com/api/webhooks/1/abc" },
 				},
 			}),
-		]);
+		);
 
-		await dispatchDown();
+		await dispatchDown(db);
 
 		let { message } = onlyQueued();
 		expect(message.title).toBe("Homepage is DOWN");
@@ -1182,11 +1182,13 @@ describe("dispatchAlerts — queued delivery", () => {
 	});
 
 	test("reads a degraded transition as a warning", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "slack", config: { webhookUrl: SLACK_URL } } }),
-		]);
+		);
 
-		await dispatchDown("degraded");
+		await dispatchDown(db, "degraded");
 
 		expect(onlyQueued().message).toMatchObject({
 			title: "Homepage is DEGRADED",
@@ -1195,11 +1197,13 @@ describe("dispatchAlerts — queued delivery", () => {
 	});
 
 	test("resolves the incident on a recovery, under the same key", async () => {
-		listForMonitorMock.mockImplementation(async () => [
+		let { db } = createTestDatabase();
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "pagerduty", config: { routingKey: "rk" } } }),
-		]);
+		);
 
-		await dispatchDown("up");
+		await dispatchDown(db, "up");
 
 		expect(onlyQueued().message).toMatchObject({
 			title: "Homepage is RECOVERED",
@@ -1245,41 +1249,41 @@ describe("notifyHttpResult", () => {
 	test("does not dispatch on the first-ever 'up' result (previousStatus null never counts as a recovery)", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), null, {
+		await notifyHttpResult(bindModels(db), makeMailer(), makeHttpMonitor(), null, {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
-		expect(recordMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("does not dispatch when already up and staying up", async () => {
 		let { db } = createTestDatabase();
-		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
+		await seedAlerts(db, makeAlert());
+		await notifyHttpResult(bindModels(db), makeMailer(), makeHttpMonitor(), "up", {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a recovery ('up') event when transitioning from down to up", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "down", {
+		await notifyHttpResult(bindModels(db), makeMailer(), makeHttpMonitor(), "down", {
 			status: "up",
 			responseStatus: 200,
 			responseTimeMs: 50,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("up");
 		expect(call.monitor_type).toBe("http");
 		expect(call.snapshot).toEqual({
@@ -1294,30 +1298,30 @@ describe("notifyHttpResult", () => {
 	test("dispatches a 'down' event on a down result", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
+		await notifyHttpResult(bindModels(db), makeMailer(), makeHttpMonitor(), "up", {
 			status: "down",
 			responseStatus: 503,
 			responseTimeMs: 30,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("dispatches a 'degraded' event on a degraded result", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyHttpResult(db, makeMailer(), makeHttpMonitor(), "up", {
+		await notifyHttpResult(bindModels(db), makeMailer(), makeHttpMonitor(), "up", {
 			status: "degraded",
 			responseStatus: 200,
 			responseTimeMs: 6000,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("degraded");
 	});
 });
@@ -1385,19 +1389,20 @@ function dnsResult(status: "ok" | "changed" | "error") {
 describe("notifyDnsResult", () => {
 	test("does not dispatch on the first-ever 'ok' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), null, dnsResult("ok"));
+		await seedAlerts(db, makeAlert());
+		await notifyDnsResult(bindModels(db), makeMailer(), makeDnsMonitor(), null, dnsResult("ok"));
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a recovery event when a DNS check goes from error to ok", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "error", dnsResult("ok"));
+		await notifyDnsResult(bindModels(db), makeMailer(), makeDnsMonitor(), "error", dnsResult("ok"));
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("up");
 		expect(call.monitor_type).toBe("dns");
 	});
@@ -1405,31 +1410,37 @@ describe("notifyDnsResult", () => {
 	test("maps an 'error' result to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("error"));
+		await notifyDnsResult(bindModels(db), makeMailer(), makeDnsMonitor(), "ok", dnsResult("error"));
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("maps a 'changed' result to a 'degraded' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyDnsResult(db, makeMailer(), makeDnsMonitor(), "ok", dnsResult("changed"));
+		await notifyDnsResult(
+			bindModels(db),
+			makeMailer(),
+			makeDnsMonitor(),
+			"ok",
+			dnsResult("changed"),
+		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("degraded");
 	});
 
 	test("records the sweep's counters and findings in the snapshot", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyDnsResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeDnsMonitor(),
 			"ok",
@@ -1443,7 +1454,7 @@ describe("notifyDnsResult", () => {
 			}),
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.snapshot).toEqual({
 			type: "dns",
 			status: "changed",
@@ -1464,10 +1475,10 @@ describe("notifyDnsResult", () => {
 	 */
 	test("caps the stored findings without capping the counters", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyDnsResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeDnsMonitor(),
 			"ok",
@@ -1483,7 +1494,7 @@ describe("notifyDnsResult", () => {
 			}),
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		let snapshot = call.snapshot as Extract<AlertEventSnapshot, { type: "dns" }>;
 		expect(snapshot.recordsMissing).toBe(9);
 		expect(snapshot.findings).toHaveLength(5);
@@ -1610,25 +1621,26 @@ function makeTcpMonitor(overrides: Partial<SelectTcpMonitor> = {}): SelectTcpMon
 describe("notifyTcpResult", () => {
 	test("does not dispatch on the first-ever 'up' result", async () => {
 		let { db } = createTestDatabase();
-		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), null, {
+		await seedAlerts(db, makeAlert());
+		await notifyTcpResult(bindModels(db), makeMailer(), makeTcpMonitor(), null, {
 			status: "up",
 			responseTimeMs: 10,
 		});
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a recovery event when transitioning from down to up", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "down", {
+		await notifyTcpResult(bindModels(db), makeMailer(), makeTcpMonitor(), "down", {
 			status: "up",
 			responseTimeMs: 10,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("up");
 		expect(call.monitor_type).toBe("tcp");
 	});
@@ -1636,28 +1648,28 @@ describe("notifyTcpResult", () => {
 	test("maps a 'down' result to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
+		await notifyTcpResult(bindModels(db), makeMailer(), makeTcpMonitor(), "up", {
 			status: "down",
 			responseTimeMs: null,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("maps a 'timeout' result to a 'degraded' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyTcpResult(db, makeMailer(), makeTcpMonitor(), "up", {
+		await notifyTcpResult(bindModels(db), makeMailer(), makeTcpMonitor(), "up", {
 			status: "timeout",
 			responseTimeMs: null,
 		});
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("degraded");
 	});
 });
@@ -1687,41 +1699,43 @@ describe("notifyCronJobResult", () => {
 	test("never dispatches when the new status is 'new'", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "missed", "new");
+		await notifyCronJobResult(bindModels(db), makeMailer(), makeCronJobMonitor(), "missed", "new");
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("does not dispatch a first-ever 'healthy' status (previousStatus null)", async () => {
 		let { db } = createTestDatabase();
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), null, "healthy");
+		await seedAlerts(db, makeAlert());
+		await notifyCronJobResult(bindModels(db), makeMailer(), makeCronJobMonitor(), null, "healthy");
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("a transition from 'new' to 'healthy' never counts as a recovery", async () => {
 		let { db } = createTestDatabase();
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "new", "healthy");
+		await seedAlerts(db, makeAlert());
+		await notifyCronJobResult(bindModels(db), makeMailer(), makeCronJobMonitor(), "new", "healthy");
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a recovery event transitioning from 'late' to 'healthy'", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
 		await notifyCronJobResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: true }),
 			"late",
 			"healthy",
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("up");
 		expect(call.monitor_type).toBe("cron");
 	});
@@ -1729,23 +1743,29 @@ describe("notifyCronJobResult", () => {
 	test("maps 'missed' to a 'down' event", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
+		await notifyCronJobResult(
+			bindModels(db),
+			makeMailer(),
+			makeCronJobMonitor(),
+			"healthy",
+			"missed",
+		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("maps 'late' to a 'degraded' event and formats last-ping/next-expected as ISO strings", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 		let lastPingAt = Date.UTC(2026, 0, 1, 0, 0, 0);
 		let nextExpectedAt = Date.UTC(2026, 0, 2, 0, 0, 0);
 
 		await notifyCronJobResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeCronJobMonitor({
 				alert_on_late: true,
@@ -1756,7 +1776,7 @@ describe("notifyCronJobResult", () => {
 			"late",
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("degraded");
 		expect((call.snapshot as { lastPingAt: string }).lastPingAt).toBe(
 			new Date(lastPingAt).toISOString(),
@@ -1768,59 +1788,64 @@ describe("notifyCronJobResult", () => {
 
 	test("does not dispatch a 'late' transition when the monitor's alert_on_late is off", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyCronJobResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"healthy",
 			"late",
 		);
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
-		expect(recordMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("still dispatches 'missed' when alert_on_late is off", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyCronJobResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"late",
 			"missed",
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("dispatches nothing recovering from a suppressed 'late'", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyCronJobResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeCronJobMonitor({ alert_on_late: false }),
 			"late",
 			"healthy",
 		);
 
-		expect(recordMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("formats a null last-ping/next-expected as null in the snapshot", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifyCronJobResult(db, makeMailer(), makeCronJobMonitor(), "healthy", "missed");
+		await notifyCronJobResult(
+			bindModels(db),
+			makeMailer(),
+			makeCronJobMonitor(),
+			"healthy",
+			"missed",
+		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		let snapshot = call.snapshot as { lastPingAt: string | null; nextExpectedAt: string | null };
 		expect(snapshot.lastPingAt).toBeNull();
 		expect(snapshot.nextExpectedAt).toBeNull();
@@ -1868,15 +1893,16 @@ function makeFlowResult(overrides: Partial<SelectFlowMonitorResult> = {}): Selec
 describe("notifyFlowResult", () => {
 	test("does not dispatch on the first-ever 'up' result", async () => {
 		let { db } = createTestDatabase();
+		await seedAlerts(db, makeAlert());
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			null,
 			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
 		);
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	/**
@@ -1885,11 +1911,11 @@ describe("notifyFlowResult", () => {
 	 */
 	test("never dispatches an 'error' result, whatever it follows", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		for (let previous of ["up", "down", "error", null] as const) {
 			await notifyFlowResult(
-				db,
+				bindModels(db),
 				makeMailer(),
 				makeFlowMonitor(),
 				previous,
@@ -1897,71 +1923,71 @@ describe("notifyFlowResult", () => {
 			);
 		}
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a 'down' event on a failed assertion", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			"up",
 			flowAlertResultFromResult("down", makeFlowResult()),
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 		expect(call.monitor_type).toBe("flow");
 	});
 
 	test("dispatches a recovery event coming back up from down", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			"down",
 			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("up");
 	});
 
 	/** Nobody was told about the error, so nobody is told it ended. */
 	test("stays silent coming back up from an error", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			"error",
 			flowAlertResultFromResult("up", makeFlowResult({ status: "up" })),
 		);
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("records the failing assertion, its line, and the counters in the snapshot", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			"up",
 			flowAlertResultFromResult("down", makeFlowResult()),
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.snapshot).toEqual({
 			type: "flow",
 			status: "down",
@@ -1977,12 +2003,13 @@ describe("notifyFlowResult", () => {
 
 	test("quotes the failing assertion in the delivered body", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [
+		await seedAlerts(
+			db,
 			makeAlert({ config: { strategy: "webhook", config: { url: WEBHOOK_URL, secret: "" } } }),
-		]);
+		);
 
 		await notifyFlowResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeFlowMonitor(),
 			"up",
@@ -2028,19 +2055,20 @@ describe("flowAlertResultFromResult", () => {
 describe("notifySslResult", () => {
 	test("does not dispatch when shouldAlertOnSslStatus says not to (e.g. a healthy, non-expiring cert)", async () => {
 		let { db } = createTestDatabase();
-		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "valid", 90);
+		await seedAlerts(db, makeAlert());
+		await notifySslResult(bindModels(db), makeMailer(), makeHttpMonitor(), "valid", 90);
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 
 	test("dispatches a 'down' event for an expired certificate", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expired", -3);
+		await notifySslResult(bindModels(db), makeMailer(), makeHttpMonitor(), "expired", -3);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 		expect(call.monitor_type).toBe("ssl");
 	});
@@ -2048,39 +2076,45 @@ describe("notifySslResult", () => {
 	test("dispatches a 'degraded' event for a certificate expiring within a warning threshold", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifySslResult(db, makeMailer(), makeHttpMonitor(), "expiring", 7);
+		await notifySslResult(bindModels(db), makeMailer(), makeHttpMonitor(), "expiring", 7);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("degraded");
 	});
 
 	test("derives the hostname from the monitor's URL", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
 		await notifySslResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeHttpMonitor({ url: "https://sub.example.com/path" }),
 			"expired",
 			-1,
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect((call.snapshot as { hostname: string }).hostname).toBe("sub.example.com");
 	});
 
 	test("falls back to the raw URL as the hostname when it doesn't parse as a URL", async () => {
 		let { db } = createTestDatabase();
 		let alert = makeAlert();
-		listForMonitorMock.mockImplementation(async () => [alert]);
+		await seedAlerts(db, alert);
 
-		await notifySslResult(db, makeMailer(), makeHttpMonitor({ url: "not-a-url" }), "expired", -1);
+		await notifySslResult(
+			bindModels(db),
+			makeMailer(),
+			makeHttpMonitor({ url: "not-a-url" }),
+			"expired",
+			-1,
+		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect((call.snapshot as { hostname: string }).hostname).toBe("not-a-url");
 	});
 });
@@ -2188,10 +2222,14 @@ describe("shouldNotifyCronJobResult", () => {
 describe("notifyRegistrationResult", () => {
 	test("dispatches through the DNS monitor's alerts, recorded as a registration warning", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(
+			db,
+			makeAlert({ id: "dns-alert", monitor_type: "dns", monitor_id: "dns-monitor-1" }),
+			makeAlert({ id: "http-alert", monitor_type: "http", monitor_id: "dns-monitor-1" }),
+		);
 
 		await notifyRegistrationResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeDnsMonitor({
 				registration_expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000 + 60_000,
@@ -2202,8 +2240,8 @@ describe("notifyRegistrationResult", () => {
 			"expiring",
 		);
 
-		expect(listForMonitorMock.mock.calls[0]?.[2]).toBe("dns");
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
+		expect(call.alert_id).toBe("dns-alert");
 		expect(call.event_type).toBe("degraded");
 		expect(call.monitor_type).toBe("registration");
 		expect(call.snapshot).toMatchObject({
@@ -2217,25 +2255,26 @@ describe("notifyRegistrationResult", () => {
 
 	test("dispatches a 'down' event while the registry holds the domain out of resolution", async () => {
 		let { db } = createTestDatabase();
-		listForMonitorMock.mockImplementation(async () => [makeAlert()]);
+		await seedAlerts(db, makeAlert());
 
 		await notifyRegistrationResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeDnsMonitor({ registration_epp_statuses: ["serverHold"] }),
 			"valid",
 			"valid",
 		);
 
-		let call = recordMock.mock.calls[0]?.[1] as Record<string, unknown>;
+		let call = await onlyRecorded(db);
 		expect(call.event_type).toBe("down");
 	});
 
 	test("reads no EPP statuses from a monitor whose last lookup failed", async () => {
 		let { db } = createTestDatabase();
+		await seedAlerts(db, makeAlert());
 
 		await notifyRegistrationResult(
-			db,
+			bindModels(db),
 			makeMailer(),
 			makeDnsMonitor({
 				registration_epp_statuses: ["serverHold"],
@@ -2245,6 +2284,6 @@ describe("notifyRegistrationResult", () => {
 			"valid",
 		);
 
-		expect(listForMonitorMock).not.toHaveBeenCalled();
+		expect(await recorded(db)).toHaveLength(0);
 	});
 });

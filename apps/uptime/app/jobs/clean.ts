@@ -9,16 +9,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
 import type { BatchedSweepResult } from "~/app/lib/retention";
+import type { UptimeModels } from "~/app/models";
 
-import Lead from "~/app/data/lead";
-import Team from "~/app/data/team";
-import TrialWatch from "~/app/data/trial-watch";
 import jobs from "~/app/jobs";
 import { deleteOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
@@ -95,7 +91,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	 * `DELETE` cannot say whose rows it removed, so monitor count is the closest proxy
 	 * for the volume each team contributed.
 	 */
-	apportionCost(await Team.countMonitorsByTeam(ctx.database));
+	apportionCost(await ctx.models.teams.countMonitorsByTeam());
 
 	let tables: SweptTable[] = [];
 
@@ -110,7 +106,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 		tables.push(record(entry.table, swept));
 	}
 
-	tables.push(...(await sweepTrial(ctx.database, now)));
+	tables.push(...(await sweepTrial(ctx.models, now)));
 
 	let rowsDeleted = tables.reduce((total, entry) => total + entry.rowsDeleted, 0);
 	/**
@@ -136,10 +132,10 @@ export default createJobHandler(jobs.clean, async (ctx) => {
  * identifies them, then watches past their `converts_until`, then leads with no watch
  * left — each step's own condition only holds once the step before it has already run.
  */
-async function sweepTrial(db: Database, now: number): Promise<SweptTable[]> {
-	let results = await TrialWatch.deleteExpiredResults(db, now);
-	let watches = await TrialWatch.deleteExpired(db, now);
-	let leads = await Lead.deleteOrphaned(db, now);
+async function sweepTrial(models: UptimeModels, now: number): Promise<SweptTable[]> {
+	let results = await models.trialWatchResults.deleteExpired(now);
+	let watches = await models.trialWatches.deleteExpired(now);
+	let leads = await models.leads.deleteOrphaned(now);
 
 	return [
 		record("trial_watch_results", results),

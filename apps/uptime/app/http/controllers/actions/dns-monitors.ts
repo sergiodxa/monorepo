@@ -14,7 +14,7 @@
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
 import { currentLog } from "@sdxc/logger";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
@@ -23,9 +23,6 @@ import { Session } from "remix/session";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 
-import DnsMonitor, { MAX_DNS_MONITORS_PER_TEAM } from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
-import Subscription from "~/app/data/subscription";
 import {
 	CreateDnsMonitorSchema,
 	DnsMonitorIdSchema,
@@ -35,6 +32,7 @@ import {
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
 import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import {
@@ -114,7 +112,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 		});
 	}
 
-	let existingCount = await DnsMonitor.countByTeam(ctx.db, ctx.team.id);
+	let existingCount = await ctx.models.dnsMonitors.inTeam(ctx.team.id).count();
 	if (existingCount >= MAX_DNS_MONITORS_PER_TEAM) {
 		return unprocessableEntity(
 			ctx.intl.t("actions.createDnsMonitor.errors.limitExceeded", {
@@ -137,10 +135,13 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	}
 
 	let importedAt = zone.records.length > 0 ? Date.now() : null;
-	let monitor = await DnsMonitor.create(ctx.db, ctx.team.id, {
-		...values,
-		zone_file_imported_at: importedAt,
-	});
+	let monitor = unwrap(
+		await ctx.models.dnsMonitors.create({
+			team_id: ctx.team.id,
+			...values,
+			zone_file_imported_at: importedAt,
+		}),
+	);
 
 	/**
 	 * Discovery runs inline because the next screen reviews what it found, and an empty
@@ -148,7 +149,7 @@ export const createDnsMonitor = createAction(routes.actions.monitor.dns.create, 
 	 * reached still leaves a usable monitor, since its next scheduled check finds the same records.
 	 */
 	try {
-		await importDiscovery(ctx.db, monitor.id, zone.names, zone.records);
+		await importDiscovery(ctx.models, monitor.id, zone.names, zone.records);
 	} catch (error) {
 		currentLog()
 			?.set({ monitor: { id: monitor.id, type: "dns" } })
@@ -185,17 +186,19 @@ export const updateDnsMonitor = createAction(routes.actions.monitor.dns.update, 
 	}
 
 	let { monitor_id, registration_warning_days, ...values } = result.data;
-	let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(monitor_id);
 	if (!existing) return notFound("Not Found");
 
 	let windowChanged =
 		registration_warning_days !== undefined &&
 		registration_warning_days !== existing.registration_warning_days;
 
-	await DnsMonitor.updateById(ctx.db, monitor_id, {
-		...values,
-		...(windowChanged ? { registration_warning_days } : {}),
-	});
+	unwrap(
+		await ctx.models.dnsMonitors.update(monitor_id, {
+			...values,
+			...(windowChanged ? { registration_warning_days } : {}),
+		}),
+	);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -218,10 +221,10 @@ export const deleteDnsMonitor = createAction(routes.actions.monitor.dns.delete, 
 		});
 	}
 
-	let existing = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let existing = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await DnsMonitor.deleteById(ctx.db, result.data.monitor_id);
+	unwrap(await ctx.models.dnsMonitors.delete(result.data.monitor_id));
 
 	session?.flash("toast", {
 		intent: "success",
@@ -247,7 +250,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 		});
 	}
 
-	let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	/**
@@ -255,7 +258,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	 * that case still gets their check: refusing a paying customer over an inconclusive lookup
 	 * is the worse of the two mistakes, the same reading every other manual check takes.
 	 */
-	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
+	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.intl.t("actions.checks.subscriptionRequired"),
@@ -272,8 +275,8 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	 * and its alert goes through the queue the scheduled lookup uses.
 	 */
 	let [check, registration] = await Promise.all([
-		runDnsCheck(ctx.db, monitor.id, monitor.domain),
-		checkRegistration(ctx.db, monitor),
+		runDnsCheck(ctx.models, monitor.id, monitor.domain),
+		checkRegistration(ctx.models, monitor),
 	]);
 	if (registration.notification) await enqueueNotifications([registration.notification]);
 
@@ -317,7 +320,7 @@ export const checkDnsMonitor = createAction(routes.actions.monitor.dns.check, as
 	 * moment of the transition, more precise than anything reconstructed after the fact.
 	 */
 	await notifyDnsResult(
-		ctx.db,
+		ctx.models,
 		ctx.email,
 		monitor,
 		monitor.last_status as DnsCheckStatus | null,
@@ -355,7 +358,7 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 		);
 	}
 
-	let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	/**
@@ -363,12 +366,12 @@ export const reviewDnsMonitor = createAction(routes.actions.monitor.dns.review, 
 	 * checkboxes, so an id from somewhere else decides nothing.
 	 */
 	let submitted = new Set(result.data.record_ids);
-	let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
+	let records = await ctx.models.dnsMonitorRecords.listByMonitor(monitor.id);
 	let enabled = records.filter((record) => submitted.has(record.id)).map((record) => record.id);
 	let disabled = records.filter((record) => !submitted.has(record.id)).map((record) => record.id);
 
-	await DnsMonitorRecord.setEnabled(ctx.db, monitor.id, enabled, true);
-	await DnsMonitorRecord.setEnabled(ctx.db, monitor.id, disabled, false);
+	await ctx.models.dnsMonitorRecords.setEnabled(monitor.id, enabled, true);
+	await ctx.models.dnsMonitorRecords.setEnabled(monitor.id, disabled, false);
 
 	session?.flash("toast", {
 		intent: "success",
@@ -403,14 +406,14 @@ export const toggleDnsMonitorRecord = createAction(
 			);
 		}
 
-		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 		if (!monitor) return notFound("Not Found");
 
-		let records = await DnsMonitorRecord.listByMonitor(ctx.db, monitor.id);
+		let records = await ctx.models.dnsMonitorRecords.listByMonitor(monitor.id);
 		let record = records.find((row) => row.id === result.data.record_id);
 		if (!record) return notFound("Not Found");
 
-		await DnsMonitorRecord.setEnabled(ctx.db, monitor.id, [record.id], result.data.is_enabled);
+		await ctx.models.dnsMonitorRecords.setEnabled(monitor.id, [record.id], result.data.is_enabled);
 
 		session?.flash("toast", {
 			intent: "success",
@@ -451,7 +454,7 @@ export const importDnsMonitorZoneFile = createAction(
 			);
 		}
 
-		let monitor = await DnsMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+		let monitor = await ctx.models.dnsMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 		if (!monitor) return notFound("Not Found");
 
 		let zone = readZoneFile(result.data.zone_file, monitor.domain);
@@ -466,8 +469,8 @@ export const importDnsMonitorZoneFile = createAction(
 			);
 		}
 
-		let discovery = await importDiscovery(ctx.db, monitor.id, zone.names, zone.records);
-		await DnsMonitor.updateById(ctx.db, monitor.id, { zone_file_imported_at: Date.now() });
+		let discovery = await importDiscovery(ctx.models, monitor.id, zone.names, zone.records);
+		unwrap(await ctx.models.dnsMonitors.update(monitor.id, { zone_file_imported_at: Date.now() }));
 
 		session?.flash("toast", {
 			intent: "success",

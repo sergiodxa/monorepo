@@ -7,20 +7,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { redirect } from "@sdxc/http/response";
 import { notFound, unprocessableEntity } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
 import type { MonitorScope } from "~/app/lib/monitor-scope";
+import type { UptimeModels } from "~/app/models";
 import type { AlertConfig } from "~/database/schema";
 
-import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import { isResolvableScope } from "~/app/data/scope-monitors";
 import {
 	AlertIdSchema,
 	CreateAlertSchema,
@@ -28,8 +25,10 @@ import {
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
 import { parseMonitorScope } from "~/app/lib/monitor-scope";
+import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
+import { isResolvableScope } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 
 /** Builds the strategy-specific `AlertConfig` JSON column from the flat form values. */
@@ -63,13 +62,13 @@ function buildConfig(values: CreateAlertValues): AlertConfig {
  * same `null`, so the alert stays scoped to a monitor the team actually owns.
  */
 async function resolveSubmittedScope(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	value: string,
 ): Promise<MonitorScope | null> {
 	let scope = parseMonitorScope(value);
 	if (!scope) return null;
-	return (await isResolvableScope(db, teamId, scope)) ? scope : null;
+	return (await isResolvableScope(models, teamId, scope)) ? scope : null;
 }
 
 /**
@@ -97,7 +96,7 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 		});
 	}
 
-	let scope = await resolveSubmittedScope(ctx.db, ctx.team.id, result.data.scope);
+	let scope = await resolveSubmittedScope(ctx.models, ctx.team.id, result.data.scope);
 	if (!scope) {
 		session?.flash("toast", {
 			intent: "error",
@@ -119,19 +118,22 @@ export const createAlert = createAction(routes.actions.alert.create, async (ctx)
 		});
 	}
 
-	let existingCount = await Alert.countByTeam(ctx.db, ctx.team.id);
+	let existingCount = await ctx.models.alerts.inTeam(ctx.team.id).count();
 	if (existingCount >= MAX_ALERTS_PER_TEAM) {
 		return unprocessableEntity(`A team supports at most ${MAX_ALERTS_PER_TEAM} alerts.`);
 	}
 
-	let alert = await Alert.create(ctx.db, ctx.team.id, {
-		name: result.data.name,
-		monitor_type: scope.monitorType,
-		monitor_id: scope.monitorId,
-		notify_on_recovery: result.data.notify_on_recovery,
-		cooldown_minutes: result.data.cooldown_minutes,
-		config: buildConfig(result.data),
-	});
+	let alert = unwrap(
+		await ctx.models.alerts.create({
+			team_id: ctx.team.id,
+			name: result.data.name,
+			monitor_type: scope.monitorType,
+			monitor_id: scope.monitorId,
+			notify_on_recovery: result.data.notify_on_recovery,
+			cooldown_minutes: result.data.cooldown_minutes,
+			config: buildConfig(result.data),
+		}),
+	);
 
 	/**
 	 * Reuses the count from the cap check above, which nothing between the two calls
@@ -169,10 +171,10 @@ export const updateAlert = createAction(routes.actions.alert.update, async (ctx)
 		);
 	}
 
-	let existing = await Alert.findByIdForTeam(ctx.db, ctx.team.id, result.data.alert_id);
+	let existing = await ctx.models.alerts.inTeam(ctx.team.id).find(result.data.alert_id);
 	if (!existing) return notFound("Not Found");
 
-	let scope = await resolveSubmittedScope(ctx.db, ctx.team.id, result.data.scope);
+	let scope = await resolveSubmittedScope(ctx.models, ctx.team.id, result.data.scope);
 	if (!scope) {
 		session?.flash("toast", {
 			intent: "error",
@@ -198,14 +200,16 @@ export const updateAlert = createAction(routes.actions.alert.update, async (ctx)
 		);
 	}
 
-	await Alert.updateById(ctx.db, result.data.alert_id, {
-		name: result.data.name,
-		monitor_type: scope.monitorType,
-		monitor_id: scope.monitorId,
-		notify_on_recovery: result.data.notify_on_recovery,
-		cooldown_minutes: result.data.cooldown_minutes,
-		config: buildConfig(result.data),
-	});
+	unwrap(
+		await ctx.models.alerts.update(result.data.alert_id, {
+			name: result.data.name,
+			monitor_type: scope.monitorType,
+			monitor_id: scope.monitorId,
+			notify_on_recovery: result.data.notify_on_recovery,
+			cooldown_minutes: result.data.cooldown_minutes,
+			config: buildConfig(result.data),
+		}),
+	);
 
 	session?.flash("toast", { intent: "success", message: "Alert updated." });
 	return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {
@@ -224,10 +228,10 @@ export const deleteAlert = createAction(routes.actions.alert.delete, async (ctx)
 		});
 	}
 
-	let existing = await Alert.findByIdForTeam(ctx.db, ctx.team.id, result.data.alert_id);
+	let existing = await ctx.models.alerts.inTeam(ctx.team.id).find(result.data.alert_id);
 	if (!existing) return notFound("Not Found");
 
-	await Alert.deleteById(ctx.db, result.data.alert_id);
+	unwrap(await ctx.models.alerts.delete(result.data.alert_id));
 
 	session?.flash("toast", { intent: "success", message: `Alert "${existing.name}" deleted.` });
 	return redirect(routes.app.team.alerts.index.href({ team: ctx.team.slug }), {

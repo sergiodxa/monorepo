@@ -20,11 +20,10 @@ import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import type { ContentCheckRule } from "~/app/data/content-check";
 import type { DnsRecordType } from "~/app/lib/dns-record-value";
+import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { PingStatus } from "~/app/services/analytics";
 
-import Subscription from "~/app/data/subscription";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { PING_BODY } from "~/app/http/openapi/ping";
 import { features } from "~/app/lib/flags";
@@ -154,7 +153,7 @@ export default createAction(routes.api.v1.ping, {
 		 * open and gets their ping, matching what the manual "run check" button does —
 		 * refusing a paying customer over an inconclusive lookup is the worse mistake.
 		 */
-		if ((await Subscription.stateFor(ctx.db, ctx.apiTeam.owner_id)) === "inactive") {
+		if ((await ctx.models.subscriptions.stateFor(ctx.apiTeam.owner_id)) === "inactive") {
 			return apiProblems.subscriptionRequired({
 				detail: "An active subscription is required to run a ping",
 				instance: problemInstance(),

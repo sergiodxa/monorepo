@@ -17,8 +17,8 @@ import type { getContext } from "remix/middleware/async-context";
 
 import { Select } from "@sdxc/ui";
 
-import type { ScopeMonitorGroup } from "~/app/data/scope-monitors";
 import type { MonitorScope } from "~/app/lib/monitor-scope";
+import type { ScopeMonitorGroup } from "~/app/services/scope-monitors";
 
 import { encodeMonitorScope } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";

@@ -20,11 +20,10 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import Subscription from "~/app/data/subscription";
 import { MONITORING_PRODUCT } from "~/app/lib/billing";
 import { createTestBilling, entitlementState } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { eraseAccount, planAccountErasure } from "~/app/services/account-erasure";
 import {
 	invites,
@@ -100,7 +99,7 @@ describe("planAccountErasure", () => {
 		await addMember(db, team.id, SUBJECT, "member");
 		await addMember(db, team.id, "someone-else", "admin");
 
-		let plan = await planAccountErasure(db, SUBJECT);
+		let plan = await planAccountErasure(bindModels(db), SUBJECT);
 
 		expect(plan.ownedTeams).toHaveLength(0);
 		expect(plan.joinedTeams).toHaveLength(1);
@@ -118,7 +117,7 @@ describe("planAccountErasure", () => {
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, SUBJECT);
 
-		let plan = await planAccountErasure(db, SUBJECT);
+		let plan = await planAccountErasure(bindModels(db), SUBJECT);
 
 		expect(plan.ownedTeams).toHaveLength(1);
 		expect(plan.ownedTeams[0]?.otherMemberCount).toBe(0);
@@ -135,7 +134,7 @@ describe("planAccountErasure", () => {
 		await addMember(db, second.id, SUBJECT);
 		await addMember(db, second.id, "colleague-3", "admin");
 
-		let plan = await planAccountErasure(db, SUBJECT);
+		let plan = await planAccountErasure(bindModels(db), SUBJECT);
 
 		let byName = new Map(plan.ownedTeams.map((team) => [team.name, team.otherMemberCount]));
 		expect(byName.get("First")).toBe(2);
@@ -162,7 +161,7 @@ describe("eraseAccount", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let result = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) {
@@ -197,7 +196,7 @@ describe("eraseAccount", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let result = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) expect(result.data.teamsDeleted).toBe(1);
@@ -222,7 +221,7 @@ describe("eraseAccount", () => {
 		await addMember(db, second.id, SUBJECT);
 		await addMember(db, second.id, "colleague-3", "member");
 
-		let result = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (!isSuccess(result)) return;
@@ -240,7 +239,7 @@ describe("eraseAccount", () => {
 		let team = await createTeamRow(db);
 		await addMember(db, team.id, SUBJECT);
 
-		let result = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) {
@@ -255,7 +254,7 @@ describe("eraseAccount", () => {
 		await addMember(db, team.id, "owner-2");
 		await addMember(db, team.id, SUBJECT, "member");
 
-		let result = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) expect(result.data.deletedTeams).toEqual([]);
@@ -264,9 +263,9 @@ describe("eraseAccount", () => {
 	test("ends the subject's live subscriptions and clears the local projection", async () => {
 		let { db } = createTestDatabase();
 		let billing = await createBilling(true);
-		await Subscription.sync(db, SUBJECT, entitlementState({ externalId: SUBJECT }));
+		await bindModels(db).subscriptions.sync(SUBJECT, entitlementState({ externalId: SUBJECT }));
 
-		let result = await eraseAccount(db, billing, SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), billing, SUBJECT, EMAIL);
 
 		expect(isSuccess(result)).toBe(true);
 		if (isSuccess(result)) expect(result.data.subscriptionsRevoked).toBe(1);
@@ -296,7 +295,7 @@ describe("eraseAccount", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		let result = await eraseAccount(db, await createFailingBilling(), SUBJECT, EMAIL);
+		let result = await eraseAccount(bindModels(db), await createFailingBilling(), SUBJECT, EMAIL);
 
 		expect(isFailure(result)).toBe(true);
 		if (isFailure(result)) expect(result.error.message).toContain("Could not cancel billing");
@@ -337,7 +336,7 @@ describe("eraseAccount", () => {
 			{ touch: true, returnRow: true },
 		);
 
-		await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 
 		expect(await db.count(userPreferences, { where: { subject_id: SUBJECT } })).toBe(0);
 		expect(await db.count(invites, { where: { email: EMAIL } })).toBe(0);
@@ -346,12 +345,14 @@ describe("eraseAccount", () => {
 
 	test("forgets the trial lead behind the same address, and is unbothered when there is none", async () => {
 		let { db } = createTestDatabase();
-		await Lead.upsertByEmail(db, { email: EMAIL, locale: "en", consented: false });
+		unwrap(
+			await bindModels(db).leads.upsertByEmail({ email: EMAIL, locale: "en", consented: false }),
+		);
 
-		await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
-		expect(await Lead.findByEmail(db, EMAIL)).toBeNull();
+		await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
+		expect(await bindModels(db).leads.findByEmail(EMAIL)).toBeNull();
 
-		let second = await eraseAccount(db, await createBilling(), SUBJECT, EMAIL);
+		let second = await eraseAccount(bindModels(db), await createBilling(), SUBJECT, EMAIL);
 		expect(isSuccess(second)).toBe(true);
 	});
 
@@ -366,16 +367,16 @@ describe("eraseAccount", () => {
 		await addMember(db, owned.id, SUBJECT);
 		await addMember(db, owned.id, "colleague-1", "member");
 		await addMember(db, joined.id, SUBJECT, "member");
-		await Subscription.sync(db, SUBJECT, entitlementState({ externalId: SUBJECT }));
+		await bindModels(db).subscriptions.sync(SUBJECT, entitlementState({ externalId: SUBJECT }));
 
 		/** One platform across both runs, so the second really finds an already-ended account. */
 		let billing = await createBilling(true);
 
-		let first = await eraseAccount(db, billing, SUBJECT, EMAIL);
+		let first = await eraseAccount(bindModels(db), billing, SUBJECT, EMAIL);
 		expect(isSuccess(first)).toBe(true);
 		if (isSuccess(first)) expect(first.data.subscriptionsRevoked).toBe(1);
 
-		let second = await eraseAccount(db, billing, SUBJECT, EMAIL);
+		let second = await eraseAccount(bindModels(db), billing, SUBJECT, EMAIL);
 
 		expect(isSuccess(second)).toBe(true);
 		if (isSuccess(second)) {

@@ -12,16 +12,12 @@ import { createEnv } from "@sdxc/cloudflare-mocks";
 import { Log } from "@sdxc/logger";
 import { Mailer } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { NotifyInput } from "~/app/jobs";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
-import FlowMonitor from "~/app/data/flow-monitor";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestDatabase } from "~/app/lib/test/db";
 
@@ -61,9 +57,9 @@ let notifySslResultMock = vi.fn(recordCall("ssl"));
 let notifyRegistrationResultMock = vi.fn(recordCall("registration"));
 
 /**
- * `~/app/data/monitor` imports `env` from `cloudflare:workers` at module load, and this
- * package's preload only supplies placeholder strings, so it's stubbed here too. Nothing
- * on this file's routing path reaches a binding, so none is supplied.
+ * The models reach `~/app/lib/queue`, which reads `env` from `cloudflare:workers` at module
+ * load, and this package's preload only supplies placeholder strings, so it's stubbed here
+ * too. Nothing on this file's routing path reaches a binding, so none is supplied.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
@@ -84,7 +80,7 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let notify = (await import("./notify")).default;
-let { default: Monitor } = await import("~/app/data/monitor");
+let { bindModels, publishModels } = await import("~/app/lib/test/models");
 
 /**
  * The wide event the run under test emitted. It lives out here because a run that asks for
@@ -98,6 +94,7 @@ async function runJob(db: Database, input: NotifyInput) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.notify, { id: "message-1", attempts: 1, input, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -135,15 +132,18 @@ beforeEach(() => {
 describe("notify", () => {
 	test("dispatches a TCP transition with a result rebuilt from the monitor row", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await TcpMonitor.create(db, "team-1", {
-			name: "Example host",
-			host: "example.com",
-			port: 443,
-			timeout_ms: 5000,
-			is_enabled: true,
-			last_status: "down",
-			last_response_time_ms: 1234,
-		});
+		let monitor = unwrap(
+			await bindModels(db).tcpMonitors.create({
+				team_id: "team-1",
+				name: "Example host",
+				host: "example.com",
+				port: 443,
+				timeout_ms: 5000,
+				is_enabled: true,
+				last_status: "down",
+				last_response_time_ms: 1234,
+			}),
+		);
 
 		await runJob(db, {
 			monitorType: "tcp",
@@ -177,14 +177,17 @@ describe("notify", () => {
 	 */
 	test("dispatches a DNS transition with the findings reloaded from the record table", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await DnsMonitor.create(db, "team-1", {
-			name: "Example domain",
-			domain: "example.com",
-			is_enabled: true,
-			last_status: "changed",
-		});
+		let monitor = unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: "team-1",
+				name: "Example domain",
+				domain: "example.com",
+				is_enabled: true,
+				last_status: "changed",
+			}),
+		);
 
-		await DnsMonitorRecord.importMany(db, monitor.id, [
+		await bindModels(db).dnsMonitorRecords.importMany(monitor.id, [
 			{
 				name: "example.com",
 				record_type: "MX",
@@ -243,18 +246,21 @@ describe("notify", () => {
 
 	test("dispatches a cron-job transition with both of its statuses", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await CronJobMonitor.create(db, "team-1", {
-			name: "Nightly backup",
-			description: null,
-			cron_expression: "0 0 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			status: "missed",
-			alert_on_late: false,
-			last_ping_at: null,
-			next_expected_at: Date.now(),
-			enabled_at: Date.now(),
-		});
+		let monitor = unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: "team-1",
+				name: "Nightly backup",
+				description: null,
+				cron_expression: "0 0 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				status: "missed",
+				alert_on_late: false,
+				last_ping_at: null,
+				next_expected_at: Date.now(),
+				enabled_at: Date.now(),
+			}),
+		);
 
 		await runJob(db, {
 			monitorType: "cron",
@@ -280,13 +286,16 @@ describe("notify", () => {
 	 */
 	test("dispatches a flow transition with the failing assertion reloaded from the result row", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await FlowMonitor.create(db, "team-1", {
-			name: "Checkout",
-			source: 'test "checkout" { }',
-			is_enabled: true,
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: "team-1",
+				name: "Checkout",
+				source: 'test "checkout" { }',
+				is_enabled: true,
+			}),
+		);
 
-		await FlowMonitor.recordCheckResult(db, monitor.id, {
+		await bindModels(db).flowMonitors.recordCheckResult(monitor.id, {
 			status: "down",
 			testsTotal: 4,
 			testsPassed: 2,
@@ -328,13 +337,17 @@ describe("notify", () => {
 
 	test("dispatches an SSL transition with days-until-expiry recomputed from the row", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await Monitor.create(db, "team-1", "author-1", {
-			name: "Example site",
-			url: "https://example.com",
-			ssl_monitoring_enabled: true,
-			ssl_expiry_warning_days: 30,
-			ssl_expires_at: Date.now() + 5 * 24 * 60 * 60 * 1000 + 60_000,
-		});
+		let monitor = unwrap(
+			await bindModels(db).monitors.create({
+				team_id: "team-1",
+				author_id: "author-1",
+				name: "Example site",
+				url: "https://example.com",
+				ssl_monitoring_enabled: true,
+				ssl_expiry_warning_days: 30,
+				ssl_expires_at: Date.now() + 5 * 24 * 60 * 60 * 1000 + 60_000,
+			}),
+		);
 
 		await runJob(db, {
 			monitorType: "ssl",
@@ -353,7 +366,13 @@ describe("notify", () => {
 
 	test("dispatches a registration transition against the DNS monitor it belongs to", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await DnsMonitor.create(db, "team-1", { name: "Acme", domain: "acme.com" });
+		let monitor = unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: "team-1",
+				name: "Acme",
+				domain: "acme.com",
+			}),
+		);
 
 		await runJob(db, {
 			monitorType: "registration",
@@ -375,7 +394,13 @@ describe("notify", () => {
 
 	test("finishes a registration transition naming a status registrations never have", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await DnsMonitor.create(db, "team-1", { name: "Acme", domain: "acme.com" });
+		let monitor = unwrap(
+			await bindModels(db).dnsMonitors.create({
+				team_id: "team-1",
+				name: "Acme",
+				domain: "acme.com",
+			}),
+		);
 
 		await expect(
 			runJob(db, {
@@ -405,13 +430,16 @@ describe("notify", () => {
 
 	test("never retries a status the monitor type doesn't have", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await TcpMonitor.create(db, "team-1", {
-			name: "Example host",
-			host: "example.com",
-			port: 443,
-			timeout_ms: 5000,
-			is_enabled: true,
-		});
+		let monitor = unwrap(
+			await bindModels(db).tcpMonitors.create({
+				team_id: "team-1",
+				name: "Example host",
+				host: "example.com",
+				port: 443,
+				timeout_ms: 5000,
+				is_enabled: true,
+			}),
+		);
 
 		await expect(
 			runJob(db, {
@@ -425,13 +453,16 @@ describe("notify", () => {
 
 	test("retries when the alert lookup itself fails", async () => {
 		let { db } = createTestDatabase();
-		let monitor = await TcpMonitor.create(db, "team-1", {
-			name: "Example host",
-			host: "example.com",
-			port: 443,
-			timeout_ms: 5000,
-			is_enabled: true,
-		});
+		let monitor = unwrap(
+			await bindModels(db).tcpMonitors.create({
+				team_id: "team-1",
+				name: "Example host",
+				host: "example.com",
+				port: 443,
+				timeout_ms: 5000,
+				is_enabled: true,
+			}),
+		);
 
 		notifyTcpResultMock.mockImplementation(async () => {
 			throw new Error("D1 unavailable");

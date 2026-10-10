@@ -168,7 +168,7 @@ describe("planDnsCheck", () => {
 		let monitor = await seedMonitor(db, "example.com");
 		await seedNames(db, monitor.id, ["www.example.com", "mail.example.com"]);
 
-		let plan = await planDnsCheck(db, monitor.id, monitor.domain);
+		let plan = await planDnsCheck(bindModels(db), monitor.id, monitor.domain);
 
 		expect(plan.names).toContain("example.com");
 		expect(plan.names).toHaveLength(3);
@@ -180,7 +180,7 @@ describe("planDnsCheck", () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db, "unimported.example.com");
 
-		let plan = await planDnsCheck(db, monitor.id, monitor.domain);
+		let plan = await planDnsCheck(bindModels(db), monitor.id, monitor.domain);
 
 		expect(plan.names).toEqual(["unimported.example.com"]);
 		expect(plan.tracked).toBe(0);
@@ -196,7 +196,7 @@ describe("planDnsCheck", () => {
 			Array.from({ length: MAX_NAMES_PER_CHECK + 5 }, (_, index) => `n${index}.big.example.com`),
 		);
 
-		let plan = await planDnsCheck(db, monitor.id, monitor.domain);
+		let plan = await planDnsCheck(bindModels(db), monitor.id, monitor.domain);
 
 		expect(plan.names).toHaveLength(MAX_NAMES_PER_CHECK);
 		expect(plan.overflow).toBe(6);
@@ -252,7 +252,7 @@ describe("importDiscovery", () => {
 		);
 
 		let discovery = await importDiscovery(
-			db,
+			bindModels(db),
 			monitor.id,
 			["example.com"],
 			[{ name: "example.com", type: "TXT", value: "v=spf1 -all", line: 1 }],
@@ -283,11 +283,11 @@ describe("importDiscovery", () => {
 			sweepOf(name, [answered(name, "A", ["1.2.3.4"])]),
 		);
 
-		await importDiscovery(db, monitor.id, ["example.com"]);
+		await importDiscovery(bindModels(db), monitor.id, ["example.com"]);
 		let [record] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 		await models.dnsMonitorRecords.setEnabled(monitor.id, [record!.id], false);
 
-		let discovery = await importDiscovery(db, monitor.id, ["example.com"]);
+		let discovery = await importDiscovery(bindModels(db), monitor.id, ["example.com"]);
 
 		expect(discovery.imported).toBe(0);
 		let [after] = await models.dnsMonitorRecords.listByMonitor(monitor.id);
@@ -307,7 +307,7 @@ describe("recordDnsCheck", () => {
 		let monitor = await seedMonitor(db, "example.com");
 		await seedNames(db, monitor.id, ["example.com"]);
 
-		let run = await recordDnsCheck(db, monitor.id, ["example.com"], 3);
+		let run = await recordDnsCheck(bindModels(db), monitor.id, ["example.com"], 3);
 
 		expect(run.queriesFailed).toBe(3 * QUERIES_PER_NAME);
 		expect(run.status).toBe("error");
@@ -331,7 +331,7 @@ describe("recordDnsCheck", () => {
 			sweepOf(name, [answered(name, "TXT", ["v=spf1 -all"])]),
 		);
 
-		let run = await recordDnsCheck(db, monitor.id, ["example.com"]);
+		let run = await recordDnsCheck(bindModels(db), monitor.id, ["example.com"]);
 
 		expect(run.status).toBe("changed");
 		expect(run.counts.recordsNew).toBe(1);
@@ -349,7 +349,7 @@ describe("recordDnsCheck", () => {
 			sweepOf(name, [answered(name, "A", ["5.6.7.8"]), failed(name, "TXT")]),
 		);
 
-		let run = await recordDnsCheck(db, monitor.id, ["example.com"]);
+		let run = await recordDnsCheck(bindModels(db), monitor.id, ["example.com"]);
 
 		expect(run.status).toBe("error");
 		expect(run.counts.recordsChanged).toBe(1);
@@ -431,7 +431,7 @@ describe("scheduled and on-demand checks", () => {
 		});
 		await checkDns(ctx);
 
-		let run = await runDnsCheck(db, onDemand.id, onDemand.domain);
+		let run = await runDnsCheck(bindModels(db), onDemand.id, onDemand.domain);
 
 		expect(await resultOf(db, onDemand.id)).toEqual(await resultOf(db, scheduled.id));
 		expect(await recordsOf(db, onDemand.id)).toEqual(await recordsOf(db, scheduled.id));

@@ -1,6 +1,6 @@
 /**
- * Tests for the alert delivery history page controller. Doesn't import
- * `~/app/data/monitor`, so no `cloudflare:workers` mock is needed. This page lists
+ * Tests for the alert delivery history page controller. It reads the database alone,
+ * so no `cloudflare:workers` mock is needed. This page lists
  * `alert_events` (delivery outcomes), not alerts themselves, so the non-empty path
  * needs a seeded `alertEvents` row, not just an alert. `getViewer()`/`ctx.team`/
  * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for

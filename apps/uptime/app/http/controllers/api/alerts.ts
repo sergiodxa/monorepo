@@ -12,24 +12,24 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { AlertConfig, SelectAlert } from "~/database/schema";
 
-import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_ALERT_BODY } from "~/app/http/openapi/alerts";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
+import { isResolvableScope } from "~/app/services/scope-monitors";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertsRoutes } from "~/routes/api-groups";
 
@@ -145,7 +145,7 @@ export default createController(alertsRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = Alert.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.alerts.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -175,7 +175,7 @@ export default createController(alertsRoutes, {
 		alertsCreate: {
 			middleware: [requireApiKey("alerts:write"), idempotent],
 			handler: async (ctx) => {
-				let existingCount = await Alert.countByTeam(ctx.db, ctx.apiTeam.id);
+				let existingCount = await ctx.models.alerts.inTeam(ctx.apiTeam.id).count();
 				if (existingCount >= MAX_ALERTS_PER_TEAM) {
 					return apiProblems.limitExceeded({
 						detail: `Maximum of ${MAX_ALERTS_PER_TEAM} alerts per team`,
@@ -192,7 +192,7 @@ export default createController(alertsRoutes, {
 				}
 
 				let scope = apiScopeFrom(result.data);
-				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				}
 
@@ -206,7 +206,8 @@ export default createController(alertsRoutes, {
 				 * (see `CreateAlertValues`'s comment); the runtime shape is still guaranteed by
 				 * that same schema, so this restates it for `buildConfig`'s exhaustive switch.
 				 */
-				let alert = await Alert.create(ctx.db, ctx.apiTeam.id, {
+				let alert = await ctx.models.alerts.create({
+					team_id: ctx.apiTeam.id,
 					name: result.data.name,
 					monitor_type: scope.monitorType,
 					monitor_id: scope.monitorId,
@@ -215,7 +216,7 @@ export default createController(alertsRoutes, {
 					config: buildConfig(result.data as CreateAlertValues),
 				});
 
-				return apiSuccess({ alert: serializeAlertStrategyOnly(alert) }, Created);
+				return apiSuccess({ alert: serializeAlertStrategyOnly(unwrap(alert)) }, Created);
 			},
 		},
 	},

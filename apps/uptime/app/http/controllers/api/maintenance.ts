@@ -11,15 +11,13 @@
 import { Created } from "@sdxc/http/status-code";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
-import { isResolvableScope } from "~/app/data/scope-monitors";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
@@ -28,6 +26,7 @@ import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
+import { isResolvableScope } from "~/app/services/scope-monitors";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { maintenanceRoutes } from "~/routes/api-groups";
 
@@ -90,7 +89,7 @@ export default createController(maintenanceRoutes, {
 					});
 
 				// Chaining returns new queries, so the same one both counts and pages.
-				let query = MaintenanceWindow.listByTeamQuery(ctx.db, ctx.apiTeam.id);
+				let query = ctx.models.maintenanceWindows.inTeam(ctx.apiTeam.id);
 
 				let page = await Pagination.byKeyset(query, {
 					orderBy: NEWEST_FIRST,
@@ -133,11 +132,12 @@ export default createController(maintenanceRoutes, {
 				}
 
 				let scope = apiScopeFrom(result.data);
-				if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+				if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 					return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 				}
 
-				let window = await MaintenanceWindow.create(ctx.db, ctx.apiTeam.id, {
+				let window = await ctx.models.maintenanceWindows.create({
+					team_id: ctx.apiTeam.id,
 					monitor_type: scope.monitorType,
 					monitor_id: scope.monitorId,
 					name: result.data.name,
@@ -147,7 +147,10 @@ export default createController(maintenanceRoutes, {
 					show_on_status_page: result.data.showOnStatusPage,
 				});
 
-				return apiSuccess({ maintenanceWindow: serializeMaintenanceWindow(window) }, Created);
+				return apiSuccess(
+					{ maintenanceWindow: serializeMaintenanceWindow(unwrap(window)) },
+					Created,
+				);
 			},
 		},
 	},

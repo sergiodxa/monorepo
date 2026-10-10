@@ -2,7 +2,7 @@
  * Tests for the new cron-job monitor page controller: an empty form with no data
  * dependency beyond the team, so this checks the 200 response, the fields'
  * presence, and their grouping into the three settings cards via each section's
- * stable anchor id. Skips `~/app/data/monitor`, so no `cloudflare:workers` mock is
+ * stable anchor id. It reads no binding, so no `cloudflare:workers` mock is
  * needed. Auth and team state are seeded directly by a fake middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -18,12 +19,11 @@ import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, InsertFlowMonitorResult, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import FlowMonitor from "~/app/data/flow-monitor";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -94,7 +94,9 @@ async function createTeamRow(db: Db, options: { verified?: boolean } = {}): Prom
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -166,8 +168,20 @@ describe("GET /api/v1/flow-monitors", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 
-		await FlowMonitor.create(db, team.id, { name: "Mine", source: validSource() });
-		await FlowMonitor.create(db, otherTeam.id, { name: "Theirs", source: validSource() });
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Mine",
+				source: validSource(),
+			}),
+		);
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -186,8 +200,20 @@ describe("GET /api/v1/flow-monitors", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 
-		await FlowMonitor.create(db, team.id, { name: "First", source: validSource() });
-		await FlowMonitor.create(db, team.id, { name: "Second", source: validSource() });
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "First",
+				source: validSource(),
+			}),
+		);
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Second",
+				source: validSource(),
+			}),
+		);
 
 		let path = routes.api.v1.flowMonitors.index.href();
 		let response = await dispatch(db, { method: "GET", path: `${path}?perPage=1`, key });
@@ -225,7 +251,13 @@ describe("GET /api/v1/flow-monitors", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 
-		await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -516,7 +548,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -537,10 +575,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			source: validSource(),
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -558,7 +599,13 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "PUT",
@@ -583,7 +630,13 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "PUT",
@@ -601,7 +654,13 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "PUT",
@@ -620,10 +679,13 @@ describe("PUT /api/v1/flow-monitors/:flowMonitorId", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			source: validSource(),
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "PUT",
@@ -641,8 +703,14 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
-		await FlowMonitor.recordCheckResult(db, monitor.id, {
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
+		await bindModels(db).flowMonitors.recordCheckResult(monitor.id, {
 			status: "up",
 			testsTotal: 1,
 			testsPassed: 1,
@@ -678,10 +746,13 @@ describe("DELETE /api/v1/flow-monitors/:flowMonitorId", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			source: validSource(),
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "DELETE",
@@ -701,7 +772,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		await createResultRow(db, monitor.id, {
 			status: "up",
@@ -766,7 +843,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		await createResultRow(db, monitor.id, { status: "up", checked_at: 1_000 });
 		await createResultRow(db, monitor.id, { status: "down", checked_at: 2_000 });
@@ -796,7 +879,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		let path = routes.api.v1.flowMonitors.results.href({
 			flowMonitorId: encodeId("flow", monitor.id),
@@ -812,10 +901,13 @@ describe("GET /api/v1/flow-monitors/:flowMonitorId/results", () => {
 		let team = await createTeamRow(db);
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			source: validSource(),
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -836,11 +928,35 @@ describe("GET /api/v1/flow-monitors total", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
 
-		await FlowMonitor.create(db, team.id, { name: "One", source: validSource() });
-		await FlowMonitor.create(db, team.id, { name: "Two", source: validSource() });
-		await FlowMonitor.create(db, team.id, { name: "Three", source: validSource() });
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "One",
+				source: validSource(),
+			}),
+		);
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Two",
+				source: validSource(),
+			}),
+		);
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Three",
+				source: validSource(),
+			}),
+		);
 		// A monitor the key cannot see must not reach the total either.
-		await FlowMonitor.create(db, otherTeam.id, { name: "Theirs", source: validSource() });
+		unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method: "GET",
@@ -861,7 +977,13 @@ describe("GET /api/v1/flow-monitors total", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Sign in", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Sign in",
+				source: validSource(),
+			}),
+		);
 
 		await createResultRow(db, monitor.id, { checked_at: 1_000 });
 		await createResultRow(db, monitor.id, { checked_at: 2_000 });
@@ -984,7 +1106,13 @@ describe("one flow monitor's routes", () => {
 	test.each(itemRoutes)("%s %s answers 401 without an API key", async (method, leaf) => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, {
 			method,
@@ -1006,10 +1134,13 @@ describe("one flow monitor's routes", () => {
 			let otherScope: ApiKeyScope =
 				scope === "flow-monitors:read" ? "flow-monitors:write" : "flow-monitors:read";
 			let key = await createApiKey(db, team.id, [otherScope]);
-			let monitor = await FlowMonitor.create(db, team.id, {
-				name: "Login",
-				source: validSource(),
-			});
+			let monitor = unwrap(
+				await bindModels(db).flowMonitors.create({
+					team_id: team.id,
+					name: "Login",
+					source: validSource(),
+				}),
+			);
 
 			let response = await dispatch(db, {
 				method,
@@ -1031,10 +1162,13 @@ describe("one flow monitor's routes", () => {
 			let { db } = createTestDatabase();
 			let team = await createTeamRow(db);
 			let key = await createApiKey(db, team.id, [scope]);
-			let monitor = await FlowMonitor.create(db, team.id, {
-				name: "Login",
-				source: validSource(),
-			});
+			let monitor = unwrap(
+				await bindModels(db).flowMonitors.create({
+					team_id: team.id,
+					name: "Login",
+					source: validSource(),
+				}),
+			);
 
 			let response = await dispatch(db, {
 				method,
@@ -1071,11 +1205,14 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, {
-			name: "Login",
-			source: validSource(),
-			interval_seconds: 900,
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+				interval_seconds: 900,
+			}),
+		);
 
 		let response = await dispatch(db, mergePatch(monitor.id, { name: "Patched" }, { key }));
 
@@ -1090,12 +1227,15 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, {
-			name: "Login",
-			source: validSource(),
-			interval_seconds: 900,
-			is_enabled: false,
-		});
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+				interval_seconds: 900,
+				is_enabled: false,
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -1112,7 +1252,13 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(db, mergePatch(monitor.id, { source: null }, { key }));
 
@@ -1125,7 +1271,13 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -1142,7 +1294,13 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -1158,7 +1316,13 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -1174,7 +1338,13 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let { db } = createTestDatabase();
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["flow-monitors:write"]);
-		let monitor = await FlowMonitor.create(db, team.id, { name: "Login", source: validSource() });
+		let monitor = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Login",
+				source: validSource(),
+			}),
+		);
 		let later = Date.now() + 86_400_000;
 		await db.update(flowMonitors, monitor.id, { next_due_at: later });
 		let put = (body: Record<string, unknown>) => ({
@@ -1201,11 +1371,20 @@ describe("PATCH /api/v1/flow-monitors/:flowMonitorId", () => {
 		let otherTeam = await createTeamRow(db);
 		let writer = await createApiKey(db, team.id, ["flow-monitors:write"]);
 		let reader = await createApiKey(db, team.id, ["flow-monitors:read"]);
-		let foreign = await FlowMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			source: validSource(),
-		});
-		let own = await FlowMonitor.create(db, team.id, { name: "Mine", source: validSource() });
+		let foreign = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				source: validSource(),
+			}),
+		);
+		let own = unwrap(
+			await bindModels(db).flowMonitors.create({
+				team_id: team.id,
+				name: "Mine",
+				source: validSource(),
+			}),
+		);
 
 		let notFound = await dispatch(db, mergePatch(foreign.id, { name: "x" }, { key: writer }));
 		let unauthorized = await dispatch(db, mergePatch(own.id, { name: "x" }));

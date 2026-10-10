@@ -19,7 +19,7 @@ import jobs from "~/app/jobs";
 import cleanCronJobPings from "~/app/jobs/clean-cron-job-pings";
 import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { cronJobPings } from "~/database/schema";
 
@@ -53,6 +53,7 @@ describe("cleanCronJobPings", () => {
 		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.cleanCronJobPings, { id: "message-1", attempts: 1, log });
 		ctx.set(Database, db, { property: "database" });
+		publishModels(ctx, db);
 		await cleanCronJobPings(ctx);
 		log.emit();
 

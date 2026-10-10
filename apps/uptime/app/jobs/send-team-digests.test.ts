@@ -16,15 +16,14 @@ import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
-import { failure, isSuccess, success } from "@sdxc/result";
+import { failure, isSuccess, success, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
-import type { DigestPeriod } from "~/app/data/team-digest";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
+import type { DigestPeriod } from "~/app/repositories/team-digests";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
-import Monitor from "~/app/data/monitor";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
@@ -36,6 +35,7 @@ import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { installFlags } from "~/app/lib/test/flags";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/lib/test/unsubscribe-secret";
 import {
 	flowMonitors,
@@ -105,6 +105,7 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(job, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {
 		property: "mailer",
@@ -151,10 +152,14 @@ async function seedMember(db: Database, teamId: string, subjectId: string, email
 
 /** An enabled HTTP monitor, which is what makes its team's members due for a digest at all. */
 async function seedMonitor(db: Database, teamId: string, name: string) {
-	return await Monitor.create(db, teamId, "author-1", {
-		name,
-		url: `https://${name.toLowerCase()}.example.com`,
-	});
+	return unwrap(
+		await bindModels(db).monitors.create({
+			team_id: teamId,
+			author_id: "author-1",
+			name,
+			url: `https://${name.toLowerCase()}.example.com`,
+		}),
+	);
 }
 
 /** An enabled flow monitor, which its team's digest reports on like any other kind. */
@@ -212,7 +217,7 @@ function dayLabel(daysAgo: number): string {
 }
 
 /**
- * Disables a monitor the moment `TeamDigest.listDue` has answered.
+ * Disables a monitor the moment `listDigestRecipients` has answered.
  *
  * The only way to reach the race the job guards against, since both queries require an
  * enabled monitor: this is the branch where the first query said yes and the second says no.

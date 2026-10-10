@@ -19,11 +19,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import FlowMonitor from "~/app/data/flow-monitor";
-import Monitor from "~/app/data/monitor";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
@@ -65,7 +60,7 @@ function Breakdown(handle: Handle<Breakdown.Props>) {
 /**
  * GET /app/:team/dashboard/cards/count/:resource — one monitor-type count stat card,
  * fragment-only. HTTP's up/down state lives per-check in Analytics Engine, so its
- * breakdown pairs a summaries query with `Monitor.listByTeam` for the total.
+ * breakdown pairs a summaries query with the team's monitor list for the total.
  */
 export default createAction(routes.app.team.dashboard.cards.count, {
 	middleware: [requireUser, requireTeam],
@@ -73,7 +68,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		let { resource } = s.parse(s.object({ resource: s.enum_(RESOURCES) }), ctx.params);
 
 		if (resource === "dns") {
-			let dnsMonitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
+			let dnsMonitors = await ctx.models.dnsMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			let dnsCounts = {
 				total: dnsMonitors.length,
 				ok: dnsMonitors.filter((monitor) => monitor.last_status === "ok").length,
@@ -123,7 +121,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "tcp") {
-			let tcpMonitors = await TcpMonitor.listByTeam(ctx.db, ctx.team.id);
+			let tcpMonitors = await ctx.models.tcpMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			let tcpCounts = {
 				total: tcpMonitors.length,
 				up: tcpMonitors.filter((monitor) => monitor.last_status === "up").length,
@@ -167,7 +168,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "flow") {
-			let flowMonitors = await FlowMonitor.listByTeam(ctx.db, ctx.team.id);
+			let flowMonitors = await ctx.models.flowMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			let flowCounts = {
 				total: flowMonitors.length,
 				up: flowMonitors.filter((monitor) => monitor.last_status === "up").length,
@@ -222,7 +226,10 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		if (resource === "cron-jobs") {
-			let cronJobMonitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
+			let cronJobMonitors = await ctx.models.cronJobMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			let cronCounts = {
 				total: cronJobMonitors.length,
 				healthy: cronJobMonitors.filter((monitor) => monitor.status === "healthy").length,
@@ -272,7 +279,7 @@ export default createAction(routes.app.team.dashboard.cards.count, {
 		}
 
 		let [monitors, summaries] = await Promise.all([
-			Monitor.listByTeam(ctx.db, ctx.team.id),
+			ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
 			getTeamHttpSummaries(ctx.team.id),
 		]);
 		let summaryList = isFailure(summaries) ? [] : summaries.data;

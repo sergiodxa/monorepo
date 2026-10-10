@@ -1,7 +1,7 @@
 /**
  * Tests for the dashboard per-monitor-type count stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/data/monitor` and
- * `~/app/services/analytics` both read `env` at module load. MSW intercepts
+ * `cloudflare:workers` is mocked because `~/app/services/analytics` reads `env`
+ * at module load. MSW intercepts
  * the `http` resource's `queryAnalytics` call so it never hits the network;
  * every other resource's count comes straight from DB tables. `ctx.team`,
  * `ctx.membership`, auth, and intl state are seeded directly, standing in

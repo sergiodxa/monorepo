@@ -9,8 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { toDayKey } from "@sdxc/dates";
 import { inList } from "remix/data-table";
 
@@ -20,23 +18,6 @@ import type {
 	OptionalEmail,
 	SelectStatusPage,
 	SupportedLanguage,
-} from "~/database/schema";
-
-import {
-	alerts,
-	cronJobMonitors,
-	dnsMonitorRecords,
-	dnsMonitors,
-	maintenanceWindows,
-	monitorContentChecks,
-	monitors,
-	statusPageCronJobs,
-	statusPageDnsMonitors,
-	statusPageMonitors,
-	statusPages,
-	statusPageTcpMonitors,
-	tcpMonitors,
-	teamDomains,
 } from "~/database/schema";
 
 /**
@@ -145,14 +126,12 @@ const EXCLUSIONS = [
 /**
  * Builds the export document for one signed-in subject.
  *
- * @param db - Database handle each owned team's configuration is read from, table by table.
- * @param models - The same database's models, for the memberships and preferences.
+ * @param models - The models bound to the app database, each owned team read table by table.
  * @param subject - The exporter, as the ID token on the request describes them.
  * @param now - Timestamp recorded as `exportedAt`; injectable so a test can assert it.
  * @returns The document, ready to be serialized.
  */
 export async function buildAccountExport(
-	db: Database,
 	models: UptimeModels,
 	subject: ExportSubject,
 	now: Date = new Date(),
@@ -166,7 +145,7 @@ export async function buildAccountExport(
 		rows.map(async ({ team, role, isOwner }) => {
 			let [members, owned] = await Promise.all([
 				models.memberships.inTeam(team.id).all(),
-				isOwner ? exportOwnedTeam(db, team.id, team.name, team.slug) : null,
+				isOwner ? exportOwnedTeam(models, team.id, team.name, team.slug) : null,
 			]);
 			let own = members.find((member) => member.subject_id === subject.id);
 
@@ -220,46 +199,50 @@ export function accountExportFilename(subjectId: string, now: Date = new Date())
  * cap, so a truncated read is detected without a second counting query.
  */
 async function exportOwnedTeam(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	name: string,
 	slug: string,
 ): Promise<ExportedOwnedTeam> {
 	let [http, dns, tcp, cron, alertRows, windows, pages, domains] = await Promise.all([
-		db.findMany(monitors, { where: { team_id: teamId } }),
-		db.findMany(dnsMonitors, { where: { team_id: teamId } }),
-		db.findMany(tcpMonitors, { where: { team_id: teamId } }),
-		db.findMany(cronJobMonitors, { where: { team_id: teamId } }),
-		db.findMany(alerts, { where: { team_id: teamId } }),
-		db.findMany(maintenanceWindows, { where: { team_id: teamId } }),
-		db.findMany(statusPages, { where: { team_id: teamId } }),
-		db.findMany(teamDomains, { where: { team_id: teamId } }),
+		models.monitors.inTeam(teamId).all(),
+		models.dnsMonitors.inTeam(teamId).all(),
+		models.tcpMonitors.inTeam(teamId).all(),
+		models.cronJobMonitors.inTeam(teamId).all(),
+		models.alerts.inTeam(teamId).all(),
+		models.maintenanceWindows.inTeam(teamId).all(),
+		models.statusPages.inTeam(teamId).all(),
+		models.teamDomains.inTeam(teamId).all(),
 	]);
 
 	let [contentChecks, dnsRecords] = await Promise.all([
 		http.length === 0
 			? []
-			: db.findMany(monitorContentChecks, {
-					where: inList(
-						"monitor_id",
-						http.map((monitor) => monitor.id),
-					),
-				}),
+			: models.contentChecks
+					.query()
+					.where(
+						inList(
+							"monitor_id",
+							http.map((monitor) => monitor.id),
+						),
+					)
+					.all(),
 		dns.length === 0
 			? []
-			: db.findMany(dnsMonitorRecords, {
-					where: inList(
-						"dns_monitor_id",
-						dns.map((monitor) => monitor.id),
-					),
-					orderBy: [
-						["dns_monitor_id", "asc"],
-						["name", "asc"],
-						["record_type", "asc"],
-						["value", "asc"],
-					],
-					limit: MAX_EXPORTED_DNS_RECORDS_PER_TEAM + 1,
-				}),
+			: models.dnsMonitorRecords
+					.query()
+					.where(
+						inList(
+							"dns_monitor_id",
+							dns.map((monitor) => monitor.id),
+						),
+					)
+					.orderBy("dns_monitor_id", "asc")
+					.orderBy("name", "asc")
+					.orderBy("record_type", "asc")
+					.orderBy("value", "asc")
+					.limit(MAX_EXPORTED_DNS_RECORDS_PER_TEAM + 1)
+					.all(),
 	]);
 
 	let dnsRecordsTruncated = dnsRecords.length > MAX_EXPORTED_DNS_RECORDS_PER_TEAM;
@@ -300,7 +283,7 @@ async function exportOwnedTeam(
 			destination: alertDestination(alert.config),
 		})),
 		maintenanceWindows: windows.map(({ team_id: _team, ...window }) => window),
-		statusPages: await Promise.all(pages.map((page) => exportStatusPage(db, page))),
+		statusPages: await Promise.all(pages.map((page) => exportStatusPage(models, page))),
 	};
 }
 
@@ -316,14 +299,14 @@ function alertDestination(config: AlertConfig): string | null {
 	return null;
 }
 
-/** One status page plus the services attached to it, by id and display order. */
-async function exportStatusPage(db: Database, page: SelectStatusPage) {
-	let [attachedMonitors, attachedDns, attachedTcp, attachedCron] = await Promise.all([
-		db.findMany(statusPageMonitors, { where: { status_page_id: page.id } }),
-		db.findMany(statusPageDnsMonitors, { where: { status_page_id: page.id } }),
-		db.findMany(statusPageTcpMonitors, { where: { status_page_id: page.id } }),
-		db.findMany(statusPageCronJobs, { where: { status_page_id: page.id } }),
-	]);
+/** One status page plus the services attached to it, by id, in display order. */
+async function exportStatusPage(models: UptimeModels, page: SelectStatusPage) {
+	let {
+		monitors: attachedMonitors,
+		dnsMonitors: attachedDns,
+		tcpMonitors: attachedTcp,
+		cronJobs: attachedCron,
+	} = await models.statusPages.listAttachments(page.id);
 
 	let { team_id: _team, ...rest } = page;
 

@@ -13,13 +13,13 @@ import { vstack } from "@sdxc/u/layout";
 import { Button, Input, Switch, TextField } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -40,7 +40,7 @@ export default createAction(routes.app.team.alerts.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
 
 		let t = withPrefix(ctx.intl.t, "page.alerts.form.fields");
 

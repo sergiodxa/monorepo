@@ -36,8 +36,8 @@ export default createAction(routes.statusPageMaintenanceEvent, async (ctx) => {
 
 	apportionCostByTeam([page.team_id]);
 
-	let services = await listPageServices(ctx.db, page);
-	let entries = await listPublishedMaintenance(ctx.db, page, services, Date.now());
+	let services = await listPageServices(ctx.models, page);
+	let entries = await listPublishedMaintenance(ctx.models, page, services, Date.now());
 	let entry = entries.find((candidate) => candidate.window.id === windowId);
 	if (!entry) return notFound("Not Found");
 

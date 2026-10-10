@@ -204,7 +204,7 @@ export default createController(dnsMonitorsRoutes, {
 				let queriesFailed = 0;
 				try {
 					let discovery = await importDiscovery(
-						ctx.db,
+						ctx.models,
 						dnsMonitor.id,
 						names,
 						zoneFile?.records ?? [],

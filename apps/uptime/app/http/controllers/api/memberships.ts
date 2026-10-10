@@ -14,7 +14,6 @@ import requireApiKey from "~/app/http/middleware/require-api-key";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import { memberships } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** GET /api/v1/memberships — lists the team's memberships. */
@@ -25,8 +24,7 @@ export const membershipsIndex = createAction(routes.api.v1.memberships, {
 		if (isFailure(params))
 			return apiProblems.badRequest({ detail: params.error.message, instance: problemInstance() });
 
-		// Chaining returns new queries, so the same one both counts and pages.
-		let query = ctx.db.query(memberships).where({ team_id: ctx.apiTeam.id });
+		let query = ctx.models.memberships.inTeam(ctx.apiTeam.id);
 
 		/**
 		 * The ordering is left off the query deliberately: `Pagination.byKeyset()` owns it,

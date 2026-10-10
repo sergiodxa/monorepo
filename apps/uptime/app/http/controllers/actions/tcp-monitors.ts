@@ -10,7 +10,7 @@
 
 import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
@@ -18,8 +18,6 @@ import { Session } from "remix/session";
 
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 
-import Subscription from "~/app/data/subscription";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import {
 	CreateTcpMonitorSchema,
 	TcpMonitorIdSchema,
@@ -46,7 +44,9 @@ export const createTcpMonitor = createAction(routes.actions.monitor.tcp.create, 
 		});
 	}
 
-	let monitor = await TcpMonitor.create(ctx.db, ctx.team.id, result.data);
+	let monitor = unwrap(
+		await ctx.models.tcpMonitors.create({ team_id: ctx.team.id, ...result.data }),
+	);
 
 	session?.flash("toast", { intent: "success", message: `TCP monitor "${monitor.name}" created.` });
 	return redirect(
@@ -73,10 +73,10 @@ export const updateTcpMonitor = createAction(routes.actions.monitor.tcp.update, 
 	}
 
 	let { monitor_id, ...values } = result.data;
-	let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitor_id);
+	let existing = await ctx.models.tcpMonitors.inTeam(ctx.team.id).find(monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await TcpMonitor.updateById(ctx.db, monitor_id, values);
+	unwrap(await ctx.models.tcpMonitors.update(monitor_id, values));
 
 	session?.flash("toast", { intent: "success", message: "TCP monitor updated." });
 	return redirect(
@@ -96,10 +96,10 @@ export const deleteTcpMonitor = createAction(routes.actions.monitor.tcp.delete, 
 		});
 	}
 
-	let existing = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let existing = await ctx.models.tcpMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!existing) return notFound("Not Found");
 
-	await TcpMonitor.deleteById(ctx.db, result.data.monitor_id);
+	unwrap(await ctx.models.tcpMonitors.delete(result.data.monitor_id));
 
 	session?.flash("toast", {
 		intent: "success",
@@ -125,7 +125,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 		});
 	}
 
-	let monitor = await TcpMonitor.findByIdForTeam(ctx.db, ctx.team.id, result.data.monitor_id);
+	let monitor = await ctx.models.tcpMonitors.inTeam(ctx.team.id).find(result.data.monitor_id);
 	if (!monitor) return notFound("Not Found");
 
 	/**
@@ -133,7 +133,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	 * gets their check — refusing a paying customer over an inconclusive lookup is the worse
 	 * mistake. The same reading every other manual check takes.
 	 */
-	if ((await Subscription.stateFor(ctx.db, ctx.team.owner_id)) === "inactive") {
+	if ((await ctx.models.subscriptions.stateFor(ctx.team.owner_id)) === "inactive") {
 		session?.flash("toast", {
 			intent: "error",
 			message: ctx.intl.t("actions.checks.subscriptionRequired"),
@@ -145,7 +145,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	}
 
 	let checkResult = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
-	let resultId = await TcpMonitor.recordCheckResult(ctx.db, monitor.id, checkResult);
+	let resultId = await ctx.models.tcpMonitors.recordCheckResult(monitor.id, checkResult);
 
 	/**
 	 * Written here, at the same point the scheduled sweep writes it, so a manual and a
@@ -178,7 +178,7 @@ export const checkTcpMonitor = createAction(routes.actions.monitor.tcp.check, as
 	);
 
 	await notifyTcpResult(
-		ctx.db,
+		ctx.models,
 		ctx.email,
 		monitor,
 		monitor.last_status as TcpCheckStatus | null,

@@ -1,6 +1,6 @@
 /**
- * Tests for the TCP monitor uptime-history fragment controller. `~/app/data/tcp-monitor`
- * keeps to database-safe imports, so this suite needs only the database fixture below.
+ * Tests for the TCP monitor uptime-history fragment controller. The page reads the
+ * database alone, so this suite needs only the database fixture below.
  * `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded directly by a fake
  * middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.
  *
@@ -12,6 +12,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -22,11 +23,11 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { memberships, teams, tcpMonitors } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -117,17 +118,19 @@ describe("tcp-monitor-card-uptime-history", () => {
 		);
 
 		let today = new Date().toISOString().slice(0, 10);
-		await MonitorDailyStats.upsertDay(db, {
-			monitor_id: monitor.id,
-			monitor_type: "tcp",
-			date: today,
-			total_checks: 10,
-			successful_checks: 10,
-			failed_checks: 0,
-			avg_response_time_ms: 100,
-			max_response_time_ms: 120,
-			status: "up",
-		});
+		unwrap(
+			await bindModels(db).monitorDailyStats.upsertDay({
+				monitor_id: monitor.id,
+				monitor_type: "tcp",
+				date: today,
+				total_checks: 10,
+				successful_checks: 10,
+				failed_checks: 0,
+				avg_response_time_ms: 100,
+				max_response_time_ms: 120,
+				status: "up",
+			}),
+		);
 
 		let response = await send(db, team, membership, monitor.id);
 		expect(response.status).toBe(200);

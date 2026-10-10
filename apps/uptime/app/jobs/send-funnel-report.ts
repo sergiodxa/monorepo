@@ -14,16 +14,14 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { TrialDailyCounters } from "~/app/data/trial-daily-stats";
+import type { TrialDailyCounters } from "~/app/models/trial-daily-stats";
 import type { SelectTrialConversion } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import { getYesterdayDateUtc, utcDayBounds } from "~/app/data/monitor-daily-stats";
-import TrialConversion, { trialConversionUrls } from "~/app/data/trial-conversion";
-import TrialDailyStats, { isEmptyDay } from "~/app/data/trial-daily-stats";
-import TrialWatch from "~/app/data/trial-watch";
 import { FunnelReportEmail } from "~/app/emails/funnel-report";
 import jobs from "~/app/jobs";
+import { getYesterdayDateUtc, utcDayBounds } from "~/app/models/monitor-daily-stats";
+import { trialConversionUrls } from "~/app/models/trial-conversions";
+import { isEmptyDay } from "~/app/models/trial-daily-stats";
 import { recordCost } from "~/app/services/cost";
 
 /**
@@ -60,10 +58,10 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	 */
 
 	let [leads, watches, paid, signups] = await Promise.all([
-		Lead.countFunnelActivity(ctx.database, start, end),
-		TrialWatch.countFunnelActivity(ctx.database, start, end),
-		TrialConversion.listPaidBetween(ctx.database, start, end),
-		TrialConversion.listSignedUpBetween(ctx.database, start, end),
+		ctx.models.leads.countFunnelActivity(start, end),
+		ctx.models.trialWatches.countFunnelActivity(start, end),
+		ctx.models.trialConversions.listPaidBetween(start, end),
+		ctx.models.trialConversions.listSignedUpBetween(start, end),
 	]);
 
 	let counters: TrialDailyCounters = {
@@ -80,7 +78,7 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 	};
 
 	/** Written first and unconditionally: the row outlives every table it was counted from. */
-	await TrialDailyStats.upsertDay(ctx.database, { date, ...counters });
+	await ctx.models.trialDailyStats.upsertDay({ date, ...counters });
 
 	ctx.log.set({
 		funnel: {
@@ -104,7 +102,7 @@ export default createJobHandler(jobs.sendFunnelReport, async (ctx) => {
 		return;
 	}
 
-	let totals = await TrialDailyStats.totalsBetween(ctx.database, startOfTotals(date), date);
+	let totals = await ctx.models.trialDailyStats.totalsBetween(startOfTotals(date), date);
 
 	recordCost("emailSent");
 	let sent = await ctx.mailer.send(

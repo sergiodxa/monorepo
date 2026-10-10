@@ -30,12 +30,6 @@ import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import FlowMonitor from "~/app/data/flow-monitor";
-import Monitor from "~/app/data/monitor";
-import StatusPage from "~/app/data/status-page";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -70,17 +64,17 @@ export default createAction(routes.app.team.statusPages.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { statusPageId } = s.parse(s.object({ statusPageId: s.string() }), ctx.params);
-		let page = await StatusPage.findByIdForTeam(ctx.db, ctx.team.id, statusPageId);
+		let page = await ctx.models.statusPages.inTeam(ctx.team.id).find(statusPageId);
 		if (!page) return notFound("Not Found");
 
 		let [monitors, dnsMonitors, tcpMonitors, flowMonitors, cronJobs, attachedIds] =
 			await Promise.all([
-				Monitor.listByTeam(ctx.db, ctx.team.id),
-				DnsMonitor.listByTeam(ctx.db, ctx.team.id),
-				TcpMonitor.listByTeam(ctx.db, ctx.team.id),
-				FlowMonitor.listByTeam(ctx.db, ctx.team.id),
-				CronJobMonitor.listByTeam(ctx.db, ctx.team.id),
-				StatusPage.getAttachedIds(ctx.db, statusPageId),
+				ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+				ctx.models.dnsMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+				ctx.models.tcpMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+				ctx.models.flowMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+				ctx.models.cronJobMonitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
+				ctx.models.statusPages.getAttachedIds(statusPageId),
 			]);
 
 		/**

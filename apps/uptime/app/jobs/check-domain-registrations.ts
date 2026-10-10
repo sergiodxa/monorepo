@@ -44,7 +44,7 @@ export default createJobHandler(jobs.checkDomainRegistrations, async (ctx) => {
 			groups.map((group) =>
 				mapWithConcurrency(
 					group,
-					(monitor) => checkRegistration(ctx.database, monitor),
+					(monitor) => checkRegistration(ctx.models, monitor),
 					LOOKUPS_PER_REGISTRY,
 				),
 			),

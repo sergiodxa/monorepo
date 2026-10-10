@@ -58,6 +58,7 @@ let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let reportCosts = (await import("./report-costs")).default;
+let { publishModels } = await import("~/app/lib/test/models");
 
 let server = setupServer();
 /** The SQL the job asked Analytics Engine for, in order. */
@@ -137,6 +138,7 @@ async function run() {
 
 	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 
 	/** Emitted however the run ends, so the record of a run that asked for a retry survives it. */
 	try {

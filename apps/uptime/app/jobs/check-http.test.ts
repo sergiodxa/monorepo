@@ -105,6 +105,11 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkHttp = (await import("./check-http")).default;
+/**
+ * Imported dynamically, after the `cloudflare:workers` mock above, since the models reach
+ * `~/app/lib/queue`, which reads `env` at module load, and a static import would be hoisted.
+ */
+let { publishModels } = await import("~/app/lib/test/models");
 
 /**
  * Builds the context the handler receives, carrying the database its chain would publish,
@@ -125,6 +130,7 @@ function makeContext(db: Database, monitorId: string, options: { jobId?: string 
 		log,
 	});
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",
 	});
@@ -573,13 +579,11 @@ describe("checkHttp error handling", () => {
 	test("a database fault asks the queue to redeliver", async () => {
 		let { db } = createTestDatabase();
 		let monitor = await seedMonitor(db);
-		let broken = {
-			findOne: async () => {
-				throw new Error("D1_ERROR: network connection lost");
-			},
-		} as unknown as Database;
+		vi.spyOn(db, "query").mockImplementation(() => {
+			throw new Error("D1_ERROR: network connection lost");
+		});
 
-		let { ctx, emit } = makeContext(broken, monitor.id, { jobId: `${monitor.id}:1` });
+		let { ctx, emit } = makeContext(db, monitor.id, { jobId: `${monitor.id}:1` });
 
 		await expect(checkHttp(ctx)).rejects.toThrow(Job.Retry);
 		expect(emit()).toMatchObject({
@@ -589,20 +593,16 @@ describe("checkHttp error handling", () => {
 	});
 
 	test("an alert-dispatch fault doesn't undo or retry a committed result", async () => {
-		let { db } = createTestDatabase();
+		let { db, sqliteDb } = createTestDatabase();
 		let monitor = await seedMonitor(db, { expected_status: 500 });
 		/**
 		 * Alert dispatch resolves which alerts apply through the database before it
-		 * delivers anything; a fault there is the one way `notifyHttpResult` throws.
+		 * delivers anything; a fault there is the one way `notifyHttpResult` throws, and a
+		 * missing table makes that read fail the way an unavailable D1 does.
 		 */
-		let realFindMany = db.findMany.bind(db);
-		db.findMany = (async (table: unknown, ...rest: unknown[]) => {
-			if (table === alerts) throw new Error("D1_ERROR: could not resolve alerts");
-			return await (realFindMany as (...args: unknown[]) => Promise<unknown>)(table, ...rest);
-		}) as typeof db.findMany;
+		sqliteDb.exec("DROP TABLE alerts");
 
 		let record = await runJob(db, monitor.id);
-		db.findMany = realFindMany;
 
 		expect(await db.findOne(monitorResults, { where: { monitor_id: monitor.id } })).not.toBeNull();
 		expect(noteOf(record, "notifications.alert_failed")).toBeDefined();

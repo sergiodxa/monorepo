@@ -29,7 +29,7 @@ import routes from "~/routes/web";
 export default createAction(routes.app.team.reports.archive, {
 	middleware: [requireUser, requireTeam],
 	handler: async (ctx) => {
-		let request = await resolveReportRequest(ctx.db, ctx.team.id, ctx.url.searchParams);
+		let request = await resolveReportRequest(ctx.models, ctx.team.id, ctx.url.searchParams);
 		if (isFailure(request)) {
 			let builder = routes.app.team.reports.index.href({ team: ctx.team.slug });
 			return redirect(`${builder}${ctx.url.search}`);

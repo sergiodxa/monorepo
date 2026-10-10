@@ -10,14 +10,12 @@
  */
 
 import type { OrderByTuple } from "@sdxc/pagination";
-import type { Database } from "remix/data-table";
 
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
-import { and, eq } from "remix/data-table";
 import { createController } from "remix/router";
 
 import type { SelectDnsMonitorRecord } from "~/database/schema";
@@ -33,7 +31,6 @@ import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { apiPage, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
-import { dnsMonitorRecords } from "~/database/schema";
 import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";
 
 /**
@@ -144,7 +141,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 						instance: problemInstance(),
 					});
 
-				let existing = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
+				let existing = await ctx.models.dnsMonitorRecords.forMonitor(dnsMonitorId).find(recordId);
 				if (!existing)
 					return apiProblems.notFound({
 						detail: "DNS record not found",
@@ -165,7 +162,7 @@ export default createController(dnsMonitorRecordsRoutes, {
 					result.data.isEnabled,
 				);
 
-				let record = await findRecordForMonitor(ctx.db, dnsMonitorId, recordId);
+				let record = await ctx.models.dnsMonitorRecords.forMonitor(dnsMonitorId).find(recordId);
 				if (!record)
 					return apiProblems.notFound({
 						detail: "DNS record not found",
@@ -177,14 +174,3 @@ export default createController(dnsMonitorRecordsRoutes, {
 		},
 	},
 });
-
-/**
- * One record, scoped to its monitor, so an id belonging to another monitor — and therefore
- * possibly to another team — resolves only when looked up through the monitor that actually
- * owns it.
- */
-async function findRecordForMonitor(db: Database, monitorId: string, recordId: string) {
-	return await db.findOne(dnsMonitorRecords, {
-		where: and(eq("id", recordId), eq("dns_monitor_id", monitorId)),
-	});
-}

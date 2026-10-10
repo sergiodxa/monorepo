@@ -3,21 +3,20 @@
  * team's alerts with channel config stripped, and `POST` creates one for any
  * channel strategy, enforcing the per-team alert cap. Every
  * action is guarded by `requireApiKey`, so each test authenticates with a real
- * bearer key minted through `ApiKey.create`, exercising that same middleware.
+ * bearer key minted through `apiKeys.issue`, exercising that same middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
@@ -25,6 +24,7 @@ import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
+import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { encodeId } from "~/app/services/typed-id";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 import { alertsRoutes } from "~/routes/api-groups";
@@ -33,7 +33,7 @@ import { alertsRoutes } from "~/routes/api-groups";
 const CONFORMANCE = checkConformance(alertsRoutes);
 
 /**
- * `~/app/data/monitor`, imported transitively for `monitorId` validation,
+ * `~/app/lib/queue`, imported transitively through the models,
  * reads `env` from `cloudflare:workers` at module load, so this mock must
  * also resolve here, alongside the repo-root `bunfig.toml` preload.
  */
@@ -41,6 +41,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: alertsController } = await import("./alerts");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
 let dns = useMailServerDns();
@@ -62,7 +63,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test key", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test key", scopes, expires_at: null }),
+	);
 	return key;
 }
 

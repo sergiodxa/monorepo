@@ -32,10 +32,6 @@ import type {
 } from "~/database/schema";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import Monitor from "~/app/data/monitor";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { describeSchedule } from "~/app/lib/cron-text";
@@ -601,7 +597,10 @@ export default createAction(routes.app.team.dashboard.panel, {
 		let refreshToken = String(Date.now());
 
 		if (type === "dns") {
-			let dnsMonitors = await DnsMonitor.listByTeam(ctx.db, ctx.team.id);
+			let dnsMonitors = await ctx.models.dnsMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			return ctx.render(
 				<DashboardPanel
 					tab="dns"
@@ -630,7 +629,10 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		if (type === "tcp") {
-			let tcpMonitors = await TcpMonitor.listByTeam(ctx.db, ctx.team.id);
+			let tcpMonitors = await ctx.models.tcpMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			return ctx.render(
 				<DashboardPanel
 					tab="tcp"
@@ -664,7 +666,10 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		if (type === "cron-jobs") {
-			let cronJobMonitors = await CronJobMonitor.listByTeam(ctx.db, ctx.team.id);
+			let cronJobMonitors = await ctx.models.cronJobMonitors
+				.inTeam(ctx.team.id)
+				.orderBy("created_at", "desc")
+				.all();
 			let cronJobRows: CronJobRow[] = cronJobMonitors.map((monitor) => ({
 				monitor,
 				schedule: describeSchedule(monitor.cron_expression, {
@@ -705,7 +710,7 @@ export default createAction(routes.app.team.dashboard.panel, {
 		}
 
 		let [monitors, summaries, sparklines] = await Promise.all([
-			Monitor.listByTeam(ctx.db, ctx.team.id),
+			ctx.models.monitors.inTeam(ctx.team.id).orderBy("created_at", "desc").all(),
 			getTeamHttpSummaries(ctx.team.id),
 			getTeamHttpSparklines(ctx.team.id),
 		]);

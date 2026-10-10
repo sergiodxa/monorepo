@@ -8,17 +8,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { ClaimedTcpMonitor } from "~/app/data/tcp-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { UptimeModels } from "~/app/models";
+import type { ClaimedTcpMonitor } from "~/app/models/tcp-monitors";
 import type { BillablePing } from "~/app/services/ping-meter";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 
-import TcpMonitor from "~/app/data/tcp-monitor";
-import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
@@ -46,7 +43,7 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 	 * monitor from its own previous due time, so this instant only decides which monitors
 	 * are owed a check, tolerating the seconds of queue hop between trigger and execution.
 	 */
-	let monitors = await TcpMonitor.claimDue(ctx.database, Date.now());
+	let monitors = await ctx.models.tcpMonitors.claimDue(Date.now());
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — is
 	 * split across the teams whose monitors it took, in proportion to how many it took
@@ -59,8 +56,7 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 	 * afterwards: a ping is billed to the team's owner, who is the Polar customer, and
 	 * looking that up per monitor would put a D1 read on every check in the batch.
 	 */
-	let ownerIds = await Team.ownerIdsByTeamIds(
-		ctx.database,
+	let ownerIds = await ctx.models.teams.ownerIdsByTeamIds(
 		monitors.map((monitor) => monitor.team_id),
 	);
 
@@ -72,7 +68,7 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
 	let concurrency = await ctx.flags.get(features.sweepConcurrency);
 	let settled = await mapWithConcurrency(
 		monitors,
-		(monitor) => check(ctx.database, monitor),
+		(monitor) => check(ctx.models, monitor),
 		concurrency,
 	);
 
@@ -132,12 +128,12 @@ export default createJobHandler(jobs.checkTcp, async (ctx) => {
  * write since that's what makes a recovery detectable, and throwing here is what marks
  * the monitor failed, so everything this returns describes a check that finished.
  */
-async function check(db: Database, monitor: ClaimedTcpMonitor): Promise<CheckedMonitor> {
+async function check(models: UptimeModels, monitor: ClaimedTcpMonitor): Promise<CheckedMonitor> {
 	/** The column is declared as a plain text enum, so its value set is asserted here. */
 	let previousStatus = monitor.last_status as TcpCheckStatus | null;
 	let result = await checkTcpConnection(monitor.host, monitor.port, monitor.timeout_ms);
 
-	let resultId = await TcpMonitor.recordCheckResult(db, monitor.id, result);
+	let resultId = await models.tcpMonitors.recordCheckResult(monitor.id, result);
 
 	/**
 	 * A refused or timed-out connection has no latency to report and the column is

@@ -17,15 +17,13 @@ import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
-import { failure } from "@sdxc/result";
+import { failure, unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import CronJobMonitor from "~/app/data/cron-job";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { database } from "~/app/http/middleware/database";
 import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
@@ -71,6 +69,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job-ping");
+let { bindModels } = await import("~/app/lib/test/models");
 
 /**
  * The platform the endpoint bills against, replaced per test so one request's meter events
@@ -123,21 +122,26 @@ async function createApiKey(
 	scopes: ApiKeyScope[] = ["cron-jobs:ping"],
 	expiresAt: number | null = null,
 ) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: expiresAt });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: expiresAt }),
+	);
 	return key;
 }
 
 async function createCronJobRow(db: Db, teamId: string, overrides: Record<string, unknown> = {}) {
-	return await CronJobMonitor.create(db, teamId, {
-		name: "Nightly backup",
-		description: null,
-		cron_expression: "0 0 * * *",
-		grace_period_seconds: 300,
-		timezone: "UTC",
-		alert_on_late: false,
-		enabled_at: Date.now(),
-		...overrides,
-	});
+	return unwrap(
+		await bindModels(db).cronJobMonitors.create({
+			team_id: teamId,
+			name: "Nightly backup",
+			description: null,
+			cron_expression: "0 0 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			alert_on_late: false,
+			enabled_at: Date.now(),
+			...overrides,
+		}),
+	);
 }
 
 /** A team with a monitor and a key scoped to ping it — the shape most tests below need. */
@@ -388,7 +392,9 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping", () => {
 	test("returns 429 for a ping within the rate-limit window", async () => {
 		let { db } = createTestDatabase();
 		let { monitor, key } = await createCaller(db);
-		await CronJobMonitor.updateById(db, monitor.id, { last_ping_at: Date.now() - 1000 });
+		unwrap(
+			await bindModels(db).cronJobMonitors.update(monitor.id, { last_ping_at: Date.now() - 1000 }),
+		);
 
 		let response = await dispatch(db, ping(monitor.id, { key }));
 		expect(response.status).toBe(429);
@@ -528,7 +534,11 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 	test("records a ping that missed its deadline as degraded", async () => {
 		let { db } = createTestDatabase();
 		let { team, monitor, key } = await createCaller(db);
-		await CronJobMonitor.updateById(db, monitor.id, { next_expected_at: Date.now() - 3_600_000 });
+		unwrap(
+			await bindModels(db).cronJobMonitors.update(monitor.id, {
+				next_expected_at: Date.now() - 3_600_000,
+			}),
+		);
 
 		await dispatch(db, ping(monitor.id, { key, address: "203.0.113.32" }));
 
@@ -593,7 +603,9 @@ describe("POST /api/v1/cron-jobs/:cronJobId/ping billing", () => {
 	test("bills nothing for a ping inside the per-monitor window", async () => {
 		let { db } = createTestDatabase();
 		let { monitor, key } = await createCaller(db);
-		await CronJobMonitor.updateById(db, monitor.id, { last_ping_at: Date.now() - 1000 });
+		unwrap(
+			await bindModels(db).cronJobMonitors.update(monitor.id, { last_ping_at: Date.now() - 1000 }),
+		);
 
 		let response = await dispatch(db, ping(monitor.id, { key, address: "203.0.113.35" }));
 

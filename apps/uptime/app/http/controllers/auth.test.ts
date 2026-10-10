@@ -29,11 +29,6 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import Customer from "~/app/data/customer";
-import Lead from "~/app/data/lead";
-import TrialConversion from "~/app/data/trial-conversion";
-import TrialWatch from "~/app/data/trial-watch";
-import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
 import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/lib/test/billing";
@@ -115,6 +110,7 @@ vi.doMock("cloudflare:workers", () => ({
  * issuer, which reads the KV binding the moment it is built.
  */
 let { default: models } = await import("~/app/http/middleware/models");
+let { bindModels } = await import("~/app/lib/test/models");
 let { default: auth } = await import("~/app/http/middleware/auth");
 let { default: i18n } = await import("~/app/http/middleware/i18n");
 let { default: authController } = await import("./auth");
@@ -486,7 +482,7 @@ describe("GET /auth", () => {
 	test("signs the subject in even when no customer can be provisioned", async () => {
 		let { db } = createTestDatabase();
 		let agent = createAgent(db);
-		vi.spyOn(Customer, "provision").mockResolvedValue(
+		vi.spyOn(agent.platform.customers, "find").mockResolvedValue(
 			failure(
 				new BillingError("the platform is unreachable", {
 					code: "unknown",
@@ -499,8 +495,6 @@ describe("GET /auth", () => {
 
 		expect(response.status).toBe(303);
 		expect(JWT.decode(agent.tokens()!.idToken).subject).toBe("user-1");
-
-		vi.spyOn(Customer, "provision").mockRestore();
 	});
 
 	test("creates a personal team when the subject has none and no domain matches", async () => {
@@ -538,7 +532,7 @@ describe("GET /auth", () => {
 
 	test("seeds the language cookie from the subject's stored preference", async () => {
 		let { db } = createTestDatabase();
-		await UserPreferences.setLanguage(db, "user-1", "es");
+		unwrap(await bindModels(db).userPreferences.setLanguage("user-1", "es"));
 
 		let response = await signInThrough(createAgent(db));
 
@@ -621,19 +615,20 @@ describe("GET /auth", () => {
  * lands in the team this request provisions, and sign-in still succeeds when it fails.
  */
 describe("GET /auth trial conversion", () => {
-	afterEach(() => {
-		vi.spyOn(Lead, "findByEmail").mockRestore();
-	});
-
 	/** A lead for the signing-in address with one claimable target. */
 	async function seedClaimableTarget(db: ReturnType<typeof createTestDatabase>["db"]) {
-		let lead = await Lead.upsertByEmail(db, {
-			email: "ada@example.com",
-			locale: "en",
-			consented: false,
-		});
+		let models = bindModels(db);
+		let lead = unwrap(
+			await models.leads.upsertByEmail({
+				email: "ada@example.com",
+				locale: "en",
+				consented: false,
+			}),
+		);
 
-		return await TrialWatch.create(db, lead.id, { url: "https://ada.example" });
+		return unwrap(
+			await models.trialWatches.create({ lead_id: lead.id, url: "https://ada.example" }),
+		);
 	}
 
 	test("converts the targets left under the signed-in address into the team it provisions", async () => {
@@ -647,7 +642,7 @@ describe("GET /auth trial conversion", () => {
 		let team = await db.findOne(teams, { where: { owner_id: "user-1" } });
 		let created = await db.findMany(monitors, { where: { team_id: team?.id ?? "" } });
 		expect(created.map((monitor) => monitor.url)).toEqual(["https://ada.example"]);
-		expect((await TrialWatch.findById(db, watch.id))?.converted_at).not.toBeNull();
+		expect((await bindModels(db).trialWatches.find(watch.id))?.converted_at).not.toBeNull();
 	});
 
 	test("puts them in the team the subject owns rather than one they joined by domain", async () => {
@@ -678,10 +673,11 @@ describe("GET /auth trial conversion", () => {
 		expect(created.map((monitor) => monitor.team_id)).toEqual([owned?.id ?? ""]);
 	});
 
+	/** Renaming the leads table fails every read the conversion makes, as an unavailable D1 would. */
 	test("signs the user in even when the conversion fails outright", async () => {
-		let { db } = createTestDatabase();
+		let { db, sqliteDb } = createTestDatabase();
 		await seedClaimableTarget(db);
-		vi.spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
+		sqliteDb.exec("ALTER TABLE leads RENAME TO leads_unavailable");
 
 		let agent = createAgent(db);
 		let response = await signInThrough(agent);
@@ -708,7 +704,13 @@ describe("GET /auth signup attribution", () => {
 
 	/** A lead for the signing-in address, which is what gives the sign-in a conversion row. */
 	async function seedLead(db: ReturnType<typeof createTestDatabase>["db"]) {
-		await Lead.upsertByEmail(db, { email: "ada@example.com", locale: "en", consented: false });
+		unwrap(
+			await bindModels(db).leads.upsertByEmail({
+				email: "ada@example.com",
+				locale: "en",
+				consented: false,
+			}),
+		);
 	}
 
 	test("copies the first touch onto the conversion row, ahead of any later campaign", async () => {
@@ -728,7 +730,7 @@ describe("GET /auth signup attribution", () => {
 		);
 		await signInThrough(agent);
 
-		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+		expect(await bindModels(db).trialConversions.findBy({ owner_id: "user-1" })).toMatchObject({
 			landing_path: "/for/agencies",
 			campaign_source: "outreach",
 			campaign_name: "agencies-august",
@@ -755,7 +757,7 @@ describe("GET /auth signup attribution", () => {
 		);
 		await signInThrough(agent);
 
-		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+		expect(await bindModels(db).trialConversions.findBy({ owner_id: "user-1" })).toMatchObject({
 			landing_path: "/pricing",
 			campaign_source: "outreach",
 			campaign_name: null,
@@ -768,7 +770,7 @@ describe("GET /auth signup attribution", () => {
 
 		await signInThrough(createAgent(db));
 
-		expect(await TrialConversion.findByOwner(db, "user-1")).toMatchObject({
+		expect(await bindModels(db).trialConversions.findBy({ owner_id: "user-1" })).toMatchObject({
 			landing_path: null,
 			campaign_source: null,
 			campaign_name: null,

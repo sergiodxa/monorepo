@@ -13,16 +13,13 @@ import type { RequestContext } from "remix/router";
 import * as s from "@sdxc/json-schema";
 import { InvalidCursorError, Pagination } from "@sdxc/pagination";
 import { issuesFrom } from "@sdxc/problem";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { CreateAlertValues } from "~/app/http/controllers/api/alerts";
 import type { InsertAlert, SelectAlert } from "~/database/schema";
 
-import Alert from "~/app/data/alert";
-import AlertEvent from "~/app/data/alert-event";
-import { isResolvableScope } from "~/app/data/scope-monitors";
 import {
 	apiScopeFrom,
 	buildConfig,
@@ -38,6 +35,7 @@ import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
+import { isResolvableScope } from "~/app/services/scope-monitors";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { alertRoutes } from "~/routes/api-groups";
 
@@ -104,7 +102,7 @@ function writableChannel(alert: SelectAlert) {
  */
 async function patchAlert(ctx: RequestContext): Promise<Response> {
 	let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
-	let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+	let existing = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
 	if (!existing)
 		return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
@@ -135,7 +133,7 @@ async function patchAlert(ctx: RequestContext): Promise<Response> {
 			monitorType: changed.has("monitorType") ? value.monitorType : undefined,
 			monitorId: changed.has("monitorId") ? (value.monitorId ?? null) : undefined,
 		});
-		if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+		if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 			return apiProblems.notFound({ detail: "Monitor not found", instance: problemInstance() });
 		}
 
@@ -143,7 +141,7 @@ async function patchAlert(ctx: RequestContext): Promise<Response> {
 		changes.monitor_id = scope.monitorId;
 	}
 
-	let alert = await Alert.updateById(ctx.db, alertId, changes);
+	let alert = unwrap(await ctx.models.alerts.update(alertId, changes));
 	return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
 }
 
@@ -155,7 +153,7 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
-				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+				let alert = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
 				if (!alert)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 				return apiSuccess({ alert: serializeAlertSafe(alert) });
@@ -173,7 +171,7 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
-				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+				let existing = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
@@ -199,7 +197,7 @@ export default createController(alertRoutes, {
 				 */
 				if (result.data.monitorType !== undefined || result.data.monitorId !== undefined) {
 					let scope = apiScopeFrom(result.data);
-					if (scope === null || !(await isResolvableScope(ctx.db, ctx.apiTeam.id, scope))) {
+					if (scope === null || !(await isResolvableScope(ctx.models, ctx.apiTeam.id, scope))) {
 						return apiProblems.notFound({
 							detail: "Monitor not found",
 							instance: problemInstance(),
@@ -210,7 +208,7 @@ export default createController(alertRoutes, {
 					changes.monitor_id = scope.monitorId;
 				}
 
-				let alert = await Alert.updateById(ctx.db, alertId, changes);
+				let alert = unwrap(await ctx.models.alerts.update(alertId, changes));
 				return apiSuccess({ alert: serializeAlertStrategyOnly(alert) });
 			},
 		},
@@ -220,11 +218,11 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:write")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
-				let existing = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+				let existing = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
 				if (!existing)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
-				await Alert.deleteById(ctx.db, alertId);
+				unwrap(await ctx.models.alerts.delete(alertId));
 				return apiSuccess({ deleted: true });
 			},
 		},
@@ -234,7 +232,7 @@ export default createController(alertRoutes, {
 			middleware: [requireApiKey("alerts:read")],
 			handler: async (ctx) => {
 				let { alertId } = s.parse(ALERT_ID_PARAMS, ctx.params);
-				let alert = await Alert.findByIdForTeam(ctx.db, ctx.apiTeam.id, alertId);
+				let alert = await ctx.models.alerts.inTeam(ctx.apiTeam.id).find(alertId);
 				if (!alert)
 					return apiProblems.notFound({ detail: "Alert not found", instance: problemInstance() });
 
@@ -245,7 +243,7 @@ export default createController(alertRoutes, {
 						instance: problemInstance(),
 					});
 
-				let page = await Pagination.byKeyset(AlertEvent.eventsByAlertQuery(ctx.db, alertId), {
+				let page = await Pagination.byKeyset(ctx.models.alertEvents.forAlert(alertId), {
 					orderBy: newestFirst("sent_at"),
 					cursor: params.data.cursor,
 					limit: params.data.perPage,

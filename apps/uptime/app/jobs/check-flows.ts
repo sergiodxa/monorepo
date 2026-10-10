@@ -9,17 +9,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { ClaimedFlowMonitor } from "~/app/data/flow-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { UptimeModels } from "~/app/models";
+import type { ClaimedFlowMonitor } from "~/app/models/flow-monitors";
 import type { BillablePing } from "~/app/services/ping-meter";
 import type { FlowStatus } from "~/database/schema";
 
-import FlowMonitor from "~/app/data/flow-monitor";
-import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
@@ -42,7 +39,7 @@ interface CheckedMonitor {
 }
 
 export default createJobHandler(jobs.checkFlows, async (ctx) => {
-	let monitors = await FlowMonitor.claimDue(ctx.database, Date.now());
+	let monitors = await ctx.models.flowMonitors.claimDue(Date.now());
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — split
 	 * across the teams whose monitors it took, in proportion to how many it took from each
@@ -57,7 +54,7 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	 * each team may reach, one read per sweep shared across every monitor.
 	 */
 	let [ownerIds, verifiedDomains] = await Promise.all([
-		Team.ownerIdsByTeamIds(ctx.database, teamIds),
+		ctx.models.teams.ownerIdsByTeamIds(teamIds),
 		ctx.models.teamDomains.verifiedHostnamesByTeam(teamIds),
 	]);
 
@@ -69,7 +66,7 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
 	let concurrency = await ctx.flags.get(features.sweepConcurrency);
 	let settled = await mapWithConcurrency(
 		monitors,
-		(monitor) => check(ctx.database, monitor, verifiedDomains.get(monitor.team_id) ?? []),
+		(monitor) => check(ctx.models, monitor, verifiedDomains.get(monitor.team_id) ?? []),
 		concurrency,
 	);
 
@@ -141,14 +138,14 @@ export default createJobHandler(jobs.checkFlows, async (ctx) => {
  * unverified hosts to an `error` result instead.
  */
 async function check(
-	db: Database,
+	models: UptimeModels,
 	monitor: ClaimedFlowMonitor,
 	verifiedDomains: readonly string[],
 ): Promise<CheckedMonitor> {
 	/** The column is declared as a plain text enum, so its value set is asserted here. */
 	let previousStatus = monitor.last_status as FlowStatus | null;
 	let result = await runFlowCheck({ source: monitor.source, verifiedDomains });
-	let resultId = await FlowMonitor.recordCheckResult(db, monitor.id, result);
+	let resultId = await models.flowMonitors.recordCheckResult(monitor.id, result);
 
 	/**
 	 * One data point per run, not per request — the series is "how long does the

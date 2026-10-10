@@ -9,19 +9,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectCronJobMonitor, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
+import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { encodeId } from "~/app/services/typed-id";
 import { teams } from "~/database/schema";
 import { cronJobRoutes } from "~/routes/api-groups";
@@ -49,7 +50,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -58,16 +61,19 @@ async function createCronJobRow(
 	teamId: string,
 	overrides: Record<string, unknown> = {},
 ): Promise<SelectCronJobMonitor> {
-	return await CronJobMonitor.create(db, teamId, {
-		name: "Nightly backup",
-		description: null,
-		cron_expression: "0 2 * * *",
-		grace_period_seconds: 300,
-		timezone: "UTC",
-		alert_on_late: false,
-		enabled_at: null,
-		...overrides,
-	});
+	return unwrap(
+		await bindModels(db).cronJobMonitors.create({
+			team_id: teamId,
+			name: "Nightly backup",
+			description: null,
+			cron_expression: "0 2 * * *",
+			grace_period_seconds: 300,
+			timezone: "UTC",
+			alert_on_late: false,
+			enabled_at: null,
+			...overrides,
+		}),
+	);
 }
 
 async function dispatch(db: Db, request: Request) {
@@ -188,7 +194,7 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		expect(body.data.cronJob.name).toBe("New name");
 		expect(body.data.cronJob.gracePeriodSeconds).toBe(600);
 
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.name).toBe("New name");
 		expect(updated?.grace_period_seconds).toBe(600);
 	});
@@ -210,7 +216,7 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.cron_expression).toBe("0 0 1 1 *");
 		expect(updated?.next_expected_at).not.toBe(originalNextExpectedAt);
 	});
@@ -233,7 +239,7 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
 
-		let unchanged = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let unchanged = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(unchanged?.cron_expression).toBe("0 2 * * *");
 	});
 
@@ -320,7 +326,7 @@ describe("PUT /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		let unchanged = await CronJobMonitor.findByIdForTeam(db, otherTeam.id, cronJob.id);
+		let unchanged = await bindModels(db).cronJobMonitors.inTeam(otherTeam.id).find(cronJob.id);
 		expect(unchanged?.name).toBe("Someone else's");
 	});
 });
@@ -341,7 +347,7 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 		let body = (await response.json()) as { data: { deleted: boolean } };
 		expect(body.data.deleted).toBe(true);
 
-		expect(await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id)).toBeNull();
+		expect(await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id)).toBeNull();
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -379,7 +385,9 @@ describe("DELETE /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await CronJobMonitor.findByIdForTeam(db, otherTeam.id, cronJob.id)).not.toBeNull();
+		expect(
+			await bindModels(db).cronJobMonitors.inTeam(otherTeam.id).find(cronJob.id),
+		).not.toBeNull();
 	});
 });
 
@@ -441,7 +449,7 @@ describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
 		let response = await dispatch(db, mergePatch(cronJob.id, { name: "Patched" }, { key }));
 
 		expect(response.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.name).toBe("Patched");
 		expect(updated?.grace_period_seconds).toBe(900);
 		expect(updated?.cron_expression).toBe("0 2 * * *");
@@ -468,14 +476,12 @@ describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.description).toBeNull();
 		expect(updated?.grace_period_seconds).toBe(300);
 		expect(updated?.timezone).toBe("UTC");
 		expect(updated?.alert_on_late).toBe(false);
-		expect(updated?.next_expected_at).toBe(
-			CronJobMonitor.calculateNextExpected("0 2 * * *", "UTC"),
-		);
+		expect(updated?.next_expected_at).toBe(calculateNextExpected("0 2 * * *", "UTC"));
 	});
 
 	test("null on a required member answers validation-error at its pointer", async () => {
@@ -500,7 +506,7 @@ describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
 		let response = await dispatch(db, mergePatch(cronJob.id, { enabled: true }, { key }));
 
 		expect(response.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.enabled_at).toBe(1000);
 	});
 
@@ -516,7 +522,7 @@ describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
 		);
 
 		expect(response.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.enabled_at).toBeNull();
 	});
 
@@ -554,7 +560,7 @@ describe("PATCH /api/v1/cron-jobs/:cronJobId", () => {
 
 		expect(refused.status).toBe(400);
 		expect(resent.status).toBe(200);
-		let updated = await CronJobMonitor.findByIdForTeam(db, team.id, cronJob.id);
+		let updated = await bindModels(db).cronJobMonitors.inTeam(team.id).find(cronJob.id);
 		expect(updated?.enabled_at).not.toBe(1000);
 	});
 

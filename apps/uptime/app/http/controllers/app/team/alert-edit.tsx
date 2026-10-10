@@ -18,14 +18,13 @@ import { AlertDialog, Button, Input, LinkButton, Switch, TextField } from "@sdxc
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Alert from "~/app/data/alert";
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import AlertChannelFields from "~/resources/components/alert-channel-fields";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
@@ -47,10 +46,10 @@ export default createAction(routes.app.team.alerts.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { alertId } = s.parse(s.object({ alertId: s.string() }), ctx.params);
-		let alert = await Alert.findByIdForTeam(ctx.db, ctx.team.id, alertId);
+		let alert = await ctx.models.alerts.inTeam(ctx.team.id).find(alertId);
 		if (!alert) return notFound("Not Found");
 
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
 
 		/** Same fixed namespace the create page reads, so both pages label fields identically. */
 		let t = withPrefix(ctx.intl.t, "page.alerts.form.fields");

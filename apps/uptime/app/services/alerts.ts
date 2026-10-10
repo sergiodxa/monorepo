@@ -10,12 +10,12 @@
 
 import type { Mailer, SentMessage } from "@sdxc/mail";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
-import { isFailure, wrap } from "@sdxc/result";
+import { isFailure, unwrap, wrap } from "@sdxc/result";
 
-import type { DnsRecordDiff } from "~/app/data/dns-monitor-record";
 import type { MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { UptimeModels } from "~/app/models";
+import type { DnsRecordDiff } from "~/app/models/dns-monitor-records";
 import type { AlertEventType, IncidentSummary } from "~/app/services/alert-message";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { SslStatus } from "~/app/services/ssl-info";
@@ -37,9 +37,6 @@ import type {
 	RegistrationStatus,
 } from "~/database/schema";
 
-import Alert from "~/app/data/alert";
-import AlertEvent from "~/app/data/alert-event";
-import MaintenanceWindow from "~/app/data/maintenance-window";
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
 import jobs from "~/app/jobs";
@@ -94,7 +91,7 @@ function scopeOf(kind: AlertMonitorKind): MonitorScopeType {
 }
 
 export interface DispatchAlertsParams {
-	db: Database;
+	models: UptimeModels;
 	/**
 	 * Mailer the email strategy delivers through. Request paths pass `ctx.email`;
 	 * background ones resolve the container's mailer, since they have no request.
@@ -124,15 +121,14 @@ export async function dispatchAlerts(params: DispatchAlertsParams): Promise<void
 	 */
 	let scopeMonitorType = scopeOf(params.monitorType);
 
-	let suppressed = await MaintenanceWindow.isSuppressing(params.db, {
+	let suppressed = await params.models.maintenanceWindows.isSuppressing({
 		teamId: params.teamId,
 		monitorId: params.monitorId,
 		monitorType: scopeMonitorType,
 	});
 	if (suppressed) return;
 
-	let candidates = await Alert.listForMonitor(
-		params.db,
+	let candidates = await params.models.alerts.listForMonitor(
 		params.teamId,
 		scopeMonitorType,
 		params.monitorId,
@@ -161,8 +157,7 @@ async function suppressionReason(
 	params: DispatchAlertsParams,
 ): Promise<SuppressionReason | null> {
 	if (params.eventType === "up") {
-		let recentRecovery = await AlertEvent.isInCooldown(
-			params.db,
+		let recentRecovery = await params.models.alertEvents.isInCooldown(
 			alert.id,
 			params.monitorId,
 			params.eventType,
@@ -172,8 +167,7 @@ async function suppressionReason(
 	}
 
 	/** Bounded at 1: this only asks whether the incident has been notified at all yet. */
-	let alreadyNotified = await AlertEvent.countSentSinceRecovery(
-		params.db,
+	let alreadyNotified = await params.models.alertEvents.countSentSinceRecovery(
 		alert.id,
 		params.monitorId,
 		params.eventType,
@@ -181,8 +175,7 @@ async function suppressionReason(
 	);
 	if (alreadyNotified === 0) return null;
 
-	let inCooldown = await AlertEvent.isInCooldown(
-		params.db,
+	let inCooldown = await params.models.alertEvents.isInCooldown(
 		alert.id,
 		params.monitorId,
 		params.eventType,
@@ -197,8 +190,8 @@ async function suppressionReason(
  * delivery job, which retries it and settles the row. Every exit records exactly one row.
  */
 async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Promise<void> {
-	function record(status: SelectAlertEvent["status"], errorMessage: string | null) {
-		return AlertEvent.record(params.db, {
+	async function record(status: SelectAlertEvent["status"], errorMessage: string | null) {
+		let recorded = await params.models.alertEvents.record({
 			alert_id: alert.id,
 			monitor_id: params.monitorId,
 			event_type: params.eventType,
@@ -208,6 +201,7 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 			monitor_name: params.monitorName,
 			snapshot: params.snapshot,
 		});
+		return unwrap(recorded);
 	}
 
 	let suppressed = await suppressionReason(alert, params);
@@ -219,7 +213,7 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 	/** Without this a throttled incident is indistinguishable from alerts having been dropped. */
 	let incident: IncidentSummary | null = null;
 	if (params.eventType === "up") {
-		let summary = await AlertEvent.summarizeIncident(params.db, alert.id, params.monitorId);
+		let summary = await params.models.alertEvents.summarizeIncident(alert.id, params.monitorId);
 		if (summary.suppressed > 0) incident = summary;
 	}
 
@@ -251,10 +245,11 @@ async function deliverOne(alert: SelectAlert, params: DispatchAlertsParams): Pro
 		}),
 	);
 	if (isFailure(queued)) {
-		await AlertEvent.markFailed(
-			params.db,
-			event.id,
-			`Could not queue the delivery: ${queued.error.message}`,
+		unwrap(
+			await params.models.alertEvents.markFailed(
+				event.id,
+				`Could not queue the delivery: ${queued.error.message}`,
+			),
 		);
 	}
 }
@@ -358,7 +353,7 @@ export function shouldNotifyCronJobResult(
  * A `previousStatus` of `null` (never checked before) never counts as a recovery.
  */
 export async function notifyHttpResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectMonitor,
 	previousStatus: "up" | "down" | "degraded" | "timeout" | null,
@@ -368,7 +363,7 @@ export async function notifyHttpResult(
 	if (result.status === "up" && !isRecovery) return;
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -488,7 +483,7 @@ function toFinding(
  * changed, built via {@link dnsAlertResultFromDiff} or {@link dnsAlertResultFromRecords} so the counters and findings always describe the same event.
  */
 export async function notifyDnsResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectDnsMonitor,
 	previousStatus: DnsCheckStatus | null,
@@ -499,7 +494,7 @@ export async function notifyDnsResult(
 	let isRecovery = result.status === "ok";
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -523,7 +518,7 @@ export async function notifyDnsResult(
 
 /** See {@link notifyHttpResult}; `up` is the TCP-equivalent healthy state. */
 export async function notifyTcpResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectTcpMonitor,
 	previousStatus: TcpCheckStatus | null,
@@ -534,7 +529,7 @@ export async function notifyTcpResult(
 	let isRecovery = result.status === "up";
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -560,7 +555,7 @@ export async function notifyTcpResult(
  * {@link shouldNotifyCronJobResult} for why that lives in the predicate.
  */
 export async function notifyCronJobResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectCronJobMonitor,
 	previousStatus: CronJobStatus | null,
@@ -571,7 +566,7 @@ export async function notifyCronJobResult(
 	let isRecovery = newStatus === "healthy";
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -650,7 +645,7 @@ export function flowAlertResultFromResult(
  * {@link shouldNotifyFlowResult} for why an `error` reaches nobody.
  */
 export async function notifyFlowResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectFlowMonitor,
 	previousStatus: FlowStatus | null,
@@ -661,7 +656,7 @@ export async function notifyFlowResult(
 	let isRecovery = result.status === "up";
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -691,7 +686,7 @@ export async function notifyFlowResult(
  * and never capped in total. An SSL "incident" is every reminder ever sent for that monitor, since SSL never dispatches an `up` event.
  */
 export async function notifySslResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectMonitor,
 	status: SslStatus,
@@ -707,7 +702,7 @@ export async function notifySslResult(
 	}
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,
@@ -734,7 +729,7 @@ export async function notifySslResult(
  * lookup succeeded, matching the sweep, which has none to read from a failed one.
  */
 export async function notifyRegistrationResult(
-	db: Database,
+	models: UptimeModels,
 	mailer: Mailer,
 	monitor: SelectDnsMonitor,
 	previous: RegistrationStatus | null,
@@ -750,7 +745,7 @@ export async function notifyRegistrationResult(
 	if (!shouldAlertOnRegistration(previous, status, daysUntilExpiry, eppStatuses)) return;
 
 	await dispatchAlerts({
-		db,
+		models,
 		mailer,
 		teamId: monitor.team_id,
 		monitorId: monitor.id,

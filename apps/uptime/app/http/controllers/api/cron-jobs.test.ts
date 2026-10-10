@@ -9,18 +9,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import CronJobMonitor from "~/app/data/cron-job";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { markInFlight } from "~/app/lib/test/idempotency";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem, problemMessages } from "~/app/lib/test/problem";
@@ -50,7 +50,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -94,15 +96,18 @@ describe("GET /api/v1/cron-jobs", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
 
-		await CronJobMonitor.create(db, team.id, {
-			name: "Nightly backup",
-			description: null,
-			cron_expression: "0 2 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			alert_on_late: false,
-			enabled_at: null,
-		});
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "Nightly backup",
+				description: null,
+				cron_expression: "0 2 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				alert_on_late: false,
+				enabled_at: null,
+			}),
+		);
 
 		let listResponse = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		expect(listResponse.status).toBe(200);
@@ -117,24 +122,30 @@ describe("GET /api/v1/cron-jobs", () => {
 		let otherTeam = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
 
-		await CronJobMonitor.create(db, team.id, {
-			name: "Mine",
-			description: null,
-			cron_expression: "0 2 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			alert_on_late: false,
-			enabled_at: null,
-		});
-		await CronJobMonitor.create(db, otherTeam.id, {
-			name: "Theirs",
-			description: null,
-			cron_expression: "0 3 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			alert_on_late: false,
-			enabled_at: null,
-		});
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "Mine",
+				description: null,
+				cron_expression: "0 2 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				alert_on_late: false,
+				enabled_at: null,
+			}),
+		);
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				description: null,
+				cron_expression: "0 3 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				alert_on_late: false,
+				enabled_at: null,
+			}),
+		);
 
 		let response = await dispatch(db, indexRequest({ Authorization: `Bearer ${key}` }));
 		let body = (await response.json()) as { data: { cronJobs: { name: string }[] } };
@@ -147,24 +158,30 @@ describe("GET /api/v1/cron-jobs", () => {
 		let team = await createTeamRow(db);
 		let key = await createApiKey(db, team.id, ["cron-jobs:read"]);
 
-		await CronJobMonitor.create(db, team.id, {
-			name: "First",
-			description: null,
-			cron_expression: "0 2 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			alert_on_late: false,
-			enabled_at: null,
-		});
-		await CronJobMonitor.create(db, team.id, {
-			name: "Second",
-			description: null,
-			cron_expression: "0 3 * * *",
-			grace_period_seconds: 300,
-			timezone: "UTC",
-			alert_on_late: false,
-			enabled_at: null,
-		});
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "First",
+				description: null,
+				cron_expression: "0 2 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				alert_on_late: false,
+				enabled_at: null,
+			}),
+		);
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "Second",
+				description: null,
+				cron_expression: "0 3 * * *",
+				grace_period_seconds: 300,
+				timezone: "UTC",
+				alert_on_late: false,
+				enabled_at: null,
+			}),
+		);
 
 		let path = routes.api.v1.cronJobs.index.href();
 		let auth = { Authorization: `Bearer ${key}` };
@@ -238,11 +255,35 @@ describe("GET /api/v1/cron-jobs total", () => {
 			alert_on_late: false,
 			enabled_at: null,
 		};
-		await CronJobMonitor.create(db, team.id, { name: "First", ...attributes });
-		await CronJobMonitor.create(db, team.id, { name: "Second", ...attributes });
-		await CronJobMonitor.create(db, team.id, { name: "Third", ...attributes });
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "First",
+				...attributes,
+			}),
+		);
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "Second",
+				...attributes,
+			}),
+		);
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: team.id,
+				name: "Third",
+				...attributes,
+			}),
+		);
 		// A cron job the key cannot see must not reach the total either.
-		await CronJobMonitor.create(db, otherTeam.id, { name: "Theirs", ...attributes });
+		unwrap(
+			await bindModels(db).cronJobMonitors.create({
+				team_id: otherTeam.id,
+				name: "Theirs",
+				...attributes,
+			}),
+		);
 
 		let response = await dispatch(
 			db,
@@ -377,7 +418,7 @@ describe("POST /api/v1/cron-jobs with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(409);
 		await expectProblem(response, "idempotencyKeyInUse");
-		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(1);
+		expect(await bindModels(db).cronJobMonitors.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("reusing a key for a different body answers idempotency-key-reused", async () => {
@@ -391,7 +432,7 @@ describe("POST /api/v1/cron-jobs with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(422);
 		await expectProblem(response, "idempotencyKeyReused");
-		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(1);
+		expect(await bindModels(db).cronJobMonitors.inTeam(team.id).count()).toBe(1);
 	});
 
 	test("an unquoted key answers idempotency-key-invalid and creates nothing", async () => {
@@ -404,6 +445,6 @@ describe("POST /api/v1/cron-jobs with an Idempotency-Key", () => {
 
 		expect(response.status).toBe(400);
 		await expectProblem(response, "idempotencyKeyInvalid");
-		expect(await CronJobMonitor.listByTeamQuery(db, team.id).count()).toBe(0);
+		expect(await bindModels(db).cronJobMonitors.inTeam(team.id).count()).toBe(0);
 	});
 });

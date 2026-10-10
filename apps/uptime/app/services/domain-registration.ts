@@ -9,19 +9,18 @@
 
 import type { RDAPError } from "@sdxc/rdap";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
 import { createBackoff } from "@sdxc/backoff";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { RDAP } from "@sdxc/rdap";
-import { isSuccess } from "@sdxc/result";
+import { isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { UptimeModels } from "~/app/models";
 import type { RegistrationStatus, SelectDnsMonitor } from "~/database/schema";
 
-import DnsMonitor from "~/app/data/dns-monitor";
 import { absoluteUrl } from "~/app/lib/origin";
 import { classifyExpiry, shouldRemindOfExpiry } from "~/app/services/expiry";
 
@@ -195,19 +194,19 @@ export interface RegistrationCheck {
  * warrants, for the sweep and "Check now" alike. The days left are counted from the stored
  * date after the write, so a failed lookup inside the warning window still reminds.
  *
- * @param db - The database the monitor lives in.
+ * @param models - The models bound to the database the monitor lives in.
  * @param monitor - The monitor's id, domain and stored registration fields.
  * @returns The `notify` message to send, if any, and the failed lookup's error code.
  */
 export async function checkRegistration(
-	db: Database,
+	models: UptimeModels,
 	monitor: RegistrationTarget,
 ): Promise<RegistrationCheck> {
 	let now = Date.now();
 	let lookup = await rdapClient().domain(monitor.domain);
 	let patch = registrationOutcome(monitor, lookup, now);
 
-	await DnsMonitor.recordRegistration(db, monitor.id, patch);
+	unwrap(await models.dnsMonitors.update(monitor.id, patch));
 
 	let expiresAt =
 		patch.registration_expires_at === undefined

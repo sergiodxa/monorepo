@@ -9,13 +9,13 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
 import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/lib/test/db";
 import { checkConformance } from "~/app/lib/test/openapi";
@@ -26,7 +26,7 @@ import routes from "~/routes/web";
 /** Checks every exchange against the API document; see `checkConformance`. */
 const CONFORMANCE = checkConformance({ statusShow: null });
 
-/** `app/data/monitor.ts` imports `env` from `cloudflare:workers` at module scope for `Monitor.ping()`, so the mock must resolve for the module to load. */
+/** `~/app/lib/queue`, imported through the models, reads `env` from `cloudflare:workers` at module load, so the mock must resolve. */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,
@@ -34,6 +34,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { statusShow } = await import("./status");
+let { bindModels } = await import("~/app/lib/test/models");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 
@@ -52,7 +53,9 @@ async function createTeamRow(db: Db) {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 

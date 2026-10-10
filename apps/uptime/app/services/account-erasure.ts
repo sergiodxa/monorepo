@@ -11,14 +11,12 @@
 
 import type { Billing } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
 
-import Customer from "~/app/data/customer";
-import Lead from "~/app/data/lead";
-import Team from "~/app/data/team";
-import { invites, subscriptions, userPreferences } from "~/database/schema";
+import type { UptimeModels } from "~/app/models";
+
+import { cancelSubscriptions } from "~/app/services/customer";
 
 /** One team the subject owns, and therefore one team that deletion destroys. */
 export interface OwnedTeamImpact {
@@ -84,10 +82,10 @@ export interface AccountErasureReport {
  * `otherMemberCount` excludes the subject, so a personal team nobody else joined warns for `0`.
  */
 export async function planAccountErasure(
-	db: Database,
+	models: UptimeModels,
 	subjectId: string,
 ): Promise<AccountErasurePlan> {
-	let memberships = await Team.listWithRoleBySubjectId(db, subjectId);
+	let memberships = await models.teams.listWithRoleForSubject(subjectId);
 
 	let ownedTeams: OwnedTeamImpact[] = [];
 	let joinedTeams: JoinedTeamImpact[] = [];
@@ -98,7 +96,7 @@ export async function planAccountErasure(
 			continue;
 		}
 
-		let members = await Team.listMembersByTeam(db, team.id);
+		let members = await models.memberships.inTeam(team.id).all();
 		ownedTeams.push({
 			id: team.id,
 			name: team.name,
@@ -119,13 +117,13 @@ export async function planAccountErasure(
  * cancelled. Returns a failure instead of throwing, so the queued row survives as the retry;
  * the caller removes that row itself, once the confirmation mail is accepted.
  *
- * @param db - Database handle.
+ * @param models - The models bound to the app database.
  * @param billing - The configured platform, used only to end the subject's subscriptions.
  * @param subjectId - The OIDC subject being erased.
  * @param email - The address captured with the request, used to find a trial lead to forget.
  */
 export async function eraseAccount(
-	db: Database,
+	models: UptimeModels,
 	billing: Billing,
 	subjectId: string,
 	email: string,
@@ -133,7 +131,7 @@ export async function eraseAccount(
 	let revoked = await cancelBilling(billing, subjectId);
 	if (isFailure(revoked)) return revoked;
 
-	let memberships = await Team.listWithRoleBySubjectId(db, subjectId);
+	let memberships = await models.teams.listWithRoleForSubject(subjectId);
 	let teamsDeleted = 0;
 	let membershipsRemoved = 0;
 	let deletedTeams: DeletedTeamNotice[] = [];
@@ -142,20 +140,20 @@ export async function eraseAccount(
 		if (isOwner) {
 			/**
 			 * Who else is in this team is read while the team still exists, since the membership rows
-			 * are the only record of it and `Team.deleteById` removes them along with everything else
+			 * are the only record of it and deleting the team removes them along with everything else
 			 * the team owns — which is what takes away their access.
 			 */
-			let others = (await Team.listMembersByTeam(db, team.id))
+			let others = (await models.memberships.inTeam(team.id).all())
 				.map((member) => member.subject_id)
 				.filter((memberId) => memberId !== subjectId);
 
-			await Team.deleteById(db, team.id);
+			unwrap(await models.teams.delete(team.id));
 			teamsDeleted++;
 			if (others.length > 0) deletedTeams.push({ teamName: team.name, memberIds: others });
 			continue;
 		}
 
-		await Team.removeMembership(db, team.id, subjectId);
+		await models.memberships.remove(team.id, subjectId);
 		membershipsRemoved++;
 	}
 
@@ -164,24 +162,24 @@ export async function eraseAccount(
 	 * "revoked" about a person who no longer exists here, while the invoices that must survive
 	 * stay on the platform's side.
 	 */
-	await db.deleteMany(subscriptions, { where: { external_customer_id: subjectId } });
+	await models.subscriptions.query().where({ external_customer_id: subjectId }).delete();
 
-	await db.deleteMany(userPreferences, { where: { subject_id: subjectId } });
+	await models.userPreferences.query().where({ subject_id: subjectId }).delete();
 
 	/**
 	 * Pending invitations mentioning this person, in either direction: one addressed to them
 	 * is personal data sitting in somebody else's team, and one they sent is an offer from an
 	 * account being deleted. Accepted invites already vanished into a membership row.
 	 */
-	await db.deleteMany(invites, { where: { email } });
-	await db.deleteMany(invites, { where: { sender_id: subjectId } });
+	await models.invites.query().where({ email }).delete();
+	await models.invites.query().where({ sender_id: subjectId }).delete();
 
 	/**
 	 * A trial lead tied to this address is forgotten too, so erasure reaches data captured
 	 * before any account existed. `forget` performs the same hard delete an unsubscribe does.
 	 */
-	let lead = await Lead.findByEmail(db, email);
-	if (lead) await Lead.forget(db, lead.id);
+	let lead = await models.leads.findByEmail(email);
+	if (lead) await models.leads.forget(lead.id);
 
 	return success({
 		subjectId,
@@ -198,7 +196,7 @@ export async function eraseAccount(
  * neither side can correct afterwards.
  */
 async function cancelBilling(billing: Billing, subjectId: string): Promise<Result<number, Error>> {
-	let cancelled = await Customer.cancelSubscriptions(billing, subjectId);
+	let cancelled = await cancelSubscriptions(billing, subjectId);
 
 	if (isFailure(cancelled)) {
 		return failure(

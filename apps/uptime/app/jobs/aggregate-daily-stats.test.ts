@@ -1,7 +1,7 @@
 /**
  * Unit tests for the `aggregateDailyStats` job, covering its aggregation sources
  * (HTTP via Analytics Engine, DNS/TCP/flow via D1 result tables, cron via
- * `cron_job_pings`) and `MonitorDailyStats.upsertDay`'s replace-on-rerun idempotency.
+ * `cron_job_pings`) and the `monitorDailyStats.upsertDay` model method's replace-on-rerun idempotency.
  * `getHttpDailyAggregate` is mocked since Analytics Engine access has its own
  * service-level tests; the D1 and cron tests patch `db.exec` directly because the shared
  * in-memory adapter can't answer raw SQL reads. That stub answers by table name and not by
@@ -12,6 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import type { Result } from "@sdxc/result";
 
 import { createJobContext } from "@sdxc/jobs";
@@ -20,7 +21,6 @@ import { failure, success } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DailyStatsInput } from "~/app/data/monitor-daily-stats";
 import type { HttpDailyAggregate } from "~/app/services/analytics";
 
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -34,33 +34,14 @@ vi.doMock("~/app/services/analytics", () => ({
 	getHttpDailyAggregate: getHttpDailyAggregateMock,
 }));
 
-/**
- * Monitor ids whose write must fail, exercising the "one bad row doesn't cost the
- * rest their stats" guarantee. Subclassing (not object-spreading) preserves every
- * other static method, since class statics are non-enumerable and would be lost.
- */
-let failingWrites = new Set<string>();
-let realDailyStatsModule = await import("~/app/data/monitor-daily-stats");
-
-class FakeMonitorDailyStats extends realDailyStatsModule.default {
-	static override async upsertDay(db: Database, input: DailyStatsInput) {
-		if (failingWrites.has(input.monitor_id)) throw new Error(`write failed: ${input.monitor_id}`);
-		/**
-		 * `super`, not `realDailyStatsModule.default`: the module's `default` binding is live,
-		 * so once the mock below is installed that name resolves back to this class.
-		 */
-		return await super.upsertDay(db, input);
-	}
-}
-
-vi.doMock("~/app/data/monitor-daily-stats", () => ({
-	...realDailyStatsModule,
-	default: FakeMonitorDailyStats,
-}));
-
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let aggregateDailyStats = (await import("./aggregate-daily-stats")).default;
+/**
+ * Imported dynamically, after the mocks above, since the models reach `~/app/lib/queue`,
+ * which reads `env` at module load, and a static import would be hoisted.
+ */
+let { publishModels } = await import("~/app/lib/test/models");
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {
@@ -68,6 +49,7 @@ async function runJob(db: Database) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.aggregateDailyStats, { id: "message-1", attempts: 1, log });
 	ctx.set(JobDatabase, db, { property: "database" });
+	publishModels(ctx, db);
 
 	await aggregateDailyStats(ctx);
 	log.emit();
@@ -90,7 +72,7 @@ function stubRawAggregateExec(db: Database, rowsByTable: Record<string, unknown[
 	/**
 	 * `db.exec` also dispatches the query builder's internal `findMany`/`create`/`delete`
 	 * calls, so only raw SQL-string calls are intercepted here; other calls fall through
-	 * to the real implementation, keeping `MonitorDailyStats.upsertDay`'s reads and writes intact.
+	 * to the real implementation, keeping the `upsertDay` model method's reads and writes intact.
 	 */
 	let original = (db.exec as (...args: unknown[]) => Promise<unknown>).bind(db);
 	(db as unknown as { exec: unknown }).exec = vi.fn(
@@ -112,10 +94,21 @@ function statementFor(table: string) {
 	return statements.find((statement) => statement.sql.includes(table));
 }
 
+/**
+ * Makes every insert of `monitorId`'s daily row abort inside SQLite, exercising the "one bad
+ * row doesn't cost the rest their stats" guarantee through the same write path the job runs.
+ */
+function failWritesFor(sqliteDb: SqliteDatabase, monitorId: string): void {
+	sqliteDb.exec(
+		`CREATE TRIGGER fail_daily_stats_write BEFORE INSERT ON monitor_daily_stats
+		 WHEN NEW.monitor_id = '${monitorId}'
+		 BEGIN SELECT RAISE(ABORT, 'write failed: ${monitorId}'); END`,
+	);
+}
+
 beforeEach(() => {
 	getHttpDailyAggregateMock.mockReset();
 	getHttpDailyAggregateMock.mockImplementation(async () => success([]));
-	failingWrites.clear();
 });
 
 describe("aggregateDailyStats", () => {
@@ -308,8 +301,8 @@ describe("aggregateDailyStats", () => {
 	});
 
 	test("one monitor's failed write is logged and skipped, and doesn't cost the rest their stats", async () => {
-		let { db } = createTestDatabase();
-		failingWrites.add("http-2");
+		let { db, sqliteDb } = createTestDatabase();
+		failWritesFor(sqliteDb, "http-2");
 		getHttpDailyAggregateMock.mockImplementation(async () =>
 			success(
 				["http-1", "http-2", "http-3"].map((monitorId) => ({

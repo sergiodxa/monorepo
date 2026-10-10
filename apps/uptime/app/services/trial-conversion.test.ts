@@ -11,19 +11,20 @@
 import type { Database } from "remix/data-table";
 
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { beforeEach, describe, expect, test } from "vitest";
 
+import type { UptimeModels } from "~/app/models";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
-import Lead from "~/app/data/lead";
-import Monitor from "~/app/data/monitor";
-import TrialConversion, { trialConversionUrls } from "~/app/data/trial-conversion";
-import TrialWatch, {
+import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
+import { trialConversionUrls } from "~/app/models/trial-conversions";
+import {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
-} from "~/app/data/trial-watch";
-import { createTestDatabase } from "~/app/lib/test/db";
+} from "~/app/models/trial-watches";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
 import { monitorDailyStats, monitors, trialWatches, trialWatchResults } from "~/database/schema";
 
@@ -35,18 +36,38 @@ const TEAM_ID = "team-1";
 const AUTHOR_ID = "user-1";
 
 let db: Database;
+let models: UptimeModels;
 
 beforeEach(() => {
 	db = createTestDatabase().db;
+	models = bindModels(db);
 });
+
+/**
+ * Makes every insert into `table` matching `when` fail, the way a write the database refuses
+ * does, so a test reaches a failure path through real SQL.
+ */
+async function failInsertsInto(table: string, when = "1") {
+	await db.exec(
+		`CREATE TRIGGER fail_${table} BEFORE INSERT ON ${table} WHEN ${when}
+		 BEGIN SELECT RAISE(ABORT, 'insert failed'); END`,
+	);
+}
+
+/** Moves `table` out of the way so every read of it fails, as an unavailable database would. */
+async function breakReadsOf(table: string) {
+	await db.exec(`ALTER TABLE ${table} RENAME TO ${table}_unavailable`);
+}
 
 /** The lead a sign-in with {@link EMAIL} finds. */
 async function createLead(email: string = EMAIL) {
-	return await Lead.upsertByEmail(db, {
-		email,
-		locale: "en",
-		consented: false,
-	});
+	return unwrap(
+		await models.leads.upsertByEmail({
+			email,
+			locale: "en",
+			consented: false,
+		}),
+	);
 }
 
 /**
@@ -56,7 +77,7 @@ async function createLead(email: string = EMAIL) {
  */
 async function attempt(leadId: string, url: string, daysAgo: number) {
 	let startedAt = Date.now() - daysAgo * MS_PER_DAY;
-	let watch = await TrialWatch.create(db, leadId, { url });
+	let watch = unwrap(await models.trialWatches.create({ lead_id: leadId, url }));
 
 	await db.update(trialWatches, watch.id, {
 		created_at: startedAt,
@@ -89,7 +110,7 @@ async function created(): Promise<SelectMonitor[]> {
 
 /** Converts for {@link EMAIL} into {@link TEAM_ID}, the way the sign-in path does. */
 async function convert() {
-	await convertTrialWatches(db, { email: EMAIL, teamId: TEAM_ID, authorId: AUTHOR_ID });
+	await convertTrialWatches(models, { email: EMAIL, teamId: TEAM_ID, authorId: AUTHOR_ID });
 }
 
 describe("the conversion window, per attempt", () => {
@@ -117,7 +138,7 @@ describe("the conversion window, per attempt", () => {
 			"https://c.example",
 		]);
 
-		let lapsed = await TrialWatch.findById(db, a);
+		let lapsed = await models.trialWatches.find(a);
 		expect(lapsed?.converted_at).toBeNull();
 		expect(lapsed?.converted_monitor_id).toBeNull();
 	});
@@ -148,7 +169,7 @@ describe("the conversion window, per attempt", () => {
  */
 describe("matching a subject to a lead", () => {
 	async function convertAs(email: string) {
-		await convertTrialWatches(db, { email, teamId: TEAM_ID, authorId: AUTHOR_ID });
+		await convertTrialWatches(models, { email, teamId: TEAM_ID, authorId: AUTHOR_ID });
 	}
 
 	test("claims the targets of an address that was tried with a tag", async () => {
@@ -188,7 +209,7 @@ describe("matching a subject to a lead", () => {
 describe("the history a claimed target arrives with", () => {
 	/**
 	 * A check recorded at a fixed instant. Written straight to the table because
-	 * `TrialWatch.recordCheck` stamps `checked_at` from the clock, and every case here is about
+	 * `trialWatches.recordCheck` stamps `checked_at` from the clock, and every case here is about
 	 * which past day a check falls in.
 	 */
 	async function recordAt(watchId: string, at: number, status: MonitorStatus, ms: number | null) {
@@ -294,18 +315,14 @@ describe("the history a claimed target arrives with", () => {
 		let watchId = await attempt(lead.id, "https://example.com", 1);
 		await hourlyWeek(watchId, 1);
 
-		let listResults = vi.spyOn(TrialWatch, "listResults").mockRejectedValue(new Error("nope"));
+		await breakReadsOf("trial_watch_results");
 
-		try {
-			await convert();
-		} finally {
-			listResults.mockRestore();
-		}
+		await convert();
 
 		let [monitor] = await created();
 		expect(monitor?.url).toBe("https://example.com");
 
-		let watch = await TrialWatch.findById(db, watchId);
+		let watch = await models.trialWatches.find(watchId);
 		expect(watch?.converted_monitor_id).toBe(monitor?.id ?? null);
 	});
 });
@@ -318,7 +335,7 @@ describe("what a claimed target becomes", () => {
 		await convert();
 
 		let [monitor] = await created();
-		let watch = await TrialWatch.findById(db, watchId);
+		let watch = await models.trialWatches.find(watchId);
 		expect(watch?.converted_monitor_id).toBe(monitor?.id ?? null);
 		expect(watch?.converted_at).not.toBeNull();
 	});
@@ -388,12 +405,12 @@ describe("the funnel record", () => {
 	test("writes the snapshot the report is drawn from", async () => {
 		let lead = await createLead();
 		await threeAttempts(lead.id, 30);
-		await Lead.recordEmailSent(db, lead.id);
-		await Lead.recordEmailSent(db, lead.id);
+		await models.leads.recordEmailSent(lead.id);
+		await models.leads.recordEmailSent(lead.id);
 
 		await convert();
 
-		let record = await TrialConversion.findByOwner(db, AUTHOR_ID);
+		let record = await models.trialConversions.findBy({ owner_id: AUTHOR_ID });
 		expect(record?.lead_created_at).toBe(lead.created_at);
 		expect(record?.emails_sent).toBe(2);
 		expect(record?.watch_count).toBe(3);
@@ -417,13 +434,13 @@ describe("the funnel record", () => {
 		await convert();
 
 		expect(await created()).toHaveLength(0);
-		expect(await TrialConversion.findByOwner(db, AUTHOR_ID)).not.toBeNull();
+		expect(await models.trialConversions.findBy({ owner_id: AUTHOR_ID })).not.toBeNull();
 	});
 
 	test("records nothing for an address that never left a lead", async () => {
 		await convert();
 
-		expect(await TrialConversion.findByOwner(db, AUTHOR_ID)).toBeNull();
+		expect(await models.trialConversions.findBy({ owner_id: AUTHOR_ID })).toBeNull();
 	});
 
 	/**
@@ -434,16 +451,16 @@ describe("the funnel record", () => {
 	test("a later sign-in does not move the signup date or the counts taken at the first", async () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
-		await Lead.recordEmailSent(db, lead.id);
+		await models.leads.recordEmailSent(lead.id);
 
 		await convert();
-		let first = await TrialConversion.findByOwner(db, AUTHOR_ID);
+		let first = await models.trialConversions.findBy({ owner_id: AUTHOR_ID });
 
-		await Lead.recordEmailSent(db, lead.id);
+		await models.leads.recordEmailSent(lead.id);
 		await attempt(lead.id, "https://second.example", 0);
 		await convert();
 
-		let second = await TrialConversion.findByOwner(db, AUTHOR_ID);
+		let second = await models.trialConversions.findBy({ owner_id: AUTHOR_ID });
 		expect(second?.id).toBe(first?.id ?? "");
 		expect(second?.signed_up_at).toBe(first?.signed_up_at ?? 0);
 		expect(second?.emails_sent).toBe(1);
@@ -456,21 +473,20 @@ describe("the funnel record", () => {
 		await convert();
 
 		let paidAt = Date.now() - MS_PER_DAY;
-		await TrialConversion.markPaid(db, AUTHOR_ID, paidAt);
+		await models.trialConversions.markPaid(AUTHOR_ID, paidAt);
 		await convert();
 
-		expect((await TrialConversion.findByOwner(db, AUTHOR_ID))?.paid_at).toBe(paidAt);
+		expect((await models.trialConversions.findBy({ owner_id: AUTHOR_ID }))?.paid_at).toBe(paidAt);
 	});
 
 	test("a failure recording it costs nobody their monitors", async () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
-		vi.spyOn(TrialConversion, "recordSignup").mockRejectedValue(new Error("insert failed"));
+		await failInsertsInto("trial_conversions");
 
 		await convert();
 
 		expect(await created()).toHaveLength(1);
-		vi.spyOn(TrialConversion, "recordSignup").mockRestore();
 	});
 });
 
@@ -501,10 +517,10 @@ describe("the account-created funnel event", () => {
 	test("fires once with the counts and the campaign the sign-in carried", async () => {
 		let lead = await createLead();
 		await threeAttempts(lead.id, 30);
-		await Lead.recordEmailSent(db, lead.id);
+		await models.leads.recordEmailSent(lead.id);
 
 		await signIn(() =>
-			convertTrialWatches(db, {
+			convertTrialWatches(models, {
 				email: EMAIL,
 				teamId: TEAM_ID,
 				authorId: AUTHOR_ID,
@@ -561,15 +577,10 @@ describe("the account-created funnel event", () => {
 });
 
 describe("never blocking sign-in", () => {
-	afterEach(() => {
-		vi.spyOn(Lead, "findByEmail").mockRestore();
-		vi.spyOn(Monitor, "create").mockRestore();
-	});
-
 	test("swallows a failure in the lookup that decides whether there is anything to claim", async () => {
 		let lead = await createLead();
 		await attempt(lead.id, "https://example.com", 1);
-		vi.spyOn(Lead, "findByEmail").mockRejectedValue(new Error("d1 unavailable"));
+		await breakReadsOf("leads");
 
 		await expect(convert()).resolves.toBeUndefined();
 	});
@@ -577,22 +588,17 @@ describe("never blocking sign-in", () => {
 	test("swallows a failure while creating a monitor, leaving the attempt unclaimed", async () => {
 		let lead = await createLead();
 		let watchId = await attempt(lead.id, "https://example.com", 1);
-		vi.spyOn(Monitor, "create").mockRejectedValue(new Error("insert failed"));
+		await failInsertsInto("monitors");
 
 		await convert();
 
-		expect((await TrialWatch.findById(db, watchId))?.converted_at).toBeNull();
+		expect((await models.trialWatches.find(watchId))?.converted_at).toBeNull();
 	});
 
 	test("one failing target does not cost the others their conversion", async () => {
 		let lead = await createLead();
 		await threeAttempts(lead.id, 30);
-		let create = Monitor.create.bind(Monitor);
-		vi.spyOn(Monitor, "create")
-			.mockImplementationOnce(async () => {
-				throw new Error("insert failed");
-			})
-			.mockImplementation(create);
+		await failInsertsInto("monitors", "NEW.url = 'https://a.example'");
 
 		await convert();
 

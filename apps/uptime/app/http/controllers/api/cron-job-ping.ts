@@ -19,8 +19,6 @@ import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env, waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import Team from "~/app/data/team";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CRON_JOB_PING_PARAMS } from "~/app/http/openapi/cron-jobs";
 import { notifyCronJobResult } from "~/app/services/alerts";
@@ -148,7 +146,7 @@ export default createAction(routes.api.cronJobPing, {
 		 * not which monitors they may ping. A monitor belonging to someone else
 		 * answers 404 rather than 403, so ids can't be discovered by probing.
 		 */
-		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.apiTeam.id, cronJobId);
+		let monitor = await ctx.models.cronJobMonitors.inTeam(ctx.apiTeam.id).find(cronJobId);
 		if (!monitor)
 			return apiProblems.notFound({ detail: "Cron job not found", instance: problemInstance() });
 
@@ -178,7 +176,7 @@ export default createAction(routes.api.cronJobPing, {
 		 * The recorded source is the address Cloudflare saw connect, so a caller can
 		 * never write an address of its choosing into the ping history.
 		 */
-		let pingId = await CronJobMonitor.recordPing(ctx.db, monitor, wasOnTime, {
+		let pingId = await ctx.models.cronJobMonitors.recordPing(monitor, wasOnTime, {
 			sourceIp: ctx.ip?.toString() ?? null,
 			userAgent: ctx.request.headers.get("User-Agent"),
 		});
@@ -196,7 +194,7 @@ export default createAction(routes.api.cronJobPing, {
 			responseTimeMs: 0,
 		});
 
-		let ownerIds = await Team.ownerIdsByTeamIds(ctx.db, [monitor.team_id]);
+		let ownerIds = await ctx.models.teams.ownerIdsByTeamIds([monitor.team_id]);
 		let ownerId = ownerIds.get(monitor.team_id);
 		if (ownerId === undefined) {
 			/**
@@ -225,7 +223,7 @@ export default createAction(routes.api.cronJobPing, {
 		}
 
 		await notifyCronJobResult(
-			ctx.db,
+			ctx.models,
 			ctx.email,
 			monitor,
 			monitor.status,

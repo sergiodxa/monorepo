@@ -11,7 +11,6 @@ import type { Touch } from "@sdxc/attribution";
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
-import type { Database } from "remix/data-table";
 import type { Renderer } from "remix/middleware/render";
 
 import { AuthError, AuthErrorCode } from "@sdxc/auth/auth-error";
@@ -19,7 +18,7 @@ import { contextOf } from "@sdxc/auth/remix/context";
 import { redirect } from "@sdxc/http/response";
 import { Location } from "@sdxc/location";
 import { currentLog } from "@sdxc/logger";
-import { isFailure, wrap } from "@sdxc/result";
+import { isFailure, unwrap, wrap } from "@sdxc/result";
 import { border, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { flex, flexCol, gap, items } from "@sdxc/u/layout";
@@ -28,13 +27,12 @@ import { hover } from "@sdxc/u/state";
 import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import { createController } from "remix/router";
 
-import type { TrialSignupAttribution } from "~/app/data/trial-conversion";
+import type { UptimeModels } from "~/app/models";
+import type { TrialSignupAttribution } from "~/app/models/trial-conversions";
 
 import { relyingParty } from "~/app/auth/relying-party";
-import Customer from "~/app/data/customer";
-import Team from "~/app/data/team";
-import UserPreferences from "~/app/data/user-preferences";
 import { language as languageCookie, returnTo } from "~/app/http/cookies";
+import { provisionCustomer } from "~/app/services/customer";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
 import DocumentLayout from "~/resources/layouts/document";
@@ -51,13 +49,13 @@ interface AuthErrorContext {
  * join, then a fresh personal team — because a domain-joined team belongs to
  * the employer, and only an owned team should receive their anonymous history.
  */
-async function resolveTeam(db: Database, idToken: IdToken) {
-	let teams = await Team.listBySubjectId(db, idToken.subject);
+async function resolveTeam(models: UptimeModels, idToken: IdToken) {
+	let teams = await models.teams.listForSubject(idToken.subject);
 
 	let [first] = teams;
 	if (first) return teams.find((team) => team.owner_id === idToken.subject) ?? first;
 
-	let joined = await Team.joinByDomain(db, idToken);
+	let joined = await models.memberships.joinByDomain(idToken);
 	if (joined) return joined;
 
 	/**
@@ -65,7 +63,7 @@ async function resolveTeam(db: Database, idToken: IdToken) {
 	 * just created for a brand-new account; `convertTrialWatches` emits its own
 	 * for the free-page path, so summing the two counts every new account once.
 	 */
-	let created = await Team.createTeam(db, idToken);
+	let created = unwrap(await models.teams.createPersonal(idToken));
 
 	trackAccountCreated(currentLog(), {
 		ownerId: idToken.subject,
@@ -98,8 +96,11 @@ function signupAttribution(touch: Touch | null): TrialSignupAttribution | undefi
  *
  * @returns Headers carrying the cookie, or undefined when there is no stored preference.
  */
-async function languageHeaders(db: Database, subjectId: string): Promise<Headers | undefined> {
-	let preferences = await UserPreferences.findBySubjectId(db, subjectId);
+async function languageHeaders(
+	models: UptimeModels,
+	subjectId: string,
+): Promise<Headers | undefined> {
+	let preferences = await models.userPreferences.findBy({ subject_id: subjectId });
 	if (!preferences?.preferred_language) return undefined;
 
 	let headers = new Headers();
@@ -186,7 +187,7 @@ export default createController(routes.auth, {
 			 */
 			ctx.log.set({ user: { id: idToken.subject } });
 
-			let customer = await Customer.provision(ctx.billing, idToken);
+			let customer = await provisionCustomer(ctx.billing, idToken);
 
 			/**
 			 * A sign-in completes whether or not billing answered: the customer is provisioned
@@ -201,14 +202,14 @@ export default createController(routes.auth, {
 				});
 			}
 
-			let team = await resolveTeam(ctx.db, idToken);
+			let team = await resolveTeam(ctx.models, idToken);
 
 			/**
 			 * Runs after the team exists and before the redirect, so its monitors land in
 			 * the team that redirect will already show. The service always resolves
 			 * normally, so sign-in completes regardless of the conversion outcome.
 			 */
-			await convertTrialWatches(ctx.db, {
+			await convertTrialWatches(ctx.models, {
 				email: idToken.email ?? "",
 				teamId: team.id,
 				authorId: idToken.subject,
@@ -222,7 +223,7 @@ export default createController(routes.auth, {
 			let target = Location.safe(grant.returnTo, { fallback: routes.app.index.href() });
 			return redirect(target, {
 				status: redirect.Status.SeeOther,
-				headers: await languageHeaders(ctx.db, idToken.subject),
+				headers: await languageHeaders(ctx.models, idToken.subject),
 			});
 		},
 	},

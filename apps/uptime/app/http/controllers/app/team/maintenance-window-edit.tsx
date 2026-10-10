@@ -20,14 +20,14 @@ import { fieldStackLayout } from "@sdxc/ui/styles";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { MAINTENANCE_TIME_ZONE } from "~/app/http/validators/maintenance-window";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";
+import { isActiveAt } from "~/app/models/maintenance-windows";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import FormPage from "~/resources/components/form-page";
 import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -46,12 +46,11 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { windowId } = s.parse(s.object({ windowId: s.string() }), ctx.params);
-		let window = await MaintenanceWindow.findByIdForTeam(ctx.db, ctx.team.id, windowId);
+		let window = await ctx.models.maintenanceWindows.inTeam(ctx.team.id).find(windowId);
 		if (!window) return notFound("Not Found");
 
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
-		let isActive =
-			window.ended_early_at === null && MaintenanceWindow.isActiveAt(window, Date.now());
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
+		let isActive = window.ended_early_at === null && isActiveAt(window, Date.now());
 		let heading = ctx.intl.t("page.editMaintenance.header.title", { name: window.name });
 		let indexHref = routes.app.team.maintenanceWindows.index.href({ team: ctx.team.slug });
 		let fields = withPrefix(ctx.intl.t, "page.maintenanceWindows.form.fields");

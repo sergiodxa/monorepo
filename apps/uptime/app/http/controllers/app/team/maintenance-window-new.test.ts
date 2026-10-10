@@ -1,6 +1,6 @@
 /**
  * Tests for the new maintenance window page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load; the empty-form render is
+ * with a strict empty env, so the page reads the database alone; the empty-form render is
  * checked only for a 200 and that every create-action field survived being regrouped
  * into cards. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are seeded by a
  * fake middleware standing in for the real `auth`/`requireUser`/`requireTeam` chain.

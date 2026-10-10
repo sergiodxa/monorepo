@@ -1,6 +1,6 @@
 /**
- * Tests for the new alert page controller. `cloudflare:workers` is mocked
- * because `~/app/data/monitor` reads `env` at module load. The rendered form
+ * Tests for the new alert page controller. `cloudflare:workers` is mocked with a
+ * strict empty env, so a binding the page reached for would fail by name. The rendered form
  * is empty, so assertions check structure and field presence only, with
  * `ctx.team`/`ctx.membership`/`ctx.teams`/auth state seeded directly by a
  * fake middleware.

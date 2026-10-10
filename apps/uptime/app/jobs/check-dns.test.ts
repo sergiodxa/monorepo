@@ -11,6 +11,7 @@
 
 import type { UsageEvent } from "@sdxc/billing";
 import type { AnalyticsEngineMock, QueueMock } from "@sdxc/cloudflare-mocks";
+import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 
 import { BillingError } from "@sdxc/billing";
 import { createAnalyticsEngine, createEnv, createQueue } from "@sdxc/cloudflare-mocks";
@@ -28,7 +29,6 @@ import type { DnsRecordImport } from "~/app/models/dns-monitor-records";
 import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
 import type { InsertDnsMonitor } from "~/database/schema";
 
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
 import { MAIL_FROM } from "~/app/emails/sender";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
@@ -224,6 +224,18 @@ async function seedTeam(db: Database, teamId: string, ownerId: string) {
 	);
 }
 
+/**
+ * Makes recording `monitorId`'s check abort inside SQLite, so its check throws partway
+ * through the sweep the way a failed D1 write does, leaving the monitor row untouched.
+ */
+function failChecksFor(sqliteDb: SqliteDatabase, monitorId: string): void {
+	sqliteDb.exec(
+		`CREATE TRIGGER fail_dns_result BEFORE INSERT ON dns_monitor_results
+		 WHEN NEW.dns_monitor_id = '${monitorId}'
+		 BEGIN SELECT RAISE(ABORT, 'D1 write failed'); END`,
+	);
+}
+
 /** The single result row a monitor's check wrote. */
 async function onlyResult(db: Database, monitorId: string) {
 	let models = bindModels(db);
@@ -365,38 +377,28 @@ describe("checkDns", () => {
 	});
 
 	test("continues sweeping remaining monitors and counts an error when one monitor's check throws", async () => {
-		let { db } = createTestDatabase();
+		let { db, sqliteDb } = createTestDatabase();
 		let models = bindModels(db);
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
 		let healthy = await seedMonitor(db, { domain: "ok.example.com", last_status: "error" });
+		failChecksFor(sqliteDb, failing.id);
 
-		let listNames = vi
-			.spyOn(DnsMonitorRecord, "listNames")
-			.mockImplementation(async (_db: Database, monitorId: string) => {
-				if (monitorId === failing.id) throw new Error("D1 read failed");
-				return [];
-			});
+		let record = await runJob(db);
 
-		try {
-			let record = await runJob(db);
+		expect(enqueued().map((message) => message.body.monitorId)).toEqual([healthy.id]);
 
-			expect(enqueued().map((message) => message.body.monitorId)).toEqual([healthy.id]);
+		expect(record).toMatchObject({
+			"checks.total": 2,
+			"checks.succeeded": 1,
+			"checks.failed": 1,
+		});
 
-			expect(record).toMatchObject({
-				"checks.total": 2,
-				"checks.succeeded": 1,
-				"checks.failed": 1,
-			});
+		/** The failing monitor's cached fields are untouched — its check result never landed. */
+		let failedRow = await models.dnsMonitors.inTeam("team-1").where({ id: failing.id }).first();
+		expect(failedRow?.last_status).toBeNull();
+		expect(await models.dnsMonitorResults.recent(failing.id)).toHaveLength(0);
 
-			/** The failing monitor's cached fields are untouched — recordCheckResult never ran. */
-			let failedRow = await models.dnsMonitors.inTeam("team-1").where({ id: failing.id }).first();
-			expect(failedRow?.last_status).toBeNull();
-			expect(await models.dnsMonitorResults.recent(failing.id)).toHaveLength(0);
-
-			expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
-		} finally {
-			listNames.mockRestore();
-		}
+		expect(noteOf(record, "checks.monitor_failed")?.["monitor.id"]).toBe(failing.id);
 	});
 
 	test("sweeps the apex alone when the monitor tracks no names at all", async () => {
@@ -743,27 +745,17 @@ describe("checkDns ping reporting", () => {
 	});
 
 	test("a check that threw produces neither a data point nor a ping", async () => {
-		let { db } = createTestDatabase();
+		let { db, sqliteDb } = createTestDatabase();
 		await seedTeam(db, "team-1", "owner-1");
 		let failing = await seedMonitor(db, { domain: "fails.example.com" });
 		let healthy = await seedMonitor(db, { domain: "ok.example.com" });
+		failChecksFor(sqliteDb, failing.id);
 
-		let listNames = vi
-			.spyOn(DnsMonitorRecord, "listNames")
-			.mockImplementation(async (_db: Database, monitorId: string) => {
-				if (monitorId === failing.id) throw new Error("D1 read failed");
-				return [];
-			});
+		await runJob(db);
 
-		try {
-			await runJob(db);
-
-			/** A check that threw leaves no result row, so the ping report has nothing to key on. */
-			expect(pingedMonitorIds()).toEqual([healthy.id]);
-			expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([healthy.id]);
-		} finally {
-			listNames.mockRestore();
-		}
+		/** A check that threw leaves no result row, so the ping report has nothing to key on. */
+		expect(pingedMonitorIds()).toEqual([healthy.id]);
+		expect(ingestedEvents().map((event) => event.metadata?.monitorId)).toEqual([healthy.id]);
 	});
 
 	test("makes no ingestion call at all when the sweep claimed nothing", async () => {

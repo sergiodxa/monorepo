@@ -11,15 +11,12 @@
 
 import type { CurrentJobContext } from "@sdxc/jobs";
 import type { Mailer } from "@sdxc/mail";
-import type { Database } from "remix/data-table";
 
 import { createJobHandler, Job } from "@sdxc/jobs";
 import * as s from "remix/data-schema";
 
 import type { NotifyInput } from "~/app/jobs";
 
-import DnsMonitorRecord from "~/app/data/dns-monitor-record";
-import FlowMonitor from "~/app/data/flow-monitor";
 import jobs from "~/app/jobs";
 import {
 	dnsAlertResultFromRecords,
@@ -32,16 +29,7 @@ import {
 	notifyTcpResult,
 } from "~/app/services/alerts";
 import { calculateSslStatus } from "~/app/services/ssl-info";
-import {
-	cronJobMonitors,
-	cronJobStatuses,
-	dnsMonitors,
-	flowMonitors,
-	flowStatuses,
-	monitors,
-	registrationStatuses,
-	tcpMonitors,
-} from "~/database/schema";
+import { cronJobStatuses, flowStatuses, registrationStatuses } from "~/database/schema";
 
 /** The statuses each monitor type's transition can be between. */
 const TCP_STATUSES = ["up", "down", "timeout"] as const;
@@ -108,16 +96,16 @@ async function dispatch(
 	ctx: CurrentJobContext & { readonly input: NotifyInput },
 	mailer: Mailer,
 ): Promise<boolean> {
-	let db: Database = ctx.database;
+	let models = ctx.models;
 	let job = ctx.input;
 
 	switch (job.monitorType) {
 		case "tcp": {
-			let monitor = await db.findOne(tcpMonitors, { where: { id: job.monitorId } });
+			let monitor = await models.tcpMonitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { previous, current } = parseStatuses(ctx, job, TCP_STATUSES);
-			await notifyTcpResult(db, mailer, monitor, previous, {
+			await notifyTcpResult(models, mailer, monitor, previous, {
 				status: current,
 				responseTimeMs: monitor.last_response_time_ms,
 			});
@@ -125,7 +113,7 @@ async function dispatch(
 		}
 
 		case "dns": {
-			let monitor = await db.findOne(dnsMonitors, { where: { id: job.monitorId } });
+			let monitor = await models.dnsMonitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { previous, current } = parseStatuses(ctx, job, DNS_STATUSES);
@@ -135,9 +123,9 @@ async function dispatch(
 			 * message, since a status alone would leave a redelivered email with a headline and
 			 * no body, and a copy on the queue would be replayed as fact however long it sat.
 			 */
-			let records = await DnsMonitorRecord.listByMonitor(db, monitor.id);
+			let records = await models.dnsMonitorRecords.listByMonitor(monitor.id);
 			await notifyDnsResult(
-				db,
+				models,
 				mailer,
 				monitor,
 				previous,
@@ -147,16 +135,16 @@ async function dispatch(
 		}
 
 		case "cron": {
-			let monitor = await db.findOne(cronJobMonitors, { where: { id: job.monitorId } });
+			let monitor = await models.cronJobMonitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { previous, current } = parseStatuses(ctx, job, cronJobStatuses);
-			await notifyCronJobResult(db, mailer, monitor, previous, current);
+			await notifyCronJobResult(models, mailer, monitor, previous, current);
 			return true;
 		}
 
 		case "flow": {
-			let monitor = await db.findOne(flowMonitors, { where: { id: job.monitorId } });
+			let monitor = await models.flowMonitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { previous, current } = parseStatuses(ctx, job, flowStatuses);
@@ -166,9 +154,9 @@ async function dispatch(
 			 * carried in the message, so a redelivery quotes what the check actually recorded
 			 * instead of a copy that has been sitting on the queue.
 			 */
-			let [result] = await FlowMonitor.listResults(db, monitor.id, 1);
+			let [result] = await models.flowMonitorResults.recent(monitor.id, 1);
 			await notifyFlowResult(
-				db,
+				models,
 				mailer,
 				monitor,
 				previous,
@@ -178,7 +166,7 @@ async function dispatch(
 		}
 
 		case "ssl": {
-			let monitor = await db.findOne(monitors, { where: { id: job.monitorId } });
+			let monitor = await models.monitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { current } = parseStatuses(ctx, job, SSL_STATUSES);
@@ -193,16 +181,16 @@ async function dispatch(
 				monitor.ssl_expiry_warning_days,
 			);
 
-			await notifySslResult(db, mailer, monitor, current, daysUntilExpiry);
+			await notifySslResult(models, mailer, monitor, current, daysUntilExpiry);
 			return true;
 		}
 
 		case "registration": {
-			let monitor = await db.findOne(dnsMonitors, { where: { id: job.monitorId } });
+			let monitor = await models.dnsMonitors.find(job.monitorId);
 			if (!monitor) return false;
 
 			let { previous, current } = parseStatuses(ctx, job, registrationStatuses);
-			await notifyRegistrationResult(db, mailer, monitor, previous, current);
+			await notifyRegistrationResult(models, mailer, monitor, previous, current);
 			return true;
 		}
 	}

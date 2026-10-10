@@ -27,8 +27,6 @@ import { createAction } from "remix/router";
 
 import type { BadgeTone } from "~/resources/components/badge";
 
-import CronJobMonitor from "~/app/data/cron-job";
-import MonitorDailyStats from "~/app/data/monitor-daily-stats";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
@@ -60,15 +58,15 @@ export default createAction(routes.app.team.cronJobs.show, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		let { monitorId } = s.parse(s.object({ monitorId: s.string() }), ctx.params);
-		let monitor = await CronJobMonitor.findByIdForTeam(ctx.db, ctx.team.id, monitorId);
+		let monitor = await ctx.models.cronJobMonitors.inTeam(ctx.team.id).find(monitorId);
 		if (!monitor) return notFound("Not Found");
 
-		let pings = await CronJobMonitor.listPings(ctx.db, monitor.id);
+		let pings = await ctx.models.cronJobPings.recent(monitor.id);
 		let pingUrl = new URL(
 			routes.api.cronJobPing.href({ cronJobId: monitor.id }),
 			ctx.request.url,
 		).toString();
-		let dailyStats = await MonitorDailyStats.listRecentDays(ctx.db, monitor.id, "cron");
+		let dailyStats = await ctx.models.monitorDailyStats.listRecentDays(monitor.id, "cron");
 
 		let totalPings = pings.length;
 		let onTimeCount = pings.filter((ping) => ping.was_on_time).length;

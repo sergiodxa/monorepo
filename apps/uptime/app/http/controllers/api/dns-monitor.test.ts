@@ -9,17 +9,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectDnsMonitor, SelectTeam } from "~/database/schema";
 
-import ApiKey from "~/app/data/api-key";
-import DnsMonitor from "~/app/data/dns-monitor";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { checkConformance } from "~/app/lib/test/openapi";
 import { parseLink } from "~/app/lib/test/paging";
 import { expectProblem } from "~/app/lib/test/problem";
@@ -50,7 +50,9 @@ async function createTeamRow(db: Db): Promise<SelectTeam> {
 }
 
 async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Promise<string> {
-	let { key } = await ApiKey.create(db, teamId, { name: "test", scopes, expires_at: null });
+	let { key } = unwrap(
+		await bindModels(db).apiKeys.issue(teamId, { name: "test", scopes, expires_at: null }),
+	);
 	return key;
 }
 
@@ -59,13 +61,16 @@ async function createDnsMonitorRow(
 	teamId: string,
 	overrides: Record<string, unknown> = {},
 ): Promise<SelectDnsMonitor> {
-	return await DnsMonitor.create(db, teamId, {
-		name: "Apex A record",
-		domain: "example.com",
-		interval_seconds: 3600,
-		is_enabled: true,
-		...overrides,
-	});
+	return unwrap(
+		await bindModels(db).dnsMonitors.create({
+			team_id: teamId,
+			name: "Apex A record",
+			domain: "example.com",
+			interval_seconds: 3600,
+			is_enabled: true,
+			...overrides,
+		}),
+	);
 }
 
 async function dispatch(db: Db, request: Request) {
@@ -233,7 +238,7 @@ describe("registration in the DNS monitor representation", () => {
 		);
 
 		expect(response.status).toBe(200);
-		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let updated = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(updated?.registration_warning_days).toBe(60);
 		expect(updated?.registration_next_check_at).toBeNull();
 	});
@@ -254,7 +259,7 @@ describe("registration in the DNS monitor representation", () => {
 			),
 		);
 
-		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let updated = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(updated?.registration_next_check_at).toBe(nextCheck);
 	});
 
@@ -295,7 +300,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		};
 		expect(body.data.dnsMonitor.name).toBe("New name");
 
-		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let updated = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(updated?.name).toBe("New name");
 	});
 
@@ -313,7 +318,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		expect(response.status).toBe(400);
 		await expectProblem(response, "validationError");
 
-		let unchanged = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let unchanged = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(unchanged?.interval_seconds).toBe(3600);
 	});
 
@@ -339,7 +344,9 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 			updateRequest(monitor.id, { intervalSeconds: 900 }, { Authorization: `Bearer ${key}` }),
 		);
 		expect(accepted.status).toBe(200);
-		expect((await DnsMonitor.findByIdForTeam(db, team.id, monitor.id))?.interval_seconds).toBe(900);
+		expect(
+			(await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id))?.interval_seconds,
+		).toBe(900);
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -377,7 +384,7 @@ describe("PUT /api/v1/dns-monitors/:dnsMonitorId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		let unchanged = await DnsMonitor.findByIdForTeam(db, otherTeam.id, monitor.id);
+		let unchanged = await bindModels(db).dnsMonitors.inTeam(otherTeam.id).find(monitor.id);
 		expect(unchanged?.name).toBe("Someone else's");
 	});
 });
@@ -398,7 +405,7 @@ describe("DELETE /api/v1/dns-monitors/:dnsMonitorId", () => {
 		let body = (await response.json()) as { data: { deleted: boolean } };
 		expect(body.data.deleted).toBe(true);
 
-		expect(await DnsMonitor.findByIdForTeam(db, team.id, monitor.id)).toBeNull();
+		expect(await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id)).toBeNull();
 	});
 
 	test("returns 401 when the Authorization header is missing", async () => {
@@ -436,7 +443,7 @@ describe("DELETE /api/v1/dns-monitors/:dnsMonitorId", () => {
 		);
 
 		expect(response.status).toBe(404);
-		expect(await DnsMonitor.findByIdForTeam(db, otherTeam.id, monitor.id)).not.toBeNull();
+		expect(await bindModels(db).dnsMonitors.inTeam(otherTeam.id).find(monitor.id)).not.toBeNull();
 	});
 });
 
@@ -447,7 +454,7 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 		let monitor = await createDnsMonitorRow(db, team.id);
 
-		await DnsMonitor.recordCheckResult(db, monitor.id, {
+		await bindModels(db).dnsMonitors.recordCheckResult(monitor.id, {
 			status: "ok",
 			responseTimeMs: 42,
 		});
@@ -473,8 +480,14 @@ describe("GET /api/v1/dns-monitors/:dnsMonitorId/results", () => {
 		let key = await createApiKey(db, team.id, ["dns-monitors:read"]);
 		let monitor = await createDnsMonitorRow(db, team.id);
 
-		await DnsMonitor.recordCheckResult(db, monitor.id, { status: "ok", responseTimeMs: 42 });
-		await DnsMonitor.recordCheckResult(db, monitor.id, { status: "error", responseTimeMs: 99 });
+		await bindModels(db).dnsMonitors.recordCheckResult(monitor.id, {
+			status: "ok",
+			responseTimeMs: 42,
+		});
+		await bindModels(db).dnsMonitors.recordCheckResult(monitor.id, {
+			status: "error",
+			responseTimeMs: 99,
+		});
 
 		let response = await dispatch(
 			db,
@@ -602,7 +615,7 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
 		let response = await dispatch(db, mergePatch(monitor.id, { name: "Patched" }, { key }));
 
 		expect(response.status).toBe(200);
-		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let updated = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(updated?.name).toBe("Patched");
 		expect(updated?.domain).toBe("example.com");
 		expect(updated?.interval_seconds).toBe(3600);
@@ -618,12 +631,12 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
 		});
 
 		await dispatch(db, mergePatch(monitor.id, { registrationWarningDays: 90 }, { key }));
-		let widened = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let widened = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(widened?.registration_warning_days).toBe(90);
 		expect(widened?.registration_next_check_at).toBeNull();
 
 		await dispatch(db, mergePatch(monitor.id, { registrationWarningDays: null }, { key }));
-		let reset = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let reset = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(reset?.registration_warning_days).toBe(30);
 	});
 
@@ -642,7 +655,7 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
 		);
 
 		expect(response.status).toBe(200);
-		let updated = await DnsMonitor.findByIdForTeam(db, team.id, monitor.id);
+		let updated = await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id);
 		expect(updated?.interval_seconds).toBe(86_400);
 		expect(updated?.is_enabled).toBe(true);
 	});
@@ -672,7 +685,9 @@ describe("PATCH /api/v1/dns-monitors/:dnsMonitorId", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect((await DnsMonitor.findByIdForTeam(db, team.id, monitor.id))?.is_enabled).toBe(false);
+		expect((await bindModels(db).dnsMonitors.inTeam(team.id).find(monitor.id))?.is_enabled).toBe(
+			false,
+		);
 	});
 
 	test("answers unsupported-media-type with Accept-Patch for any other body", async () => {

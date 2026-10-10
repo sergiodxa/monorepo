@@ -1,7 +1,7 @@
 /**
  * Tests for the edit status-page form controller. `cloudflare:workers` is mocked
- * before the dynamic import because the controller's import chain pulls in
- * `~/app/data/monitor`, which touches the `QUEUE` binding at module scope; the
+ * before the dynamic import because the models' import chain pulls in
+ * `~/app/lib/queue`, which reads the `QUEUE` binding; the
  * bindings behind it are in-memory implementations, and the env is strict, so a
  * binding this form reaches for without supplying fails by name.
  * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds

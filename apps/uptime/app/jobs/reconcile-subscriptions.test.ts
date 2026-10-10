@@ -26,7 +26,7 @@ import { Database } from "~/app/jobs/middleware/database";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
 import { createTestBilling } from "~/app/lib/test/billing";
 import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { bindModels, publishModels } from "~/app/lib/test/models";
 import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 
 /** Days after which a handled delivery is dropped, as the job is configured. */
@@ -82,6 +82,7 @@ async function run() {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, db, { property: "database" });
+	publishModels(ctx, db);
 
 	await reconcileSubscriptions(ctx);
 

@@ -7,15 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { UptimeModels } from "~/app/models";
 
-import CronJob from "~/app/data/cron-job";
-import DnsMonitor from "~/app/data/dns-monitor";
-import FlowMonitor from "~/app/data/flow-monitor";
-import Monitor from "~/app/data/monitor";
-import TcpMonitor from "~/app/data/tcp-monitor";
 import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
 
 /** One monitor as a scope choice needs it: enough to name it and to store it. */
@@ -31,37 +25,40 @@ export interface ScopeMonitorGroup {
 }
 
 /**
- * The monitor models behind the scope types. They share a `listByTeam`/`findByIdForTeam`
- * signature, so the whole per-type branch is this table plus an index, and a new scope
- * type is one entry here.
+ * The team-scoped query of the model behind each scope type. Every monitor model shares the
+ * `inTeam` scope, so the whole per-type branch is this switch, and a new scope type is one case.
  */
-const SCOPE_MONITOR_MODELS: Record<
-	MonitorScopeType,
-	{
-		listByTeam(db: Database, teamId: string): Promise<ScopeMonitor[]>;
-		findByIdForTeam(db: Database, teamId: string, monitorId: string): Promise<ScopeMonitor | null>;
+function inTeam(models: UptimeModels, monitorType: MonitorScopeType, teamId: string) {
+	switch (monitorType) {
+		case "http":
+			return models.monitors.inTeam(teamId);
+		case "dns":
+			return models.dnsMonitors.inTeam(teamId);
+		case "tcp":
+			return models.tcpMonitors.inTeam(teamId);
+		case "cron":
+			return models.cronJobMonitors.inTeam(teamId);
+		case "flow":
+			return models.flowMonitors.inTeam(teamId);
 	}
-> = {
-	http: Monitor,
-	dns: DnsMonitor,
-	tcp: TcpMonitor,
-	cron: CronJob,
-	flow: FlowMonitor,
-};
+}
 
 /**
- * Every monitor the team can scope a rule to, grouped by type, with empty types kept
- * out — a group whose only content would be its own heading tells a reader nothing.
+ * Every monitor the team can scope a rule to, grouped by type, newest first within a type,
+ * with empty types kept out — a group whose only content would be its own heading tells a
+ * reader nothing.
  */
 export async function listScopeMonitors(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 ): Promise<ScopeMonitorGroup[]> {
 	let groups = await Promise.all(
-		MONITOR_SCOPE_TYPES.map(async (monitorType) => ({
-			monitorType,
-			monitors: await SCOPE_MONITOR_MODELS[monitorType].listByTeam(db, teamId),
-		})),
+		MONITOR_SCOPE_TYPES.map(async (monitorType) => {
+			let rows: ScopeMonitor[] = await inTeam(models, monitorType, teamId)
+				.orderBy("created_at", "desc")
+				.all();
+			return { monitorType, monitors: rows };
+		}),
 	);
 
 	return groups.filter((group) => group.monitors.length > 0);
@@ -73,17 +70,15 @@ export async function listScopeMonitors(
  * is checked against that type's own table, so it can only name a monitor the team owns.
  */
 export async function isResolvableScope(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	scope: MonitorScope,
 ): Promise<boolean> {
 	if (scope.monitorType === null || scope.monitorId === null) return true;
 
-	let monitor = await SCOPE_MONITOR_MODELS[scope.monitorType].findByIdForTeam(
-		db,
-		teamId,
-		scope.monitorId,
-	);
+	let monitor = await inTeam(models, scope.monitorType, teamId)
+		.where({ id: scope.monitorId })
+		.first();
 
 	return monitor !== null;
 }

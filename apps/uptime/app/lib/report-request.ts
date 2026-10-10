@@ -9,17 +9,16 @@
 
 import type { DayRange } from "@sdxc/dates";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
 import { failure, isFailure, success } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
-import type { DailyStatsMonitorType } from "~/app/data/monitor-daily-stats";
-import type Report from "~/app/data/report";
 import type { ReportDialectName } from "~/app/lib/report-dialect";
 import type { ReportRangeProblem } from "~/app/lib/report-range";
+import type { UptimeModels } from "~/app/models";
+import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
+import type { Report } from "~/app/repositories/reports";
 
-import StatusPage from "~/app/data/status-page";
 import { ReportQuerySchema } from "~/app/http/validators/report";
 import { checkRange, presetRange } from "~/app/lib/report-range";
 
@@ -72,14 +71,14 @@ export interface ReportRequest {
  * Resolves the builder's query. Without `from` and `to` the range is last month, the
  * builder's default; with only one of them the query is invalid.
  *
- * @param db - The team's database
+ * @param models - The models bound to the team's database
  * @param teamId - The team the report is for
  * @param params - The request's query string
  * @param now - The current instant in epoch milliseconds
  * @returns The request, or the problem the builder shows
  */
 export async function resolveReportRequest(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	params: URLSearchParams,
 	now: number = Date.now(),
@@ -97,7 +96,7 @@ export async function resolveReportRequest(
 		range = checked.data;
 	}
 
-	let scope = await resolveMonitorScope(db, teamId, monitors);
+	let scope = await resolveMonitorScope(models, teamId, monitors);
 	if (scope === null) return failure(new ReportRequestError("scope"));
 
 	return success({ range, filter: { ...range, ...scope }, dialect, monitors });
@@ -117,13 +116,13 @@ export function isSubmitted(params: URLSearchParams): boolean {
 /**
  * Reads the `monitors` control's value into a filter, checking a status page is the team's.
  *
- * @param db - The team's database
+ * @param models - The models bound to the team's database
  * @param teamId - The team the report is for
  * @param value - `all`, `status-page:<id>` or `type:<monitor type>`
  * @returns The filter fields, or `null` for a value the team cannot use
  */
 async function resolveMonitorScope(
-	db: Database,
+	models: UptimeModels,
 	teamId: string,
 	value: string,
 ): Promise<Pick<Report.Filter, "statusPageId" | "monitorType"> | null> {
@@ -137,7 +136,7 @@ async function resolveMonitorScope(
 
 	if (value.startsWith("status-page:")) {
 		let statusPageId = value.slice("status-page:".length);
-		let page = await StatusPage.findByIdForTeam(db, teamId, statusPageId);
+		let page = await models.statusPages.inTeam(teamId).where({ id: statusPageId }).first();
 		return page ? { statusPageId } : null;
 	}
 

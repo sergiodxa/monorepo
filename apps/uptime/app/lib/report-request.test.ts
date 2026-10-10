@@ -11,6 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { isSubmitted, resolveReportRequest } from "~/app/lib/report-request";
 import { createTestDatabase } from "~/app/lib/test/db";
+import { bindModels } from "~/app/lib/test/models";
 import { statusPages } from "~/database/schema";
 
 /** 2026-09-29T10:00Z. */
@@ -44,7 +45,10 @@ async function createFixture() {
 async function resolve(query: string) {
 	let { db, own, foreign } = await createFixture();
 	let text = query.replace("{own}", own.id).replace("{foreign}", foreign.id);
-	return { result: await resolveReportRequest(db, TEAM, new URLSearchParams(text), NOW), own };
+	return {
+		result: await resolveReportRequest(bindModels(db), TEAM, new URLSearchParams(text), NOW),
+		own,
+	};
 }
 
 describe("resolveReportRequest", () => {

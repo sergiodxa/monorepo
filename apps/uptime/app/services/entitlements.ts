@@ -13,11 +13,11 @@
 
 import type { BillingError, CustomerRef } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
 import { isFailure, success } from "@sdxc/result";
 
-import Subscription from "~/app/data/subscription";
+import type { UptimeModels } from "~/app/models";
+
 import { polar } from "~/app/lib/billing";
 
 /** What one sync did, for the caller's own log line. */
@@ -37,13 +37,13 @@ export interface EntitlementSync {
  * Re-reads what a customer holds and writes it into the projection, rescheduling their
  * monitors to match.
  *
- * @param db - Database handle.
+ * @param models - The models bound to the app database.
  * @param customer - Which customer, by either identifier.
  * @returns What the sync did, `null` for a platform customer linked to no subject — which
  * leaves no owner whose monitors this could apply to — or the read's failure.
  */
 export async function syncEntitlements(
-	db: Database,
+	models: UptimeModels,
 	customer: CustomerRef,
 ): Promise<Result<EntitlementSync | null, BillingError>> {
 	let state = await polar.entitlements.of(customer);
@@ -52,7 +52,7 @@ export async function syncEntitlements(
 	let ownerId = state.data.externalId;
 	if (ownerId === null) return success(null);
 
-	let synced = await Subscription.sync(db, ownerId, state.data);
+	let synced = await models.subscriptions.sync(ownerId, state.data);
 
 	/**
 	 * A snapshot older than the one already stored says nothing new, so rescheduling from it
@@ -68,7 +68,7 @@ export async function syncEntitlements(
 		});
 	}
 
-	let monitors = await Subscription.applyEntitlement(db, ownerId, synced.entitled);
+	let monitors = await models.subscriptions.applyEntitlement(ownerId, synced.entitled);
 
 	return success({
 		ownerId,

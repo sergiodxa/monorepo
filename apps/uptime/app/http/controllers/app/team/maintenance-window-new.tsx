@@ -14,12 +14,12 @@ import { Button, Input, Label, Switch, TextField } from "@sdxc/ui";
 import { fieldStackLayout } from "@sdxc/ui/styles";
 import { createAction } from "remix/router";
 
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/lib/monitor-scope";
 import { withPrefix } from "~/app/lib/prefixed-translate";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import FormPage from "~/resources/components/form-page";
 import MonitorScopeField from "~/resources/components/monitor-scope-field";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";
@@ -34,7 +34,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
 
 		/** Shares its field copy with the edit page by reading the same maintenance-window form namespace. */
 		let t = withPrefix(ctx.intl.t, "page.maintenanceWindows.form.fields");

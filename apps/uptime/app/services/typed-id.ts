@@ -2,7 +2,7 @@
  * TypeID encoding for the `/api/v1/*` wire format. Rows store canonical UUIDs, so
  * this is the seam that turns one into the prefixed identifier the API documents
  * (`mon_01h455vb4pex5vsknk084sn02q`) on the way out, and turns it back into a UUID
- * the `app/data/*` layer can query with on the way in.
+ * the models can query with on the way in.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

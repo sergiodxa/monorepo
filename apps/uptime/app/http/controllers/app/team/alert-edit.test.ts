@@ -1,7 +1,7 @@
 /**
- * Tests for the edit alert page controller. `cloudflare:workers` is mocked because
- * `~/app/data/monitor` reads `env` at module load when populating the monitor-scope
- * dropdown. This is a plain GET handler with no error-rerender branch, so only the
+ * Tests for the edit alert page controller. `cloudflare:workers` is mocked with a strict
+ * empty env, so populating the monitor-scope dropdown reads the database alone.
+ * This is a plain GET handler with no error-rerender branch, so only the
  * 404 and pre-filled 200 cases apply here. `getViewer()`/`ctx.team`/`ctx.membership`/
  * `ctx.teams` come from a fake middleware standing in for the real chain.
  *

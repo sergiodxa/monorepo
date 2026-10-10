@@ -1,8 +1,7 @@
 /**
- * Tests for the alerts list page controller. `cloudflare:workers` is mocked because
- * `~/app/data/monitor` (used here to resolve each alert's scoped monitor name) reads
- * `env` at module load — following the exact pattern established in
- * `app/http/controllers/actions/monitors.test.ts`. `getViewer()`/`ctx.team`/
+ * Tests for the alerts list page controller. `cloudflare:workers` is mocked with a strict
+ * empty env, so resolving each alert's scoped monitor name reads the database alone —
+ * following the exact pattern established in `app/http/controllers/actions/monitors.test.ts`. `getViewer()`/`ctx.team`/
  * `ctx.membership`/`ctx.teams` are seeded directly by a fake middleware standing in for
  * the real `auth`/`requireUser`/`requireTeam` chain, matching the template in
  * `app/http/controllers/app/team/http-monitors.test.ts`.

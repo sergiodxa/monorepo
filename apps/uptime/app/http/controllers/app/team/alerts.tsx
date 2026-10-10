@@ -16,12 +16,12 @@ import { createAction } from "remix/router";
 
 import type { SelectAlert } from "~/database/schema";
 
-import Alert, { MAX_ALERTS_PER_TEAM } from "~/app/data/alert";
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -34,7 +34,7 @@ export default createAction(routes.app.team.alerts.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let alerts = await Alert.listByTeam(ctx.db, ctx.team.id);
+		let alerts = await ctx.models.alerts.inTeam(ctx.team.id).orderBy("created_at", "desc").all();
 		let atLimit = alerts.length >= MAX_ALERTS_PER_TEAM;
 
 		/**
@@ -42,7 +42,7 @@ export default createAction(routes.app.team.alerts.index, {
 		 * unique across every monitor type, so keying on id alone is enough for
 		 * {@link storedMonitorScope}'s resolved scope to look up its name.
 		 */
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
 		let monitorNamesById = new Map(
 			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
 		);

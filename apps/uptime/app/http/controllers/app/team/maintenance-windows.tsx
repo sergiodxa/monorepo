@@ -15,13 +15,13 @@ import { createAction } from "remix/router";
 
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
-import MaintenanceWindow from "~/app/data/maintenance-window";
-import { listScopeMonitors } from "~/app/data/scope-monitors";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { MAINTENANCE_TIME_ZONE } from "~/app/http/validators/maintenance-window";
 import { storedMonitorScope } from "~/app/lib/monitor-scope";
+import { isActiveAt } from "~/app/models/maintenance-windows";
+import { listScopeMonitors } from "~/app/services/scope-monitors";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";
@@ -34,13 +34,16 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 		let viewer = getViewer();
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
-		let windows = await MaintenanceWindow.listByTeam(ctx.db, ctx.team.id);
+		let windows = await ctx.models.maintenanceWindows
+			.inTeam(ctx.team.id)
+			.orderBy("created_at", "desc")
+			.all();
 		/**
 		 * A scope's monitor id is unique across every type, so one map keyed by id
 		 * resolves every row's name, matching what {@link storedMonitorScope}
 		 * already determined for that row.
 		 */
-		let scopeGroups = await listScopeMonitors(ctx.db, ctx.team.id);
+		let scopeGroups = await listScopeMonitors(ctx.models, ctx.team.id);
 		let monitorNamesById = new Map(
 			scopeGroups.flatMap((group) => group.monitors.map((monitor) => [monitor.id, monitor.name])),
 		);
@@ -60,7 +63,7 @@ export default createAction(routes.app.team.maintenanceWindows.index, {
 
 		let now = Date.now();
 
-		let active = windows.filter((window) => MaintenanceWindow.isActiveAt(window, now));
+		let active = windows.filter((window) => isActiveAt(window, now));
 		let upcoming = windows.filter((window) => !active.includes(window) && window.starts_at > now);
 		let past = windows.filter((window) => !active.includes(window) && !upcoming.includes(window));
 

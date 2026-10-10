@@ -12,15 +12,14 @@
 import type { CurrentJobContext } from "@sdxc/jobs";
 
 import { createJobHandler } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 
-import type { ClaimedDnsMonitor } from "~/app/data/dns-monitor";
 import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { ClaimedDnsMonitor } from "~/app/models/dns-monitors";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { DnsCheckPlan } from "~/app/services/dns-discovery";
 import type { BillablePing } from "~/app/services/ping-meter";
 
-import DnsMonitor from "~/app/data/dns-monitor";
-import Team from "~/app/data/team";
 import jobs from "~/app/jobs";
 import { polar } from "~/app/lib/billing";
 import { mapWithConcurrency } from "~/app/lib/concurrency";
@@ -35,7 +34,6 @@ import {
 	recordDnsCheck,
 } from "~/app/services/dns-discovery";
 import { ingestPings } from "~/app/services/ping-meter";
-import { dnsMonitors } from "~/database/schema";
 
 /**
  * Monitors swept at once inside one invocation, bounded because each is itself a fan-out of
@@ -84,7 +82,7 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 	 * this instant only decides which monitors are owed a check, tolerant of the few seconds
 	 * the queue hop between trigger and here takes.
 	 */
-	let monitors = await DnsMonitor.claimDue(ctx.database, Date.now());
+	let monitors = await ctx.models.dnsMonitors.claimDue(Date.now());
 	/**
 	 * The sweep's fixed cost — the claim, the invocation, its share of the batch — is
 	 * split across the teams whose monitors it took, in proportion to how many it took
@@ -97,8 +95,7 @@ export default createJobHandler(jobs.checkDns, async (ctx) => {
 	 * afterwards: a ping is billed to the team's owner, who is the Polar customer, and
 	 * looking that up per monitor would put a D1 read on every check in the batch.
 	 */
-	let ownerIds = await Team.ownerIdsByTeamIds(
-		ctx.database,
+	let ownerIds = await ctx.models.teams.ownerIdsByTeamIds(
 		monitors.map((monitor) => monitor.team_id),
 	);
 
@@ -199,12 +196,7 @@ async function check(
 	 * Re-arming `next_due_at` brings that retry within a minute, a decision this sweep owns.
 	 */
 	if (granted === 0) {
-		await ctx.database.update(
-			dnsMonitors,
-			monitor.id,
-			{ next_due_at: Date.now() },
-			{ touch: true },
-		);
+		unwrap(await ctx.models.dnsMonitors.update(monitor.id, { next_due_at: Date.now() }));
 		ctx.log.note("checks.deferred", { "monitor.id": monitor.id, names: plan.names.length });
 		return { deferred: true };
 	}
@@ -223,7 +215,7 @@ async function check(
 		});
 	}
 
-	let run = await recordDnsCheck(ctx.database, monitor.id, plan.names.slice(0, granted), unswept);
+	let run = await recordDnsCheck(ctx.models, monitor.id, plan.names.slice(0, granted), unswept);
 	let status = run.status;
 	let resultId = run.resultId;
 
@@ -266,7 +258,7 @@ async function check(
  * runs — logged here, since only a background sweep has nobody to tell.
  */
 async function planFor(ctx: CurrentJobContext, monitor: ClaimedDnsMonitor): Promise<DnsCheckPlan> {
-	let plan = await planDnsCheck(ctx.database, monitor.id, monitor.domain);
+	let plan = await planDnsCheck(ctx.models, monitor.id, monitor.domain);
 	if (plan.tracked > 0) return plan;
 
 	ctx.log.note("checks.no_tracked_names", {
