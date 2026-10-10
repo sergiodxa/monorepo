@@ -13,7 +13,6 @@ import { nodeInfo } from "@sdxc/well-known/nodeinfo";
 import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
-import { Post } from "~/app/repositories/post";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
 
@@ -55,6 +54,6 @@ export function nodeInfoDocument(localPosts: number): NodeInfo {
 
 /** Serves the NodeInfo 2.1 document with its profiled JSON media type. */
 export default createAction(routes.nodeInfo, async (ctx) => {
-	let posts = await Post.findFederatable(ctx.db);
+	let posts = await ctx.models.posts.findFederatable();
 	return await respond(nodeInfo, nodeInfoDocument(posts.length), { request: ctx.request });
 });

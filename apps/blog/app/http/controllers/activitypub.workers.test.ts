@@ -9,12 +9,13 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 import { ACTOR_ID } from "~/config/activitypub";
 
 import createApplication from "../../../bootstrap/app";
@@ -56,22 +57,28 @@ beforeAll(async () => {
 	db = await migratedDatabase();
 	let author = await seedAuthor(db);
 	let meta = { locale: "en", content: "A **federated** body.", excerpt: "The lede." };
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { ...meta, slug: LIVE, title: "Federated" },
-	});
-	let deleted = await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { ...meta, slug: DELETED, title: "Withdrawn" },
-	});
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2999-01-01T00:00:00.000Z",
-		meta: { ...meta, slug: DRAFT, title: "Draft" },
-	});
-	await ArticlePost.destroy(db, deleted!.id);
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { ...meta, slug: LIVE, title: "Federated" },
+		}),
+	);
+	let deleted = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { ...meta, slug: DELETED, title: "Withdrawn" },
+		}),
+	);
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2999-01-01T00:00:00.000Z",
+			meta: { ...meta, slug: DRAFT, title: "Draft" },
+		}),
+	);
+	await bindModels(db).articles.tombstone(deleted!.id);
 });
 
 describe("a post asked for as ActivityStreams", () => {

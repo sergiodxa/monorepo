@@ -1,3 +1,7 @@
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+
+import jobs from "~/app/jobs";
 /**
  * Takes a bookmark's Wayback Machine capture and records its instant as `archived_at`,
  * which the Wayback link on `/bookmarks` opens. A new bookmark is captured as saved; one
@@ -6,12 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-
-import jobs from "~/app/jobs";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { normalizeUrl } from "~/app/models/post-values";
 import { captureStatus, closestCapture, requestCapture } from "~/app/services/wayback";
 import { waybackKeys } from "~/app/services/wayback-keys";
 
@@ -25,13 +24,13 @@ const BACKFILL_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
  * after thirty days.
  */
 export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
-	let bookmark = await LikePost.findById(ctx.db, ctx.input.postId);
+	let bookmark = await ctx.models.likes.find(ctx.input.postId);
 	if (!bookmark) return ctx.ack("The bookmark no longer exists");
 
-	let url = LikePost.normalizeUrl(bookmark.meta.url);
+	let url = normalizeUrl(bookmark.meta.url);
 	if (!/^https?:\/\//i.test(url)) return ctx.ack("The bookmark links within the site");
 
-	let record = await Bookmark.findByPostId(ctx.db, bookmark.id);
+	let record = await ctx.models.bookmarks.find(bookmark.id);
 	if (!record) return ctx.ack("The bookmark has no record yet");
 
 	if (record.archive_job) {
@@ -41,19 +40,19 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 		let status = await captureStatus(record.archive_job, keys);
 		if (isFailure(status)) {
 			if (status.error.retryable) ctx.retry({ delay: "5 minutes", cause: status.error });
-			await Bookmark.archived(ctx.db, bookmark.id);
+			await ctx.models.bookmarks.archived(bookmark.id);
 			return ctx.exit(status.error.message);
 		}
 
 		let capture = status.data;
 		if (capture.state === "pending") return ctx.retry({ delay: "1 minute" });
 		if (capture.state === "failed") {
-			await Bookmark.archived(ctx.db, bookmark.id);
+			await ctx.models.bookmarks.archived(bookmark.id);
 			return ctx.exit(`The archive could not capture the page: ${capture.reason}`);
 		}
 
-		await LikePost.update(ctx.db, bookmark.id, { meta: { archived_at: capture.at } });
-		await Bookmark.archived(ctx.db, bookmark.id);
+		await ctx.models.likes.update(bookmark.id, { meta: { archived_at: capture.at } });
+		await ctx.models.bookmarks.archived(bookmark.id);
 		return void ctx.log.set({ bookmark: { id: bookmark.id, archived: capture.at } });
 	}
 
@@ -63,8 +62,8 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 			ctx.retry({ delay: "5 minutes", cause: closest.error });
 		}
 		if (!isFailure(closest) && closest.data) {
-			await LikePost.update(ctx.db, bookmark.id, { meta: { archived_at: closest.data } });
-			await Bookmark.archived(ctx.db, bookmark.id);
+			await ctx.models.likes.update(bookmark.id, { meta: { archived_at: closest.data } });
+			await ctx.models.bookmarks.archived(bookmark.id);
 			return void ctx.log.set({ bookmark: { id: bookmark.id, archived: closest.data } });
 		}
 	}
@@ -75,10 +74,10 @@ export default createJobHandler(jobs.bookmarks.archive, async (ctx) => {
 	let job = await requestCapture(url, keys);
 	if (isFailure(job)) {
 		if (job.error.retryable) ctx.retry({ delay: "5 minutes", cause: job.error });
-		await Bookmark.archived(ctx.db, bookmark.id);
+		await ctx.models.bookmarks.archived(bookmark.id);
 		return ctx.exit(job.error.message);
 	}
 
-	await Bookmark.archiving(ctx.db, bookmark.id, job.data);
+	await ctx.models.bookmarks.archiving(bookmark.id, job.data);
 	ctx.retry({ delay: "1 minute" });
 });

@@ -9,7 +9,6 @@
  */
 
 import type { Federation } from "@sdxc/activitypub";
-import type { Database } from "remix/data-table";
 
 import { wantsActivity } from "@sdxc/activitypub";
 import * as ct from "@sdxc/http/content-type";
@@ -19,18 +18,22 @@ import { advertise } from "@sdxc/webmention/discover";
 import { enum_, optional, parse } from "remix/data-schema";
 import { createAction } from "remix/router";
 
+import type { BlogModels } from "~/app/models";
+import type { PublicTypePath } from "~/app/models/post-values";
+
 import { isAdmin } from "~/app/http/middleware/auth";
 import { NotFoundViewModel } from "~/app/http/view-models/not-found";
 import { PostViewModel } from "~/app/http/view-models/post";
-import { Post } from "~/app/repositories/post";
+import { isPublishedAt } from "~/app/models/post-values";
 import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { article, tombstone } from "~/app/services/federated-posts";
 import { postEpub } from "~/app/services/post-epub";
+import { findPublicPost, findTombstone, isTombstoned } from "~/app/services/posts";
 import { NotFoundView } from "~/resources/views/not-found";
 import { PostView } from "~/resources/views/post";
 import routeMap from "~/routes/web";
 
-type PostType = Post.PublicTypePath;
+type PostType = PublicTypePath;
 
 interface ValidPostRequestParams {
 	postType: PostType;
@@ -99,12 +102,12 @@ export default createAction(
 			accepts(ctx.request).preferred(ct.HTML, ct.Markdown) === ct.Markdown ||
 			validation.params.contentType === "md";
 
-		let post = await Post.findByTypeAndSlug(ctx.db, {
+		let post = await findPublicPost(ctx.models, {
 			postType: validation.params.postType,
 			postSlug: validation.params.postSlug,
 		});
 
-		if (!post && (await Post.isTombstoned(ctx.db, validation.params))) {
+		if (!post && (await isTombstoned(ctx.models, validation.params))) {
 			if (prefersMarkdown) {
 				return markdown(410, "# Gone\n\nThis post was deleted.\n\n");
 			}
@@ -146,7 +149,7 @@ export default createAction(
 			});
 		}
 
-		let isPublished = Post.isPublishedAt(post.post.published_at);
+		let isPublished = isPublishedAt(post.post.published_at);
 
 		if (!isPublished && !isAdmin()) {
 			if (prefersMarkdown) {
@@ -244,19 +247,19 @@ export default createAction(
  * `404` for anything else, drafts included. Answered before the edge-cache declaration,
  * with a private policy, so only the HTML variant is ever stored under this URL.
  *
- * @param ctx The request context, carrying the database and `ctx.activityPub`.
+ * @param ctx The request context, carrying the models and `ctx.activityPub`.
  * @param params The validated collection and slug.
  */
 async function activityFor(
-	ctx: { db: Database; request: Request; activityPub: Federation },
+	ctx: { models: BlogModels; request: Request; activityPub: Federation },
 	params: ValidPostRequestParams,
 ): Promise<Response> {
 	let options = { cache: NEGOTIATED_ACTIVITY };
-	let post = await Post.findByTypeAndSlug(ctx.db, params);
+	let post = await findPublicPost(ctx.models, params);
 	let document = null;
-	if (post && Post.isPublishedAt(post.post.published_at)) document = article(post);
+	if (post && isPublishedAt(post.post.published_at)) document = article(post);
 
-	let deleted = post ? null : await Post.findTombstone(ctx.db, params);
+	let deleted = post ? null : await findTombstone(ctx.models, params);
 	if (deleted) {
 		document = tombstone({
 			postType: params.postType,

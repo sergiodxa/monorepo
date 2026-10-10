@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Post } from "~/app/repositories/post";
+import type { PublicTypePath } from "~/app/models/post-values";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -21,7 +21,7 @@ export const USER_AGENT = `sergiodxa.com Webmention (+${PROFILE.canonical.origin
  *
  * @param post The post's collection path and slug.
  */
-export function permalink(post: { postType: Post.PublicTypePath; slug: string }): URL {
+export function permalink(post: { postType: PublicTypePath; slug: string }): URL {
 	return new URL(
 		routes.post.href({ postType: post.postType, postSlug: post.slug }),
 		PROFILE.canonical.origin,

@@ -9,7 +9,6 @@
 
 import type { ActivityPub, LocalObjects } from "@sdxc/activitypub";
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
 import { PUBLIC, stringify, tombstone as tombstoneOf } from "@sdxc/activitypub";
 import { Markdown } from "@sdxc/markdown";
@@ -17,7 +16,12 @@ import { toHTML } from "@sdxc/markdown/html";
 import { decodeCursor, encodeCursor, InvalidCursorError } from "@sdxc/pagination";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-import { Post } from "~/app/repositories/post";
+import type { BlogModels } from "~/app/models";
+import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicPost } from "~/app/services/posts";
+
+import { isPublishedAt, timestampFromPublishedOrCreated } from "~/app/models/post-values";
+import { findForMentions, findPublicPost } from "~/app/services/posts";
 import { permalink } from "~/app/services/webmention";
 import { ACTOR_ID, FOLLOWERS_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
@@ -31,7 +35,7 @@ const ARTICLE_BYTES_LIMIT = 100_000;
 /** A post permalink path, `/articles/:slug` or `/tutorials/:slug`, with no extension. */
 const POST_PATH = /^\/(articles|tutorials)\/([^/.]+)$/;
 
-/** The keyset the outbox pages by, matching the order `Post.findFederatable` lists in. */
+/** The keyset the outbox pages by, matching the order `posts.findFederatable()` lists in. */
 const OUTBOX_KEYS = ["timestamp", "id"] as const;
 
 /** Every character a Mastodon hashtag cannot hold. */
@@ -40,11 +44,11 @@ const NON_HASHTAG = /[^\p{L}\p{N}_]/gu;
 /** The post shapes the mappers read. */
 export namespace FederatedPosts {
 	/** A published post as the post page loads it. */
-	export type Published = Post.PublicFoundByTypeAndSlug;
+	export type Published = PublicPost;
 
-	/** A deleted post, as `Post.findForMentions` still reads it. */
+	/** A deleted post, as `findForMentions()` still reads it. */
 	export interface Deleted {
-		postType: Post.PublicTypePath;
+		postType: PublicTypePath;
 		slug: string;
 		deleted_at: string | null;
 	}
@@ -61,7 +65,7 @@ export namespace FederatedPosts {
  * whichever host served the request. A body past `ARTICLE_BYTES_LIMIT` becomes the summary
  * and a link, which is also all Mastodon shows of an Article.
  *
- * @param post The post as `Post.findByTypeAndSlug` reads it.
+ * @param post The post as `findPublicPost()` reads it.
  * @param updated When its content last changed, which an `Update` carries.
  * @example return respond(article(post), { request: ctx.request, vary: true });
  */
@@ -88,7 +92,7 @@ export function article(
 		url: id,
 		inReplyTo: null,
 		quote: null,
-		published: dateOf(Post.timestampFromPublishedOrCreated(post.post)),
+		published: dateOf(timestampFromPublishedOrCreated(post.post)),
 		updated,
 		sensitive: false,
 		tag: post.postType === "tutorials" ? hashtags(post.tags) : [],
@@ -182,11 +186,11 @@ export function remove(post: FederatedPosts.Deleted): ActivityPub.Draft<Activity
  * permalink other than the canonical one finds `null`.
  */
 export class FederatedPosts implements LocalObjects {
-	readonly #db: Database;
+	readonly #models: BlogModels;
 
-	/** @param db The request's or job's database, as the context publishes it. */
-	constructor(db: Database) {
-		this.#db = db;
+	/** @param models The request's or job's models, as the context publishes them. */
+	constructor(models: BlogModels) {
+		this.#models = models;
 	}
 
 	/** The `Article` served under `id`, or `null` when the blog serves no post there. */
@@ -194,11 +198,11 @@ export class FederatedPosts implements LocalObjects {
 		let location = postLocation(id);
 		if (location === null) return success(null);
 
-		let found = await wrap(() => Post.findByTypeAndSlug(this.#db, location));
+		let found = await wrap(() => findPublicPost(this.#models, location));
 		if (isFailure(found)) return found;
 
 		let post = found.data;
-		if (post === null || !Post.isPublishedAt(post.post.published_at)) return success(null);
+		if (post === null || !isPublishedAt(post.post.published_at)) return success(null);
 
 		let object = article(post);
 		return success(object.id === id ? object : null);
@@ -206,7 +210,7 @@ export class FederatedPosts implements LocalObjects {
 
 	/** How many posts the outbox lists: every published, live article and tutorial. */
 	async count(): Promise<Result<number, Error>> {
-		let rows = await wrap(() => Post.findFederatable(this.#db));
+		let rows = await wrap(() => this.#models.posts.findFederatable());
 		if (isFailure(rows)) return rows;
 		return success(rows.data.length);
 	}
@@ -229,7 +233,7 @@ export class FederatedPosts implements LocalObjects {
 			after = decoded.data;
 		}
 
-		let rows = await wrap(() => Post.findFederatable(this.#db));
+		let rows = await wrap(() => this.#models.posts.findFederatable());
 		if (isFailure(rows)) return rows;
 
 		let remaining = rows.data.filter(
@@ -243,7 +247,7 @@ export class FederatedPosts implements LocalObjects {
 
 		let items: Array<ActivityPub.Draft<ActivityPub.Activity>> = [];
 		for (let row of page) {
-			let post = await wrap(() => findPublished(this.#db, row.id));
+			let post = await wrap(() => findPublished(this.#models, row.id));
 			if (isFailure(post)) return post;
 			if (post.data !== null) items.push(create(post.data));
 		}
@@ -261,16 +265,16 @@ export class FederatedPosts implements LocalObjects {
  * A post by id as the post page loads it, or `null` once it is deleted or no longer an
  * article or tutorial. Its publish state is the caller's to check.
  *
- * @param db The request's or job's database.
+ * @param models The request's or job's models.
  * @param id The post's id.
  */
 export async function findPublished(
-	db: Database,
+	models: BlogModels,
 	id: string,
 ): Promise<FederatedPosts.Published | null> {
-	let source = await Post.findForMentions(db, id);
+	let source = await findForMentions(models, id);
 	if (source === null || source.deleted_at !== null) return null;
-	return Post.findByTypeAndSlug(db, { postType: source.postType, postSlug: source.slug });
+	return findPublicPost(models, { postType: source.postType, postSlug: source.slug });
 }
 
 /** The boundary an outbox cursor carries, refusing one minted for any other listing. */
@@ -299,7 +303,7 @@ function outboxCursor(
  * The collection and slug a canonical post IRI names, or `null` for another origin, another
  * path, a query, a fragment, or a slug that does not decode.
  */
-function postLocation(id: string): { postType: Post.PublicTypePath; postSlug: string } | null {
+function postLocation(id: string): { postType: PublicTypePath; postSlug: string } | null {
 	let url: URL;
 	try {
 		url = new URL(id);

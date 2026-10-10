@@ -7,12 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
+import type { BlogModels } from "~/app/models";
+import type { Like } from "~/app/models/likes";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { bookmarkLabel } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /** Type contracts shared by the feed controllers. */
@@ -87,7 +85,7 @@ export function syndicationChannel(stream: Syndication.Stream, base: URL): Syndi
 
 /**
  * Loads a stream's public items, newest first, querying only the content types the stream
- * carries. Future-dated articles and tutorials stay out, following `Post.isPublishedAt`.
+ * carries. Future-dated articles and tutorials stay out, following `isPublishedAt`.
  *
  * @param db The tenant database.
  * @param base The request URL, which item links resolve against.
@@ -95,17 +93,17 @@ export function syndicationChannel(stream: Syndication.Stream, base: URL): Syndi
  * @returns The entries, sorted by publish date descending.
  */
 export async function syndicationEntries(
-	db: Database,
+	models: BlogModels,
 	base: URL,
 	stream: Syndication.Stream,
 ): Promise<Syndication.Entry[]> {
 	let carries = (type: Syndication.Stream) => stream === "feed" || stream === type;
 
 	let [articles, tutorials, likes, glossary] = await Promise.all([
-		carries("articles") ? ArticlePost.findAll(db, { includePreview: false }) : [],
-		carries("tutorials") ? TutorialPost.findAll(db, { includePreview: false }) : [],
-		carries("bookmarks") ? LikePost.findAll(db) : [],
-		stream === "feed" ? GlossaryPost.findAll(db) : [],
+		carries("articles") ? models.articles.findAll({ includePreview: false }) : [],
+		carries("tutorials") ? models.tutorials.findAll({ includePreview: false }) : [],
+		carries("bookmarks") ? models.likes.findAll() : [],
+		stream === "feed" ? models.glossary.findAll() : [],
 	]);
 
 	let entries: Syndication.Entry[] = [];
@@ -130,7 +128,7 @@ export async function syndicationEntries(
 	for (let like of likes) {
 		entries.push({
 			id: like.id,
-			title: LikePost.label(like.meta),
+			title: bookmarkLabel(like.meta),
 			summary: bookmarkSummary(like.meta),
 			url: like.meta.url,
 			published: iso(like.created_at),
@@ -156,7 +154,7 @@ export async function syndicationEntries(
  * A bookmark's description, then its URL on a line of its own, so a reader shows what the page
  * is about before the link; the URL alone while the bookmark has no description.
  */
-function bookmarkSummary(meta: LikePost.Meta): string {
+function bookmarkSummary(meta: Like["meta"]): string {
 	let description = meta.description.trim();
 	if (description === "") return meta.url;
 	return `${description}\n\n${meta.url}`;

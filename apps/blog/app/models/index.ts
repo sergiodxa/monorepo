@@ -16,6 +16,12 @@ export const models = createModels({
 	webmentions: () => import("./webmentions"),
 	webmentionDomains: () => import("./webmention-domains"),
 	webmentionSends: () => import("./webmention-sends"),
+	bookmarks: () => import("./bookmarks"),
+	posts: () => import("./posts"),
+	articles: () => import("./articles"),
+	tutorials: () => import("./tutorials"),
+	likes: () => import("./likes"),
+	glossary: () => import("./glossary"),
 });
 
 /** The registry bound to one request or job, for code handed `ctx.models`. */

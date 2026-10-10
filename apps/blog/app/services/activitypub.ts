@@ -21,8 +21,8 @@ import type { BlogModels } from "~/app/models";
 
 import jobs from "~/app/jobs";
 import { FollowerRepository } from "~/app/repositories/follower";
-import { Post } from "~/app/repositories/post";
 import { FederatedPosts } from "~/app/services/federated-posts";
+import { findMentionable } from "~/app/services/posts";
 import {
 	ACTIVITYPUB_USER_AGENT,
 	ACTOR_ID,
@@ -123,7 +123,7 @@ export interface FederationServices {
  */
 export function createFederation(services: FederationServices): Federation {
 	let { db, models } = services;
-	let posts = new FederatedPosts(db);
+	let posts = new FederatedPosts(models);
 
 	return new Federation({
 		actor: siteActor(),
@@ -193,13 +193,13 @@ async function storeResponse(
  * @param pair The remote source and the local target.
  */
 async function store(
-	{ db, models }: FederationServices,
+	{ models }: FederationServices,
 	summary: Summary,
 	pair: { source: URL; target: URL },
 ) {
 	let { source, target } = pair;
 
-	let post = await Post.findMentionable(db, target, PROFILE.canonical.origin);
+	let post = await findMentionable(models, target, PROFILE.canonical.origin);
 	if (post === null) return;
 
 	let policy = await models.webmentionDomains.policyFor(source.hostname);

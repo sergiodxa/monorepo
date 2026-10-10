@@ -10,7 +10,6 @@
 import { createAction } from "remix/router";
 
 import { GlossaryViewModel } from "~/app/http/view-models/glossary";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { GlossaryView } from "~/resources/views/glossary";
 import routes from "~/routes/web";
 
@@ -19,7 +18,7 @@ import routes from "~/routes/web";
  * @returns HTML response for the glossary route.
  */
 export default createAction(routes.glossary, async (ctx) => {
-	let glossary = await GlossaryPost.findAll(ctx.db);
+	let glossary = await ctx.models.glossary.findAll();
 	let model = GlossaryViewModel.index(glossary);
 
 	return ctx.render(GlossaryView, model);

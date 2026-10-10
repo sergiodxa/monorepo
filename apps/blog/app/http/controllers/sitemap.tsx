@@ -11,9 +11,6 @@ import { xml } from "@sdxc/http/response";
 import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import routes from "~/routes/web";
 
 /** Serves the XML sitemap covering the section pages and every published post. */
@@ -26,9 +23,9 @@ export default createAction(
 	 */
 	async function sitemapAction(ctx) {
 		let [articles, tutorials, likes] = await Promise.all([
-			ArticlePost.findAll(ctx.db, { includePreview: false }),
-			TutorialPost.findAll(ctx.db, { includePreview: false }),
-			LikePost.findAll(ctx.db),
+			ctx.models.articles.findAll({ includePreview: false }),
+			ctx.models.tutorials.findAll({ includePreview: false }),
+			ctx.models.likes.findAll(),
 		]);
 
 		let sitemap = new Sitemap();

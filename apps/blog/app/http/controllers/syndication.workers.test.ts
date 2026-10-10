@@ -11,15 +11,14 @@ import type { Result } from "@sdxc/result";
 
 import { Atom } from "@sdxc/atom";
 import { JSONFeed } from "@sdxc/json-feed";
-import { succeeded } from "@sdxc/result";
+import { succeeded, unwrap } from "@sdxc/result";
 import { RSS } from "@sdxc/rss";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { LikePost } from "~/app/repositories/posts/like";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -64,27 +63,35 @@ let articleId = "";
 beforeAll(async () => {
 	let db = await migratedDatabase();
 	let author = await seedAuthor(db);
-	let article = await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2026-09-01T12:00:00.000Z",
-		meta: { slug: SLUG, title: "Syndicated", locale: "en", content: "Body." },
-	});
+	let article = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2026-09-01T12:00:00.000Z",
+			meta: { slug: SLUG, title: "Syndicated", locale: "en", content: "Body." },
+		}),
+	);
 	articleId = article?.id ?? "";
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2999-01-01T00:00:00.000Z",
-		meta: { slug: FUTURE_SLUG, title: "Not yet", locale: "en", content: "Later." },
-	});
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2026-09-02T12:00:00.000Z",
-		meta: { url: BOOKMARK_URL, title: "A saved page", description: BOOKMARK_DESCRIPTION },
-	});
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2026-09-02T12:00:00.000Z",
-		meta: { url: UNTITLED_URL, title: "" },
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2999-01-01T00:00:00.000Z",
+			meta: { slug: FUTURE_SLUG, title: "Not yet", locale: "en", content: "Later." },
+		}),
+	);
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: "2026-09-02T12:00:00.000Z",
+			meta: { url: BOOKMARK_URL, title: "A saved page", description: BOOKMARK_DESCRIPTION },
+		}),
+	);
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: "2026-09-02T12:00:00.000Z",
+			meta: { url: UNTITLED_URL, title: "" },
+		}),
+	);
 });
 
 describe("the Atom feed", () => {

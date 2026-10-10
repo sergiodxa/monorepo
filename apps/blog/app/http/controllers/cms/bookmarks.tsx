@@ -12,10 +12,12 @@ import { isFailure, succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import type { SelectBookmark } from "~/database/schema";
+
 import { getAuthUser } from "~/app/http/middleware/auth";
 import jobs from "~/app/jobs";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { flagOf, isOpen, statusOf } from "~/app/models/bookmarks";
+import { bookmarkAddress, bookmarkLabel, cleanUrl } from "~/app/models/post-values";
 import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/schemas/cms/bookmark";
 import { createBookmark, updateBookmark } from "~/app/services/bookmarks";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views/cms/bookmarks";
@@ -36,11 +38,8 @@ function duplicateHref(id: string) {
  * What the edit page says about the latest read of the page: nothing until it was read, and
  * for a page that moved, the edit page again with the new address filled in.
  */
-function checkOf(
-	record: NonNullable<Awaited<ReturnType<typeof Bookmark.findByPostId>>>,
-	id: string,
-): CMSBookmarksActionView.Check | undefined {
-	let status = Bookmark.statusOf(record);
+function checkOf(record: SelectBookmark, id: string): CMSBookmarksActionView.Check | undefined {
+	let status = statusOf(record);
 	if (status === null || record.checked_at === null) return undefined;
 
 	let moved = status === "moved" && record.final_url !== null;
@@ -49,7 +48,7 @@ function checkOf(
 		httpStatus: record.http_status,
 		checkedOn: SAVED_ON.format(new Date(record.checked_at)),
 		finalUrl: record.final_url,
-		open: Bookmark.isOpen(record),
+		open: isOpen(record),
 		...(moved && record.final_url
 			? {
 					useFinalHref: `${routes.cms.bookmarks.edit.href({ id })}?${new URLSearchParams({ url: record.final_url })}`,
@@ -91,15 +90,15 @@ export default createController(routes.cms.bookmarks, {
 		 */
 		index: async (ctx) => {
 			let [bookmarks, open] = await Promise.all([
-				LikePost.findAll(ctx.db),
-				Bookmark.findOpen(ctx.db),
+				ctx.models.likes.findAll(),
+				ctx.models.bookmarks.findOpen(),
 			]);
 			let items = bookmarks.map((bookmark) => {
 				let record = open.get(bookmark.id);
-				let flag = record ? Bookmark.flagOf(record) : null;
+				let flag = record ? flagOf(record) : null;
 				return {
 					id: bookmark.id,
-					title: LikePost.label(bookmark.meta),
+					title: bookmarkLabel(bookmark.meta),
 					url: bookmark.meta.url,
 					href: routes.cms.bookmarks.edit.href({ id: bookmark.id }),
 					deleteAction: routes.cms.bookmarks.destroy.href({ id: bookmark.id }),
@@ -125,7 +124,7 @@ export default createController(routes.cms.bookmarks, {
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let saved = await createBookmark(ctx.db, user.id, result.data);
+			let saved = await createBookmark(ctx.models, user.id, result.data);
 			if (isFailure(saved)) {
 				ctx.log.warn("bookmark.save_failed", { message: saved.error.message });
 				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
@@ -155,7 +154,7 @@ export default createController(routes.cms.bookmarks, {
 			if (!id)
 				return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 
-			await LikePost.destroy(ctx.db, id);
+			await ctx.models.likes.destroy(id);
 			return redirect(routes.cms.bookmarks.index.href(), { status: redirect.Status.SeeOther });
 		},
 
@@ -168,15 +167,15 @@ export default createController(routes.cms.bookmarks, {
 		 */
 		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let bookmark = id ? await LikePost.findById(ctx.db, id) : null;
+			let bookmark = id ? await ctx.models.likes.find(id) : null;
 			if (!bookmark) return ctx.render(CMSBookmarksActionView, notFoundModel(id), { status: 404 });
 
-			let record = await Bookmark.findByPostId(ctx.db, bookmark.id);
+			let record = await ctx.models.bookmarks.find(bookmark.id);
 			let query = await validate(ctx.url.searchParams, BookmarkPrefillSchema);
 			let prefill = isFailure(query) ? { url: "", duplicate: "" } : query.data;
 
 			let model = {
-				title: `Edit Bookmark ${LikePost.label(bookmark.meta)}`,
+				title: `Edit Bookmark ${bookmarkLabel(bookmark.meta)}`,
 				description: `Editing bookmark pointing to ${bookmark.meta.url}.`,
 				mode: "edit",
 				action: routes.cms.bookmarks.update.href({ id: bookmark.id }),
@@ -207,10 +206,10 @@ export default createController(routes.cms.bookmarks, {
 		new: async (ctx) => {
 			let query = await validate(ctx.url.searchParams, BookmarkPrefillSchema);
 			let shared = isFailure(query) ? "" : query.data.url.trim();
-			let url = shared === "" ? "" : LikePost.clean(shared);
+			let url = shared === "" ? "" : cleanUrl(shared);
 
 			if (url !== "") {
-				let holder = await Bookmark.findByAddress(ctx.db, LikePost.address(url));
+				let holder = await ctx.models.bookmarks.findByAddress(bookmarkAddress(url));
 				if (holder) {
 					return redirect(duplicateHref(holder.post_id), { status: redirect.Status.SeeOther });
 				}
@@ -246,14 +245,14 @@ export default createController(routes.cms.bookmarks, {
 			let result = await validate(ctx.get(FormData), BookmarkSchema);
 			succeeded(result, "Invalid bookmark form data");
 
-			let updated = await updateBookmark(ctx.db, id, user.id, result.data);
+			let updated = await updateBookmark(ctx.models, id, user.id, result.data);
 
 			if (updated.outcome === "missing") {
 				return ctx.render(CMSBookmarksActionView, notFoundModel(id), { status: 404 });
 			}
 
 			if (updated.outcome === "duplicate") {
-				let holder = await LikePost.findById(ctx.db, updated.id);
+				let holder = await ctx.models.likes.find(updated.id);
 				let model = {
 					title: "Edit Bookmark",
 					description: "Another bookmark already holds this URL.",
@@ -263,7 +262,7 @@ export default createController(routes.cms.bookmarks, {
 					deleteAction: routes.cms.bookmarks.destroy.href({ id }),
 					values: result.data,
 					conflict: {
-						label: holder ? LikePost.label(holder.meta) : result.data.url,
+						label: holder ? bookmarkLabel(holder.meta) : result.data.url,
 						href: routes.cms.bookmarks.edit.href({ id: updated.id }),
 					},
 				} satisfies CMSBookmarksActionView.Props;

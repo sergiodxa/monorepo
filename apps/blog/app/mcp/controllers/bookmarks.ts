@@ -11,8 +11,11 @@
 import { createTool } from "@sdxc/mcp";
 
 import toolset from "~/app/mcp/tools";
-import { Post } from "~/app/repositories/post";
-import { LikePost } from "~/app/repositories/posts/like";
+import {
+	bookmarkLabel,
+	isPublishedAt,
+	timestampFromPublishedOrCreated,
+} from "~/app/models/post-values";
 
 /**
  * Lists bookmarked links, newest first, paged, each named as `/bookmarks` names it and with
@@ -20,15 +23,15 @@ import { LikePost } from "~/app/repositories/posts/like";
  * unparseable date sorts last, so every bookmark still appears in the page.
  */
 export default createTool(toolset.bookmarks, async (ctx) => {
-	let bookmarks = await LikePost.findAll(ctx.db);
+	let bookmarks = await ctx.models.likes.findAll();
 
 	let published = bookmarks
-		.filter((bookmark) => Post.isPublishedAt(bookmark.published_at))
+		.filter((bookmark) => isPublishedAt(bookmark.published_at))
 		.map((bookmark) => {
-			let timestamp = Post.timestampFromPublishedOrCreated(bookmark);
+			let timestamp = timestampFromPublishedOrCreated(bookmark);
 
 			return {
-				title: LikePost.label(bookmark.meta),
+				title: bookmarkLabel(bookmark.meta),
 				url: bookmark.meta.url,
 				description: bookmark.meta.description.trim(),
 				timestamp: Number.isNaN(timestamp) ? 0 : timestamp,

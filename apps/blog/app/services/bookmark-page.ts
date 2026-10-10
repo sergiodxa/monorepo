@@ -15,7 +15,7 @@ import { follow, readText, release, resolveHost } from "@sdxc/outbound";
 import { isFailure } from "@sdxc/result";
 import { isAllowedBy } from "@sdxc/robots/fetch";
 
-import type { Bookmark } from "~/app/repositories/bookmark";
+import type { BookmarkReading, BookmarkStatus } from "~/app/models/bookmarks";
 
 /** What the blog's requests call themselves, so a publisher can tell who is asking. */
 export const BOOKMARK_USER_AGENT = "sergiodxa.com bookmarks (+https://sergiodxa.com/bookmarks)";
@@ -29,7 +29,7 @@ const GONE_STATUSES = new Set([404, 410]);
 /** Types for reading a bookmarked page. */
 export namespace BookmarkPage {
 	/** One read of a page: how it went, and what the page says about itself when it is up. */
-	export interface Reading extends Bookmark.Reading {
+	export interface Reading extends BookmarkReading {
 		/** The headline the page declares, read only when the page is `ok`. */
 		title: string | null;
 		/** The page's summary or opening, read only when the page is `ok`. */
@@ -47,7 +47,7 @@ export namespace BookmarkPage {
 }
 
 /** A reading of a page that could not be fetched, carrying no response and no metadata. */
-function unanswered(status: Bookmark.Status): BookmarkPage.Reading {
+function unanswered(status: BookmarkStatus): BookmarkPage.Reading {
 	return { status, httpStatus: null, finalUrl: null, title: null, description: null };
 }
 
@@ -71,7 +71,7 @@ const ORIGIN_UNREACHABLE = 530;
  * An unreachable origin's outcome: `gone` when its name no longer exists, which is how an
  * expired domain fails, and `flaky` for anything that may pass.
  */
-async function unreachableOutcome(url: URL): Promise<Bookmark.Status> {
+async function unreachableOutcome(url: URL): Promise<BookmarkStatus> {
 	let resolved = await resolveHost(url);
 	if (isFailure(resolved) && resolved.error.code === "refused-host") return "gone";
 	return "flaky";
@@ -82,7 +82,7 @@ async function unreachableOutcome(url: URL): Promise<Bookmark.Status> {
  * `flaky`, an address the request refused to reach `blocked`, and a failed connection
  * depends on whether the name still resolves.
  */
-async function failedOutcome(url: URL, error: OutboundError): Promise<Bookmark.Status> {
+async function failedOutcome(url: URL, error: OutboundError): Promise<BookmarkStatus> {
 	if (error.code === "too-many-redirects") return "gone";
 	if (error.code === "timeout") return "flaky";
 	if (error.code !== "network") return "blocked";
@@ -90,7 +90,7 @@ async function failedOutcome(url: URL, error: OutboundError): Promise<Bookmark.S
 }
 
 /** The outcome a response's status reports, before a redirect is considered. */
-function statusOutcome(response: Response): Bookmark.Status {
+function statusOutcome(response: Response): BookmarkStatus {
 	if (response.headers.get("cf-mitigated") === "challenge") return "blocked";
 	if (GONE_STATUSES.has(response.status)) return "gone";
 	if (REFUSING_STATUSES.has(response.status)) return "blocked";

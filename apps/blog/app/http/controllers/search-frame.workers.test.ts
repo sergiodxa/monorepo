@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -59,41 +60,47 @@ beforeAll(async () => {
 	let author = await seedAuthor(db);
 
 	for (let index = 1; index <= ARTICLE_COUNT; index++) {
-		await ArticlePost.create(db, {
+		unwrap(
+			await bindModels(db).articles.create({
+				author_id: author,
+				published_at: PAST,
+				meta: {
+					slug: `${TOKEN}-article-${index}`,
+					title: `${TOKEN} article ${index}`,
+					locale: "en",
+					content: "Body",
+					excerpt: `Notes on part ${index}.`,
+				},
+			}),
+		);
+	}
+
+	unwrap(
+		await bindModels(db).articles.create({
 			author_id: author,
 			published_at: PAST,
 			meta: {
-				slug: `${TOKEN}-article-${index}`,
-				title: `${TOKEN} article ${index}`,
+				slug: `${BODY_WORD}-unsummarized`,
+				title: "An article with no summary",
 				locale: "en",
-				content: "Body",
-				excerpt: `Notes on part ${index}.`,
+				content: `# Setup\n\nFirst install **the tools**, then read [the ${BODY_WORD} guide](https://example.com).`,
 			},
-		});
-	}
+		}),
+	);
 
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: PAST,
-		meta: {
-			slug: `${BODY_WORD}-unsummarized`,
-			title: "An article with no summary",
-			locale: "en",
-			content: `# Setup\n\nFirst install **the tools**, then read [the ${BODY_WORD} guide](https://example.com).`,
-		},
-	});
-
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: PAST,
-		meta: {
-			slug: `${BODY_WORD}-summarized`,
-			title: "An article whose summary misses",
-			locale: "en",
-			excerpt: "A summary about something else.",
-			content: `Long before the point, the body finally says ${BODY_WORD} near the end.`,
-		},
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: PAST,
+			meta: {
+				slug: `${BODY_WORD}-summarized`,
+				title: "An article whose summary misses",
+				locale: "en",
+				excerpt: "A summary about something else.",
+				content: `Long before the point, the body finally says ${BODY_WORD} near the end.`,
+			},
+		}),
+	);
 });
 
 describe("GET /frames/search", () => {

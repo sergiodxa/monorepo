@@ -11,7 +11,6 @@ import { createAction } from "remix/router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { ArticlesViewModel } from "~/app/http/view-models/articles";
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { ArticlesView } from "~/resources/views/articles";
 import routes from "~/routes/web";
@@ -21,7 +20,7 @@ import routes from "~/routes/web";
  * @returns HTML response for `GET /articles`.
  */
 export default createAction(routes.articles, async (ctx) => {
-	let articles = await ArticlePost.listItems(ctx.db, { includePreview: isAdmin() });
+	let articles = await ctx.models.articles.listItems({ includePreview: isAdmin() });
 	let model = ArticlesViewModel.index(articles);
 
 	// An admin's listing carries unpublished posts, so it never reaches a shared cache.

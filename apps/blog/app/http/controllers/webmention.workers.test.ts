@@ -9,10 +9,10 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
@@ -63,24 +63,30 @@ beforeAll(async () => {
 	db = await migratedDatabase();
 	let author = await seedAuthor(db);
 	let meta = { locale: "en", content: "Body" };
-	let live = await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { ...meta, slug: LIVE, title: "Mentioned" },
-	});
-	let deleted = await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { ...meta, slug: DELETED, title: "Deleted" },
-	});
-	let withdrawn = await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { ...meta, slug: WITHDRAWN, title: "Withdrawn" },
-	});
+	let live = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { ...meta, slug: LIVE, title: "Mentioned" },
+		}),
+	);
+	let deleted = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { ...meta, slug: DELETED, title: "Deleted" },
+		}),
+	);
+	let withdrawn = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { ...meta, slug: WITHDRAWN, title: "Withdrawn" },
+		}),
+	);
 	liveId = live!.id;
 	withdrawnId = withdrawn!.id;
-	await ArticlePost.destroy(db, deleted!.id);
+	await bindModels(db).articles.tombstone(deleted!.id);
 });
 
 describe("POST /webmention", () => {
@@ -93,7 +99,7 @@ describe("POST /webmention", () => {
 			"https://replies.example.com/1",
 			`${ORIGIN}/articles/${WITHDRAWN}`,
 		);
-		await ArticlePost.destroy(db, withdrawnId);
+		await bindModels(db).articles.tombstone(withdrawnId);
 
 		expect(response.status).toBe(202);
 	});

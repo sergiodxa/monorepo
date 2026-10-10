@@ -10,7 +10,6 @@
 import { createAction } from "remix/router";
 
 import { BookmarksViewModel } from "~/app/http/view-models/bookmarks";
-import { LikePost } from "~/app/repositories/posts/like";
 import { BookmarksView } from "~/resources/views/bookmarks";
 import routes from "~/routes/web";
 
@@ -19,7 +18,7 @@ import routes from "~/routes/web";
  * @returns Server-rendered bookmarks page response.
  */
 export default createAction(routes.bookmarks, async (ctx) => {
-	let bookmarks = await LikePost.findAll(ctx.db);
+	let bookmarks = await ctx.models.likes.findAll();
 	let model = BookmarksViewModel.index(bookmarks);
 
 	return ctx.render(BookmarksView, model);

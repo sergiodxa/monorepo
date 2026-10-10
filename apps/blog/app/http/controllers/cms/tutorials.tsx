@@ -9,15 +9,14 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { succeeded } from "@sdxc/result";
+import { isFailure, succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { isPublishedAt, tutorialTags } from "~/app/models/post-values";
 import { TutorialSchema } from "~/app/schemas/cms/tutorial";
 import { TAGS } from "~/app/services/cache";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views/cms/tutorials";
@@ -36,20 +35,20 @@ export default createController(routes.cms.tutorials, {
 
 	actions: {
 		/**
-		 * Preview badges come from `Post.isPublishedAt`, so they match the shared publish
+		 * Preview badges come from `isPublishedAt`, so they match the shared publish
 		 * contract: `null` or a past date is published, a future date is preview.
 		 *
 		 * @param ctx Request context carrying the database.
 		 * @returns HTML response with the tutorials list view-model.
 		 */
 		index: async (ctx) => {
-			let tutorials = await TutorialPost.findAll(ctx.db, { includePreview: true });
+			let tutorials = await ctx.models.tutorials.findAll({ includePreview: true });
 			let sources: Array<TutorialViewModel.SourceIndexItem> = tutorials.map((tutorial) => ({
 				id: tutorial.id,
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
-				preview: !Post.isPublishedAt(tutorial.published_at),
-				tags: tutorial.meta.tags,
+				preview: !isPublishedAt(tutorial.published_at),
+				tags: tutorialTags(tutorial.meta.tags),
 			}));
 			let items = TutorialViewModel.index({ items: sources });
 
@@ -72,16 +71,18 @@ export default createController(routes.cms.tutorials, {
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
 
-			let created = await TutorialPost.create(ctx.db, {
+			let saved = await ctx.models.tutorials.create({
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
 			});
 
-			if (!created)
+			if (isFailure(saved))
 				return redirect(routes.cms.tutorials.index.href(), {
 					status: redirect.Status.SeeOther,
 				});
+
+			let created = saved.data;
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
 			await ctx.jobs.enqueue(jobs.activityPub.publish, {
@@ -108,9 +109,9 @@ export default createController(routes.cms.tutorials, {
 
 			// Read before deleting: the public page is cached under its slug, which
 			// only the record carries.
-			let tutorial = await TutorialPost.findById(ctx.db, id);
+			let tutorial = await ctx.models.tutorials.find(id);
 
-			let destroyed = await TutorialPost.destroy(ctx.db, id);
+			let destroyed = await ctx.models.tutorials.tombstone(id);
 			if (destroyed) {
 				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 				await ctx.jobs.enqueue(jobs.activityPub.publish, {
@@ -133,7 +134,7 @@ export default createController(routes.cms.tutorials, {
 		 */
 		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let tutorial = id ? await TutorialPost.findById(ctx.db, id) : null;
+			let tutorial = id ? await ctx.models.tutorials.find(id) : null;
 
 			if (!tutorial) {
 				let model = TutorialViewModel.notFound({ id });
@@ -145,7 +146,7 @@ export default createController(routes.cms.tutorials, {
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
 				excerpt: tutorial.meta.excerpt,
-				tags: tutorial.meta.tags,
+				tags: tutorialTags(tutorial.meta.tags),
 				content: tutorial.meta.content,
 				published_at: tutorial.published_at,
 			};
@@ -185,15 +186,15 @@ export default createController(routes.cms.tutorials, {
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
-			let previous = await TutorialPost.findById(ctx.db, id);
+			let previous = await ctx.models.tutorials.find(id);
 
-			let updated = await TutorialPost.update(ctx.db, id, {
+			let updated = await ctx.models.tutorials.update(id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
 			});
 
-			if (!updated) {
+			if (isFailure(updated)) {
 				let model = TutorialViewModel.notFound({ id });
 				return ctx.render(CMSTutorialsActionView, model, { status: 404 });
 			}

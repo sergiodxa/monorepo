@@ -33,9 +33,8 @@ import models from "~/app/http/middleware/models";
 import jobs from "~/app/jobs";
 import publish from "~/app/jobs/activitypub/publish";
 import { FollowerRepository } from "~/app/repositories/follower";
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { federationQueue } from "~/app/services/activitypub";
+import { findForMentions } from "~/app/services/posts";
 import {
 	ALICE,
 	ALICE_SHARED_INBOX,
@@ -126,11 +125,13 @@ async function articles(count: number): Promise<string[]> {
 	let author = await seedAuthor(db);
 	let ids: string[] = [];
 	for (let index = 0; index < count; index++) {
-		let created = await ArticlePost.create(db, {
-			author_id: author,
-			published_at: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
-			meta: { slug: `post-${index}`, title: `Post ${index}`, locale: "en", content: "Body" },
-		});
+		let created = unwrap(
+			await bindModels(db).articles.create({
+				author_id: author,
+				published_at: new Date(Date.UTC(2026, 0, index + 1)).toISOString(),
+				meta: { slug: `post-${index}`, title: `Post ${index}`, locale: "en", content: "Body" },
+			}),
+		);
 		if (created) ids.push(created.id);
 	}
 	return ids;
@@ -348,7 +349,7 @@ describe("a post asked for as ActivityStreams", () => {
 
 	test("answers a deleted post's Tombstone with 410", async () => {
 		let [id] = await articles(1);
-		await ArticlePost.destroy(db, id ?? "");
+		await bindModels(db).articles.tombstone(id ?? "");
 
 		let response = await fetchPath("/articles/post-0", { headers: { accept: AS2 } });
 
@@ -504,7 +505,7 @@ describe("the activityPub.publish job", () => {
 				}),
 			},
 		]);
-		expect((await Post.findForMentions(db, postId))?.federated_at).not.toBeNull();
+		expect((await findForMentions(bindModels(db), postId))?.federated_at).not.toBeNull();
 
 		await runPublish(postId, "2026-03-02T00:00:00.000Z", queue);
 		await drain(queue.take());
@@ -513,7 +514,7 @@ describe("the activityPub.publish job", () => {
 			id: "https://sergiodxa.com/articles/post-0#update-2026-03-02T00:00:00.000Z",
 		});
 
-		await ArticlePost.destroy(db, postId);
+		await bindModels(db).articles.tombstone(postId);
 		await runPublish(postId, "2026-03-03T00:00:00.000Z", queue);
 		await drain(queue.take());
 		expect(delivered[2]?.activity).toMatchObject({
@@ -524,16 +525,16 @@ describe("the activityPub.publish job", () => {
 
 	test("takes a post off the scheduled job's list once its Create is queued", async () => {
 		let [postId = ""] = await articles(1);
-		expect(await Post.findDueForFederation(db)).toEqual([postId]);
+		expect(await bindModels(db).posts.findDueForFederation()).toEqual([postId]);
 
 		await runPublish(postId, "2026-03-01T00:00:00.000Z", new TestQueue());
 
-		expect(await Post.findDueForFederation(db)).toEqual([]);
+		expect(await bindModels(db).posts.findDueForFederation()).toEqual([]);
 	});
 
 	test("sends nothing for a post deleted before it federated", async () => {
 		let [postId = ""] = await articles(1);
-		await ArticlePost.destroy(db, postId);
+		await bindModels(db).articles.tombstone(postId);
 		let queue = new TestQueue();
 
 		let ended = await runPublish(postId, "2026-03-01T00:00:00.000Z", queue).then(

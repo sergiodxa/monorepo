@@ -9,19 +9,18 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { succeeded } from "@sdxc/result";
+import { isFailure, succeeded } from "@sdxc/result";
 import { slugify } from "@sdxc/strings";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
 import { GlossarySchema } from "~/app/schemas/cms/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/cms/glossary";
 import routes from "~/routes/web";
 
 /**
- * CMS glossary CRUD. `GlossaryPost` is the data boundary, and every action answers with an
+ * CMS glossary CRUD. `ctx.models.glossary` is the data boundary, and every action answers with an
  * HTML view or a 303 redirect.
  */
 export default createController(routes.cms.glossary, {
@@ -38,7 +37,7 @@ export default createController(routes.cms.glossary, {
 		 * @returns CMS glossary index view response.
 		 */
 		index: async (ctx) => {
-			let glossary = await GlossaryPost.findAll(ctx.db);
+			let glossary = await ctx.models.glossary.findAll();
 			let items = glossary.map((item) => ({
 				id: item.id,
 				term: item.meta.term,
@@ -64,7 +63,7 @@ export default createController(routes.cms.glossary, {
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let created = await GlossaryPost.create(ctx.db, {
+			let saved = await ctx.models.glossary.create({
 				author_id: user.id,
 				meta: {
 					term: result.data.term,
@@ -74,8 +73,10 @@ export default createController(routes.cms.glossary, {
 				},
 			});
 
-			if (!created)
+			if (isFailure(saved))
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
+
+			let created = saved.data;
 
 			return redirect(routes.cms.glossary.edit.href({ id: created.id }), {
 				status: redirect.Status.SeeOther,
@@ -91,7 +92,7 @@ export default createController(routes.cms.glossary, {
 			if (!id)
 				return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 
-			await GlossaryPost.destroy(ctx.db, id);
+			await ctx.models.glossary.tombstone(id);
 			return redirect(routes.cms.glossary.index.href(), { status: redirect.Status.SeeOther });
 		},
 
@@ -103,7 +104,7 @@ export default createController(routes.cms.glossary, {
 		 */
 		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let glossary = id ? await GlossaryPost.findById(ctx.db, id) : null;
+			let glossary = id ? await ctx.models.glossary.find(id) : null;
 
 			if (!glossary) {
 				let viewProps = {
@@ -144,7 +145,7 @@ export default createController(routes.cms.glossary, {
 		 * @returns CMS glossary creation form view.
 		 */
 		new: async (ctx) => {
-			let total = (await GlossaryPost.findAll(ctx.db)).length;
+			let total = (await ctx.models.glossary.findAll()).length;
 			let viewProps = {
 				title: "New Glossary",
 				description: `New Glossary form loaded. Current glossary count: ${total}.`,
@@ -172,7 +173,7 @@ export default createController(routes.cms.glossary, {
 			let result = await validate(ctx.get(FormData), GlossarySchema);
 			succeeded(result, "Invalid glossary form data");
 
-			let updated = await GlossaryPost.update(ctx.db, id, {
+			let updated = await ctx.models.glossary.update(id, {
 				author_id: user.id,
 				meta: {
 					term: result.data.term,
@@ -182,7 +183,7 @@ export default createController(routes.cms.glossary, {
 				},
 			});
 
-			if (!updated) {
+			if (isFailure(updated)) {
 				let viewProps = {
 					title: "Glossary Term Not Found",
 					description: `Glossary term ${id} was not found.`,

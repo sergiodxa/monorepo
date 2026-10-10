@@ -208,7 +208,7 @@ bun run db:remote:migrate # Apply migrations to production
 ### Search index
 
 `post_search` is a search-only projection of each live article, tutorial and glossary entry
-(title, tags as a JSON array, and body or definition), written by the `Post` repository on
+(title, tags as a JSON array, and body or definition), written by the posts model's callbacks on
 every create, update and delete. `post_search_fts` is its FTS5 index, kept in step by three
 triggers. Publish state, kind and everything a result shows are read from `posts` and
 `post_meta`. See [ADR-004](../../docs/adr/blog/ADR-004-full-text-search.md).

@@ -1,5 +1,5 @@
 /**
- * Unit tests for the Post repository. Exercises `Post.isPublishedAt`, verifying
+ * Unit tests for the post publish rule. Exercises `isPublishedAt`, verifying
  * that a null publish date counts as published and that unix-second timestamps in
  * the past are treated as published while future ones are treated as preview.
  *
@@ -9,22 +9,22 @@
 
 import { describe, expect, test } from "vitest";
 
-import { Post } from "./post";
+import { isPublishedAt } from "./post-values";
 
-describe("Post.isPublishedAt", () => {
+describe("isPublishedAt", () => {
 	test("treats null as published", () => {
-		expect(Post.isPublishedAt(null)).toBe(true);
+		expect(isPublishedAt(null)).toBe(true);
 	});
 
 	test("treats past unix-second timestamps as published", () => {
 		let publishedAt = String(Math.floor(Date.now() / 1000) - 60);
 
-		expect(Post.isPublishedAt(publishedAt)).toBe(true);
+		expect(isPublishedAt(publishedAt)).toBe(true);
 	});
 
 	test("treats future unix-second timestamps as preview", () => {
 		let publishedAt = String(Math.floor(Date.now() / 1000) + 60);
 
-		expect(Post.isPublishedAt(publishedAt)).toBe(false);
+		expect(isPublishedAt(publishedAt)).toBe(false);
 	});
 });

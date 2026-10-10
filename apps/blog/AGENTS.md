@@ -8,7 +8,8 @@ This document defines app-specific rules for `apps/blog`.
 - MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and router creation in `bootstrap/app.tsx`.
 - MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
 - MUST pass a CMS route's guards as `lazy()`'s second argument (`CMS_GUARDS` / `CMS_WRITE_GUARDS`), never as a `middleware` field wrapping the loader: a stand-in is an object, not a function, so it cannot be an action object's `handler`.
-- MUST use model classes for data access in controllers (avoid ad-hoc DB queries in controllers).
+- MUST read and write data through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware in requests and jobs), never ad-hoc DB queries in controllers. Logic that spans post types lives in `app/services/posts.ts` and takes `ctx.models`; a pure rule over post values lives in `app/models/post-values.ts`, which no model imports back.
+- MUST write a post through its type's model (`ctx.models.articles`, `tutorials`, `likes`, `glossary`), whose callbacks keep the post's search document current; a delete is `tombstone(id)`, which every read then skips through the base model's default scope.
 - MUST treat post publish state as:
   - `published_at === null` => published
   - `published_at` in the past => published
@@ -86,7 +87,7 @@ This document defines app-specific rules for `apps/blog`.
 - MAY include JSDoc `@template` tags with concise descriptions when there are generic type parameters.
 - MAY include up to 3 JSDoc `@example` tags for practical usage snippets.
 
-- SHOULD use `@param` and `@returns` on handlers/repository methods where request context, side effects, or response contracts are not obvious.
+- SHOULD use `@param` and `@returns` on handlers/model methods where request context, side effects, or response contracts are not obvious.
 - SHOULD document edge-case behavior (empty inputs, invalid params, missing records, legacy data shapes) when a symbol intentionally handles those cases.
 
 - MUST NOT use placeholder or template wording in JSDoc (for example: "Defines ...", "Represents ...", or "Handles ..." without meaningful contract detail).
@@ -120,12 +121,12 @@ This document defines app-specific rules for `apps/blog`.
   - `packages/ui/src/theme.css` (the semantic `--ui-*` layer this app's palette feeds)
 - Data layer
   - `database/schema/index.ts`
-  - `app/repositories/post.ts`
-  - `app/repositories/post-meta.ts`
+  - `app/models/index.ts` (the registry `ctx.models` binds)
+  - `app/models/posts.ts` (the base model every post type extends)
+  - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`
+  - `app/models/post-values.ts` (publish state, ordering, bookmark URLs, tutorial tags)
+  - `app/services/posts.ts` (reads across post types)
   - `app/repositories/feed.ts`
-  - `app/repositories/posts/article.ts`
-  - `app/repositories/posts/tutorial.ts`
-  - `app/repositories/posts/like.ts`
 - Federation
   - `app/services/activitypub.ts`
   - `app/services/federated-posts.ts`

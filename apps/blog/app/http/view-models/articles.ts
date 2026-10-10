@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { ArticlePost } from "~/app/repositories/posts/article";
+import type { ArticleListItem } from "~/app/models/articles";
 
-import { Post } from "~/app/repositories/post";
+import { isPublishedAt } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /**
@@ -65,15 +65,15 @@ export namespace ArticlesViewModel {
 export class ArticlesViewModel {
 	/**
 	 * Centralizes two contracts for the index route: route generation per slug,
-	 * and preview detection based on `Post.isPublishedAt` semantics.
+	 * and preview detection based on `isPublishedAt` semantics.
 	 *
 	 * @param articles Articles fetched for the index route.
 	 * @returns Template-ready page payload with stable ordering.
 	 */
-	static index(articles: Array<ArticlePost.ListItem>): ArticlesViewModel.Page {
+	static index(articles: Array<ArticleListItem>): ArticlesViewModel.Page {
 		let items = articles.map((article) => {
 			let href = routes.post.href({ postType: "articles", postSlug: article.slug });
-			let isPublished = Post.isPublishedAt(article.published_at);
+			let isPublished = isPublishedAt(article.published_at);
 
 			return {
 				href,

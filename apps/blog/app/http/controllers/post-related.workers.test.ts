@@ -7,12 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -49,17 +51,19 @@ beforeAll(async () => {
 	let author = await seedAuthor(db);
 
 	for (let name of ["first", "second"]) {
-		await TutorialPost.create(db, {
-			author_id: author,
-			published_at: "2026-03-01T12:00:00.000Z",
-			meta: {
-				slug: `${TOKEN}-${name}`,
-				title: `The ${name} tutorial`,
-				excerpt: "A tutorial.",
-				content: "Body",
-				tags: [TAG],
-			},
-		});
+		unwrap(
+			await bindModels(db).tutorials.create({
+				author_id: author,
+				published_at: "2026-03-01T12:00:00.000Z",
+				meta: {
+					slug: `${TOKEN}-${name}`,
+					title: `The ${name} tutorial`,
+					excerpt: "A tutorial.",
+					content: "Body",
+					tags: serializeTags([TAG]),
+				},
+			}),
+		);
 	}
 });
 

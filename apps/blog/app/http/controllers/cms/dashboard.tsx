@@ -10,10 +10,6 @@
 
 import type { AppContext } from "~/app/http/context";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 
 /**
@@ -24,10 +20,10 @@ import { CMSDashboardView } from "~/resources/views/cms/dashboard";
  */
 export default async function dashboard(ctx: AppContext) {
 	let [articles, tutorials, likes, glossary] = await Promise.all([
-		ArticlePost.count(ctx.db),
-		TutorialPost.count(ctx.db),
-		LikePost.count(ctx.db),
-		GlossaryPost.count(ctx.db),
+		ctx.models.articles.query().count(),
+		ctx.models.tutorials.query().count(),
+		ctx.models.likes.query().count(),
+		ctx.models.glossary.query().count(),
 	]);
 
 	return ctx.render(CMSDashboardView, {

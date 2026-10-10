@@ -12,6 +12,7 @@ import { parseDate, toDayKey } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 import { slugify } from "@sdxc/strings";
 
+import { serializeTags } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /**
@@ -200,7 +201,7 @@ export class TutorialViewModel {
 				title: data.title,
 				slug: data.slug || slugify(data.title),
 				excerpt: data.excerpt,
-				tags: this.parseTags(data.tags),
+				tags: serializeTags(this.parseTags(data.tags)),
 				content: data.content,
 			},
 		};

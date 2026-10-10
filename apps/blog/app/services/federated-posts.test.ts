@@ -14,11 +14,13 @@ import { localObjectsConformance } from "@sdxc/activitypub/testing";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import type { PublicTypePath } from "~/app/models/post-values";
+
+import { serializeTags } from "~/app/models/post-values";
+import { findPublicPost } from "~/app/services/posts";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 import { ACTOR_ID, FOLLOWERS_ID } from "~/config/activitypub";
 
 import { article, create, FederatedPosts, remove, tombstone, update } from "./federated-posts";
@@ -30,41 +32,45 @@ const TUTORIAL_ID = "https://sergiodxa.com/tutorials/routing";
 async function seeded(): Promise<{ db: Database; authorId: string }> {
 	let db = await testDatabase();
 	let authorId = await seedAuthor(db);
-	await ArticlePost.create(db, {
-		author_id: authorId,
-		published_at: "2026-01-02T03:04:05.000Z",
-		meta: {
-			slug: "hello",
-			title: "Hello",
-			locale: "en",
-			content: "Some **bold** text",
-			excerpt: "A greeting",
-		},
-	});
-	await TutorialPost.create(db, {
-		author_id: authorId,
-		published_at: null,
-		meta: {
-			slug: "routing",
-			title: "Routing",
-			excerpt: "",
-			content: "Body",
-			tags: ["react-router", "Remix"],
-		},
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: authorId,
+			published_at: "2026-01-02T03:04:05.000Z",
+			meta: {
+				slug: "hello",
+				title: "Hello",
+				locale: "en",
+				content: "Some **bold** text",
+				excerpt: "A greeting",
+			},
+		}),
+	);
+	unwrap(
+		await bindModels(db).tutorials.create({
+			author_id: authorId,
+			published_at: null,
+			meta: {
+				slug: "routing",
+				title: "Routing",
+				excerpt: "",
+				content: "Body",
+				tags: serializeTags(["react-router", "Remix"]),
+			},
+		}),
+	);
 	return { db, authorId };
 }
 
 /** The post page's payload for a seeded post. */
-async function found(db: Database, postType: Post.PublicTypePath, postSlug: string) {
-	let post = await Post.findByTypeAndSlug(db, { postType, postSlug });
+async function found(db: Database, postType: PublicTypePath, postSlug: string) {
+	let post = await findPublicPost(bindModels(db), { postType, postSlug });
 	if (!post) throw new Error(`${postType}/${postSlug} was not seeded`);
 	return post;
 }
 
 localObjectsConformance({
 	name: "FederatedPosts",
-	create: async () => new FederatedPosts((await seeded()).db),
+	create: async () => new FederatedPosts(bindModels((await seeded()).db)),
 	served: [ARTICLE_ID, TUTORIAL_ID],
 });
 
@@ -77,22 +83,24 @@ describe("FederatedPosts.find", () => {
 	});
 
 	test("finds nothing for a post still in preview", async () => {
-		await ArticlePost.create(db, {
-			author_id: authorId,
-			published_at: new Date(Date.now() + 86_400_000).toISOString(),
-			meta: { slug: "soon", title: "Soon", locale: "en", content: "Later" },
-		});
+		unwrap(
+			await bindModels(db).articles.create({
+				author_id: authorId,
+				published_at: new Date(Date.now() + 86_400_000).toISOString(),
+				meta: { slug: "soon", title: "Soon", locale: "en", content: "Later" },
+			}),
+		);
 
 		expect(
-			unwrap(await new FederatedPosts(db).find("https://sergiodxa.com/articles/soon")),
+			unwrap(await new FederatedPosts(bindModels(db)).find("https://sergiodxa.com/articles/soon")),
 		).toBeNull();
 	});
 
 	test("finds nothing for a deleted post", async () => {
 		let post = await found(db, "articles", "hello");
-		await Post.destroy(db, post.post.id);
+		await bindModels(db).posts.tombstone(post.post.id);
 
-		expect(unwrap(await new FederatedPosts(db).find(ARTICLE_ID))).toBeNull();
+		expect(unwrap(await new FederatedPosts(bindModels(db)).find(ARTICLE_ID))).toBeNull();
 	});
 
 	test.each([
@@ -104,7 +112,7 @@ describe("FederatedPosts.find", () => {
 		["an unknown slug", "https://sergiodxa.com/articles/missing"],
 		["a non-URL", "hello"],
 	])("finds nothing for %s", async (_, id) => {
-		expect(unwrap(await new FederatedPosts(db).find(id))).toBeNull();
+		expect(unwrap(await new FederatedPosts(bindModels(db)).find(id))).toBeNull();
 	});
 });
 

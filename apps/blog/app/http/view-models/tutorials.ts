@@ -8,9 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { TutorialPost } from "~/app/repositories/posts/tutorial";
+import type { TutorialListItem } from "~/app/models/tutorials";
 
-import { Post } from "~/app/repositories/post";
+import { isPublishedAt } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /**
@@ -56,16 +56,16 @@ export namespace TutorialsViewModel {
 export class TutorialsViewModel {
 	/**
 	 * Each input row becomes one output item, preserving input order. Preview state
-	 * comes from `Post.isPublishedAt`, so future dates are preview while `null`
+	 * comes from `isPublishedAt`, so future dates are preview while `null`
 	 * counts as published.
 	 *
 	 * @param tutorials Tutorial rows returned by the tutorials repository.
 	 * @returns Page payload ready for the tutorials index template.
 	 */
-	static index(tutorials: Array<TutorialPost.ListItem>): TutorialsViewModel.Page {
+	static index(tutorials: Array<TutorialListItem>): TutorialsViewModel.Page {
 		let items = tutorials.map((tutorial) => {
 			let href = routes.post.href({ postType: "tutorials", postSlug: tutorial.slug });
-			let isPublished = Post.isPublishedAt(tutorial.published_at);
+			let isPublished = isPublishedAt(tutorial.published_at);
 
 			return {
 				href,

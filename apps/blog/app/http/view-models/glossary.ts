@@ -8,8 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { GlossaryPost as GlossaryPostRepository } from "~/app/repositories/posts/glossary";
-
+import type { GlossaryEntry } from "~/app/models/glossary";
 /**
  * Type contracts consumed by the glossary route renderer: the normalized
  * payload templates expect.
@@ -58,12 +57,10 @@ export class GlossaryViewModel {
 	 * The input array is copied before sorting; missing `id` values degrade to
 	 * `meta.slug`.
 	 *
-	 * @param entries Repository records returned by `GlossaryPostRepository.findAll`.
+	 * @param entries The entries `glossary.findAll()` returns.
 	 * @returns Page payload ready for direct template consumption.
 	 */
-	static index(
-		entries: Array<Awaited<ReturnType<typeof GlossaryPostRepository.findAll>>[number]>,
-	): GlossaryViewModel.Page {
+	static index(entries: Array<GlossaryEntry>): GlossaryViewModel.Page {
 		let list = [...entries]
 			.sort((a, b) => a.meta.term.localeCompare(b.meta.term))
 			.map((entry) => {

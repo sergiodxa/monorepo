@@ -10,12 +10,11 @@
 import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels, publishModels } from "~/app/test/models";
@@ -40,11 +39,13 @@ beforeEach(async () => {
 /** Creates an article whose body links to the given URLs. */
 async function article(slug: string, links: string[], published_at: string | null = null) {
 	let content = links.map((href, index) => `[link ${index}](${href})`).join(" and ");
-	let created = await ArticlePost.create(db, {
-		author_id: author,
-		published_at,
-		meta: { slug, title: slug, locale: "en", content },
-	});
+	let created = unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at,
+			meta: { slug, title: slug, locale: "en", content },
+		}),
+	);
 	return created!.id;
 }
 
@@ -75,7 +76,7 @@ describe("the send job", () => {
 			{ postId: id, target: "https://example.com/a", removed: false },
 			{ postId: id, target: "https://example.org/b", removed: false },
 		]);
-		expect((await Post.findDueForMentions(db)).includes(id)).toBe(false);
+		expect((await bindModels(db).posts.findDueForMentions()).includes(id)).toBe(false);
 	});
 
 	test("also notifies a page the post stopped linking to", async () => {
@@ -103,7 +104,7 @@ describe("the send job", () => {
 			code: 202,
 			location: null,
 		});
-		await ArticlePost.destroy(db, id);
+		await bindModels(db).articles.tombstone(id);
 
 		await run(send, { postId: id });
 
@@ -134,7 +135,7 @@ describe("the scheduled job", () => {
 
 		expect(deliveries()).toEqual([{ postId: arrived }]);
 
-		await Post.markMentionsSent(db, arrived);
-		expect(await Post.findDueForMentions(db)).toEqual([]);
+		await bindModels(db).posts.markMentionsSent(arrived);
+		expect(await bindModels(db).posts.findDueForMentions()).toEqual([]);
 	});
 });

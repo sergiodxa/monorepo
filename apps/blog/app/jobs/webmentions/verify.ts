@@ -1,3 +1,9 @@
+import { createBackoff } from "@sdxc/backoff";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { verify } from "@sdxc/webmention/receiver";
+
+import jobs from "~/app/jobs";
 /**
  * Verifies one received Webmention: fetches the source under bounds and stores the
  * mention it now is, updates it, or marks it deleted. Runs off the request, so the
@@ -6,13 +12,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createBackoff } from "@sdxc/backoff";
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-import { verify } from "@sdxc/webmention/receiver";
-
-import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
+import { findMentionable } from "~/app/services/posts";
 import { USER_AGENT } from "~/app/services/webmention";
 
 /**
@@ -30,7 +30,7 @@ export default createJobHandler(jobs.webmentions.verify, async (ctx) => {
 	let pair = { source: new URL(ctx.input.source), target: new URL(ctx.input.target) };
 	ctx.log.set({ webmention: { source: pair.source.href, target: pair.target.href } });
 
-	let post = await Post.findMentionable(ctx.db, pair.target, pair.target.origin);
+	let post = await findMentionable(ctx.models, pair.target, pair.target.origin);
 	if (!post) {
 		await ctx.models.webmentions.markDeleted(pair);
 		return ctx.ack("The target no longer takes mentions");

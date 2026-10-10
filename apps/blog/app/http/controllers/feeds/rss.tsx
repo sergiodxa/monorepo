@@ -31,7 +31,7 @@ async function rssFeed(
 	stream: Syndication.Stream,
 ): Promise<Response> {
 	let channel = syndicationChannel(stream, ctx.url);
-	let entries = await syndicationEntries(ctx.db, ctx.url, stream);
+	let entries = await syndicationEntries(ctx.models, ctx.url, stream);
 	let hub = advertiseHub(new URL(feed.href(), ctx.url).toString());
 
 	let rss = new RSS({

@@ -11,7 +11,6 @@ import { createAction } from "remix/router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { TutorialsViewModel } from "~/app/http/view-models/tutorials";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { TutorialsView } from "~/resources/views/tutorials";
 import routes from "~/routes/web";
@@ -21,7 +20,7 @@ import routes from "~/routes/web";
  * @returns HTML response for `GET /tutorials`.
  */
 export default createAction(routes.tutorials, async (ctx) => {
-	let tutorials = await TutorialPost.listItems(ctx.db, {
+	let tutorials = await ctx.models.tutorials.listItems({
 		includePreview: isAdmin(),
 	});
 	let model = TutorialsViewModel.index(tutorials);

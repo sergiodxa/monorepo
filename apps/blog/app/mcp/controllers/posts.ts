@@ -8,18 +8,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createResource, createToolController, ToolError } from "@sdxc/mcp";
 
-import type { Post as PostTypes } from "~/app/repositories/post";
+import type { BlogModels } from "~/app/models";
+import type { PublicTypePath } from "~/app/models/post-values";
+import type { PublicPost } from "~/app/services/posts";
 
 import { cached } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { isPublishedAt, timestampFromPublishedOrCreated } from "~/app/models/post-values";
+import { findPublicPost } from "~/app/services/posts";
 
 /** Where each collection's pages live, for building a post's public URL. */
 const COLLECTION_PATHS = { articles: "/articles", tutorials: "/tutorials" } as const;
@@ -30,19 +29,19 @@ const COLLECTION_PATHS = { articles: "/articles", tutorials: "/tutorials" } as c
  * The publish rule is enforced here because `findByTypeAndSlug` returns preview posts too;
  * only the HTML route otherwise guards against a slug learned elsewhere reaching a draft.
  *
- * @param db Database connection used for the lookup.
+ * @param models The request's models.
  * @param postType Which collection to look in.
  * @param postSlug The post's slug.
  * @returns The post, or `null` when it is missing or still in preview.
  */
 async function findPublished(
-	db: Database,
-	postType: PostTypes.PublicTypePath,
+	models: BlogModels,
+	postType: PublicTypePath,
 	postSlug: string,
-): Promise<PostTypes.PublicFoundByTypeAndSlug | null> {
-	let found = await Post.findByTypeAndSlug(db, { postType, postSlug });
+): Promise<PublicPost | null> {
+	let found = await findPublicPost(models, { postType, postSlug });
 	if (!found) return null;
-	if (!Post.isPublishedAt(found.post.published_at)) return null;
+	if (!isPublishedAt(found.post.published_at)) return null;
 	return found;
 }
 
@@ -51,7 +50,7 @@ function listItem(
 	collection: keyof typeof COLLECTION_PATHS,
 	item: { title: string; slug: string; published_at: string | null; created_at: string },
 ) {
-	let timestamp = Post.timestampFromPublishedOrCreated(item);
+	let timestamp = timestampFromPublishedOrCreated(item);
 
 	return {
 		title: item.title,
@@ -68,8 +67,8 @@ export const postsController = createToolController(toolset.posts, {
 		list: async (ctx) => {
 			let items =
 				ctx.input.type === "articles"
-					? await ArticlePost.listItems(ctx.db, { includePreview: false })
-					: await TutorialPost.listItems(ctx.db, { includePreview: false });
+					? await ctx.models.articles.listItems({ includePreview: false })
+					: await ctx.models.tutorials.listItems({ includePreview: false });
 
 			let page = items.slice(ctx.input.offset, ctx.input.offset + ctx.input.limit);
 
@@ -83,7 +82,7 @@ export const postsController = createToolController(toolset.posts, {
 
 		/** Reads one post in full, as the Markdown it was written in. */
 		get: async (ctx) => {
-			let found = await findPublished(ctx.db, ctx.input.type, ctx.input.slug);
+			let found = await findPublished(ctx.models, ctx.input.type, ctx.input.slug);
 			if (!found) {
 				let noun = ctx.input.type === "articles" ? "article" : "tutorial";
 				throw new ToolError(
@@ -113,7 +112,7 @@ export const postsController = createToolController(toolset.posts, {
 export const articleResource = createResource(resourceset.article, {
 	list: (ctx) =>
 		cached("resources/articles", null, async () => {
-			let articles = await ArticlePost.listItems(ctx.db, { includePreview: false });
+			let articles = await ctx.models.articles.listItems({ includePreview: false });
 
 			return articles.map((article) => ({
 				uri: resourceset.article.href({ slug: article.slug }),
@@ -124,7 +123,7 @@ export const articleResource = createResource(resourceset.article, {
 
 	read: (ctx) =>
 		cached("resources/article", ctx.variables, async () => {
-			let found = await findPublished(ctx.db, "articles", ctx.variables.slug);
+			let found = await findPublished(ctx.models, "articles", ctx.variables.slug);
 			return found?.post.meta.content ?? null;
 		}),
 });
@@ -133,7 +132,7 @@ export const articleResource = createResource(resourceset.article, {
 export const tutorialResource = createResource(resourceset.tutorial, {
 	list: (ctx) =>
 		cached("resources/tutorials", null, async () => {
-			let tutorials = await TutorialPost.listItems(ctx.db, { includePreview: false });
+			let tutorials = await ctx.models.tutorials.listItems({ includePreview: false });
 
 			return tutorials.map((tutorial) => ({
 				uri: resourceset.tutorial.href({ slug: tutorial.slug }),
@@ -144,7 +143,7 @@ export const tutorialResource = createResource(resourceset.tutorial, {
 
 	read: (ctx) =>
 		cached("resources/tutorial", ctx.variables, async () => {
-			let found = await findPublished(ctx.db, "tutorials", ctx.variables.slug);
+			let found = await findPublished(ctx.models, "tutorials", ctx.variables.slug);
 			return found?.post.meta.content ?? null;
 		}),
 });

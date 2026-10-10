@@ -1,3 +1,10 @@
+import { createBackoff } from "@sdxc/backoff";
+import { createJobHandler } from "@sdxc/jobs";
+import { isFailure } from "@sdxc/result";
+import { WebmentionFetchError } from "@sdxc/webmention";
+import { send } from "@sdxc/webmention/sender";
+
+import jobs from "~/app/jobs";
 /**
  * Delivers one Webmention: discovers the target's endpoint and notifies it that the
  * post links to it, or no longer does. The endpoint's answer is recorded so the next
@@ -6,14 +13,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import { createBackoff } from "@sdxc/backoff";
-import { createJobHandler } from "@sdxc/jobs";
-import { isFailure } from "@sdxc/result";
-import { WebmentionFetchError } from "@sdxc/webmention";
-import { send } from "@sdxc/webmention/sender";
-
-import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
+import { findForMentions } from "~/app/services/posts";
 import { permalink, USER_AGENT } from "~/app/services/webmention";
 
 /**
@@ -28,7 +28,7 @@ const retryBackoff = createBackoff({ base: "5 minutes", max: "6 hours", jitter: 
  * or once telling it is no longer possible.
  */
 export default createJobHandler(jobs.webmentions.deliver, async (ctx) => {
-	let post = await Post.findForMentions(ctx.db, ctx.input.postId);
+	let post = await findForMentions(ctx.models, ctx.input.postId);
 	if (!post) return ctx.ack("The post no longer exists");
 
 	let { postId, removed, target } = ctx.input;

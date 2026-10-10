@@ -12,7 +12,7 @@ import { accepted, parseRequest, rejected } from "@sdxc/webmention/receiver";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
+import { findMentionable } from "~/app/services/posts";
 import routes from "~/routes/web";
 
 /**
@@ -23,8 +23,7 @@ import routes from "~/routes/web";
 export default createAction(routes.webmention, async (ctx) => {
 	let parsed = await parseRequest(ctx.request, {
 		formData: ctx.get(FormData),
-		accepts: async (target) =>
-			(await Post.findMentionable(ctx.db, target, ctx.url.origin)) !== null,
+		accepts: async (target) => (await findMentionable(ctx.models, target, ctx.url.origin)) !== null,
 	});
 	if (isFailure(parsed)) {
 		ctx.log.set({ webmention: { rejected: parsed.error.reason } });

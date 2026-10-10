@@ -7,13 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
+import type { BlogModels } from "~/app/models";
 
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import {
+	bookmarkLabel,
+	isPublishedAt,
+	timestampFromPublishedOrCreated,
+} from "~/app/models/post-values";
 
 /**
  * Feed-specific type contracts shared by repository consumers.
@@ -59,7 +59,7 @@ export class Feed {
 			createdAt?: string;
 		};
 
-		return Post.timestampFromPublishedOrCreated({
+		return timestampFromPublishedOrCreated({
 			published_at: record.published_at ?? record.publishedAt ?? null,
 			created_at: record.created_at ?? record.createdAt ?? "",
 		});
@@ -68,7 +68,7 @@ export class Feed {
 	/**
 	 * Determines whether a feed item should be flagged as preview content.
 	 *
-	 * Publish-state semantics come from `Post.isPublishedAt`, where a null
+	 * Publish-state semantics come from `isPublishedAt`, where a null
 	 * `published_at` counts as published.
 	 *
 	 * @param input Source object that may include a publish date field.
@@ -76,7 +76,7 @@ export class Feed {
 	 */
 	static isPreview(input: unknown) {
 		let record = input as { published_at?: string | null; publishedAt?: string | null };
-		return !Post.isPublishedAt(record.published_at ?? record.publishedAt ?? null);
+		return !isPublishedAt(record.published_at ?? record.publishedAt ?? null);
 	}
 
 	/**
@@ -84,18 +84,18 @@ export class Feed {
 	 * glossary terms. Items whose date cannot be parsed are dropped, and dates are
 	 * emitted as ISO strings for API and UI stability.
 	 *
-	 * @param db Database connection used to read post sources.
+	 * @param models The invocation's models, read for every post type.
 	 * @param limit Optional maximum number of items; non-positive values return an empty list.
 	 * @returns Normalized feed items ordered from newest to oldest.
 	 */
-	static async listActivity(db: Database, limit?: number): Promise<Array<Feed.ActivityItem>> {
+	static async listActivity(models: BlogModels, limit?: number): Promise<Array<Feed.ActivityItem>> {
 		if (typeof limit === "number" && limit <= 0) return [];
 
 		let [articles, tutorials, bookmarks, glossary] = await Promise.all([
-			ArticlePost.findAll(db, { includePreview: false }),
-			TutorialPost.findAll(db, { includePreview: false }),
-			LikePost.findAll(db),
-			GlossaryPost.findAll(db),
+			models.articles.findAll({ includePreview: false }),
+			models.tutorials.findAll({ includePreview: false }),
+			models.likes.findAll(),
+			models.glossary.findAll(),
 		]);
 
 		let rawActivity: Array<{
@@ -133,7 +133,7 @@ export class Feed {
 
 				return {
 					kind: "bookmark" as const,
-					title: LikePost.label(bookmark.meta),
+					title: bookmarkLabel(bookmark.meta),
 					url: bookmark.meta.url,
 					date: activityDate,
 					preview: this.isPreview(bookmark),

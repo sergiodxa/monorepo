@@ -11,16 +11,16 @@ import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
 import { MemoryTransport } from "@sdxc/mail/memory";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
 import { Mail } from "~/app/jobs/middleware/mail";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { bookmarkAddress } from "~/app/models/post-values";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
-import { publishModels } from "~/app/test/models";
+import { bindModels, publishModels } from "~/app/test/models";
 
 /** Every `enqueueMany` call, standing in for the queue the dispatcher writes to. */
 let enqueued = vi.fn<(job: unknown, inputs: unknown[]) => Promise<void>>(async () => {});
@@ -43,14 +43,20 @@ beforeEach(async () => {
 
 /** Saves a bookmark with its record, flagged `gone` when asked. */
 async function bookmark(url: string, flagged = false): Promise<string> {
-	let created = await LikePost.create(db, {
-		author_id: author,
-		meta: { url, title: `Saved ${url}`, description: "" },
-	});
+	let created = unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			meta: { url, title: `Saved ${url}`, description: "" },
+		}),
+	);
 	if (!created) throw new Error("Seeding the bookmark failed");
-	await Bookmark.claim(db, created.id, LikePost.address(url), null);
+	await bindModels(db).bookmarks.claim(created.id, bookmarkAddress(url), null);
 	if (flagged) {
-		await Bookmark.record(db, created.id, { status: "gone", httpStatus: 404, finalUrl: url });
+		await bindModels(db).bookmarks.record(created.id, {
+			status: "gone",
+			httpStatus: 404,
+			finalUrl: url,
+		});
 	}
 	return created.id;
 }
@@ -85,7 +91,7 @@ describe("the digest job", () => {
 
 	test("leaves out a flag reviewed after it was raised", async () => {
 		let id = await bookmark("https://example.com/dead", true);
-		await Bookmark.review(db, id);
+		await bindModels(db).bookmarks.review(id);
 
 		await runDigest();
 
@@ -105,10 +111,12 @@ describe("the digest job", () => {
 describe("the sweep job", () => {
 	test("queues an inspection for every bookmark on another site, and an archive for each unarchived one", async () => {
 		let external = await bookmark("https://example.com/post");
-		let created = await LikePost.create(db, {
-			author_id: author,
-			meta: { url: "/articles/local", title: "Local" },
-		});
+		let created = unwrap(
+			await bindModels(db).likes.create({
+				author_id: author,
+				meta: { url: "/articles/local", title: "Local" },
+			}),
+		);
 
 		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
 		ctx.set(Database, db, { property: "db" });
@@ -122,9 +130,11 @@ describe("the sweep job", () => {
 
 	test("leaves out an archived bookmark and one whose archive was attempted this month", async () => {
 		let archived = await bookmark("https://example.com/archived");
-		await LikePost.update(db, archived, { meta: { archived_at: "2026-10-01T00:00:00.000Z" } });
+		await bindModels(db).likes.update(archived, {
+			meta: { archived_at: "2026-10-01T00:00:00.000Z" },
+		});
 		let attempted = await bookmark("https://example.com/attempted");
-		await Bookmark.archived(db, attempted);
+		await bindModels(db).bookmarks.archived(attempted);
 
 		let ctx = createJobContext(jobs.bookmarks.sweep, { id: "m", attempts: 1 });
 		ctx.set(Database, db, { property: "db" });

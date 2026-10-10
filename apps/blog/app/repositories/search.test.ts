@@ -10,17 +10,15 @@
 import type { Database } from "remix/data-table";
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
-import { succeeded } from "@sdxc/result";
+import { succeeded, unwrap } from "@sdxc/result";
 import { sql } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { serializeTags } from "~/app/models/post-values";
 import { openDatabase } from "~/app/services/database";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import { PostSearch } from "./search";
 
@@ -57,6 +55,13 @@ async function slugsFor(options: PostSearch.Options) {
 }
 
 /** Creates an article, published in the past unless told otherwise. */
+/** Creates an article through the model, failing the test when the write is refused. */
+async function createArticle(
+	values: Parameters<ReturnType<typeof bindModels>["articles"]["create"]>[0],
+) {
+	return unwrap(await bindModels(db).articles.create(values));
+}
+
 function article(input: {
 	slug: string;
 	title: string;
@@ -64,7 +69,7 @@ function article(input: {
 	excerpt?: string;
 	published_at?: string | null;
 }) {
-	return ArticlePost.create(db, {
+	return createArticle({
 		author_id: author,
 		published_at: input.published_at === undefined ? PAST : input.published_at,
 		meta: {
@@ -163,10 +168,12 @@ describe("the 0007 migration", () => {
 		await applyMigrations(binding, (file) => file < BOOKMARK_MIGRATION);
 		let legacy = openDatabase(binding);
 		let user = await seedAuthor(legacy);
-		let saved = await LikePost.create(legacy, {
-			author_id: user,
-			meta: { title: "Already indexed", url: "https://example.com/kept" },
-		});
+		let saved = unwrap(
+			await bindModels(legacy).likes.create({
+				author_id: user,
+				meta: { title: "Already indexed", url: "https://example.com/kept" },
+			}),
+		);
 		await legacy.exec(
 			sql`update "post_search" set "content" = 'as written' where "post_id" = ${saved!.id}`,
 		);
@@ -225,10 +232,12 @@ describe("the 0008 migration", () => {
 		await applyMigrations(binding, (file) => file < BLANK_MIGRATION);
 		let legacy = openDatabase(binding);
 		let user = await seedAuthor(legacy);
-		let real = await LikePost.create(legacy, {
-			author_id: user,
-			meta: { title: "A real bookmark", url: "https://example.com" },
-		});
+		let real = unwrap(
+			await bindModels(legacy).likes.create({
+				author_id: user,
+				meta: { title: "A real bookmark", url: "https://example.com" },
+			}),
+		);
 
 		await binding
 			.prepare(
@@ -259,25 +268,29 @@ describe("the 0008 migration", () => {
 
 describe("keeping post_search current", () => {
 	test("never indexes a post with no title and no content, such as one whose metadata was never saved", async () => {
-		let created = await LikePost.create(db, { author_id: author, meta: { title: "", url: "" } });
+		let created = unwrap(
+			await bindModels(db).likes.create({ author_id: author, meta: { title: "", url: "" } }),
+		);
 		expect(await projections(db)).toEqual([]);
 
-		await LikePost.update(db, created!.id, { meta: { title: "Now it has a title" } });
+		await bindModels(db).likes.update(created!.id, { meta: { title: "Now it has a title" } });
 		expect((await projections(db)).map((row) => row.post_id)).toEqual([created!.id]);
 
-		await LikePost.update(db, created!.id, { meta: { title: "  " } });
+		await bindModels(db).likes.update(created!.id, { meta: { title: "  " } });
 		expect(await projections(db)).toEqual([]);
 	});
 
 	test("an orphan bookmark with no metadata never shows up as a result, even with a stale row", async () => {
-		let orphan = await LikePost.create(db, { author_id: author, meta: {} as LikePost.Meta });
+		let orphan = unwrap(await bindModels(db).posts.create({ author_id: author, type: "like" }));
 		await db.exec(
 			sql`insert into "post_search" ("post_id", "title", "tags", "content") values (${orphan!.id}, '', '[]', '') on conflict ("post_id") do nothing`,
 		);
-		let real = await LikePost.create(db, {
-			author_id: author,
-			meta: { title: "Render JSX to images", url: "https://example.com/jsx" },
-		});
+		let real = unwrap(
+			await bindModels(db).likes.create({
+				author_id: author,
+				meta: { title: "Render JSX to images", url: "https://example.com/jsx" },
+			}),
+		);
 
 		let results = await PostSearch.query(db, { query: "kind:bookmarks" });
 		expect(results.map((result) => result.url)).toEqual(["https://example.com/jsx"]);
@@ -285,10 +298,12 @@ describe("keeping post_search current", () => {
 	});
 
 	test("a bookmark is searchable by its title and its site, follows edits and leaves on delete", async () => {
-		let created = await LikePost.create(db, {
-			author_id: author,
-			meta: { title: "Remix v3 is here", url: "https://remix.run/blog/remix-v3" },
-		});
+		let created = unwrap(
+			await bindModels(db).likes.create({
+				author_id: author,
+				meta: { title: "Remix v3 is here", url: "https://remix.run/blog/remix-v3" },
+			}),
+		);
 		let id = created!.id;
 		let urls = async (query: string) =>
 			(await PostSearch.query(db, { query })).map((result) => result.url);
@@ -300,23 +315,25 @@ describe("keeping post_search current", () => {
 		expect(await urls("blog")).toEqual(["https://remix.run/blog/remix-v3"]);
 		expect(await urls("https")).toEqual([]);
 
-		await LikePost.update(db, id, {
+		await bindModels(db).likes.update(id, {
 			meta: { title: "Streaming in Workers", url: "developers.cloudflare.com/workers" },
 		});
 		expect(await urls("remix")).toEqual([]);
 		expect(await urls("cloudflare")).toEqual(["https://developers.cloudflare.com/workers"]);
 
-		await LikePost.destroy(db, id);
+		await bindModels(db).likes.destroy(id);
 		expect(await urls("cloudflare")).toEqual([]);
 		expect(await projections(db)).toEqual([]);
 	});
 
 	test("a bookmark's description is searched beside its address once filled, and becomes its excerpt", async () => {
-		let created = await LikePost.create(db, {
-			author_id: author,
-			published_at: PAST,
-			meta: { title: "", url: "https://remix.run/blog/remix-v3" },
-		});
+		let created = unwrap(
+			await bindModels(db).likes.create({
+				author_id: author,
+				published_at: PAST,
+				meta: { title: "", url: "https://remix.run/blog/remix-v3" },
+			}),
+		);
 		let id = created!.id;
 		let address = "remix.run/blog/remix-v3";
 
@@ -325,7 +342,9 @@ describe("keeping post_search current", () => {
 		]);
 		expect(await PostSearch.query(db, { query: "framework" })).toEqual([]);
 
-		await LikePost.update(db, id, { meta: { description: "The next version of the framework" } });
+		await bindModels(db).likes.update(id, {
+			meta: { description: "The next version of the framework" },
+		});
 
 		expect(await projections(db)).toEqual([
 			{
@@ -353,11 +372,11 @@ describe("keeping post_search current", () => {
 		let id = created!.id;
 		expect(await slugsFor({ query: "caching" })).toEqual(["first"]);
 
-		await ArticlePost.update(db, id, { meta: { title: "Streaming responses" } });
+		await bindModels(db).articles.update(id, { meta: { title: "Streaming responses" } });
 		expect(await slugsFor({ query: "caching" })).toEqual([]);
 		expect(await slugsFor({ query: "streaming" })).toEqual(["first"]);
 
-		await ArticlePost.destroy(db, id);
+		await bindModels(db).articles.tombstone(id);
 		expect(await slugsFor({ query: "streaming" })).toEqual([]);
 		expect(await projections(db)).toEqual([]);
 	});
@@ -369,21 +388,23 @@ describe("keeping post_search current", () => {
 		]);
 		expect(await slugsFor({ query: "edge" })).toEqual(["later"]);
 
-		await ArticlePost.update(db, created!.id, { published_at: FUTURE });
+		await bindModels(db).articles.update(created!.id, { published_at: FUTURE });
 		expect(await slugsFor({ query: "edge" })).toEqual([]);
 		expect(await projections(db)).toHaveLength(1);
 	});
 
 	test("a glossary entry is found by its term or its alias, and leaves on delete", async () => {
-		let entry = await GlossaryPost.create(db, {
-			author_id: author,
-			meta: {
-				slug: "ssr",
-				term: "SSR",
-				title: "Server rendering",
-				definition: "HTML built per request",
-			},
-		});
+		let entry = unwrap(
+			await bindModels(db).glossary.create({
+				author_id: author,
+				meta: {
+					slug: "ssr",
+					term: "SSR",
+					title: "Server rendering",
+					definition: "HTML built per request",
+				},
+			}),
+		);
 
 		expect(await slugsFor({ query: "ssr" })).toEqual(["ssr"]);
 		let [hit] = await PostSearch.query(db, { query: "server" });
@@ -394,7 +415,7 @@ describe("keeping post_search current", () => {
 			url: "/glossary/ssr",
 		});
 
-		await GlossaryPost.destroy(db, entry!.id);
+		await bindModels(db).glossary.tombstone(entry!.id);
 		expect(await PostSearch.query(db, { query: "request" })).toEqual([]);
 	});
 });
@@ -403,17 +424,19 @@ describe("PostSearch.query", () => {
 	beforeEach(async () => {
 		await article({ slug: "mentions", title: "Building forms", content: "Mentions Remix once." });
 		await article({ slug: "about", title: "Remix forms", content: "All about forms." });
-		await TutorialPost.create(db, {
-			author_id: author,
-			published_at: PAST,
-			meta: {
-				slug: "tagged",
-				title: "Progressive enhancement",
-				excerpt: "Forms that work without JavaScript",
-				content: "Forms submit natively.",
-				tags: ["Remix", "HTML"],
-			},
-		});
+		unwrap(
+			await bindModels(db).tutorials.create({
+				author_id: author,
+				published_at: PAST,
+				meta: {
+					slug: "tagged",
+					title: "Progressive enhancement",
+					excerpt: "Forms that work without JavaScript",
+					content: "Forms submit natively.",
+					tags: serializeTags(["Remix", "HTML"]),
+				},
+			}),
+		);
 		await article({ slug: "draft", title: "Remix preview", published_at: FUTURE });
 	});
 

@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
+import { bindModels } from "~/app/test/models";
 import { seedAdmin } from "~/app/test/session";
 import createApplication from "~/bootstrap/app";
 
@@ -42,39 +43,45 @@ function fetchPath(path: string) {
 beforeAll(async () => {
 	let db = await migratedDatabase();
 	let authorId = await seedAdmin(db);
-	await TutorialPost.create(db, {
-		author_id: authorId,
-		published_at: null,
-		meta: {
-			slug: `epub-${SUFFIX}`,
-			title: "Download a Tutorial",
-			excerpt: "An ebook of one tutorial.",
-			content: "## Setup\n\nRun `bun add`.\n\n![A screenshot](/images/setup.png)\n",
-			tags: ["remix"],
-		},
-	});
-	await TutorialPost.create(db, {
-		author_id: authorId,
-		published_at: "2999-01-01T00:00:00.000Z",
-		meta: {
-			slug: `epub-draft-${SUFFIX}`,
-			title: "A Draft",
-			excerpt: "",
-			content: "Not yet.",
-			tags: [],
-		},
-	});
-	await ArticlePost.create(db, {
-		author_id: authorId,
-		published_at: null,
-		meta: {
-			slug: `epub-article-${SUFFIX}`,
-			title: "An Article",
-			locale: "en",
-			content: "## Opening\n\nWords.\n",
-			excerpt: "",
-		},
-	});
+	unwrap(
+		await bindModels(db).tutorials.create({
+			author_id: authorId,
+			published_at: null,
+			meta: {
+				slug: `epub-${SUFFIX}`,
+				title: "Download a Tutorial",
+				excerpt: "An ebook of one tutorial.",
+				content: "## Setup\n\nRun `bun add`.\n\n![A screenshot](/images/setup.png)\n",
+				tags: serializeTags(["remix"]),
+			},
+		}),
+	);
+	unwrap(
+		await bindModels(db).tutorials.create({
+			author_id: authorId,
+			published_at: "2999-01-01T00:00:00.000Z",
+			meta: {
+				slug: `epub-draft-${SUFFIX}`,
+				title: "A Draft",
+				excerpt: "",
+				content: "Not yet.",
+				tags: serializeTags([]),
+			},
+		}),
+	);
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: authorId,
+			published_at: null,
+			meta: {
+				slug: `epub-article-${SUFFIX}`,
+				title: "An Article",
+				locale: "en",
+				content: "## Opening\n\nWords.\n",
+				excerpt: "",
+			},
+		}),
+	);
 });
 
 describe("GET /:postType/:slug.epub", () => {

@@ -10,14 +10,13 @@ import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/jobs/dispatcher";
-import { Post } from "~/app/repositories/post";
 
 /**
  * Only queues: each publish stamps its post once its fan-out is queued, so a post queued
  * twice before that sends the same `Create` id twice, which receivers absorb.
  */
 export default createJobHandler(jobs.activityPub.scheduled, async (ctx) => {
-	let due = await Post.findDueForFederation(ctx.db);
+	let due = await ctx.models.posts.findDueForFederation();
 	let changedAt = new Date().toISOString();
 	await dispatcher.enqueueMany(
 		jobs.activityPub.publish,

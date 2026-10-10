@@ -9,9 +9,9 @@
 
 import type { Database } from "remix/data-table";
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
@@ -35,11 +35,13 @@ function mention(url: string) {
 
 beforeEach(async () => {
 	db = await testDatabase();
-	let post = await ArticlePost.create(db, {
-		author_id: await seedAuthor(db),
-		published_at: null,
-		meta: { slug: "post", title: "Post", locale: "en", content: "Body" },
-	});
+	let post = unwrap(
+		await bindModels(db).articles.create({
+			author_id: await seedAuthor(db),
+			published_at: null,
+			meta: { slug: "post", title: "Post", locale: "en", content: "Body" },
+		}),
+	);
 	postId = post!.id;
 });
 

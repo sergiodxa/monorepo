@@ -1,11 +1,3 @@
-/**
- * Plans what a post notifies after it was created, updated or deleted: every page its
- * content links to now, plus every page it notified before and no longer links to, and
- * queues one delivery per target so a slow endpoint delays nobody else.
- *
- * @author [Sergio Xalambrí](https://sergiodxa.com)
- * @copyright Sergio Xalambrí 2026
- */
 import { createJobHandler } from "@sdxc/jobs";
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
@@ -14,7 +6,16 @@ import { outboundLinks, plan } from "@sdxc/webmention/sender";
 
 import jobs from "~/app/jobs";
 import { dispatcher } from "~/app/jobs/dispatcher";
-import { Post } from "~/app/repositories/post";
+/**
+ * Plans what a post notifies after it was created, updated or deleted: every page its
+ * content links to now, plus every page it notified before and no longer links to, and
+ * queues one delivery per target so a slow endpoint delays nobody else.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { isPublishedAt } from "~/app/models/post-values";
+import { findForMentions } from "~/app/services/posts";
 import { permalink } from "~/app/services/webmention";
 
 /**
@@ -32,11 +33,11 @@ function linksOf(content: string, source: URL): URL[] {
  * date arrives. A deleted post notifies every target it had, which then reads its 410.
  */
 export default createJobHandler(jobs.webmentions.send, async (ctx) => {
-	let post = await Post.findForMentions(ctx.db, ctx.input.postId);
+	let post = await findForMentions(ctx.models, ctx.input.postId);
 	if (!post) return ctx.ack("The post has no permalink to send from");
 
 	let deleted = post.deleted_at !== null;
-	if (!deleted && !Post.isPublishedAt(post.published_at)) {
+	if (!deleted && !isPublishedAt(post.published_at)) {
 		return ctx.ack("The post is not published yet");
 	}
 
@@ -54,7 +55,7 @@ export default createJobHandler(jobs.webmentions.send, async (ctx) => {
 			removed: !linked.has(target.href),
 		})),
 	);
-	if (!deleted) await Post.markMentionsSent(ctx.db, post.id);
+	if (!deleted) await ctx.models.posts.markMentionsSent(post.id);
 
 	ctx.log.set({ webmention: { post: post.id, targets: targets.length, deleted } });
 });

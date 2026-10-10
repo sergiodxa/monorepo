@@ -10,7 +10,7 @@
 import { createAction } from "remix/router";
 
 import { PostRelatedViewModel } from "~/app/http/view-models/post-related";
-import { Post } from "~/app/repositories/post";
+import { findRelatedPosts } from "~/app/services/posts";
 import { PostRelatedView } from "~/resources/views/post-related";
 import routes from "~/routes/web";
 
@@ -25,7 +25,7 @@ export default createAction(routes.postRelated, async (ctx) => {
 	if (!postType || !postSlug) return ctx.render(PostRelatedView, { items: [] });
 	if (postType !== "tutorials") return ctx.render(PostRelatedView, { items: [] });
 
-	let related = await Post.findRelatedByTypeAndSlug(ctx.db, {
+	let related = await findRelatedPosts(ctx.models, {
 		postType,
 		postSlug,
 		limit: 3,

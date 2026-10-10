@@ -8,23 +8,22 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { createToolController, ToolError } from "@sdxc/mcp";
 
+import type { BlogModels } from "~/app/models";
+
 import toolset from "~/app/mcp/tools";
-import { Post } from "~/app/repositories/post";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
+import { isPublishedAt } from "~/app/models/post-values";
 
 /**
  * Reads every published glossary entry.
  *
- * The publish filter is applied here because `GlossaryPost.findAll` returns every row,
+ * The publish filter is applied here because `glossary.findAll()` returns every row,
  * preview entries included.
  */
-async function published(db: Database) {
-	let entries = await GlossaryPost.findAll(db);
-	return entries.filter((entry) => Post.isPublishedAt(entry.published_at));
+async function published(models: BlogModels) {
+	let entries = await models.glossary.findAll();
+	return entries.filter((entry) => isPublishedAt(entry.published_at));
 }
 
 /** Answers `list_glossary` and `get_glossary_term`. */
@@ -32,7 +31,7 @@ export default createToolController(toolset.glossary, {
 	actions: {
 		/** Lists every term, alphabetically, so a model can scan for one. */
 		list: async (ctx) => {
-			let entries = await published(ctx.db);
+			let entries = await published(ctx.models);
 
 			return {
 				total: entries.length,
@@ -44,7 +43,7 @@ export default createToolController(toolset.glossary, {
 
 		/** Reads one term's definition. */
 		get: async (ctx) => {
-			let entries = await published(ctx.db);
+			let entries = await published(ctx.models);
 			let entry = entries.find((each) => each.meta.slug === ctx.input.slug);
 
 			if (!entry) {

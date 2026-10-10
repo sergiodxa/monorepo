@@ -15,8 +15,8 @@ import { isSuccess, succeeded } from "@sdxc/result";
 
 import type { Webmention } from "~/app/models/webmentions";
 
+import { timestampFromPublishedOrCreated } from "~/app/models/post-values";
 import { hostOf } from "~/app/models/webmentions";
-import { Post } from "~/app/repositories/post";
 import { permalink } from "~/app/services/webmention";
 
 /**
@@ -298,7 +298,7 @@ export class PostViewModel {
 		post: { published_at: string | null; created_at: string },
 		url: string,
 	): { url: string; published: Date | null; publishedLabel: string } {
-		let timestamp = Post.timestampFromPublishedOrCreated(post);
+		let timestamp = timestampFromPublishedOrCreated(post);
 		if (Number.isNaN(timestamp)) return { url, published: null, publishedLabel: "" };
 
 		let published = new Date(timestamp);

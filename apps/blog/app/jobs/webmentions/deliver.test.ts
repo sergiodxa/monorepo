@@ -10,13 +10,13 @@
 import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels, publishModels } from "~/app/test/models";
@@ -39,11 +39,13 @@ let received: Array<URLSearchParams> = [];
 beforeEach(async () => {
 	received = [];
 	db = await testDatabase();
-	let created = await ArticlePost.create(db, {
-		author_id: await seedAuthor(db),
-		published_at: null,
-		meta: { slug: "sender", title: "Sender", locale: "en", content: "" },
-	});
+	let created = unwrap(
+		await bindModels(db).articles.create({
+			author_id: await seedAuthor(db),
+			published_at: null,
+			meta: { slug: "sender", title: "Sender", locale: "en", content: "" },
+		}),
+	);
 	postId = created!.id;
 });
 

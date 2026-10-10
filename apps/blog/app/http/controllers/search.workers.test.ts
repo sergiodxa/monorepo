@@ -9,14 +9,14 @@
 
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { parseLinkHeader } from "@sdxc/pagination";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -108,46 +108,54 @@ beforeAll(async () => {
 	let author = await seedAuthor(db);
 
 	for (let index = 1; index <= 3; index++) {
-		await ArticlePost.create(db, {
+		unwrap(
+			await bindModels(db).articles.create({
+				author_id: author,
+				published_at: PAST,
+				meta: {
+					slug: `${TOKEN}-article-${index}`,
+					title: `${TOKEN} article ${index}`,
+					locale: "en",
+					content: "Body",
+					excerpt: `Notes on part ${index}.`,
+				},
+			}),
+		);
+	}
+
+	unwrap(
+		await bindModels(db).tutorials.create({
 			author_id: author,
 			published_at: PAST,
 			meta: {
-				slug: `${TOKEN}-article-${index}`,
-				title: `${TOKEN} article ${index}`,
+				slug: `${TOKEN}-tutorial`,
+				title: "A tutorial on something else",
+				excerpt: `This one only mentions ${TOKEN} <b>in passing</b>.`,
+				content: `A body that mentions ${TOKEN} once.`,
+				tags: serializeTags(["remix"]),
+			},
+		}),
+	);
+
+	unwrap(
+		await bindModels(db).glossary.create({
+			author_id: author,
+			meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
+		}),
+	);
+
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2099-01-01T00:00:00.000Z",
+			meta: {
+				slug: `${TOKEN}-preview`,
+				title: `${TOKEN} preview`,
 				locale: "en",
 				content: "Body",
-				excerpt: `Notes on part ${index}.`,
 			},
-		});
-	}
-
-	await TutorialPost.create(db, {
-		author_id: author,
-		published_at: PAST,
-		meta: {
-			slug: `${TOKEN}-tutorial`,
-			title: "A tutorial on something else",
-			excerpt: `This one only mentions ${TOKEN} <b>in passing</b>.`,
-			content: `A body that mentions ${TOKEN} once.`,
-			tags: ["remix"],
-		},
-	});
-
-	await GlossaryPost.create(db, {
-		author_id: author,
-		meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
-	});
-
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2099-01-01T00:00:00.000Z",
-		meta: {
-			slug: `${TOKEN}-preview`,
-			title: `${TOKEN} preview`,
-			locale: "en",
-			content: "Body",
-		},
-	});
+		}),
+	);
 });
 
 describe("GET /search", () => {

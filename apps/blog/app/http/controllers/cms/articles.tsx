@@ -9,15 +9,14 @@
  */
 
 import { redirect } from "@sdxc/http/response";
-import { succeeded } from "@sdxc/result";
+import { isFailure, succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
 import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import jobs from "~/app/jobs";
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
+import { isPublishedAt } from "~/app/models/post-values";
 import { ArticleSchema } from "~/app/schemas/cms/article";
 import { TAGS } from "~/app/services/cache";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/resources/views/cms/articles";
@@ -37,19 +36,19 @@ export default createController(routes.cms.articles, {
 	actions: {
 		/**
 		 * Lists every article, preview included, so editors see scheduled work. The `preview`
-		 * flag follows `Post.isPublishedAt`: `null` and past timestamps count as published,
+		 * flag follows `isPublishedAt`: `null` and past timestamps count as published,
 		 * future timestamps as preview.
 		 *
 		 * @param ctx Request context carrying the database.
 		 * @returns SSR view response for the article listing page.
 		 */
 		index: async (ctx) => {
-			let articles = await ArticlePost.findAll(ctx.db, { includePreview: true });
+			let articles = await ctx.models.articles.findAll({ includePreview: true });
 			let sources: Array<ArticleViewModel.SourceIndexItem> = articles.map((article) => ({
 				id: article.id,
 				title: article.meta.title,
 				slug: article.meta.slug,
-				preview: !Post.isPublishedAt(article.published_at),
+				preview: !isPublishedAt(article.published_at),
 			}));
 			let items = ArticleViewModel.index({ items: sources });
 
@@ -72,14 +71,16 @@ export default createController(routes.cms.articles, {
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
 
-			let created = await ArticlePost.create(ctx.db, {
+			let saved = await ctx.models.articles.create({
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
 			});
 
-			if (!created)
+			if (isFailure(saved))
 				return redirect(routes.cms.articles.index.href(), { status: redirect.Status.SeeOther });
+
+			let created = saved.data;
 
 			await ctx.jobs.enqueue(jobs.webmentions.send, { postId: created.id });
 			await ctx.jobs.enqueue(jobs.activityPub.publish, {
@@ -106,9 +107,9 @@ export default createController(routes.cms.articles, {
 
 			// Read before deleting: the public page is cached under its slug, which
 			// only the record carries.
-			let article = await ArticlePost.findById(ctx.db, id);
+			let article = await ctx.models.articles.find(id);
 
-			let destroyed = await ArticlePost.destroy(ctx.db, id);
+			let destroyed = await ctx.models.articles.tombstone(id);
 			if (destroyed) {
 				await ctx.jobs.enqueue(jobs.webmentions.send, { postId: id });
 				await ctx.jobs.enqueue(jobs.activityPub.publish, {
@@ -131,7 +132,7 @@ export default createController(routes.cms.articles, {
 		 */
 		edit: async (ctx) => {
 			let id = ctx.params.id;
-			let article = id ? await ArticlePost.findById(ctx.db, id) : null;
+			let article = id ? await ctx.models.articles.find(id) : null;
 
 			if (!article) {
 				let viewProps = ArticleViewModel.notFound({ id });
@@ -181,15 +182,15 @@ export default createController(routes.cms.articles, {
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
-			let previous = await ArticlePost.findById(ctx.db, id);
+			let previous = await ctx.models.articles.find(id);
 
-			let updated = await ArticlePost.update(ctx.db, id, {
+			let updated = await ctx.models.articles.update(id, {
 				author_id: user.id,
 				published_at: input.published_at,
 				meta: input.meta,
 			});
 
-			if (!updated) {
+			if (isFailure(updated)) {
 				let viewProps = ArticleViewModel.notFound({ id });
 				return ctx.render(CMSArticlesActionView, viewProps, { status: 404 });
 			}

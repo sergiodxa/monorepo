@@ -8,8 +8,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { LikePost as LikePostRepository } from "~/app/repositories/posts/like";
+import type { Like } from "~/app/models/likes";
 
+import { bookmarkLabel, normalizeUrl, waybackSnapshotUrl } from "~/app/models/post-values";
 /**
  * Contracts consumed by the bookmarks page template.
  */
@@ -74,23 +75,18 @@ export class BookmarksViewModel {
 	 * @param bookmarks Raw liked-post records returned by the bookmarks repository.
 	 * @returns Bookmarks page payload sorted by most recent activity first.
 	 */
-	static index(
-		bookmarks: Array<Awaited<ReturnType<typeof LikePostRepository.findAll>>[number]>,
-	): BookmarksViewModel.Page {
+	static index(bookmarks: Array<Like>): BookmarksViewModel.Page {
 		let items = [...bookmarks]
 			.sort((a, b) => this.activityTimestamp(b) - this.activityTimestamp(a))
 			.map((bookmark) => {
 				let href = bookmark.meta.url;
-				let label = LikePostRepository.label(bookmark.meta);
-				let normalizedHref = LikePostRepository.normalizeUrl(href);
+				let label = bookmarkLabel(bookmark.meta);
+				let normalizedHref = normalizeUrl(href);
 				let publishedAt = this.publishedAt(bookmark);
 				let isPublished = publishedAt === null || Date.parse(publishedAt) <= Date.now();
 				let createdAt = this.createdAt(bookmark);
 				let suffixHref = normalizedHref.startsWith("http")
-					? LikePostRepository.waybackSnapshotUrl(
-							normalizedHref,
-							bookmark.meta.archived_at || createdAt,
-						)
+					? waybackSnapshotUrl(normalizedHref, bookmark.meta.archived_at || createdAt)
 					: null;
 
 				return {

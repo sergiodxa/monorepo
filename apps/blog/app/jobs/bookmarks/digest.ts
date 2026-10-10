@@ -1,11 +1,3 @@
-/**
- * Mails the bookmarks flagged since the last digest. It runs daily and sends nothing when
- * nothing is new, so mail follows the weekly check, and a failed send is retried before
- * any flag is marked reported.
- *
- * @author [Sergio Xalambrí](https://sergiodxa.com)
- * @copyright Sergio Xalambrí 2026
- */
 import type { Address } from "@sdxc/mail";
 
 import { createJobHandler } from "@sdxc/jobs";
@@ -14,8 +6,16 @@ import { isFailure } from "@sdxc/result";
 
 import { BookmarksDigestEmail } from "~/app/emails/bookmarks-digest";
 import jobs from "~/app/jobs";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { flagOf } from "~/app/models/bookmarks";
+/**
+ * Mails the bookmarks flagged since the last digest. It runs daily and sends nothing when
+ * nothing is new, so mail follows the weekly check, and a failed send is retried before
+ * any flag is marked reported.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+import { bookmarkLabel } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /** The mailbox digests come from, on the domain verified for the email binding. */
@@ -35,18 +35,18 @@ const SITE = "https://sergiodxa.com";
  * unreported so the next run mails it once the binding exists.
  */
 export default createJobHandler(jobs.bookmarks.digest, async (ctx) => {
-	let records = await Bookmark.findUnreported(ctx.db);
+	let records = await ctx.models.bookmarks.findUnreported();
 	if (records.length === 0) return ctx.ack("No new flags");
 
 	if (!ctx.mail) return ctx.exit("The worker has no email binding");
 
 	let items: BookmarksDigestEmail.Item[] = [];
 	for (let record of records) {
-		let bookmark = await LikePost.findById(ctx.db, record.post_id);
-		let flag = Bookmark.flagOf(record);
+		let bookmark = await ctx.models.likes.find(record.post_id);
+		let flag = flagOf(record);
 		if (!bookmark || flag === null) continue;
 		items.push({
-			title: LikePost.label(bookmark.meta),
+			title: bookmarkLabel(bookmark.meta),
 			url: bookmark.meta.url,
 			flag,
 			httpStatus: record.http_status,
@@ -60,8 +60,7 @@ export default createJobHandler(jobs.bookmarks.digest, async (ctx) => {
 	let sent = await mailer.send(new BookmarksDigestEmail(DIGEST_RECIPIENT, items));
 	if (isFailure(sent)) ctx.retry({ delay: "1 hour", cause: sent.error });
 
-	await Bookmark.reported(
-		ctx.db,
+	await ctx.models.bookmarks.reported(
 		records.map((record) => record.post_id),
 		new Date().toISOString(),
 	);

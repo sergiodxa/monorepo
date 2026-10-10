@@ -8,12 +8,12 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 
-import { failure, success } from "@sdxc/result";
+import { failure, isFailure, success } from "@sdxc/result";
 
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import type { BlogModels } from "~/app/models";
+
+import { bookmarkAddress, cleanUrl } from "~/app/models/post-values";
 import { readBookmarkPage } from "~/app/services/bookmark-page";
 
 /**
@@ -67,27 +67,27 @@ function isAbsolute(url: string): boolean {
  * read before saving and fills whatever the form left empty; a value typed in the form wins.
  * Of two concurrent saves of one URL exactly one survives, and the other is tombstoned.
  *
- * @param db Database handle used for reads and writes.
+ * @param models The invocation's models, read and written through.
  * @param authorId The person saving it.
  * @param fields The URL, and the title and description when typed.
  * @returns The created bookmark, or the duplicate it would have been.
  */
 export async function createBookmark(
-	db: Database,
+	models: BlogModels,
 	authorId: string,
 	fields: Bookmarks.Fields,
 ): Promise<Result<Bookmarks.Created, BookmarkSaveError>> {
-	let url = LikePost.clean(fields.url);
-	let address = LikePost.address(url);
+	let url = cleanUrl(fields.url);
+	let address = bookmarkAddress(url);
 
-	let holder = await Bookmark.findByAddress(db, address);
+	let holder = await models.bookmarks.findByAddress(address);
 	if (holder) return success({ outcome: "duplicate", id: holder.post_id });
 
 	let reading = isAbsolute(url)
 		? await readBookmarkPage(url, { timeout: SAVE_READ_TIMEOUT_MS })
 		: null;
 
-	let created = await LikePost.create(db, {
+	let saved = await models.likes.create({
 		author_id: authorId,
 		meta: {
 			url,
@@ -95,11 +95,16 @@ export async function createBookmark(
 			description: fields.description?.trim() || reading?.description || "",
 		},
 	});
-	if (!created) return failure(new BookmarkSaveError(`Bookmark for ${url} was not saved`));
+	if (isFailure(saved)) {
+		return failure(
+			new BookmarkSaveError(`Bookmark for ${url} was not saved`, { cause: saved.error }),
+		);
+	}
+	let created = saved.data;
 
-	if (!(await Bookmark.claim(db, created.id, address, reading))) {
-		await LikePost.destroy(db, created.id);
-		let winner = await Bookmark.findByAddress(db, address);
+	if (!(await models.bookmarks.claim(created.id, address, reading))) {
+		await models.likes.destroy(created.id);
+		let winner = await models.bookmarks.findByAddress(address);
 		return success({ outcome: "duplicate", id: winner?.post_id ?? created.id });
 	}
 
@@ -111,29 +116,29 @@ export async function createBookmark(
  * changed address moves the bookmark's record to it, unless another bookmark holds it, and
  * drops the old URL's archive, since that capture shows another page.
  *
- * @param db Database handle used for reads and writes.
+ * @param models The invocation's models, read and written through.
  * @param id The bookmark being edited.
  * @param authorId The person saving it.
  * @param fields Every field of the edit form; an emptied title or description is read again.
  * @returns How the edit went.
  */
 export async function updateBookmark(
-	db: Database,
+	models: BlogModels,
 	id: string,
 	authorId: string,
 	fields: Bookmarks.Fields,
 ): Promise<Bookmarks.Updated> {
-	let bookmark = await LikePost.findById(db, id);
+	let bookmark = await models.likes.find(id);
 	if (!bookmark) return { outcome: "missing" };
 
-	let url = LikePost.clean(fields.url);
-	let address = LikePost.address(url);
-	let moved = address !== LikePost.address(bookmark.meta.url);
+	let url = cleanUrl(fields.url);
+	let address = bookmarkAddress(url);
+	let moved = address !== bookmarkAddress(bookmark.meta.url);
 
-	let holder = await Bookmark.findByAddress(db, address);
+	let holder = await models.bookmarks.findByAddress(address);
 	if (holder && holder.post_id !== id) return { outcome: "duplicate", id: holder.post_id };
 
-	await LikePost.update(db, id, {
+	await models.likes.update(id, {
 		author_id: authorId,
 		meta: {
 			url,
@@ -143,8 +148,8 @@ export async function updateBookmark(
 		},
 	});
 
-	if (moved || !holder) await Bookmark.readdress(db, id, address);
-	await Bookmark.review(db, id);
+	if (moved || !holder) await models.bookmarks.readdress(id, address);
+	await models.bookmarks.review(id);
 
 	return { outcome: "updated", moved };
 }

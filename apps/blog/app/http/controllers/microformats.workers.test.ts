@@ -11,14 +11,13 @@ import type { Result } from "@sdxc/result";
 
 import { findItem, parse } from "@sdxc/microformats";
 import { readCard, readEntry, readFeed } from "@sdxc/microformats/vocabulary";
-import { succeeded } from "@sdxc/result";
+import { succeeded, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { LikePost } from "~/app/repositories/posts/like";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 import { PROFILE } from "~/config/profile";
 
 import createApplication from "../../../bootstrap/app";
@@ -61,30 +60,36 @@ async function parsePage(path: string) {
 beforeAll(async () => {
 	let db = await migratedDatabase();
 	let author = await seedAuthor(db);
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: PUBLISHED_AT,
-		meta: {
-			slug: SLUG,
-			title: "Marked Up",
-			locale: "en",
-			content: "Some body text with [a link](https://example.org/).",
-		},
-	});
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: PUBLISHED_AT,
-		meta: {
-			url: BOOKMARK_URL,
-			title: "A saved page",
-			description: "What the page says about itself.",
-		},
-	});
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: PUBLISHED_AT,
-		meta: { url: UNTITLED_URL, title: "" },
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: PUBLISHED_AT,
+			meta: {
+				slug: SLUG,
+				title: "Marked Up",
+				locale: "en",
+				content: "Some body text with [a link](https://example.org/).",
+			},
+		}),
+	);
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: PUBLISHED_AT,
+			meta: {
+				url: BOOKMARK_URL,
+				title: "A saved page",
+				description: "What the page says about itself.",
+			},
+		}),
+	);
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: PUBLISHED_AT,
+			meta: { url: UNTITLED_URL, title: "" },
+		}),
+	);
 });
 
 describe("the post page", () => {

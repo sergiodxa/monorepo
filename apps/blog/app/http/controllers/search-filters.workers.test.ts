@@ -9,15 +9,14 @@
  */
 
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
+import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
+import { bindModels } from "~/app/test/models";
 
 import createApplication from "../../../bootstrap/app";
 
@@ -118,91 +117,109 @@ beforeAll(async () => {
 	let db = await migratedDatabase();
 	let author = await seedAuthor(db);
 
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2026-01-01T12:00:00.000Z",
-		meta: {
-			slug: `${TOKEN}-es`,
-			title: `${TOKEN} en español`,
-			locale: "es-AR",
-			content: "Cuerpo",
-			excerpt: "Un artículo.",
-		},
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2026-01-01T12:00:00.000Z",
+			meta: {
+				slug: `${TOKEN}-es`,
+				title: `${TOKEN} en español`,
+				locale: "es-AR",
+				content: "Cuerpo",
+				excerpt: "Un artículo.",
+			},
+		}),
+	);
 
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: "2026-02-01T12:00:00.000Z",
-		meta: {
-			slug: `${TOKEN}-en`,
-			title: `${TOKEN} in English`,
-			locale: "en",
-			content: "Body",
-			excerpt: "An article.",
-		},
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: "2026-02-01T12:00:00.000Z",
+			meta: {
+				slug: `${TOKEN}-en`,
+				title: `${TOKEN} in English`,
+				locale: "en",
+				content: "Body",
+				excerpt: "An article.",
+			},
+		}),
+	);
 
 	/** Created before the newer tutorial, so their ids run opposite to their dates. */
-	await TutorialPost.create(db, {
-		author_id: author,
-		published_at: "2025-12-01T12:00:00.000Z",
-		meta: {
-			slug: `${TOKEN}-older`,
-			title: "An older tutorial",
-			excerpt: "A tutorial.",
-			content: `A body naming ${TOKEN}.`,
-			tags: [TAG, "React Router"],
-		},
-	});
+	unwrap(
+		await bindModels(db).tutorials.create({
+			author_id: author,
+			published_at: "2025-12-01T12:00:00.000Z",
+			meta: {
+				slug: `${TOKEN}-older`,
+				title: "An older tutorial",
+				excerpt: "A tutorial.",
+				content: `A body naming ${TOKEN}.`,
+				tags: serializeTags([TAG, "React Router"]),
+			},
+		}),
+	);
 
-	await TutorialPost.create(db, {
-		author_id: author,
-		published_at: "2026-03-01T12:00:00.000Z",
-		meta: {
-			slug: `${TOKEN}-newer`,
-			title: "A newer tutorial",
-			excerpt: "A tutorial.",
-			content: `A body naming ${TOKEN}.`,
-			tags: [TAG],
-		},
-	});
+	unwrap(
+		await bindModels(db).tutorials.create({
+			author_id: author,
+			published_at: "2026-03-01T12:00:00.000Z",
+			meta: {
+				slug: `${TOKEN}-newer`,
+				title: "A newer tutorial",
+				excerpt: "A tutorial.",
+				content: `A body naming ${TOKEN}.`,
+				tags: serializeTags([TAG]),
+			},
+		}),
+	);
 
-	await GlossaryPost.create(db, {
-		author_id: author,
-		published_at: "2026-01-15T12:00:00.000Z",
-		meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
-	});
+	unwrap(
+		await bindModels(db).glossary.create({
+			author_id: author,
+			published_at: "2026-01-15T12:00:00.000Z",
+			meta: { slug: `${TOKEN}-term`, term: "Term", definition: `Defined by ${TOKEN}.` },
+		}),
+	);
 
 	/** A bookmark whose metadata was never saved, which no page lists. */
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2026-08-06T12:00:00.000Z",
-		meta: {} as LikePost.Meta,
-	});
+	unwrap(
+		await bindModels(db).posts.create({
+			author_id: author,
+			type: "like",
+			published_at: "2026-08-06T12:00:00.000Z",
+		}),
+	);
 
 	/** Saved before the newer one, so their ids run opposite to their dates. */
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2025-11-01T12:00:00.000Z",
-		meta: { title: "An older saved page", url: POSTS.olderBookmark },
-	});
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: "2025-11-01T12:00:00.000Z",
+			meta: { title: "An older saved page", url: POSTS.olderBookmark },
+		}),
+	);
 
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2026-04-01T12:00:00.000Z",
-		meta: { title: "Remix routing, saved", url: POSTS.newerBookmark },
-	});
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: "2026-04-01T12:00:00.000Z",
+			meta: { title: "Remix routing, saved", url: POSTS.newerBookmark },
+		}),
+	);
 
 	/** Found by its description alone; its link sits outside what `found()` collects. */
-	await LikePost.create(db, {
-		author_id: author,
-		published_at: "2026-05-01T12:00:00.000Z",
-		meta: {
-			title: "A described page",
-			url: DESCRIBED_BOOKMARK,
-			description: `A page about ${TOKEN} and wombats.`,
-		},
-	});
+	unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			published_at: "2026-05-01T12:00:00.000Z",
+			meta: {
+				title: "A described page",
+				url: DESCRIBED_BOOKMARK,
+				description: `A page about ${TOKEN} and wombats.`,
+			},
+		}),
+	);
 });
 
 describe("bookmarks", () => {

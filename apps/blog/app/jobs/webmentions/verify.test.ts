@@ -10,13 +10,13 @@
 import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
-import { ArticlePost } from "~/app/repositories/posts/article";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels, publishModels } from "~/app/test/models";
@@ -37,11 +37,13 @@ let db: DataTable;
 beforeEach(async () => {
 	db = await testDatabase();
 	let author = await seedAuthor(db);
-	await ArticlePost.create(db, {
-		author_id: author,
-		published_at: null,
-		meta: { slug: "verified", title: "Verified", locale: "en", content: "Body" },
-	});
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: null,
+			meta: { slug: "verified", title: "Verified", locale: "en", content: "Body" },
+		}),
+	);
 });
 
 /** Serves the source page as HTML, replying to the target with an `h-entry`. */

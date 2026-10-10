@@ -10,17 +10,17 @@
 import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { bookmarkAddress } from "~/app/models/post-values";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
-import { publishModels } from "~/app/test/models";
+import { bindModels, publishModels } from "~/app/test/models";
 
 vi.doMock("~/app/services/wayback-keys", () => ({
 	waybackKeys: async () => ({ access: "access-key", secret: "secret-key" }),
@@ -47,13 +47,15 @@ beforeEach(async () => {
 
 /** Saves a bookmark of the page with its record, created at `created_at` when given. */
 async function bookmark(created_at?: string): Promise<string> {
-	let created = await LikePost.create(db, {
-		author_id: author,
-		...(created_at ? { created_at } : {}),
-		meta: { url: PAGE_URL, title: "Saved" },
-	});
+	let created = unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			...(created_at ? { created_at } : {}),
+			meta: { url: PAGE_URL, title: "Saved" },
+		}),
+	);
 	if (!created) throw new Error("Seeding the bookmark failed");
-	await Bookmark.claim(db, created.id, LikePost.address(PAGE_URL), null);
+	await bindModels(db).bookmarks.claim(created.id, bookmarkAddress(PAGE_URL), null);
 	return created.id;
 }
 
@@ -79,7 +81,7 @@ describe("the archive job", () => {
 		let id = await bookmark();
 
 		await expect(run(id)).rejects.toBeInstanceOf(Job.Retry);
-		expect((await Bookmark.findByPostId(db, id))?.archive_job).toBe("spn2-1");
+		expect((await bindModels(db).bookmarks.find(id))?.archive_job).toBe("spn2-1");
 		expect(saved).toBe(PAGE_URL);
 		expect(authorization).toBe("LOW access-key:secret-key");
 
@@ -90,8 +92,10 @@ describe("the archive job", () => {
 		);
 		await run(id);
 
-		expect((await LikePost.findById(db, id))?.meta.archived_at).toBe("2026-10-07T15:30:45.000Z");
-		let record = await Bookmark.findByPostId(db, id);
+		expect((await bindModels(db).likes.find(id))?.meta.archived_at).toBe(
+			"2026-10-07T15:30:45.000Z",
+		);
+		let record = await bindModels(db).bookmarks.find(id);
 		expect(record?.archive_job).toBeNull();
 		expect(record?.archive_attempted_at).not.toBeNull();
 	});
@@ -108,7 +112,7 @@ describe("the archive job", () => {
 
 		await expect(run(id)).rejects.toBeInstanceOf(Job.Retry);
 
-		expect((await Bookmark.findByPostId(db, id))?.archive_job).toBe("spn2-2");
+		expect((await bindModels(db).bookmarks.find(id))?.archive_job).toBe("spn2-2");
 	});
 
 	test("takes the closest existing capture of an old bookmark without asking for one", async () => {
@@ -128,7 +132,9 @@ describe("the archive job", () => {
 		await run(id);
 
 		expect(asked).toBe("20200823051846");
-		expect((await LikePost.findById(db, id))?.meta.archived_at).toBe("2020-08-24T10:11:12.000Z");
+		expect((await bindModels(db).likes.find(id))?.meta.archived_at).toBe(
+			"2020-08-24T10:11:12.000Z",
+		);
 	});
 
 	test("asks for a capture of an old bookmark the archive never captured", async () => {
@@ -142,7 +148,7 @@ describe("the archive job", () => {
 
 		await expect(run(id)).rejects.toBeInstanceOf(Job.Retry);
 
-		expect((await Bookmark.findByPostId(db, id))?.archive_job).toBe("spn2-3");
+		expect((await bindModels(db).bookmarks.find(id))?.archive_job).toBe("spn2-3");
 	});
 
 	test("retries later when the archive is rate limiting", async () => {
@@ -155,7 +161,7 @@ describe("the archive job", () => {
 
 		expect(ending).toBeInstanceOf(Job.Retry);
 		expect(ending instanceof Job.Retry && ending.delay).toBe("5 minutes");
-		expect((await Bookmark.findByPostId(db, id))?.archive_attempted_at).toBeNull();
+		expect((await bindModels(db).bookmarks.find(id))?.archive_attempted_at).toBeNull();
 	});
 
 	test("records the attempt when the archive refuses the capture", async () => {
@@ -168,8 +174,8 @@ describe("the archive job", () => {
 
 		await expect(run(id)).rejects.toBeInstanceOf(Job.NonRetriable);
 
-		let record = await Bookmark.findByPostId(db, id);
+		let record = await bindModels(db).bookmarks.find(id);
 		expect(record?.archive_attempted_at).not.toBeNull();
-		expect((await LikePost.findById(db, id))?.meta.archived_at).toBe("");
+		expect((await bindModels(db).likes.find(id))?.meta.archived_at).toBe("");
 	});
 });

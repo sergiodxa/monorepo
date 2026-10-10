@@ -18,11 +18,15 @@ import { isFailure, success } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
 import { and, inList, rawSql, sql } from "remix/data-table";
 
-import { Post } from "~/app/repositories/post";
-import { ArticlePost } from "~/app/repositories/posts/article";
-import { GlossaryPost } from "~/app/repositories/posts/glossary";
-import { LikePost } from "~/app/repositories/posts/like";
-import { TutorialPost } from "~/app/repositories/posts/tutorial";
+import type { BlogModels } from "~/app/models";
+import type { PostType } from "~/app/models/post-values";
+
+import {
+	bookmarkLabel,
+	normalizeUrl,
+	timestampFromPublishedOrCreated,
+	tutorialTags,
+} from "~/app/models/post-values";
 import * as schema from "~/database/schema";
 
 /**
@@ -91,7 +95,7 @@ export namespace PostSearch {
 const KINDS: ReadonlyArray<PostSearch.Kind> = ["article", "tutorial", "glossary", "bookmark"];
 
 /** The `posts.type` each kind is stored as; a bookmark is a `like`. */
-const KIND_TYPES: Record<PostSearch.Kind, Post.Type> = {
+const KIND_TYPES: Record<PostSearch.Kind, PostType> = {
 	article: "article",
 	tutorial: "tutorial",
 	glossary: "glossary",
@@ -109,7 +113,7 @@ const KIND_PATHS: Record<Exclude<PostSearch.Kind, "bookmark">, string> = {
 const RESULT_META_KEYS = ["slug", "title", "term", "excerpt", "definition", "url", "description"];
 
 /**
- * A `posts` date column as epoch milliseconds, read the way `Post.isPublishedAt` reads it: a
+ * A `posts` date column as epoch milliseconds, read the way `isPublishedAt` reads it: a
  * run of digits is seconds (or milliseconds past 10^12), anything else a date SQLite parses.
  * Text SQLite cannot parse comes out `NULL`, which never compares as published.
  *
@@ -183,7 +187,7 @@ function kindOf(type: string): PostSearch.Kind | null {
  * words match while `https` never does.
  */
 function addressOf(url: string): string {
-	return LikePost.normalizeUrl(url).replace(/^https?:\/\//i, "");
+	return normalizeUrl(url).replace(/^https?:\/\//i, "");
 }
 
 /**
@@ -275,12 +279,16 @@ export class PostSearch {
 	 * when the post is deleted, of a kind search skips, or has no title and no content.
 	 * Previews are projected too: a search reads publish state from `posts` at query time.
 	 *
-	 * @param db Database connection used for the read and the write.
+	 * @param ctx The writing model's context: the database to write and the models to read.
 	 * @param id The post just created or updated.
 	 * @param type The post's stored type, which decides how its metadata is read.
 	 */
-	static async index(db: Database, id: string, type: Post.Type): Promise<void> {
-		let projection = await this.projectionOf(db, id, type);
+	static async index(
+		{ db, models }: { db: Database; models: BlogModels },
+		id: string,
+		type: PostType,
+	): Promise<void> {
+		let projection = await this.projectionOf(models, id, type);
 		if (projection === null || isBlank(projection)) return this.remove(db, id);
 
 		await db.exec(sql`
@@ -407,7 +415,7 @@ export class PostSearch {
 	): PostSearch.Result {
 		let value = (key: string) => latestValue(meta, key);
 		let slug = value("slug") ?? "";
-		let timestamp = Post.timestampFromPublishedOrCreated(post);
+		let timestamp = timestampFromPublishedOrCreated(post);
 
 		let title = value("title") ?? "";
 		let excerpt = kind === "tutorial" ? (value("excerpt") ?? "") : value("excerpt");
@@ -420,8 +428,8 @@ export class PostSearch {
 		if (kind === "bookmark") {
 			let bookmark = { title, url: value("url") ?? "" };
 			let description = value("description")?.trim() ?? "";
-			title = LikePost.label(bookmark);
-			url = LikePost.normalizeUrl(bookmark.url);
+			title = bookmarkLabel(bookmark);
+			url = normalizeUrl(bookmark.url);
 			excerpt = description === "" ? addressOf(bookmark.url) : description;
 		}
 
@@ -437,7 +445,7 @@ export class PostSearch {
 	}
 
 	/**
-	 * Reads a post through its own type's repository, so the projection carries exactly the
+	 * Reads a post through its own type's model, so the projection carries exactly the
 	 * metadata the post's pages show. A glossary entry's title holds its term and its alias,
 	 * so either one finds it, and its definition is its content; a bookmark's content is its
 	 * address, so a site's name finds what was saved from it, then its description.
@@ -445,35 +453,35 @@ export class PostSearch {
 	 * @returns The projection, or `null` when the post is deleted or of a kind search skips.
 	 */
 	private static async projectionOf(
-		db: Database,
+		models: BlogModels,
 		id: string,
-		type: Post.Type,
+		type: PostType,
 	): Promise<Projection | null> {
 		if (type === "article") {
-			let article = await ArticlePost.findById(db, id);
+			let article = await models.articles.find(id);
 			if (!article) return null;
 			return { title: article.meta.title, tags: [], content: article.meta.content };
 		}
 
 		if (type === "tutorial") {
-			let tutorial = await TutorialPost.findById(db, id);
+			let tutorial = await models.tutorials.find(id);
 			if (!tutorial) return null;
 			return {
 				title: tutorial.meta.title,
-				tags: TutorialPost.tags(tutorial.meta.tags),
+				tags: tutorialTags(tutorial.meta.tags),
 				content: tutorial.meta.content,
 			};
 		}
 
 		if (type === "like") {
-			let bookmark = await LikePost.findById(db, id);
+			let bookmark = await models.likes.find(id);
 			if (!bookmark) return null;
 			let content = [addressOf(bookmark.meta.url), bookmark.meta.description.trim()];
 			return { title: bookmark.meta.title, tags: [], content: content.filter(Boolean).join("\n") };
 		}
 
 		if (type === "glossary") {
-			let entry = await GlossaryPost.findById(db, id);
+			let entry = await models.glossary.find(id);
 			if (!entry) return null;
 			return {
 				title: [entry.meta.term, entry.meta.title].filter(Boolean).join(" "),

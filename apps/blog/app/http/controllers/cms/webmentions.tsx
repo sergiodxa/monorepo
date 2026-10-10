@@ -7,15 +7,14 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
 import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
+import type { BlogModels } from "~/app/models";
+
 import { hostOf } from "~/app/models/webmentions";
-import { Post } from "~/app/repositories/post";
 import { WebmentionDecisionSchema, WebmentionQueueSchema } from "~/app/schemas/cms/webmention";
 import { TAGS } from "~/app/services/cache";
 import { CMSWebmentionsView } from "~/resources/views/cms/webmentions";
@@ -28,14 +27,16 @@ const TYPE_PATHS = { article: "articles", tutorial: "tutorials" } as const;
  * The cache tag of the page a mention renders on, or `null` for a post that is gone
  * or has no permalink.
  *
- * @param db Database handle used for the lookup.
+ * @param models The request's models.
  * @param postId The post the mention targets.
  */
-async function postTag(db: Database, postId: string): Promise<ReturnType<typeof TAGS.post> | null> {
-	let post = await Post.findById(db, postId);
-	if (!post || (post.type !== "article" && post.type !== "tutorial")) return null;
-	let slug = post.meta.find((row) => row.key === "slug")?.value;
-	return slug ? TAGS.post(TYPE_PATHS[post.type], slug) : null;
+async function postTag(
+	models: BlogModels,
+	postId: string,
+): Promise<ReturnType<typeof TAGS.post> | null> {
+	let post = (await models.articles.find(postId)) ?? (await models.tutorials.find(postId));
+	if (!post) return null;
+	return post.meta.slug ? TAGS.post(TYPE_PATHS[post.type], post.meta.slug) : null;
 }
 
 /**
@@ -109,7 +110,7 @@ export default createController(routes.cms.webmentions, {
 					break;
 			}
 
-			let tags = await Promise.all([...affected].map((postId) => postTag(ctx.db, postId)));
+			let tags = await Promise.all([...affected].map((postId) => postTag(ctx.models, postId)));
 			let live = tags.filter((tag) => tag !== null);
 			if (live.length > 0) ctx.cache.purgeLater(...live);
 

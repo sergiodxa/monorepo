@@ -10,17 +10,18 @@
 import type { Database as DataTable } from "remix/data-table";
 
 import { createJobContext, Job } from "@sdxc/jobs";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import { Database } from "~/app/http/middleware/database";
 import jobs from "~/app/jobs";
-import { Bookmark } from "~/app/repositories/bookmark";
-import { LikePost } from "~/app/repositories/posts/like";
+import { isOpen } from "~/app/models/bookmarks";
+import { bookmarkAddress } from "~/app/models/post-values";
 import { testDatabase } from "~/app/test/database";
 import { seedAuthor } from "~/app/test/fixtures";
-import { publishModels } from "~/app/test/models";
+import { bindModels, publishModels } from "~/app/test/models";
 
 import inspect from "./inspect";
 
@@ -63,16 +64,18 @@ function answering(status: number) {
 
 /** Saves a bookmark of the page with its record, as the CMS leaves it. */
 async function bookmark(meta: { title?: string; description?: string } = {}): Promise<string> {
-	let created = await LikePost.create(db, {
-		author_id: author,
-		meta: {
-			url: PAGE_URL,
-			title: meta.title ?? "Typed",
-			description: meta.description ?? "Typed.",
-		},
-	});
+	let created = unwrap(
+		await bindModels(db).likes.create({
+			author_id: author,
+			meta: {
+				url: PAGE_URL,
+				title: meta.title ?? "Typed",
+				description: meta.description ?? "Typed.",
+			},
+		}),
+	);
 	if (!created) throw new Error("Seeding the bookmark failed");
-	await Bookmark.claim(db, created.id, LikePost.address(PAGE_URL), null);
+	await bindModels(db).bookmarks.claim(created.id, bookmarkAddress(PAGE_URL), null);
 	return created.id;
 }
 
@@ -91,10 +94,10 @@ describe("the inspect job", () => {
 
 		await run(id);
 
-		let record = await Bookmark.findByPostId(db, id);
+		let record = await bindModels(db).bookmarks.find(id);
 		expect(record).toMatchObject({ status: "ok", http_status: 200, flag: null });
 		expect(record?.described_at).not.toBeNull();
-		expect((await LikePost.findById(db, id))?.meta).toMatchObject({
+		expect((await bindModels(db).likes.find(id))?.meta).toMatchObject({
 			title: "My Title",
 			description: "What the page is about.",
 		});
@@ -106,7 +109,7 @@ describe("the inspect job", () => {
 
 		await expect(run(id)).rejects.toBeInstanceOf(Job.Retry);
 
-		expect((await Bookmark.findByPostId(db, id))?.checked_at).toBeNull();
+		expect((await bindModels(db).bookmarks.find(id))?.checked_at).toBeNull();
 	});
 
 	test("raises the flag once the second read agrees", async () => {
@@ -115,7 +118,7 @@ describe("the inspect job", () => {
 
 		await run(id, 2);
 
-		let record = await Bookmark.findByPostId(db, id);
+		let record = await bindModels(db).bookmarks.find(id);
 		expect(record).toMatchObject({ status: "gone", http_status: 404, flag: "gone" });
 		expect(record?.flagged_at).not.toBeNull();
 	});
@@ -124,14 +127,14 @@ describe("the inspect job", () => {
 		answering(404);
 		let id = await bookmark();
 		await run(id, 2);
-		let first = await Bookmark.findByPostId(db, id);
-		await Bookmark.review(db, id);
+		let first = await bindModels(db).bookmarks.find(id);
+		await bindModels(db).bookmarks.review(id);
 
 		await run(id);
 
-		let record = await Bookmark.findByPostId(db, id);
+		let record = await bindModels(db).bookmarks.find(id);
 		expect(record?.flagged_at).toBe(first?.flagged_at);
-		expect(record && Bookmark.isOpen(record)).toBe(false);
+		expect(record && isOpen(record)).toBe(false);
 	});
 
 	test("leaves the flag through a read that could not tell, and clears it once the page is back", async () => {
@@ -141,21 +144,23 @@ describe("the inspect job", () => {
 
 		answering(503);
 		await run(id);
-		expect((await Bookmark.findByPostId(db, id))?.flag).toBe("gone");
+		expect((await bindModels(db).bookmarks.find(id))?.flag).toBe("gone");
 
 		answering(200);
 		await run(id);
-		expect(await Bookmark.findByPostId(db, id)).toMatchObject({ status: "ok", flag: null });
+		expect(await bindModels(db).bookmarks.find(id)).toMatchObject({ status: "ok", flag: null });
 	});
 
 	test("leaves a bookmark that links within the site alone", async () => {
-		let created = await LikePost.create(db, {
-			author_id: author,
-			meta: { url: "/articles/local", title: "Local" },
-		});
+		let created = unwrap(
+			await bindModels(db).likes.create({
+				author_id: author,
+				meta: { url: "/articles/local", title: "Local" },
+			}),
+		);
 
 		await expect(run(created?.id ?? "")).rejects.toBeInstanceOf(Job.Ack);
 
-		expect(await Bookmark.findByPostId(db, created?.id ?? "")).toBeNull();
+		expect(await bindModels(db).bookmarks.find(created?.id ?? "")).toBeNull();
 	});
 });

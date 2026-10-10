@@ -10,7 +10,7 @@
 
 import type { Feed } from "~/app/repositories/feed";
 
-import { LikePost } from "~/app/repositories/posts/like";
+import { normalizeUrl } from "~/app/models/post-values";
 import routes from "~/routes/web";
 
 /**
@@ -91,7 +91,7 @@ export class FeedViewModel {
 					if (!item.url) return null;
 
 					return {
-						href: LikePost.normalizeUrl(item.url),
+						href: normalizeUrl(item.url),
 						label: `I saved ${item.title}`,
 						date: item.date,
 						preview: item.preview,

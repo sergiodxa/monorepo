@@ -29,7 +29,7 @@ export default createAction(routes.feed, async function feedController(ctx) {
 	});
 	if (actor) return actor;
 
-	let activity = await Feed.listActivity(ctx.db);
+	let activity = await Feed.listActivity(ctx.models);
 	let model = FeedViewModel.index(activity);
 
 	ctx.cache(PUBLIC_PAGE, TAGS.postList());

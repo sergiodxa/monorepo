@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Post } from "~/app/repositories/post";
+import type { RelatedTutorial } from "~/app/models/tutorials";
 
 import routes from "~/routes/web";
 
@@ -44,7 +44,7 @@ export class PostRelatedViewModel {
 	 * @param items Related posts already filtered and ordered by tag matching.
 	 * @returns A page payload; returns an empty `items` array when no matches exist.
 	 */
-	static index(items: Array<Post.RelatedByTypeItem>): PostRelatedViewModel.Page {
+	static index(items: Array<RelatedTutorial>): PostRelatedViewModel.Page {
 		return {
 			items: items.map((item) => ({
 				href: routes.post.href({ postType: "tutorials", postSlug: item.slug }),
