@@ -5,7 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { describe, expect, test } from "vitest";
 
 import { encode } from "./lib/base32.js";

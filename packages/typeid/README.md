@@ -27,7 +27,7 @@ alongside this package: `generateUUID` produces the values `TypeID.fromUUID` tak
 
 ```typescript
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 let userId = TypeID.fromUUID("user", generateUUID());
 
@@ -218,7 +218,7 @@ returns its own type:
 
 ```typescript
 import { typeid } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 export let createUserId = typeid("user");
 export let createSessionId = typeid("session");

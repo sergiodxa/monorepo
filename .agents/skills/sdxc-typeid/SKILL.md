@@ -32,7 +32,7 @@ Declare the workspace dependency, then import:
 
 ```ts
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 let userId = TypeID.fromUUID("user", generateUUID());
 
@@ -60,4 +60,4 @@ TypeID.isValid("user_nope"); // false
 
 ## Related
 
-- `@sdxc/uuid` — supplies the `UUID` type `fromUUID` takes and `toUUID` returns, and `generateUUID`; skill `sdxc-uuid`
+- `@sdxc/uuid` — supplies the `UUID` type `fromUUID` takes and `toUUID` returns, and `generateUUID` from its `/v7` and `/v4` entry points; skill `sdxc-uuid`
