@@ -10,7 +10,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { SelectConnection } from "~/database/schema";
 

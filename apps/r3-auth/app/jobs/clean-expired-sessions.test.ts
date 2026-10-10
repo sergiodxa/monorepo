@@ -12,7 +12,7 @@ import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import Client from "~/app/data/client";

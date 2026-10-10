@@ -126,7 +126,7 @@ beforeEach(async () => {
 });
 
 async function createSession(expiresAt: number): Promise<string> {
-	let { generateUUID } = await import("@sdxc/uuid");
+	let { generateUUID } = await import("@sdxc/uuid/v4");
 	let { sessions } = await import("~/database/schema");
 
 	let session = await db.create(

@@ -11,7 +11,7 @@
 import type { Database } from "remix/data-table";
 
 import { toMs } from "@sdxc/duration";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { gt, lte } from "remix/data-table";
 
 import type { SelectClient, SelectSession } from "~/database/schema";

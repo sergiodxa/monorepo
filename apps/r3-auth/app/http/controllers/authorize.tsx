@@ -16,7 +16,7 @@ import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { addressKey } from "@sdxc/rate-limit";
 import { isFailure } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
