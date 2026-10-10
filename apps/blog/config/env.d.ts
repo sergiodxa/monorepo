@@ -9,8 +9,6 @@
 
 import type { SendEmailBinding } from "@sdxc/mail/cloudflare";
 
-import type { KVStore } from "../app/contracts/kv-store";
-
 declare global {
 	namespace App {
 		interface Env {
@@ -18,13 +16,8 @@ declare global {
 			CLIENT_ID: string;
 			CLIENT_SECRET: string;
 			COOKIE_SESSION_SECRET: string;
-			AUTH: KVStore;
-			REDIRECTS: KVStore;
-			/**
-			 * Typed as the raw platform binding because its only consumer,
-			 * `@sdxc/cache`, needs the real namespace; `AUTH` and `REDIRECTS`
-			 * keep the narrower `KVStore` contract for repositories and services.
-			 */
+			AUTH: KVNamespace;
+			REDIRECTS: KVNamespace;
 			CACHE: KVNamespace;
 			/** Present only once the deployment's bindings include a `ratelimits` entry. */
 			MCP_RATE_LIMITER: RateLimit | undefined;

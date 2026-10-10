@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { KVStore } from "~/app/contracts/kv-store";
-
 /**
  * Redirect domain types persisted in the REDIRECTS KV namespace.
  *
@@ -67,7 +65,7 @@ export class Redirect {
 	 * @param pathname Incoming request pathname to resolve.
 	 * @returns Parsed redirect payload, or `null` when no valid redirect exists.
 	 */
-	static async findByPath(kv: KVStore, pathname: string): Promise<Redirect.Value | null> {
+	static async findByPath(kv: KVNamespace, pathname: string): Promise<Redirect.Value | null> {
 		let key = this.normalizePath(pathname);
 		let value = await kv.get(key);
 		if (!value) return null;
@@ -84,7 +82,7 @@ export class Redirect {
 	 * @param kv KV namespace containing redirect definitions.
 	 * @returns Redirect records with normalized `from` paths.
 	 */
-	static async findAll(kv: KVStore): Promise<Array<Redirect.Record>> {
+	static async findAll(kv: KVNamespace): Promise<Array<Redirect.Record>> {
 		let list = await kv.list();
 		if (list.keys.length === 0) return [];
 
@@ -113,7 +111,7 @@ export class Redirect {
 	 * @param input Redirect source, target, and optional status.
 	 * @returns Persisted redirect record with normalized `from` and resolved status.
 	 */
-	static async upsert(kv: KVStore, input: Redirect.UpsertInput) {
+	static async upsert(kv: KVNamespace, input: Redirect.UpsertInput) {
 		let from = this.normalizePath(input.from);
 		let value = JSON.stringify({ to: input.to, status: input.status ?? 302 });
 		await kv.put(from, value);
@@ -131,7 +129,7 @@ export class Redirect {
 	 * @param from Source path to remove.
 	 * @returns `true` once KV deletion has completed.
 	 */
-	static async destroy(kv: KVStore, from: string) {
+	static async destroy(kv: KVNamespace, from: string) {
 		let key = this.normalizePath(from);
 		await kv.delete(key);
 		return true;
