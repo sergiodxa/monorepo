@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
@@ -120,9 +121,7 @@ describe("the refresh_token grant", () => {
 	test("a refresh token whose session was revoked is invalid_grant", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
-
-		let { default: Session } = await import("~/app/data/session");
-		await Session.deleteById(app.db, tokens.refresh_token);
+		await app.models.sessions.delete(tokens.refresh_token);
 
 		let response = await post({
 			grant_type: "refresh_token",
@@ -186,13 +185,13 @@ describe("the refresh_token grant", () => {
 	test("a refresh token presented by a different client is invalid_grant", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
-
-		let { default: Client } = await import("~/app/data/client");
-		let other = await Client.create(app.db, {
-			name: "Other App",
-			redirect_uri: "https://other.example.com/callback",
-			logout_uri: "https://other.example.com/logout",
-		});
+		let other = unwrap(
+			await app.models.clients.create({
+				name: "Other App",
+				redirect_uri: "https://other.example.com/callback",
+				logout_uri: "https://other.example.com/logout",
+			}),
+		);
 
 		let response = await post(
 			{ grant_type: "refresh_token", refresh_token: tokens.refresh_token },
@@ -236,13 +235,12 @@ describe("the client_credentials grant", () => {
 	 * base64 produces.
 	 */
 	test("a secret containing base64 padding characters still authenticates over Basic", async () => {
-		let { default: Client } = await import("~/app/data/client");
 		let { clients } = await import("~/database/schema");
 
 		let secret = "??>";
 		await app.db.updateMany(clients, { secret }, { where: { id: fixtures.clientId } });
 
-		let client = await Client.findById(app.db, fixtures.clientId);
+		let client = await app.models.clients.find(fixtures.clientId);
 		expect(client?.secret).toBe(secret);
 
 		let response = await post(

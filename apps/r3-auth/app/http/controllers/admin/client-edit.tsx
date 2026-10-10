@@ -11,12 +11,11 @@
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import abilities from "~/app/authz/abilities";
-import Client from "~/app/data/client";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireClientAbility from "~/app/http/middleware/require-client-ability";
@@ -107,7 +106,7 @@ export default createController(routes.admin.clientEdit, {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
-			let client = await Client.findById(ctx.db, clientId);
+			let client = await ctx.models.clients.find(clientId);
 			if (!client) {
 				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
@@ -131,7 +130,7 @@ export default createController(routes.admin.clientEdit, {
 			let clientId = ctx.params.clientId!;
 			ctx.log.set({ client: { id: clientId } });
 
-			let existing = await Client.findById(ctx.db, clientId);
+			let existing = await ctx.models.clients.find(clientId);
 			if (!existing) {
 				ctx.log.note("admin.client.not_found");
 				return defaultHandler(ctx);
@@ -153,18 +152,20 @@ export default createController(routes.admin.clientEdit, {
 			}
 
 			let input = result.data;
-			let updated = await Client.update(ctx.db, clientId, {
-				name: input.name,
-				description: input.description,
-				logo_url: input.logoUrl,
-				redirect_uri: input.redirectUri,
-				logout_uri: input.logoutUri,
-				backchannel_logout_uri: input.backchannelLogoutUri,
-				backchannel_logout_session_required: input.backchannelLogoutSessionRequired,
-				frontchannel_logout_uri: input.frontchannelLogoutUri,
-				frontchannel_logout_session_required: input.frontchannelLogoutSessionRequired,
-				regenerateSecret: input.regenerateSecret,
-			});
+			let updated = unwrap(
+				await ctx.models.clients.edit(clientId, {
+					name: input.name,
+					description: input.description,
+					logo_url: input.logoUrl,
+					redirect_uri: input.redirectUri,
+					logout_uri: input.logoutUri,
+					backchannel_logout_uri: input.backchannelLogoutUri,
+					backchannel_logout_session_required: input.backchannelLogoutSessionRequired,
+					frontchannel_logout_uri: input.frontchannelLogoutUri,
+					frontchannel_logout_session_required: input.frontchannelLogoutSessionRequired,
+					regenerateSecret: input.regenerateSecret,
+				}),
+			);
 
 			ctx.log.note("admin.client.updated", { secret_rotated: input.regenerateSecret });
 

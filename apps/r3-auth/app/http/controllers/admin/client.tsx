@@ -14,8 +14,6 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import abilities from "~/app/authz/abilities";
-import Client from "~/app/data/client";
-import Grant from "~/app/data/grant";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireClientAbility from "~/app/http/middleware/require-client-ability";
@@ -34,8 +32,8 @@ export default createController(routes.admin.client, {
 			ctx.log.set({ client: { id: clientId } });
 
 			let [client, authorizedUsers] = await Promise.all([
-				Client.findById(ctx.db, clientId),
-				Grant.countByClientId(ctx.db, clientId),
+				ctx.models.clients.find(clientId),
+				ctx.models.grants.countByClientId(clientId),
 			]);
 
 			if (!client) {
@@ -109,8 +107,8 @@ export default createController(routes.admin.client, {
 					return badRequest({ error: "invalid_intent" });
 				}
 
-				await Grant.deleteByClientId(ctx.db, clientId);
-				await Client.delete(ctx.db, clientId);
+				await ctx.models.grants.deleteByClientId(clientId);
+				await ctx.models.clients.delete(clientId);
 
 				ctx.log.note("admin.client.deleted");
 

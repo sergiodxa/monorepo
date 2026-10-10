@@ -12,6 +12,7 @@
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { createEnv, createExecutionContext, createQueue } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 /** The queue the cron produces into. */
@@ -103,23 +104,26 @@ beforeEach(async () => {
 	dlq.reset();
 	context = createExecutionContext();
 
-	let { createTestDatabase } = await import("~/app/lib/test/db");
-	let Client = (await import("~/app/data/client")).default;
-	let Subject = (await import("~/app/data/subject")).default;
+	let { createTestModels } = await import("~/app/lib/test/models");
 
-	db = createTestDatabase().db;
+	let { db: database, models } = createTestModels();
+	db = database;
 
-	let client = await Client.create(db, {
-		name: "Client App",
-		redirect_uri: "https://client.example.com/callback",
-		logout_uri: "https://client.example.com/logout",
-	});
-	let subject = await Subject.create(db, {
-		email_address: "jane@example.com",
-		display_name: "Jane Doe",
-		username: "jane",
-		avatar: "https://example.com/jane.png",
-	});
+	let client = unwrap(
+		await models.clients.create({
+			name: "Client App",
+			redirect_uri: "https://client.example.com/callback",
+			logout_uri: "https://client.example.com/logout",
+		}),
+	);
+	let subject = unwrap(
+		await models.subjects.create({
+			email_address: "jane@example.com",
+			display_name: "Jane Doe",
+			username: "jane",
+			avatar: "https://example.com/jane.png",
+		}),
+	);
 
 	clientId = client.id;
 	subjectId = subject.id;

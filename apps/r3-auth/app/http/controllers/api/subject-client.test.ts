@@ -13,7 +13,7 @@ import { AuthError } from "@sdxc/auth/auth-error";
 import { Issuer } from "@sdxc/auth/issuer";
 import { ManagementClient, SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { ServiceClient } from "@sdxc/auth/service-client";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { http, passthrough } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -22,7 +22,6 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { ISSUER } from "~/app/config";
-import Grant from "~/app/data/grant";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -93,7 +92,7 @@ afterAll(() => server.close());
 beforeEach(async () => {
 	app = await createTestApp();
 	fixtures = await seed(app);
-	await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
+	unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, fixtures.clientId));
 });
 
 describe("the client library", () => {

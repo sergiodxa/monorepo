@@ -8,15 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Connection from "~/app/data/connection";
-import Grant from "~/app/data/grant";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -30,7 +27,7 @@ let fixtures: Fixtures;
 
 /** Promotes the seeded subject and signs the client in as them. */
 async function signInAsAdmin(): Promise<void> {
-	await Subject.update(app.db, fixtures.subjectId, { role: "admin" });
+	unwrap(await app.models.subjects.update(fixtures.subjectId, { role: "admin" }));
 	await signIn(app, fixtures);
 }
 
@@ -53,12 +50,14 @@ async function post(path: string, body: Record<string, string>): Promise<Respons
 
 /** Registers a second subject, so the listing and the deletions have a target. */
 async function createOtherSubject(suffix = "1"): Promise<string> {
-	let subject = await Subject.create(app.db, {
-		email_address: `other-${suffix}@example.com`,
-		display_name: `Other Person ${suffix}`,
-		username: `other${suffix}`,
-		avatar: "https://example.com/other.png",
-	});
+	let subject = unwrap(
+		await app.models.subjects.create({
+			email_address: `other-${suffix}@example.com`,
+			display_name: `Other Person ${suffix}`,
+			username: `other${suffix}`,
+			avatar: "https://example.com/other.png",
+		}),
+	);
 	return subject.id;
 }
 
@@ -107,7 +106,13 @@ describe("GET /admin/subjects", () => {
 
 describe("GET /admin/subjects/:subjectId", () => {
 	test("renders the profile, the sessions and the connected accounts", async () => {
-		await Connection.create(app.db, "github", "MDQ6VXNlcjE=", fixtures.subjectId);
+		unwrap(
+			await app.models.connections.create({
+				provider: "github",
+				external_id: "MDQ6VXNlcjE=",
+				subject_id: fixtures.subjectId,
+			}),
+		);
 
 		let response = await get(routes.admin.subject.index.href({ subjectId: fixtures.subjectId }));
 		let html = await response.text();
@@ -123,7 +128,14 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 	test("labels a session's device and names the client it belongs to", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, "203.0.113.9", DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: "203.0.113.9",
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let html = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 
@@ -145,12 +157,26 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 	test("offers revoke-all only once there is more than one session", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let one = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 		expect(one).not.toContain("Revoke all sessions");
 
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let two = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 		expect(two).toContain("Revoke all sessions");
@@ -158,7 +184,14 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 	test("each confirmation is a native dialog holding a real form that posts the intent", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let html = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 
@@ -178,7 +211,14 @@ describe("GET /admin/subjects/:subjectId", () => {
 
 	test("the revoke dialog is keyed by row position, never by the session id", async () => {
 		let other = await createOtherSubject();
-		let session = await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		let session = unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let html = await (await get(routes.admin.subject.index.href({ subjectId: other }))).text();
 
@@ -199,8 +239,22 @@ describe("GET /admin/subjects/:subjectId", () => {
 describe("POST /admin/subjects/:subjectId", () => {
 	test("intent=revoke-session revokes exactly that session", async () => {
 		let other = await createOtherSubject();
-		let kept = await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
-		let doomed = await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		let kept = unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
+		let doomed = unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "revoke-session",
@@ -211,8 +265,8 @@ describe("POST /admin/subjects/:subjectId", () => {
 		expect(response.headers.get("location")).toBe(
 			routes.admin.subject.index.href({ subjectId: other }),
 		);
-		expect(await Session.findById(app.db, doomed.id)).toBeNull();
-		expect(await Session.findById(app.db, kept.id)).not.toBeNull();
+		expect(await app.models.sessions.find(doomed.id)).toBeNull();
+		expect(await app.models.sessions.find(kept.id)).not.toBeNull();
 	});
 
 	/**
@@ -222,7 +276,14 @@ describe("POST /admin/subjects/:subjectId", () => {
 	test("intent=revoke-session leaves a session belonging to another subject alone", async () => {
 		let other = await createOtherSubject();
 		let bystander = await createOtherSubject("2");
-		let foreign = await Session.create(app.db, bystander, fixtures.clientId, null, DESKTOP_AGENT);
+		let foreign = unwrap(
+			await app.models.sessions.create({
+				subject_id: bystander,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "revoke-session",
@@ -233,30 +294,51 @@ describe("POST /admin/subjects/:subjectId", () => {
 		expect(response.headers.get("location")).toBe(
 			routes.admin.subject.index.href({ subjectId: other }),
 		);
-		expect(await Session.findById(app.db, foreign.id)).not.toBeNull();
+		expect(await app.models.sessions.find(foreign.id)).not.toBeNull();
 	});
 
 	test("intent=revoke-all-sessions clears every session for that subject only", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
-		let adminSessionsBefore = await Session.findBySubjectId(app.db, fixtures.subjectId);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
+		let adminSessionsBefore = await app.models.sessions.findBySubjectId(fixtures.subjectId);
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "revoke-all-sessions",
 		});
 
 		expect(response.status).toBe(303);
-		expect(await Session.findBySubjectId(app.db, other)).toHaveLength(0);
-		expect(await Session.findBySubjectId(app.db, fixtures.subjectId)).toHaveLength(
+		expect(await app.models.sessions.findBySubjectId(other)).toHaveLength(0);
+		expect(await app.models.sessions.findBySubjectId(fixtures.subjectId)).toHaveLength(
 			adminSessionsBefore.length,
 		);
 	});
 
 	test("intent=delete removes the subject with its sessions and grants", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
-		await Grant.findOrCreate(app.db, other, fixtures.clientId);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
+		unwrap(await app.models.grants.findOrCreate(other, fixtures.clientId));
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "delete",
@@ -264,34 +346,48 @@ describe("POST /admin/subjects/:subjectId", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.admin.subjects.href());
-		expect(await Subject.findById(app.db, other)).toBeNull();
-		expect(await Session.findBySubjectId(app.db, other)).toHaveLength(0);
-		expect(await Grant.findBySubjectId(app.db, other)).toHaveLength(0);
+		expect(await app.models.subjects.find(other)).toBeNull();
+		expect(await app.models.sessions.findBySubjectId(other)).toHaveLength(0);
+		expect(await app.models.grants.findBySubjectId(other)).toHaveLength(0);
 	});
 
 	test("an unknown intent is refused and nothing is removed", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "impersonate",
 		});
 
 		expect(response.status).toBe(400);
-		expect(await Subject.findById(app.db, other)).not.toBeNull();
-		expect(await Session.findBySubjectId(app.db, other)).toHaveLength(1);
+		expect(await app.models.subjects.find(other)).not.toBeNull();
+		expect(await app.models.sessions.findBySubjectId(other)).toHaveLength(1);
 	});
 
 	test("revoke-session without a session id is refused", async () => {
 		let other = await createOtherSubject();
-		await Session.create(app.db, other, fixtures.clientId, null, DESKTOP_AGENT);
+		unwrap(
+			await app.models.sessions.create({
+				subject_id: other,
+				client_id: fixtures.clientId,
+				ip_address: null,
+				user_agent: DESKTOP_AGENT,
+			}),
+		);
 
 		let response = await post(routes.admin.subject.action.href({ subjectId: other }), {
 			intent: "revoke-session",
 		});
 
 		expect(response.status).toBe(400);
-		expect(await Session.findBySubjectId(app.db, other)).toHaveLength(1);
+		expect(await app.models.sessions.findBySubjectId(other)).toHaveLength(1);
 	});
 });
 
@@ -325,7 +421,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 			routes.admin.subject.index.href({ subjectId: fixtures.subjectId }),
 		);
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.display_name).toBe("Jane Q. Doe");
 		expect(subject?.username).toBe("janeq");
 		expect(subject?.avatar).toBe("https://example.com/new.png");
@@ -344,7 +440,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 			role: "user",
 			emailVerified: "on",
 		});
-		expect((await Subject.findById(app.db, other))?.email_verified_at).not.toBeNull();
+		expect((await app.models.subjects.find(other))?.email_verified_at).not.toBeNull();
 
 		await post(routes.admin.subjectEdit.action.href({ subjectId: other }), {
 			displayName: "Other Person 1",
@@ -352,7 +448,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 			avatar: "https://example.com/other.png",
 			role: "user",
 		});
-		expect((await Subject.findById(app.db, other))?.email_verified_at).toBeNull();
+		expect((await app.models.subjects.find(other))?.email_verified_at).toBeNull();
 	});
 
 	test("POST can promote a subject to admin", async () => {
@@ -365,7 +461,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 			role: "admin",
 		});
 
-		expect((await Subject.findById(app.db, other))?.role).toBe("admin");
+		expect((await app.models.subjects.find(other))?.role).toBe("admin");
 	});
 
 	test("POST refuses a role the enum does not contain", async () => {
@@ -380,7 +476,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect((await Subject.findById(app.db, fixtures.subjectId))?.role).toBe("admin");
+		expect((await app.models.subjects.find(fixtures.subjectId))?.role).toBe("admin");
 	});
 
 	test("POST re-renders with a 400 when the avatar is not a URL", async () => {
@@ -395,7 +491,7 @@ describe("/admin/subjects/:subjectId/edit", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect((await Subject.findById(app.db, fixtures.subjectId))?.avatar).toBe(
+		expect((await app.models.subjects.find(fixtures.subjectId))?.avatar).toBe(
 			"https://example.com/jane.png",
 		);
 	});

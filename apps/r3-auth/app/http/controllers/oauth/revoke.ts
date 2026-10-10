@@ -52,7 +52,7 @@ export default createAction(routes.oauth.revoke, async (ctx) => {
 	}
 
 	try {
-		await createOidcProvider(ctx.db).revoke({
+		await createOidcProvider(ctx.models).revoke({
 			clientId: credentials.clientId,
 			clientSecret: credentials.clientSecret,
 			token: body.token,

@@ -9,9 +9,6 @@
 
 import { createAction } from "remix/router";
 
-import Client from "~/app/data/client";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { toChrome } from "~/app/http/view-models/admin";
@@ -27,9 +24,9 @@ export default createAction(routes.admin.dashboard, {
 	 */
 	handler: async (ctx) => {
 		let [clients, subjects, activeSessions] = await Promise.all([
-			Client.count(ctx.db),
-			Subject.count(ctx.db),
-			Session.countActive(ctx.db),
+			ctx.models.clients.query().count(),
+			ctx.models.subjects.query().count(),
+			ctx.models.sessions.active().count(),
 		]);
 
 		let chrome = toChrome(ctx, {

@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { SessionWithClient } from "~/app/data/session";
+import type { SessionWithClient } from "~/app/models/sessions";
 
 import { describeUserAgent, toSessionRow } from "~/app/http/view-models/account-session";
 

@@ -12,8 +12,6 @@ import { notFound, ok } from "@sdxc/http/response/json";
 import { env, waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import Grant from "~/app/data/grant";
-import Subject from "~/app/data/subject";
 import { requireApiClient } from "~/app/http/middleware/require-api-client";
 import { parseCachedSubject, toApiSubject } from "~/app/http/view-models/api-subject";
 import routes from "~/routes/web";
@@ -45,7 +43,7 @@ export default createAction(routes.api.subject, {
 		ctx.log.set({ subject: { id: subjectId } });
 
 		let authorized = await collector.measure("db", "findGrant", async () => {
-			return await Grant.exists(ctx.db, subjectId, ctx.apiClient.id);
+			return await ctx.models.grants.hasConsented(subjectId, ctx.apiClient.id);
 		});
 
 		if (!authorized) {
@@ -65,7 +63,7 @@ export default createAction(routes.api.subject, {
 		ctx.log.inc("cache.miss");
 
 		let subject = await collector.measure("db", "findSubjectById", async () => {
-			return await Subject.findById(ctx.db, subjectId);
+			return await ctx.models.subjects.find(subjectId);
 		});
 
 		if (!subject) {

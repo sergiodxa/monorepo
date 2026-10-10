@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Client from "~/app/data/client";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -24,7 +23,7 @@ let fixtures: Fixtures;
 
 /** Promotes the seeded subject and signs the client in as them. */
 async function signInAsAdmin(): Promise<void> {
-	await Subject.update(app.db, fixtures.subjectId, { role: "admin" });
+	unwrap(await app.models.subjects.update(fixtures.subjectId, { role: "admin" }));
 	await signIn(app, fixtures);
 }
 
@@ -65,11 +64,13 @@ describe("GET /admin", () => {
 	});
 
 	test("counts every registered client", async () => {
-		await Client.create(app.db, {
-			name: "Second App",
-			redirect_uri: "https://second.example.com/callback",
-			logout_uri: "https://second.example.com/logout",
-		});
+		unwrap(
+			await app.models.clients.create({
+				name: "Second App",
+				redirect_uri: "https://second.example.com/callback",
+				logout_uri: "https://second.example.com/logout",
+			}),
+		);
 		await signInAsAdmin();
 
 		let html = await (await get(routes.admin.dashboard.href())).text();
@@ -128,7 +129,7 @@ describe("the admin area's authorization", () => {
 		await signInAsAdmin();
 		expect((await get(routes.admin.dashboard.href())).status).toBe(200);
 
-		await Subject.update(app.db, fixtures.subjectId, { role: "user" });
+		unwrap(await app.models.subjects.update(fixtures.subjectId, { role: "user" }));
 
 		expect((await get(routes.admin.dashboard.href())).status).toBe(303);
 	});

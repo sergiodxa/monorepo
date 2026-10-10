@@ -16,7 +16,6 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import abilities from "~/app/authz/abilities";
-import Session from "~/app/data/session";
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { destroySession, getRefreshToken, unsetTokens } from "~/app/http/middleware/session";
@@ -43,7 +42,7 @@ const NO_STORE: HeadersInit = { "Cache-Control": "no-store, private" };
 
 async function sessionsPage(ctx: RequestContext): Promise<Response> {
 	let subject = ctx.subject;
-	let sessions = await Session.findBySubjectId(ctx.db, subject.id);
+	let sessions = await ctx.models.sessions.findBySubjectId(subject.id);
 	let currentSessionId = getRefreshToken();
 
 	return await ctx.render(
@@ -155,9 +154,9 @@ export default createController(routes.account.sessions, {
 			let submitted = result.data;
 
 			if (submitted.intent === "revoke-all") {
-				let owned = await Session.findBySubjectId(ctx.db, subject.id);
+				let owned = await ctx.models.sessions.findBySubjectId(subject.id);
 				let others = owned.filter((session) => session.id !== currentSessionId);
-				for (let session of others) await Session.deleteById(ctx.db, session.id);
+				for (let session of others) await ctx.models.sessions.delete(session.id);
 
 				ctx.log.set({ sessions: { revoked: others.length } });
 				ctx.log.note("session.revoked_all");
@@ -167,7 +166,7 @@ export default createController(routes.account.sessions, {
 				return backToList();
 			}
 
-			let target = await Session.findById(ctx.db, submitted.sessionId);
+			let target = await ctx.models.sessions.find(submitted.sessionId);
 
 			if (
 				!target ||
@@ -177,13 +176,13 @@ export default createController(routes.account.sessions, {
 				return backToList();
 			}
 
-			await Session.deleteById(ctx.db, target.id);
+			await ctx.models.sessions.delete(target.id);
 			ctx.log.set({ sessions: { revoked: 1 } });
 			ctx.log.note("session.revoked");
 
 			if (target.id === currentSessionId) return signOut();
 
-			let remaining = await Session.findBySubjectId(ctx.db, subject.id);
+			let remaining = await ctx.models.sessions.findBySubjectId(subject.id);
 			if (remaining.length === 0) return signOut();
 
 			return backToList();

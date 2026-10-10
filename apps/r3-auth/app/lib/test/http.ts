@@ -124,7 +124,7 @@ export interface TestApp {
 	 * whole global middleware chain — the real session, logging and rendering path.
 	 */
 	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["application"]>;
-	/** The migrated in-memory database every controller reads as `ctx.db`. */
+	/** The migrated in-memory database the app publishes as `ctx.db` and binds `ctx.models` to. */
 	db: Database;
 	/** The app's models bound to {@link TestApp.db}, for seeding and asserting through the model layer. */
 	models: AuthModels;

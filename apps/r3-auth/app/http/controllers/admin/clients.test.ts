@@ -9,15 +9,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
-import Client from "~/app/data/client";
-import Grant from "~/app/data/grant";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -27,7 +25,7 @@ let fixtures: Fixtures;
 
 /** Promotes the seeded subject and signs the client in as them. */
 async function signInAsAdmin(): Promise<void> {
-	await Subject.update(app.db, fixtures.subjectId, { role: "admin" });
+	unwrap(await app.models.subjects.update(fixtures.subjectId, { role: "admin" }));
 	await signIn(app, fixtures);
 }
 
@@ -87,11 +85,13 @@ describe("GET /admin/clients", () => {
 
 	test("paginates at ten rows and page two shows the rest", async () => {
 		for (let index = 0; index < 10; index++) {
-			await Client.create(app.db, {
-				name: `Filler ${index}`,
-				redirect_uri: `https://filler-${index}.example.com/callback`,
-				logout_uri: `https://filler-${index}.example.com/logout`,
-			});
+			unwrap(
+				await app.models.clients.create({
+					name: `Filler ${index}`,
+					redirect_uri: `https://filler-${index}.example.com/callback`,
+					logout_uri: `https://filler-${index}.example.com/logout`,
+				}),
+			);
 		}
 
 		let first = await (await get(routes.admin.clients.index.href())).text();
@@ -111,7 +111,7 @@ describe("GET /admin/clients", () => {
 	});
 
 	test("renders an empty state when nothing is registered", async () => {
-		await Client.delete(app.db, fixtures.clientId);
+		await app.models.clients.delete(fixtures.clientId);
 
 		let html = await (await get(routes.admin.clients.index.href())).text();
 
@@ -121,7 +121,7 @@ describe("GET /admin/clients", () => {
 
 describe("POST /admin/clients", () => {
 	test("intent=delete removes the client and its grants, then redirects to the list", async () => {
-		await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, fixtures.clientId));
 
 		let response = await post(routes.admin.clients.action.href(), {
 			intent: "delete",
@@ -130,8 +130,8 @@ describe("POST /admin/clients", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.admin.clients.index.href());
-		expect(await Client.findById(app.db, fixtures.clientId)).toBeNull();
-		expect(await Grant.countByClientId(app.db, fixtures.clientId)).toBe(0);
+		expect(await app.models.clients.find(fixtures.clientId)).toBeNull();
+		expect(await app.models.grants.countByClientId(fixtures.clientId)).toBe(0);
 	});
 
 	test("an unknown intent is refused and deletes nothing", async () => {
@@ -141,14 +141,14 @@ describe("POST /admin/clients", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect(await Client.findById(app.db, fixtures.clientId)).not.toBeNull();
+		expect(await app.models.clients.find(fixtures.clientId)).not.toBeNull();
 	});
 
 	test("a delete with no client id is refused", async () => {
 		let response = await post(routes.admin.clients.action.href(), { intent: "delete" });
 
 		expect(response.status).toBe(400);
-		expect(await Client.findById(app.db, fixtures.clientId)).not.toBeNull();
+		expect(await app.models.clients.find(fixtures.clientId)).not.toBeNull();
 	});
 });
 
@@ -168,7 +168,7 @@ describe("/admin/clients/new", () => {
 
 		expect(response.status).toBe(200);
 
-		let created = await Client.findAll(app.db, { limit: 1, offset: 0 });
+		let created = await app.models.clients.page({ limit: 1, offset: 0 });
 		let client = created[0]!;
 		expect(client.name).toBe(VALID_CLIENT.name);
 		expect(client.redirect_uri).toBe(VALID_CLIENT.redirectUri);
@@ -183,12 +183,12 @@ describe("/admin/clients/new", () => {
 	test("POST accepts an empty logo URL and stores it as absent", async () => {
 		await post(routes.admin.clientNew.action.href(), { ...VALID_CLIENT, logoUrl: "" });
 
-		let client = (await Client.findAll(app.db, { limit: 1, offset: 0 }))[0]!;
+		let client = (await app.models.clients.page({ limit: 1, offset: 0 }))[0]!;
 		expect(client.logo_url).toBeNull();
 	});
 
 	test("POST re-renders the form with a 400 when a URI is not a URL", async () => {
-		let before = await Client.count(app.db);
+		let before = await app.models.clients.query().count();
 
 		let response = await post(routes.admin.clientNew.action.href(), {
 			...VALID_CLIENT,
@@ -197,7 +197,7 @@ describe("/admin/clients/new", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.text()).toContain('name="redirectUri"');
-		expect(await Client.count(app.db)).toBe(before);
+		expect(await app.models.clients.query().count()).toBe(before);
 	});
 
 	test("a failed submission shows the offending field its own message", async () => {
@@ -212,7 +212,7 @@ describe("/admin/clients/new", () => {
 	});
 
 	test("POST refuses a description longer than 280 characters", async () => {
-		let before = await Client.count(app.db);
+		let before = await app.models.clients.query().count();
 
 		let response = await post(routes.admin.clientNew.action.href(), {
 			...VALID_CLIENT,
@@ -220,13 +220,13 @@ describe("/admin/clients/new", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect(await Client.count(app.db)).toBe(before);
+		expect(await app.models.clients.query().count()).toBe(before);
 	});
 });
 
 describe("GET /admin/clients/:clientId", () => {
 	test("renders the registration, the grant count, and no secret", async () => {
-		await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, fixtures.clientId));
 
 		let response = await get(routes.admin.client.index.href({ clientId: fixtures.clientId }));
 		let html = await response.text();
@@ -250,7 +250,7 @@ describe("GET /admin/clients/:clientId", () => {
 
 describe("POST /admin/clients/:clientId", () => {
 	test("intent=delete removes the client and its grants", async () => {
-		await Grant.findOrCreate(app.db, fixtures.subjectId, fixtures.clientId);
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, fixtures.clientId));
 
 		let response = await post(routes.admin.client.action.href({ clientId: fixtures.clientId }), {
 			intent: "delete",
@@ -258,8 +258,8 @@ describe("POST /admin/clients/:clientId", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.admin.clients.index.href());
-		expect(await Client.findById(app.db, fixtures.clientId)).toBeNull();
-		expect(await Grant.countByClientId(app.db, fixtures.clientId)).toBe(0);
+		expect(await app.models.clients.find(fixtures.clientId)).toBeNull();
+		expect(await app.models.grants.countByClientId(fixtures.clientId)).toBe(0);
 	});
 
 	test("an unknown intent is refused and the client survives", async () => {
@@ -268,7 +268,7 @@ describe("POST /admin/clients/:clientId", () => {
 		});
 
 		expect(response.status).toBe(400);
-		expect(await Client.findById(app.db, fixtures.clientId)).not.toBeNull();
+		expect(await app.models.clients.find(fixtures.clientId)).not.toBeNull();
 	});
 });
 
@@ -303,7 +303,7 @@ describe("/admin/clients/:clientId/edit", () => {
 			routes.admin.client.index.href({ clientId: fixtures.clientId }),
 		);
 
-		let client = await Client.findById(app.db, fixtures.clientId);
+		let client = await app.models.clients.find(fixtures.clientId);
 		expect(client?.name).toBe("Renamed App");
 		expect(client?.redirect_uri).toBe("https://renamed.example.com/callback");
 		expect(client?.backchannel_logout_uri).toBe("https://renamed.example.com/backchannel");
@@ -321,7 +321,7 @@ describe("/admin/clients/:clientId/edit", () => {
 			frontchannelLogoutUri: "https://client.example.com/frontchannel",
 		});
 
-		let client = await Client.findById(app.db, fixtures.clientId);
+		let client = await app.models.clients.find(fixtures.clientId);
 		expect(client?.backchannel_logout_session_required).toBe("true");
 		expect(client?.frontchannel_logout_session_required).toBe("false");
 
@@ -339,7 +339,7 @@ describe("/admin/clients/:clientId/edit", () => {
 			frontchannelLogoutSessionRequired: "on",
 		});
 
-		let after = await Client.findById(app.db, fixtures.clientId);
+		let after = await app.models.clients.find(fixtures.clientId);
 		expect(after?.backchannel_logout_session_required).toBe("false");
 		expect(after?.frontchannel_logout_session_required).toBe("true");
 	});
@@ -357,7 +357,7 @@ describe("/admin/clients/:clientId/edit", () => {
 
 		expect(response.status).toBe(200);
 
-		let client = await Client.findById(app.db, fixtures.clientId);
+		let client = await app.models.clients.find(fixtures.clientId);
 		expect(client?.secret).not.toBe(fixtures.clientSecret);
 
 		let html = await response.text();
@@ -376,7 +376,7 @@ describe("/admin/clients/:clientId/edit", () => {
 		);
 
 		expect(response.status).toBe(400);
-		expect((await Client.findById(app.db, fixtures.clientId))?.name).toBe("Client App");
+		expect((await app.models.clients.find(fixtures.clientId))?.name).toBe("Client App");
 	});
 
 	test("GET answers 404 for a client that does not exist", async () => {
@@ -395,7 +395,7 @@ describe("/admin/clients/:clientId/edit", () => {
  */
 describe("this server's own client", () => {
 	beforeEach(async () => {
-		await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
+		unwrap(await app.models.clients.ensureAuthServerClient(new URL(ORIGIN)));
 	});
 
 	test("its detail page offers neither edit nor delete", async () => {
@@ -436,7 +436,7 @@ describe("this server's own client", () => {
 			routes.admin.clientEdit.action.href({ clientId: AUTH_SERVER_CLIENT_ID }),
 			{ ...VALID_CLIENT, regenerateSecret: "true" },
 		);
-		let client = await Client.findById(app.db, AUTH_SERVER_CLIENT_ID);
+		let client = await app.models.clients.find(AUTH_SERVER_CLIENT_ID);
 
 		expect(response.status).toBe(303);
 		expect(client?.name).toBe(AUTH_SERVER_NAME);
@@ -452,11 +452,11 @@ describe("this server's own client", () => {
 		expect(response.headers.get("location")).toBe(
 			routes.admin.client.index.href({ clientId: AUTH_SERVER_CLIENT_ID }),
 		);
-		expect(await Client.findById(app.db, AUTH_SERVER_CLIENT_ID)).not.toBeNull();
+		expect(await app.models.clients.find(AUTH_SERVER_CLIENT_ID)).not.toBeNull();
 	});
 
 	test("POST delete from the list leaves it and its consents in place", async () => {
-		await Grant.findOrCreate(app.db, fixtures.subjectId, AUTH_SERVER_CLIENT_ID);
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, AUTH_SERVER_CLIENT_ID));
 
 		let response = await post(routes.admin.clients.action.href(), {
 			intent: "delete",
@@ -465,7 +465,7 @@ describe("this server's own client", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.admin.clients.index.href());
-		expect(await Client.findById(app.db, AUTH_SERVER_CLIENT_ID)).not.toBeNull();
-		expect(await Grant.countByClientId(app.db, AUTH_SERVER_CLIENT_ID)).toBe(1);
+		expect(await app.models.clients.find(AUTH_SERVER_CLIENT_ID)).not.toBeNull();
+		expect(await app.models.grants.countByClientId(AUTH_SERVER_CLIENT_ID)).toBe(1);
 	});
 });

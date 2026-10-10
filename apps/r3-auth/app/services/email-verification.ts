@@ -14,19 +14,18 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import type { AuthModels } from "~/app/models";
 import type { SelectSubject } from "~/database/schema";
 
 import { ISSUER_HOST } from "~/app/config";
-import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { VerifyEmailEmail } from "~/app/emails/verify-email";
 import routes from "~/routes/web";
@@ -133,18 +132,16 @@ function verificationUrl(token: string): string {
  * whichever address a form supplies on any other outcome would make this an oracle.
  *
  * @param ctx - The request the send is attached to; its mailer, translator and log.
- * @param db - Database the subject's address and verification state are read from.
  * @param subjectId - Subject whose address would be confirmed.
  * @returns Which of the four things happened, so a resend page can say so. A sign-in's
  *   own response is identical on every outcome, so sign-in paths can ignore it.
  */
 export async function sendVerificationEmail(
 	ctx: RequestContext,
-	db: Database,
 	subjectId: string,
 ): Promise<VerificationSendOutcome> {
 	try {
-		let subject = await Subject.findById(db, subjectId);
+		let subject = await ctx.models.subjects.find(subjectId);
 		if (!subject) {
 			ctx.log.warn("email_verification.subject_missing", { subject_id: subjectId });
 			return "failed";
@@ -197,7 +194,7 @@ export async function sendVerificationEmail(
  * still names both that subject and its current address — a token proves nothing once the
  * row's address has moved on — and, only when asked, spends it to confirm the address.
  *
- * @param db - Database the subject is read from and the column written to.
+ * @param models - The models the subject is read from and the column written to.
  * @param token - The token exactly as the link carried it.
  * @param spend - Whether to delete the record and stamp the column. The record is deleted
  *   before anything is written, the same way an authorization code is consumed by being
@@ -206,7 +203,7 @@ export async function sendVerificationEmail(
  *   refusal for both callers, so what a token is good for cannot drift between them.
  */
 async function resolveToken(
-	db: Database,
+	models: AuthModels,
 	token: string,
 	spend: boolean,
 ): Promise<Result<SelectSubject, VerificationError>> {
@@ -233,7 +230,7 @@ async function resolveToken(
 	let parsed = await validate(record as Record<string, unknown>, TOKEN_RECORD_SCHEMA);
 	if (isFailure(parsed)) return failure(new VerificationError("invalid"));
 
-	let subject = await Subject.findById(db, parsed.data.subjectId);
+	let subject = await models.subjects.find(parsed.data.subjectId);
 	if (!subject) return failure(new VerificationError("invalid"));
 
 	if (subject.email_address !== parsed.data.emailAddress)
@@ -243,7 +240,9 @@ async function resolveToken(
 
 	if (subject.email_verified_at !== null) return success(subject);
 
-	return success(await Subject.update(db, subject.id, { email_verified_at: Date.now() }));
+	return success(
+		unwrap(await models.subjects.update(subject.id, { email_verified_at: Date.now() })),
+	);
 }
 
 /**
@@ -251,15 +250,15 @@ async function resolveToken(
  * mail scanner, link checker, or bodyless probe that fetches the URL out of an inbox
  * leaves the token exactly as it found it and the person's own click still works.
  *
- * @param db - Database the subject is read from.
+ * @param models - The models the subject is read from.
  * @param token - The token exactly as the link carried it.
  * @returns The subject the token names, or why it is good for nothing.
  */
 export async function peekVerificationToken(
-	db: Database,
+	models: AuthModels,
 	token: string,
 ): Promise<Result<SelectSubject, VerificationError>> {
-	return await resolveToken(db, token, false);
+	return await resolveToken(models, token, false);
 }
 
 /**
@@ -267,13 +266,13 @@ export async function peekVerificationToken(
  * confirmed. A subject already verified answers as a success without rewriting the
  * column, so a link submitted twice in one session reads as already done.
  *
- * @param db - Database the subject is read from and the column written to.
+ * @param models - The models the subject is read from and the column written to.
  * @param token - The token exactly as the link carried it.
  * @returns The confirmed subject, or why nothing was confirmed.
  */
 export async function consumeVerificationToken(
-	db: Database,
+	models: AuthModels,
 	token: string,
 ): Promise<Result<SelectSubject, VerificationError>> {
-	return await resolveToken(db, token, true);
+	return await resolveToken(models, token, true);
 }

@@ -10,7 +10,7 @@
  */
 
 import { Base64Url, password, sha256 } from "@sdxc/crypto";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
@@ -18,8 +18,6 @@ import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import Credential from "~/app/data/credential";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { notesOf, withLog } from "~/app/lib/test/logs";
 import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
@@ -380,7 +378,7 @@ describe("POST /authorize", () => {
 		let response = await register();
 
 		expect(response.status).toBe(303);
-		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).not.toBeNull();
+		expect(await app.models.subjects.findByEmail(NEW_EMAIL)).not.toBeNull();
 
 		let location = new URL(response.headers.get("location")!);
 		expect(`${location.origin}${location.pathname}`).toBe(REDIRECT_URI);
@@ -440,7 +438,7 @@ describe("POST /authorize", () => {
 		let response = await register({ email: " Newcomer@Example.com " });
 
 		expect(response.status).toBe(303);
-		expect(await Subject.findByEmail(app.db, "Newcomer@Example.com")).not.toBeNull();
+		expect(await app.models.subjects.findByEmail("Newcomer@Example.com")).not.toBeNull();
 	});
 
 	test("refuses to register an address with a trailing-dot domain", async () => {
@@ -449,7 +447,7 @@ describe("POST /authorize", () => {
 		let response = await register({ email: `${NEW_EMAIL}.` });
 
 		expect(response.status).toBe(400);
-		expect(await Subject.findByEmail(app.db, `${NEW_EMAIL}.`)).toBeNull();
+		expect(await app.models.subjects.findByEmail(`${NEW_EMAIL}.`)).toBeNull();
 	});
 
 	test("refuses to register a password shorter than eight characters, saying so", async () => {
@@ -459,7 +457,7 @@ describe("POST /authorize", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("Use at least 8 characters.");
-		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+		expect(await app.models.subjects.findByEmail(NEW_EMAIL)).toBeNull();
 	});
 
 	test("refuses to register a breached password, saying why", async () => {
@@ -469,7 +467,7 @@ describe("POST /authorize", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain(en.password.policy.breached);
-		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+		expect(await app.models.subjects.findByEmail(NEW_EMAIL)).toBeNull();
 	});
 
 	test("refuses to register a password containing the username", async () => {
@@ -479,7 +477,7 @@ describe("POST /authorize", () => {
 
 		expect(response.status).toBe(200);
 		expect(await response.text()).toContain("contain your email address or username");
-		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).toBeNull();
+		expect(await app.models.subjects.findByEmail(NEW_EMAIL)).toBeNull();
 	});
 
 	test("registers when the breach lookup is down, since every local rule passed", async () => {
@@ -489,20 +487,28 @@ describe("POST /authorize", () => {
 		let response = await register();
 
 		expect(response.status).toBe(303);
-		expect(await Subject.findByEmail(app.db, NEW_EMAIL)).not.toBeNull();
+		expect(await app.models.subjects.findByEmail(NEW_EMAIL)).not.toBeNull();
 	});
 
 	test("refuses a registered subject whose credential was never verified", async () => {
-		let subject = await Subject.create(app.db, {
-			email_address: "github@example.com",
-			display_name: "Git Hub",
-			username: "githubber",
-			avatar: "https://example.com/gh.png",
-		});
+		let subject = unwrap(
+			await app.models.subjects.create({
+				email_address: "github@example.com",
+				display_name: "Git Hub",
+				username: "githubber",
+				avatar: "https://example.com/gh.png",
+			}),
+		);
 
 		let hash = await password.hash("a-password-somebody-else-chose");
 		if (isFailure(hash)) throw new Error("Could not hash the password");
-		await Credential.create(app.db, subject.id, hash.data, null);
+		unwrap(
+			await app.models.credentials.create({
+				subject_id: subject.id,
+				password_hash: hash.data,
+				verified_at: null,
+			}),
+		);
 
 		await app.fetch(new Request(authorizeUrl(fixtures)));
 

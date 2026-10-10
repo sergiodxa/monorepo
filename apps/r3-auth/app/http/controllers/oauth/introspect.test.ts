@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Client from "~/app/data/client";
 import { createTestApp, withUnreadableSigningKeys } from "~/app/lib/test/http";
 import { withLog } from "~/app/lib/test/logs";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
@@ -44,11 +44,13 @@ async function introspect(
 
 /** Registers a second relying party, a client the seeded tokens were never issued to. */
 async function createOtherClient() {
-	return await Client.create(app.db, {
-		name: "Other App",
-		redirect_uri: "https://other.example.com/callback",
-		logout_uri: "https://other.example.com/logout",
-	});
+	return unwrap(
+		await app.models.clients.create({
+			name: "Other App",
+			redirect_uri: "https://other.example.com/callback",
+			logout_uri: "https://other.example.com/logout",
+		}),
+	);
 }
 
 beforeEach(async () => {

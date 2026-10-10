@@ -16,8 +16,6 @@ import type { SelectSubject } from "~/database/schema";
 
 import { createOidcProvider } from "~/app/auth/repository";
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import Client from "~/app/data/client";
-import Subject from "~/app/data/subject";
 import {
 	getAccessToken,
 	getRefreshToken,
@@ -53,10 +51,10 @@ export const requireSubject: Middleware = async (ctx, next) => {
 
 	if (isAccessTokenExpiringSoon(accessToken)) {
 		try {
-			let client = await Client.findById(ctx.db, AUTH_SERVER_CLIENT_ID);
+			let client = await ctx.models.clients.find(AUTH_SERVER_CLIENT_ID);
 			if (!client) throw new Error("Auth server client not found");
 
-			let tokens = await createOidcProvider(ctx.db).token({
+			let tokens = await createOidcProvider(ctx.models).token({
 				type: "refresh_token",
 				refreshToken,
 				clientId: client.id,
@@ -84,7 +82,7 @@ export const requireSubject: Middleware = async (ctx, next) => {
 	}
 
 	let subjectId = getSubjectFromAccessToken(accessToken);
-	let subject = subjectId ? await Subject.findById(ctx.db, subjectId) : null;
+	let subject = subjectId ? await ctx.models.subjects.find(subjectId) : null;
 
 	if (!subject) {
 		ctx.log.note("session.subject_not_found");

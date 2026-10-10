@@ -8,14 +8,11 @@
  */
 
 import { password } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 
 import type { TestApp } from "~/app/lib/test/http";
 
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import Client from "~/app/data/client";
-import Credential from "~/app/data/credential";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import routes from "~/routes/web";
 
 /** Origin every test request is sent to. */
@@ -58,25 +55,35 @@ export interface SeedOptions {
  * an unclaimed address. The address itself starts verified by default.
  */
 export async function seed(app: TestApp, options: SeedOptions = {}): Promise<Fixtures> {
-	let client = await Client.create(app.db, {
-		name: "Client App",
-		description: "A relying party",
-		redirect_uri: REDIRECT_URI,
-		logout_uri: "https://client.example.com/logout",
-	});
+	let client = unwrap(
+		await app.models.clients.create({
+			name: "Client App",
+			description: "A relying party",
+			redirect_uri: REDIRECT_URI,
+			logout_uri: "https://client.example.com/logout",
+		}),
+	);
 
-	let subject = await Subject.create(app.db, {
-		email_address: EMAIL,
-		display_name: "Jane Doe",
-		username: "jane",
-		avatar: "https://example.com/jane.png",
-		email_verified_at: options.emailVerified === false ? null : Date.now(),
-	});
+	let subject = unwrap(
+		await app.models.subjects.create({
+			email_address: EMAIL,
+			display_name: "Jane Doe",
+			username: "jane",
+			avatar: "https://example.com/jane.png",
+			email_verified_at: options.emailVerified === false ? null : Date.now(),
+		}),
+	);
 
 	let hash = await password.hash(PASSWORD);
 	if (hash.status === "failure") throw new Error("Could not hash the fixture password");
 
-	await Credential.create(app.db, subject.id, hash.data, Date.now());
+	unwrap(
+		await app.models.credentials.create({
+			subject_id: subject.id,
+			password_hash: hash.data,
+			verified_at: Date.now(),
+		}),
+	);
 
 	return { clientId: client.id, clientSecret: client.secret, subjectId: subject.id };
 }
@@ -157,15 +164,14 @@ export interface TokenSet {
  * @returns The session id, which is the refresh token the guard presents.
  */
 export async function openSelfSession(app: TestApp, fixtures: Fixtures): Promise<string> {
-	await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
+	unwrap(await app.models.clients.ensureAuthServerClient(new URL(ORIGIN)));
 
-	let session = await Session.create(
-		app.db,
-		fixtures.subjectId,
-		AUTH_SERVER_CLIENT_ID,
-		null,
-		null,
-		SIGN_IN_SCOPE.split(" "),
+	let session = unwrap(
+		await app.models.sessions.create({
+			subject_id: fixtures.subjectId,
+			client_id: AUTH_SERVER_CLIENT_ID,
+			scope: SIGN_IN_SCOPE,
+		}),
 	);
 
 	return session.id;

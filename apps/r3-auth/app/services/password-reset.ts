@@ -9,7 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { Hex, randomToken, sha256 } from "@sdxc/crypto";
@@ -19,7 +18,6 @@ import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
 import { ISSUER_HOST } from "~/app/config";
-import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
 import { PasswordResetRecordSchema } from "~/app/http/validators/password";
@@ -85,15 +83,10 @@ function resetUrl(token: string): string {
  * the form. Answers identically whether or not the address is registered.
  *
  * @param ctx - The request the form was posted on; its mailer and log are read from it.
- * @param db - Database the address is resolved against.
  * @param email - The address in its canonical form, as `ForgotPasswordSchema` answers it,
  *   which is what the cooldown is keyed on and the subject is looked up by.
  */
-export async function requestPasswordReset(
-	ctx: RequestContext,
-	db: Database,
-	email: string,
-): Promise<void> {
+export async function requestPasswordReset(ctx: RequestContext, email: string): Promise<void> {
 	try {
 		let cooldownDigest = await digest(email);
 		if (!cooldownDigest) {
@@ -111,7 +104,7 @@ export async function requestPasswordReset(
 			expirationTtl: toSeconds(PASSWORD_RESET_COOLDOWN),
 		});
 
-		let subject = await Subject.findByEmail(db, email);
+		let subject = await ctx.models.subjects.findByEmail(email);
 		if (!subject) {
 			ctx.log.note("password_reset.address_unknown");
 			return;

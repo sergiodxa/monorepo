@@ -8,16 +8,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
 import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
-import Client from "~/app/data/client";
-import Grant from "~/app/data/grant";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -54,7 +51,7 @@ describe("GET /account/grants", () => {
 
 	test("says so when nothing has been authorized", async () => {
 		await signIn(app, fixtures);
-		await Grant.deleteBySubjectId(app.db, fixtures.subjectId);
+		await app.models.grants.deleteBySubjectId(fixtures.subjectId);
 
 		let html = await (
 			await app.fetch(new Request(`${ORIGIN}${routes.account.grants.index.href()}`))
@@ -78,8 +75,8 @@ describe("GET /account/grants", () => {
 
 	test("lists this server's own registration without a revoke control", async () => {
 		await signIn(app, fixtures);
-		await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
-		await Grant.findOrCreate(app.db, fixtures.subjectId, AUTH_SERVER_CLIENT_ID);
+		unwrap(await app.models.clients.ensureAuthServerClient(new URL(ORIGIN)));
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, AUTH_SERVER_CLIENT_ID));
 
 		let html = await (
 			await app.fetch(new Request(`${ORIGIN}${routes.account.grants.index.href()}`))
@@ -100,36 +97,38 @@ describe("POST /account/grants intent=revoke", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.grants.index.href());
 
-		let grants = await Grant.findBySubjectId(app.db, fixtures.subjectId);
+		let grants = await app.models.grants.findBySubjectId(fixtures.subjectId);
 		expect(grants).toHaveLength(0);
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("refuses to withdraw this server's own registration", async () => {
 		await signIn(app, fixtures);
-		await Client.ensureAuthServerClient(app.db, new URL(ORIGIN));
-		await Grant.findOrCreate(app.db, fixtures.subjectId, AUTH_SERVER_CLIENT_ID);
+		unwrap(await app.models.clients.ensureAuthServerClient(new URL(ORIGIN)));
+		unwrap(await app.models.grants.findOrCreate(fixtures.subjectId, AUTH_SERVER_CLIENT_ID));
 
 		let response = await post({ intent: "revoke", clientId: AUTH_SERVER_CLIENT_ID });
 
 		expect(response.status).toBe(303);
-		let grants = await Grant.findBySubjectId(app.db, fixtures.subjectId);
+		let grants = await app.models.grants.findBySubjectId(fixtures.subjectId);
 		expect(grants.map((grant) => grant.client_id)).toContain(AUTH_SERVER_CLIENT_ID);
 	});
 
 	test("never withdraws another subject's consent for the same client", async () => {
-		let bystander = await Subject.create(app.db, {
-			email_address: "bystander@example.com",
-			display_name: "Bystander",
-			username: "bystander",
-			avatar: "https://example.com/bystander.png",
-		});
-		await Grant.findOrCreate(app.db, bystander.id, fixtures.clientId);
+		let bystander = unwrap(
+			await app.models.subjects.create({
+				email_address: "bystander@example.com",
+				display_name: "Bystander",
+				username: "bystander",
+				avatar: "https://example.com/bystander.png",
+			}),
+		);
+		unwrap(await app.models.grants.findOrCreate(bystander.id, fixtures.clientId));
 
 		await signIn(app, fixtures);
 		await post({ intent: "revoke", clientId: fixtures.clientId });
 
-		let theirs = await Grant.findBySubjectId(app.db, bystander.id);
+		let theirs = await app.models.grants.findBySubjectId(bystander.id);
 		expect(theirs).toHaveLength(1);
 	});
 
@@ -142,7 +141,7 @@ describe("POST /account/grants intent=revoke", () => {
 		});
 
 		expect(response.status).toBe(303);
-		let grants = await Grant.findBySubjectId(app.db, fixtures.subjectId);
+		let grants = await app.models.grants.findBySubjectId(fixtures.subjectId);
 		expect(grants).toHaveLength(1);
 	});
 
@@ -152,7 +151,7 @@ describe("POST /account/grants intent=revoke", () => {
 		let response = await post({ intent: "revoke-all", clientId: fixtures.clientId });
 
 		expect(response.status).toBe(303);
-		let grants = await Grant.findBySubjectId(app.db, fixtures.subjectId);
+		let grants = await app.models.grants.findBySubjectId(fixtures.subjectId);
 		expect(grants).toHaveLength(1);
 	});
 

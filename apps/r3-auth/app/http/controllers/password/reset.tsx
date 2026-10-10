@@ -16,15 +16,12 @@ import type { RequestContext } from "remix/router";
 
 import { password } from "@sdxc/crypto";
 import { addressKey } from "@sdxc/rate-limit";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { checkNewPassword, passwordRefusalMessage } from "~/app/auth/password-policy";
 import { createOidcProvider } from "~/app/auth/repository";
-import Credential from "~/app/data/credential";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { unsetTokens } from "~/app/http/middleware/session";
@@ -127,7 +124,7 @@ function donePage(ctx: RequestContext): Response | Promise<Response> {
  */
 async function revokeSessions(ctx: RequestContext, subjectId: string) {
 	try {
-		await createOidcProvider(ctx.db).sendBackchannelLogoutTokens(subjectId);
+		await createOidcProvider(ctx.models).sendBackchannelLogoutTokens(subjectId);
 	} catch (error) {
 		ctx.log.warn("password_reset.backchannel_failed", {
 			subject_id: subjectId,
@@ -135,7 +132,7 @@ async function revokeSessions(ctx: RequestContext, subjectId: string) {
 		});
 	}
 
-	return await Session.deleteBySubjectId(ctx.db, subjectId);
+	return await ctx.models.sessions.deleteBySubjectId(subjectId);
 }
 
 /** The token a refused submission should be re-offered with, or `null` when it sent none. */
@@ -204,7 +201,7 @@ export default createController(routes.password.reset, {
 
 			ctx.log.set({ subject: { id: pendingSubjectId } });
 
-			let subject = await Subject.findById(ctx.db, pendingSubjectId);
+			let subject = await ctx.models.subjects.find(pendingSubjectId);
 			if (!subject) {
 				ctx.log.note("password_reset.subject_missing");
 				return invalidPage(ctx);
@@ -247,7 +244,7 @@ export default createController(routes.password.reset, {
 				);
 			}
 
-			await Credential.setVerifiedPassword(ctx.db, subjectId, hash.data, Date.now());
+			unwrap(await ctx.models.credentials.setVerifiedPassword(subjectId, hash.data, Date.now()));
 
 			let revoked = await revokeSessions(ctx, subjectId);
 

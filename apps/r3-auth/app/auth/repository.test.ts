@@ -10,7 +10,10 @@
 import type { Database } from "remix/data-table";
 
 import { createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
+
+import type { AuthModels } from "~/app/models";
 
 let kv = createKVNamespace();
 
@@ -29,14 +32,11 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { createOidcRepository } = await import("~/app/auth/repository");
 let { AUTHZ_CODE_TTL } = await import("~/app/config");
-let { default: Client } = await import("~/app/data/client");
-let { default: Grant } = await import("~/app/data/grant");
-let { default: Session } = await import("~/app/data/session");
-let { default: Subject } = await import("~/app/data/subject");
-let { createTestDatabase } = await import("~/app/lib/test/db");
+let { createTestModels } = await import("~/app/lib/test/models");
 let { clients } = await import("~/database/schema");
 
 let db: Database;
+let models: AuthModels;
 let repository: ReturnType<typeof createOidcRepository>;
 let subjectId: string;
 let clientId: string;
@@ -58,22 +58,26 @@ function authzCodeData(overrides: Record<string, unknown> = {}) {
 beforeEach(async () => {
 	kv = createKVNamespace();
 
-	db = createTestDatabase().db;
-	repository = createOidcRepository(db);
+	({ db, models } = createTestModels());
+	repository = createOidcRepository(models);
 
-	let subject = await Subject.create(db, {
-		email_address: "jane@example.com",
-		display_name: "Jane Doe",
-		username: "jane",
-		avatar: "https://example.com/jane.png",
-	});
+	let subject = unwrap(
+		await models.subjects.create({
+			email_address: "jane@example.com",
+			display_name: "Jane Doe",
+			username: "jane",
+			avatar: "https://example.com/jane.png",
+		}),
+	);
 	subjectId = subject.id;
 
-	let client = await Client.create(db, {
-		name: "Blog",
-		redirect_uri: "https://blog.example.com/auth/callback",
-		logout_uri: "https://blog.example.com/logout",
-	});
+	let client = unwrap(
+		await models.clients.create({
+			name: "Blog",
+			redirect_uri: "https://blog.example.com/auth/callback",
+			logout_uri: "https://blog.example.com/logout",
+		}),
+	);
 	clientId = client.id;
 });
 
@@ -133,7 +137,14 @@ describe("authorization codes", () => {
 
 describe("sessions", () => {
 	test("resolves a refresh token to its session with epoch-ms columns read as dates", async () => {
-		let created = await Session.create(db, subjectId, clientId, "203.0.113.1", "Firefox");
+		let created = unwrap(
+			await models.sessions.create({
+				subject_id: subjectId,
+				client_id: clientId,
+				ip_address: "203.0.113.1",
+				user_agent: "Firefox",
+			}),
+		);
 
 		let session = await repository.findSessionById(created.id);
 
@@ -155,8 +166,12 @@ describe("sessions", () => {
 	});
 
 	test("revokes one session and leaves the subject's other sessions alone", async () => {
-		let first = await Session.create(db, subjectId, clientId, null, null);
-		let second = await Session.create(db, subjectId, clientId, null, null);
+		let first = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
+		let second = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
 
 		await repository.deleteSessionById(first.id);
 
@@ -165,13 +180,26 @@ describe("sessions", () => {
 	});
 
 	test("revokes every session a subject holds, which is what logout means here", async () => {
-		let first = await Session.create(db, subjectId, clientId, null, null);
-		let second = await Session.create(db, subjectId, clientId, null, null);
+		let first = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
+		let second = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
 
 		await repository.deleteSessionBySubjectId(subjectId);
 
 		expect(await repository.findSessionById(first.id)).toBeNull();
 		expect(await repository.findSessionById(second.id)).toBeNull();
+	});
+
+	test("refuses to touch a session revoked since it was read, so no refresh completes on it", async () => {
+		let session = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
+		await repository.deleteSessionById(session.id);
+
+		await expect(repository.touchSession(session.id)).rejects.toThrow();
 	});
 });
 
@@ -205,11 +233,13 @@ describe("clients", () => {
 	 * resolves to one registration, and to the same one on every call.
 	 */
 	test("answers with one stable registration when two clients share a logout URI", async () => {
-		let twin = await Client.create(db, {
-			name: "Blog Mirror",
-			redirect_uri: "https://mirror.example.com/auth/callback",
-			logout_uri: "https://blog.example.com/logout",
-		});
+		let twin = unwrap(
+			await models.clients.create({
+				name: "Blog Mirror",
+				redirect_uri: "https://mirror.example.com/auth/callback",
+				logout_uri: "https://blog.example.com/logout",
+			}),
+		);
 
 		let first = await repository.findClientByLogoutUri("https://blog.example.com/logout");
 		let second = await repository.findClientByLogoutUri("https://blog.example.com/logout");
@@ -235,7 +265,7 @@ describe("grants", () => {
 		let second = await repository.findOrCreateGrant(subjectId, clientId);
 
 		expect(second.id).toBe(first.id);
-		expect(await Grant.countByClientId(db, clientId)).toBe(1);
+		expect(await models.grants.countByClientId(clientId)).toBe(1);
 	});
 });
 
@@ -254,7 +284,9 @@ describe("logout queries", () => {
 	});
 
 	test("returns a session per client that registered the requested channel", async () => {
-		let session = await Session.create(db, subjectId, clientId, null, null);
+		let session = unwrap(
+			await models.sessions.create({ subject_id: subjectId, client_id: clientId }),
+		);
 
 		let backchannel = await repository.findSessionsForBackchannelLogout(subjectId);
 		let frontchannel = await repository.findSessionsForFrontchannelLogout(subjectId);
@@ -268,26 +300,28 @@ describe("logout queries", () => {
 	});
 
 	test("excludes the client that initiated the logout, which needs no notification", async () => {
-		await Session.create(db, subjectId, clientId, null, null);
+		unwrap(await models.sessions.create({ subject_id: subjectId, client_id: clientId }));
 
 		expect(await repository.findSessionsForBackchannelLogout(subjectId, clientId)).toEqual([]);
 		expect(await repository.findSessionsForFrontchannelLogout(subjectId, clientId)).toEqual([]);
 	});
 
 	test("skips clients that registered no URI for the channel being used", async () => {
-		let other = await Client.create(db, {
-			name: "Uptime",
-			redirect_uri: "https://uptime.example.com/auth/callback",
-			logout_uri: "https://uptime.example.com/logout",
-		});
+		let other = unwrap(
+			await models.clients.create({
+				name: "Uptime",
+				redirect_uri: "https://uptime.example.com/auth/callback",
+				logout_uri: "https://uptime.example.com/logout",
+			}),
+		);
 		await db.update(
 			clients,
 			other.id,
 			{ backchannel_logout_uri: "https://uptime.example.com/backchannel" },
 			{ touch: true },
 		);
-		await Session.create(db, subjectId, other.id, null, null);
-		await Session.create(db, subjectId, clientId, null, null);
+		unwrap(await models.sessions.create({ subject_id: subjectId, client_id: other.id }));
+		unwrap(await models.sessions.create({ subject_id: subjectId, client_id: clientId }));
 
 		let backchannel = await repository.findSessionsForBackchannelLogout(subjectId);
 		let frontchannel = await repository.findSessionsForFrontchannelLogout(subjectId);

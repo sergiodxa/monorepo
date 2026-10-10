@@ -11,11 +11,10 @@
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Subject from "~/app/data/subject";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -81,7 +80,7 @@ export default createController(routes.admin.subjectEdit, {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(ctx.db, subjectId);
+			let subject = await ctx.models.subjects.find(subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
@@ -106,7 +105,7 @@ export default createController(routes.admin.subjectEdit, {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(ctx.db, subjectId);
+			let subject = await ctx.models.subjects.find(subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
@@ -129,13 +128,15 @@ export default createController(routes.admin.subjectEdit, {
 
 			let input = result.data;
 
-			await Subject.update(ctx.db, subjectId, {
-				display_name: input.displayName,
-				username: input.username,
-				avatar: input.avatar,
-				role: input.role,
-				email_verified_at: input.emailVerified ? (subject.email_verified_at ?? Date.now()) : null,
-			});
+			unwrap(
+				await ctx.models.subjects.update(subjectId, {
+					display_name: input.displayName,
+					username: input.username,
+					avatar: input.avatar,
+					role: input.role,
+					email_verified_at: input.emailVerified ? (subject.email_verified_at ?? Date.now()) : null,
+				}),
+			);
 
 			ctx.log.note("admin.subject.updated", { role: input.role });
 

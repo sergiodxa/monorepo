@@ -9,7 +9,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { unauthorized } from "@sdxc/http/response/json";
@@ -18,9 +17,10 @@ import { TimingCollector } from "@sdxc/server-timing";
 import { env, waitUntil } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 
+import type { AuthModels } from "~/app/models";
+
 import AccessToken from "~/app/auth/values/access-token";
 import { ISSUER } from "~/app/config";
-import Client from "~/app/data/client";
 import { getSigningKey } from "~/app/services/signing-keys";
 
 declare module "remix/router" {
@@ -64,13 +64,13 @@ function clientCacheKey(clientId: string): string {
  *
  * @param collector - Where each step's duration is recorded for `Server-Timing`.
  * @param request - The request whose bearer token names the client.
- * @param db - Where a client missing from the cache is looked up.
+ * @param models - Where a client missing from the cache is looked up.
  * @returns The calling client, or `null` for a missing, malformed or unverifiable token.
  */
 async function resolveClient(
 	collector: TimingCollector,
 	request: Request,
-	db: Database,
+	models: AuthModels,
 ): Promise<ApiClient | null> {
 	let authorization = request.headers.get("Authorization");
 	if (!authorization) return null;
@@ -109,7 +109,7 @@ async function resolveClient(
 	}
 
 	let client = await collector.measure("db", "authorize.findClientById", async () => {
-		return await Client.findById(db, clientId);
+		return await models.clients.find(clientId);
 	});
 
 	if (!client) return null;
@@ -134,7 +134,7 @@ export function requireApiClient(): Middleware {
 		ctx.timing = collector;
 
 		let client = await collector.measure("auth", "authorize", async () => {
-			return await resolveClient(collector, ctx.request, ctx.db);
+			return await resolveClient(collector, ctx.request, ctx.models);
 		});
 
 		if (!client) {

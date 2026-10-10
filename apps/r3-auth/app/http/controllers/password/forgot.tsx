@@ -105,7 +105,7 @@ export default createController(routes.password.forgot, {
 				);
 			}
 
-			await requestPasswordReset(ctx, ctx.db, result.data.email);
+			await requestPasswordReset(ctx, result.data.email);
 
 			return sentPage(ctx);
 		},

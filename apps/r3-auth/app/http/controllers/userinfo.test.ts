@@ -187,9 +187,7 @@ describe("GET /userinfo", () => {
 
 	test("answers 401 once the subject the token names is gone", async () => {
 		let accessToken = await tokenWithScope("openid email");
-
-		let { default: Subject } = await import("~/app/data/subject");
-		await Subject.delete(app.db, fixtures.subjectId);
+		await app.models.subjects.delete(fixtures.subjectId);
 
 		let response = await userinfo(accessToken);
 

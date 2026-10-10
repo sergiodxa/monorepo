@@ -24,7 +24,7 @@ export default createAction(routes.account.verifyEmailResend, {
 	 * just happened and names an outcome alone, which is safe in a history entry.
 	 */
 	handler: async (ctx) => {
-		let outcome = await sendVerificationEmail(ctx, ctx.db, ctx.subject.id);
+		let outcome = await sendVerificationEmail(ctx, ctx.subject.id);
 
 		ctx.log.set({ email_verification: { outcome } });
 

@@ -9,7 +9,7 @@
 
 import { formatParts } from "@sdxc/dates";
 
-import type { GrantWithClient } from "~/app/data/grant";
+import type { GrantWithClient } from "~/app/models/grants";
 
 /** One row of the authorized-apps list, ready to render. */
 export interface GrantRow {

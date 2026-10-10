@@ -9,12 +9,11 @@
 
 import type { RequestContext } from "remix/router";
 
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import Client from "~/app/data/client";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { CreateClientSchema } from "~/app/http/validators/admin";
@@ -106,13 +105,15 @@ export default createController(routes.admin.clientNew, {
 			}
 
 			let input = result.data;
-			let client = await Client.create(ctx.db, {
-				name: input.name,
-				description: input.description,
-				logo_url: input.logoUrl,
-				redirect_uri: input.redirectUri,
-				logout_uri: input.logoutUri,
-			});
+			let client = unwrap(
+				await ctx.models.clients.create({
+					name: input.name,
+					description: input.description,
+					logo_url: input.logoUrl,
+					redirect_uri: input.redirectUri,
+					logout_uri: input.logoutUri,
+				}),
+			);
 
 			ctx.log.set({ client: { id: client.id } });
 			ctx.log.note("admin.client.created");

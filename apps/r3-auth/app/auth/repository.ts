@@ -8,23 +8,17 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
-
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 
+import type { AuthModels } from "~/app/models";
 import type { SelectClient, SelectSession } from "~/database/schema";
 
 import { OIDC } from "~/app/auth/oidc-provider";
 import { AUTHZ_CODE_TTL, ISSUER } from "~/app/config";
-import Client from "~/app/data/client";
-import Credential from "~/app/data/credential";
-import Grant from "~/app/data/grant";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import { getSigningKey } from "~/app/services/signing-keys";
 
 /**
@@ -112,12 +106,12 @@ function toEngineSubject(subject: {
  * @param excludeClientId - The initiating client, which is notified by the response it already gets.
  */
 async function findSessionsForLogout(
-	db: Database,
+	models: AuthModels,
 	subjectId: string,
 	channel: "backchannel" | "frontchannel",
 	excludeClientId?: string,
 ): Promise<OIDC.SessionWithClient[]> {
-	let sessions = await Session.findBySubjectId(db, subjectId);
+	let sessions = await models.sessions.findBySubjectId(subjectId);
 	let result: OIDC.SessionWithClient[] = [];
 
 	for (let session of sessions) {
@@ -143,18 +137,18 @@ async function findSessionsForLogout(
 }
 
 /**
- * Builds the storage the engine runs on, over a database handle and the KV namespace
- * bound to this worker.
+ * Builds the storage the engine runs on, over the request's models and the KV namespace
+ * bound to this worker. A write the database refuses throws, failing the engine call.
  *
- * @param db - The database every relational lookup and write goes through.
+ * @param models - The models every relational lookup and write goes through.
  */
-export function createOidcRepository(db: Database): OIDC.Repository {
+export function createOidcRepository(models: AuthModels): OIDC.Repository {
 	return {
 		getSigningKey,
 
 		/** Resolves a client id to the registration, or `null` when it is not registered. */
 		async findClientById(clientId) {
-			let client = await Client.findById(db, clientId);
+			let client = await models.clients.find(clientId);
 			return client ? toEngineClient(client) : null;
 		},
 
@@ -163,7 +157,7 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 		 * a post-logout address is verified when nothing else identified a client.
 		 */
 		async findClientByLogoutUri(logoutUri) {
-			let client = await Client.findByLogoutUri(db, logoutUri);
+			let client = await models.clients.findByLogoutUri(logoutUri);
 			return client ? toEngineClient(client) : null;
 		},
 
@@ -186,52 +180,54 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 
 		/** Resolves a refresh token — which is a session id — to its session. */
 		async findSessionById(sessionId) {
-			let session = await Session.findById(db, sessionId);
+			let session = await models.sessions.find(sessionId);
 			return session ? toEngineSession(session) : null;
 		},
 
 		/** Resolves a subject id to the identity claims tokens are built from. */
 		async findSubjectById(subjectId) {
-			let subject = await Subject.findById(db, subjectId);
+			let subject = await models.subjects.find(subjectId);
 			return subject ? toEngineSubject(subject) : null;
 		},
 
 		/** Revokes one session, invalidating the refresh token it is named by. */
 		async deleteSessionById(sessionId) {
-			await Session.deleteById(db, sessionId);
+			await models.sessions.delete(sessionId);
 		},
 
 		/** Revokes every session a subject holds, which is what a logout does here. */
 		async deleteSessionBySubjectId(subjectId) {
-			await Session.deleteBySubjectId(db, subjectId);
+			await models.sessions.deleteBySubjectId(subjectId);
 		},
 
 		/** Records that a session was just refreshed, so the device list shows real activity. */
 		async touchSession(sessionId) {
-			await Session.touch(db, sessionId);
+			unwrap(await models.sessions.touch(sessionId));
 		},
 
 		/** Resolves an email address to a subject, or `null` when nobody registered it. */
 		async findSubjectByEmail(email) {
-			let subject = await Subject.findByEmail(db, email);
+			let subject = await models.subjects.findByEmail(email);
 			return subject ? toEngineSubject(subject) : null;
 		},
 
 		/** Registers a subject. The address is unverified until something proves it. */
 		async createSubject(data) {
-			let subject = await Subject.create(db, {
-				email_address: data.emailAddress,
-				display_name: data.displayName,
-				username: data.username,
-				avatar: data.avatar,
-			});
+			let subject = unwrap(
+				await models.subjects.create({
+					email_address: data.emailAddress,
+					display_name: data.displayName,
+					username: data.username,
+					avatar: data.avatar,
+				}),
+			);
 
 			return toEngineSubject(subject);
 		},
 
 		/** Reads a subject's password credential, or `null` when they sign in another way. */
 		async findCredential(subjectId) {
-			let credential = await Credential.find(db, subjectId);
+			let credential = await models.credentials.findBySubjectId(subjectId);
 			if (!credential) return null;
 
 			return {
@@ -246,23 +242,37 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 		 * verification instant the engine decided on is written as epoch milliseconds.
 		 */
 		async createCredential(subjectId, passwordHash, verifiedAt) {
-			await Credential.create(db, subjectId, passwordHash, verifiedAt?.getTime() ?? null);
+			unwrap(
+				await models.credentials.create({
+					subject_id: subjectId,
+					password_hash: passwordHash,
+					verified_at: verifiedAt?.getTime() ?? null,
+				}),
+			);
 		},
 
 		/** Rewrites the password hash of a credential that already exists. */
 		async updateCredentialPasswordHash(subjectId, passwordHash) {
-			await Credential.updatePasswordHash(db, subjectId, passwordHash);
+			await models.credentials.updatePasswordHash(subjectId, passwordHash);
 		},
 
 		/** Opens a session, whose id is the refresh token the client will present. */
 		async createSession(subjectId, clientId, ip, ua, scope) {
-			let session = await Session.create(db, subjectId, clientId, ip, ua, scope);
+			let session = unwrap(
+				await models.sessions.create({
+					subject_id: subjectId,
+					client_id: clientId,
+					ip_address: ip,
+					user_agent: ua,
+					scope: scope.join(" "),
+				}),
+			);
 			return { id: session.id };
 		},
 
 		/** Records consent for a client, or returns the consent already on file. */
 		async findOrCreateGrant(subjectId, clientId) {
-			let grant = await Grant.findOrCreate(db, subjectId, clientId);
+			let grant = unwrap(await models.grants.findOrCreate(subjectId, clientId));
 			return { id: grant.id, subjectId: grant.subject_id, clientId: grant.client_id };
 		},
 
@@ -279,23 +289,23 @@ export function createOidcRepository(db: Database): OIDC.Repository {
 
 		/** Sessions whose clients registered a back-channel logout URI. */
 		async findSessionsForBackchannelLogout(subjectId, excludeClientId) {
-			return await findSessionsForLogout(db, subjectId, "backchannel", excludeClientId);
+			return await findSessionsForLogout(models, subjectId, "backchannel", excludeClientId);
 		},
 
 		/** Sessions whose clients registered a front-channel logout URI. */
 		async findSessionsForFrontchannelLogout(subjectId, excludeClientId) {
-			return await findSessionsForLogout(db, subjectId, "frontchannel", excludeClientId);
+			return await findSessionsForLogout(models, subjectId, "frontchannel", excludeClientId);
 		},
 	};
 }
 
 /**
- * Builds the OIDC engine bound to the given database and to the current request's log,
+ * Builds the OIDC engine bound to the given models and to the current request's log,
  * so a failure the engine recovers from lands in that request's record; call it from
  * inside a request. The issuer is fixed to {@link ISSUER}, the value relying parties pin.
  *
- * @param db - The database the engine's storage reads and writes through.
+ * @param models - The models the engine's storage reads and writes through.
  */
-export function createOidcProvider(db: Database): OIDC {
-	return new OIDC(ISSUER, createOidcRepository(db), getContext().log);
+export function createOidcProvider(models: AuthModels): OIDC {
+	return new OIDC(ISSUER, createOidcRepository(models), getContext().log);
 }

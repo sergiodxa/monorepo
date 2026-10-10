@@ -1,6 +1,6 @@
 /**
- * Job middleware that opens the app's database and publishes it on the context, so a
- * handler reads `ctx.database`, and a test hands one in instead.
+ * Job middleware that opens the app's database and publishes it on the context, so the
+ * `models()` middleware binds the job's models to it, and a test hands one in instead.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Session from "~/app/data/session";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -57,7 +57,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("answers 200 for a token that never existed", async () => {
@@ -73,13 +73,13 @@ describe("POST /oauth/revoke", () => {
 	test("answers 200 without revoking when the token belongs to another client", async () => {
 		let tokens = await signIn(app, fixtures);
 		app.resetCookies();
-
-		let { default: Client } = await import("~/app/data/client");
-		let other = await Client.create(app.db, {
-			name: "Other",
-			redirect_uri: "https://other.example.com/callback",
-			logout_uri: "https://other.example.com/logout",
-		});
+		let other = unwrap(
+			await app.models.clients.create({
+				name: "Other",
+				redirect_uri: "https://other.example.com/callback",
+				logout_uri: "https://other.example.com/logout",
+			}),
+		);
 
 		let response = await post(
 			routes.oauth.revoke.href(),
@@ -88,7 +88,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("refuses a caller with no credentials", async () => {
@@ -109,7 +109,7 @@ describe("POST /oauth/revoke", () => {
 		);
 
 		expect(response.status).toBe(200);
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
 	});
 });
 

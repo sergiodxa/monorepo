@@ -10,6 +10,7 @@
  */
 
 import { JWK, JWT } from "@sdxc/jwt";
+import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
@@ -17,8 +18,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Client from "~/app/data/client";
-import Session from "~/app/data/session";
 import { createTestApp } from "~/app/lib/test/http";
 import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -106,18 +105,22 @@ async function registerOtherClient(options: OtherClientOptions = {}): Promise<st
 	let frontchannel = options.frontchannel ?? true;
 	let sessionRequired = options.sessionRequired ?? "true";
 
-	let other = await Client.create(app.db, {
-		name: "Other App",
-		redirect_uri: "https://other.example.com/callback",
-		logout_uri: "https://other.example.com/logged-out",
-	});
+	let other = unwrap(
+		await app.models.clients.create({
+			name: "Other App",
+			redirect_uri: "https://other.example.com/callback",
+			logout_uri: "https://other.example.com/logged-out",
+		}),
+	);
 
-	await Client.update(app.db, other.id, {
-		backchannel_logout_uri: backchannel ? OTHER_BACKCHANNEL : null,
-		backchannel_logout_session_required: sessionRequired,
-		frontchannel_logout_uri: frontchannel ? OTHER_FRONTCHANNEL : null,
-		frontchannel_logout_session_required: sessionRequired,
-	});
+	unwrap(
+		await app.models.clients.edit(other.id, {
+			backchannel_logout_uri: backchannel ? OTHER_BACKCHANNEL : null,
+			backchannel_logout_session_required: sessionRequired,
+			frontchannel_logout_uri: frontchannel ? OTHER_FRONTCHANNEL : null,
+			frontchannel_logout_session_required: sessionRequired,
+		}),
+	);
 
 	let url = new URL(authorizeUrl(fixtures));
 	url.searchParams.set("client_id", other.id);
@@ -147,7 +150,7 @@ describe("GET /oidc/logout", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(`${ORIGIN}${routes.authorize.index.href()}`);
 		expect(response.headers.get("clear-site-data")).toBe('"*"');
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("logs out with an id_token_hint and returns to the registered logout URI", async () => {
@@ -169,7 +172,7 @@ describe("GET /oidc/logout", () => {
 		let location = new URL(response.headers.get("location") ?? "");
 		expect(location.origin + location.pathname).toBe("https://client.example.com/logout");
 		expect(location.searchParams.get("state")).toBe("correlation-1");
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("logs out with an expired id_token_hint instead of failing", async () => {
@@ -183,7 +186,7 @@ describe("GET /oidc/logout", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("refuses an id_token_hint this server did not sign with a 400", async () => {
@@ -199,7 +202,7 @@ describe("GET /oidc/logout", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_request" });
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("refuses a malformed id_token_hint with a 400", async () => {
@@ -211,7 +214,7 @@ describe("GET /oidc/logout", () => {
 
 		expect(response.status).toBe(400);
 		expect(await response.json()).toMatchObject({ error: "invalid_request" });
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("honors a registered post_logout_redirect_uri with no hint and no client_id", async () => {
@@ -233,7 +236,7 @@ describe("GET /oidc/logout", () => {
 		expect(location.origin + location.pathname).toBe("https://client.example.com/logout");
 		expect(location.searchParams.get("state")).toBe("correlation-3");
 		expect(response.headers.get("clear-site-data")).toBe('"*"');
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("signs out and stays on this server when the post_logout_redirect_uri is unregistered", async () => {
@@ -249,7 +252,7 @@ describe("GET /oidc/logout", () => {
 		expect(response.headers.get("location")).toBe(`${ORIGIN}${routes.authorize.index.href()}`);
 		expect(response.headers.get("location")).not.toContain("malicious.example.com");
 		expect(response.headers.get("clear-site-data")).toBe('"*"');
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("ignores an unregistered post_logout_redirect_uri sent alongside a hint", async () => {
@@ -268,7 +271,7 @@ describe("GET /oidc/logout", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(`${ORIGIN}${routes.authorize.index.href()}`);
 		expect(response.headers.get("location")).not.toContain("malicious.example.com");
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 
 	test("refuses a client_id that contradicts the id_token_hint", async () => {
@@ -287,10 +290,12 @@ describe("GET /oidc/logout", () => {
 	test("delivers a back-channel logout token to every other relying party", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		await Client.update(app.db, fixtures.clientId, {
-			backchannel_logout_uri: SEEDED_BACKCHANNEL,
-			backchannel_logout_session_required: "true",
-		});
+		unwrap(
+			await app.models.clients.edit(fixtures.clientId, {
+				backchannel_logout_uri: SEEDED_BACKCHANNEL,
+				backchannel_logout_session_required: "true",
+			}),
+		);
 
 		let other = await registerOtherClient({ frontchannel: false });
 
@@ -391,10 +396,12 @@ describe("GET /oidc/logout", () => {
 	test("does not collect a front-channel URL for the initiating client", async () => {
 		let tokens = await signIn(app, fixtures);
 
-		await Client.update(app.db, fixtures.clientId, {
-			frontchannel_logout_uri: "https://client.example.com/frontchannel-logout",
-			frontchannel_logout_session_required: "true",
-		});
+		unwrap(
+			await app.models.clients.edit(fixtures.clientId, {
+				frontchannel_logout_uri: "https://client.example.com/frontchannel-logout",
+				frontchannel_logout_session_required: "true",
+			}),
+		);
 
 		let response = await app.fetch(
 			new Request(logoutUrl({ id_token_hint: tokens.id_token }), { redirect: "manual" }),
@@ -414,7 +421,7 @@ describe("GET /oidc/logout", () => {
 		);
 
 		expect(response.status).toBe(303);
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 	});
 });
 
@@ -433,7 +440,7 @@ describe("POST /oidc/logout", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 		expect(response.headers.get("clear-site-data")).toBe('"*"');
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 
 		expect(delivered.map((entry) => entry.url)).toEqual([OTHER_BACKCHANNEL]);
 	});

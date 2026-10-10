@@ -44,7 +44,7 @@ export default createAction(routes.userinfo, async (ctx) => {
 	}
 
 	try {
-		let { subject, scope } = await createOidcProvider(ctx.db).userinfo({
+		let { subject, scope } = await createOidcProvider(ctx.models).userinfo({
 			accessToken: authorization.slice("Bearer ".length),
 		});
 

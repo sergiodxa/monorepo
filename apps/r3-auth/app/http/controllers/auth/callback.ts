@@ -15,7 +15,6 @@ import { createAction } from "remix/router";
 
 import { createOidcProvider } from "~/app/auth/repository";
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import Client from "~/app/data/client";
 import { getAuthz, setTokens, unsetAuthz } from "~/app/http/middleware/session";
 import routes from "~/routes/web";
 
@@ -49,14 +48,14 @@ export default createAction(routes.auth.callback, async (ctx) => {
 		return badRequest({ message: "Invalid client" });
 	}
 
-	let client = await Client.findById(ctx.db, AUTH_SERVER_CLIENT_ID);
+	let client = await ctx.models.clients.find(AUTH_SERVER_CLIENT_ID);
 	if (!client) {
 		ctx.log.warn("auth.callback.client_missing");
 		return badRequest({ message: "Auth server client not found" });
 	}
 
 	try {
-		let tokens = await createOidcProvider(ctx.db).token({
+		let tokens = await createOidcProvider(ctx.models).token({
 			type: "authorization_code",
 			code,
 			redirectUri: authz.redirectUri,

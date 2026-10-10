@@ -7,12 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { EMAIL, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -124,7 +124,7 @@ describe("POST /account/profile/edit", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.profile.href());
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.display_name).toBe("Jane R. Doe");
 		expect(subject?.username).toBe("janedoe");
 		expect(subject?.avatar).toBe("https://example.com/new.png");
@@ -141,7 +141,7 @@ describe("POST /account/profile/edit", () => {
 			role: "admin",
 		});
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.email_address).toBe(EMAIL);
 		expect(subject?.role).toBe("user");
 	});
@@ -160,7 +160,7 @@ describe("POST /account/profile/edit", () => {
 		expect(html).toContain('value="Jane Kept"');
 		expect(html).toContain('value="not-a-url"');
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.display_name).toBe("Jane Doe");
 	});
 
@@ -175,17 +175,19 @@ describe("POST /account/profile/edit", () => {
 
 		expect(response.status).toBe(400);
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.display_name).toBe("Jane Doe");
 	});
 
 	test("reports a username somebody else already holds instead of failing", async () => {
-		await Subject.create(app.db, {
-			email_address: "other@example.com",
-			display_name: "Other Person",
-			username: "taken",
-			avatar: "https://example.com/other.png",
-		});
+		unwrap(
+			await app.models.subjects.create({
+				email_address: "other@example.com",
+				display_name: "Other Person",
+				username: "taken",
+				avatar: "https://example.com/other.png",
+			}),
+		);
 
 		await signIn(app, fixtures);
 
@@ -199,7 +201,7 @@ describe("POST /account/profile/edit", () => {
 		expect(response.status).toBe(400);
 		expect(html).toContain("already taken");
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.username).toBe("jane");
 	});
 
@@ -213,7 +215,7 @@ describe("POST /account/profile/edit", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 
-		let subject = await Subject.findById(app.db, fixtures.subjectId);
+		let subject = await app.models.subjects.find(fixtures.subjectId);
 		expect(subject?.display_name).toBe("Jane Doe");
 	});
 });

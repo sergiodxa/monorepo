@@ -18,5 +18,5 @@ import routes from "~/routes/web";
  * here; the private half stays in the key store the provider reads from.
  */
 export default createAction(routes.wellKnown.jwks, async (ctx) =>
-	ok(await createOidcProvider(ctx.db).jwks),
+	ok(await createOidcProvider(ctx.models).jwks),
 );

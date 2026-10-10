@@ -14,10 +14,6 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Connection from "~/app/data/connection";
-import Grant from "~/app/data/grant";
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
@@ -39,15 +35,15 @@ export default createController(routes.admin.subject, {
 			let subjectId = ctx.params.subjectId!;
 			ctx.log.set({ admin: { subject_id: subjectId } });
 
-			let subject = await Subject.findById(ctx.db, subjectId);
+			let subject = await ctx.models.subjects.find(subjectId);
 			if (!subject) {
 				ctx.log.note("admin.subject.not_found");
 				return defaultHandler(ctx);
 			}
 
 			let [sessions, connections] = await Promise.all([
-				Session.findBySubjectId(ctx.db, subjectId),
-				Connection.findBySubjectId(ctx.db, subjectId),
+				ctx.models.sessions.findBySubjectId(subjectId),
+				ctx.models.connections.findBySubjectId(subjectId),
 			]);
 
 			ctx.log.set({
@@ -155,22 +151,22 @@ export default createController(routes.admin.subject, {
 			let here = routes.admin.subject.index.href({ subjectId });
 
 			if (intent.intent === "revoke-session") {
-				let revoked = await Session.deleteBySubjectAndId(ctx.db, subjectId, intent.sessionId);
+				let revoked = await ctx.models.sessions.deleteBySubjectAndId(subjectId, intent.sessionId);
 				ctx.log.set({ sessions: { revoked } });
 				ctx.log.note(revoked ? "admin.subject.session_revoked" : "admin.subject.session_not_found");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
 			if (intent.intent === "revoke-all-sessions") {
-				let revoked = await Session.deleteBySubjectId(ctx.db, subjectId);
+				let revoked = await ctx.models.sessions.deleteBySubjectId(subjectId);
 				ctx.log.set({ sessions: { revoked } });
 				ctx.log.note("admin.subject.sessions_revoked");
 				return redirect(here, { status: redirect.Status.SeeOther });
 			}
 
-			await Session.deleteBySubjectId(ctx.db, subjectId);
-			await Grant.deleteBySubjectId(ctx.db, subjectId);
-			await Subject.delete(ctx.db, subjectId);
+			await ctx.models.sessions.deleteBySubjectId(subjectId);
+			await ctx.models.grants.deleteBySubjectId(subjectId);
+			await ctx.models.subjects.delete(subjectId);
 
 			ctx.log.note("admin.subject.deleted");
 

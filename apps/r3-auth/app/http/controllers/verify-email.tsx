@@ -117,7 +117,7 @@ export default createController(routes.verifyEmail, {
 				return outcomePage(ctx, "invalid", 400);
 			}
 
-			let result = await peekVerificationToken(ctx.db, query.data.token);
+			let result = await peekVerificationToken(ctx.models, query.data.token);
 
 			if (isFailure(result)) {
 				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });
@@ -138,7 +138,7 @@ export default createController(routes.verifyEmail, {
 				return outcomePage(ctx, "invalid", 400);
 			}
 
-			let result = await consumeVerificationToken(ctx.db, form.data.token);
+			let result = await consumeVerificationToken(ctx.models, form.data.token);
 
 			if (isFailure(result)) {
 				ctx.log.note("email_verification.token_refused", { reason: result.error.reason });

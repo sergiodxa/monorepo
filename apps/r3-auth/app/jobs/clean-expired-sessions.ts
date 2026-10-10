@@ -10,7 +10,6 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
-import Session from "~/app/data/session";
 import jobs from "~/app/jobs";
 
 /**
@@ -19,11 +18,11 @@ import jobs from "~/app/jobs";
  * it expires.
  */
 export default createJobHandler(jobs.cleanExpiredSessions, async (ctx) => {
-	let expiredSessions = await Session.findExpiredSessions(ctx.database);
+	let expiredSessions = await ctx.models.sessions.expired().all();
 	ctx.log.set({ sessions: { expired: expiredSessions.length } });
 
 	if (expiredSessions.length === 0) return;
 
-	let deletedCount = await Session.deleteExpiredSessions(ctx.database);
+	let deletedCount = await ctx.models.sessions.deleteExpired();
 	ctx.log.set({ sessions: { deleted: deletedCount } });
 });

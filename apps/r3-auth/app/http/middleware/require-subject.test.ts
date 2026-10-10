@@ -78,9 +78,7 @@ describe("requireSubject", () => {
 
 	test("signs the session out when its subject no longer exists", async () => {
 		await signIn(app, fixtures);
-
-		let { default: Subject } = await import("~/app/data/subject");
-		await Subject.delete(app.db, fixtures.subjectId);
+		await app.models.subjects.delete(fixtures.subjectId);
 
 		let response = await app.fetch(
 			new Request(`${ORIGIN}${guarded.subject.href()}`, { redirect: "manual" }),
@@ -97,8 +95,7 @@ describe("requireSubject", () => {
 		 * An access token already past its refresh threshold, paired with a session row
 		 * that has been revoked, drives the guard through refresh, failure, and sign-out.
 		 */
-		let { default: Session } = await import("~/app/data/session");
-		await Session.deleteById(app.db, refreshToken);
+		await app.models.sessions.delete(refreshToken);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
 
 		let response = await app.fetch(
@@ -145,9 +142,7 @@ describe("requireSubject", () => {
 		 * second request through.
 		 */
 		expect((await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`))).status).toBe(200);
-
-		let { default: Session } = await import("~/app/data/session");
-		await Session.deleteById(app.db, refreshToken);
+		await app.models.sessions.delete(refreshToken);
 
 		let second = await app.fetch(
 			new Request(`${ORIGIN}${guarded.subject.href()}`, { redirect: "manual" }),
@@ -159,9 +154,7 @@ describe("requireSubject", () => {
 	test("the refresh keeps the same refresh token, since it is the session row's id", async () => {
 		let refreshToken = await openSelfSession(app, fixtures);
 		await app.signIn(expiredAccessToken(fixtures.subjectId), refreshToken);
-
-		let { default: Session } = await import("~/app/data/session");
-		let before = await Session.findById(app.db, refreshToken);
+		let before = await app.models.sessions.find(refreshToken);
 
 		await app.fetch(new Request(`${ORIGIN}${guarded.subject.href()}`));
 
@@ -170,10 +163,10 @@ describe("requireSubject", () => {
 		 * updates, since replacing it with a new id would silently break every client
 		 * holding this refresh token.
 		 */
-		let after = await Session.findById(app.db, refreshToken);
+		let after = await app.models.sessions.find(refreshToken);
 		expect(after).not.toBeNull();
 		expect(after?.updated_at).toBeGreaterThanOrEqual(before?.updated_at ?? 0);
-		expect(await Session.findBySubjectId(app.db, fixtures.subjectId)).toHaveLength(1);
+		expect(await app.models.sessions.findBySubjectId(fixtures.subjectId)).toHaveLength(1);
 	});
 });
 

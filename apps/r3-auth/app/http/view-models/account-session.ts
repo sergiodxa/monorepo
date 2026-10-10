@@ -13,7 +13,7 @@ import type { DeviceType as ParsedDeviceType } from "@sdxc/user-agent";
 import { formatParts } from "@sdxc/dates";
 import { parse } from "@sdxc/user-agent";
 
-import type { SessionWithClient } from "~/app/data/session";
+import type { SessionWithClient } from "~/app/models/sessions";
 
 /** How long a session may go untouched before the list marks it stale. */
 const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;

@@ -19,7 +19,6 @@ import { createController } from "remix/router";
 
 import { OIDC } from "~/app/auth/oidc-provider";
 import { createOidcProvider } from "~/app/auth/repository";
-import Session from "~/app/data/session";
 import {
 	destroySession,
 	getAccessToken,
@@ -90,7 +89,7 @@ export default createController(routes.oidc.logout, {
 			}
 
 			let logout: Awaited<ReturnType<OIDC["logout"]>>;
-			let provider = createOidcProvider(ctx.db);
+			let provider = createOidcProvider(ctx.models);
 
 			try {
 				logout = await provider.logout({
@@ -112,7 +111,7 @@ export default createController(routes.oidc.logout, {
 
 			await provider.deliverBackchannelLogoutTokens(logout.subjectId, logout.backchannelSessions);
 
-			if (refreshToken) await Session.deleteById(ctx.db, refreshToken);
+			if (refreshToken) await ctx.models.sessions.delete(refreshToken);
 
 			ctx.log.set({
 				subject: { id: logout.subjectId },
@@ -162,10 +161,10 @@ export default createController(routes.oidc.logout, {
 				let subjectId = getSubjectFromAccessToken(accessToken);
 
 				if (subjectId) {
-					await createOidcProvider(ctx.db).sendBackchannelLogoutTokens(subjectId);
+					await createOidcProvider(ctx.models).sendBackchannelLogoutTokens(subjectId);
 				}
 
-				await Session.deleteById(ctx.db, refreshToken);
+				await ctx.models.sessions.delete(refreshToken);
 				ctx.log.set({ subject: { id: subjectId ?? undefined } });
 				ctx.log.note("oidc.logout.completed");
 				unsetTokens();

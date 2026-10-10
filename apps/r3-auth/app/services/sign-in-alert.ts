@@ -12,10 +12,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
-import Subject from "~/app/data/subject";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { NewSignInEmail } from "~/app/emails/new-sign-in";
 import { describeUserAgent } from "~/app/http/view-models/account-session";
@@ -27,16 +25,11 @@ import { describeUserAgent } from "~/app/http/view-models/account-session";
  *
  * @param ctx - The request the sign-in arrived on; its mailer, log, user-agent and
  *   client address are all read from it.
- * @param db - Database the subject's address is read from.
  * @param subjectId - Subject the session was opened for.
  */
-export async function notifyNewSignIn(
-	ctx: RequestContext,
-	db: Database,
-	subjectId: string,
-): Promise<void> {
+export async function notifyNewSignIn(ctx: RequestContext, subjectId: string): Promise<void> {
 	try {
-		let subject = await Subject.findById(db, subjectId);
+		let subject = await ctx.models.subjects.find(subjectId);
 		if (!subject) {
 			ctx.log.warn("sign_in_alert.subject_missing", { subject_id: subjectId });
 			return;

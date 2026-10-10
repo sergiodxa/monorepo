@@ -94,7 +94,7 @@ export default createAction(routes.oauth.token, async (ctx) => {
 	);
 	if (limited) return limited;
 
-	let oidc = createOidcProvider(ctx.db);
+	let oidc = createOidcProvider(ctx.models);
 
 	try {
 		if (body.grant_type === "authorization_code") {

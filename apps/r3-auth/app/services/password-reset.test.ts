@@ -10,14 +10,13 @@
  */
 
 import { password } from "@sdxc/crypto";
+import { unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Credential from "~/app/data/credential";
-import Subject from "~/app/data/subject";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
 import { createTestApp } from "~/app/lib/test/http";
@@ -121,17 +120,25 @@ async function completeReset(newPassword = NEW_PASSWORD): Promise<Response> {
 
 /** Registers a second subject with a password of their own. */
 async function seedOtherSubject(): Promise<string> {
-	let subject = await Subject.create(app.db, {
-		email_address: OTHER_EMAIL,
-		display_name: "John Doe",
-		username: "john",
-		avatar: "https://example.com/john.png",
-	});
+	let subject = unwrap(
+		await app.models.subjects.create({
+			email_address: OTHER_EMAIL,
+			display_name: "John Doe",
+			username: "john",
+			avatar: "https://example.com/john.png",
+		}),
+	);
 
 	let hash = await password.hash(OTHER_PASSWORD);
 	if (hash.status === "failure") throw new Error("Could not hash the second fixture password");
 
-	await Credential.create(app.db, subject.id, hash.data, Date.now());
+	unwrap(
+		await app.models.credentials.create({
+			subject_id: subject.id,
+			password_hash: hash.data,
+			verified_at: Date.now(),
+		}),
+	);
 
 	return subject.id;
 }
@@ -428,18 +435,20 @@ describe("completing a reset", () => {
 	test("marks the credential usable, so the reset is not a dead end", async () => {
 		await completeReset();
 
-		let credential = await Credential.find(app.db, fixtures.subjectId);
+		let credential = await app.models.credentials.findBySubjectId(fixtures.subjectId);
 
 		expect(credential?.verified_at).toBeGreaterThan(0);
 	});
 
 	test("gives a subject with no credential a usable one, since the inbox proved ownership", async () => {
-		let subjectId = await Subject.create(app.db, {
-			email_address: "social@example.com",
-			display_name: "Social Only",
-			username: "social",
-			avatar: "https://example.com/social.png",
-		}).then((subject) => subject.id);
+		let { id: subjectId } = unwrap(
+			await app.models.subjects.create({
+				email_address: "social@example.com",
+				display_name: "Social Only",
+				username: "social",
+				avatar: "https://example.com/social.png",
+			}),
+		);
 
 		await requestReset("social@example.com");
 		let token = tokenFromMail();
@@ -447,7 +456,7 @@ describe("completing a reset", () => {
 
 		expect(response.status).toBe(200);
 
-		let credential = await Credential.find(app.db, subjectId);
+		let credential = await app.models.credentials.findBySubjectId(subjectId);
 		expect(credential).not.toBeNull();
 		expect(credential!.verified_at).toBeGreaterThan(0);
 
@@ -467,7 +476,7 @@ describe("completing a reset", () => {
 		expect(replay.status).toBe(400);
 		expect(await replay.text()).toContain("This link no longer works");
 
-		let credential = await Credential.find(app.db, fixtures.subjectId);
+		let credential = await app.models.credentials.findBySubjectId(fixtures.subjectId);
 		let stillFirst = await password.verify(credential!.password_hash, NEW_PASSWORD);
 		expect(stillFirst.status === "success" && stillFirst.data).toBe(true);
 	});
@@ -477,7 +486,7 @@ describe("completing a reset", () => {
 
 		await completeReset();
 
-		let otherCredential = await Credential.find(app.db, otherId);
+		let otherCredential = await app.models.credentials.findBySubjectId(otherId);
 		let untouched = await password.verify(otherCredential!.password_hash, OTHER_PASSWORD);
 
 		expect(untouched.status === "success" && untouched.data).toBe(true);

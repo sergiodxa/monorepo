@@ -20,7 +20,7 @@ import { checkNewPassword } from "~/app/auth/password-policy";
 import AccessToken from "~/app/auth/values/access-token";
 import IdToken from "~/app/auth/values/id-token";
 import LogoutToken from "~/app/auth/values/logout-token";
-import { SESSION_TTL } from "~/app/data/session";
+import { SESSION_TTL } from "~/app/models/sessions";
 
 /**
  * Bytes of entropy behind the session-state salt, matching the length this

@@ -17,8 +17,6 @@ import { createController } from "remix/router";
 
 import abilities from "~/app/authz/abilities";
 import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import Grant from "~/app/data/grant";
-import Session from "~/app/data/session";
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { GrantsIntentSchema } from "~/app/http/validators/account";
@@ -30,7 +28,7 @@ import routes from "~/routes/web";
 
 async function grantsPage(ctx: RequestContext): Promise<Response> {
 	let subject = ctx.subject;
-	let grants = await Grant.findBySubjectId(ctx.db, subject.id);
+	let grants = await ctx.models.grants.findBySubjectId(subject.id);
 
 	return await ctx.render(
 		<AccountLayout
@@ -108,14 +106,14 @@ export default createController(routes.account.grants, {
 				return backToList();
 			}
 
-			let removed = await Grant.deleteBySubjectAndClient(ctx.db, subject.id, clientId);
+			let removed = await ctx.models.grants.deleteBySubjectAndClient(subject.id, clientId);
 
 			if (removed === 0) {
 				ctx.log.note("grant.not_found");
 				return backToList();
 			}
 
-			let sessions = await Session.deleteBySubjectAndClient(ctx.db, subject.id, clientId);
+			let sessions = await ctx.models.sessions.deleteBySubjectAndClient(subject.id, clientId);
 
 			ctx.log.set({ sessions: { revoked: sessions } });
 			ctx.log.note("grant.revoked");

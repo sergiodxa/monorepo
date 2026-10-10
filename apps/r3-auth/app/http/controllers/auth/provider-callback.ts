@@ -99,13 +99,13 @@ export default createAction(routes.auth.providerCallback, async (ctx) => {
 		return await errorResponse(ctx, authz, identity.error);
 	}
 
-	let subject = await resolveGitHubSubject(ctx.db, ctx.billing, identity.data);
+	let subject = await resolveGitHubSubject(ctx.models, ctx.billing, identity.data);
 	if (isFailure(subject)) {
 		ctx.log.note("auth.provider.subject_unresolved", { code: subject.error.code });
 		return await errorResponse(ctx, authz, subject.error);
 	}
 
-	let oidc = createOidcProvider(ctx.db);
+	let oidc = createOidcProvider(ctx.models);
 	let opBrowserState = oidc.generateOpBrowserState();
 
 	let result = await oidc.loginWithProvider({
@@ -135,9 +135,9 @@ export default createAction(routes.auth.providerCallback, async (ctx) => {
 	ctx.log.set({ subject: { id: subject.data } });
 	ctx.log.note("auth.login_completed");
 
-	await notifyNewSignIn(ctx, ctx.db, subject.data);
+	await notifyNewSignIn(ctx, subject.data);
 
-	await sendVerificationEmail(ctx, ctx.db, subject.data);
+	await sendVerificationEmail(ctx, subject.data);
 
 	if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 

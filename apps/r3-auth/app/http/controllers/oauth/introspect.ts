@@ -48,7 +48,7 @@ export default createAction(routes.oauth.introspect, async (ctx) => {
 	}
 
 	try {
-		let introspection = await createOidcProvider(ctx.db).introspect({
+		let introspection = await createOidcProvider(ctx.models).introspect({
 			clientId: credentials.clientId,
 			clientSecret: credentials.clientSecret,
 			token: result.data.token,

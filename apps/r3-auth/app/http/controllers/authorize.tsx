@@ -15,7 +15,7 @@ import type { RequestContext } from "remix/router";
 import { redirect } from "@sdxc/http/response";
 import { badRequest, notFound } from "@sdxc/http/response/json";
 import { addressKey } from "@sdxc/rate-limit";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
@@ -28,7 +28,6 @@ import { OIDC } from "~/app/auth/oidc-provider";
 import { passwordRefusalMessage } from "~/app/auth/password-policy";
 import { createOidcProvider } from "~/app/auth/repository";
 import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
-import Client from "~/app/data/client";
 import {
 	getAccessToken,
 	getAuthz,
@@ -181,7 +180,7 @@ function signInPage(ctx: RequestContext, client: SelectClient, authz: AuthzState
  * bare `/authorize` reaches the account area through the same flow relying parties use.
  */
 async function selfRedirect(ctx: RequestContext): Promise<Response> {
-	let client = await Client.ensureAuthServerClient(ctx.db, ctx.url);
+	let client = unwrap(await ctx.models.clients.ensureAuthServerClient(ctx.url));
 	let state = generateUUID();
 
 	setAuthz({ clientId: client.id, state, redirectUri: client.redirect_uri });
@@ -229,7 +228,7 @@ export default createController(routes.authorize, {
 			let limited = await spendRateLimit(ctx.limiters.authorize, addressKey(ctx.ip));
 			if (limited) return limited;
 
-			let client = await Client.findById(ctx.db, query.client_id);
+			let client = await ctx.models.clients.find(query.client_id);
 			if (!client) {
 				ctx.log.note("oidc.authorize.client_unknown");
 				return notFound({ message: "Client not found" });
@@ -264,7 +263,7 @@ export default createController(routes.authorize, {
 			let forceLogin = query.prompt?.includes("login") ?? false;
 
 			if (subjectId && !forceLogin) {
-				let code = await createOidcProvider(ctx.db).generateAuthzCode({
+				let code = await createOidcProvider(ctx.models).generateAuthzCode({
 					subjectId,
 					clientId: client.id,
 					ip: ctx.ip?.toString() ?? null,
@@ -340,7 +339,7 @@ export default createController(routes.authorize, {
 				return badRequest({ message: "Invalid request" });
 			}
 
-			let login = await createOidcProvider(ctx.db).loginWithCredential({
+			let login = await createOidcProvider(ctx.models).loginWithCredential({
 				email: result.data.email,
 				password: result.data.password,
 				name: result.data.name,
@@ -362,7 +361,7 @@ export default createController(routes.authorize, {
 				ctx.log.set({ oidc: { error: login.error.code } });
 				ctx.log.note("auth.login_refused");
 
-				let client = await Client.findById(ctx.db, authz.clientId);
+				let client = await ctx.models.clients.find(authz.clientId);
 				if (!client) return badRequest({ message: "Invalid request" });
 
 				let message = signInErrorMessage(ctx, login.error.code);
@@ -377,9 +376,9 @@ export default createController(routes.authorize, {
 			ctx.log.set({ subject: { id: login.data.subjectId } });
 			ctx.log.note("auth.login_completed");
 
-			await notifyNewSignIn(ctx, ctx.db, login.data.subjectId);
+			await notifyNewSignIn(ctx, login.data.subjectId);
 
-			await sendVerificationEmail(ctx, ctx.db, login.data.subjectId);
+			await sendVerificationEmail(ctx, login.data.subjectId);
 
 			if (authz.clientId !== AUTH_SERVER_CLIENT_ID) unsetAuthz();
 

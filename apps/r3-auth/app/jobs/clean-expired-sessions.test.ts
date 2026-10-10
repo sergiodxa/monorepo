@@ -2,7 +2,7 @@
  * Tests for the daily session sweep, run against the real schema: it must delete every
  * row whose expiry has passed, leave every live row alone, and leave the table untouched
  * when nothing has expired. The handler is a function over a context, so each test builds
- * one and hands it the database itself.
+ * one and hands it the database and the models bound to it itself.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,20 +10,23 @@
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
+import { Models } from "@sdxc/data-model";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import Client from "~/app/data/client";
-import Subject from "~/app/data/subject";
+import type { AuthModels } from "~/app/models";
+
 import jobs from "~/app/jobs";
 import handler from "~/app/jobs/clean-expired-sessions";
 import { Database } from "~/app/jobs/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestModels } from "~/app/lib/test/models";
 import { sessions } from "~/database/schema";
 
 let db: DataTableDatabase;
+let models: AuthModels;
 let subjectId: string;
 let clientId: string;
 
@@ -60,6 +63,7 @@ async function run(): Promise<Record<string, unknown>> {
 	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
 	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, db, { property: "database" });
+	ctx.set(Models, models, { property: "models" });
 
 	await log.run(() => handler(ctx));
 
@@ -67,19 +71,23 @@ async function run(): Promise<Record<string, unknown>> {
 }
 
 beforeEach(async () => {
-	db = createTestDatabase().db;
+	({ db, models } = createTestModels());
 
-	let client = await Client.create(db, {
-		name: "Client App",
-		redirect_uri: "https://client.example.com/callback",
-		logout_uri: "https://client.example.com/logout",
-	});
-	let subject = await Subject.create(db, {
-		email_address: "jane@example.com",
-		display_name: "Jane Doe",
-		username: "jane",
-		avatar: "https://example.com/jane.png",
-	});
+	let client = unwrap(
+		await models.clients.create({
+			name: "Client App",
+			redirect_uri: "https://client.example.com/callback",
+			logout_uri: "https://client.example.com/logout",
+		}),
+	);
+	let subject = unwrap(
+		await models.subjects.create({
+			email_address: "jane@example.com",
+			display_name: "Jane Doe",
+			username: "jane",
+			avatar: "https://example.com/jane.png",
+		}),
+	);
 
 	clientId = client.id;
 	subjectId = subject.id;

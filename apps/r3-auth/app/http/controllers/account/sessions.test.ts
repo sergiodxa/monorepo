@@ -8,13 +8,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TestApp } from "~/app/lib/test/http";
 import type { Fixtures } from "~/app/lib/test/seed";
 
-import Session from "~/app/data/session";
-import Subject from "~/app/data/subject";
 import { createTestApp } from "~/app/lib/test/http";
 import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
 import routes from "~/routes/web";
@@ -41,7 +40,14 @@ async function post(fields: Record<string, string>): Promise<Response> {
 
 /** Opens an extra session for the seeded subject, standing in for another device. */
 async function extraSession(ua: string, ip: string): Promise<string> {
-	let session = await Session.create(app.db, fixtures.subjectId, fixtures.clientId, ip, ua);
+	let session = unwrap(
+		await app.models.sessions.create({
+			subject_id: fixtures.subjectId,
+			client_id: fixtures.clientId,
+			ip_address: ip,
+			user_agent: ua,
+		}),
+	);
 	return session.id;
 }
 
@@ -109,7 +115,7 @@ describe("GET /account/sessions", () => {
 
 	test("says so when the subject holds no session", async () => {
 		let tokens = await signIn(app, fixtures);
-		await Session.deleteById(app.db, tokens.refresh_token);
+		await app.models.sessions.delete(tokens.refresh_token);
 
 		let html = await (
 			await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`))
@@ -142,7 +148,7 @@ describe("POST /account/sessions intent=revoke", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
 		expect(response.headers.get("clear-site-data")).toBeNull();
-		expect(await Session.findById(app.db, other)).toBeNull();
+		expect(await app.models.sessions.find(other)).toBeNull();
 
 		let after = await app.fetch(new Request(`${ORIGIN}${routes.account.sessions.index.href()}`));
 		expect(after.status).toBe(200);
@@ -157,7 +163,7 @@ describe("POST /account/sessions intent=revoke", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.authorize.index.href());
 		expect(response.headers.get("clear-site-data")).toBe('"cookies"');
-		expect(await Session.findById(app.db, tokens.refresh_token)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).toBeNull();
 
 		let after = await app.fetch(
 			new Request(`${ORIGIN}${routes.account.sessions.index.href()}`, { redirect: "manual" }),
@@ -175,18 +181,21 @@ describe("POST /account/sessions intent=revoke", () => {
 	});
 
 	test("refuses a session id belonging to another subject", async () => {
-		let victim = await Subject.create(app.db, {
-			email_address: "victim@example.com",
-			display_name: "Victim",
-			username: "victim",
-			avatar: "https://example.com/victim.png",
-		});
-		let victimSession = await Session.create(
-			app.db,
-			victim.id,
-			fixtures.clientId,
-			"192.0.2.1",
-			"Mozilla/5.0",
+		let victim = unwrap(
+			await app.models.subjects.create({
+				email_address: "victim@example.com",
+				display_name: "Victim",
+				username: "victim",
+				avatar: "https://example.com/victim.png",
+			}),
+		);
+		let victimSession = unwrap(
+			await app.models.sessions.create({
+				subject_id: victim.id,
+				client_id: fixtures.clientId,
+				ip_address: "192.0.2.1",
+				user_agent: "Mozilla/5.0",
+			}),
 		);
 
 		await signIn(app, fixtures);
@@ -195,24 +204,27 @@ describe("POST /account/sessions intent=revoke", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
-		expect(await Session.findById(app.db, victimSession.id)).not.toBeNull();
+		expect(await app.models.sessions.find(victimSession.id)).not.toBeNull();
 	});
 
 	test("refuses another subject's session to an admin as well", async () => {
-		let victim = await Subject.create(app.db, {
-			email_address: "victim@example.com",
-			display_name: "Victim",
-			username: "victim",
-			avatar: "https://example.com/victim.png",
-		});
-		let victimSession = await Session.create(
-			app.db,
-			victim.id,
-			fixtures.clientId,
-			"192.0.2.1",
-			"Mozilla/5.0",
+		let victim = unwrap(
+			await app.models.subjects.create({
+				email_address: "victim@example.com",
+				display_name: "Victim",
+				username: "victim",
+				avatar: "https://example.com/victim.png",
+			}),
 		);
-		await Subject.update(app.db, fixtures.subjectId, { role: "admin" });
+		let victimSession = unwrap(
+			await app.models.sessions.create({
+				subject_id: victim.id,
+				client_id: fixtures.clientId,
+				ip_address: "192.0.2.1",
+				user_agent: "Mozilla/5.0",
+			}),
+		);
+		unwrap(await app.models.subjects.update(fixtures.subjectId, { role: "admin" }));
 
 		await signIn(app, fixtures);
 
@@ -220,7 +232,7 @@ describe("POST /account/sessions intent=revoke", () => {
 
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
-		expect(await Session.findById(app.db, victimSession.id)).not.toBeNull();
+		expect(await app.models.sessions.find(victimSession.id)).not.toBeNull();
 	});
 
 	test("accepts an id that no longer exists without erroring", async () => {
@@ -242,7 +254,7 @@ describe("POST /account/sessions intent=revoke", () => {
 		let response = await post({ intent: "delete-everything", sessionId: other });
 
 		expect(response.status).toBe(303);
-		expect(await Session.findById(app.db, other)).not.toBeNull();
+		expect(await app.models.sessions.find(other)).not.toBeNull();
 	});
 });
 
@@ -257,15 +269,15 @@ describe("POST /account/sessions intent=revoke-all", () => {
 		expect(response.status).toBe(303);
 		expect(response.headers.get("location")).toBe(routes.account.sessions.index.href());
 		expect(response.headers.get("clear-site-data")).toBeNull();
-		expect(await Session.findById(app.db, first)).toBeNull();
-		expect(await Session.findById(app.db, second)).toBeNull();
-		expect(await Session.findById(app.db, tokens.refresh_token)).not.toBeNull();
+		expect(await app.models.sessions.find(first)).toBeNull();
+		expect(await app.models.sessions.find(second)).toBeNull();
+		expect(await app.models.sessions.find(tokens.refresh_token)).not.toBeNull();
 	});
 
 	test("signs the browser out when its own session row was already gone", async () => {
 		let tokens = await signIn(app, fixtures);
 		await extraSession("Mozilla/5.0 (X11; Linux) Firefox/121.0", "192.0.2.9");
-		await Session.deleteById(app.db, tokens.refresh_token);
+		await app.models.sessions.delete(tokens.refresh_token);
 
 		let response = await post({ intent: "revoke-all" });
 
@@ -274,23 +286,26 @@ describe("POST /account/sessions intent=revoke-all", () => {
 	});
 
 	test("never touches another subject's sessions", async () => {
-		let bystander = await Subject.create(app.db, {
-			email_address: "bystander@example.com",
-			display_name: "Bystander",
-			username: "bystander",
-			avatar: "https://example.com/bystander.png",
-		});
-		let theirs = await Session.create(
-			app.db,
-			bystander.id,
-			fixtures.clientId,
-			"192.0.2.2",
-			"Mozilla/5.0",
+		let bystander = unwrap(
+			await app.models.subjects.create({
+				email_address: "bystander@example.com",
+				display_name: "Bystander",
+				username: "bystander",
+				avatar: "https://example.com/bystander.png",
+			}),
+		);
+		let theirs = unwrap(
+			await app.models.sessions.create({
+				subject_id: bystander.id,
+				client_id: fixtures.clientId,
+				ip_address: "192.0.2.2",
+				user_agent: "Mozilla/5.0",
+			}),
 		);
 
 		await signIn(app, fixtures);
 		await post({ intent: "revoke-all" });
 
-		expect(await Session.findById(app.db, theirs.id)).not.toBeNull();
+		expect(await app.models.sessions.find(theirs.id)).not.toBeNull();
 	});
 });

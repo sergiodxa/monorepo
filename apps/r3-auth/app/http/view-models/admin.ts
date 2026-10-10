@@ -12,7 +12,7 @@ import type { RequestContext } from "remix/router";
 
 import { formatParts } from "@sdxc/dates";
 
-import type { SessionWithClient } from "~/app/data/session";
+import type { SessionWithClient } from "~/app/models/sessions";
 import type { SelectClient, SelectConnection, SelectSubject } from "~/database/schema";
 
 import routes from "~/routes/web";

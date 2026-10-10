@@ -15,8 +15,6 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import abilities from "~/app/authz/abilities";
-import Client from "~/app/data/client";
-import Grant from "~/app/data/grant";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { ClientsIntentSchema } from "~/app/http/validators/admin";
@@ -38,8 +36,8 @@ export default createController(routes.admin.clients, {
 			let page = readPageNumber(ctx.url);
 
 			let [clients, totalCount] = await Promise.all([
-				Client.findAll(ctx.db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-				Client.count(ctx.db),
+				ctx.models.clients.page({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+				ctx.models.clients.query().count(),
 			]);
 
 			let chrome = toChrome(ctx, {
@@ -115,8 +113,8 @@ export default createController(routes.admin.clients, {
 				return redirect(routes.admin.clients.index.href(), { status: redirect.Status.SeeOther });
 			}
 
-			await Grant.deleteByClientId(ctx.db, clientId);
-			await Client.delete(ctx.db, clientId);
+			await ctx.models.grants.deleteByClientId(clientId);
+			await ctx.models.clients.delete(clientId);
 
 			ctx.log.note("admin.client.deleted");
 

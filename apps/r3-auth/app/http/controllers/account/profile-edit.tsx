@@ -12,14 +12,13 @@ import type { ValidationError } from "@sdxc/validate";
 import type { RequestContext } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
 import type { SelectSubject } from "~/database/schema";
 
-import Subject from "~/app/data/subject";
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { UpdateProfileSchema } from "~/app/http/validators/account";
@@ -150,11 +149,13 @@ export default createController(routes.account.profileEdit, {
 			}
 
 			try {
-				await Subject.update(ctx.db, subject.id, {
-					display_name: result.data.displayName,
-					username: result.data.username,
-					avatar: result.data.avatar,
-				});
+				unwrap(
+					await ctx.models.subjects.update(subject.id, {
+						display_name: result.data.displayName,
+						username: result.data.username,
+						avatar: result.data.avatar,
+					}),
+				);
 			} catch (error) {
 				ctx.log.note("profile.update_rejected", {
 					error: error instanceof Error ? error.message : "Unknown error",

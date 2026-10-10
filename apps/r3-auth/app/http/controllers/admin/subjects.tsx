@@ -9,7 +9,6 @@
 
 import { createAction } from "remix/router";
 
-import Subject from "~/app/data/subject";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import {
@@ -29,8 +28,8 @@ export default createAction(routes.admin.subjects, {
 		let page = readPageNumber(ctx.url);
 
 		let [subjects, totalCount] = await Promise.all([
-			Subject.findAll(ctx.db, { limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
-			Subject.count(ctx.db),
+			ctx.models.subjects.page({ limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE }),
+			ctx.models.subjects.query().count(),
 		]);
 
 		let chrome = toChrome(ctx, {

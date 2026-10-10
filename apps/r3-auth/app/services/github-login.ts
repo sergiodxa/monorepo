@@ -16,18 +16,17 @@
 import type { Billing } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 import type { GitHubAuthProfile } from "remix/auth";
-import type { Database } from "remix/data-table";
 import type { RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
-import { failure, isFailure, success } from "@sdxc/result";
+import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createGitHubAuthProvider, finishExternalAuth, startExternalAuth } from "remix/auth";
 import * as s from "remix/data-schema";
 
-import Connection from "~/app/data/connection";
-import Subject from "~/app/data/subject";
+import type { AuthModels } from "~/app/models";
+
 import Customer from "~/app/services/customer";
 import routes from "~/routes/web";
 
@@ -205,14 +204,14 @@ function externalIdOf(profile: GitHubProfile): string {
  * a first sign-in. An email already tied to a subject stops the sign-in,
  * since address alone proves no ownership and adopting the account on it would be a takeover.
  *
- * @param db - Database the subject and connection are written to.
+ * @param models - The models the subject and connection are written to.
  * @param billing - Billing platform the subject is mirrored into, best effort; a
  * failed mirror is only recorded, since a later lookup by address recovers it.
  * @param identity - The profile GitHub authenticated and its verification verdict.
  * @returns The subject id to issue an authorization code for.
  */
 export async function resolveGitHubSubject(
-	db: Database,
+	models: AuthModels,
 	billing: Billing,
 	identity: GitHubIdentity,
 ): Promise<Result<string, ProviderLoginError>> {
@@ -221,8 +220,8 @@ export async function resolveGitHubSubject(
 	let externalId = externalIdOf(profile);
 
 	let connection =
-		(await Connection.find(db, PROVIDER, externalId)) ??
-		(await Connection.find(db, PROVIDER, String(profile.id)));
+		(await models.connections.findByIdentity(PROVIDER, externalId)) ??
+		(await models.connections.findByIdentity(PROVIDER, String(profile.id)));
 
 	if (connection) {
 		log?.set({ subject: { id: connection.subject_id } });
@@ -238,7 +237,7 @@ export async function resolveGitHubSubject(
 		);
 	}
 
-	if (await Subject.findByEmail(db, email)) {
+	if (await models.subjects.findByEmail(email)) {
 		log?.note("auth.provider.email_registered");
 		return failure(
 			new ProviderLoginError(
@@ -248,18 +247,26 @@ export async function resolveGitHubSubject(
 		);
 	}
 
-	let subject = await Subject.create(db, {
-		email_address: email,
-		display_name: profile.name ?? profile.login,
-		username: profile.login,
-		avatar: profile.avatar_url ?? "",
-		email_verified_at: emailVerified ? Date.now() : null,
-	});
+	let subject = unwrap(
+		await models.subjects.create({
+			email_address: email,
+			display_name: profile.name ?? profile.login,
+			username: profile.login,
+			avatar: profile.avatar_url ?? "",
+			email_verified_at: emailVerified ? Date.now() : null,
+		}),
+	);
 
 	try {
-		await Connection.create(db, PROVIDER, externalId, subject.id);
+		unwrap(
+			await models.connections.create({
+				provider: PROVIDER,
+				external_id: externalId,
+				subject_id: subject.id,
+			}),
+		);
 	} catch {
-		await Subject.delete(db, subject.id);
+		await models.subjects.delete(subject.id);
 		log?.warn("auth.provider.connection_create_failed", { subject_id: subject.id });
 		return failure(new ProviderLoginError("server_error", PROVISIONING_FAILED));
 	}
