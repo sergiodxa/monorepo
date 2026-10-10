@@ -30,6 +30,13 @@ public-target check, the Turnstile challenge and a daily budget of free probes. 
 is `@sdxc/outbound`'s `checkUrl` (ports 80 and 443 only) and `resolveHost`, so a refusal's logged
 `detail` is that package's error code, and its README states the DNS rebinding limit the check carries.
 
+## Data layer
+
+Every table is read and written through an `@sdxc/data-model` model in `app/models/`, bound per
+request and per job as `ctx.models`. Services that read data take those bound models from their
+caller, and the two queries that join several tables into one report shape live in
+`app/repositories/`.
+
 ## Development
 
 ```sh
