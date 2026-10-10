@@ -70,13 +70,22 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   function; MUST NOT pass `key=` to a `remix/component` or `@sdxc/ui` component.
 - MUST validate every external input with `remix/data-schema` through `@sdxc/validate`, in a
   validator module under `app/http/validators/`. Zod MUST NOT be added back.
-- MUST persist through `remix/data-table` (`@sdxc/data-table-d1` in production) from
-  `app/data/`; no ORM, no raw SQL in controllers. DB-facing field names stay `snake_case`.
-- MUST reach the database and the rate limiters off the request context — `ctx.db` and
+- MUST persist through the `@sdxc/data-model` models in `app/models/`, one per table over
+  `remix/data-table` (`@sdxc/data-table-d1` in production); no raw SQL in controllers.
+  DB-facing field names stay `snake_case`. A model owns its table's domain rules (generated
+  ids and client secrets, session expiry, idempotent consent) and never touches i18n, the
+  request or rendering. Writes answer `@sdxc/result` Results; reads answer `null` for a
+  missing row. Register a new model in `app/models/index.ts`, and type anything its
+  callbacks read in `config/model-context.d.ts`.
+- MUST reach the models and the rate limiters off the request context — `ctx.models` and
   `ctx.limiters`, published by the global middleware in `bootstrap/app.tsx` — and MUST keep
   every other request-lifetime value (session, current subject, request log, locale) in
-  middleware and request context the same way. A job reads `ctx.database`. A service
-  nothing substitutes is a module function under `app/lib/` that the caller imports.
+  middleware and request context the same way. A job reads `ctx.models` too, bound by the
+  dispatcher's `models()` middleware. Code outside a context (the OIDC engine's storage, the
+  token-checking services) takes the bound registry as an `AuthModels` argument. A test binds
+  the registry with `createTestModels()` from `app/lib/test/models.ts`, or reads
+  `app.models` off a test app. A service nothing substitutes is a module function under
+  `app/lib/` that the caller imports.
 - MUST bill through `@sdxc/billing`: the provider is constructed once in `app/lib/billing.ts`,
   a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
   Every call answers a `@sdxc/result` `Result`, so a caller branches on `isFailure` and logs
@@ -237,4 +246,4 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
 - Data layer
   - `database/schema.ts` <- The frozen D1 schema
-  - `app/data/` <- One repository class per table
+  - `app/models/` <- One `@sdxc/data-model` model per table, registered in `index.ts`

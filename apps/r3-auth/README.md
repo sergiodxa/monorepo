@@ -263,6 +263,11 @@ six tables (`subjects`, `credentials`, `connections`, `sessions`, `clients`, `gr
 mirrored in `database/schema.ts` and every timestamp column is an integer holding epoch
 milliseconds. `sessions.id` **is** the refresh token handed to clients.
 
+Each table is read and written through an `@sdxc/data-model` model in `app/models/`, bound
+per request and per job as `ctx.models`. The models generate ids, client secrets and session
+expiries on create, so a row written through them always carries what the frozen schema
+leaves to the application.
+
 Migrations are located in `database/migrations/`.
 
 ```bash
