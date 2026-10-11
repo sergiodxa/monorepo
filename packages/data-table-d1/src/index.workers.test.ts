@@ -67,6 +67,18 @@ describe("createD1DatabaseAdapter", () => {
 		db = (await setup()).db;
 	});
 
+	test("an upsert binds its insert values before the update it writes on conflict", async () => {
+		await db.query(users).upsert({ id: 1, email: "first@example.com" }, { update: { email: "x" } });
+		await db
+			.query(users)
+			.upsert({ id: 1, email: "ignored@example.com" }, { update: { email: "second@example.com" } });
+
+		expect(await db.findOne(users, { where: { id: 1 } })).toEqual({
+			id: 1,
+			email: "second@example.com",
+		});
+	});
+
 	test("does not advertise savepoint support", () => {
 		expect(createD1DatabaseAdapter(env.DB).capabilities.savepoints).toBe(false);
 	});

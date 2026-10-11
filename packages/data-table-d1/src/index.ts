@@ -484,6 +484,10 @@ function compileInsertManyStatement(
 	};
 }
 
+/**
+ * Compiles `INSERT … ON CONFLICT`. Placeholders bind by position, so the insert values are
+ * pushed before the conflict clause's, in the order the statement text reads them.
+ */
 function compileUpsertStatement(statement: UpsertOperation, context: CompileContext): CompiledSql {
 	let insertColumns = Object.keys(statement.values);
 	let conflictTarget = statement.conflictTarget ?? [...getTablePrimaryKey(statement.table)];
@@ -492,6 +496,9 @@ function compileUpsertStatement(statement: UpsertOperation, context: CompileCont
 		throw new Error("upsert requires at least one value");
 	}
 
+	let insertValues = insertColumns
+		.map((column) => pushValue(context, statement.values[column]))
+		.join(", ");
 	let updateValues = statement.update ?? statement.values;
 	let updateColumns = Object.keys(updateValues);
 
@@ -519,7 +526,7 @@ function compileUpsertStatement(statement: UpsertOperation, context: CompileCont
 			" (" +
 			insertColumns.map((column) => quotePath(column)).join(", ") +
 			") values (" +
-			insertColumns.map((column) => pushValue(context, statement.values[column])).join(", ") +
+			insertValues +
 			")" +
 			conflictClause +
 			compileReturningClause(statement.returning),
