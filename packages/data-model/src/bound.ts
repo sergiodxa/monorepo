@@ -61,7 +61,10 @@ export function bindModel(config: ModelConfig, session: Session): RuntimeModel {
 				key,
 				value,
 			),
-		find: (key: unknown) => model.query().where(keyWhere(config, key)).first(),
+		find: (key: unknown) => {
+			let where = keyWhere(config, key);
+			return where === null ? Promise.resolve(null) : model.query().where(where).first();
+		},
 		findBy: (where: unknown) => model.query().where(where).first(),
 		create: (values: Row) => createRow(session, config, values),
 		update: (key: unknown, values: Row) => updateRow(session, config, key, values),

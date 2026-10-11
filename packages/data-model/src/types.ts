@@ -349,9 +349,11 @@ export interface StructuralQuery<Row = unknown, Where = never, Column = never> {
 
 /** The scopes `from()` can apply: those built only from `where`, `orderBy`, `limit` and `offset`. */
 type FromScopeCalls<S extends ModelShape, Row, Where, Column> = {
-	[Name in keyof S["scopes"] as ReturnType<S["scopes"][Name]> extends ScopeQuery<string, false>
-		? Name
-		: never]: (...args: ScopeArguments<S["scopes"][Name]>) => FromQuery<S, Row, Where, Column>;
+	[
+		Name in keyof S["scopes"] as ReturnType<S["scopes"][Name]> extends ScopeQuery<string, false>
+			? Name
+			: never
+	]: (...args: ScopeArguments<S["scopes"][Name]>) => FromQuery<S, Row, Where, Column>;
 };
 
 /**
@@ -429,7 +431,10 @@ export interface BoundModelMethods<S extends ModelShape> {
 	from<Row, Where, Column>(
 		query: StructuralQuery<Row, Where, Column>,
 	): FromQuery<S, Row, Where, Column>;
-	/** The row with this primary key among the model's rows, or `null` for one its constraints exclude. */
+	/**
+	 * The row with this primary key among the model's rows; `null` for one its constraints exclude
+	 * or for a key of a shape no primary key takes, such as a list.
+	 */
 	find(key: S["key"]): Promise<S["row"] | null>;
 	/** The first row matching `where`, or `null`. */
 	findBy(where: SingleTableWhere<S["table"]>): Promise<S["row"] | null>;
@@ -441,8 +446,9 @@ export interface BoundModelMethods<S extends ModelShape> {
 	 */
 	update(key: S["key"], values: S["update"]): Promise<Result<S["row"], ValidationError | NotFound>>;
 	/**
-	 * Inserts a row, or writes `update` to the row it conflicts with, in one statement with no
-	 * read before it, and answers the row as it stands. Runs no model callbacks.
+	 * Inserts a row, or writes `update` to the row it conflicts with, in one statement, and
+	 * answers the row as it stands. Runs no model callbacks. A model with constraints reads the
+	 * conflict target first, so a conflicting row outside them is refused and left as it is.
 	 */
 	upsert(
 		values: UpsertValues<S>,
@@ -643,10 +649,9 @@ type RequiredCreateKeys<Row, Constraints, Optional> = Exclude<
 type CreateColumns<Row, Constraints, Optional> = {
 	[Key in RequiredCreateKeys<Row, Constraints, Optional>]: Row[Key];
 } & {
-	[Key in Exclude<
-		keyof Row,
-		keyof Constraints | RequiredCreateKeys<Row, Constraints, Optional>
-	>]?: Row[Key];
+	[
+		Key in Exclude<keyof Row, keyof Constraints | RequiredCreateKeys<Row, Constraints, Optional>>
+	]?: Row[Key];
 };
 
 /** The `meta` half of a `create` input, required when any field is. */

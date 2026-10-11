@@ -223,7 +223,8 @@ async function insert(scoped: Session, config: ModelConfig, values: Row): Promis
 	try {
 		await writeMeta(scoped.db, config, owner, meta);
 	} catch (error) {
-		await queryOf(scoped.db, config.table).where(keyWhere(config, owner)).delete();
+		let where = keyWhere(config, owner);
+		if (where !== null) await queryOf(scoped.db, config.table).where(where).delete();
 		return metaFailure(error, config.metaTable?.tableName ?? config.tableName);
 	}
 
@@ -267,7 +268,9 @@ export function updateRow(
 	values: Row,
 ): Promise<Result<Row, Error>> {
 	return runWrite(session, async (scoped) => {
-		let target = () => modelRows(scoped, config).where(keyWhere(config, key));
+		let where = keyWhere(config, key);
+		if (where === null) return failed(new NotFound(config.name, key));
+		let target = () => modelRows(scoped, config).where(where);
 		let before = await readRow(scoped, config, target());
 		if (before === null) return failed(new NotFound(config.name, key));
 		return change(scoped, config, target, before, values);
@@ -373,10 +376,43 @@ export interface UpsertInput {
 	update?: Row;
 }
 
+/** Whether a row sits inside the model's constraints. */
+function owns(config: ModelConfig, row: Row): boolean {
+	return Object.entries(config.constraints).every(([column, value]) =>
+		sameValue(row[column], value),
+	);
+}
+
+/** The failure an upsert answers for a conflicting row outside the model's constraints. */
+function notOwned(target: readonly string[]): Outcome {
+	return failed(
+		toValidationError([
+			{ message: "Conflicts with a row this model does not own", path: [target[0] ?? "id"] },
+		]),
+	);
+}
+
 /**
- * Inserts a row, or writes `update` to the row it conflicts with, as one
- * `INSERT … ON CONFLICT` statement. An empty `update` keeps the conflicting row as it is, and
- * the row is then read by the conflict columns, so the write always answers the row it found.
+ * The row the insert would conflict with, read for a model with constraints only: the one
+ * statement an upsert runs writes to the conflicting row before anything can inspect it, so a
+ * constrained model trades one read for leaving a row it does not own untouched.
+ */
+async function conflictingRow(
+	session: Session,
+	config: ModelConfig,
+	target: readonly string[],
+	inserted: Row,
+): Promise<Row | null> {
+	if (Object.keys(config.constraints).length === 0) return null;
+	let lookup: Row = {};
+	for (let column of target) lookup[column] = inserted[column];
+	return queryOf(session.db, config.table).where(lookup).first();
+}
+
+/**
+ * Inserts a row, or writes `update` to the row it conflicts with, as one `INSERT … ON CONFLICT`
+ * statement; a model with constraints reads the conflict target first, so a row outside them is
+ * refused before anything is written to it. An empty `update` keeps the conflicting row as it is.
  */
 export function upsertRow(
 	session: Session,
@@ -404,6 +440,9 @@ export function upsertRow(
 			if (Object.keys(update).length > 0) update[updatedAt] ??= now;
 		}
 
+		let conflicting = await conflictingRow(scoped, config, target, inserted);
+		if (conflicting !== null && !owns(config, conflicting)) return notOwned(target);
+
 		let row: Row | null | undefined;
 		try {
 			let result = await queryOf(scoped.db, config.table).upsert(inserted, {
@@ -426,16 +465,7 @@ export function upsertRow(
 			throw new TypeError(`upsert() on ${config.tableName} found no row to answer`);
 		}
 
-		let owned = Object.entries(config.constraints).every(([column, value]) =>
-			sameValue(row[column], value),
-		);
-		if (!owned) {
-			return failed(
-				toValidationError([
-					{ message: "Conflicts with a row this model does not own", path: [target[0] ?? "id"] },
-				]),
-			);
-		}
+		if (!owns(config, row)) return notOwned(target);
 
 		return { result: success(await withMeta(scoped, config, row)), commits: [] };
 	});
@@ -452,7 +482,9 @@ export function deleteRow(
 ): Promise<Result<Row, Error>> {
 	return runWrite(session, async (scoped) => {
 		let ctx = modelContext(scoped);
-		let target = () => modelRows(scoped, config).where(keyWhere(config, key));
+		let where = keyWhere(config, key);
+		if (where === null) return failed(new NotFound(config.name, key));
+		let target = () => modelRows(scoped, config).where(where);
 		let before = await readRow(scoped, config, target());
 		if (before === null) return failed(new NotFound(config.name, key));
 

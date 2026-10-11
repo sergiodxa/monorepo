@@ -242,7 +242,9 @@ export function wrapQuery(target: object, state: QueryState): object {
 				return typeof value === "function" ? (value as Method).bind(object) : value;
 			}
 
-			let scope = state.config.scopes[property];
+			let scope = Object.hasOwn(state.config.scopes, property)
+				? state.config.scopes[property]
+				: undefined;
 			if (scope !== undefined) {
 				return (...args: unknown[]) => {
 					let result = scope(proxy, ...args);

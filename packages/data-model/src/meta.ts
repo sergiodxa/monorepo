@@ -13,6 +13,7 @@ import type { Database } from "remix/data-table";
 import { inList, notInList } from "remix/data-table";
 
 import type { ModelConfig, ResolvedMetaTable, Row } from "./config.js";
+import type { AnyField } from "./fields.js";
 
 import { queryOf } from "./config.js";
 
@@ -36,6 +37,14 @@ function chunk<Value>(values: readonly Value[], size: number): Value[][] {
 		runs.push(values.slice(start, start + step));
 	}
 	return runs;
+}
+
+/**
+ * The field a model declares under `key`, reading its own declarations only, so a key named
+ * like an `Object.prototype` member, such as `constructor`, is undeclared like any other.
+ */
+function fieldOf(config: ModelConfig, key: string): AnyField | undefined {
+	return Object.hasOwn(config.fields, key) ? config.fields[key] : undefined;
 }
 
 /** Orders two column values the way SQLite does: `null` first, numbers numerically, then text. */
@@ -69,7 +78,7 @@ function decode(config: ModelConfig, rows: Row[], keys: readonly string[]): Row 
 	if (meta === undefined) return decoded;
 
 	for (let key of keys) {
-		let field = config.fields[key];
+		let field = fieldOf(config, key);
 		if (field === undefined) continue;
 
 		let texts = rows.filter((row) => row[meta.key] === key).map((row) => String(row[meta.value]));
@@ -171,7 +180,9 @@ export function validateMeta(
 /** The declared keys a write's `meta` names, `null` values included. */
 export function namedKeys(config: ModelConfig, meta: Row | undefined): string[] {
 	if (meta === undefined) return [];
-	return Object.keys(meta).filter((key) => key in config.fields && meta[key] !== undefined);
+	return Object.keys(meta).filter(
+		(key) => fieldOf(config, key) !== undefined && meta[key] !== undefined,
+	);
 }
 
 /**
@@ -197,7 +208,7 @@ export async function writeMeta(
 	let rows: Row[] = [];
 	for (let key of keys) {
 		let value = meta[key];
-		let field = config.fields[key];
+		let field = fieldOf(config, key);
 		if (value === null || field === undefined) continue;
 
 		let encoded = field.encode(value);
@@ -280,7 +291,7 @@ function intersect(
  * field. A value the field cannot encode matches nothing, so it is left out.
  */
 export function filterTexts(config: ModelConfig, filter: MetaFilter): string[] {
-	let field = config.fields[filter.key];
+	let field = fieldOf(config, filter.key);
 	let texts: string[] = [];
 	for (let value of filter.values) {
 		let encoded = field?.isList ? field.encode([value]) : field?.encode(value);

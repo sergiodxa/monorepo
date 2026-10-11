@@ -179,7 +179,7 @@ function checkScopeNames(scopes: Record<string, RuntimeScope>, existing: Record<
 		if (RESERVED_NAMES.has(name)) {
 			throw new TypeError(`A scope cannot be named "${name}", which a query already defines`);
 		}
-		if (name in existing) {
+		if (Object.hasOwn(existing, name)) {
 			throw new TypeError(`The scope "${name}" is already defined by the base model`);
 		}
 	}
@@ -268,7 +268,7 @@ function checkMethodNames(methods: MethodSet, base: readonly MethodSet[]) {
 		if (RESERVED_NAMES.has(name)) {
 			throw new TypeError(`A method cannot be named "${name}", which a model already defines`);
 		}
-		if (base.some((set) => name in set)) {
+		if (base.some((set) => Object.hasOwn(set, name))) {
 			throw new TypeError(`The method "${name}" is already defined by the base model`);
 		}
 	}
@@ -287,20 +287,29 @@ export function scopeQuery<Query>(query: Query, config: ModelConfig, unscoped = 
 	return scoped as Query;
 }
 
+/** Whether a value is one a key column holds and the database binds: no object or function. */
+function isScalar(value: unknown): boolean {
+	return value === null || (typeof value !== "object" && typeof value !== "function");
+}
+
 /**
- * The `WHERE` object a primary-key input selects, for a single or a composite key. A single
- * key reads either as its value or as an object naming its column, the two forms data-table's
- * `PrimaryKeyInput` types it as depending on how the table declares its key.
+ * The `WHERE` object a primary-key input selects, or `null` for an input no key takes, such as
+ * a list or an object as a key value. A single key reads as its value or as an object naming
+ * its column, as data-table's `PrimaryKeyInput` types it; a composite key reads as an object.
  */
-export function keyWhere(config: ModelConfig, key: unknown): Row {
+export function keyWhere(config: ModelConfig, key: unknown): Row | null {
 	let [column] = config.primaryKey;
 	if (config.primaryKey.length === 1 && column !== undefined) {
-		let named = typeof key === "object" && key !== null && !Array.isArray(key);
-		return { [column]: named ? (key as Row)[column] : key };
+		if (Array.isArray(key)) return null;
+		let value = typeof key === "object" && key !== null ? (key as Row)[column] : key;
+		return isScalar(value) ? { [column]: value } : null;
 	}
 
-	let object = (key ?? {}) as Row;
+	let object = typeof key === "object" && key !== null && !Array.isArray(key) ? (key as Row) : {};
 	let where: Row = {};
-	for (let name of config.primaryKey) where[name] = object[name];
+	for (let name of config.primaryKey) {
+		if (!isScalar(object[name])) return null;
+		where[name] = object[name];
+	}
 	return where;
 }

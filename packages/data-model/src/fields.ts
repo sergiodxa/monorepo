@@ -182,13 +182,23 @@ const TIMESTAMP_CODEC: Codec<string> = {
 	},
 };
 
-/** Accepts absolute URLs, stored as written. */
+/** Whether text is an absolute URL a browser follows as a link: `http` or `https` only. */
+function isWebUrl(text: string): boolean {
+	if (!URL.canParse(text)) return false;
+	let { protocol } = new URL(text);
+	return protocol === "http:" || protocol === "https:";
+}
+
+/**
+ * Accepts absolute `http` and `https` URLs, stored as written, so a stored value is safe to
+ * render as a link; a `javascript:` or `data:` URL is refused on write and reads as missing.
+ */
 const URL_CODEC: Codec<string> = {
 	encode: (value) =>
-		typeof value === "string" && URL.canParse(value)
+		typeof value === "string" && isWebUrl(value)
 			? { ok: true, text: value }
-			: { ok: false, message: "Expected an absolute URL" },
-	decode: (text) => (URL.canParse(text) ? text : undefined),
+			: { ok: false, message: "Expected an http or https URL" },
+	decode: (text) => (isWebUrl(text) ? text : undefined),
 };
 
 /**
@@ -280,7 +290,7 @@ export const field = {
 	boolean: (): Field<boolean, false, false> => scalar(BOOLEAN_CODEC, false, false, undefined),
 	/** An instant, accepted as a `Date` or a parseable string and read back as ISO 8601. */
 	timestamp: (): Field<string, false, false> => scalar(TIMESTAMP_CODEC, false, false, undefined),
-	/** An absolute URL, stored as written. */
+	/** An absolute `http` or `https` URL, stored as written. */
 	url: (): Field<string, false, false> => scalar(URL_CODEC, false, false, undefined),
 	/**
 	 * One of a fixed set of strings; a stored value outside the set reads as missing.

@@ -265,14 +265,16 @@ of the base's is a type error.
 | `load()`               | The bound model once a lazily loaded module has loaded     |
 
 A single key is the column's value, also for a table declaring `primaryKey: ["id"]`; a
-composite key is an object. Every `update` sets the table's `updatedAt` column, so
+composite key is an object. A key of any other shape, such as a list, answers `null` from
+`find` and `NotFound` from `update` and `delete`. Every `update` sets the table's `updatedAt` column, so
 `update(key, {})` marks a row as changed, running the update callbacks.
 
-`upsert(values, { conflict, update })` is one `INSERT … ON CONFLICT` statement with no read
-before it, so it runs no model callbacks and supplies its own `id`. `conflict` defaults to the
-primary key; `update` defaults to the values without the conflict and key columns and
-`createdAt`, and `update: {}` keeps a conflicting row as it is. It answers the row as it
-stands, and refuses a conflicting row outside the model's constraints.
+`upsert(values, { conflict, update })` is one `INSERT … ON CONFLICT` statement, so it runs no
+model callbacks and supplies its own `id`. `conflict` defaults to the primary key; `update`
+defaults to the values without the conflict and key columns and `createdAt`, and `update: {}`
+keeps a conflicting row as it is. It answers the row as it stands. A model with constraints
+reads the conflict target first, so a conflicting row outside them is refused and left as it
+is.
 
 A bulk write built from a query, `users.inTeam(teamId).update({ ... }, { touch: false })`, is
 data-table's own statement and runs no model callbacks; `touch: false` leaves `updatedAt` as it
@@ -287,8 +289,9 @@ every entry; `models.transaction(fn)` opens a unit of work across them.
 
 ### `field`
 
-Meta field codecs: `text`, `integer`, `number`, `boolean`, `timestamp`, `url`, `enum(values)`,
-`json(schema)` and `list(field)`. Every field reads as `T | undefined` unless it declares
+Meta field codecs: `text`, `integer`, `number`, `boolean`, `timestamp`, `url` (`http` and
+`https` only, so a stored value is safe to link to), `enum(values)`, `json(schema)` and
+`list(field)`. Every field reads as `T | undefined` unless it declares
 `.default(value)`; `.required()` makes `create` refuse a write without it.
 
 ### `models(registry, context, options?)` from `./router` and `./jobs`

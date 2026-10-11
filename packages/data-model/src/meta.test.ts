@@ -227,7 +227,7 @@ describe("writing", () => {
 			{ message: "Required", path: ["meta", "slug"] },
 		]);
 		expect(isFailure(invalid) && invalid.error.issues).toEqual([
-			{ message: "Expected an absolute URL", path: ["meta", "canonical_url"] },
+			{ message: "Expected an http or https URL", path: ["meta", "canonical_url"] },
 		]);
 		expect(await articles.query().count()).toBe(0);
 	});
@@ -315,6 +315,51 @@ describe("writing", () => {
 		await articles.update(article.id, { meta: { title: "T" } });
 
 		expect(await metaRows(db, article.id, "legacy")).toBe(1);
+	});
+
+	test("a key named like an Object.prototype member is undeclared, so it is left alone", async () => {
+		let { db } = openDatabase();
+		let { articles } = await setup(db);
+		let meta = JSON.parse(
+			'{"slug": "a", "constructor": "x", "__proto__": "y", "toString": "z"}',
+		) as { slug: string };
+
+		let article = unwrap(await articles.create({ author_id: "author", published_at: null, meta }));
+
+		expect(article.meta.slug).toBe("a");
+		expect(await metaRows(db, article.id, "constructor")).toBe(0);
+		expect(await articles.whereMeta("constructor" as never, "x" as never).count()).toBe(0);
+		expect((await articles.withMeta(["constructor"] as never).find(article.id))?.meta).toEqual({});
+	});
+
+	test("a url field takes http and https URLs only, so a stored value is safe to link to", async () => {
+		let { db } = openDatabase();
+		let { articles } = await setup(db);
+
+		let refused = await articles.create({
+			author_id: "author",
+			published_at: null,
+			meta: { slug: "a", canonical_url: "javascript:alert(1)" },
+		});
+		let article = unwrap(
+			await articles.create({
+				author_id: "author",
+				published_at: null,
+				meta: { slug: "b", canonical_url: "https://example.com/a" },
+			}),
+		);
+		await db.create(postMeta, {
+			id: "zz_1",
+			post_id: article.id,
+			key: "canonical_url",
+			value: "data:text/html,<script>alert(1)</script>",
+		});
+
+		expect(isFailure(refused) && refused.error.issues).toEqual([
+			{ message: "Expected an http or https URL", path: ["meta", "canonical_url"] },
+		]);
+		expect(article.meta.canonical_url).toBe("https://example.com/a");
+		expect((await articles.find(article.id))?.meta.canonical_url).toBeUndefined();
 	});
 
 	test("afterCommit names changed meta keys as meta.<key>", async () => {

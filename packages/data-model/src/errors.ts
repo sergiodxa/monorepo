@@ -12,7 +12,10 @@ import type { StandardSchemaV1 } from "@standard-schema/spec";
 import { ValidationError } from "@sdxc/validate";
 import { DataTableConstraintError, DataTableValidationError } from "remix/data-table";
 
-/** No row with the given key exists among the rows the model reads. */
+/**
+ * No row with the given key exists among the rows the model reads, or the key has a shape no
+ * primary key takes, such as a list.
+ */
 export class NotFound extends Error {
 	override name = "NotFound";
 	/** The model's name, such as `users` or `posts.article`. */

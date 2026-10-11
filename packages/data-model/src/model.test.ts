@@ -231,6 +231,25 @@ describe("writes", () => {
 		expect(isFailure(deleted) && deleted.error).toBeInstanceOf(NotFound);
 	});
 
+	test("a key of a shape no primary key takes answers null or NotFound and writes nothing", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		let a = unwrap(await users.create({ email: "a@example.com", name: "A" }));
+		let b = unwrap(await users.create({ email: "b@example.com", name: "B" }));
+
+		let updated = await users.update([a.id, b.id] as never, { name: "X" });
+		let deleted = await users.delete([a.id, b.id] as never);
+
+		expect(await users.find([a.id] as never)).toBeNull();
+		expect(await users.find({ id: { eq: a.id } } as never)).toBeNull();
+		expect(isFailure(updated) && updated.error).toBeInstanceOf(NotFound);
+		expect(isFailure(deleted) && deleted.error).toBeInstanceOf(NotFound);
+		expect((await users.query().orderBy("email", "asc").all()).map((user) => user.name)).toEqual([
+			"A",
+			"B",
+		]);
+	});
+
 	test("delete answers the deleted row, and a beforeDelete refusal keeps it", async () => {
 		let { db, Users, calls } = setup();
 		let users = Users.bind({ db });
@@ -501,24 +520,51 @@ describe("writes", () => {
 		expect(operations.map((operation) => operation.kind)).toEqual(["upsert"]);
 	});
 
-	test("upsert on a sub-model refuses a conflicting row of another type", async () => {
+	test("upsert on a sub-model refuses a conflicting row of another type and leaves it as it is", async () => {
 		let { db, Posts, Articles, Users } = setup();
 		let author = unwrap(await Users.bind({ db }).create({ email: "a@example.com", name: "A" }));
-		await Posts.bind({ db }).create({
-			id: "p1",
-			type: "like",
-			author_id: author.id,
-			published_at: null,
-		});
-
-		let result = await Articles.bind({ db }).upsert(
-			{ id: "p1", author_id: author.id },
-			{ update: {} },
+		let other = unwrap(await Users.bind({ db }).create({ email: "b@example.com", name: "B" }));
+		let like = unwrap(
+			await Posts.bind({ db }).create({
+				id: "p1",
+				type: "like",
+				author_id: author.id,
+				published_at: null,
+			}),
 		);
+
+		let result = await Articles.bind({ db }).upsert({
+			id: "p1",
+			author_id: other.id,
+			published_at: "2026-01-01T00:00:00.000Z",
+		});
 
 		expect(isFailure(result) && result.error.issues).toEqual([
 			{ message: "Conflicts with a row this model does not own", path: ["id"] },
 		]);
+		expect(await Posts.bind({ db }).unscoped().where({ id: "p1" }).first()).toEqual(like);
+	});
+
+	test("upsert on a sub-model writes to a conflicting row of its own type", async () => {
+		let { db, Articles, Users } = setup();
+		let author = unwrap(await Users.bind({ db }).create({ email: "a@example.com", name: "A" }));
+		let articles = Articles.bind({ db });
+		unwrap(await articles.upsert({ id: "p1", author_id: author.id, published_at: null }));
+
+		let updated = unwrap(
+			await articles.upsert({
+				id: "p1",
+				author_id: author.id,
+				published_at: "2026-01-01T00:00:00.000Z",
+			}),
+		);
+
+		expect(updated).toMatchObject({
+			id: "p1",
+			type: "article",
+			published_at: "2026-01-01T00:00:00.000Z",
+		});
+		expect(await articles.query().count()).toBe(1);
 	});
 
 	test("update with no values touches updatedAt and runs the update callbacks", async () => {
