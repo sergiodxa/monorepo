@@ -44,7 +44,7 @@ export const Devices = createModel(pushSubscriptions, {
 			let values = { ...keys, failure_count: 0 };
 
 			if (existing === null) return unwrap(await this.create({ endpoint, ...values }));
-			return unwrap(await this.update({ id: existing.id }, values));
+			return unwrap(await this.update(existing.id, values));
 		},
 	},
 

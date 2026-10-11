@@ -104,10 +104,10 @@ describe("folders", () => {
 		await post("p1", feed.id);
 		await models.posts.ofSubscription(feed.id).update({ folder_id: folder.id });
 
-		unwrap(await models.folders.delete({ id: folder.id }));
+		unwrap(await models.folders.delete(folder.id));
 
-		expect((await models.subscriptions.find({ id: feed.id }))?.folder_id).toBeNull();
-		expect((await models.posts.find({ id: "p1" }))?.folder_id).toBeNull();
+		expect((await models.subscriptions.find(feed.id))?.folder_id).toBeNull();
+		expect((await models.posts.find("p1"))?.folder_id).toBeNull();
 	});
 });
 
@@ -123,7 +123,7 @@ describe("tags", () => {
 		expect(applied.created_at).toBeGreaterThan(0);
 		expect((await models.tags.bySlug("rust"))?.id).toBe(tag.id);
 
-		unwrap(await models.tags.delete({ id: tag.id }));
+		unwrap(await models.tags.delete(tag.id));
 
 		expect(await models.itemTags.onPost("p1").count()).toBe(0);
 		expect(await models.posts.saved().count()).toBe(1);
@@ -134,7 +134,7 @@ describe("devices", () => {
 	test("registers an endpoint once and clears its failures on the next registration", async () => {
 		let keys = { p256dh: "k", auth: "a", vapid_key: null, user_agent: null, locale: "en" };
 		let first = await models.devices.register("https://push.example.com/1", keys);
-		await models.devices.update({ id: first.id }, { failure_count: 3 });
+		await models.devices.update(first.id, { failure_count: 3 });
 
 		let again = await models.devices.register("https://push.example.com/1", {
 			...keys,

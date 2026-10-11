@@ -434,14 +434,14 @@ async function deliverTo(
 	});
 
 	if (outcome === "accepted") {
-		await models.devices.update({ id: device.id }, { last_delivered_at: now, failure_count: 0 });
+		await models.devices.update(device.id, { last_delivered_at: now, failure_count: 0 });
 
 		return true;
 	}
 
 	if (outcome === "expired") {
 		record("alarm", { event: "push.expired", status, failureCount: device.failure_count });
-		await models.devices.delete({ id: device.id });
+		await models.devices.delete(device.id);
 
 		return false;
 	}
@@ -460,12 +460,12 @@ async function deliverTo(
 
 	if (failures >= PUSH_FAILURE_LIMIT) {
 		record("alarm", { event: "push.expired", status, failureCount: failures });
-		await models.devices.delete({ id: device.id });
+		await models.devices.delete(device.id);
 
 		return false;
 	}
 
-	await models.devices.update({ id: device.id }, { failure_count: failures });
+	await models.devices.update(device.id, { failure_count: failures });
 
 	return false;
 }

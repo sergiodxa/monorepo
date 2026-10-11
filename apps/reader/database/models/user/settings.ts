@@ -61,7 +61,7 @@ export const Settings = createModel(settings, {
 		 * caller provisions it first; writing to a missing one is a programming error.
 		 */
 		async write(changes: SettingsChanges): Promise<SelectSettings> {
-			return unwrap(await this.update({ id: SETTINGS_ID }, changes));
+			return unwrap(await this.update(SETTINGS_ID, changes));
 		},
 	},
 });

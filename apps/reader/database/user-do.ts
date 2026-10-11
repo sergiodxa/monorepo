@@ -1547,7 +1547,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One followed feed, or `null` when this reader does not follow it. */
 	async getFeed(feedId: string): Promise<UserStore.FeedSummary | null> {
-		let row = await this.#models.subscriptions.find({ id: feedId });
+		let row = await this.#models.subscriptions.find(feedId);
 		if (row === null || row.unfollowed_at !== null) return null;
 
 		let unread = await this.#models.posts.ofSubscription(feedId).unread().count();
@@ -1691,7 +1691,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let checked = await userStore(subject).checkFeedNow(feedId);
 	 */
 	async checkFeedNow(feedId: string): Promise<UserStore.CheckResult> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		/**
@@ -1735,7 +1735,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * the feed's name, marked as no longer followed so every list leaves it out.
 	 */
 	async unfollowFeed(feedId: string): Promise<boolean> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null) return false;
 
 		let dropped = and({ feed_id: feedId }, isNull("saved_at"));
@@ -1758,7 +1758,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (saved > 0) {
 			await this.#models.subscriptions.write(feedId, { unfollowed_at: Date.now() });
 		} else {
-			unwrap(await this.#models.subscriptions.delete({ id: feedId }));
+			unwrap(await this.#models.subscriptions.delete(feedId));
 		}
 
 		/**
@@ -1922,7 +1922,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async setVelocity(feedId: string, velocity: string): Promise<UserStore.VelocityResult> {
 		if (!isVelocity(velocity)) return { ok: false, reason: "invalid-velocity" };
 
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		let updated = await this.#models.subscriptions.write(feedId, { velocity });
@@ -1945,7 +1945,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * reader does not hold.
 	 */
 	async openPost(itemId: string): Promise<UserStore.OpenedPost | null> {
-		let row = await this.#models.posts.find({ id: itemId });
+		let row = await this.#models.posts.find(itemId);
 		if (row === null) return null;
 
 		let [labels, feed, extraction] = await Promise.all([
@@ -1981,7 +1981,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param saved - Whether to keep it; `false` puts it back under whatever rule would take it.
 	 */
 	async saveItem(itemId: string, saved = true): Promise<UserStore.SaveResult> {
-		let item = await this.#models.posts.find({ id: itemId });
+		let item = await this.#models.posts.find(itemId);
 		if (item === null) return { ok: false, reason: "not-found" };
 
 		if (!saved) {
@@ -1990,7 +1990,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			 * to whatever rule would have taken it, unlabelled.
 			 */
 			await this.#forgetTags([itemId]);
-			unwrap(await this.#models.posts.update({ id: itemId }, { saved_at: null }));
+			unwrap(await this.#models.posts.update(itemId, { saved_at: null }));
 			await this.#dropIfSpent(item.feed_id);
 
 			return { ok: true, saved: false };
@@ -2008,7 +2008,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 			return { ok: false, reason: "full", limit: limitRefusal(tier, "saved", kept) };
 		}
 
-		unwrap(await this.#models.posts.update({ id: itemId }, { saved_at: Date.now() }));
+		unwrap(await this.#models.posts.update(itemId, { saved_at: Date.now() }));
 
 		return { ok: true, saved: true };
 	}
@@ -2124,7 +2124,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One folder, or `null` when the reader has none by that id. */
 	async getFolder(folderId: string): Promise<UserStore.Folder | null> {
-		let row = await this.#models.folders.find({ id: folderId });
+		let row = await this.#models.folders.find(folderId);
 		return row === null ? null : toFolder(row);
 	}
 
@@ -2157,13 +2157,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let name = title.trim();
 		if (name.length === 0) return { ok: false, reason: "invalid-title" };
 
-		let folder = await this.#models.folders.find({ id: folderId });
+		let folder = await this.#models.folders.find(folderId);
 		if (folder === null) return { ok: false, reason: "not-found" };
 
 		let taken = await this.#models.folders.byTitle(name);
 		if (taken !== null && taken.id !== folderId) return { ok: false, reason: "duplicate-title" };
 
-		let renamed = unwrap(await this.#models.folders.update({ id: folderId }, { title: name }));
+		let renamed = unwrap(await this.#models.folders.update(folderId, { title: name }));
 		this.#record("job", { event: "user.folder", action: "rename", folderId });
 
 		return { ok: true, folder: toFolder(renamed) };
@@ -2176,13 +2176,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param folderId - The folder to delete.
 	 */
 	async deleteFolder(folderId: string): Promise<UserStore.FolderRemoval> {
-		let folder = await this.#models.folders.find({ id: folderId });
+		let folder = await this.#models.folders.find(folderId);
 		if (folder === null) return { ok: false, reason: "not-found" };
 
 		let filed = await this.#models.subscriptions.inFolder(folderId).count();
 
 		/** The folder's subscriptions and their posts come back unfiled in the same turn. */
-		unwrap(await this.#models.folders.delete({ id: folderId }));
+		unwrap(await this.#models.folders.delete(folderId));
 
 		this.#record("job", {
 			event: "user.folder",
@@ -2210,7 +2210,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param target - The folder, the name to file it under, or `null` to unfile it.
 	 */
 	async fileFeed(feedId: string, target: UserStore.FolderTarget): Promise<UserStore.FileResult> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null || feed.unfollowed_at !== null) {
 			return { ok: false, reason: "not-following" };
 		}
@@ -2218,7 +2218,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let folder: SelectFolder | null = null;
 
 		if (target !== null && "folderId" in target) {
-			folder = await this.#models.folders.find({ id: target.folderId });
+			folder = await this.#models.folders.find(target.folderId);
 			if (folder === null) return { ok: false, reason: "not-found" };
 		}
 
@@ -2264,7 +2264,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One label, or `null` when the reader has none by that id. */
 	async getTag(tagId: string): Promise<UserStore.Tag | null> {
-		let row = await this.#models.tags.find({ id: tagId });
+		let row = await this.#models.tags.find(tagId);
 		return row === null ? null : toTag(row);
 	}
 
@@ -2319,7 +2319,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let folded = foldTagName(name);
 		if (folded === null) return { ok: false, reason: "tag-name-invalid" };
 
-		let tag = await this.#models.tags.find({ id: tagId });
+		let tag = await this.#models.tags.find(tagId);
 		if (tag === null) return { ok: false, reason: "not-found" };
 
 		let taken = await this.#models.tags.bySlug(folded.slug);
@@ -2328,7 +2328,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		}
 
 		let renamed = unwrap(
-			await this.#models.tags.update({ id: tagId }, { name: folded.name, slug: folded.slug }),
+			await this.#models.tags.update(tagId, { name: folded.name, slug: folded.slug }),
 		);
 
 		let items = await this.#models.itemTags.ofTag(tagId).count();
@@ -2349,13 +2349,13 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tagId - The label to delete.
 	 */
 	async deleteTag(tagId: string): Promise<UserStore.TagRemoval> {
-		let tag = await this.#models.tags.find({ id: tagId });
+		let tag = await this.#models.tags.find(tagId);
 		if (tag === null) return { ok: false, reason: "not-found" };
 
 		let items = await this.#models.itemTags.ofTag(tagId).count();
 
 		/** The label comes off every post in the same turn it goes. */
-		unwrap(await this.#models.tags.delete({ id: tagId }));
+		unwrap(await this.#models.tags.delete(tagId));
 
 		this.#record("job", {
 			event: "user.tag.deleted",
@@ -2390,7 +2390,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let labelling = await this.#decide(abilities.tags.label);
 		if (!labelling.allowed) return { ok: false, reason: refusalReason(labelling) };
 
-		let item = await this.#models.posts.find({ id: itemId });
+		let item = await this.#models.posts.find(itemId);
 		if (item === null) return { ok: false, reason: "not-found" };
 
 		let tag = await this.#resolveTag(target, create);
@@ -2543,7 +2543,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One saved search, or `null` when the reader has none by that id. */
 	async getSearch(searchId: string): Promise<UserStore.SavedSearch | null> {
-		let row = await this.#models.searches.find({ id: searchId });
+		let row = await this.#models.searches.find(searchId);
 		return row === null ? null : toSavedSearch(row);
 	}
 
@@ -2597,22 +2597,19 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		searchId: string,
 		draft: UserStore.SavedSearchDraft,
 	): Promise<UserStore.SavedSearchResult> {
-		let stored = await this.#models.searches.find({ id: searchId });
+		let stored = await this.#models.searches.find(searchId);
 		if (stored === null) return { ok: false, reason: "not-found" };
 
 		let checked = await this.#searchDraft(draft, searchId);
 		if (!checked.ok) return checked;
 
 		let written = unwrap(
-			await this.#models.searches.update(
-				{ id: searchId },
-				{
-					name: checked.name,
-					query: checked.query,
-					read_state: checked.readState,
-					feed_id: checked.feedId,
-				},
-			),
+			await this.#models.searches.update(searchId, {
+				name: checked.name,
+				query: checked.query,
+				read_state: checked.readState,
+				feed_id: checked.feedId,
+			}),
 		);
 
 		return { ok: true, search: toSavedSearch(written) };
@@ -2620,10 +2617,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** Forgets a saved search, which deletes no post and changes no list but the rail's. */
 	async deleteSearch(searchId: string): Promise<UserStore.SavedSearchRemoval> {
-		let stored = await this.#models.searches.find({ id: searchId });
+		let stored = await this.#models.searches.find(searchId);
 		if (stored === null) return { ok: false, reason: "not-found" };
 
-		unwrap(await this.#models.searches.delete({ id: searchId }));
+		unwrap(await this.#models.searches.delete(searchId));
 		this.#record("job", { event: "user.search.forgotten", searchId });
 
 		return { ok: true };
@@ -2667,7 +2664,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (taken !== null && taken.id !== excluding) return { ok: false, reason: "duplicate-name" };
 
 		let feedId = draft.feedId;
-		if (feedId !== null && (await this.#models.subscriptions.find({ id: feedId })) === null) {
+		if (feedId !== null && (await this.#models.subscriptions.find(feedId)) === null) {
 			feedId = null;
 		}
 
@@ -2688,7 +2685,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** One rule, or `null` when the reader has none by that id. */
 	async getRule(ruleId: string): Promise<UserStore.Rule | null> {
-		let row = await this.#models.rules.find({ id: ruleId });
+		let row = await this.#models.rules.find(ruleId);
 		return row === null ? null : toRule(row);
 	}
 
@@ -2752,22 +2749,19 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let writing = await this.#decide(abilities.rules.write);
 		if (!writing.allowed) return { ok: false, reason: refusalReason(writing) };
 
-		let existing = await this.#models.rules.find({ id: ruleId });
+		let existing = await this.#models.rules.find(ruleId);
 		if (existing === null) return { ok: false, reason: "not-found" };
 
 		let checked = await this.#ruleDraft(draft);
 		if (!checked.ok) return checked;
 
 		let written = unwrap(
-			await this.#models.rules.update(
-				{ id: ruleId },
-				{
-					feed_id: checked.feedId,
-					field: checked.field,
-					value: checked.value,
-					action: checked.action,
-				},
-			),
+			await this.#models.rules.update(ruleId, {
+				feed_id: checked.feedId,
+				field: checked.field,
+				value: checked.value,
+				action: checked.action,
+			}),
 		);
 
 		return { ok: true, rule: toRule(written) };
@@ -2780,10 +2774,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param ruleId - The rule to delete.
 	 */
 	async deleteRule(ruleId: string): Promise<UserStore.RuleRemoval> {
-		let existing = await this.#models.rules.find({ id: ruleId });
+		let existing = await this.#models.rules.find(ruleId);
 		if (existing === null) return { ok: false, reason: "not-found" };
 
-		unwrap(await this.#models.rules.delete({ id: ruleId }));
+		unwrap(await this.#models.rules.delete(ruleId));
 		this.#record("job", {
 			event: "user.rule.deleted",
 			ruleId,
@@ -2987,7 +2981,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 	/** Forgets one device, which is how a reader revokes a browser they no longer read in. */
 	async forgetDevice(deviceId: string): Promise<boolean> {
-		return isSuccess(await this.#models.devices.delete({ id: deviceId }));
+		return isSuccess(await this.#models.devices.delete(deviceId));
 	}
 
 	/**
@@ -2999,7 +2993,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param wanted - Whether to hear about it.
 	 */
 	async setFeedNotify(feedId: string, wanted = true): Promise<UserStore.NotifyFeedResult> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		let updated = await this.#models.subscriptions.write(feedId, { notify: wanted });
@@ -3019,7 +3013,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		feedId: string,
 		wanted = true,
 	): Promise<UserStore.LinkParametersResult> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null) return { ok: false, reason: "not-following" };
 
 		let updated = await this.#models.subscriptions.write(feedId, {
@@ -3037,7 +3031,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param pinned - Whether to pin it; `false` puts it back among the rest.
 	 */
 	async pinFeed(feedId: string, pinned = true): Promise<UserStore.PinResult> {
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null || feed.unfollowed_at !== null) {
 			return { ok: false, reason: "not-following" };
 		}
@@ -3122,7 +3116,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async recordPublishingRate(feedId: string, postsPerDay: number | null): Promise<void> {
 		if (postsPerDay === null) return;
 
-		let feed = await this.#models.subscriptions.find({ id: feedId });
+		let feed = await this.#models.subscriptions.find(feedId);
 		if (feed === null || feed.posts_per_day === postsPerDay) return;
 
 		await this.#models.subscriptions.write(feedId, { posts_per_day: postsPerDay });
@@ -3201,10 +3195,10 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param tokenId - The row the reader asked to stop honouring.
 	 */
 	async revokeAgentToken(tokenId: string): Promise<UserStore.AgentTokenRemoval> {
-		let row = await this.#models.agentTokens.find({ id: tokenId });
+		let row = await this.#models.agentTokens.find(tokenId);
 		if (row === null || row.revoked_at !== null) return { ok: false, reason: "not-found" };
 
-		unwrap(await this.#models.agentTokens.update({ id: tokenId }, { revoked_at: Date.now() }));
+		unwrap(await this.#models.agentTokens.update(tokenId, { revoked_at: Date.now() }));
 
 		return { ok: true };
 	}
@@ -3222,7 +3216,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @example let allowed = await userStore(subject).authorizeAgent(tokenId);
 	 */
 	async authorizeAgent(tokenId: string): Promise<UserStore.AgentAuthorization> {
-		let row = await this.#models.agentTokens.find({ id: tokenId });
+		let row = await this.#models.agentTokens.find(tokenId);
 		if (row === null) return { ok: false, reason: "unknown-token" };
 		if (row.revoked_at !== null) return { ok: false, reason: "revoked" };
 
@@ -3237,7 +3231,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		if (!(await this.#withinDailyBudget(tokenId))) return { ok: false, reason: "budget" };
 
 		if (row.last_used_at === null || now - row.last_used_at >= TOKEN_USE_STAMP_MS) {
-			unwrap(await this.#models.agentTokens.update({ id: tokenId }, { last_used_at: now }));
+			unwrap(await this.#models.agentTokens.update(tokenId, { last_used_at: now }));
 		}
 
 		return { ok: true, scope, tier, may: agent };
@@ -3648,7 +3642,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		| { ok: false; reason: Exclude<UserStore.TagFailure, "saved-full"> }
 	> {
 		if ("tagId" in target) {
-			let row = await this.#models.tags.find({ id: target.tagId });
+			let row = await this.#models.tags.find(target.tagId);
 			return row === null ? { ok: false, reason: "not-found" } : { ok: true, tag: toTag(row) };
 		}
 
@@ -3718,7 +3712,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	async #folderOf(feed: SelectFeed): Promise<UserStore.Folder | null> {
 		if (feed.folder_id === null) return null;
 
-		let row = await this.#models.folders.find({ id: feed.folder_id });
+		let row = await this.#models.folders.find(feed.folder_id);
 		return row === null ? null : toFolder(row);
 	}
 
@@ -4007,7 +4001,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		let feedId = draft.feedId ?? null;
 
 		if (feedId !== null) {
-			let feed = await this.#models.subscriptions.find({ id: feedId });
+			let feed = await this.#models.subscriptions.find(feedId);
 			if (feed === null || feed.unfollowed_at !== null)
 				return { ok: false, reason: "not-following" };
 		}
@@ -4048,14 +4042,14 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 		for (let [ruleId, count] of run.matched) {
 			if (count === 0) continue;
 
-			let rule = await this.#models.rules.find({ id: ruleId });
+			let rule = await this.#models.rules.find(ruleId);
 			if (rule === null) continue;
 
 			unwrap(
-				await this.#models.rules.update(
-					{ id: ruleId },
-					{ matches: rule.matches + count, last_matched_at: now },
-				),
+				await this.#models.rules.update(ruleId, {
+					matches: rule.matches + count,
+					last_matched_at: now,
+				}),
 			);
 		}
 
@@ -4072,7 +4066,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 	 * @param subscriptionId - The feed the unsaved post belonged to.
 	 */
 	async #dropIfSpent(subscriptionId: string): Promise<void> {
-		let feed = await this.#models.subscriptions.find({ id: subscriptionId });
+		let feed = await this.#models.subscriptions.find(subscriptionId);
 		if (feed === null || feed.unfollowed_at === null) return;
 
 		let kept = await this.#models.posts.ofSubscription(subscriptionId).saved().count();
@@ -4087,7 +4081,7 @@ export class UserDO extends DurableObject<Cloudflare.Env> {
 
 		await this.#forgetTags(doomed.map((row) => row.id));
 		await this.#db.deleteMany(feedItems, { where: { feed_id: subscriptionId } });
-		unwrap(await this.#models.subscriptions.delete({ id: subscriptionId }));
+		unwrap(await this.#models.subscriptions.delete(subscriptionId));
 	}
 
 	/**

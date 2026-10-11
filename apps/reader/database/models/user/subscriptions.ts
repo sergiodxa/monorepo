@@ -48,7 +48,7 @@ export const Subscriptions = createModel(feeds, {
 		 * read the row, so a missing one is a programming error rather than a refusal.
 		 */
 		async write(id: string, changes: SubscriptionChanges): Promise<SelectFeed> {
-			return unwrap(await this.update({ id }, changes));
+			return unwrap(await this.update(id, changes));
 		},
 	},
 
