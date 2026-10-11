@@ -82,9 +82,12 @@ export const Sessions = createModel(sessions, {
 			return (await this.expired().delete()).affectedRows;
 		},
 
-		/** Records that a session was just used, so the device list reflects real activity. */
+		/**
+		 * Records that a session was just used, so the device list reflects real activity: an
+		 * update with no values moves only `updated_at`, stamped by the database clock.
+		 */
 		touch(id: string): Promise<Result<SelectSession, ValidationError | NotFound>> {
-			return this.update(id, { updated_at: Date.now() });
+			return this.update(id, {});
 		},
 	},
 

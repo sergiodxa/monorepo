@@ -10,7 +10,7 @@
 
 import type { Database as DataTableDatabase } from "remix/data-table";
 
-import { Models } from "@sdxc/data-model";
+import { publishModels } from "@sdxc/data-model/testing";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
@@ -23,6 +23,7 @@ import jobs from "~/app/jobs";
 import handler from "~/app/jobs/clean-expired-sessions";
 import { Database } from "~/app/jobs/middleware/database";
 import { createTestModels } from "~/app/lib/test/models";
+import { models as registry } from "~/app/models";
 import { sessions } from "~/database/schema";
 
 let db: DataTableDatabase;
@@ -52,8 +53,8 @@ async function createSession(expiresAt: number): Promise<string> {
 }
 
 /**
- * Runs the sweep against a context carrying the test database, published the way the
- * middleware publishes it: the cast is what stands in for a chain having run. The run is
+ * Runs the sweep against a context carrying the test database and the models bound to it,
+ * published the way the middleware publishes them. The run is
  * recorded into a log the caller can read back.
  *
  * @returns The record the run emitted.
@@ -63,7 +64,7 @@ async function run(): Promise<Record<string, unknown>> {
 	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
 	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1, log });
 	ctx.set(Database, db, { property: "database" });
-	ctx.set(Models, models, { property: "models" });
+	publishModels(ctx, registry, { db });
 
 	await log.run(() => handler(ctx));
 
