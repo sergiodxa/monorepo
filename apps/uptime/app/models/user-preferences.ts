@@ -40,8 +40,8 @@ export const UserPreferences = createModel(userPreferences, {
 		/** Sets (or clears, when `null`) a subject's preferred UI language, keeping their opt-outs. */
 		setLanguage(subjectId: string, language: SupportedLanguage | null) {
 			return this.upsert(
-				{ subject_id: subjectId, preferred_language: language },
-				{ conflictTarget: ["subject_id"] },
+				{ id: generateUUID(), subject_id: subjectId, preferred_language: language },
+				{ conflict: ["subject_id"] },
 			);
 		},
 
@@ -52,8 +52,8 @@ export const UserPreferences = createModel(userPreferences, {
 		 */
 		setUnsubscribedEmails(subjectId: string, unsubscribed: OptionalEmail[]) {
 			return this.upsert(
-				{ subject_id: subjectId, unsubscribed_emails: unsubscribed },
-				{ conflictTarget: ["subject_id"] },
+				{ id: generateUUID(), subject_id: subjectId, unsubscribed_emails: unsubscribed },
+				{ conflict: ["subject_id"] },
 			);
 		},
 
