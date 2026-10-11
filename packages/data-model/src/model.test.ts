@@ -469,6 +469,26 @@ describe("writes", () => {
 		expect(updated).toMatchObject({ id: "u1", name: "Ada L." });
 	});
 
+	test("upsert and an empty update write only the timestamp columns the table has", async () => {
+		let events = table({
+			name: "events",
+			timestamps: { createdAt: "created_at" },
+			columns: { id: c.text().primaryKey(), name: c.text(), created_at: c.text() },
+		});
+		let { db, sqlite } = openDatabase();
+		sqlite.exec(
+			"create table events (id text primary key, name text not null, created_at text not null)",
+		);
+		let model = createModel(events).bind({ db });
+
+		let first = unwrap(await model.upsert({ id: "e1", name: "A" }));
+		let second = unwrap(await model.upsert({ id: "e1", name: "B" }));
+		let touched = await model.update("e1", {});
+
+		expect(second).toEqual({ id: "e1", name: "B", created_at: first.created_at });
+		expect(isSuccess(touched)).toBe(true);
+	});
+
 	test("upsert runs one statement, with no read before it", async () => {
 		let binding = createD1Database();
 		let { driver, operations } = intercept(createD1DatabaseAdapter(binding));

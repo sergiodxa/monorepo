@@ -12,7 +12,7 @@ import type { ValidationError } from "@sdxc/validate";
 import type { StandardSchemaV1 } from "@standard-schema/spec";
 
 import { failure, success } from "@sdxc/result";
-import { getTableTimestamps } from "remix/data-table";
+import { getTableColumns, getTableTimestamps } from "remix/data-table";
 
 import type { ModelConfig, Row } from "./config.js";
 import type { LooseQuery } from "./config.js";
@@ -280,12 +280,26 @@ function modelRows(session: Session, config: ModelConfig): LooseQuery {
 }
 
 /**
+ * The timestamp columns the table declares and actually has: a table naming only `createdAt`
+ * resolves `updatedAt` to its default name, which the table may lack.
+ */
+function timestampColumns(config: ModelConfig): { createdAt?: string; updatedAt?: string } {
+	let timestamps = getTableTimestamps(config.table);
+	if (timestamps === null) return {};
+	let columns = getTableColumns(config.table);
+	return {
+		createdAt: timestamps.createdAt in columns ? timestamps.createdAt : undefined,
+		updatedAt: timestamps.updatedAt in columns ? timestamps.updatedAt : undefined,
+	};
+}
+
+/**
  * The columns that mark a row as changed when an update names no column: the table's declared
  * `updatedAt` column at the database's clock, which is what a column update touches too.
  */
 function touch(session: Session, config: ModelConfig): Row {
-	let timestamps = getTableTimestamps(config.table);
-	return timestamps === null ? {} : { [timestamps.updatedAt]: session.db.now() };
+	let { updatedAt } = timestampColumns(config);
+	return updatedAt === undefined ? {} : { [updatedAt]: session.db.now() };
 }
 
 /**
@@ -374,20 +388,20 @@ export function upsertRow(
 		let target = [...(options.conflict ?? config.primaryKey)];
 		let { columns } = split(config, values);
 		let inserted: Row = { ...columns, ...config.constraints };
-		let timestamps = getTableTimestamps(config.table);
+		let { createdAt, updatedAt } = timestampColumns(config);
 		let now = scoped.db.now();
 
 		let update: Row = { ...(options.update ?? columns) };
 		if (options.update === undefined) {
 			for (let column of [...target, ...config.primaryKey]) delete update[column];
-			if (timestamps !== null) delete update[timestamps.createdAt];
+			if (createdAt !== undefined) delete update[createdAt];
 		}
 		for (let column of Object.keys(config.constraints)) delete update[column];
 
-		if (timestamps !== null) {
-			inserted[timestamps.createdAt] ??= now;
-			inserted[timestamps.updatedAt] ??= now;
-			if (Object.keys(update).length > 0) update[timestamps.updatedAt] ??= now;
+		if (createdAt !== undefined) inserted[createdAt] ??= now;
+		if (updatedAt !== undefined) {
+			inserted[updatedAt] ??= now;
+			if (Object.keys(update).length > 0) update[updatedAt] ??= now;
 		}
 
 		let row: Row | null | undefined;
