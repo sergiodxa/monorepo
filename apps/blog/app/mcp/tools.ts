@@ -38,7 +38,8 @@ export default tools({
 			),
 			tag: s.optional(
 				s.string().pipe(checks.maxLength(100)).meta({
-					description: "Only return posts carrying this tag. Tutorials are the tagged type.",
+					description:
+						"Only return posts carrying this tag, or for name@version a newer compatible version of it. Tutorials are the tagged type.",
 				}),
 			),
 			limit: s.defaulted(

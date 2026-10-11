@@ -53,6 +53,7 @@
 		"@sdxc/rss": "workspace:*",
 		"@sdxc/search": "workspace:*",
 		"@sdxc/security-headers": "workspace:*",
+		"@sdxc/semver": "workspace:*",
 		"@sdxc/session-storage-kv": "workspace:*",
 		"@sdxc/sitemap": "workspace:*",
 		"@sdxc/spam": "workspace:*",

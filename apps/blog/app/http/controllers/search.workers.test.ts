@@ -175,7 +175,7 @@ describe("GET /search", () => {
 
 		expect(tips).toMatch(/<summary[^>]*>[\s\S]*Search tips<\/summary>/);
 		expect(tips).not.toMatch(/<details[^>]* open/);
-		expect(tips.match(/<dt>/g)).toHaveLength(8);
+		expect(tips.match(/<dt>/g)).toHaveLength(9);
 		expect(tips).toMatch(/<code[^>]*>tag:remix<\/code>/);
 	});
 

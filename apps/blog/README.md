@@ -82,7 +82,8 @@ with it empty, is answered with a 500.
   `Link` and `X-Total-Count` headers, and matched words are highlighted.
 - Search syntax, shared by `/search`, the search panel and `search_posts`: `"phrases"`,
   `-exclusions`, `OR` in capitals, `title:` for a word in the title, and the filters
-  `tag:"react router"` (a tutorial tag, any case), `kind:tutorial` (`article`, `tutorial`,
+  `tag:"react router"` (a tutorial tag, any case; `tag:"remix@3.0.0"` also finds `remix@3.2.6`, any
+  `remix@` tag at that version or a newer one with the same major), `kind:tutorial` (`article`, `tutorial`,
   `glossary`, `bookmark`, plural accepted, `like` for bookmarks too) and `lang:es` (also `locale:` and `language:`; `es` matches
   `es-AR`, and `spanish`/`español`/`english` work too). An article's language is its `locale`;
   tutorials and glossary entries are English. A search of filters alone lists newest first.

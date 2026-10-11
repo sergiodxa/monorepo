@@ -16,6 +16,7 @@ import type { Database, SqlStatement } from "remix/data-table";
 import { Pagination } from "@sdxc/pagination";
 import { isFailure, success } from "@sdxc/result";
 import { defineSearch, parseQuery } from "@sdxc/search";
+import { satisfies } from "@sdxc/semver";
 import { and, inList, rawSql, sql } from "remix/data-table";
 
 import type { BlogModels } from "~/app/models";
@@ -244,7 +245,7 @@ export class PostSearch {
 		let limit = options.limit ?? 10;
 		if (limit <= 0) return [];
 
-		let rows = await this.matching(db, parsed.data, options).limit(limit).all();
+		let rows = await (await this.matching(db, parsed.data, options)).limit(limit).all();
 		let hits = await this.hits(db, rows);
 		return hits.map(({ body: _body, ...result }) => result);
 	}
@@ -262,7 +263,7 @@ export class PostSearch {
 		db: Database,
 		options: PostSearch.PageOptions,
 	): Promise<Result<Page<PostSearch.Hit>, PaginationError>> {
-		let page = await Pagination.byOffset(this.matching(db, options.query, options), {
+		let page = await Pagination.byOffset(await this.matching(db, options.query, options), {
 			page: options.page,
 			perPage: options.perPage,
 		});
@@ -318,12 +319,12 @@ export class PostSearch {
 	 * it, and narrowed by the query's filters and the caller's. A query of filters alone has
 	 * no relevance to rank by, so it lists newest first.
 	 */
-	private static matching(
+	private static async matching(
 		db: Database,
 		query: ParsedQuery,
 		filters: PostSearch.Filters,
-	): OffsetQuery<MatchedRow> {
-		let conditions = this.conditions(query, filters);
+	): Promise<OffsetQuery<MatchedRow>> {
+		let conditions = await this.conditions(db, query, filters);
 		if (!query.clauses.some((clause) => !clause.exclude)) {
 			return new NewestFirst(db, [POST_SEARCH.predicate(query), ...conditions]);
 		}
@@ -337,15 +338,22 @@ export class PostSearch {
 	 * What a row must meet beyond the text: published and of a reachable kind, then every
 	 * filter. Values of one filter are alternatives; separate filters must all hold.
 	 */
-	private static conditions(query: ParsedQuery, filters: PostSearch.Filters): Array<SqlStatement> {
+	private static async conditions(
+		db: Database,
+		query: ParsedQuery,
+		filters: PostSearch.Filters,
+	): Promise<Array<SqlStatement>> {
 		let kinds = new Set<PostSearch.Kind>(filters.kind === undefined ? KINDS : [filters.kind]);
 		let conditions: Array<SqlStatement> = [];
 
-		if (filters.tag !== undefined) conditions.push(hasTag([filters.tag], false));
+		if (filters.tag !== undefined)
+			conditions.push(hasTag(await expandTags(db, [filters.tag]), false));
 
 		for (let filter of query.filters) {
 			let name = FILTER_NAMES[filter.name];
-			if (name === "tag") conditions.push(hasTag(filter.values, filter.exclude));
+			if (name === "tag") {
+				conditions.push(hasTag(await expandTags(db, filter.values), filter.exclude));
+			}
 			if (name === "lang") conditions.push(inLanguage(filter.values, filter.exclude));
 			if (name === "kind") kinds = narrowKinds(kinds, filter);
 		}
@@ -538,6 +546,42 @@ type MatchedRow = Pick<schema.SelectPostSearch, "id" | "post_id" | "tags" | "con
 /** `lower(?)` placeholders for each value, for an `in` list compared without case. */
 function lowered(values: ReadonlyArray<string>): string {
 	return values.map(() => "lower(?)").join(", ");
+}
+
+/**
+ * The stored tags a `tag:` filter's values stand for. A value written `name@version` with a
+ * SemVer version stands for itself and every `name@` tag at that version or a newer one that
+ * keeps its leading element (`^`), so `remix@3.0.0` finds a post tagged `remix@3.2.6`; any
+ * other value stands for itself.
+ */
+async function expandTags(db: Database, values: ReadonlyArray<string>): Promise<Array<string>> {
+	let expanded = new Set<string>();
+
+	for (let value of values) {
+		let tag = value.trim();
+		expanded.add(tag);
+
+		let at = tag.lastIndexOf("@");
+		if (at <= 0) continue;
+
+		let name = tag.slice(0, at);
+		let version = tag.slice(at + 1);
+		let pattern = `${name.toLowerCase().replace(/[\\%_]/g, "\\$&")}@%`;
+		let result = await db.exec(
+			rawSql(
+				`select distinct "value" from "post_search", json_each("post_search"."tags") where lower("value") like ? escape '\\'`,
+				[pattern],
+			),
+		);
+
+		for (let row of (result.rows ?? []) as Array<{ value: unknown }>) {
+			if (typeof row.value !== "string") continue;
+			if (satisfies(row.value.slice(row.value.lastIndexOf("@") + 1), "^", version))
+				expanded.add(row.value);
+		}
+	}
+
+	return [...expanded];
 }
 
 /** Whether the post's projected tags hold any of `values`, compared without case. */

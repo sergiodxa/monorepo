@@ -450,6 +450,38 @@ describe("PostSearch.query", () => {
 		expect(await slugsFor({ query: "forms", tag: "rails" })).toEqual([]);
 	});
 
+	test("reads a tag written name@version as that version or a newer compatible one", async () => {
+		let tags: Record<string, Array<string>> = {
+			"remix-3-0": ["remix@3.0.0"],
+			"remix-3-2": ["Remix@3.2.6"],
+			"remix-2-9": ["remix@2.9.0"],
+			"remix-4-0": ["remix@4.0.0"],
+			"other-3-1": ["remix-router@3.1.0"],
+			"mcp-new": ["@sdxc/mcp@2026.10.9"],
+			"mcp-old": ["@sdxc/mcp@2026.10.6"],
+		};
+		for (let [slug, list] of Object.entries(tags)) {
+			unwrap(
+				await bindModels(db).tutorials.create({
+					author_id: author,
+					published_at: PAST,
+					meta: { slug, title: slug, excerpt: slug, content: slug, tags: serializeTags(list) },
+				}),
+			);
+		}
+
+		let found = async (q: string) => [...(await slugsFor({ query: q }))].sort();
+
+		expect(await found('tag:"remix@3.0.0"')).toEqual(["remix-3-0", "remix-3-2"]);
+		expect(await found('tag:"remix@3.2.6"')).toEqual(["remix-3-2"]);
+		expect(await found('tag:"@sdxc/mcp@2026.10.6"')).toEqual(["mcp-new", "mcp-old"]);
+		expect(await found('tag:"remix@3.0.0" -tag:"remix@3.2.6"')).toEqual(["remix-3-0"]);
+		expect(await found('tag:"remix@4.0.0" OR tag:"remix@2.9.0"')).toEqual([
+			"remix-2-9",
+			"remix-4-0",
+		]);
+	});
+
 	test("honours the limit", async () => {
 		expect(await slugsFor({ query: "remix", limit: 1 })).toEqual(["about"]);
 		expect(await slugsFor({ query: "remix", limit: 0 })).toEqual([]);
