@@ -101,7 +101,7 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
 import { NewPasswordSchema } from "~/app/http/validators/password";
-import { Users } from "~/app/repositories/users";
+import { Users } from "~/app/models/users";
 import { consumeReset } from "~/app/services/password-resets";
 import { ResetPasswordPage } from "~/resources/views/reset-password";
 import routes from "~/routes/web";
@@ -143,7 +143,7 @@ import type { Database } from "remix/data-table";
 import { password } from "@sdxc/crypto";
 import { isFailure, isSuccess } from "@sdxc/result";
 
-import { Users } from "~/app/repositories/users";
+import { Users } from "~/app/models/users";
 
 export async function checkPassword(db: Database, email: string, secret: string) {
 	let user = await Users.findByEmail(db, email);

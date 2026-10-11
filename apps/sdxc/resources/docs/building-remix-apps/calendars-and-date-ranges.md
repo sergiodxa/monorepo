@@ -92,7 +92,7 @@ viewer's zone. An event at 23:30 in New York is on the 14th there and the 15th i
 import { createAction } from "remix/router";
 
 import { calendarMonth } from "~/app/calendar/month";
-import { Events } from "~/app/data/events";
+import { Events } from "~/app/models/events";
 import { viewerOf } from "~/app/http/viewer";
 import { CalendarPage } from "~/resources/views/calendar";
 import routes from "~/routes/web";
@@ -115,7 +115,7 @@ import { grid, gridTemplate, vstack } from "@sdxc/u/layout";
 import { LinkButton } from "@sdxc/ui";
 
 import type { CalendarMonth } from "~/app/calendar/month";
-import type { Event } from "~/app/data/events";
+import type { Event } from "~/app/models/events";
 import type { Viewer } from "~/app/http/viewer";
 
 import routes from "~/routes/web";

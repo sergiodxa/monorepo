@@ -27,7 +27,7 @@ npm add @sdxc/cache @sdxc/workers-cache @sdxc/http @sdxc/result
 `waitUntil`, it hands each write to the invocation instead of awaiting it, so the reader who paid
 for a miss does not also pay for the put.
 
-```typescript {% title="app/services/cache.ts" %}
+```typescript {% title="app/initializers/cache.ts" %}
 import type { Cache } from "@sdxc/cache";
 
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
@@ -54,7 +54,7 @@ returns that. The value's type comes from the loader, so nothing is annotated:
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { requestCache } from "~/app/services/cache";
+import { requestCache } from "~/app/initializers/cache";
 import { listPackages } from "~/app/services/registry";
 import PackagesPage from "~/resources/views/packages";
 import routes from "~/routes/web";
@@ -172,17 +172,19 @@ fails where you wrote it rather than silently at the edge.
 Register the middleware once, handing it the platform cache. List it ahead of your session and
 auth middleware, so the check it runs on the finished response sees everything they added:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
 import workersCache from "@sdxc/workers-cache/middleware";
 import { cache as platformCache } from "cloudflare:workers";
 import { createRouter } from "remix/router";
 
-import { logger } from "~/app/logger";
+import { logger } from "~/app/initializers/logger";
 
-export default createRouter({
-	middleware: [log(logger), workersCache({ cache: () => platformCache })],
-});
+export function createWebRouter() {
+	return createRouter({
+		middleware: [log(logger), workersCache({ cache: () => platformCache })],
+	});
+}
 ```
 
 A handler then declares what it wants with `ctx.cache(policy, ...tags)`:
@@ -190,7 +192,7 @@ A handler then declares what it wants with `ctx.cache(policy, ...tags)`:
 ```tsx {% title="app/http/controllers/releases.tsx" %}
 import { createAction } from "remix/router";
 
-import { requestCache } from "~/app/services/cache";
+import { requestCache } from "~/app/initializers/cache";
 import { PUBLIC_PAGE, TAGS } from "~/app/services/edge-cache";
 import { readReleases } from "~/app/services/releases";
 import ReleasesPage from "~/resources/views/releases";
@@ -220,7 +222,7 @@ import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { saveRelease } from "~/app/data/releases";
+import { saveRelease } from "~/app/models/releases";
 import { TAGS } from "~/app/services/edge-cache";
 import routes from "~/routes/web";
 
@@ -249,7 +251,7 @@ which entries are wrong.
 like KV down to the `Date` coming back as a string, and its `now` option expires an entry without
 waiting for one. `createRecordingCache()` records purges instead of sending them:
 
-```typescript {% title="app/services/cache.test.ts" %}
+```typescript {% title="app/services/edge-cache.test.ts" %}
 import { MemoryCache } from "@sdxc/cache/memory";
 import { createRecordingCache, purge } from "@sdxc/workers-cache";
 import { expect, test } from "vitest";

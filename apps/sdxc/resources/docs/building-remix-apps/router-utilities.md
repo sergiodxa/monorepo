@@ -32,9 +32,7 @@ npm add @sdxc/no-www-middleware @sdxc/trailing-slash-middleware \
 even when your router answers both with the same page. Choose one and redirect the other.
 `trailingSlash()` with no options makes the slash-free form canonical:
 
-```typescript {% title="bootstrap/app.ts" %}
-import type { Middleware } from "remix/router";
-
+```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
 import { createRouter } from "remix/router";
@@ -44,10 +42,8 @@ import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
-export default function application() {
-	let middleware: Middleware[] = [log(logger) as Middleware, trailingSlash()];
-
-	let router = createRouter({ middleware });
+export function createWebRouter() {
+	let router = createRouter({ middleware: [log(logger), trailingSlash()] });
 	router.map(routes.pricing, pricing);
 	return router;
 }
@@ -75,9 +71,7 @@ people write by hand.
 apex domain without a `Domain` attribute never reaches the `www.` host. `noWWW()` makes the
 apex domain the only one that answers:
 
-```typescript {% title="bootstrap/app.ts" %}
-import type { Middleware } from "remix/router";
-
+```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
 import { noWWW } from "@sdxc/no-www-middleware";
 import { trailingSlash } from "@sdxc/trailing-slash-middleware";
@@ -88,14 +82,10 @@ import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		noWWW(),
-		trailingSlash(),
-	];
-
-	let router = createRouter({ middleware });
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [log(logger), noWWW(), trailingSlash()],
+	});
 	router.map(routes.pricing, pricing);
 	return router;
 }
@@ -122,13 +112,13 @@ The `www.` host must still reach the Worker for the redirect to run, so route it
 Worker as the apex domain. A test sends the router a request for that host and reads the
 redirect, with both middleware running as they do in production:
 
-```typescript {% title="bootstrap/app.test.ts" %}
+```typescript {% title="app/initializers/router.test.ts" %}
 import { expect, test } from "vitest";
 
-import application from "./app";
+import { createWebRouter } from "~/app/initializers/router";
 
 test("the www. host redirects to the apex domain, then the slash goes", async () => {
-	let router = application();
+	let router = createWebRouter();
 
 	let first = await router.fetch(new Request("https://www.example.com/pricing/"));
 	expect(first.status).toBe(308);
@@ -169,7 +159,7 @@ Every call site gets a user, with no branch of its own:
 import { createAction } from "remix/router";
 
 import { requireUser } from "~/app/http/require-user";
-import { Invoices } from "~/app/repositories/invoices";
+import { Invoices } from "~/app/models/invoices";
 import { BillingPage } from "~/resources/views/billing";
 import routes from "~/routes/web";
 
@@ -217,7 +207,7 @@ evaluate the admin area, the billing views and whatever those import. `lazy()` k
 mapped at startup, so matching and `href()` are unchanged, and imports the module behind it on
 the first request that matches:
 
-```typescript {% title="bootstrap/app.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import type { Middleware } from "remix/router";
 
 import { catchResponse } from "@sdxc/catch-response-middleware";
@@ -234,16 +224,16 @@ import { logger } from "./logger";
 
 const ADMIN: Middleware[] = [requireAdmin];
 
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		noWWW(),
-		trailingSlash(),
-		// …your session, formData() and renderer middleware
-		catchResponse(),
-	];
-
-	let router = createRouter({ middleware });
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			log(logger),
+			noWWW(),
+			trailingSlash(),
+			// …your session, formData() and renderer middleware
+			catchResponse(),
+		],
+	});
 	router.map(
 		routes.pricing,
 		lazy(() => import("~/app/http/controllers/pricing")),
@@ -288,7 +278,7 @@ When your Worker fetches from an origin behind a CDN, `Cache-Status` says which 
 answered. Describe a hop once, at module scope, with the `sf` builders, which compose with
 `remix/data-schema`:
 
-```typescript {% title="app/lib/cache-status.ts" %}
+```typescript {% title="app/services/cache-status.ts" %}
 import { isSuccess } from "@sdxc/result";
 import { getField } from "@sdxc/structured-fields";
 import { sf } from "@sdxc/structured-fields/schema";
@@ -326,7 +316,7 @@ import type { Middleware } from "remix/router";
 import { json } from "@sdxc/http/response";
 import { setField } from "@sdxc/structured-fields";
 
-import { Quotas } from "~/app/repositories/quotas";
+import { Quotas } from "~/app/models/quotas";
 
 export const quota: Middleware = async (ctx, next) => {
 	let key = ctx.request.headers.get("Authorization") ?? "anonymous";

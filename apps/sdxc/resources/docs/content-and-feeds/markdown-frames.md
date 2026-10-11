@@ -46,7 +46,7 @@ client entry elsewhere on the page reloads the region through `handle.frames.get
 
 `FRAME_TAG` is the tag's definition. Register it under `tags` wherever the document is parsed:
 
-```typescript {% title="app/content/guide.ts" %}
+```typescript {% title="app/services/content/guide.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { FRAME_TAG } from "@sdxc/markdown/plugin/frames";
 
@@ -68,13 +68,13 @@ no `src` fails the same way.
 `FrameTag` draws the tag as a Remix frame, with the tag's children as its fallback. Pass it
 to `toRemix` under the tag's name:
 
-```tsx {% title="app/controllers/guide.tsx" %}
+```tsx {% title="app/http/controllers/guide.tsx" %}
 import { FrameTag, toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { readGuide } from "~/app/content/guide";
-import COLORS_GUIDE from "~/content/colors.md?raw";
+import { readGuide } from "~/app/services/content/guide";
+import COLORS_GUIDE from "~/resources/content/colors.md?raw";
 import routes from "~/routes";
 
 export default createAction(routes.guide, (ctx) => {
@@ -98,10 +98,10 @@ router, carrying the reader's cookies.
 The route at `src` answers with an HTML fragment. A client entry inside it hydrates the way
 it would on a page of its own:
 
-```tsx {% title="app/controllers/frame-preview.tsx" %}
+```tsx {% title="app/http/controllers/frame-preview.tsx" %}
 import { createAction } from "remix/router";
 
-import { ColorPickerPreview } from "~/components/color-picker-preview";
+import { ColorPickerPreview } from "~/resources/components/color-picker-preview";
 import routes from "~/routes";
 
 export default createAction(routes.frames.preview, (ctx) => {

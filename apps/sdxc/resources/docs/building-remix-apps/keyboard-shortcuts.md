@@ -58,7 +58,7 @@ import { isApplePlatform } from "@sdxc/user-agent/helpers";
 import { parse } from "@sdxc/user-agent";
 import { createAction } from "remix/router";
 
-import { Messages } from "~/app/data/messages";
+import { Messages } from "~/app/models/messages";
 import { InboxPage } from "~/resources/views/inbox";
 import routes from "~/routes/web";
 

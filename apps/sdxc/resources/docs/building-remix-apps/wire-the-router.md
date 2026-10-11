@@ -18,7 +18,7 @@ replaces it without touching a handler.
 
 ```bash
 npm add remix @sdxc/http @sdxc/logger @sdxc/trace-context \
-	@sdxc/user-agent @sdxc/data-table-d1
+	@sdxc/user-agent @sdxc/lazy-route @sdxc/data-table-d1
 ```
 
 The logger, the trace and `asyncContext()` all keep per-request state in `AsyncLocalStorage`,
@@ -30,7 +30,7 @@ A logger is configuration, not a per-request object. Create it once in its own m
 router and anything else that opens a log (a job dispatcher, a cron handler) write records
 under the same `service` name and a query can group them.
 
-```typescript {% title="bootstrap/logger.ts" %}
+```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({ service: "my-app" });
@@ -44,11 +44,13 @@ to the one already open.
 
 Build the router in a function rather than at module scope. The Worker calls it per request,
 and a test calls the same function, so what the test drives is the chain production runs.
+Each route is mapped through `lazy()` from [`@sdxc/lazy-route`](/api/lazy-route), so a request
+imports only the controller it reaches; [Canonical URLs, lazy routes and header
+fields](/docs/building-remix-apps/router-utilities) covers it in full.
 
-```tsx {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```tsx {% title="app/initializers/router.tsx" %}
 import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
@@ -56,24 +58,27 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import home from "~/app/http/controllers/home";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
-export default function application() {
-	let middleware: Middleware[] = [
-		headRequests(),
-		asyncContext(),
-		log(logger) as Middleware,
-		trace() as Middleware,
-		userAgent(),
-		// …then the Remix middleware your app already runs:
-		// cop(), formData(), a renderer
-	];
-
-	let router = createRouter({ middleware, defaultHandler });
-	router.map(routes.home, home);
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			headRequests(),
+			asyncContext(),
+			log(logger),
+			trace(),
+			userAgent(),
+			// …then the Remix middleware your app already runs:
+			// cop(), formData(), a renderer
+		],
+		defaultHandler,
+	});
+	router.map(
+		routes.home,
+		lazy(() => import("~/app/http/controllers/home")),
+	);
 	return router;
 }
 ```
@@ -97,10 +102,9 @@ The Remix middleware after them (cross-origin protection, form parsing, renderin
 unchanged by any of this; see the
 [Remix documentation](https://github.com/remix-run/remix) for those.
 
-The array is annotated `Middleware[]`, so a middleware whose return type describes what it
-adds to the context is cast to the plain type. The properties stay typed anyway: each package
-augments `RequestContext` in `remix/router`, so installing `log()` is what makes `ctx.log`
-exist in your editor.
+Write the list inline in `createRouter()`, so the router's context type records what each
+middleware adds. Each package also augments `RequestContext` in `remix/router`, so installing
+`log()` is what makes `ctx.log` exist in your editor.
 
 ## Publishing a service
 
@@ -134,7 +138,7 @@ The middleware takes a function that opens the database, not the database itself
 production source reads the D1 binding at request time, so each request uses the binding it
 was served with:
 
-```typescript {% title="app/lib/database.ts" %}
+```typescript {% title="app/initializers/database.ts" %}
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -147,11 +151,11 @@ export function openDatabase(): Database {
 A test hands in a source of its own. Pass it through the composition root, defaulting to the
 production one:
 
-```tsx {% title="bootstrap/app.tsx" %}
+```tsx {% title="app/initializers/router.tsx" %}
 import type { Database as DataTable } from "remix/data-table";
-import type { Middleware } from "remix/router";
 
 import { headRequests } from "@sdxc/http/middleware/head-requests";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { userAgent } from "@sdxc/user-agent/middleware";
@@ -159,28 +163,33 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import home from "~/app/http/controllers/home";
-import project from "~/app/http/controllers/project";
 import database from "~/app/http/middleware/database";
-import { openDatabase } from "~/app/lib/database";
+import { openDatabase } from "~/app/initializers/database";
 import routes from "~/routes/web";
 
 import { logger } from "./logger";
 
-export default function application(openDb: () => DataTable = openDatabase) {
-	let middleware: Middleware[] = [
-		headRequests(),
-		asyncContext(),
-		log(logger) as Middleware,
-		trace() as Middleware,
-		userAgent(),
-		database(openDb),
-		// …then cop(), formData() and a renderer, as before
-	];
-
-	let router = createRouter({ middleware, defaultHandler });
-	router.map(routes.home, home);
-	router.map(routes.project, project);
+export function createWebRouter(openDb: () => DataTable = openDatabase) {
+	let router = createRouter({
+		middleware: [
+			headRequests(),
+			asyncContext(),
+			log(logger),
+			trace(),
+			userAgent(),
+			database(openDb),
+			// …then cop(), formData() and a renderer, as before
+		],
+		defaultHandler,
+	});
+	router.map(
+		routes.home,
+		lazy(() => import("~/app/http/controllers/home")),
+	);
+	router.map(
+		routes.project,
+		lazy(() => import("~/app/http/controllers/project")),
+	);
 	return router;
 }
 ```
@@ -194,7 +203,7 @@ writing a line of its own. `Project` is your model and `ProjectPage` your view.
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Project from "~/app/data/project";
+import Project from "~/app/models/project";
 import ProjectPage from "~/resources/views/project";
 import routes from "~/routes/web";
 
@@ -220,16 +229,15 @@ Because the service arrives through the composition root, a test builds the real
 a different source and sends it a request. `createTestDatabase` is a helper of your own that
 opens an in-memory D1 database with your schema applied.
 
-```typescript {% title="bootstrap/app.test.ts" %}
+```typescript {% title="app/initializers/router.test.ts" %}
 import { expect, test } from "vitest";
 
-import { createTestDatabase } from "~/app/lib/test/database";
-
-import application from "./app";
+import { createWebRouter } from "~/app/initializers/router";
+import { createTestDatabase } from "~/app/test/database";
 
 test("the home page lists projects", async () => {
 	let db = await createTestDatabase();
-	let router = application(() => db);
+	let router = createWebRouter(() => db);
 
 	let response = await router.fetch(new Request("https://app.test/"));
 
@@ -243,11 +251,11 @@ production, and only the database differs.
 The Worker entry is then a thin wrapper:
 
 ```typescript {% title="bootstrap/worker.ts" %}
-import application from "./app";
+import { createWebRouter } from "~/app/initializers/router";
 
 export default {
 	async fetch(request: Request) {
-		return await application().fetch(request);
+		return await createWebRouter().fetch(request);
 	},
 } satisfies ExportedHandler<Cloudflare.Env>;
 ```

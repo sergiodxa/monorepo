@@ -39,7 +39,7 @@ Visitors whose node types are disjoint spread into one object and run as a singl
 visitors that handle the same type take a walk each, because a spread keeps only the last
 handler for a key. That gives a post three walks, in this order:
 
-```typescript {% title="app/content/prepare.ts" %}
+```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { embeds, gist, vimeo, youtube } from "@sdxc/markdown/plugin/embeds";
@@ -92,7 +92,7 @@ The three headings above get `setup`, `configure` and `configure-1`. Two options
 ids: `levels` limits which headings get a generated one, and `slug` replaces GitHub's slug with
 your own function, still numbered when two results repeat.
 
-```typescript {% title="app/content/anchors.ts" %}
+```typescript {% title="app/services/content/anchors.ts" %}
 import { headings } from "@sdxc/markdown/plugin/headings";
 
 export const ANCHORS = headings({
@@ -110,7 +110,7 @@ per part, so a slug taken in one part is free again in the next.
 heading at the same level or shallower, so a skipped level (`##` then `####`) nests under the
 nearest shallower heading:
 
-```typescript {% title="app/content/outline.ts" %}
+```typescript {% title="app/services/content/outline.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { tableOfContents } from "@sdxc/markdown/plugin/headings";
@@ -137,7 +137,7 @@ Documentation written as a folder of `.md` files that link to each other is the 
 the links work on GitHub as written, and the rewrite maps each one to the route that renders
 it, while images move to a CDN.
 
-```typescript {% title="app/content/docs-links.ts" %}
+```typescript {% title="app/services/content/docs-links.ts" %}
 import { links } from "@sdxc/markdown/plugin/links";
 
 const DOCS_ORIGIN = "https://example.com";
@@ -175,7 +175,7 @@ an elided year (`'90s`) is an apostrophe.
 A locale that writes other marks passes them as pairs, and each of the three rules can be turned
 off on its own:
 
-```typescript {% title="app/content/typography.ts" %}
+```typescript {% title="app/services/content/typography.ts" %}
 import { typography } from "@sdxc/markdown/plugin/typography";
 
 export const SPANISH = typography({
@@ -212,7 +212,7 @@ YouTube's `t` or `start` parameter. Matching reads the URL alone, so the walk ma
 
 Each tag renders through the component registered under its name, the way any other tag does:
 
-```tsx {% title="app/components/youtube.tsx" %}
+```tsx {% title="resources/components/youtube.tsx" %}
 import type { Handle } from "remix/component";
 
 interface YouTubeProps {
@@ -244,7 +244,7 @@ vocabulary that already uses the default name. A provider of your own is an obje
 tag's `name` and a `match` function that returns the tag's attributes, or `null` for a URL that
 is someone else's:
 
-```typescript {% title="app/content/codepen.ts" %}
+```typescript {% title="app/services/content/codepen.ts" %}
 import type { EmbedProvider } from "@sdxc/markdown/plugin/embeds";
 
 export const CODEPEN: EmbedProvider = {
@@ -283,15 +283,15 @@ and optionally a position narrower or wider than the node's.
 A Vitest test over every post makes the check part of CI, and the failure lists each problem with
 the file and line to open:
 
-```typescript {% title="app/content/posts.test.ts" %}
+```typescript {% title="app/services/content/posts.test.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { lint } from "@sdxc/markdown/plugin/lint";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { MARKDOWN_OPTIONS } from "~/app/content/schema";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
-const POSTS = import.meta.glob<string>("../../content/posts/*.md", {
+const POSTS = import.meta.glob<string>("/resources/content/posts/*.md", {
 	query: "?raw",
 	import: "default",
 	eager: true,

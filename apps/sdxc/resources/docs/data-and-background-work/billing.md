@@ -28,7 +28,7 @@ npm add @sdxc/billing @sdxc/jobs @sdxc/result @sdxc/http remix @sdxc/authz
 A provider is a class built once at module scope. Its constructor reaches nothing, so importing
 it costs no startup work, and a route and a job share the same instance:
 
-```typescript {% title="app/lib/billing.ts" %}
+```typescript {% title="app/initializers/billing.ts" %}
 import type { Billing } from "@sdxc/billing";
 
 import { PolarBilling } from "@sdxc/billing/providers/polar";
@@ -60,21 +60,23 @@ and `supports(billing, "portal")` narrows one to present before you call it.
 The billing middleware publishes the provider as `ctx.billing`. Importing it is what types the
 property, and its `entitlements` option is the reader the feature gate calls further down:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import billingMiddleware from "@sdxc/billing/middleware";
 import { createRouter } from "remix/router";
 
-import { Entitlements } from "~/app/data/entitlements";
-import { billing } from "~/app/lib/billing";
+import { billing } from "~/app/initializers/billing";
+import { Entitlements } from "~/app/models/entitlements";
 
-export const router = createRouter({
-	middleware: [
-		billingMiddleware({
-			provider: billing,
-			entitlements: (ctx) => Entitlements.snapshot(ctx.db, ctx.account.id),
-		}),
-	],
-});
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			billingMiddleware({
+				provider: billing,
+				entitlements: (ctx) => Entitlements.snapshot(ctx.db, ctx.account.id),
+			}),
+		],
+	});
+}
 ```
 
 Put it after the middleware that publishes `ctx.db` and `ctx.account`, the signed-in account
@@ -93,7 +95,7 @@ import type { Result } from "@sdxc/result";
 
 import { isSuccess } from "@sdxc/result";
 
-import type { Account } from "~/app/data/accounts";
+import type { Account } from "~/app/models/accounts";
 
 export async function linkCustomer(
 	billing: Billing,
@@ -166,7 +168,7 @@ import type { Database } from "remix/data-table";
 
 import { isFailure, success } from "@sdxc/result";
 
-import { Entitlements } from "~/app/data/entitlements";
+import { Entitlements } from "~/app/models/entitlements";
 
 export async function syncEntitlements(
 	db: Database,
@@ -227,9 +229,9 @@ import type { RequestContext } from "remix/router";
 import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 
-import { WebhookDeliveries } from "~/app/data/webhook-deliveries";
-import { billing } from "~/app/lib/billing";
-import { openDatabase } from "~/app/lib/database";
+import { billing } from "~/app/initializers/billing";
+import { openDatabase } from "~/app/initializers/database";
+import { WebhookDeliveries } from "~/app/models/webhook-deliveries";
 import { syncEntitlements } from "~/app/services/entitlements";
 
 async function resync(ctx: RequestContext, customerId: string | null): Promise<void> {
@@ -274,7 +276,7 @@ is its authentication.
 The store is how a redelivery is recognized after the request that first saw it has ended. It
 implements `WebhookStore`, three calls over a table of your own:
 
-```typescript {% title="app/data/webhook-deliveries.ts" %}
+```typescript {% title="app/models/webhook-deliveries.ts" %}
 import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
 import type { Database } from "remix/data-table";
 
@@ -349,12 +351,12 @@ record, keep the plan in the policy that decides the rest. `@sdxc/authz/facts/bi
 the snapshot as a fact, `{ products, features }`, read through the same `entitlements` reader,
 so the request still reads the projection once:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import type { BillingFacts } from "@sdxc/authz/facts/billing";
 
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	facts: { billing: fact<BillingFacts>() },
@@ -391,8 +393,8 @@ arrived:
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
+import { billing } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { billing } from "~/app/lib/billing";
 import { syncEntitlements } from "~/app/services/entitlements";
 
 const MAX_PAGES = 50;

@@ -30,7 +30,7 @@ bootstrap file, the map from each TLD to its registry's server, so a lookup cost
 the registry rather than two. The user agent goes out on every request, and it is how a registry
 that rate-limits identifies who to contact:
 
-```typescript {% title="app/domains/rdap.ts" %}
+```typescript {% title="app/initializers/rdap.ts" %}
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { RDAP } from "@sdxc/rdap";
 import { env } from "cloudflare:workers";
@@ -51,10 +51,10 @@ points a TLD at a registry IANA does not list yet.
 `rdap.domain` answers a `Result`. The name can be Unicode or A-label, with or without a trailing
 dot; `Bücher.com.` queries `xn--bcher-kva.com`:
 
-```typescript {% title="app/domains/describe.ts" %}
+```typescript {% title="app/services/domains/describe.ts" %}
 import { isFailure, success } from "@sdxc/result";
 
-import { rdap } from "~/app/domains/rdap";
+import { rdap } from "~/app/initializers/rdap";
 
 export async function describeDomain(name: string) {
 	let looked = await rdap.domain(name, { related: true });
@@ -94,7 +94,7 @@ you stored. `not-found` and `unsupported-tld` answer about the name: the registr
 domain, or the TLD runs no RDAP service, and asking again tomorrow will give the same answer.
 Everything else is an outage, and an outage should never erase a date you already have:
 
-```typescript {% title="app/domains/expiry.ts" %}
+```typescript {% title="app/services/domains/expiry.ts" %}
 import type { RDAP, RDAPError } from "@sdxc/rdap";
 import type { Result } from "@sdxc/result";
 
@@ -191,10 +191,10 @@ The expiry date is one signal and the status is the other. `redemptionPeriod` an
 `pendingDelete` mean the registration has lapsed and is on its way out, and `clientHold` and
 `serverHold` mean the registry has taken the domain out of DNS, whatever its date says:
 
-```typescript {% title="app/domains/alerts.ts" %}
+```typescript {% title="app/services/domains/alerts.ts" %}
 import type { RDAP } from "@sdxc/rdap";
 
-import type { ExpiryPatch } from "~/app/domains/expiry";
+import type { ExpiryPatch } from "~/app/services/domains/expiry";
 
 const DAY_MS = 86_400_000;
 
@@ -244,13 +244,13 @@ The handler claims the domains whose `nextCheckAt` has passed and writes each ou
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import type { TrackedDomain } from "~/app/data/domains";
+import type { TrackedDomain } from "~/app/models/domains";
 
-import { Domains } from "~/app/data/domains";
-import { needsAlert } from "~/app/domains/alerts";
-import { expiryOutcome } from "~/app/domains/expiry";
-import { rdap } from "~/app/domains/rdap";
+import { rdap } from "~/app/initializers/rdap";
 import jobs from "~/app/jobs";
+import { Domains } from "~/app/models/domains";
+import { needsAlert } from "~/app/services/domains/alerts";
+import { expiryOutcome } from "~/app/services/domains/expiry";
 
 const PER_REGISTRY = 2;
 
@@ -304,12 +304,12 @@ is the job middleware from that guide.
 `expiryOutcome` takes a `Result` and a time, so the outage rules are tested without a registry.
 An `RDAPError` is built with the code and the fields that code fills:
 
-```typescript {% title="app/domains/expiry.test.ts" %}
+```typescript {% title="app/services/domains/expiry.test.ts" %}
 import { RDAPError } from "@sdxc/rdap";
 import { failure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { expiryOutcome } from "~/app/domains/expiry";
+import { expiryOutcome } from "~/app/services/domains/expiry";
 
 const NOW = Date.UTC(2026, 9, 8);
 const HOUR_MS = 3_600_000;

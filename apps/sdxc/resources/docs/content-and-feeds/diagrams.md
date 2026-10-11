@@ -106,7 +106,7 @@ lists every statement each kind reads.
 
 `toSVG` takes the source and answers with a `Result` holding the markup:
 
-```typescript {% title="app/content/architecture.ts" %}
+```typescript {% title="app/services/content/architecture.ts" %}
 import { toSVG } from "@sdxc/diagram";
 import { isFailure } from "@sdxc/result";
 
@@ -134,7 +134,7 @@ SVG elements rooted at `svg`, which a build can store and a renderer can draw la
 marked `mermaid` into a `diagram` tag carrying a `source` attribute and leaves every other
 code block alone, so it composes with a highlighter in one walk:
 
-```typescript {% title="app/content/prepare.ts" %}
+```typescript {% title="app/services/content/prepare.ts" %}
 import { diagram } from "@sdxc/diagram/markdown";
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
@@ -184,7 +184,7 @@ parse then stays the code block its author wrote, and the walk succeeds.
 `DiagramTag` from `@sdxc/diagram/ui` is a `remix/component` component whose props are the
 attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
 
-```tsx {% title="app/content/render-post.tsx" %}
+```tsx {% title="app/services/content/render-post.tsx" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { DiagramTag } from "@sdxc/diagram/ui";
@@ -197,7 +197,7 @@ export function renderPost(document: Markdown.Document) {
 
 `Diagram` draws one outside markdown, in any view:
 
-```tsx {% title="app/components/request-flow.tsx" %}
+```tsx {% title="resources/components/request-flow.tsx" %}
 import type { Handle } from "remix/component";
 
 import { Diagram } from "@sdxc/diagram/ui";
@@ -225,7 +225,7 @@ Lines and text use `currentColor`. Node bodies fill with `--diagram-fill`, and n
 and block labels with `--diagram-tint`; both fall back to the page background, so set them
 only where your surfaces differ from it:
 
-```css {% title="app/styles/prose.css" %}
+```css {% title="resources/styles/prose.css" %}
 .prose svg[role="img"] {
 	color: var(--text-muted);
 	--diagram-fill: var(--surface-raised);
@@ -239,7 +239,7 @@ The drawing shrinks to its container and never grows past its natural size.
 A feed item or an email body wants a string. `renderDiagram` is the tag renderer for
 `toHTML`, turning each `diagram` tag into the markup `toSVG` writes:
 
-```typescript {% title="app/content/render.ts" %}
+```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { renderDiagram } from "@sdxc/diagram/markdown";

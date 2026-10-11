@@ -120,7 +120,7 @@ The list's action renders the whole page for a visit and only the rows for a fra
 ```tsx {% title="app/http/controllers/jobs/index.tsx" %}
 import { createAction } from "remix/router";
 
-import Jobs from "~/app/data/job";
+import Jobs from "~/app/models/job";
 import { fragment, isFrameRequest } from "~/app/http/fragment";
 import { JobList, JobsPage } from "~/resources/views/jobs";
 import routes from "~/routes/web";
@@ -138,7 +138,7 @@ export default createAction(routes.jobs.index, async (ctx) => {
 [Paginate lists](/docs/http-apis/paginate-lists) shows, and answers the rows with the address
 of this page and of the pages either side of it:
 
-```typescript {% title="app/data/job.ts" %}
+```typescript {% title="app/models/job.ts" %}
 export interface JobPage {
 	url: string;
 	newer: string | null;
@@ -162,7 +162,7 @@ import type { Handle } from "remix/component";
 
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
 
-import type { JobPage } from "~/app/data/job";
+import type { JobPage } from "~/app/models/job";
 
 import { frameOf } from "~/app/http/fragment";
 

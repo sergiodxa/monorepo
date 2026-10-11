@@ -25,7 +25,7 @@ npm add @sdxc/security-headers @sdxc/crypto @sdxc/well-known @sdxc/result
 The CSP model writes keywords unquoted and quotes them on output, so a missing quote cannot
 happen. `"nonce"` is a placeholder the middleware replaces with a fresh nonce per response.
 
-```typescript {% title="app/http/security-policy.ts" %}
+```typescript {% title="config/security-policy.ts" %}
 import type { SecurityHeaders } from "@sdxc/security-headers";
 
 export const BOOT_SCRIPT = `document.documentElement.classList.add("js");`;
@@ -74,34 +74,35 @@ blocked without blocking it. You move it to `contentSecurityPolicy` once the rep
 
 `securityHeaders(policy)` publishes `ctx.securityHeaders` and writes the headers onto whatever
 response the chain returns, keeping any header the response set itself. Place it right before
-`renderWith`, so it decorates the rendered page and the renderer can read the nonce.
+the renderer, so it decorates the rendered page and the renderer can read the nonce.
 
-```typescript {% title="bootstrap/app.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { securityHeaders } from "@sdxc/security-headers/middleware";
-import { renderWith } from "remix/middleware/render";
+import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import { SECURITY_POLICY } from "~/app/http/security-policy";
-import { APP_MIDDLEWARE } from "~/bootstrap/middleware";
-import { createHtmlRenderer } from "~/bootstrap/renderer";
+import { withDocument } from "~/app/http/render";
+import { assets } from "~/app/initializers/assets";
+import { SECURITY_POLICY } from "~/config/security-policy";
 
-export const router = createRouter({
-	middleware: [
-		...APP_MIDDLEWARE,
-		securityHeaders(SECURITY_POLICY),
-		renderWith(createHtmlRenderer),
-	],
-});
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			// …the middleware your app already runs
+			securityHeaders(SECURITY_POLICY),
+			render({ assets }),
+			renderWith(withDocument),
+		],
+	});
+	// router.map(…) for each route
+	return router;
+}
 ```
 
-`APP_MIDDLEWARE` stands for whatever your app already runs ahead of it, and
-`createHtmlRenderer` for the renderer from
-[Wire the router](/docs/building-remix-apps/wire-the-router); the order among the rest does not
-matter to the headers.
-
-HSTS is written only on `https:` requests, so `localhost` over HTTP is never pinned to HTTPS by
-accident, and `preload`, when you set it, is written only if the preload lists would accept the
-rest of the header.
+The comment stands for whatever your app already runs ahead of it, from
+[Wire the router](/docs/building-remix-apps/wire-the-router), and `withDocument` for the
+`renderWith()` wrapper in `app/http/render.tsx` that wraps every page in your document. The
+order among the rest does not matter to the headers.
 
 ## Nonces for the scripts you render
 
@@ -114,7 +115,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { ImportMap } from "remix/component/server";
 
-import { BOOT_SCRIPT } from "~/app/http/security-policy";
+import { BOOT_SCRIPT } from "~/config/security-policy";
 
 type DocumentProps = { nonce: string; children?: RemixNode };
 
@@ -151,7 +152,7 @@ visitor. For a script whose text never changes, list its hash instead. The polic
 exports the script's text as `BOOT_SCRIPT` and lists its `sha256-…` source as a literal, and a
 test fails when the two drift apart:
 
-```typescript {% title="app/http/security-policy.test.ts" %}
+```typescript {% title="config/security-policy.test.ts" %}
 import { Base64, sha256 } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
@@ -230,7 +231,7 @@ RFC 9116's `/.well-known/security.txt` is where a researcher looks for your secu
 `wellKnown()` answers it with the right media type, an `ETag` and caching, and hands every other
 path to the next middleware.
 
-```typescript {% title="app/lib/security-txt.ts" %}
+```typescript {% title="config/security-txt.ts" %}
 import type { SecurityTxt } from "@sdxc/well-known/security-txt";
 
 export const SECURITY_TXT: SecurityTxt = {

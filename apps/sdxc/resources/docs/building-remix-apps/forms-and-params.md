@@ -74,7 +74,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import Team from "~/app/data/team";
+import Team from "~/app/models/team";
 import { NewTeamSchema } from "~/app/http/validators/team";
 import { NewTeamPage } from "~/resources/views/new-team";
 import routes from "~/routes/web";
@@ -242,7 +242,7 @@ import * as s from "remix/data-schema";
 import { email, minLength } from "remix/data-schema/checks";
 import { createAction } from "remix/router";
 
-import Team from "~/app/data/team";
+import Team from "~/app/models/team";
 import routes from "~/routes/web";
 
 const BODY = s.object({

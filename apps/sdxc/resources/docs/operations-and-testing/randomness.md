@@ -136,7 +136,7 @@ import { systemSeed } from "@sdxc/random";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Giveaways } from "~/app/repositories/giveaways";
+import { Giveaways } from "~/app/models/giveaways";
 import { drawWinners } from "~/app/services/giveaway";
 import routes from "~/routes/web";
 
@@ -156,7 +156,7 @@ export default createAction(routes.giveaways.draw, async (ctx) => {
 });
 ```
 
-`Giveaways` is your own repository over the tables in
+`Giveaways` is your own model over the tables in
 [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases). Publishing the
 seed and the entrant list next to the winners turns "trust us" into a check anyone can run:
 `drawWinners(entrants, seed, prizes)` gives back the stored winners.
@@ -197,9 +197,10 @@ log line naming it points straight at the stream.
 A seed replays a stream from the start. When a stream lives across requests, such as a bingo
 hall calling one number per request, save where it is instead. `state()` is plain JSON, and
 `restoreRandom(state)` continues from the next draw the original would have taken. A Durable
-Object keeps it in its own storage:
+Object keeps it in its own storage, with the class exported from `bootstrap/worker.ts` so the
+runtime can instantiate it:
 
-```typescript {% title="app/objects/bingo-hall.ts" %}
+```typescript {% title="bootstrap/do/bingo-hall.ts" %}
 import type { SeededRandom } from "@sdxc/random";
 
 import { createRandom, restoreRandom, systemSeed } from "@sdxc/random";
@@ -246,7 +247,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { createRandom, systemSeed } from "@sdxc/random";
 
 import jobs from "~/app/jobs";
-import { Orders } from "~/app/repositories/orders";
+import { Orders } from "~/app/models/orders";
 
 const AUDIT_RATE = 0.01;
 

@@ -24,7 +24,7 @@ A bundle is a plain object per language, nested by key segment, with MessageForm
 as leaves. JSON is a convenient home for them, since translators can edit it without touching
 code.
 
-```json {% title="app/locales/en.json" %}
+```json {% title="resources/locales/en.json" %}
 {
 	"projects": {
 		"title": "Projects",
@@ -43,11 +43,11 @@ code.
 
 State the languages once, in a module the middleware and everything outside a request share:
 
-```typescript {% title="app/lib/i18n.ts" %}
+```typescript {% title="app/initializers/i18n.ts" %}
 import type { Messages } from "@sdxc/i18n";
 
-import en from "~/app/locales/en.json";
-import es from "~/app/locales/es.json";
+import en from "~/resources/locales/en.json";
+import es from "~/resources/locales/es.json";
 
 export const SUPPORTED_LANGUAGES = ["en", "es"];
 
@@ -66,31 +66,33 @@ The `i18n` middleware detects the request's language and publishes `ctx.locale` 
 [Wire the router](/docs/building-remix-apps/wire-the-router). Put `i18n` after `log()`, because a message that fails to format is recorded as an
 `i18n.error` warning on the request's log rather than thrown.
 
-```typescript {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```typescript {% title="app/initializers/router.tsx" %}
 import i18n from "@sdxc/i18n/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
-import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/lib/i18n";
+import {
+	FALLBACK_LANGUAGE,
+	RESOURCES,
+	SUPPORTED_LANGUAGES,
+} from "~/app/initializers/i18n";
 
 import { logger } from "./logger";
 
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		i18n({
-			detection: {
-				supportedLanguages: SUPPORTED_LANGUAGES,
-				fallbackLanguage: FALLBACK_LANGUAGE,
-			},
-			resources: RESOURCES,
-		}) as Middleware,
-		// …the rest of your chain
-	];
-
-	return createRouter({ middleware });
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			log(logger),
+			i18n({
+				detection: {
+					supportedLanguages: SUPPORTED_LANGUAGES,
+					fallbackLanguage: FALLBACK_LANGUAGE,
+				},
+				resources: RESOURCES,
+			}),
+			// …the rest of your chain
+		],
+	});
 }
 ```
 
@@ -111,7 +113,7 @@ layout, taking the title and the language.
 import { Heading, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import Project from "~/app/data/project";
+import Project from "~/app/models/project";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -177,7 +179,7 @@ Wrap the page once, in the handler, and every component under it reads the same 
 import { IntlProvider } from "@sdxc/i18n/ui";
 import { createAction } from "remix/router";
 
-import Project from "~/app/data/project";
+import Project from "~/app/models/project";
 import ProjectsPage from "~/resources/views/projects";
 import routes from "~/routes/web";
 
@@ -198,33 +200,35 @@ Detection reads a cookie when you give it one, so a language picker is a form th
 Hand the detector the `remix/cookie` cookie your picker writes, exported here from your own
 `app/http/cookies.ts`:
 
-```typescript {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```typescript {% title="app/initializers/router.tsx" %}
 import i18n from "@sdxc/i18n/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import { LOCALE_COOKIE } from "~/app/http/cookies";
-import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/lib/i18n";
+import {
+	FALLBACK_LANGUAGE,
+	RESOURCES,
+	SUPPORTED_LANGUAGES,
+} from "~/app/initializers/i18n";
 
 import { logger } from "./logger";
 
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		i18n({
-			detection: {
-				supportedLanguages: SUPPORTED_LANGUAGES,
-				fallbackLanguage: FALLBACK_LANGUAGE,
-				cookie: LOCALE_COOKIE,
-			},
-			resources: RESOURCES,
-		}) as Middleware,
-		// …the rest of your chain
-	];
-
-	return createRouter({ middleware });
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			log(logger),
+			i18n({
+				detection: {
+					supportedLanguages: SUPPORTED_LANGUAGES,
+					fallbackLanguage: FALLBACK_LANGUAGE,
+					cookie: LOCALE_COOKIE,
+				},
+				resources: RESOURCES,
+			}),
+			// …the rest of your chain
+		],
+	});
 }
 ```
 
@@ -244,7 +248,11 @@ like this one with the language stored in its input.
 ```typescript {% title="app/jobs/welcome-email.ts" %}
 import { createTranslator } from "@sdxc/i18n";
 
-import { FALLBACK_LANGUAGE, RESOURCES, SUPPORTED_LANGUAGES } from "~/app/lib/i18n";
+import {
+	FALLBACK_LANGUAGE,
+	RESOURCES,
+	SUPPORTED_LANGUAGES,
+} from "~/app/initializers/i18n";
 
 const translate = createTranslator({
 	resources: RESOURCES,
@@ -273,14 +281,14 @@ as `{$name}`. Neither throws, which keeps a page up, and also means a typo in a 
 ships silently. `parse` from `@sdxc/messageformat` returns a `Result`, so a test can check
 every message in every bundle.
 
-```typescript {% title="app/locales/locales.test.ts" %}
+```typescript {% title="resources/locales/locales.test.ts" %}
 import type { Messages } from "@sdxc/i18n";
 
 import { parse } from "@sdxc/messageformat";
 import { isFailure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { RESOURCES } from "~/app/lib/i18n";
+import { RESOURCES } from "~/app/initializers/i18n";
 
 function* leaves(messages: Messages, prefix = ""): Generator<[string, string]> {
 	for (let [key, value] of Object.entries(messages)) {

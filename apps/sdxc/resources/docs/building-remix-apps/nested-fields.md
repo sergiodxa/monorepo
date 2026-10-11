@@ -80,7 +80,7 @@ import { parse } from "@sdxc/bracket-params";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Task from "~/app/data/task";
+import Task from "~/app/models/task";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { TaskQuerySchema } from "~/app/http/validators/task-query";
 import { TasksPage } from "~/resources/views/tasks";
@@ -119,7 +119,7 @@ import type { Handle } from "remix/component";
 
 import { Button, Checkbox, CheckboxGroup, Label, TextField } from "@sdxc/ui";
 
-import type { TaskRow } from "~/app/data/task";
+import type { TaskRow } from "~/app/models/task";
 import type { TaskQuery } from "~/app/http/validators/task-query";
 
 import { STATUSES } from "~/app/http/validators/task-query";
@@ -324,7 +324,7 @@ import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createController } from "remix/router";
 
-import Invoice from "~/app/data/invoice";
+import Invoice from "~/app/models/invoice";
 import { InvoiceSchema } from "~/app/http/validators/invoice";
 import { NewInvoicePage } from "~/resources/views/new-invoice";
 import routes from "~/routes/web";
@@ -375,7 +375,7 @@ each `File` as its own field. It is how a test posts to the action without spell
 ```typescript {% title="app/http/controllers/invoices-new.test.ts" %}
 import { toFormData } from "@sdxc/bracket-params";
 
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 let body = toFormData({
 	customer: { name: "Ada Lovelace", email: "ada@example.com" },
@@ -386,7 +386,7 @@ let body = toFormData({
 	attachments: [new File(["%PDF-1.7"], "brief.pdf", { type: "application/pdf" })],
 });
 
-let response = await application().fetch(
+let response = await createWebRouter().fetch(
 	new Request("https://example.com/invoices/new", { method: "POST", body }),
 );
 ```

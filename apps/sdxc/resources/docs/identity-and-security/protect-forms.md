@@ -32,44 +32,61 @@ The route is `signUp: form("/sign-up")` in `routes/web.ts`, beside a `checkYourE
 goes on both, because the page that renders the form has to issue the fields the submission is
 checked against. The budget and the challenge go on the action alone.
 
-```typescript {% title="bootstrap/sign-up.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import type { Captcha } from "@sdxc/captcha";
-import type { Router } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
 import { Honeypot } from "@sdxc/honeypot";
 import { honeypot } from "@sdxc/honeypot/middleware";
+import { lazy } from "@sdxc/lazy-route";
 import { env } from "cloudflare:workers";
+import { formData } from "remix/middleware/form-data";
+import { createRouter } from "remix/router";
 
-import { action } from "~/app/http/controllers/sign-up/action";
 import { answerTrappedBots } from "~/app/http/controllers/sign-up/bots";
-import { index } from "~/app/http/controllers/sign-up/render";
 import { callerBudget } from "~/app/http/middleware/rate-limit";
+import { productionCaptcha } from "~/app/initializers/captcha";
 import routes from "~/routes/web";
 
 const TRAP = new Honeypot({ secret: env.HONEYPOT_SECRET });
 
-export function mountSignUp(router: Router, guard: Captcha): void {
-	router.map(routes.signUp, {
-		middleware: [honeypot(TRAP, { onFailure: answerTrappedBots })],
-		actions: {
-			index,
-			action: {
-				middleware: [callerBudget("sign-up", 5), captcha(guard)],
-				handler: action,
-			},
-		},
-	});
+export function createWebRouter(guard: Captcha = productionCaptcha()) {
+	let router = createRouter({ middleware: [formData()] });
+	let trap = honeypot(TRAP, { onFailure: answerTrappedBots });
+
+	router.map(
+		routes.signUp.index,
+		lazy(
+			() =>
+				import("~/app/http/controllers/sign-up/render").then(
+					(it) => it.index,
+				),
+			[trap],
+		),
+	);
+	router.map(
+		routes.signUp.action,
+		lazy(
+			() =>
+				import("~/app/http/controllers/sign-up/action").then(
+					(it) => it.action,
+				),
+			[trap, callerBudget("sign-up", 5), captcha(guard)],
+		),
+	);
+
+	return router;
 }
 ```
 
 The order is the cost order. The honeypot is an HMAC check over two form fields. The budget is
 one KV read and write. The challenge is a call to the provider. Only a submission that passes
 all three is parsed, has its domain looked up in DNS and has its password checked against a
-breach corpus. `guard` is the CAPTCHA provider, passed in so a test can hand in its own. The
-router is the one your app already builds, with Remix's `formData()` in its global middleware:
-the honeypot, the challenge and the handler all read the submission it parsed. Each module this
-file imports is built in the sections below.
+breach corpus. The guards are `lazy()`'s second argument, so a refused submission never loads
+the controller. `guard` is the CAPTCHA provider, passed in so a test can hand in its own.
+Remix's `formData()` runs in the router's global middleware: the honeypot, the challenge and the
+handler all read the submission it parsed. Each module this file imports is built in the
+sections below.
 
 ## A trap no person fills
 
@@ -172,7 +189,7 @@ one egress address share a budget, which is the cost of keying on an address at 
 `captcha(provider)` verifies the field the provider's widget writes and refuses a failed token
 with a `403`. `Captcha` is an interface, so the router takes whichever provider it is given:
 
-```typescript {% title="app/lib/captcha.ts" %}
+```typescript {% title="app/initializers/captcha.ts" %}
 import type { Captcha } from "@sdxc/captcha";
 
 import { MemoryCaptcha } from "@sdxc/captcha/memory";
@@ -188,8 +205,8 @@ export function testCaptcha(): Captcha {
 }
 ```
 
-The Worker calls `mountSignUp(router, productionCaptcha())`, a test
-`mountSignUp(router, testCaptcha())`. `MemoryCaptcha` passes every non-empty token unless told otherwise, `failNext` queues one
+The Worker calls `createWebRouter()`, which defaults to `productionCaptcha()`, and a test
+calls `createWebRouter(testCaptcha())`. `MemoryCaptcha` passes every non-empty token unless told otherwise, `failNext` queues one
 refusal, and `last` records the token and address it was asked about, so a test drives both
 branches without reaching Cloudflare. Its field is `captcha-response`, so a test posts that
 instead of Turnstile's. Every failure carries a `code` that separates what the visitor can fix
@@ -201,7 +218,7 @@ instead of Turnstile's. Every failure carries a `code` that separates what the v
 Parse first, run the checks that need no network, then ask DNS whether the domain receives mail
 at all.
 
-```typescript {% title="app/lib/sign-up-email.ts" %}
+```typescript {% title="app/services/sign-up-email.ts" %}
 import { parseEmailAddress } from "@sdxc/email-address";
 import { checkDisposable } from "@sdxc/email-address/disposable";
 import { checkMailServer } from "@sdxc/email-address/mail-server";
@@ -248,8 +265,8 @@ import * as s from "remix/data-schema";
 
 import { checkYourEmail } from "~/app/http/controllers/sign-up/bots";
 import { renderSignUp } from "~/app/http/controllers/sign-up/render";
-import { passwordMessage } from "~/app/lib/password-message";
-import { checkSignUpEmail } from "~/app/lib/sign-up-email";
+import { passwordMessage } from "~/app/services/password-message";
+import { checkSignUpEmail } from "~/app/services/sign-up-email";
 import { createAccount } from "~/app/services/accounts";
 
 const SIGN_UP = s.object({
@@ -311,36 +328,23 @@ success and creates nothing; an unsure one creates the account held for review.
 
 A newsletter box is the same kind of form with one field, and bots fill it to send confirmation
 emails to addresses that never asked, which spends your list's sending reputation. The three
-guards mount the same way on its route:
+guards mount the same way on its route, inside the same `createWebRouter`:
 
-```typescript {% title="bootstrap/subscribe.ts" %}
-import type { Captcha } from "@sdxc/captcha";
-import type { Router } from "remix/router";
-
-import { captcha } from "@sdxc/captcha/middleware";
-import { Honeypot } from "@sdxc/honeypot";
-import { honeypot } from "@sdxc/honeypot/middleware";
-import { env } from "cloudflare:workers";
-
-import { answerTrappedBots } from "~/app/http/controllers/sign-up/bots";
-import { action, index } from "~/app/http/controllers/subscribe";
-import { callerBudget } from "~/app/http/middleware/rate-limit";
-import routes from "~/routes/web";
-
-const TRAP = new Honeypot({ secret: env.HONEYPOT_SECRET });
-
-export function mountSubscribe(router: Router, guard: Captcha): void {
-	router.map(routes.subscribe, {
-		middleware: [honeypot(TRAP, { onFailure: answerTrappedBots })],
-		actions: {
-			index,
-			action: {
-				middleware: [callerBudget("subscribe", 5), captcha(guard)],
-				handler: action,
-			},
-		},
-	});
-}
+```typescript {% title="app/initializers/router.ts" %}
+router.map(
+	routes.subscribe.index,
+	lazy(
+		() => import("~/app/http/controllers/subscribe").then((it) => it.index),
+		[trap],
+	),
+);
+router.map(
+	routes.subscribe.action,
+	lazy(
+		() => import("~/app/http/controllers/subscribe").then((it) => it.action),
+		[trap, callerBudget("subscribe", 5), captcha(guard)],
+	),
+);
 ```
 
 The form renders `HoneypotFields` and the challenge widget beside its email input, as the sign-up

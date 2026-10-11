@@ -46,13 +46,15 @@ Route handlers enqueue through `ctx.jobs`, which `jobEnqueuer(queue)` from `@sdx
 publishes when it runs in the router's middleware. The queue is the one module both the router
 and the dispatcher import:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
-import { queue } from "~/app/jobs/queue";
+import { queue } from "~/app/initializers/queue";
 
-export const router = createRouter({ middleware: [jobEnqueuer(queue)] });
+export function createWebRouter() {
+	return createRouter({ middleware: [jobEnqueuer(queue)] });
+}
 ```
 
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) builds that queue and
@@ -64,7 +66,7 @@ The record lives at an underscore name under the customer's domain, so it never 
 the TXT records they already keep at the apex, such as SPF. Its value carries a random token
 stored on the domain row, so nobody can publish it without reading your settings page:
 
-```typescript {% title="app/domains/challenge.ts" %}
+```typescript {% title="app/services/domains/challenge.ts" %}
 export interface Challenge {
 	name: string;
 	value: string;
@@ -91,7 +93,7 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { Domains } from "~/app/data/domains";
+import { Domains } from "~/app/models/domains";
 import jobs from "~/app/jobs";
 import { DomainsPage } from "~/resources/views/domains";
 import routes from "~/routes/web";
@@ -150,10 +152,10 @@ import { verifyTxtRecord } from "@sdxc/doh";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import { Domains } from "~/app/data/domains";
-import { challengeFor } from "~/app/domains/challenge";
+import { Domains } from "~/app/models/domains";
+import { challengeFor } from "~/app/services/domains/challenge";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
 
 const recheck = createBackoff({ base: "1 minute", max: "15 minutes" });
 
@@ -200,7 +202,7 @@ they control, and a stranger claiming someone else's domain costs you nothing be
 The client is bound to one zone and holds only configuration, so building one per use costs
 nothing:
 
-```typescript {% title="app/lib/hostnames.ts" %}
+```typescript {% title="app/initializers/hostnames.ts" %}
 import { HostnameClient } from "@sdxc/hostname";
 import { env } from "cloudflare:workers";
 
@@ -228,10 +230,10 @@ retrying until Cloudflare reports both the hostname and its certificate as activ
 import { HostnameClient } from "@sdxc/hostname";
 import { createJobHandler } from "@sdxc/jobs";
 
-import { Domains } from "~/app/data/domains";
-import { setupMessage } from "~/app/domains/status";
+import { Domains } from "~/app/models/domains";
+import { setupMessage } from "~/app/services/domains/status";
 import jobs from "~/app/jobs";
-import { hostnameClient } from "~/app/lib/hostnames";
+import { hostnameClient } from "~/app/initializers/hostnames";
 
 export default createJobHandler(jobs.domains.activate, async (ctx) => {
 	let domain = await Domains.find(ctx.database, ctx.input.domainId);
@@ -275,14 +277,14 @@ outage costs a delay, not a lost domain.
 validation". The most common thing a customer has left to do is point their domain at you,
 and `checkCname` from `@sdxc/doh` can check that directly:
 
-```typescript {% title="app/domains/status.ts" %}
+```typescript {% title="app/services/domains/status.ts" %}
 import type { HostnameResult } from "@sdxc/hostname";
 
 import { checkCname } from "@sdxc/doh";
 import { HostnameClient } from "@sdxc/hostname";
 import { isSuccess } from "@sdxc/result";
 
-import { FALLBACK_ORIGIN } from "~/app/lib/hostnames";
+import { FALLBACK_ORIGIN } from "~/app/initializers/hostnames";
 
 export async function setupMessage(result: HostnameResult): Promise<string> {
 	if (HostnameClient.isActive(result)) return "Active";
@@ -314,8 +316,8 @@ import { notFound } from "@sdxc/http/response/html";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Domains } from "~/app/data/domains";
-import { hostnameClient } from "~/app/lib/hostnames";
+import { Domains } from "~/app/models/domains";
+import { hostnameClient } from "~/app/initializers/hostnames";
 import routes from "~/routes/web";
 
 export default createAction(routes.domains.destroy, async (ctx) => {

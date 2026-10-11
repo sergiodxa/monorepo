@@ -140,38 +140,41 @@ The router middleware binds the registry per request. Its function builds the mo
 from the request context, once, on the first model access, so it reads whatever earlier
 middleware published, such as the database on `ctx.db`:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/router";
 import { createRouter } from "remix/router";
 
-import database from "~/http/middleware/database";
-import { openDatabase } from "~/lib/database";
-import { models } from "~/models";
+import database from "~/app/http/middleware/database";
+import { openDatabase } from "~/app/initializers/database";
+import { models } from "~/app/models";
 
-export const router = createRouter({
-	middleware: [
-		database(openDatabase),
-		modelsMiddleware(models, (ctx) => ({ db: ctx.db })),
-	],
-});
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			database(openDatabase),
+			modelsMiddleware(models, (ctx) => ({ db: ctx.db })),
+		],
+	});
 
-router.get(routes.users.show, async (ctx) => {
-	let user = await ctx.models.users.findByEmail(ctx.params.email);
-	if (user === null) return new Response(null, { status: 404 });
-	return Response.json(user);
-});
+	router.get(routes.users.show, async (ctx) => {
+		let user = await ctx.models.users.findByEmail(ctx.params.email);
+		if (user === null) return new Response(null, { status: 404 });
+		return Response.json(user);
+	});
+	return router;
+}
 ```
 
 An MCP tool mounted on the router runs on the same request context, so it reads
 `ctx.get(Models)` the same way. A job dispatcher takes the counterpart from
 `@sdxc/data-model/jobs`, given the database its own middleware published:
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import { models as modelsMiddleware } from "@sdxc/data-model/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
-import { Database, database } from "~/jobs/middleware/database";
-import { models } from "~/models";
+import { Database, database } from "~/app/jobs/middleware/database";
+import { models } from "~/app/models";
 
 export const dispatcher = createJobDispatcher({
 	middleware: [
@@ -195,8 +198,8 @@ depends on, you declare on the interface, and every binding then has to supply i
 import type { BoundModels } from "@sdxc/data-model";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
-import type { Articles } from "~/models/articles";
-import type { Users } from "~/models/users";
+import type { Articles } from "~/app/models/articles";
+import type { Users } from "~/app/models/users";
 
 interface AppModels {
 	users: typeof Users;
@@ -239,7 +242,7 @@ A callback reads `ctx.jobs` directly:
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
 
-import jobs from "~/jobs";
+import jobs from "~/app/jobs";
 
 export const Users = createModel(users, {
 	callbacks: {
@@ -467,7 +470,7 @@ export async function forPost<M extends AnyModel<{ post_id: string }>>(
 [`@sdxc/sample`](/api/sample) and write through the model, so callbacks, constraints and meta
 run in a fixture exactly as in production:
 
-```typescript {% title="app/test/factories.ts" %}
+```typescript {% title="database/factories/index.ts" %}
 import { defineFactory } from "@sdxc/data-model/testing";
 
 export const UserFactory = defineFactory(Users, {

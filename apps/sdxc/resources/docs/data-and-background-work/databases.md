@@ -37,7 +37,7 @@ the way in and parsed on the way out, on a plain read and on a `RETURNING` row a
 
 `createD1DatabaseAdapter` takes the D1 binding and returns the driver `new Database(...)` expects:
 
-```typescript {% title="app/lib/database.ts" %}
+```typescript {% title="app/initializers/database.ts" %}
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { env } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -96,7 +96,7 @@ a read followed by a write, which two concurrent requests can both win. When the
 expression the builder cannot bind, such as moving a timestamp forward, write it raw with a
 `RETURNING` clause:
 
-```typescript {% title="app/data/reminders.ts" %}
+```typescript {% title="app/models/reminders.ts" %}
 import type { Database } from "remix/data-table";
 
 export async function claimDueReminders(db: Database, intervalMs: number) {
@@ -116,7 +116,7 @@ between the read and the write for another request to land in.
 A SQLite-backed Durable Object exposes its database as `ctx.storage.sql`. Build the driver once
 per instance, since the handle outlives every request the object serves:
 
-```typescript {% title="app/objects/tenant.ts" %}
+```typescript {% title="bootstrap/do/tenant.ts" %}
 import { createSQLStorageDatabaseAdapter } from "@sdxc/data-table-sqlstorage";
 import { DurableObject } from "cloudflare:workers";
 import { Database } from "remix/data-table";
@@ -132,8 +132,9 @@ export class Tenant extends DurableObject {
 }
 ```
 
-`postings` is one of your own tables. Your tables and queries do not change, because they only
-ever saw a `Database`. What changes is how atomicity works. SQL storage rejects `BEGIN` and
+`postings` is one of your own tables, and `bootstrap/worker.ts` re-exports the class so the
+runtime can find it. Your tables and queries do not change, because they only ever saw a
+`Database`. What changes is how atomicity works. SQL storage rejects `BEGIN` and
 `COMMIT`, so `db.transaction()` rejects here. Instead, every write an object makes within one
 turn of its event loop commits together. Two `create`
 calls in a row are atomic; the same two calls with a `fetch` between them are not, because

@@ -51,12 +51,12 @@ A client decides what to do with an event by two fields. `UID` identifies it, so
 never change for the same meetup, and `SEQUENCE` says which revision is newer, so it must only
 grow. Derive both from the row:
 
-```typescript {% title="app/calendar/events.ts" %}
+```typescript {% title="app/services/calendar/events.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
 
 import { utc } from "@sdxc/icalendar";
 
-import type { Meetup } from "~/app/data/meetup";
+import type { Meetup } from "~/app/models/meetup";
 
 export function calendarEvent(meetup: Meetup, url: string): ICalendar.Event {
 	return {
@@ -93,8 +93,8 @@ import { policy } from "@sdxc/http/cache";
 import { calendarResponse } from "@sdxc/icalendar";
 import { createAction } from "remix/router";
 
-import { calendarEvent } from "~/app/calendar/events";
-import Meetups from "~/app/data/meetup";
+import { calendarEvent } from "~/app/services/calendar/events";
+import Meetups from "~/app/models/meetup";
 import routes from "~/routes/web";
 
 export default createAction(routes.events.feed, async (ctx) => {
@@ -141,7 +141,7 @@ A one-off event is an instant, and UTC describes it exactly. A series is differe
 Thursday at 19:00 in Madrid" is a wall-clock time, and the UTC instant under it shifts by an
 hour twice a year. Write that start in its zone, and ship the zone's rules with it:
 
-```typescript {% title="app/calendar/series.ts" %}
+```typescript {% title="app/services/calendar/series.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
 
 import { vtimezone } from "@sdxc/icalendar/timezone";
@@ -202,7 +202,7 @@ days and weeks are nominal and keep their local time across a change. The alarm 
 Your own pages need the dates too, and computing them separately is how a page and a calendar
 end up disagreeing. `occurrences` expands the same event the feed publishes:
 
-```typescript {% title="app/calendar/next-sessions.ts" %}
+```typescript {% title="app/services/calendar/next-sessions.ts" %}
 import type { ICalendar } from "@sdxc/icalendar";
 
 import { occurrences } from "@sdxc/icalendar/rrule";
@@ -231,8 +231,8 @@ import { calendarResponse } from "@sdxc/icalendar";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { calendarEvent } from "~/app/calendar/events";
-import Meetups from "~/app/data/meetup";
+import { calendarEvent } from "~/app/services/calendar/events";
+import Meetups from "~/app/models/meetup";
 import routes from "~/routes/web";
 
 export default createAction(routes.events.download, async (ctx) => {
@@ -270,7 +270,7 @@ import { parse, toInstant } from "@sdxc/icalendar";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Meetups from "~/app/data/meetup";
+import Meetups from "~/app/models/meetup";
 import routes from "~/routes/web";
 
 export default createAction(routes.events.import, async (ctx) => {

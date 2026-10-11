@@ -73,7 +73,7 @@ sign-in lands on, so the controllers below read `routes.passkeys.signIn.verify` 
 The relying party holds your policy and nothing else, so one instance at module scope serves
 every request.
 
-```typescript {% title="app/auth/passkeys.ts" %}
+```typescript {% title="app/initializers/passkeys.ts" %}
 import { RelyingParty } from "@sdxc/passkey/server";
 import { env } from "cloudflare:workers";
 
@@ -96,7 +96,7 @@ The challenge is issued by one request and checked by the next, so it has to out
 The session is the smallest place that holds it — the one from
 [Sign in with OpenID Connect](/docs/identity-and-security/sign-in-with-oidc) works as it is.
 
-```typescript {% title="app/auth/passkey-challenge.ts" %}
+```typescript {% title="app/services/auth/passkey-challenge.ts" %}
 import type { RequestContext } from "remix/router";
 
 import { sessionOf } from "@sdxc/auth/remix/context";
@@ -126,7 +126,7 @@ Registration answers the row to store, as a `RegisteredPasskey`: the credential 
 `publicKey`, its COSE `algorithm`, the signature `counter`, the `transports`, and whether the
 credential is `syncable` and `backedUp`. Authentication later needs `id`, `publicKey` and
 `counter` back. Keep them in a table of your own, beside the account id and a `suspended` flag;
-the controllers below reach it through a small `Passkeys` repository of yours.
+the controllers below reach it through a small `Passkeys` model of yours.
 
 ## Enroll a passkey
 
@@ -138,10 +138,10 @@ was fresh, and the origin and relying party id matched.
 import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { currentAccount } from "~/app/auth/current-account";
-import { keepChallenge } from "~/app/auth/passkey-challenge";
-import { RELYING_PARTY } from "~/app/auth/passkeys";
-import { Passkeys } from "~/app/repositories/passkeys";
+import { currentAccount } from "~/app/services/auth/current-account";
+import { keepChallenge } from "~/app/services/auth/passkey-challenge";
+import { RELYING_PARTY } from "~/app/initializers/passkeys";
+import { Passkeys } from "~/app/models/passkeys";
 import routes from "~/routes/web";
 
 export default createAction(routes.passkeys.register.challenge, async (ctx) => {
@@ -170,10 +170,10 @@ import { badRequest, ok } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { currentAccount } from "~/app/auth/current-account";
-import { spendChallenge } from "~/app/auth/passkey-challenge";
-import { RELYING_PARTY } from "~/app/auth/passkeys";
-import { Passkeys } from "~/app/repositories/passkeys";
+import { currentAccount } from "~/app/services/auth/current-account";
+import { spendChallenge } from "~/app/services/auth/passkey-challenge";
+import { RELYING_PARTY } from "~/app/initializers/passkeys";
+import { Passkeys } from "~/app/models/passkeys";
 import routes from "~/routes/web";
 
 export default createAction(routes.passkeys.register.verify, async (ctx) => {
@@ -201,8 +201,8 @@ every passkey it holds for your domain, so nobody types an identifier first.
 import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { keepChallenge } from "~/app/auth/passkey-challenge";
-import { RELYING_PARTY } from "~/app/auth/passkeys";
+import { keepChallenge } from "~/app/services/auth/passkey-challenge";
+import { RELYING_PARTY } from "~/app/initializers/passkeys";
 import routes from "~/routes/web";
 
 export default createAction(routes.passkeys.signIn.challenge, (ctx) => {
@@ -223,9 +223,9 @@ import { CounterError } from "@sdxc/passkey/server";
 import { isFailure, wrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { spendChallenge } from "~/app/auth/passkey-challenge";
-import { RELYING_PARTY } from "~/app/auth/passkeys";
-import { Passkeys } from "~/app/repositories/passkeys";
+import { spendChallenge } from "~/app/services/auth/passkey-challenge";
+import { RELYING_PARTY } from "~/app/initializers/passkeys";
+import { Passkeys } from "~/app/models/passkeys";
 import routes from "~/routes/web";
 
 export default createAction(routes.passkeys.signIn.verify, async (ctx) => {

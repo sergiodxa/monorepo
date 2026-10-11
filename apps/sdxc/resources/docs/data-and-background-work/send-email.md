@@ -31,7 +31,7 @@ A `Mailer` applies your sender identity to every message and delivers through a 
 transport is the only part that knows about a provider, so it is the one argument worth making
 replaceable:
 
-```typescript {% title="app/lib/mail.ts" %}
+```typescript {% title="app/initializers/mail.ts" %}
 import type { Transport } from "@sdxc/mail";
 
 import { Mailer } from "@sdxc/mail";
@@ -121,13 +121,13 @@ The subject belongs in the reader's language, which is not always the language o
 that caused the email. The package resolves no locale; you hand it strings you already
 translated. Store the locale on the job's payload and build a translator for it:
 
-```typescript {% title="app/lib/i18n.ts" %}
+```typescript {% title="app/initializers/i18n.ts" %}
 import type { I18n, Messages } from "@sdxc/i18n";
 
 import { createI18n } from "@sdxc/i18n";
 
-import en from "~/app/locales/en.json";
-import es from "~/app/locales/es.json";
+import en from "~/resources/locales/en.json";
+import es from "~/resources/locales/es.json";
 
 export const resources: Record<string, Messages> = { en, es };
 
@@ -136,7 +136,7 @@ export function translatorFor(locale: string): I18n {
 }
 ```
 
-```json {% title="app/locales/en.json" %}
+```json {% title="resources/locales/en.json" %}
 {
 	"email": {
 		"subject": "{$title} is live",
@@ -181,20 +181,20 @@ Add it to the chain of the dispatcher factory from
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), with an `openMailer`
 option beside its database source:
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Mailer } from "@sdxc/mail";
 import type { Database } from "remix/data-table";
 
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { openDatabase } from "~/app/initializers/database";
+import { logger } from "~/app/initializers/logger";
+import { createMailer } from "~/app/initializers/mail";
+import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { database } from "~/app/jobs/middleware/database";
 import { mailer } from "~/app/jobs/middleware/mailer";
-import { queue } from "~/app/jobs/queue";
-import { openDatabase } from "~/app/lib/database";
-import { createMailer } from "~/app/lib/mail";
-import { logger } from "~/app/logger";
 
 interface DispatcherOptions {
 	queue?: JobQueue;
@@ -236,10 +236,10 @@ posting as it is when the message runs:
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import { findPosting } from "~/app/data/posting";
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
+import { translatorFor } from "~/app/initializers/i18n";
 import jobs from "~/app/jobs";
-import { translatorFor } from "~/app/lib/i18n";
+import { findPosting } from "~/app/models/posting";
 
 export default createJobHandler(jobs.sendConfirmation, async (ctx) => {
 	let posting = await findPosting(ctx.database, ctx.input.postingId);
@@ -278,20 +278,22 @@ from a request".
 Some mail has no reason to be a job, such as a password-changed notice after a form succeeds.
 `@sdxc/mail/middleware` publishes a request-scoped mailer as `ctx.email`:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { log } from "@sdxc/logger/middleware";
 import mail from "@sdxc/mail/middleware";
 import { createRouter } from "remix/router";
 
-import { createMailTransport, MAIL_FROM } from "~/app/lib/mail";
-import { logger } from "~/app/logger";
+import { logger } from "~/app/initializers/logger";
+import { createMailTransport, MAIL_FROM } from "~/app/initializers/mail";
 
-export default createRouter({
-	middleware: [
-		log(logger),
-		mail({ transport: createMailTransport, from: MAIL_FROM }),
-	],
-});
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			log(logger),
+			mail({ transport: createMailTransport, from: MAIL_FROM }),
+		],
+	});
+}
 ```
 
 `transport` takes a transport or a function that builds one per request. In a handler, `later()`
@@ -301,8 +303,8 @@ queues a message that is sent once the response has been produced:
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import { changePassword } from "~/app/data/account";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
+import { changePassword } from "~/app/models/account";
 import routes from "~/routes/web";
 
 export default createAction(routes.account.password, async (ctx) => {
@@ -335,10 +337,10 @@ import * as memory from "@sdxc/jobs/memory";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import { expect, test } from "vitest";
 
-import { insertPosting } from "~/app/data/posting";
+import { createDispatcher } from "~/app/initializers/dispatcher";
+import { createMailer } from "~/app/initializers/mail";
 import jobs from "~/app/jobs";
-import { createDispatcher } from "~/app/jobs/dispatcher";
-import { createMailer } from "~/app/lib/mail";
+import { insertPosting } from "~/app/models/posting";
 import { createTestDatabase } from "~/app/test/database";
 
 test("mails the contact in the language they posted in", async () => {

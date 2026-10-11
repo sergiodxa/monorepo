@@ -59,7 +59,7 @@ export default route({
 Derive the absolute identifiers from the route table, so the URL your metadata publishes and
 the URL an assertion is checked against are one value:
 
-```typescript {% title="app/sso/service-provider.ts" %}
+```typescript {% title="app/services/sso/service-provider.ts" %}
 import routes from "~/routes/web";
 
 export function serviceProvider(url: URL, slug: string) {
@@ -76,7 +76,7 @@ An administrator on the customer's side hands you their identity provider's meta
 or an XML file. `parseIdPMetadata` reads the entity id, the sign-on endpoints and the signing
 certificates out of it, each certificate already parsed:
 
-```typescript {% title="app/sso/provider-metadata.ts" %}
+```typescript {% title="app/services/sso/provider-metadata.ts" %}
 import { isFailure, success } from "@sdxc/result";
 import * as SAML from "@sdxc/saml";
 
@@ -117,7 +117,7 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { serviceProvider } from "~/app/sso/service-provider";
+import { serviceProvider } from "~/app/services/sso/service-provider";
 import routes from "~/routes/web";
 
 export default createAction(routes.sso.metadata, async (ctx) => {
@@ -184,9 +184,9 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Connections } from "~/app/repositories/connections";
-import { signingKey } from "~/app/sso/keys";
-import { serviceProvider } from "~/app/sso/service-provider";
+import { Connections } from "~/app/models/connections";
+import { signingKey } from "~/app/services/sso/keys";
+import { serviceProvider } from "~/app/services/sso/service-provider";
 import routes from "~/routes/web";
 
 export default createAction(routes.sso.start, async (ctx) => {
@@ -242,10 +242,10 @@ import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
 import { startSession } from "~/app/http/session";
-import { Users } from "~/app/repositories/users";
-import { findPending } from "~/app/sso/pending";
-import { replayStore } from "~/app/sso/replay-store";
-import { serviceProvider } from "~/app/sso/service-provider";
+import { Users } from "~/app/models/users";
+import { findPending } from "~/app/services/sso/pending";
+import { replayStore } from "~/app/models/replay-store";
+import { serviceProvider } from "~/app/services/sso/service-provider";
 import { LoginPage } from "~/resources/views/login";
 import routes from "~/routes/web";
 
@@ -311,7 +311,7 @@ has passed, with a TTL covering the rest of the assertion's own window, so a for
 never fills the table and a stored row outlives exactly the period a captured one could be
 replayed.
 
-```typescript {% title="app/sso/replay-store.ts" %}
+```typescript {% title="app/models/replay-store.ts" %}
 import type { ReplayStore } from "@sdxc/saml";
 import type { Database } from "remix/data-table";
 
@@ -361,7 +361,7 @@ import { isFailure } from "@sdxc/result";
 import { errorResponse, ScimError } from "@sdxc/scim";
 import { createContextKey } from "remix/router";
 
-import { Directories } from "~/app/repositories/directories";
+import { Directories } from "~/app/models/directories";
 
 export const DirectoryId = createContextKey<string>();
 
@@ -398,7 +398,7 @@ One set of definitions says which attributes your app models. The `/Schemas` doc
 advertises it, and filters, PATCH and projection evaluate against it, so what the directory is
 told and what the server does cannot disagree.
 
-```typescript {% title="app/scim/definitions.ts" %}
+```typescript {% title="app/services/scim/definitions.ts" %}
 import type { Discovery } from "@sdxc/scim/discovery";
 
 import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
@@ -450,7 +450,7 @@ import {
 	GROUP_DEFINITIONS,
 	MAX_PAGE_SIZE,
 	USER_DEFINITIONS,
-} from "~/app/scim/definitions";
+} from "~/app/services/scim/definitions";
 import routes from "~/routes/web";
 
 const USER_TYPE = {
@@ -504,9 +504,9 @@ import * as Scim from "@sdxc/scim";
 import { createAction } from "remix/router";
 
 import { scimAuth } from "~/app/http/middleware/scim-auth";
-import { Users } from "~/app/repositories/users";
-import { MAX_PAGE_SIZE, USER_DEFINITIONS } from "~/app/scim/definitions";
-import { findUsers } from "~/app/scim/find-users";
+import { Users } from "~/app/models/users";
+import { MAX_PAGE_SIZE, USER_DEFINITIONS } from "~/app/services/scim/definitions";
+import { findUsers } from "~/app/services/scim/find-users";
 import routes from "~/routes/web";
 
 export const create = createAction(routes.scim.users.create, {
@@ -548,7 +548,7 @@ and each attribute's `returned` rule. A directory's first call is usually
 `filter=userName eq "ada@example.com"`, to find out whether a person already exists. The
 filter is where the two sub-packages meet:
 
-```typescript {% title="app/scim/find-users.ts" %}
+```typescript {% title="app/services/scim/find-users.ts" %}
 import type { Filter } from "@sdxc/scim/filter";
 import type { Database } from "remix/data-table";
 
@@ -557,8 +557,8 @@ import { userResource } from "@sdxc/scim";
 import { filterToWhere } from "@sdxc/scim/data-table";
 import { compileFilter } from "@sdxc/scim/filter";
 
-import { Users } from "~/app/repositories/users";
-import { USER_DEFINITIONS } from "~/app/scim/definitions";
+import { Users } from "~/app/models/users";
+import { USER_DEFINITIONS } from "~/app/services/scim/definitions";
 
 const ALLOW = ["userName", "externalId", "emails.value"];
 const COLUMNS = { userName: { column: "user_name", caseExact: false } };
@@ -605,8 +605,8 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { scimAuth } from "~/app/http/middleware/scim-auth";
-import { Users } from "~/app/repositories/users";
-import { USER_DEFINITIONS } from "~/app/scim/definitions";
+import { Users } from "~/app/models/users";
+import { USER_DEFINITIONS } from "~/app/services/scim/definitions";
 import routes from "~/routes/web";
 
 export default createAction(routes.scim.users.patch, {
@@ -653,7 +653,7 @@ import * as Scim from "@sdxc/scim";
 import { createAction } from "remix/router";
 
 import { scimAuth } from "~/app/http/middleware/scim-auth";
-import { Groups } from "~/app/repositories/groups";
+import { Groups } from "~/app/models/groups";
 import routes from "~/routes/web";
 
 export const create = createAction(routes.scim.groups.create, {
@@ -672,30 +672,61 @@ export const create = createAction(routes.scim.groups.create, {
 
 ## Mount it
 
-Map the routes in the composition root from
-[Wire the router](/docs/building-remix-apps/wire-the-router), next to the rest of your app:
+Map the routes in your router initializer from
+[Wire the router](/docs/building-remix-apps/wire-the-router), next to the rest of your app.
+Each controller loads through `lazy()`, so a sign-in never loads the SCIM handlers:
 
-```typescript {% title="bootstrap/enterprise.ts" %}
-import type { createRouter } from "remix/router";
+```typescript {% title="app/initializers/router.ts" %}
+import { lazy } from "@sdxc/lazy-route";
+import { createRouter } from "remix/router";
 
-import discovery from "~/app/http/controllers/scim/discovery";
-import * as groups from "~/app/http/controllers/scim/groups";
-import patchUser from "~/app/http/controllers/scim/patch-user";
-import * as users from "~/app/http/controllers/scim/users";
-import acs from "~/app/http/controllers/sso/acs";
-import metadata from "~/app/http/controllers/sso/metadata";
-import start from "~/app/http/controllers/sso/start";
 import routes from "~/routes/web";
 
-export function mapEnterprise(router: ReturnType<typeof createRouter>) {
-	router.map(routes.sso.metadata, metadata);
-	router.map(routes.sso.start, start);
-	router.map(routes.sso.acs, acs);
-	router.map(routes.scim.discovery, discovery);
-	router.map(routes.scim.users.list, users.list);
-	router.map(routes.scim.users.create, users.create);
-	router.map(routes.scim.users.patch, patchUser);
-	router.map(routes.scim.groups.create, groups.create);
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			// your global middleware
+		],
+	});
+
+	router.map(
+		routes.sso.metadata,
+		lazy(() => import("~/app/http/controllers/sso/metadata")),
+	);
+	router.map(
+		routes.sso.start,
+		lazy(() => import("~/app/http/controllers/sso/start")),
+	);
+	router.map(
+		routes.sso.acs,
+		lazy(() => import("~/app/http/controllers/sso/acs")),
+	);
+	router.map(
+		routes.scim.discovery,
+		lazy(() => import("~/app/http/controllers/scim/discovery")),
+	);
+	router.map(
+		routes.scim.users.list,
+		lazy(() => import("~/app/http/controllers/scim/users").then((it) => it.list)),
+	);
+	router.map(
+		routes.scim.users.create,
+		lazy(() =>
+			import("~/app/http/controllers/scim/users").then((it) => it.create),
+		),
+	);
+	router.map(
+		routes.scim.users.patch,
+		lazy(() => import("~/app/http/controllers/scim/patch-user")),
+	);
+	router.map(
+		routes.scim.groups.create,
+		lazy(() =>
+			import("~/app/http/controllers/scim/groups").then((it) => it.create),
+		),
+	);
+
+	return router;
 }
 ```
 
@@ -710,6 +741,6 @@ eagerly, so give the SCIM routes a rate limit of their own, keyed on the token's
 - [Validate forms and route params](/docs/building-remix-apps/forms-and-params) — reading
   the posted `SAMLResponse` and `RelayState` fields in `findPending`.
 - [Query D1 and Durable Object SQL](/docs/data-and-background-work/databases) — the
-  database behind the replay store and the `Users` repository.
+  database behind the replay store and the `Users` model.
 - [`@sdxc/saml`](/api/saml) and [`@sdxc/scim`](/api/scim) — every error class, and the
   filter, PATCH and discovery reference.

@@ -30,7 +30,7 @@ A provider is one subscriber list on one platform. Build it once at module scope
 reaches no network, so a missing API key fails the call that needed it and the Worker still
 boots.
 
-```typescript {% title="app/lib/newsletter.ts" %}
+```typescript {% title="app/initializers/newsletter.ts" %}
 import type { Newsletter } from "@sdxc/newsletter";
 
 import { ButtondownNewsletter } from "@sdxc/newsletter/buttondown";
@@ -53,7 +53,7 @@ holds several.
 On Kit, double opt-in belongs to the form a reader is added through, so the provider names that
 form and repeats its setting:
 
-```typescript {% title="app/lib/newsletter.ts" %}
+```typescript {% title="app/initializers/newsletter.ts" %}
 import type { Newsletter } from "@sdxc/newsletter";
 
 import { KitNewsletter } from "@sdxc/newsletter/kit";
@@ -79,40 +79,46 @@ which the write may have landed; every write in the contract is safe to repeat.
 ## Publish it on the request
 
 The middleware publishes the provider as `ctx.newsletter`. Taking the list as a parameter of
-the router factory is what lets a test hand in the memory list:
+`createWebRouter` is what lets a test hand in the memory list:
 
-```tsx {% title="bootstrap/app.tsx" %}
+```tsx {% title="app/initializers/router.tsx" %}
 import type { Newsletter } from "@sdxc/newsletter";
-import type { Middleware } from "remix/router";
 
 import { attribution } from "@sdxc/attribution/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import newsletter from "@sdxc/newsletter/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
-import * as subscribe from "~/app/http/controllers/subscribe";
-import { attributionCookie } from "~/app/lib/cookies";
-import { buttondown } from "~/app/lib/newsletter";
-import { createNewsletterWebhook } from "~/app/lib/newsletter-webhook";
+import { attributionCookie } from "~/app/initializers/cookies";
+import { logger } from "~/app/initializers/logger";
+import { buttondown } from "~/app/initializers/newsletter";
+import { createNewsletterWebhook } from "~/app/initializers/newsletter-webhook";
 import routes from "~/routes/web";
 
-import { logger } from "./logger";
+export function createWebRouter(list: Newsletter = buttondown) {
+	let router = createRouter({
+		middleware: [
+			log(logger),
+			getClientIP(),
+			attribution({ store: attributionCookie() }),
+			formData(),
+			newsletter({ provider: list }),
+			// …then cop() and a renderer
+		],
+	});
 
-export default function application(list: Newsletter = buttondown) {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		getClientIP(),
-		attribution({ store: attributionCookie() }),
-		formData() as Middleware,
-		newsletter({ provider: list }),
-		// …then cop() and a renderer
-	];
-
-	let router = createRouter({ middleware });
 	router.map(routes.subscribe, {
-		actions: { index: subscribe.index, action: subscribe.action },
+		actions: {
+			index: lazy(() =>
+				import("~/app/http/controllers/subscribe").then((it) => it.index),
+			),
+			action: lazy(() =>
+				import("~/app/http/controllers/subscribe").then((it) => it.action),
+			),
+		},
 	});
 	router.map(routes.webhooks.newsletter, createNewsletterWebhook(list));
 	return router;
@@ -286,14 +292,14 @@ The platform tells you when a pending reader confirms, leaves or bounces. `Newsl
 verifies the delivery against the provider's secret, normalizes it into events and calls the
 handler keyed by each event's type:
 
-```typescript {% title="app/lib/newsletter-webhook.ts" %}
+```typescript {% title="app/initializers/newsletter-webhook.ts" %}
 import type { Newsletter } from "@sdxc/newsletter";
 
 import { NewsletterWebhook } from "@sdxc/newsletter";
 import { KVReplayStore } from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 
-import { setReaderStatus } from "~/app/data/readers";
+import { setReaderStatus } from "~/app/models/readers";
 
 export function createNewsletterWebhook(provider: Newsletter): NewsletterWebhook {
 	return new NewsletterWebhook(
@@ -343,7 +349,7 @@ import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 const ORIGIN = "https://example.com";
 
@@ -353,7 +359,7 @@ function post(list: MemoryNewsletter, email: string, cookie = "") {
 		headers: { origin: ORIGIN, cookie },
 		body: new URLSearchParams({ email }),
 	});
-	return application(list).fetch(request);
+	return createWebRouter(list).fetch(request);
 }
 
 test("a new reader waits for confirmation", async () => {
@@ -378,7 +384,7 @@ test("a suppressed address sees its own copy", async () => {
 
 test("credits the campaign the visitor landed from", async () => {
 	let list = new MemoryNewsletter();
-	let landing = await application(list).fetch(
+	let landing = await createWebRouter(list).fetch(
 		new Request(`${ORIGIN}/subscribe?utm_source=Mastodon&utm_campaign=Launch`, {
 			headers: { "sec-fetch-dest": "document" },
 		}),
@@ -407,7 +413,7 @@ import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 test("refuses a delivery the configured secret does not prove", async () => {
 	let sender = new MemoryNewsletter();
@@ -420,7 +426,7 @@ test("refuses a delivery the configured secret does not prove", async () => {
 	);
 
 	let unconfigured = new MemoryNewsletter({ webhookSecret: "" });
-	let response = await application(unconfigured).fetch(delivery.request);
+	let response = await createWebRouter(unconfigured).fetch(delivery.request);
 
 	expect(response.status).toBe(401);
 });
@@ -436,10 +442,10 @@ subscribe per address, lookups by id and email, tags, metadata merging, idempote
 full cursor walk and fail-closed webhooks. The memory, Buttondown and Kit providers pass the same
 suite.
 
-```typescript {% title="app/lib/mailing-list.test.ts" %}
+```typescript {% title="app/services/mailing-list.test.ts" %}
 import { conformance } from "@sdxc/newsletter/conformance";
 
-import { MailingListNewsletter, signDelivery } from "~/app/lib/mailing-list";
+import { MailingListNewsletter, signDelivery } from "~/app/services/mailing-list";
 
 const API_KEY = "test-key";
 const SECRET = "test-webhook-secret";

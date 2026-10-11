@@ -31,26 +31,23 @@ Add the middleware to the router's global chain. It reads the `CF-Connecting-IP`
 Cloudflare attaches to every request it routes, parses it, and publishes the result as `ctx.ip`
 before any route middleware or handler runs.
 
-```tsx {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```tsx {% title="app/initializers/router.tsx" %}
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import routes from "~/routes/web";
+import { logger } from "~/app/initializers/logger";
 
-import { logger } from "./logger";
-
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		getClientIP(),
-		// …then cop(), formData() and a renderer
-	];
-
-	let router = createRouter({ middleware, defaultHandler });
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			log(logger),
+			getClientIP(),
+			// …then cop(), formData() and a renderer
+		],
+		defaultHandler,
+	});
 	// router.map(…) for each route
 	return router;
 }
@@ -118,7 +115,7 @@ import type { Database } from "remix/data-table";
 import { IP } from "@sdxc/ip";
 import { isSuccess } from "@sdxc/result";
 
-import { SignIns } from "~/app/repositories/sign-ins";
+import { SignIns } from "~/app/models/sign-ins";
 
 const CLIENT_NETWORK: IP.Prefixes = { v4: 32, v6: 64 };
 
@@ -138,7 +135,7 @@ export async function isNewNetwork(db: Database, userId: string, ip: IP) {
 }
 ```
 
-`SignIns` is your own repository over a table with a text `ip` column. `toString()` writes the
+`SignIns` is your own model over a table with a text `ip` column. `toString()` writes the
 canonical form, so equal addresses store equal strings and an index on the column finds them.
 Reading it back goes through `IP.parse`, which turns a row written by older code, or edited by
 hand, into a failure you handle instead of a value you trust.
@@ -201,8 +198,8 @@ export default function officeOnly(): Middleware {
 }
 ```
 
-Install `officeOnly()` in the `middleware` of the admin routes' `router.map`, after the global
-chain has published `ctx.ip`. A request with no usable address is refused with the rest.
+Pass `[officeOnly()]` as the second argument of the admin routes' `lazy()` in the router, so it
+runs after the global chain has published `ctx.ip` and before the admin module loads. A request with no usable address is refused with the rest.
 
 `IP.Range.parse` refuses `203.0.113.1/24` with `host-bits-set`, because an address with bits
 past its prefix names a host where a network was meant. A typo in the list therefore fails to
@@ -224,7 +221,7 @@ import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Webhooks } from "~/app/repositories/webhooks";
+import { Webhooks } from "~/app/models/webhooks";
 import routes from "~/routes/web";
 
 const WEBHOOK = s.object({ url: s.string() });

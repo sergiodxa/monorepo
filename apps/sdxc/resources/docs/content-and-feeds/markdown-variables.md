@@ -28,7 +28,7 @@ A variable is a name after a `$`. In text it sits inside `{% … %}`, and in an 
 inside braces. A name may continue as a dotted path whose segments are property names or array
 indexes, so `$plan.seats` reads a field and `$plans.0` the first item of a list.
 
-```text {% title="content/onboarding/welcome.md" %}
+```text {% title="resources/content/onboarding/welcome.md" %}
 Welcome to {% $product %}. Your {% $plan.name %} plan includes {% $plan.seats %} seats.
 
 <pricing plans={$plans} current={$plan.id} />
@@ -56,7 +56,7 @@ The tag and the allowlisted element in that file are declared the usual way. A t
 schema describes the values it receives once filled, so `plans` is an array of plan objects
 even though the source writes a variable:
 
-```typescript {% title="app/content/schema.ts" %}
+```typescript {% title="app/services/content/schema.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import * as s from "remix/data-schema";
@@ -81,11 +81,11 @@ export const MARKDOWN_OPTIONS = {
 included. Pass the options the document was parsed with, so the plugin can run the checks that
 were waiting on these values:
 
-```typescript {% title="app/content/onboarding.ts" %}
+```typescript {% title="app/services/content/onboarding.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { variables } from "@sdxc/markdown/plugin/variables";
 
-import { MARKDOWN_OPTIONS } from "~/app/content/schema";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
 interface Workspace {
 	slug: string;
@@ -140,13 +140,13 @@ variable takes only relative, `http`, `https`, `mailto` and `tel` URLs, so a val
 `javascript:alert(1)` fails the walk at the `<a>` the way it would fail the parse had the author
 written it.
 
-```typescript {% title="app/content/onboarding-page.ts" %}
+```typescript {% title="app/services/content/onboarding-page.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { MarkdownParseError } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
 
-import { fillOnboarding } from "~/app/content/onboarding";
+import { fillOnboarding } from "~/app/services/content/onboarding";
 
 export function onboardingPage(
 	document: Markdown.Document,
@@ -190,11 +190,11 @@ Variables survive parsing, so `Markdown.stringify` writes them back as the autho
 comments included. An editing API can parse a file, change its frontmatter, and save it without
 filling a value or dropping a note:
 
-```typescript {% title="app/content/save.ts" %}
+```typescript {% title="app/services/content/save.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { isFailure, success } from "@sdxc/result";
 
-import { MARKDOWN_OPTIONS } from "~/app/content/schema";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
 export function touch(source: string) {
 	let parsed = Markdown.parse(source, MARKDOWN_OPTIONS);

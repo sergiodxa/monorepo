@@ -135,7 +135,7 @@ import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { CREATE_BOOK } from "~/app/http/openapi/operations";
 import { problems } from "~/app/services/problems";
 import routes from "~/routes/web";
@@ -246,9 +246,9 @@ import { isFailure } from "@sdxc/result";
 import { expect, test } from "vitest";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
-let router = application();
+let router = createWebRouter();
 
 test("a refused create answers as documented", async () => {
 	let request = new Request("https://books.example.com/api/books", {

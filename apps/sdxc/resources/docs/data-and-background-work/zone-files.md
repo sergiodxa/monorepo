@@ -31,7 +31,7 @@ RFC 1035 reads as relative: `example.com` written in the `example.com` zone mean
 `example.com.example.com`. `relativeNames: "origin-suffix"` reads such a name as the absolute
 name it was meant to be:
 
-```typescript {% title="app/zones/read-zone.ts" %}
+```typescript {% title="app/services/zones/read-zone.ts" %}
 import * as ZoneFile from "@sdxc/zone-file";
 
 export const MAX_ZONE_BYTES = 256 * 1024;
@@ -63,7 +63,7 @@ started on, its trailing `;` comment, and typed fields: `address` for `A`, `pref
 other than `IN` and types you may not handle. Deciding what to keep is a policy, and it is a
 filter over the records:
 
-```typescript {% title="app/zones/tracked-records.ts" %}
+```typescript {% title="app/services/zones/tracked-records.ts" %}
 import type { ZoneFile } from "@sdxc/zone-file";
 
 import { formatRecordData } from "@sdxc/zone-file";
@@ -125,8 +125,8 @@ import { maxLength, minLength } from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { MAX_ZONE_BYTES, readZone } from "~/app/zones/read-zone";
-import { trackedRecords } from "~/app/zones/tracked-records";
+import { MAX_ZONE_BYTES, readZone } from "~/app/services/zones/read-zone";
+import { trackedRecords } from "~/app/services/zones/tracked-records";
 import { ImportZonePage, ReviewZonePage } from "~/resources/views/zones";
 import routes from "~/routes/web";
 
@@ -175,12 +175,12 @@ finds records that are still propagating or edited by hand on the provider's sid
 returns records with the same typed fields `parse` gives, so the same `formatRecordData` key
 lines them up:
 
-```typescript {% title="app/zones/compare.ts" %}
+```typescript {% title="app/services/zones/compare.ts" %}
 import { resolve } from "@sdxc/doh";
 import { isFailure } from "@sdxc/result";
 import { formatRecordData } from "@sdxc/zone-file";
 
-import type { TrackedRecord } from "~/app/zones/tracked-records";
+import type { TrackedRecord } from "~/app/services/zones/tracked-records";
 
 export async function missingFromDns(records: TrackedRecord[]) {
 	let groups = Map.groupBy(records, (record) => `${record.name} ${record.type}`);
@@ -223,7 +223,7 @@ import { attachment, text } from "@sdxc/http/response";
 import * as ZoneFile from "@sdxc/zone-file";
 import { createAction } from "remix/router";
 
-import { Zones } from "~/app/data/zones";
+import { Zones } from "~/app/models/zones";
 import routes from "~/routes/web";
 
 export default createAction(routes.zones.export, async (ctx) => {

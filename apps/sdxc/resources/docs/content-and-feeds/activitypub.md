@@ -31,7 +31,7 @@ npm add remix @sdxc/activitypub @sdxc/jobs @sdxc/cache @sdxc/well-known @sdxc/ht
 
 The package keeps no state of its own. Followers, the activities already processed and the
 posts you serve live in your database, behind four small interfaces it calls, so the examples
-import a few modules from your own `~/app/repositories/*` and `~/app/models/*`.
+import a few modules from your own `~/app/models/*`.
 
 ## Generate the actor's keys
 
@@ -67,7 +67,7 @@ import { ActorKeys } from "@sdxc/activitypub";
 import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { ACTOR_ID } from "~/app/config/activitypub";
+import { ACTOR_ID } from "~/config/activitypub";
 
 class SiteKeys implements KeyProvider {
 	#keys: Promise<Result<ActorKeys, Error>> | null = null;
@@ -94,7 +94,7 @@ A failed import is forgotten, so the next call tries again. The key must be PKCS
 The actor's URLs are ordinary routes in your app. Name them once, so the routes and the actor
 document cannot drift apart:
 
-```typescript {% title="app/config/activitypub.ts" %}
+```typescript {% title="config/activitypub.ts" %}
 export const ACTOR_ID = "https://example.com/actor";
 export const INBOX_ID = "https://example.com/actor/inbox";
 export const OUTBOX_ID = "https://example.com/actor/outbox";
@@ -135,7 +135,7 @@ import {
 	FOLLOWING_ID,
 	INBOX_ID,
 	OUTBOX_ID,
-} from "~/app/config/activitypub";
+} from "~/config/activitypub";
 
 export function siteActor(): Result<ActivityPub.Actor, ActivityPubParseError> {
 	return parseActor({
@@ -176,10 +176,10 @@ import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import { USER_AGENT } from "~/app/config/activitypub";
+import { USER_AGENT } from "~/config/activitypub";
 import jobs from "~/app/jobs";
 import { saveResponse, withdrawResponse } from "~/app/models/responses";
-import { Followers } from "~/app/repositories/followers";
+import { Followers } from "~/app/models/followers";
 import { SITE_KEYS } from "~/app/services/actor-keys";
 import { FederatedPosts } from "~/app/services/federated-posts";
 import { siteActor } from "~/app/services/site-actor";
@@ -341,7 +341,7 @@ import { isFailure } from "@sdxc/result";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { readQuery, select, webFinger } from "@sdxc/well-known/webfinger";
 
-import { ACTOR_ID, HANDLE } from "~/app/config/activitypub";
+import { ACTOR_ID, HANDLE } from "~/config/activitypub";
 
 export const webFingerMiddleware = wellKnown({
 	webfinger: serve(webFinger, (ctx) => {
@@ -395,7 +395,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { createFederation } from "~/app/services/federation";
 
 export default createJobHandler(jobs.federation.process, async (ctx) => {
@@ -469,7 +469,7 @@ unless the actor sets `manuallyApprovesFollowers: true`. A pending follower is s
 `federation.approve` accepts it and queues the `Accept` of its stored `Follow`;
 `federation.reject`, for a pending or an accepted follower, queues the `Reject` and forgets it:
 
-```typescript {% title="app/controllers/followers.ts" %}
+```typescript {% title="app/http/controllers/followers.ts" %}
 let federation = createFederation(ctx);
 if (isFailure(federation)) return serviceUnavailable({ error: "not federating" });
 let decided =
@@ -544,7 +544,7 @@ import { isFailure, success, wrap } from "@sdxc/result";
 
 import type { Post } from "~/app/models/posts";
 
-import { ACTOR_ID, FOLLOWERS_ID } from "~/app/config/activitypub";
+import { ACTOR_ID, FOLLOWERS_ID } from "~/config/activitypub";
 import { findPostByUrl } from "~/app/models/posts";
 
 export function articleOf(post: Post): ActivityPub.Draft<ActivityPub.Object> {
@@ -617,7 +617,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { findPost, markFederated } from "~/app/models/posts";
 import { activityOf } from "~/app/services/federated-posts";
 import { createFederation } from "~/app/services/federation";
@@ -725,11 +725,11 @@ reads the page first.
 suites that hold your own stores to the contracts the package relies on. Register a suite for
 each store you wrote:
 
-```typescript {% title="app/repositories/followers.test.ts" %}
+```typescript {% title="app/models/followers.test.ts" %}
 import { followerStoreConformance } from "@sdxc/activitypub/testing";
 
-import { Followers } from "~/app/repositories/followers";
-import { openTestDatabase } from "~/test/database";
+import { Followers } from "~/app/models/followers";
+import { openTestDatabase } from "~/app/test/database";
 
 followerStoreConformance({
 	name: "Followers",
@@ -756,7 +756,7 @@ import { MemoryCache } from "@sdxc/cache/memory";
 import { isSuccess, unwrap } from "@sdxc/result";
 import { expect, test } from "vitest";
 
-import { ACTOR_ID, INBOX_ID } from "~/app/config/activitypub";
+import { ACTOR_ID, INBOX_ID } from "~/config/activitypub";
 import { siteActor } from "~/app/services/site-actor";
 
 async function testFederation(queued: Federation.Message[]) {

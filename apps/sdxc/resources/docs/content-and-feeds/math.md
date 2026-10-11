@@ -69,7 +69,7 @@ The source of each is the TeX inside a `math` fence, as the next sections show.
 the markup. `display: true` makes it a block formula, which also sets the limits of big
 operators like `\sum` under and over the symbol instead of beside it:
 
-```typescript {% title="app/content/formula.ts" %}
+```typescript {% title="app/services/content/formula.ts" %}
 import { toMathML } from "@sdxc/math";
 import { isFailure } from "@sdxc/result";
 
@@ -117,7 +117,7 @@ carrying `tex` and `display` attributes and leaves every other code block alone.
 are synchronous, so it spreads into the same single walk as the rest of your preparation and
 the walk still answers with a `Result`:
 
-```typescript {% title="app/content/prepare.ts" %}
+```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { math } from "@sdxc/math/markdown";
@@ -173,7 +173,7 @@ block or inline code its author wrote, and the walk succeeds.
 `MathFormula` from `@sdxc/math/ui` is a `remix/component` component whose props are exactly
 the attributes the visitor writes, so it goes straight into the `components` map of `toRemix`:
 
-```tsx {% title="app/content/render-post.tsx" %}
+```tsx {% title="app/services/content/render-post.tsx" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { toRemix } from "@sdxc/markdown/remix";
@@ -191,7 +191,7 @@ walk with `invalid: "keep"` never produces but a hand-built tag can, renders as 
 
 The same component draws a formula outside markdown, in any view:
 
-```tsx {% title="app/components/pricing-note.tsx" %}
+```tsx {% title="resources/components/pricing-note.tsx" %}
 import type { Handle } from "remix/component";
 
 import { MathFormula } from "@sdxc/math/ui";
@@ -214,7 +214,7 @@ A feed item or an email body wants a string. `renderMath` is the tag renderer fo
 turning each `math` tag into the markup `toMathML` writes, with unconvertible TeX as escaped
 `<code>`:
 
-```typescript {% title="app/content/render.ts" %}
+```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { toHTML } from "@sdxc/markdown/html";

@@ -29,7 +29,7 @@ npm add -D @sdxc/sample @sdxc/random
 A generator takes a seed and, optionally, the instant its `date` module measures from. Pin
 both, in one module the tests and the previews share:
 
-```typescript {% title="app/fixtures/sample.ts" %}
+```typescript {% title="app/test/sample.ts" %}
 import { createSample } from "@sdxc/sample";
 
 export const REFERENCE = new Date("2026-06-15T12:00:00Z");
@@ -49,11 +49,11 @@ after what they are for, like `"invoice-list"`, so two tests never share a strea
 A factory draws one row's worth of input for your model. The generator's modules return the
 pieces, and `person.record()` returns a whole person whose email and handle match their name:
 
-```typescript {% title="app/fixtures/factories.ts" %}
+```typescript {% title="database/factories/index.ts" %}
 import type { Sample } from "@sdxc/sample";
 
-import type { AccountInput } from "~/app/data/account";
-import type { InvoiceInput } from "~/app/data/invoice";
+import type { AccountInput } from "~/app/models/account";
+import type { InvoiceInput } from "~/app/models/invoice";
 
 export function accountInput(sample: Sample): AccountInput {
 	let person = sample.person.record();
@@ -100,9 +100,9 @@ drawing from a stream of its own:
 import type { Sample } from "@sdxc/sample";
 import type { Database } from "remix/data-table";
 
-import Accounts from "~/app/data/account";
-import Invoices from "~/app/data/invoice";
-import { accountInput, invoiceInput } from "~/app/fixtures/factories";
+import Accounts from "~/app/models/account";
+import Invoices from "~/app/models/invoice";
+import { accountInput, invoiceInput } from "~/database/factories";
 
 export async function seedDatabase(db: Database, sample: Sample, accounts = 10) {
 	let people = sample.derive("accounts");
@@ -132,7 +132,7 @@ A test then seeds a fresh database, requests a page, and checks it against what 
 ```typescript {% title="app/http/controllers/invoices.test.ts" %}
 import { expect, test } from "vitest";
 
-import { fixtureSample } from "~/app/fixtures/sample";
+import { fixtureSample } from "~/app/test/sample";
 import { createTestDatabase, fetchApp } from "~/app/test/router";
 import { seedDatabase } from "~/app/test/seed";
 
@@ -166,12 +166,12 @@ so a bug report that names a customer points at the same row on every laptop.
 A component worth previewing needs props that look like production. Build the fixture once,
 with ids, from the same factories:
 
-```typescript {% title="app/fixtures/invoice.ts" %}
-import type { Account } from "~/app/data/account";
-import type { Invoice } from "~/app/data/invoice";
+```typescript {% title="database/factories/invoice.ts" %}
+import type { Account } from "~/app/models/account";
+import type { Invoice } from "~/app/models/invoice";
 
-import { accountInput, invoiceInput } from "~/app/fixtures/factories";
-import { fixtureSample } from "~/app/fixtures/sample";
+import { accountInput, invoiceInput } from "~/database/factories";
+import { fixtureSample } from "~/app/test/sample";
 
 export interface InvoiceFixture {
 	account: Account;
@@ -191,8 +191,8 @@ A preview page renders your `InvoiceCard` with it, and takes the seed from the q
 ```tsx {% title="app/http/controllers/previews/invoice-card.tsx" %}
 import { createAction } from "remix/router";
 
-import { InvoiceCard } from "~/app/components/invoice-card";
-import { invoiceFixture } from "~/app/fixtures/invoice";
+import { InvoiceCard } from "~/resources/components/invoice-card";
+import { invoiceFixture } from "~/database/factories/invoice";
 import routes from "~/routes/web";
 
 export default createAction(routes.previews.invoiceCard, (ctx) => {
@@ -212,12 +212,12 @@ A snapshot records output and fails when it changes, which is only useful when n
 your code can change it. Generated data meets that bar once the seed and the reference
 instant are fixed:
 
-```tsx {% title="app/components/invoice-card.test.tsx" %}
+```tsx {% title="resources/components/invoice-card.test.tsx" %}
 import { renderToString } from "remix/component/server";
 import { expect, test } from "vitest";
 
-import { InvoiceCard } from "~/app/components/invoice-card";
-import { invoiceFixture } from "~/app/fixtures/invoice";
+import { InvoiceCard } from "~/resources/components/invoice-card";
+import { invoiceFixture } from "~/database/factories/invoice";
 
 test.each(["invoice-card", "invoice-card-2", "invoice-card-5"])(
 	"an invoice card renders the same markup for %s",
@@ -252,13 +252,13 @@ Fixed seeds make a suite repeatable, and they also let it lean on one lucky set 
 code that should hold for any input, draw a fresh seed each run and print it where a failure
 shows it:
 
-```typescript {% title="app/data/invoice-totals.test.ts" %}
+```typescript {% title="app/services/invoice-totals.test.ts" %}
 import { systemSeed } from "@sdxc/random";
 import { createSample } from "@sdxc/sample";
 import { describe, expect, test } from "vitest";
 
-import { totals } from "~/app/data/invoice-totals";
-import { invoiceInput } from "~/app/fixtures/factories";
+import { totals } from "~/app/services/invoice-totals";
+import { invoiceInput } from "~/database/factories";
 
 const SEED = Number(process.env.SAMPLE_SEED) || systemSeed();
 
@@ -275,7 +275,7 @@ describe(`invoice totals (SAMPLE_SEED=${SEED})`, () => {
 
 `totals` is your own function. `systemSeed()` from `@sdxc/random` draws a 32-bit seed from Web Crypto.
 Because the seed is in the suite's name, a failure prints it, and
-`SAMPLE_SEED=<seed> vp test run app/data` replays that exact run down to the last field.
+`SAMPLE_SEED=<seed> vp test run app/services` replays that exact run down to the last field.
 
 ## Where to go next
 

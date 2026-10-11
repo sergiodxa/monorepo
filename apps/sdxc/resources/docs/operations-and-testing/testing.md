@@ -72,7 +72,7 @@ so `cloudflare:test` type-checks, and set `"test": "vp test run"` in `package.js
 ## Drive the real router
 
 The test that catches the most is one request through the same middleware chain, controllers
-and jobs the Worker builds. Make the app factory take the services a test substitutes as
+and jobs the Worker builds. Make the router factory take the services a test substitutes as
 parameters, and write one helper that opens a database and fetches through the router.
 
 ```typescript {% title="app/test/router.ts" %}
@@ -83,7 +83,7 @@ import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import * as memory from "@sdxc/jobs/memory";
 import { Database } from "remix/data-table";
 
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 export const ORIGIN = "https://app.test";
 
@@ -104,13 +104,13 @@ export async function fetchApp(db: Database, path: string, init: RequestInit = {
 	let headers = new Headers(init.headers);
 	if (init.method && init.method !== "GET") headers.set("origin", ORIGIN);
 	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
-	return await application(() => db, queue).fetch(request);
+	return await createWebRouter(() => db, queue).fetch(request);
 }
 ```
 
 `createD1Database()` is a D1 binding over an in-memory SQLite database, so a malformed
 statement or a constraint violation fails in the test rather than in production, and
-`exec()` takes the migration file as it stands. The app factory hands `queue` to
+`exec()` takes the migration file as it stands. `createWebRouter` hands `queue` to
 `jobEnqueuer(queue)` from `@sdxc/jobs/router`, so whatever a handler enqueues through
 `ctx.jobs` lands in a memory queue the test can drain (see
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)). Setting `origin` on writes keeps
@@ -120,7 +120,7 @@ request and an assertion:
 ```typescript {% title="app/http/controllers/board.test.ts" %}
 import { beforeEach, expect, test } from "vitest";
 
-import Posting from "~/app/data/posting";
+import Posting from "~/app/models/posting";
 import { createTestDatabase, fetchApp } from "~/app/test/router";
 
 let db: Awaited<ReturnType<typeof createTestDatabase>>;
@@ -146,7 +146,7 @@ through the factory as above, alias the specifier to a small stub module with Vi
 A file named `*.workers.test.ts` runs inside workerd, and its `env` holds the bindings your
 Wrangler config declares, implemented by Cloudflare's own code.
 
-```typescript {% title="app/lib/cache.workers.test.ts" %}
+```typescript {% title="app/initializers/cache.workers.test.ts" %}
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
@@ -181,7 +181,7 @@ Everything else lives in `@sdxc/cloudflare-mocks`. Each factory returns isolated
 against the platform interface, so a mock that drifts from the platform's shape fails
 typecheck.
 
-```typescript {% title="app/jobs/refresh.test.ts" %}
+```typescript {% title="bootstrap/worker.test.ts" %}
 import {
 	createEnv,
 	createExecutionContext,
@@ -190,7 +190,7 @@ import {
 } from "@sdxc/cloudflare-mocks";
 import { expect, test } from "vitest";
 
-import worker from "~/bootstrap/worker";
+import worker from "./worker";
 
 test("a refresh request enqueues one message", async () => {
 	let queue = createQueue<{ id: string }>();
@@ -221,7 +221,7 @@ run with anything size- or limit-related.
 Mock the network, not `fetch`. MSW intercepts requests at the boundary, so your code calls
 the global `fetch` exactly as it does in production.
 
-```typescript {% title="app/lib/billing.test.ts" %}
+```typescript {% title="app/services/billing.test.ts" %}
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
@@ -255,14 +255,14 @@ export const mailer = new Mailer({
 });
 ```
 
-Import `mailer` into `fetchApp` and pass it to `application()` next to the database and the
+Import `mailer` into `fetchApp` and pass it to `createWebRouter()` next to the database and the
 queue, the same way the Worker passes its real one. The confirmation is sent by a job, so the
 test drains the queue through the app's own dispatcher before reading what was sent:
 
 ```typescript {% title="app/http/controllers/board.test.ts" %}
 import { beforeEach, expect, test } from "vitest";
 
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { outbox } from "~/app/test/mail";
 import { createTestDatabase, fetchApp, queue } from "~/app/test/router";
 
@@ -383,7 +383,7 @@ when behavior depends on script; `db`, `sample` and shared `command` definitions
 
 ## Where to go next
 
-- [Wire the router](/docs/building-remix-apps/wire-the-router) shows the app factory and the
+- [Wire the router](/docs/building-remix-apps/wire-the-router) shows the router factory and the
   middleware that publishes `ctx.db`, which is what makes it substitutable.
 - [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron) covers the
   dispatcher the memory queue stands in for.

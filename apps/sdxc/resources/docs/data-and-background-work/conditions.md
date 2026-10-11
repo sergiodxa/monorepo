@@ -85,8 +85,8 @@ import * as s from "remix/data-schema";
 import { minLength } from "remix/data-schema/checks";
 import { createAction } from "remix/router";
 
-import { AlertRules } from "~/app/repositories/alert-rules";
-import { Filters } from "~/app/repositories/filters";
+import { AlertRules } from "~/app/models/alert-rules";
+import { Filters } from "~/app/models/filters";
 import { alertConditions } from "~/app/services/alert-conditions";
 import routes from "~/routes/web";
 
@@ -112,7 +112,7 @@ export default createAction(routes.api.alertRules.create, async (ctx) => {
 ```
 
 `ctx.team` is the team your API-key middleware published, and `AlertRules` and `Filters` are
-your own repositories over `ctx.db`.
+your own models over `ctx.db`.
 
 The schema accepts anything well-formed, and `compile` catches the rest before the row is
 written: a filter the team never saved, two filters that reference each other in a cycle,
@@ -147,8 +147,8 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
 
-import { AlertRules } from "~/app/repositories/alert-rules";
-import { Filters } from "~/app/repositories/filters";
+import { AlertRules } from "~/app/models/alert-rules";
+import { Filters } from "~/app/models/filters";
 import { alertConditions } from "~/app/services/alert-conditions";
 import { RuleEditor } from "~/resources/views/rule-editor";
 import routes from "~/routes/web";
@@ -247,9 +247,9 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
-import { AlertRules } from "~/app/repositories/alert-rules";
-import { CheckResults } from "~/app/repositories/check-results";
-import { Filters } from "~/app/repositories/filters";
+import { AlertRules } from "~/app/models/alert-rules";
+import { CheckResults } from "~/app/models/check-results";
+import { Filters } from "~/app/models/filters";
 import { alertConditions } from "~/app/services/alert-conditions";
 import { alertContext } from "~/app/services/alert-context";
 import { notify } from "~/app/services/notify";
@@ -291,7 +291,7 @@ The context is the vocabulary your customers write against, so build it on purpo
 ```typescript {% title="app/services/alert-context.ts" %}
 import type { Context } from "@sdxc/expression";
 
-import type { CheckResult } from "~/app/repositories/check-results";
+import type { CheckResult } from "~/app/models/check-results";
 
 export function alertContext(result: CheckResult): Context {
 	return {
@@ -362,7 +362,7 @@ admin page the same text editing as above, and
 `@sdxc/logger` takes a condition in the JSON form as its sampling `keep`, so the exemption can
 come from configuration rather than code:
 
-```typescript {% title="bootstrap/logger.ts" %}
+```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({

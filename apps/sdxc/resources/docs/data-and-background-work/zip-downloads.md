@@ -42,7 +42,7 @@ An entry's source is a string, written as UTF-8, a `Uint8Array`, or a
 `ReadableStream<Uint8Array>`. `streamify` returns exactly that stream, so the contacts go in as
 their CSV is written:
 
-```typescript {% title="app/exports/account-archive.ts" %}
+```typescript {% title="app/services/exports/account-archive.ts" %}
 import type { Result } from "@sdxc/result";
 import type { ZipError } from "@sdxc/zip";
 import type { Database } from "remix/data-table";
@@ -51,11 +51,11 @@ import { streamify } from "@sdxc/csv";
 import { isFailure, success } from "@sdxc/result";
 import { Zip } from "@sdxc/zip";
 
-import type { Account } from "~/app/data/accounts";
+import type { Account } from "~/app/models/accounts";
 
-import { Invoices } from "~/app/data/invoices";
-import { contactRows } from "~/app/exports/contact-rows";
-import { storedFile } from "~/app/exports/stored-file";
+import { Invoices } from "~/app/models/invoices";
+import { contactRows } from "~/app/services/exports/contact-rows";
+import { storedFile } from "~/app/services/exports/stored-file";
 
 export async function accountArchive(
 	db: Database,
@@ -107,7 +107,7 @@ An R2 object's body is a stream, but `get` opens it, and an archive of two hundr
 would open two hundred objects before the first byte went out. A stream whose `pull` opens the
 object defers that to the moment the archive reads it:
 
-```typescript {% title="app/exports/stored-file.ts" %}
+```typescript {% title="app/services/exports/stored-file.ts" %}
 import { env } from "cloudflare:workers";
 
 async function openObject(key: string) {
@@ -151,7 +151,7 @@ import { attachment } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { accountArchive } from "~/app/exports/account-archive";
+import { accountArchive } from "~/app/services/exports/account-archive";
 import routes from "~/routes/web";
 
 export default createAction(routes.account.export, async (ctx) => {
@@ -215,9 +215,9 @@ import type { Database } from "remix/data-table";
 import { isFailure, success } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { Account } from "~/app/data/accounts";
+import type { Account } from "~/app/models/accounts";
 
-import { accountArchive } from "~/app/exports/account-archive";
+import { accountArchive } from "~/app/services/exports/account-archive";
 
 export async function storeExport(db: Database, account: Account) {
 	let archive = await accountArchive(db, account);

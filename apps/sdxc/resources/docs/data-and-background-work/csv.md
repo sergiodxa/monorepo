@@ -28,7 +28,7 @@ The reader returns strings only. CSV has no numbers, dates or empty values, and 
 lose data: `"007"` read as a number is `7`. So the types come from a schema of your own, with
 one field per column header:
 
-```typescript {% title="app/imports/contact-row.ts" %}
+```typescript {% title="app/services/imports/contact-row.ts" %}
 import * as s from "remix/data-schema";
 import { email, min, minLength } from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
@@ -57,16 +57,16 @@ unterminated quote or a record with the wrong number of fields, and the `CSVPars
 returns carries the `line` it stopped on. A row that parses but fails the schema is a different
 kind of problem, so the import reports both, on one error that carries the list:
 
-```typescript {% title="app/imports/read-contacts.ts" %}
+```typescript {% title="app/services/imports/read-contacts.ts" %}
 import type { Result } from "@sdxc/result";
 
 import { parse } from "@sdxc/csv";
 import { failure, isFailure, success } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 
-import type { Contact } from "~/app/imports/contact-row";
+import type { Contact } from "~/app/services/imports/contact-row";
 
-import { CONTACT_ROW } from "~/app/imports/contact-row";
+import { CONTACT_ROW } from "~/app/services/imports/contact-row";
 
 export type ImportProblem =
 	| { kind: "file"; line: number; message: string }
@@ -119,7 +119,7 @@ Collecting every row's problems before answering matters more than it looks. A p
 file in a spreadsheet wants the whole list at once, not one error per upload. `describe` puts
 the column's name in front of each message:
 
-```typescript {% title="app/imports/read-contacts.ts" %}
+```typescript {% title="app/services/imports/read-contacts.ts" %}
 interface Issue {
 	message: string;
 	path?: ReadonlyArray<PropertyKey | { key: PropertyKey }>;
@@ -152,8 +152,8 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { Contacts } from "~/app/data/contacts";
-import { readContacts } from "~/app/imports/read-contacts";
+import { Contacts } from "~/app/models/contacts";
+import { readContacts } from "~/app/services/imports/read-contacts";
 import { ImportPage } from "~/resources/views/import";
 import routes from "~/routes/web";
 
@@ -293,7 +293,7 @@ Excel in decimal-comma locales, such as Spanish, German or French, splits a `.cs
 instead of `,`, and reads it as UTF-8 only when it starts with a byte order mark. Both are
 options on the writer:
 
-```typescript {% title="app/exports/spreadsheet-options.ts" %}
+```typescript {% title="app/services/exports/spreadsheet-options.ts" %}
 import type { WriteOptions } from "@sdxc/csv";
 
 export function spreadsheetOptions(locale: string): WriteOptions {

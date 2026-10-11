@@ -27,10 +27,10 @@ npm add @sdxc/mcp @sdxc/json-schema @sdxc/cache @sdxc/authz
 
 A tool declaration is a route table for a model: the name a client calls, the description
 the model chooses it by, and the [`@sdxc/json-schema`](/api/json-schema) schema its arguments
-satisfy, which `tools/list` publishes as JSON Schema. Keep declarations in their own module,
-apart from the code that answers them.
+satisfy, which `tools/list` publishes as JSON Schema. Keep declarations in the folder's
+`index.ts`, apart from the files that answer them.
 
-```typescript {% title="app/mcp/tools.ts" %}
+```typescript {% title="app/mcp/tools/index.ts" %}
 import * as s from "@sdxc/json-schema";
 import * as checks from "@sdxc/json-schema/checks";
 import { tool, tools } from "@sdxc/mcp";
@@ -64,7 +64,7 @@ A tool is chosen by the model; a resource is attached by the person, from the pi
 client fills with `resources/list`. A resource is addressed by a URI, declared with the same
 pattern syntax as your routes.
 
-```typescript {% title="app/mcp/resources.ts" %}
+```typescript {% title="app/mcp/resources/index.ts" %}
 import { resource, resources } from "@sdxc/mcp";
 
 export default resources({
@@ -84,18 +84,19 @@ the server would never match.
 
 ## Answer them with your app's context
 
-Each implementation lives in its own file. `createTool` types a handler against its
-declaration, so `ctx.input` is typed away from the `map` call. Handlers receive the router's
+Each implementation lives in its own file beside the declarations, as that file's default
+export. `createTool` types a handler against its declaration, so `ctx.input` is typed away
+from the `map` call. Handlers receive the router's
 `RequestContext`, so `ctx.db` and everything else your middleware publishes is already there.
 
-```typescript {% title="app/mcp/controllers/search-jobs.ts" %}
+```typescript {% title="app/mcp/tools/search-jobs.ts" %}
 import { createTool, ToolError } from "@sdxc/mcp";
 
-import Posting from "~/app/data/posting";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
+import Posting from "~/app/models/posting";
 
-export const searchJobs = createTool(toolset.searchJobs, async (ctx) => {
+export default createTool(toolset.searchJobs, async (ctx) => {
 	let found = await Posting.search(ctx.db, ctx.input.query, ctx.input.limit);
 	if (found.length === 0)
 		throw new ToolError("Nothing matched. Try a broader query.");
@@ -117,14 +118,14 @@ your app's own model.
 
 A resource implements `read`, and optionally a `list` that fills the client's picker:
 
-```typescript {% title="app/mcp/controllers/posting.ts" %}
+```typescript {% title="app/mcp/resources/posting.ts" %}
 import { createResource } from "@sdxc/mcp";
 
-import Posting from "~/app/data/posting";
 import { toMarkdown } from "~/app/mcp/markdown";
 import resourceset from "~/app/mcp/resources";
+import Posting from "~/app/models/posting";
 
-export const postingResource = createResource(resourceset.posting, {
+export default createResource(resourceset.posting, {
 	list: async (ctx) =>
 		(await Posting.listOpen(ctx.db, 50)).map((posting) => ({
 			uri: resourceset.posting.href({ id: posting.id }),
@@ -142,13 +143,13 @@ export const postingResource = createResource(resourceset.posting, {
 function that writes a posting as Markdown. Returning `null` reports the resource as missing,
 which is the answer the protocol reserves for that case.
 
-`createHandler` builds the server, and `map` binds each declaration to its implementation:
+`createHandler` builds the server, and `map` binds each declaration to its implementation.
+`lazy()` wraps the import of each handler's file, so a call imports only the handler it
+reaches:
 
-```typescript {% title="bootstrap/mcp.ts" %}
-import { createHandler } from "@sdxc/mcp";
+```typescript {% title="app/initializers/mcp.ts" %}
+import { createHandler, lazy } from "@sdxc/mcp";
 
-import { postingResource } from "~/app/mcp/controllers/posting";
-import { searchJobs } from "~/app/mcp/controllers/search-jobs";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 
@@ -158,17 +159,27 @@ const mcp = createHandler({
 	version: "1.0.0",
 	instructions:
 		"Search open positions with search_jobs, then read one as a resource.",
+	cacheScope: "public",
 });
 
-mcp.tools.map(toolset.searchJobs, searchJobs);
-mcp.resources.map(resourceset.posting, postingResource);
+mcp.tools.map(
+	toolset.searchJobs,
+	lazy(() => import("~/app/mcp/tools/search-jobs")),
+);
+mcp.resources.map(
+	resourceset.posting,
+	lazy(() => import("~/app/mcp/resources/posting")),
+);
 
 export default mcp;
 ```
 
 Building the server at module scope is fine: mapping is object construction, with no I/O and
-no parsing, so nothing runs in the Worker's global scope. A group of tools declared with
-`tools({...})` is implemented the same way with `createToolController`.
+no parsing, so nothing runs in the Worker's global scope. A list that includes a lazy handler
+is `"private"` by default, because whether a handler is visible is unknown until it loads;
+every caller sees the same tools here, so `cacheScope: "public"` lets a shared cache hold the
+lists. A group of tools declared with `tools({...})` is implemented the same way with
+`createToolController`.
 
 ## Cache the expensive tool
 
@@ -196,15 +207,15 @@ waits on the KV put. KV refuses a TTL under 60 seconds. A `fetch` failure means 
 itself failed, so rethrowing its cause makes the tool fail the same way with or without the
 cache. Because the tool lives in its own file, caching it changes only that file:
 
-```typescript {% title="app/mcp/controllers/search-jobs.ts" %}
+```typescript {% title="app/mcp/tools/search-jobs.ts" %}
 import { createTool, ToolError } from "@sdxc/mcp";
 
-import Posting from "~/app/data/posting";
 import { cachedSearch } from "~/app/mcp/cache";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
+import Posting from "~/app/models/posting";
 
-export const searchJobs = createTool(toolset.searchJobs, async (ctx) => {
+export default createTool(toolset.searchJobs, async (ctx) => {
 	let { query, limit } = ctx.input;
 	let key = `search_jobs:${limit}:${query.toLowerCase()}`;
 	let found = await cachedSearch(key, () => Posting.search(ctx.db, query, limit));
@@ -235,17 +246,19 @@ The server's `fetch` takes the router's context, so the endpoint is one route wi
 middleware you want in front of it. An anonymous endpoint needs a caller budget, since every
 call costs you a search.
 
-```typescript {% title="bootstrap/app.tsx" %}
+```typescript {% title="app/initializers/router.ts" %}
+import type { RequestContext } from "remix/router";
+
 import { getClientIP } from "@sdxc/get-client-ip";
+import { lazy } from "@sdxc/lazy-route";
+import { log } from "@sdxc/logger/middleware";
 import { CloudflareAdapter } from "@sdxc/rate-limit";
 import { rateLimit } from "@sdxc/rate-limit/middleware";
 import { env } from "cloudflare:workers";
-
 import { createRouter } from "remix/router";
 
+import { logger } from "~/app/initializers/logger";
 import routes from "~/routes/web";
-
-import mcp from "./mcp";
 
 function mcpBudget() {
 	return rateLimit({
@@ -260,19 +273,26 @@ function mcpBudget() {
 	});
 }
 
-export default function application() {
-	let router = createRouter();
-	router.map(routes.mcp, {
-		middleware: [mcpBudget()],
-		handler: (ctx) => mcp.fetch(ctx),
-	});
+export function createWebRouter() {
+	let router = createRouter({ middleware: [log(logger)] });
+	router.map(
+		routes.mcp,
+		lazy(
+			() =>
+				import("~/app/initializers/mcp").then(
+					(it) => (ctx: RequestContext) => it.default.fetch(ctx),
+				),
+			[mcpBudget()],
+		),
+	);
 	return router;
 }
 ```
 
 The route is `mcp: post("/mcp")` in your route table, and the rate limiter is a binding named
-`MCP_RATE_LIMITER` in your Wrangler config. Your real `createRouter` call carries your global
-middleware; with `log(logger)` in that chain, the
+`MCP_RATE_LIMITER` in your Wrangler config. The budget is `lazy()`'s second argument, so an
+over-budget caller is refused before the server's module loads. Your real `createRouter` call
+carries the rest of your global middleware; with `log(logger)` in that chain, the
 request's record gains `mcp.method`, `mcp.tool` and `mcp.is_error`, so one filter finds every
 call a model did not get a clean answer to. Authentication, when you add it, is ordinary
 request middleware on this route; it runs for `tools/list` too, which matters because the
@@ -287,7 +307,7 @@ the token's holder on the route with `access()` from `@sdxc/authz/middleware/rou
 the token's scope as `within`, a ceiling of roles every check must also pass, and listing the
 claims the predicates read under `load`, since `available` answers synchronously:
 
-```typescript {% title="bootstrap/app.tsx" %}
+```typescript {% title="app/initializers/router.ts" %}
 access(policy, {
 	roles: (ctx) => [ctx.member.role],
 	within: (ctx) => [`agent:${ctx.token.scope}`],
@@ -295,24 +315,24 @@ access(policy, {
 });
 ```
 
-That middleware goes on the `routes.mcp` mapping after your token middleware, which publishes
+That middleware goes in the `routes.mcp` mapping's `lazy()` guards after your token middleware, which publishes
 `ctx.token` and `ctx.member`; `abilities` and `policy` are your catalog and policy, with a role
 named `agent:read` and one named `agent:write`. `@sdxc/authz/mcp` then guards the tool, and
 checks the record it touches once its arguments validate:
 
-```typescript {% title="app/mcp/controllers/close-posting.ts" %}
+```typescript {% title="app/mcp/tools/close-posting.ts" %}
 import type { InputOf } from "@sdxc/mcp";
 
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";
 import { createTool } from "@sdxc/mcp";
 
-import abilities from "~/app/authz/abilities";
-import Posting from "~/app/data/posting";
 import toolset from "~/app/mcp/tools";
+import Posting from "~/app/models/posting";
+import abilities from "~/app/policies/abilities";
 
 type Input = InputOf<typeof toolset.closePosting>;
 
-export const closePosting = createTool(toolset.closePosting, {
+export default createTool(toolset.closePosting, {
 	...guard(abilities.agent.write),
 	middleware: [
 		requireToolAbility<typeof abilities.posting.close, Input>(
@@ -333,8 +353,10 @@ export const closePosting = createTool(toolset.closePosting, {
 });
 ```
 
-A read-scoped token never sees `close_posting`, and a write-scoped one still closes only the
-postings its holder may. A posting the holder may not see answers with the `notFound` message,
+Map it in `app/initializers/mcp.ts` like the others, and remove `cacheScope: "public"` there:
+the tool's `available` predicate makes the lists vary by credential, so they must stay
+`"private"`. A read-scoped token never sees `close_posting`, and a write-scoped one still
+closes only the postings its holder may. A posting the holder may not see answers with the `notFound` message,
 as a missing one does, and any other refusal answers as `ForbiddenError`. Cache keys for a
 scoped tool carry the credential, as the cache section above explains. [Decide who can do
 what](/docs/identity-and-security/authorization) writes the policy and the scope roles.

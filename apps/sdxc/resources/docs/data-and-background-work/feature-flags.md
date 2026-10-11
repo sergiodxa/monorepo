@@ -26,7 +26,7 @@ A definition names the values a flag can take as variants, and which one to serv
 Start with the definitions in code: flipping a flag is then an edit and a deploy, with the review
 any other change gets.
 
-```typescript {% title="app/lib/flags.ts" %}
+```typescript {% title="app/initializers/flags.ts" %}
 import type { StoredFlagSet } from "@sdxc/flags-engine/store";
 
 export const FLAG_SET: StoredFlagSet = {
@@ -55,7 +55,7 @@ deleting its entry, then its branch.
 Call sites should not repeat a key, a type and a default. A catalog writes each down once, so a
 misspelled key is a compile error rather than a flag that is silently off:
 
-```typescript {% title="app/lib/flags.ts" %}
+```typescript {% title="app/initializers/flags.ts" %}
 import { defineFlags, flag } from "@sdxc/flags/catalog";
 
 export const features = defineFlags({
@@ -77,7 +77,7 @@ before your code sees it.
 request would initialize on every one. The provider itself is created lazily, the first time an
 evaluation needs it, so loading the module in a Worker does no work:
 
-```typescript {% title="app/lib/flags.ts" %}
+```typescript {% title="app/initializers/flags.ts" %}
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
@@ -100,24 +100,26 @@ The router middleware from `@sdxc/flags/middleware/router` reads the request's s
 publishes a client as `ctx.flags`. List it after your auth middleware, so the subject is known,
 and after `log()`, so the hook has a record to write to:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import featureFlags from "@sdxc/flags/middleware/router";
 import { log } from "@sdxc/logger/middleware";
 import { createRouter } from "remix/router";
 
 import { auth, currentUser } from "~/app/http/middleware/auth";
-import { flags } from "~/app/lib/flags";
-import { logger } from "~/app/logger";
+import { flags } from "~/app/initializers/flags";
+import { logger } from "~/app/initializers/logger";
 
-export default createRouter({
-	middleware: [
-		log(logger),
-		auth(),
-		featureFlags(flags, {
-			context: (ctx) => ({ targetingKey: currentUser(ctx)?.id }),
-		}),
-	],
-});
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			log(logger),
+			auth(),
+			featureFlags(flags, {
+				context: (ctx) => ({ targetingKey: currentUser(ctx)?.id }),
+			}),
+		],
+	});
+}
 ```
 
 Here `auth()` stands for your own authentication middleware and `currentUser` for however you
@@ -140,7 +142,7 @@ decision is not the request's subject, pass it on the evaluation:
 import { serviceUnavailable } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { features } from "~/app/lib/flags";
+import { features } from "~/app/initializers/flags";
 import { runPing } from "~/app/services/ping";
 import routes from "~/routes/web";
 
@@ -172,7 +174,7 @@ between a flag that is off and flags that are down.
 
 `targeting` is a list of rules, tried in order. The first whose condition holds decides:
 
-```typescript {% title="app/lib/flag-rules.ts" %}
+```typescript {% title="config/flag-rules.ts" %}
 import type { FlagSet } from "@sdxc/flags-engine";
 
 export const RULED_SET: FlagSet = {
@@ -219,7 +221,7 @@ When you want to flip a flag without a deploy, keep the set in Workers KV. `Work
 stores the whole set as one JSON value, and `maxAge` says how long a loaded snapshot counts as
 current:
 
-```typescript {% title="app/lib/flag-provider.ts" %}
+```typescript {% title="app/initializers/flag-provider.ts" %}
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { WorkerKVFlagStore } from "@sdxc/flags-engine/store/worker-kv";
@@ -238,7 +240,7 @@ export function flagProvider(): EngineProvider {
 }
 ```
 
-In `app/lib/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the in-memory
+In `app/initializers/flags.ts`, pass `provider: flagProvider` to `createFlags` in place of the in-memory
 provider. Reloading is yours to schedule, because a Worker only has time while an invocation is
 running.
 `flagProvider().refresh()` reads the store again and answers with a `Result`, so hand it to
@@ -253,7 +255,7 @@ than the JSON it stands for. `flagConditions` is the dialect the engine evaluate
 converts between the two: `stringify` shows a stored condition as text, and `parse` reads what
 was typed back into JSON, with the line and column where it broke:
 
-```typescript {% title="app/lib/flag-rule-editor.ts" %}
+```typescript {% title="app/services/flag-rule-editor.ts" %}
 import type { FlagSet } from "@sdxc/flags-engine";
 
 import { flagConditions } from "@sdxc/flags-engine";
@@ -292,10 +294,10 @@ tool. Written as a guard in an [`@sdxc/authz`](/api/authz) policy, it is one rul
 read. Add the flag to the catalog as `reportsExport: flag.boolean("reports-export", true)`,
 declare the catalog as a fact, and refuse while it is off:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	facts: { flags: fact<{ reportsExport: boolean }>() },
@@ -317,8 +319,8 @@ export default definePolicy(abilities, {
 import { fromFlags } from "@sdxc/authz/facts/flags";
 import { access } from "@sdxc/authz/middleware/router";
 
-import policy from "~/app/authz/policy";
-import { features } from "~/app/lib/flags";
+import { features } from "~/app/initializers/flags";
+import policy from "~/app/policies/policy";
 
 export const memberAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -339,13 +341,13 @@ policy, the route guard and the job binding.
 
 A test builds its own instance, so nothing it sets leaks into the next one:
 
-```typescript {% title="app/lib/flags.test.ts" %}
+```typescript {% title="app/initializers/flags.test.ts" %}
 import { evaluateAll, parseFlagSet } from "@sdxc/flags-engine";
 import { createFlags } from "@sdxc/flags/client";
 import { InMemoryProvider } from "@sdxc/flags/provider/memory";
 import { expect, test } from "vitest";
 
-import { RULED_SET } from "~/app/lib/flag-rules";
+import { RULED_SET } from "~/config/flag-rules";
 
 test("a pinned flag answers the pinned value", async () => {
 	let flags = createFlags({

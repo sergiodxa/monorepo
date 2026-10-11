@@ -211,9 +211,9 @@ function main(): void {
 		symbols.map((node) => [node.name, toPage(node, names)]),
 	);
 
-	mkdirSync("app/generated", { recursive: true });
-	writeFileSync("app/generated/api.json", JSON.stringify(project));
-	writeFileSync("app/generated/reference.json", JSON.stringify({ pages }));
+	mkdirSync("resources/generated", { recursive: true });
+	writeFileSync("resources/generated/api.json", JSON.stringify(project));
+	writeFileSync("resources/generated/reference.json", JSON.stringify({ pages }));
 }
 ```
 
@@ -233,7 +233,7 @@ it is now:
 }
 ```
 
-Add `app/generated/` to `.gitignore`: it is output, rebuilt on every run.
+Add `resources/generated/` to `.gitignore`: it is output, rebuilt on every run.
 
 ## Serve a page per symbol
 
@@ -249,7 +249,7 @@ interface ReferenceDocument {
 }
 
 export async function findReference(name: string): Promise<ReferencePage | null> {
-	let { default: document } = await import("~/app/generated/reference.json");
+	let { default: document } = await import("~/resources/generated/reference.json");
 	let { pages } = document as ReferenceDocument;
 	return Object.hasOwn(pages, name) ? (pages[name] ?? null) : null;
 }

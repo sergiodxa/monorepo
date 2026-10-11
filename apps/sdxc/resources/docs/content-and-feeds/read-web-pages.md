@@ -59,7 +59,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
-import { Links } from "~/app/repositories/links";
+import { Links } from "~/app/models/links";
 import routes from "~/routes/web";
 
 const SAVE_LINK = s.object({ url: s.string() });
@@ -77,7 +77,7 @@ export default createAction(routes.links.create, async (ctx) => {
 });
 ```
 
-`Links` is your own repository; `save` inserts a row with a `pending` status. The route is a
+`Links` is your own model; `save` inserts a row with a `pending` status. The route is a
 `post("/api/links")`, and `validate` reads a JSON or form body alike, so a browser extension
 and a plain form can share it.
 
@@ -85,13 +85,15 @@ and a plain form can share it.
 dispatcher delivers from. [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)
 builds both:
 
-```typescript {% title="bootstrap/app.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
-import { queue } from "~/app/jobs/queue";
+import { queue } from "~/app/initializers/queue";
 
-export const router = createRouter({ middleware: [jobEnqueuer(queue)] });
+export function createWebRouter() {
+	return createRouter({ middleware: [jobEnqueuer(queue)] });
+}
 ```
 
 ## Read the article in the job
@@ -108,8 +110,8 @@ import { isFailure } from "@sdxc/result";
 import { fetchRobots } from "@sdxc/robots/fetch";
 
 import jobs from "~/app/jobs";
-import { excerptOf } from "~/app/lib/excerpt";
-import { Links } from "~/app/repositories/links";
+import { excerptOf } from "~/app/services/excerpt";
+import { Links } from "~/app/models/links";
 
 const USER_AGENT = "Shelf/1.0 (+https://shelf.example/about/bot)";
 
@@ -166,7 +168,7 @@ A list of saved links needs a line or two under each title, and it must be text,
 `HTML.parse` reads the sanitized article back, and `text` is what a reader would see, with
 block boundaries turned into spaces:
 
-```typescript {% title="app/lib/excerpt.ts" %}
+```typescript {% title="app/services/excerpt.ts" %}
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 
@@ -263,7 +265,7 @@ Some markup reaches you without a fetch: the `content` of a feed item, or an HTM
 `HTML.sanitize(source, policy)` is the same allow-list `distill` applies, run on markup in
 hand:
 
-```typescript {% title="app/lib/feed-content.ts" %}
+```typescript {% title="app/services/feed-content.ts" %}
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 

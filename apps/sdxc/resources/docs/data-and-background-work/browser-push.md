@@ -106,7 +106,7 @@ Safari and Firefox show the permission prompt only during a user gesture, so `su
 from a click. It asks for permission, registers the worker, and reuses the browser's existing
 subscription or replaces one made under another key:
 
-```tsx {% title="app/assets/enable-push.tsx" %}
+```tsx {% title="resources/components/enable-push.tsx" %}
 import type { Handle } from "remix/component";
 
 import { isSuccess } from "@sdxc/result";
@@ -116,7 +116,7 @@ import { clientEntry, on } from "remix/component";
 type EnablePushProps = { applicationServerKey: string; action: string };
 
 export const EnablePush = clientEntry(
-	"/app/assets/enable-push.tsx#EnablePush",
+	"/resources/components/enable-push.tsx#EnablePush",
 	function EnablePush(handle: Handle<EnablePushProps>) {
 		async function enable() {
 			let subscribed = await subscribe({
@@ -160,7 +160,7 @@ import { SUBSCRIPTION_SCHEMA } from "@sdxc/web-push";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { savePushSubscription } from "~/app/data/push-subscriptions";
+import { savePushSubscription } from "~/app/models/push-subscriptions";
 import routes from "~/routes/web";
 
 const REGISTRATION = s.object({ subscription: SUBSCRIPTION_SCHEMA });
@@ -191,16 +191,16 @@ Build one `WebPush` per batch of sends: it caches one VAPID token per push servi
 browsers on Chrome's push service cost one signature. Each send makes one attempt and answers a `Result`
 whose error code says what to do with the row:
 
-```typescript {% title="app/notifications/push.ts" %}
+```typescript {% title="app/services/notifications/push.ts" %}
 import type { WebPushError } from "@sdxc/web-push";
 import type { Database } from "remix/data-table";
-import type { PushSubscriptionRow } from "~/app/data/push-subscriptions";
+import type { PushSubscriptionRow } from "~/app/models/push-subscriptions";
 
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
 import { env } from "cloudflare:workers";
 
-import Subscriptions from "~/app/data/push-subscriptions";
+import Subscriptions from "~/app/models/push-subscriptions";
 
 const FAILURE_LIMIT = 10;
 
@@ -269,7 +269,7 @@ An app that already routes alerts through [`@sdxc/messaging`](/api/messaging), a
 browser push as one more destination. `BrowserPush` is an optional peer, so install
 `@sdxc/web-push` beside it:
 
-```typescript {% title="app/notifications/destinations.ts" %}
+```typescript {% title="app/services/notifications/destinations.ts" %}
 import type { Destination } from "@sdxc/messaging";
 import type { Subscription, WebPush } from "@sdxc/web-push";
 
@@ -313,7 +313,7 @@ current pair for a row with none. A row naming a key the sender no longer holds 
 [MSW](https://mswjs.io) stands in for the push service, so the status branches run without a
 network. Any `p256dh` on the P-256 curve works; RFC 8291's example key is a convenient one:
 
-```typescript {% title="app/notifications/push.test.ts" %}
+```typescript {% title="app/services/notifications/push.test.ts" %}
 import { isFailure } from "@sdxc/result";
 import { WebPush } from "@sdxc/web-push";
 import { http, HttpResponse } from "msw";

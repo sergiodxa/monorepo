@@ -26,7 +26,7 @@ deployment. A page served from any of them must still name one address, or a cra
 the preview. `createSeo` takes the site's identity and builds every URL from that origin,
 whichever host served the request. Build it once, at module scope, and import it everywhere.
 
-```typescript {% title="app/lib/seo.ts" %}
+```typescript {% title="app/initializers/seo.ts" %}
 import { createSeo } from "@sdxc/seo";
 
 export const seo = createSeo({
@@ -90,9 +90,9 @@ import type { Seo } from "@sdxc/seo";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Post from "~/app/data/post";
+import Post from "~/app/models/post";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -164,8 +164,8 @@ import { xml } from "@sdxc/http/response";
 import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
-import Post from "~/app/data/post";
-import { seo } from "~/app/lib/seo";
+import Post from "~/app/models/post";
+import { seo } from "~/app/initializers/seo";
 import routes from "~/routes/web";
 
 export default createAction(routes.sitemap, async (ctx) => {
@@ -202,7 +202,7 @@ import { text } from "@sdxc/http/response";
 import { stringify } from "@sdxc/robots";
 import { createAction } from "remix/router";
 
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
 import routes from "~/routes/web";
 
 export default createAction(routes.robots, (ctx) => {
@@ -254,9 +254,7 @@ export const SECURITY_TXT: SecurityTxt = {
 };
 ```
 
-```typescript {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```typescript {% title="app/initializers/router.tsx" %}
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { serve, wellKnown } from "@sdxc/well-known/middleware";
 import { securityTxt } from "@sdxc/well-known/security-txt";
@@ -264,14 +262,14 @@ import { createRouter } from "remix/router";
 
 import { SECURITY_TXT } from "~/config/security-txt";
 
-export default function application() {
-	let middleware: Middleware[] = [
-		headRequests(),
-		wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
-		// …the rest of your chain
-	];
-
-	return createRouter({ middleware });
+export function createWebRouter() {
+	return createRouter({
+		middleware: [
+			headRequests(),
+			wellKnown({ "security.txt": serve(securityTxt, () => SECURITY_TXT) }),
+			// …the rest of your chain
+		],
+	});
 }
 ```
 

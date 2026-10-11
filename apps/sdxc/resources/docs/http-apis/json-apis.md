@@ -116,7 +116,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { BOOK_INPUT } from "~/app/http/schemas/books";
 import { problems } from "~/app/services/problems";
 import routes from "~/routes/web";
@@ -164,7 +164,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { BOOK_PARAMS } from "~/app/http/schemas/books";
 import { problems } from "~/app/services/problems";
 import routes from "~/routes/web";
@@ -199,7 +199,7 @@ import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { serializeBook } from "~/app/data/book";
+import { serializeBook } from "~/app/models/book";
 import { problems } from "~/app/services/problems";
 import { books } from "~/database/schema";
 import routes from "~/routes/web";
@@ -278,10 +278,10 @@ callers, key on the caller's identity instead of the address, so one client cann
 another's budget.
 
 Mount the limiter once over the three actions, so they share one budget per caller. The
-`application()` below shows only that mapping; the app's own router also runs the global
+`createWebRouter()` below shows only that mapping; the app's own router also runs the global
 middleware that publishes `ctx.db`:
 
-```typescript {% title="bootstrap/app.tsx" %}
+```typescript {% title="app/initializers/router.tsx" %}
 import { createRouter } from "remix/router";
 
 import { create } from "~/app/http/controllers/api/books/create";
@@ -290,7 +290,7 @@ import { show } from "~/app/http/controllers/api/books/show";
 import { apiRateLimit } from "~/app/http/middleware/api-rate-limit";
 import routes from "~/routes/web";
 
-export default function application() {
+export function createWebRouter() {
 	let router = createRouter();
 	router.map(routes.api.books, {
 		middleware: [apiRateLimit()],

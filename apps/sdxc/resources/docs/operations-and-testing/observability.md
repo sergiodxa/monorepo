@@ -29,7 +29,7 @@ A logger is configuration, not a stream. You create it once, in its own module, 
 entry point of the Worker — the router, the job dispatcher, a Durable Object — opens its logs
 with the same `service`, and a query across workers has something to group by.
 
-```typescript {% title="bootstrap/logger.ts" %}
+```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
 
@@ -53,17 +53,22 @@ directly after it, so the trace ids land on the request's log. `jobEnqueuer(queu
 in the jobs section below. The Remix middleware your app already runs (`formData()`, `cop()`,
 …) follows them.
 
-```tsx {% title="bootstrap/app.tsx" %}
+```tsx {% title="app/initializers/router.tsx" %}
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
 
-import { queue } from "~/app/jobs/queue";
+import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
 
-import { logger } from "./logger";
-
-let router = createRouter({ middleware: [log(logger), trace(), jobEnqueuer(queue)] });
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [log(logger), trace(), jobEnqueuer(queue)],
+	});
+	// router.map(…) for each route
+	return router;
+}
 ```
 
 Every request now emits one record carrying `route` (the pattern, never the concrete path),
@@ -83,9 +88,9 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Posting from "~/app/data/posting";
+import Posting from "~/app/models/posting";
 import { PostingSchema } from "~/app/http/validators/posting";
-import { renderForm } from "~/app/http/views/posting-form";
+import { renderForm } from "~/resources/views/posting-form";
 import jobs from "~/app/jobs";
 import routes from "~/routes/web";
 
@@ -123,16 +128,16 @@ that resolves them: call `ctx.log.set({ user: { id: user.id } })` there once.
 
 ## Reach the log outside a handler
 
-A repository, a cache wrapper or a mail helper does not receive `ctx`. It reads the running
+A model, a cache wrapper or a mail helper does not receive `ctx`. It reads the running
 invocation's log with `currentLog()`, which is `undefined` outside an invocation, so the
 optional chain is all the guarding it needs. Here `loadFlags` is your call to a flag provider,
 returning a `Result`, and `DEFAULT_FLAGS` what the app runs with when it fails.
 
-```typescript {% title="app/lib/flags.ts" %}
+```typescript {% title="app/initializers/flags.ts" %}
 import { currentLog } from "@sdxc/logger";
 import { isFailure } from "@sdxc/result";
 
-import { DEFAULT_FLAGS, loadFlags } from "~/app/lib/flag-provider";
+import { DEFAULT_FLAGS, loadFlags } from "~/app/services/flag-provider";
 
 export async function readFlags() {
 	let loaded = await loadFlags();
@@ -155,7 +160,7 @@ Jobs are their own invocations, so they get their own records. Pass the same `lo
 module the router and the dispatcher both import, so `jobEnqueuer` writes to the backend the
 dispatcher delivers from:
 
-```typescript {% title="app/jobs/queue.ts" %}
+```typescript {% title="app/initializers/queue.ts" %}
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
@@ -164,12 +169,12 @@ export const queue = cloudflare.queue(() => env.QUEUE);
 
 `database()` stands for the job middleware that publishes your database to handlers.
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import { createJobDispatcher } from "@sdxc/jobs";
 
 import { database } from "~/app/jobs/middleware/database";
-import { queue } from "~/app/jobs/queue";
-import { logger } from "~/bootstrap/logger";
+import { queue } from "~/app/initializers/queue";
+import { logger } from "~/app/initializers/logger";
 
 export const dispatcher = createJobDispatcher({
 	logger,
@@ -191,7 +196,7 @@ A request to another service joins the trace when it carries `traceparent`. `inj
 the current trace into a `Headers`, and `withTrace` copies a request you are forwarding to a
 service binding or a Durable Object stub.
 
-```typescript {% title="app/lib/billing.ts" %}
+```typescript {% title="app/services/billing.ts" %}
 import { inject, withTrace } from "@sdxc/trace-context";
 import { env } from "cloudflare:workers";
 
@@ -256,7 +261,7 @@ Logging is billed per event, and width costs nothing, so the default keeps every
 volume gets close to your allotment, sample the successful background runs, which is where
 the events are:
 
-```typescript {% title="bootstrap/logger.ts" %}
+```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({
@@ -272,7 +277,7 @@ twenty successful job runs is kept. `slowerThanMs` keeps slow successes too.
 is data rather than code, so the exemption can come from configuration. While you chase a
 problem for one customer, keep every one of their events and sample everyone else's:
 
-```typescript {% title="bootstrap/logger.ts" %}
+```typescript {% title="app/initializers/logger.ts" %}
 import { createLogger } from "@sdxc/logger";
 
 export const logger = createLogger({

@@ -48,7 +48,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import jobs from "~/app/jobs";
-import { Calendars } from "~/app/repositories/calendars";
+import { Calendars } from "~/app/models/calendars";
 import routes from "~/routes/web";
 
 const SUBSCRIBE = s.object({ url: s.string() });
@@ -78,7 +78,7 @@ The check runs on the parsed URL, so `http://0x7f.1/` and `http://2130706433/` a
 admin port on a public host. A list such as `[80, 443, 8443]` allows the ports it names, an
 omitted port counting as the scheme's own. `literals: "refuse"` refuses every address literal,
 public or not, for a feature where a name is the only sensible input. `Calendars` is your own
-repository, and the job is declared as `refresh: job({ input: s.object({ calendarId:
+model, and the job is declared as `refresh: job({ input: s.object({ calendarId:
 s.string() }) })`; [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron)
 builds the queue and `ctx.jobs`.
 
@@ -163,7 +163,7 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 import jobs from "~/app/jobs";
-import { Calendars } from "~/app/repositories/calendars";
+import { Calendars } from "~/app/models/calendars";
 import { downloadCalendar } from "~/app/services/calendar-download";
 
 const MAX_ATTEMPTS = 4;

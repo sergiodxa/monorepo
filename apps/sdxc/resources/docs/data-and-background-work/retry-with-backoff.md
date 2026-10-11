@@ -31,7 +31,7 @@ npm add @sdxc/backoff @sdxc/random @sdxc/jobs @sdxc/outbound @sdxc/result remix
 A schedule is a pair of functions over options validated once, so it belongs at module scope,
 built when the module loads and shared by every run:
 
-```typescript {% title="app/previews/retry.ts" %}
+```typescript {% title="app/services/previews/retry.ts" %}
 import { createBackoff } from "@sdxc/backoff";
 
 export const previewBackoff = createBackoff({
@@ -60,8 +60,8 @@ A server answering `429` or `503` may say how long to wait. That number is the f
 schedule still applies on top of it, so a server that says "1 second" on every attempt gets
 the growing delay anyway:
 
-```typescript {% title="app/previews/retry-after.ts" %}
-import { previewBackoff } from "~/app/previews/retry";
+```typescript {% title="app/services/previews/retry-after.ts" %}
+import { previewBackoff } from "~/app/services/previews/retry";
 
 const QUEUE_HOLD_LIMIT_MS = 12 * 3_600_000;
 
@@ -105,10 +105,10 @@ import { createJobHandler } from "@sdxc/jobs";
 import { follow, readText, release } from "@sdxc/outbound";
 import { isFailure } from "@sdxc/result";
 
-import { Previews } from "~/app/data/previews";
 import jobs from "~/app/jobs";
-import { previewBackoff } from "~/app/previews/retry";
-import { waitAfter } from "~/app/previews/retry-after";
+import { Previews } from "~/app/models/previews";
+import { previewBackoff } from "~/app/services/previews/retry";
+import { waitAfter } from "~/app/services/previews/retry-after";
 
 const MAX_BYTES = 1024 * 1024;
 
@@ -142,7 +142,7 @@ export default createJobHandler(jobs.previews.fetch, async (ctx) => {
 });
 ```
 
-`Previews` is your own repository. Every failure takes one of two endings. A `timeout` or
+`Previews` is your own model. Every failure takes one of two endings. A `timeout` or
 `network` error from `@sdxc/outbound` is `retryable`, and so is a `429` or a `5xx`: the next
 attempt could succeed, so the job waits on the schedule. A refused host, a body over the cap or
 a `404` reaches the same result on every attempt, so `ctx.exit` ends the message and reports
@@ -189,7 +189,7 @@ on the row instead: a failure count, and the time the feed is next due. `at(atte
 `now + delay(attempt)`, the value to store. Build the schedule from a function taking the
 `Random` to draw from, so a test can pass a seeded one:
 
-```typescript {% title="app/feeds/backoff.ts" %}
+```typescript {% title="app/services/feeds/backoff.ts" %}
 import type { Random } from "@sdxc/random";
 
 import { createBackoff } from "@sdxc/backoff";
@@ -209,10 +209,10 @@ the count on success:
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import { Feeds } from "~/app/data/feeds";
-import { feedBackoff } from "~/app/feeds/backoff";
-import { fetchFeed } from "~/app/feeds/fetch";
 import jobs from "~/app/jobs";
+import { Feeds } from "~/app/models/feeds";
+import { feedBackoff } from "~/app/services/feeds/backoff";
+import { fetchFeed } from "~/app/services/feeds/fetch";
 
 const REFRESH_EVERY_MS = 60 * 60_000;
 
@@ -254,7 +254,7 @@ A schedule your customers read in your documentation, such as webhook delivery, 
 as a table of round numbers than as a curve. `steps` replaces the curve, and the last step
 repeats for every attempt past the end:
 
-```typescript {% title="app/webhooks/schedule.ts" %}
+```typescript {% title="app/services/webhooks/schedule.ts" %}
 import { createBackoff } from "@sdxc/backoff";
 
 export const deliveryBackoff = createBackoff({
@@ -312,11 +312,11 @@ schedule answers only what a given count costs.
 Jitter makes every run different, which is the point in production and a problem in a test.
 A seeded stream from `createRandom` makes the draws, and so the delays, the same on every run:
 
-```typescript {% title="app/feeds/backoff.test.ts" %}
+```typescript {% title="app/services/feeds/backoff.test.ts" %}
 import { createRandom } from "@sdxc/random";
 import { expect, test } from "vitest";
 
-import { createFeedBackoff } from "~/app/feeds/backoff";
+import { createFeedBackoff } from "~/app/services/feeds/backoff";
 
 test("a seeded schedule answers the same delays on every run", () => {
 	let backoff = createFeedBackoff(createRandom("feeds"));

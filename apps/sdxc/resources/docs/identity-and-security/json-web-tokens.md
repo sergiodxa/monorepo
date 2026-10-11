@@ -27,7 +27,7 @@ npm add @sdxc/jwt @sdxc/well-known @sdxc/http @sdxc/result
 A verified token is a bag of claims until you say what it carries. Subclass `JWT` and give
 each claim your token guarantees a typed accessor, read through `this.parser`:
 
-```typescript {% title="app/auth/service-token.ts" %}
+```typescript {% title="app/services/auth/service-token.ts" %}
 import { JWT } from "@sdxc/jwt";
 
 export class ServiceToken extends JWT {
@@ -109,7 +109,7 @@ built, so the lifetime reads as what it is:
 import { JWK } from "@sdxc/jwt";
 import { env } from "cloudflare:workers";
 
-import { ServiceToken } from "~/app/auth/service-token";
+import { ServiceToken } from "~/app/services/auth/service-token";
 import { signingKeys } from "~/app/services/signing-keys";
 
 const REPORTS_API = "https://reports.example.com";
@@ -175,11 +175,11 @@ of the isolate. `JWK.importRemote` fetches the document when a token first needs
 it again, at most once per cooldown, when a token names a `kid` it has not seen, which is what
 carries it across your key rotations:
 
-```typescript {% title="app/auth/authenticate.ts" %}
+```typescript {% title="app/services/auth/authenticate.ts" %}
 import { JWK } from "@sdxc/jwt";
 import { failure, wrap } from "@sdxc/result";
 
-import { ServiceToken } from "~/app/auth/service-token";
+import { ServiceToken } from "~/app/services/auth/service-token";
 
 const ISSUER = "https://app.example.com";
 
@@ -216,7 +216,7 @@ import { accepted, forbidden, unauthorized } from "@sdxc/http/response/json";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { authenticate } from "~/app/auth/authenticate";
+import { authenticate } from "~/app/services/auth/authenticate";
 import routes from "~/routes/web";
 
 export default createAction(routes.api.reports.create, async (ctx) => {

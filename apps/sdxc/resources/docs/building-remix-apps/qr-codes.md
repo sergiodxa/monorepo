@@ -85,7 +85,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Tickets from "~/app/data/ticket";
+import Tickets from "~/app/models/ticket";
 import { checkInCode } from "~/app/tickets/qr";
 import { TicketPage } from "~/resources/views/ticket";
 import routes from "~/routes/web";
@@ -117,7 +117,7 @@ import type { Handle } from "remix/component";
 
 import { QrCode } from "@sdxc/qr/ui";
 
-import type { Ticket } from "~/app/data/ticket";
+import type { Ticket } from "~/app/models/ticket";
 
 interface TicketPageProps {
 	ticket: Ticket;
@@ -169,7 +169,7 @@ import { renderToString } from "remix/component/server";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import Tickets from "~/app/data/ticket";
+import Tickets from "~/app/models/ticket";
 import { checkInCode } from "~/app/tickets/qr";
 import routes from "~/routes/web";
 

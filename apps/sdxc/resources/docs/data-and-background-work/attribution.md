@@ -59,7 +59,7 @@ The middleware reads the touch on every page view and keeps two: the first withi
 the latest one that was not `direct`. It stores them in a cookie. Sign the cookie, so a visitor
 cannot credit themselves to a campaign, and give it the same lifetime as the window:
 
-```typescript {% title="app/lib/cookies.ts" %}
+```typescript {% title="app/initializers/cookies.ts" %}
 import type { Cookie } from "remix/cookie";
 
 import { env } from "cloudflare:workers";
@@ -82,28 +82,25 @@ export function attributionCookie(): Cookie {
 `COOKIE_SECRET` is a secret declared in your Worker's configuration. Add the middleware to the
 global chain, ahead of anything that ends a request early:
 
-```tsx {% title="bootstrap/app.tsx" %}
-import type { Middleware } from "remix/router";
-
+```tsx {% title="app/initializers/router.tsx" %}
 import { attribution } from "@sdxc/attribution/middleware";
 import { log } from "@sdxc/logger/middleware";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 
-import { attributionCookie } from "~/app/lib/cookies";
+import { attributionCookie } from "~/app/initializers/cookies";
+import { logger } from "~/app/initializers/logger";
 
-import { logger } from "./logger";
-
-export default function application() {
-	let middleware: Middleware[] = [
-		log(logger) as Middleware,
-		attribution({ store: attributionCookie() }),
-		formData() as Middleware,
-		// …then cop() and a renderer
-	];
-
-	let router = createRouter({ middleware });
-	// router.map(…) for each route
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [
+			log(logger),
+			attribution({ store: attributionCookie() }),
+			formData(),
+			// …then cop() and a renderer
+		],
+	});
+	// router.map(…) for each route, through lazy()
 	return router;
 }
 ```
@@ -149,7 +146,7 @@ attribution({
 The sign-up action is where a visitor becomes a record. Read the touches there and write the
 fields your reports group by into the account's own columns:
 
-```typescript {% title="app/data/acquisition.ts" %}
+```typescript {% title="app/services/acquisition.ts" %}
 import type { Touch } from "@sdxc/attribution";
 
 export interface Acquisition {
@@ -178,8 +175,8 @@ it reads as `direct`. The action passes the first touch, which answers "what fou
 import { toMetadata } from "@sdxc/attribution";
 import { createAction } from "remix/router";
 
-import { acquisitionOf } from "~/app/data/acquisition";
-import { createAccount } from "~/app/data/accounts";
+import { createAccount } from "~/app/models/accounts";
+import { acquisitionOf } from "~/app/services/acquisition";
 import routes from "~/routes/web";
 
 export default createAction(routes.signUp.action, async (ctx) => {
@@ -258,13 +255,13 @@ The middleware needs no app around it, so a test builds a router with only it, l
 the way a browser does, keeps the cookie the response set, and sends it with the request that
 converts:
 
-```typescript {% title="app/data/acquisition.test.ts" %}
+```typescript {% title="app/services/acquisition.test.ts" %}
 import { attribution } from "@sdxc/attribution/middleware";
 import { createCookie } from "remix/cookie";
 import { createRouter } from "remix/router";
 import { expect, test } from "vitest";
 
-import { acquisitionOf } from "~/app/data/acquisition";
+import { acquisitionOf } from "~/app/services/acquisition";
 
 function createTestRouter() {
 	let cookie = createCookie("attribution", { secrets: ["test-secret"] });

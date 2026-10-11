@@ -31,11 +31,11 @@ An ability is one thing a person does: to a record, as `project.update` does to 
 to nothing in particular, as `reports.export` does. Declare every one in a catalog, and every
 check, guard and test names it through the catalog rather than a string:
 
-```typescript {% title="app/authz/abilities.ts" %}
+```typescript {% title="app/policies/abilities.ts" %}
 import { abilities, ability, context } from "@sdxc/authz";
 
-import type { Project } from "~/app/data/projects";
-import type { Team } from "~/app/data/teams";
+import type { Project } from "~/app/models/projects";
+import type { Team } from "~/app/models/teams";
 
 export default abilities({
 	project: {
@@ -74,10 +74,10 @@ ability in declaration order with its description, for an admin page that explai
 
 The policy says who holds what. Roles only allow, and the only refusals are guards:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	facts: {
@@ -135,8 +135,8 @@ the text form into this JSON.
 
 Register the policy once, and `ctx.access` is typed from it in every controller:
 
-```typescript {% title="app/authz/types.ts" %}
-import type policy from "~/app/authz/policy";
+```typescript {% title="app/policies/types.ts" %}
+import type policy from "~/app/policies/policy";
 
 declare module "@sdxc/authz" {
 	interface AuthzTypes {
@@ -154,8 +154,8 @@ function is read the first time a check needs it, and only once.
 ```typescript {% title="app/http/middleware/access.ts" %}
 import { access } from "@sdxc/authz/middleware/router";
 
-import policy from "~/app/authz/policy";
-import { renderDenied } from "~/app/http/denied";
+import policy from "~/app/policies/policy";
+import { renderDenied } from "~/app/http/render";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -184,10 +184,10 @@ import { redirect } from "@sdxc/http/response";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
-import { Projects } from "~/app/data/projects";
+import abilities from "~/app/policies/abilities";
+import { Projects } from "~/app/models/projects";
 import { teamAccess } from "~/app/http/middleware/access";
-import { readProjectForm } from "~/app/http/forms/project";
+import { readProjectForm } from "~/app/http/validators/project";
 import routes from "~/routes/web";
 
 export default createAction(routes.projects.update, {
@@ -239,8 +239,8 @@ import { requireAbility } from "@sdxc/authz/middleware/router";
 import { notFound } from "@sdxc/http/response/html";
 import { createAction } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
-import { Projects } from "~/app/data/projects";
+import abilities from "~/app/policies/abilities";
+import { Projects } from "~/app/models/projects";
 import { teamAccess } from "~/app/http/middleware/access";
 import { ProjectPage } from "~/resources/views/project";
 import routes from "~/routes/web";
@@ -288,7 +288,7 @@ type that left it undecided), and its `as` is `notFound` or `forbidden`. Being p
 refusal crosses a Durable Object RPC intact. The `onDenied` responder turns it into your app's
 own page:
 
-```tsx {% title="app/http/denied.tsx" %}
+```tsx {% title="app/http/render.tsx" %}
 import type { Refusal } from "@sdxc/authz";
 import type { RequestContext } from "remix/router";
 
@@ -316,12 +316,12 @@ A paid feature is a guard over the customer's entitlements. `@sdxc/authz/facts/b
 them as a fact, read through the billing middleware's own `entitlements` reader, so the
 request shares one read with `requireEntitlement` and anything else that asks:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import type { BillingFacts } from "@sdxc/authz/facts/billing";
 
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	facts: {
@@ -350,8 +350,8 @@ the chain:
 import { fromEntitlements } from "@sdxc/authz/facts/billing";
 import { access } from "@sdxc/authz/middleware/router";
 
-import policy from "~/app/authz/policy";
-import { renderDenied } from "~/app/http/denied";
+import policy from "~/app/policies/policy";
+import { renderDenied } from "~/app/http/render";
 
 export const teamAccess = access(policy, {
 	roles: (ctx) => [ctx.membership.role],
@@ -376,10 +376,10 @@ An operational switch is a guard over a flag. `@sdxc/authz/facts/flags` binds a
 [`@sdxc/flags`](/api/flags) catalog as a fact keyed by its property names, and evaluates only
 the flags some condition reads:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import { definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	facts: {
@@ -422,18 +422,18 @@ sources every job shares, added to the dispatcher's chain after flags. With the 
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), every handler sees
 it typed from the registered policy:
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import { authz } from "@sdxc/authz/middleware/dispatcher";
 import { fromFlags } from "@sdxc/authz/facts/flags";
 import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 
-import policy from "~/app/authz/policy";
+import policy from "~/app/policies/policy";
 import { database } from "~/app/jobs/middleware/database";
-import { queue } from "~/app/jobs/queue";
-import { openDatabase } from "~/app/lib/database";
-import { features, flags } from "~/app/lib/flags";
-import { logger } from "~/app/logger";
+import { queue } from "~/app/initializers/queue";
+import { openDatabase } from "~/app/initializers/database";
+import { features, flags } from "~/app/initializers/flags";
+import { logger } from "~/app/initializers/logger";
 
 export const dispatcher = createJobDispatcher({
 	logger,
@@ -453,10 +453,10 @@ shared ones by root:
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 import jobs from "~/app/jobs";
-import { Entitlements } from "~/app/data/entitlements";
-import { Members } from "~/app/data/members";
+import { Entitlements } from "~/app/models/entitlements";
+import { Members } from "~/app/models/members";
 
 export default createJobHandler(jobs.reports.export, async (ctx) => {
 	let { teamId, userId } = ctx.input;
@@ -491,10 +491,10 @@ An agent token acts for a person, and it should never do more than its scope all
 than its holder may. Declare a role per scope and bind it as `within`, a ceiling every allowed
 check must also pass:
 
-```typescript {% title="app/authz/policy.ts" %}
+```typescript {% title="app/policies/policy.ts" %}
 import { allow, definePolicy } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 export default definePolicy(abilities, {
 	// facts, conditions and guards as before
@@ -509,31 +509,38 @@ export default definePolicy(abilities, {
 The MCP route binds its own `access()`, with the token's scope as the ceiling and the agent
 claims loaded up front:
 
-```typescript {% title="bootstrap/app.ts" %}
-import { access } from "@sdxc/authz/middleware/router";
+```typescript {% title="app/initializers/router.ts" %}
+import type { RequestContext } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
-import policy from "~/app/authz/policy";
+import { access } from "@sdxc/authz/middleware/router";
+import { lazy } from "@sdxc/lazy-route";
+
 import { requireToken } from "~/app/http/middleware/token";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
 import routes from "~/routes/web";
 
-import mcp from "./mcp";
-
-router.map(routes.mcp, {
-	middleware: [
-		requireToken,
-		access(policy, {
-			roles: (ctx) => [ctx.membership.role],
-			within: (ctx) => [`agent:${ctx.token.scope}`],
-			facts: { actor: (ctx) => ({ id: ctx.user.id, teamId: ctx.team.id }) },
-			load: [abilities.agent],
-		}),
-	],
-	handler: (ctx) => mcp.fetch(ctx),
-});
+router.map(
+	routes.mcp,
+	lazy(
+		() =>
+			import("~/app/initializers/mcp").then(
+				(it) => (ctx: RequestContext) => it.default.fetch(ctx),
+			),
+		[
+			requireToken,
+			access(policy, {
+				roles: (ctx) => [ctx.membership.role],
+				within: (ctx) => [`agent:${ctx.token.scope}`],
+				facts: { actor: (ctx) => ({ id: ctx.user.id, teamId: ctx.team.id }) },
+				load: [abilities.agent],
+			}),
+		],
+	),
+);
 ```
 
-`router` is the one your application builds, and `requireToken` is your token middleware,
+`router` is the one `createWebRouter` builds, and `requireToken` is your token middleware,
 publishing the token and its holder. A check outside
 the ceiling refuses with cause `outOfScope`, and a viewer's write-scoped token still cannot
 write, because the holder's roles must allow it too.
@@ -543,19 +550,19 @@ write, because the holder's roles must allow it too.
 `requireToolAbility` is tool middleware that checks an ability against the call's validated
 arguments. Here `toolset.renameProject` is a tool declared with a `projectId` and a `name`:
 
-```typescript {% title="app/mcp/controllers/rename-project.ts" %}
+```typescript {% title="app/mcp/tools/rename-project.ts" %}
 import type { InputOf } from "@sdxc/mcp";
 
 import { guard, requireToolAbility } from "@sdxc/authz/mcp";
 import { createTool } from "@sdxc/mcp";
 
-import abilities from "~/app/authz/abilities";
-import { Projects } from "~/app/data/projects";
+import abilities from "~/app/policies/abilities";
+import { Projects } from "~/app/models/projects";
 import toolset from "~/app/mcp/tools";
 
 type Input = InputOf<typeof toolset.renameProject>;
 
-export const renameProject = createTool(toolset.renameProject, {
+export default createTool(toolset.renameProject, {
 	...guard(abilities.agent.write),
 	middleware: [
 		requireToolAbility<typeof abilities.project.update, Input>(
@@ -588,14 +595,14 @@ and any other refusal answers as `ForbiddenError` with the guard's reason.
 `testAccess` from `@sdxc/authz/testing` binds from plain values, synchronously, so a table of
 cases is the whole test:
 
-```typescript {% title="app/authz/policy.test.ts" %}
+```typescript {% title="app/policies/policy.test.ts" %}
 import type { Decision } from "@sdxc/authz";
 
 import { testAccess } from "@sdxc/authz/testing";
 import { expect, test } from "vitest";
 
-import abilities from "~/app/authz/abilities";
-import policy from "~/app/authz/policy";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
 
 const ACTOR = { id: "u1", teamId: "t1" };
 const OWN = { id: "p1", teamId: "t1", ownerId: "u1" };

@@ -50,7 +50,7 @@ The second job is for sending, further down. Build the queue once, in a module b
 dispatcher and the router import, so the router writes to the same backend the dispatcher
 delivers from:
 
-```typescript {% title="app/jobs/queue.ts" %}
+```typescript {% title="app/initializers/queue.ts" %}
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
@@ -61,13 +61,15 @@ export const queue = cloudflare.queue(() => env.QUEUE);
 `ctx.jobs`, which is how a route handler enqueues. Only the queue enters the request path; the
 dispatcher and every job handler stay out of it:
 
-```typescript {% title="bootstrap/app.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { createRouter } from "remix/router";
 
-import { queue } from "~/app/jobs/queue";
+import { queue } from "~/app/initializers/queue";
 
-export const router = createRouter({ middleware: [jobEnqueuer(queue)] });
+export function createWebRouter() {
+	return createRouter({ middleware: [jobEnqueuer(queue)] });
+}
 ```
 
 Put it alongside the middleware your app already runs, after `trace()` if you use it, so each
@@ -181,7 +183,7 @@ The job runs whenever the queue delivers the message, as many times as it takes 
 import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
-import { Orders } from "~/app/repositories/orders";
+import { Orders } from "~/app/models/orders";
 
 export default createJobHandler(jobs.orders.fulfil, async (ctx) => {
 	let order = await Orders.find(ctx.database, ctx.input.orderId);
@@ -212,8 +214,8 @@ import { isFailure } from "@sdxc/result";
 import * as Webhooks from "@sdxc/webhooks";
 
 import jobs from "~/app/jobs";
-import { Endpoints } from "~/app/repositories/endpoints";
-import { Events } from "~/app/repositories/events";
+import { Endpoints } from "~/app/models/endpoints";
+import { Events } from "~/app/models/events";
 
 const retryBackoff = createBackoff({ base: "1 minute", max: "6 hours", jitter: 0.2 });
 
@@ -289,8 +291,8 @@ each delivery before anything trusts it, and a handler per event type does the w
 import { BillingWebhook } from "@sdxc/billing";
 
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
-import { deliveries } from "~/app/repositories/webhook-deliveries";
+import { polar } from "~/app/initializers/billing";
+import { deliveries } from "~/app/models/webhook-deliveries";
 
 export default new BillingWebhook(
 	polar,

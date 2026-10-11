@@ -29,7 +29,7 @@ A `Message` is plain data: a required `title`, Markdown `text`, a `severity`, la
 `fields`, `links` drawn as buttons, and a `timestamp`. Build it from your domain state in
 one module, so every channel says the same thing:
 
-```typescript {% title="app/notifications/messages.ts" %}
+```typescript {% title="app/services/notifications/messages.ts" %}
 import type { Message } from "@sdxc/messaging";
 
 export interface SyncRun {
@@ -90,7 +90,7 @@ Every provider implements one `Destination` contract and lives behind its own su
 bundle carries only the platforms you import. Constructing one does no I/O, which makes it
 cheap to build from a stored channel at the moment of sending:
 
-```typescript {% title="app/notifications/destinations.ts" %}
+```typescript {% title="app/services/notifications/destinations.ts" %}
 import type { Destination } from "@sdxc/messaging";
 
 import { DiscordWebhook } from "@sdxc/messaging/discord";
@@ -181,7 +181,7 @@ The settings form stores whatever URL a person pasted, and each URL provider has
 `DiscordWebhook` only `discord.com`, so a stored URL can never point a send anywhere else;
 `Webhook` accepts any public URL and refuses private and reserved hosts:
 
-```typescript {% title="app/notifications/check-url.ts" %}
+```typescript {% title="app/services/notifications/check-url.ts" %}
 import { DiscordWebhook } from "@sdxc/messaging/discord";
 import { SlackWebhook } from "@sdxc/messaging/slack";
 import { Webhook } from "@sdxc/messaging/webhook";
@@ -223,7 +223,7 @@ database rather than in every queued message. The handler builds the destination
 ```typescript {% title="app/jobs/middleware/destinations.ts" %}
 import type { JobMiddleware } from "@sdxc/jobs";
 import type { Destination } from "@sdxc/messaging";
-import type { ChannelConfig } from "~/app/notifications/destinations";
+import type { ChannelConfig } from "~/app/services/notifications/destinations";
 
 import { createContextKey } from "remix/router";
 
@@ -253,20 +253,20 @@ Add it to the dispatcher factory from
 [Background jobs and cron](/docs/data-and-background-work/jobs-and-cron), with a
 `destinations` option beside its database source:
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 import type { DestinationFactory } from "~/app/jobs/middleware/destinations";
 
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { openDatabase } from "~/app/initializers/database";
+import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { database } from "~/app/jobs/middleware/database";
 import { destinations } from "~/app/jobs/middleware/destinations";
-import { queue } from "~/app/jobs/queue";
-import { openDatabase } from "~/app/lib/database";
-import { logger } from "~/app/logger";
-import { destinationFor } from "~/app/notifications/destinations";
+import { destinationFor } from "~/app/services/notifications/destinations";
 
 interface DispatcherOptions {
 	queue?: JobQueue;
@@ -299,8 +299,8 @@ import { createBackoff } from "@sdxc/backoff";
 import { createJobHandler } from "@sdxc/jobs";
 import { isSuccess } from "@sdxc/result";
 
-import Channels from "~/app/data/channel";
 import jobs from "~/app/jobs";
+import Channels from "~/app/models/channel";
 
 const MAX_ATTEMPTS = 4;
 
@@ -359,13 +359,13 @@ the message a second time.
 Chat channels hear about every failure. Paging channels wake someone up, so they get only
 critical messages, and the recovery that resolves them:
 
-```typescript {% title="app/notifications/notify-team.ts" %}
+```typescript {% title="app/services/notifications/notify-team.ts" %}
 import type { JobEnqueuer } from "@sdxc/jobs";
 import type { Message } from "@sdxc/messaging";
 import type { Database } from "remix/data-table";
 
-import Channels from "~/app/data/channel";
 import jobs from "~/app/jobs";
+import Channels from "~/app/models/channel";
 
 const PAGING_KINDS: ReadonlySet<string> = new Set(["pagerduty", "opsgenie"]);
 
@@ -410,7 +410,7 @@ A recovery reads better as an edit to the failure it answers. `update` and `repl
 on providers whose platform can do them, and `supports` narrows a destination to one that
 has the method:
 
-```typescript {% title="app/notifications/send-or-update.ts" %}
+```typescript {% title="app/services/notifications/send-or-update.ts" %}
 import type { Destination, Message, SendOptions, SentRef } from "@sdxc/messaging";
 
 import { supports } from "@sdxc/messaging";
@@ -451,7 +451,7 @@ import * as Webhooks from "@sdxc/webhooks";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { recordAlert } from "~/app/data/alerts";
+import { recordAlert } from "~/app/models/alerts";
 import routes from "~/routes/web";
 
 export default createAction(routes.alerts.inbox, async (ctx) => {
@@ -474,7 +474,7 @@ export default createAction(routes.alerts.inbox, async (ctx) => {
 Each provider has a public `render(message)` answering the exact body it sends. Subclass it
 and override `render`; the send, the URL checks and the error mapping stay the same:
 
-```typescript {% title="app/notifications/compact-slack.ts" %}
+```typescript {% title="app/services/notifications/compact-slack.ts" %}
 import type { Message } from "@sdxc/messaging";
 
 import { SlackWebhook } from "@sdxc/messaging/slack";
@@ -507,9 +507,9 @@ import * as memory from "@sdxc/jobs/memory";
 import { MemoryDestination } from "@sdxc/messaging/memory";
 import { expect, test } from "vitest";
 
-import { insertChannel } from "~/app/data/channel";
+import { createDispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { createDispatcher } from "~/app/jobs/dispatcher";
+import { insertChannel } from "~/app/models/channel";
 import { createTestDatabase } from "~/app/test/database";
 
 test("waits the delay a rate limit asked for, then delivers", async () => {
@@ -556,13 +556,13 @@ destination passes: it sends, declares exactly the capabilities it claims, refus
 provider's ref, and answers a rate limit as retryable with the delay the platform named. Run
 it against `CompactSlack`, with [MSW](https://mswjs.io) standing in for Slack:
 
-```typescript {% title="app/notifications/compact-slack.test.ts" %}
+```typescript {% title="app/services/notifications/compact-slack.test.ts" %}
 import { describeDestination } from "@sdxc/messaging/conformance";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll } from "vitest";
 
-import { CompactSlack } from "~/app/notifications/compact-slack";
+import { CompactSlack } from "~/app/services/notifications/compact-slack";
 
 const WEBHOOK_URL = "https://hooks.slack.com/services/T000/B000/test-token";
 

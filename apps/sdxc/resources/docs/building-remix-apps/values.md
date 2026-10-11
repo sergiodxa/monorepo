@@ -60,7 +60,7 @@ indexes well, and the prefix is added where an id leaves your app. `UUID` is a b
 a plain `string` is not assignable to it, so a repository typed on `UUID` cannot be handed a
 raw path segment by mistake.
 
-```typescript {% title="app/data/post.ts" %}
+```typescript {% title="app/models/post.ts" %}
 import type { UUID } from "@sdxc/uuid";
 
 import { assertUUID } from "@sdxc/uuid";
@@ -144,7 +144,7 @@ import { validate } from "@sdxc/validate";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Posts } from "~/app/data/posts";
+import { Posts } from "~/app/models/posts";
 import { newPostId } from "~/app/ids";
 import { derivePost } from "~/app/posts/derive";
 import { NewPostPage } from "~/resources/views/admin/new-post";
@@ -181,7 +181,7 @@ import { TypeID } from "@sdxc/typeid";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Posts } from "~/app/data/posts";
+import { Posts } from "~/app/models/posts";
 import { EditPostPage } from "~/resources/views/admin/edit-post";
 import routes from "~/routes/web";
 

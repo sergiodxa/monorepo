@@ -112,7 +112,7 @@ import { QR } from "@sdxc/qr";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { currentUser } from "~/app/auth/current-user";
+import { currentUser } from "~/app/services/auth/current-user";
 import { beginEnrollment } from "~/app/services/two-factor/enroll";
 import { EnrollTwoFactorPage } from "~/resources/views/enroll-two-factor";
 import routes from "~/routes/web";
@@ -338,7 +338,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { currentUser } from "~/app/auth/current-user";
+import { currentUser } from "~/app/services/auth/current-user";
 import { CODE_FORM } from "~/app/http/validators/two-factor";
 import { confirmEnrollment } from "~/app/services/two-factor/confirm";
 import { RecoveryCodesPage } from "~/resources/views/recovery-codes";
@@ -360,7 +360,7 @@ export default createAction(routes.twoFactor.confirm, async (ctx) => {
 The password step no longer signs the user in when they have a factor. It holds the sign-in in
 the session for a few minutes and sends the browser to the code page:
 
-```typescript {% title="app/auth/pending-sign-in.ts" %}
+```typescript {% title="app/services/auth/pending-sign-in.ts" %}
 import type { RequestContext } from "remix/router";
 
 import { sessionOf } from "@sdxc/auth/remix/context";
@@ -417,7 +417,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { completeSignIn, pendingUserId } from "~/app/auth/pending-sign-in";
+import { completeSignIn, pendingUserId } from "~/app/services/auth/pending-sign-in";
 import { CODE_FORM } from "~/app/http/validators/two-factor";
 import { checkSecondFactor } from "~/app/services/two-factor/check";
 import { TwoFactorPage } from "~/resources/views/two-factor";

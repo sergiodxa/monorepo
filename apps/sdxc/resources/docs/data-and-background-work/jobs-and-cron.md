@@ -55,8 +55,8 @@ declaration: its type requires five fields, and an out-of-range value throws
 ```typescript {% title="app/jobs/expire-postings.ts" %}
 import { createJobHandler } from "@sdxc/jobs";
 
-import { expireBefore } from "~/app/data/posting";
 import jobs from "~/app/jobs";
+import { expireBefore } from "~/app/models/posting";
 
 const LIFETIME_MS = 30 * 86_400_000;
 
@@ -115,7 +115,7 @@ Jobs are written to a queue in one place and read from it in another: route hand
 and the dispatcher delivers. Build the queue once, in a module both sides import, so they cannot
 end up pointed at different backends:
 
-```typescript {% title="app/jobs/queue.ts" %}
+```typescript {% title="app/initializers/queue.ts" %}
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
@@ -130,17 +130,17 @@ binding until something is enqueued.
 The dispatcher owns the middleware chain and the timeout, delivers from the shared queue, and
 maps each job to a loader so a handler module is imported only once a message for it arrives:
 
-```typescript {% title="app/jobs/dispatcher.ts" %}
+```typescript {% title="app/initializers/dispatcher.ts" %}
 import type { JobQueue } from "@sdxc/jobs/queue";
 import type { Database } from "remix/data-table";
 
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { openDatabase } from "~/app/initializers/database";
+import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { database } from "~/app/jobs/middleware/database";
-import { queue } from "~/app/jobs/queue";
-import { openDatabase } from "~/app/lib/database";
-import { logger } from "~/app/logger";
 
 interface DispatcherOptions {
 	queue?: JobQueue;
@@ -172,7 +172,7 @@ gives every handler the context this chain produces:
 ```typescript {% title="app/jobs/types.ts" %}
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
-import type { dispatcher } from "~/app/jobs/dispatcher";
+import type { dispatcher } from "~/app/initializers/dispatcher";
 
 declare module "@sdxc/jobs" {
 	interface JobTypes {
@@ -189,18 +189,20 @@ A route handler enqueues through `ctx.jobs`, which `jobEnqueuer(queue)` from
 `@sdxc/jobs/router` publishes. It writes through the shared queue alone, so the dispatcher, its
 middleware and every job handler stay out of the request path's module graph:
 
-```typescript {% title="app/router.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { log } from "@sdxc/logger/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { createRouter } from "remix/router";
 
-import { queue } from "~/app/jobs/queue";
-import { logger } from "~/app/logger";
+import { logger } from "~/app/initializers/logger";
+import { queue } from "~/app/initializers/queue";
 
-export default createRouter({
-	middleware: [log(logger), trace(), jobEnqueuer(queue)],
-});
+export function createWebRouter() {
+	return createRouter({
+		middleware: [log(logger), trace(), jobEnqueuer(queue)],
+	});
+}
 ```
 
 Importing the middleware is what types `ctx.jobs`. Listing `trace()` before it makes every
@@ -211,8 +213,8 @@ A handler then enqueues with exactly the payload the job's schema accepts:
 import { redirect } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import { publishPosting } from "~/app/data/posting";
 import jobs from "~/app/jobs";
+import { publishPosting } from "~/app/models/posting";
 import routes from "~/routes/web";
 
 export default createAction(routes.postings.create, async (ctx) => {
@@ -240,18 +242,18 @@ same arguments.
 ## Wire the Worker
 
 `cloudflare.worker(dispatcher)` returns the `scheduled` and `queue` handlers a Worker exports,
-beside the `fetch` handler your router factory answers:
+beside the `fetch` handler the router from `createWebRouter()` answers:
 
 ```typescript {% title="bootstrap/worker.ts" %}
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 
-import { dispatcher } from "~/app/jobs/dispatcher";
-import application from "~/bootstrap/app";
+import { dispatcher } from "~/app/initializers/dispatcher";
+import { createWebRouter } from "~/app/initializers/router";
 
 const handlers = cloudflare.worker(dispatcher);
 
 export default {
-	fetch: (request: Request) => application().fetch(request),
+	fetch: (request: Request) => createWebRouter().fetch(request),
 	scheduled: (controller: ScheduledController) => handlers.scheduled(controller),
 	queue: (batch: MessageBatch) => handlers.queue(batch),
 } satisfies ExportedHandler<Cloudflare.Env>;
@@ -346,8 +348,8 @@ the queue through the dispatcher:
 import * as memory from "@sdxc/jobs/memory";
 import { expect, test } from "vitest";
 
+import { createDispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { createDispatcher } from "~/app/jobs/dispatcher";
 import { createTestDatabase } from "~/app/test/database";
 
 test("the nightly sweep runs to completion", async () => {

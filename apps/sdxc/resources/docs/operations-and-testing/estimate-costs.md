@@ -50,7 +50,7 @@ Pick the meters your app uses and name each one after the usage you will feed it
 `included` allowance resets every billing month across the whole account, so it comes off the
 month's total before the price applies:
 
-```typescript {% title="app/lib/estimate.ts" %}
+```typescript {% title="app/services/estimate.ts" %}
 import type { Meter } from "@sdxc/cloudflare-pricing";
 
 import { centsPerUnit } from "@sdxc/cloudflare-pricing";
@@ -112,12 +112,12 @@ costs is a different question, and there the allowance does not apply: it belong
 account, never to one customer's share of it. Price the quantities one unit of work consumed
 at the list rate:
 
-```typescript {% title="app/lib/unit-cost.ts" %}
-import type { Usage } from "~/app/lib/estimate";
+```typescript {% title="app/services/unit-cost.ts" %}
+import type { Usage } from "~/app/services/estimate";
 
 import { centsPerUnit } from "@sdxc/cloudflare-pricing";
 
-import { METERS } from "~/app/lib/estimate";
+import { METERS } from "~/app/services/estimate";
 
 export function costOfWork(work: Partial<Usage>): number {
 	let cents = 0;
@@ -142,7 +142,7 @@ its response `meta`, and `@sdxc/data-table-d1` hands them to an `onStatement` ob
 counting them costs no extra statement. Adding them to the current log record puts the totals
 on every request's wide event:
 
-```typescript {% title="app/lib/database.ts" %}
+```typescript {% title="app/initializers/database.ts" %}
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { currentLog } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
@@ -192,10 +192,10 @@ GB-month is already an average over the month:
 import { DAYS_PER_BILLING_MONTH } from "@sdxc/cloudflare-pricing";
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { Usage } from "~/app/lib/estimate";
+import type { Usage } from "~/app/services/estimate";
 
 import jobs from "~/app/jobs";
-import { estimateMonth, METERS } from "~/app/lib/estimate";
+import { estimateMonth, METERS } from "~/app/services/estimate";
 import { readMonthToDate } from "~/app/services/usage";
 
 const BUDGET_CENTS = 2_000;
@@ -243,10 +243,10 @@ before you count those meters.
 Releases are dated, and any release may change a price. Pin one exact version, and keep a test
 that states what a known month costs, so an upgrade that moves a price fails there first:
 
-```typescript {% title="app/lib/estimate.test.ts" %}
+```typescript {% title="app/services/estimate.test.ts" %}
 import { expect, test } from "vitest";
 
-import { estimateMonth } from "~/app/lib/estimate";
+import { estimateMonth } from "~/app/services/estimate";
 
 const IDLE = {
 	requests: 0,

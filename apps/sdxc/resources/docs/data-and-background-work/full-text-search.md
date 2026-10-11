@@ -117,7 +117,7 @@ export const articleSearch = table({
 and which FTS5 table indexes them. It holds no connection, so one definition at module scope
 serves every request and every tenant's database:
 
-```typescript {% title="app/search/articles.ts" %}
+```typescript {% title="app/models/search/articles.ts" %}
 import { defineSearch, parseQuery } from "@sdxc/search";
 
 import { articleSearch } from "~/database/schema/article-search";
@@ -155,7 +155,7 @@ empty `columns`, a weight of zero, a column the table lacks, or a non-integer ke
 An article's write action writes its search row too, in one upsert, so the row is created the
 first time and replaced after:
 
-```typescript {% title="app/search/articles.ts" %}
+```typescript {% title="app/models/search/articles.ts" %}
 import type { Database } from "remix/data-table";
 
 import { sql } from "remix/data-table";
@@ -220,9 +220,9 @@ export default jobs({
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
-import { ARTICLE_SEARCH } from "~/app/search/articles";
+import { ARTICLE_SEARCH } from "~/app/models/search/articles";
 
 export default createJobHandler(jobs.reindexArticleSearch, async (ctx) => {
 	let progress = await ARTICLE_SEARCH.reindex(ctx.database, {
@@ -274,7 +274,7 @@ reading for a box that searches as the reader types.
 any `remix/data-table` query. The filters the parse read out are yours to apply, because only
 the app knows what `section:billing` means:
 
-```typescript {% title="app/search/articles.ts" %}
+```typescript {% title="app/models/search/articles.ts" %}
 import type { ParsedQuery } from "@sdxc/search";
 
 import { inList, notInList } from "remix/data-table";
@@ -312,8 +312,8 @@ import { createPaging, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { toHit } from "~/app/search/hits";
-import { matchingArticles, parseArticleQuery } from "~/app/search/articles";
+import { matchingArticles, parseArticleQuery } from "~/app/models/search/articles";
+import { toHit } from "~/app/services/search/hits";
 import { SearchPage } from "~/resources/views/search";
 import routes from "~/routes/web";
 
@@ -378,7 +378,7 @@ relevance shifts each time the index changes between two pages.
 `excerpt` picks a window of words around the first match. Both compare the way the index
 does, ignoring case and diacritics, and both keep the text exactly as written:
 
-```typescript {% title="app/search/hits.ts" %}
+```typescript {% title="app/services/search/hits.ts" %}
 import type { SearchRow } from "@sdxc/search";
 import type { Excerpt, HighlightSegment, ParsedQuery } from "@sdxc/search/query";
 
@@ -420,7 +420,7 @@ browser bundle can parse and highlight with the same functions the server search
 Leave out `fts` and the same definition runs every query as `LIKE` over the columns. The table
 you already have is all it reads, so this search ships without a migration:
 
-```typescript {% title="app/search/faq.ts" %}
+```typescript {% title="app/models/search/faq.ts" %}
 import { defineSearch } from "@sdxc/search";
 
 import { faqs } from "~/database/schema/faqs";

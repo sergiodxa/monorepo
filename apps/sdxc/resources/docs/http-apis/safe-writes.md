@@ -115,7 +115,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { idempotent } from "~/app/http/middleware/idempotency";
 import { BOOK_INPUT } from "~/app/http/schemas/books";
 import { problems } from "~/app/services/problems";
@@ -200,7 +200,7 @@ import { ok } from "@sdxc/http/response/json";
 import { isSuccess } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { problems } from "~/app/services/problems";
 import routes from "~/routes/web";
 
@@ -223,7 +223,7 @@ with `If-None-Match` before every reuse, and gets the body again only when it ch
 ## Accept a merge patch
 
 Add `update: patch("/api/books/:bookId")` to the route table, and `update` to the
-`actions` the first guide's `application()` maps. A merge patch is written in the shape of
+`actions` the first guide's `createWebRouter()` maps. A merge patch is written in the shape of
 the resource: it lists only the members that change, and `null` removes one.
 
 The patch applies to the book's writable members as the API spells them, with unset ones
@@ -232,7 +232,7 @@ left out, since absence is how a merge patch represents them:
 ```typescript {% title="app/http/controllers/api/books/writable-book.ts" %}
 import type { JSONObject } from "@sdxc/merge-patch";
 
-import type { BookRow } from "~/app/data/book";
+import type { BookRow } from "~/app/models/book";
 
 export function writableBook(book: BookRow): JSONObject {
 	let target: JSONObject = {
@@ -257,7 +257,7 @@ import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import Book, { serializeBook } from "~/app/data/book";
+import Book, { serializeBook } from "~/app/models/book";
 import { writableBook } from "~/app/http/controllers/api/books/writable-book";
 import { BOOK_INPUT } from "~/app/http/schemas/books";
 import { problems } from "~/app/services/problems";

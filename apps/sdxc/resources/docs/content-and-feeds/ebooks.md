@@ -42,7 +42,7 @@ a file that leaves your site:
 - Images become links to the online copy. An EPUB embeds only the files it carries, and an image
   loaded from the web fails the build with `remote-resource`.
 
-```typescript {% title="app/books/chapter.ts" %}
+```typescript {% title="app/services/books/chapter.ts" %}
 import type { EPUB } from "@sdxc/epub";
 import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
 
@@ -101,14 +101,14 @@ the same chapter, because the `id` it names is in the body. A heading that alrea
 `EPUB.build` takes metadata, chapters, stylesheets and resources, and answers with the
 publication or the first rule the input breaks:
 
-```typescript {% title="app/books/post-epub.ts" %}
+```typescript {% title="app/services/books/post-epub.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { EPUB } from "@sdxc/epub";
 import { isFailure } from "@sdxc/result";
 
-import bookCss from "~/app/books/book.css?raw";
-import { chapterBody } from "~/app/books/chapter";
+import bookCss from "~/resources/styles/book.css?raw";
+import { chapterBody } from "~/app/services/books/chapter";
 
 export interface PostBook {
 	title: string;
@@ -192,8 +192,8 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { postEpub } from "~/app/books/post-epub";
-import { readPost } from "~/app/content/posts";
+import { postEpub } from "~/app/services/books/post-epub";
+import { readPost } from "~/app/services/content/posts";
 import routes from "~/routes/web";
 
 export default createAction(routes.posts.epub, async (ctx) => {
@@ -263,10 +263,10 @@ at `EPUB/text/<id>.xhtml`, and every reference inside a body resolves from there
 carried at `images/diagram.svg` is `../images/diagram.svg`, and another chapter is
 `<id>.xhtml`, with a fragment when it points inside it.
 
-```typescript {% title="app/books/series-epub.ts" %}
+```typescript {% title="app/services/books/series-epub.ts" %}
 import { EPUB } from "@sdxc/epub";
 
-import bookCss from "~/app/books/book.css?raw";
+import bookCss from "~/resources/styles/book.css?raw";
 
 export interface SeriesChapter {
 	slug: string;

@@ -39,7 +39,7 @@ A receiver reads your page's microformats to decide what your post is, and a Web
 send is only as good as the markup it points at. `mf` from `@sdxc/microformats/ui` is a mixin
 that adds the class names, typed so a misspelled property is a compile error:
 
-```tsx {% title="app/components/post-entry.tsx" %}
+```tsx {% title="resources/components/post-entry.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
 import { MicroTime, mf } from "@sdxc/microformats/ui";
@@ -115,7 +115,7 @@ reaches a sender that only reads headers; a `<link>` reaches one that parses the
 the element in your document layout's `<head>`, where every page carries it, beside the one a
 Micropub client looks for:
 
-```tsx {% title="app/components/indieweb-links.tsx" %}
+```tsx {% title="resources/components/indieweb-links.tsx" %}
 import routes from "~/routes/web";
 
 export function IndieWebLinks() {
@@ -286,7 +286,7 @@ import { isFailure } from "@sdxc/result";
 import { outboundLinks, plan } from "@sdxc/webmention/sender";
 
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
 import { sentTargets } from "~/app/models/mentions";
 import { findPost } from "~/app/models/posts";
 

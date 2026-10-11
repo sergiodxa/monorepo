@@ -48,22 +48,25 @@ Remix's session middleware puts on the context, so the session has to exist befo
 route runs. `KVSessionStorage` keeps its values in Workers KV while the cookie carries only the
 id:
 
-```typescript {% title="bootstrap/middleware.ts" %}
+```typescript {% title="app/initializers/router.ts" %}
 import { KVSessionStorage } from "@sdxc/session-storage-kv";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { session } from "remix/middleware/session";
+import { createRouter } from "remix/router";
 
-import { sessionCookie } from "~/app/http/cookies";
 import { authenticate } from "~/app/http/middleware/auth";
+import { sessionCookie } from "~/app/initializers/cookies";
 
 const SESSIONS = new KVSessionStorage(env.SESSIONS, { ttlSeconds: "30 days" });
 
-export const GLOBAL_MIDDLEWARE = [
-	asyncContext(),
-	session(sessionCookie, SESSIONS),
-	authenticate,
-];
+export function createWebRouter() {
+	let router = createRouter({
+		middleware: [asyncContext(), session(sessionCookie, SESSIONS), authenticate],
+	});
+	// router.map(…) for each route
+	return router;
+}
 ```
 
 `sessionCookie` is your app's signed session cookie, made with `createCookie` from
@@ -79,7 +82,7 @@ An `Issuer` holds the provider's discovery document and its signing keys. `Issue
 the same instance to every caller in the isolate, so the documents are fetched once, and a
 `cache` shares them across isolates so a cold start reads KV instead of the provider.
 
-```typescript {% title="app/auth/issuer.ts" %}
+```typescript {% title="app/initializers/issuer.ts" %}
 import { Issuer } from "@sdxc/auth/issuer";
 import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { env } from "cloudflare:workers";
@@ -100,12 +103,12 @@ The relying party is your app as the provider's client. It is built per request 
 callback URL is derived from the origin the request arrived on, so a preview deploy and
 production each present the URL they are registered under.
 
-```typescript {% title="app/auth/relying-party.ts" %}
+```typescript {% title="app/initializers/relying-party.ts" %}
 import { RelyingParty } from "@sdxc/auth/relying-party";
 import { JWK } from "@sdxc/jwt";
 import { env } from "cloudflare:workers";
 
-import { issuer } from "~/app/auth/issuer";
+import { issuer } from "~/app/initializers/issuer";
 import routes from "~/routes/web";
 
 export function relyingParty(url: URL): RelyingParty {
@@ -158,7 +161,7 @@ every browser-flow method takes.
 import { contextOf } from "@sdxc/auth/remix/context";
 import { createController } from "remix/router";
 
-import { relyingParty } from "~/app/auth/relying-party";
+import { relyingParty } from "~/app/initializers/relying-party";
 import { LoginPage } from "~/resources/views/login";
 import routes from "~/routes/web";
 
@@ -197,8 +200,8 @@ import { Location } from "@sdxc/location";
 import { isFailure, wrap } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { relyingParty } from "~/app/auth/relying-party";
-import { Users } from "~/app/repositories/users";
+import { relyingParty } from "~/app/initializers/relying-party";
+import { Users } from "~/app/models/users";
 import { LoginPage } from "~/resources/views/login";
 import routes from "~/routes/web";
 
@@ -245,7 +248,7 @@ import { isFailure, wrap } from "@sdxc/result";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 
-import { relyingParty } from "~/app/auth/relying-party";
+import { relyingParty } from "~/app/initializers/relying-party";
 import { LogoutPage } from "~/resources/views/logout";
 import routes from "~/routes/web";
 
@@ -288,8 +291,8 @@ import type { Middleware } from "remix/router";
 import { sessionScheme } from "@sdxc/auth/remix/schemes";
 import { auth } from "remix/middleware/auth";
 
-import { relyingParty } from "~/app/auth/relying-party";
-import { Users } from "~/app/repositories/users";
+import { relyingParty } from "~/app/initializers/relying-party";
+import { Users } from "~/app/models/users";
 
 export const authenticate: Middleware = (ctx, next) => {
 	let scheme = sessionScheme(relyingParty(ctx.url), {

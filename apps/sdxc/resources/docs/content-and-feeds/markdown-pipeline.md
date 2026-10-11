@@ -28,7 +28,7 @@ Start with the three things a post file is allowed to say: the fields its frontm
 carries, the tags its body may use, and the HTML elements it may write directly. All three go
 in one options object that every read of a post shares.
 
-```typescript {% title="app/content/schema.ts" %}
+```typescript {% title="app/services/content/schema.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import * as s from "remix/data-schema";
@@ -115,7 +115,7 @@ from [`@sdxc/highlight/markdown`](/api/highlight) is exactly such an object, hol
 handler that attaches the painted tokens to each fence, and the plugins that ship with
 `@sdxc/markdown` are built the same way.
 
-```typescript {% title="app/content/prepare.ts" %}
+```typescript {% title="app/services/content/prepare.ts" %}
 import { highlight } from "@sdxc/highlight/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { headings } from "@sdxc/markdown/plugin/headings";
@@ -157,20 +157,20 @@ how a check you add later (a code block with no language, say) reports the line 
 Keep the files as raw strings and parse per request. A Worker rejects an upload whose global
 scope does real work, and a lazy glob means a page pays for the one post it renders.
 
-```typescript {% title="app/content/posts.ts" %}
+```typescript {% title="app/services/content/posts.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { isFailure, success } from "@sdxc/result";
 
-import { preparePost } from "~/app/content/prepare";
-import { MARKDOWN_OPTIONS } from "~/app/content/schema";
+import { preparePost } from "~/app/services/content/prepare";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
-export const POSTS = import.meta.glob<string>("../../content/posts/*.md", {
+export const POSTS = import.meta.glob<string>("/resources/content/posts/*.md", {
 	query: "?raw",
 	import: "default",
 });
 
 export async function readPost(slug: string) {
-	let load = POSTS[`../../content/posts/${slug}.md`];
+	let load = POSTS[`/resources/content/posts/${slug}.md`];
 	if (!load) return null;
 
 	let parsed = Markdown.parse(await load(), MARKDOWN_OPTIONS);
@@ -187,14 +187,14 @@ An index page needs titles and dates, not bodies. `Markdown.frontmatter` takes t
 and stops after the block, so listing a hundred posts reads a hundred frontmatter blocks and
 parses no markdown at all. It reads the same `POSTS` glob the loader above exports:
 
-```typescript {% title="app/content/list-posts.ts" %}
+```typescript {% title="app/services/content/list-posts.ts" %}
 import { Markdown } from "@sdxc/markdown";
 import { isFailure } from "@sdxc/result";
 
-import type { Frontmatter } from "~/app/content/schema";
+import type { Frontmatter } from "~/app/services/content/schema";
 
-import { POSTS } from "~/app/content/posts";
-import { MARKDOWN_OPTIONS } from "~/app/content/schema";
+import { POSTS } from "~/app/services/content/posts";
+import { MARKDOWN_OPTIONS } from "~/app/services/content/schema";
 
 export async function listPosts() {
 	let posts: Array<Frontmatter & { slug: string }> = [];
@@ -218,7 +218,7 @@ the heading's `id`, its plain text, its `level` and the deeper headings of its s
 and 3 unless you pass `{ levels }`, and leaves out a heading with no id, which is why it reads
 the prepared document:
 
-```tsx {% title="app/components/toc.tsx" %}
+```tsx {% title="resources/components/toc.tsx" %}
 import type { TableOfContentsEntry } from "@sdxc/markdown/plugin/headings";
 import type { Handle } from "remix/component";
 
@@ -250,7 +250,7 @@ blocks.
 `components` map is where a tag gets its markup. A component receives the tag's attributes as
 props, already validated by the schema you registered, plus its rendered `children`:
 
-```tsx {% title="app/components/callout.tsx" %}
+```tsx {% title="resources/components/callout.tsx" %}
 import type { Handle, RemixNode } from "remix/component";
 
 import { Alert } from "@sdxc/ui";
@@ -293,9 +293,9 @@ import { createAction } from "remix/router";
 
 import { tableOfContents } from "@sdxc/markdown/plugin/headings";
 
-import { Callout } from "~/app/components/callout";
-import { TocList } from "~/app/components/toc";
-import { readPost } from "~/app/content/posts";
+import { Callout } from "~/resources/components/callout";
+import { TocList } from "~/resources/components/toc";
+import { readPost } from "~/app/services/content/posts";
 import routes from "~/routes/web";
 
 export default createAction(routes.posts.show, async (ctx) => {
@@ -335,7 +335,7 @@ The painted tokens become `<span class="token …">` runs, and the stylesheet th
 ships with the highlighter. Import it from your document layout, after the theme, so the
 build links it with the [rest of the page's stylesheets](/docs/building-remix-apps/interface-with-remix-ui#the-stylesheets):
 
-```tsx {% title="app/components/document.tsx" %}
+```tsx {% title="resources/components/document.tsx" %}
 import "@sdxc/highlight/styles.css";
 ```
 
@@ -344,7 +344,7 @@ import "@sdxc/highlight/styles.css";
 A feed body, an email or a JSON API wants a string rather than UI nodes. `toHTML` renders any
 node as static HTML, with its own `tags` map returning markup for each tag:
 
-```typescript {% title="app/content/render.ts" %}
+```typescript {% title="app/services/content/render.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { toHTML } from "@sdxc/markdown/html";
@@ -377,7 +377,7 @@ A consumer that parses the output as XML, such as an EPUB content document built
 tag renderer returns is written as the renderer built it, so a renderer feeding XHTML writes
 XHTML itself:
 
-```typescript {% title="app/content/chapter.ts" %}
+```typescript {% title="app/services/content/chapter.ts" %}
 import type { Markdown } from "@sdxc/markdown";
 
 import { toHTML } from "@sdxc/markdown/html";

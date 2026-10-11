@@ -29,12 +29,12 @@ npm add @sdxc/http @sdxc/jobs @sdxc/markdown @sdxc/result
 Each format names the same facts differently, so build the facts once and let each action map
 them. A feed item's body is HTML, which is what `toHTML` gives you from a parsed post:
 
-```typescript {% title="app/feeds/entries.ts" %}
+```typescript {% title="app/services/feeds/entries.ts" %}
 import { toHTML } from "@sdxc/markdown/html";
 import { isFailure } from "@sdxc/result";
 
-import { listPosts } from "~/app/content/list-posts";
-import { readPost } from "~/app/content/posts";
+import { listPosts } from "~/app/services/content/list-posts";
+import { readPost } from "~/app/services/content/posts";
 import routes from "~/routes/web";
 
 export interface FeedEntry {
@@ -93,7 +93,7 @@ import { xml } from "@sdxc/http/response";
 import { RSS } from "@sdxc/rss";
 import { createAction } from "remix/router";
 
-import { feedEntries } from "~/app/feeds/entries";
+import { feedEntries } from "~/app/services/feeds/entries";
 import routes from "~/routes/web";
 
 export default createAction(routes.feeds.rss, async (ctx) => {
@@ -143,7 +143,7 @@ import { Atom } from "@sdxc/atom";
 import { xml } from "@sdxc/http/response";
 import { createAction } from "remix/router";
 
-import { feedEntries } from "~/app/feeds/entries";
+import { feedEntries } from "~/app/services/feeds/entries";
 import routes from "~/routes/web";
 
 export default createAction(routes.feeds.atom, async (ctx) => {
@@ -192,7 +192,7 @@ Fields are camelCase here and written under the format's own names, so `homePage
 import { JSONFeed } from "@sdxc/json-feed";
 import { createAction } from "remix/router";
 
-import { feedEntries } from "~/app/feeds/entries";
+import { feedEntries } from "~/app/services/feeds/entries";
 import routes from "~/routes/web";
 
 export default createAction(routes.feeds.json, async (ctx) => {
@@ -231,7 +231,7 @@ Browsers and feed readers look for `<link rel="alternate">` in a page's head. Re
 there, the one you want people to subscribe to first, since readers take the first as the
 site's main feed:
 
-```tsx {% title="app/components/feed-links.tsx" %}
+```tsx {% title="resources/components/feed-links.tsx" %}
 import routes from "~/routes/web";
 
 export function FeedLinks() {
@@ -303,7 +303,7 @@ A subscriber may look for the hub in the response's `Link` header or in the docu
 advertise it in both. One helper builds the two for any feed: the `rel="self"` and `rel="hub"`
 links for the document, and the header value that `links` writes:
 
-```typescript {% title="app/feeds/hub.ts" %}
+```typescript {% title="app/services/feeds/hub.ts" %}
 import { links } from "@sdxc/websub/publisher";
 import { env } from "cloudflare:workers";
 
@@ -370,7 +370,7 @@ attempt; a 4xx means the hub refused this ping and will refuse the next one too.
 
 The topics are the absolute URLs of every feed a new post changes:
 
-```typescript {% title="app/feeds/topics.ts" %}
+```typescript {% title="app/services/feeds/topics.ts" %}
 import routes from "~/routes/web";
 
 export function feedTopics(base: URL): string[] {
