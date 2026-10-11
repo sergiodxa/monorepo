@@ -3,27 +3,25 @@
 Models over remix/data-table tables with scopes, async callbacks and typed meta fields.
 
 A model is a `remix/data-table` table plus named scopes, custom methods, async callbacks and
-typed fields over a key/value meta table. It is defined once and bound per request, job or test
-to the right database, so every member runs there without taking the database as an argument.
-Rows stay the plain objects data-table returns, and every scope returns a real data-table
-`Query`, so pagination, search and eager loading take them unchanged.
+typed fields over a key/value meta table. Define it once and bind it per request, job or test to
+the right database; rows stay the plain objects data-table returns, and every scope is a real
+data-table `Query`, so pagination, search and eager loading take them unchanged.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/data-model
 ```
 
-Tables come from `remix/data-table` in [`remix`](https://www.npmjs.com/package/remix). Writes
+Tables come from `remix/data-table` in [`remix`](https://www.npmjs.com/package/remix); writes
 answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and fail
-with the `ValidationError` from [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate);
-all three install alongside this package. The `./jobs` entry point needs
-[`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs), and `./testing` needs
-[`@sdxc/sample`](https://www.npmjs.com/package/@sdxc/sample).
+with the `ValidationError` from [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate).
+The `./jobs` entry point needs [`@sdxc/jobs`](https://www.npmjs.com/package/@sdxc/jobs) and
+`./testing` needs [`@sdxc/sample`](https://www.npmjs.com/package/@sdxc/sample).
 
 ## Usage
 
-### Define A Model
+### Define a model
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
@@ -53,15 +51,21 @@ export const Users = createModel(users, {
 });
 ```
 
-### Bind It And Use It
+### Bind it, read and write
 
 ```typescript
+import { ConstraintViolation } from "@sdxc/data-model";
 import { isFailure } from "@sdxc/result";
 
 let users = Users.bind({ db });
 
 let created = await users.create({ email: "Pat@Example.com", name: "Pat" });
-if (isFailure(created)) return created.error.issues; // ValidationError issues
+if (isFailure(created)) {
+	if (created.error instanceof ConstraintViolation && created.error.kind === "unique") {
+		return "That email is taken";
+	}
+	return created.error.issues;
+}
 
 await users.find(created.data.id); // the row, or null
 await users.inTeam(teamId).orderBy("name", "asc").all(); // deleted users left out
@@ -69,23 +73,15 @@ await users.unscoped().where({ id }).first(); // including deleted ones
 ```
 
 Reads answer `null` for a missing row. `create`, `update`, `upsert` and `delete` answer a
-`Result`; a unique or foreign-key violation comes back as a `ConstraintViolation`, a
-`ValidationError` at the column the constraint covers whose `kind` names the constraint:
+`Result`: a callback's `fail(...)` or a database constraint comes back as a `ValidationError`,
+and an `update` or `delete` of a row the model cannot see comes back as `NotFound`.
 
-```typescript
-import { ConstraintViolation } from "@sdxc/data-model";
-
-let created = await users.create({ email, name });
-if (isFailure(created) && created.error instanceof ConstraintViolation) {
-	if (created.error.kind === "unique") return "That email is taken";
-}
-```
-
-### Publish Models Per Request
+### Publish models per request
 
 ```typescript
 import { createModels } from "@sdxc/data-model";
 import { models } from "@sdxc/data-model/router";
+import { createRouter } from "remix/fetch-router";
 
 export const registry = createModels({
 	users: Users,
@@ -102,25 +98,19 @@ router.get(routes.users.show, async (ctx) => {
 });
 ```
 
-The function runs once, on the first model access, so it reads whatever earlier middleware
-published. An entry written as an import loads on its first call in each invocation.
+The context function runs once per request, on the first model access, so it reads whatever
+earlier middleware published. An entry written as an import loads on its first call.
 
-### Dispatch Side Effects After Commit
+### Reach services and defer side effects
 
-Callbacks receive a `ModelContext`, and methods read it as `this.context`. It carries `db`,
-`models` (the rest of the registry, bound to the same database and unit of work) and `get(key)`,
-which reads what the host context published; anything else a model reads, the app adds to the
-interface the way middleware adds properties to a router's context, and supplies wherever it
-binds:
+Callbacks receive a `ModelContext` and methods read it as `this.context`: `db`, `models` (the
+rest of the registry, bound alongside) and `get(key)`, which reads the host context. Add
+whatever else your models need to the interface, and supply it wherever you bind:
 
 ```typescript
 import type { BoundModels } from "@sdxc/data-model";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
-import type { Teams } from "./models/teams.js";
-import type { Users } from "./models/users.js";
-
-/** The registry's entries, one per line, which `ctx.models` resolves one at a time. */
 interface AppModels {
 	users: typeof Users;
 	teams: typeof Teams;
@@ -132,14 +122,7 @@ declare module "@sdxc/data-model" {
 		models: BoundModels<AppModels>;
 	}
 }
-```
 
-Type `models` from an interface listing the entries rather than from `typeof registry`: an
-interface resolves each entry when it is read, so a method calling a sibling leaves the rest of
-the registry's type alone. Two models whose unannotated methods call each other still form a
-cycle; annotate the return type of one of them.
-
-```typescript
 export const Users = createModel(users, {
 	methods: {
 		async signUp(email: string, name: string) {
@@ -150,8 +133,8 @@ export const Users = createModel(users, {
 	},
 	callbacks: {
 		async afterCommit(event, ctx) {
-			if (event.operation !== "create") return;
-			await ctx.jobs.enqueue(jobs.sendWelcome, { userId: event.row.id });
+			if (event.operation === "create")
+				await ctx.jobs.enqueue(sendWelcome, { userId: event.row.id });
 		},
 	},
 });
@@ -170,37 +153,14 @@ anything but a `Failure`; a throw or a returned `Failure` drops them. Writes rol
 the database has real transactions, so on D1 the user above stays written when the team fails,
 and no welcome job goes out for it.
 
-### Type Several Registries
-
-An app binding one registry per database types each registry's context on its own models.
-`withContext` answers a `createModel` whose callbacks and `this.context` read that context:
-
-```typescript
-import type { BoundModels, ModelContext } from "@sdxc/data-model";
-
-import { withContext } from "@sdxc/data-model";
-
-interface FeedModels {
-	feeds: typeof Feeds;
-	items: typeof Items;
-}
-
-interface FeedContext extends ModelContext {
-	models: BoundModels<FeedModels>;
-}
-
-export const { createModel } = withContext<FeedContext>();
-```
-
-Declare the context as an interface: an intersection type is resolved eagerly and makes the
-models circular again. The registry's `bind` and middleware then require every member that
-context declares.
+Type `models` from an interface listing the entries rather than from `typeof registry`, so a
+method calling a sibling leaves the rest of the registry's type alone.
 
 ## API
 
 ### `createModel(table, options?)`
 
-Defines a model. Options:
+Defines a model over a data-table table. Every option is optional:
 
 - `scopes`: named refinements `(query, ...args) => query`, callable on the bound model and on
   every query from it. A scope may call `where`, `having`, `orderBy`, `groupBy`, `limit`,
@@ -208,49 +168,52 @@ Defines a model. Options:
   `methods`.
 - `defaultScope`: a scope every read applies, including the row an update or delete targets.
   `unscoped()` reads without it.
-- `methods`: custom methods, with `this` bound to the model, so a method composes its scopes,
-  its queries, the other methods and `this.context`. Each answers a promise or a model query; a
-  method answering a plain value, or a method or scope named like a member (see
-  `ReservedName`), turns the definition into an `InvalidModel` naming it. A method's signature
-  names its rows as `TableRow<typeof table>`, since `ModelRow<typeof Model>` inside the model's
-  own definition refers to the definition being inferred.
+- `methods`: custom methods with `this` bound to the model. Each answers a promise or a model
+  query; a method answering a plain value, or a method or scope named like a built-in member
+  (see `ReservedName`), turns the definition into an `InvalidModel` naming it.
 - `callbacks`: `validate`, `beforeCreate`, `beforeUpdate`, `beforeDelete`, `afterCreate`,
   `afterUpdate`, `afterDelete` and `afterCommit`, all async and all receiving the
-  `ModelContext`. `validate` and the `before*` callbacks fail with `fail(...)` from
-  `remix/data-table`; `before*` may return rewritten values.
-- `constraints`: columns pinned to fixed values. Every query filters on them, every create
-  writes them, and an update or delete of a row outside them answers `NotFound`.
+  `ModelContext`. `validate` and `before*` fail with `fail(...)` from `remix/data-table`;
+  `before*` may return rewritten values.
+- `constraints`: columns pinned to fixed values. Every read filters on them, every create writes
+  them, and an update or delete of a row outside them answers `NotFound`.
 - `inheritance`: the discriminator column `extend()` pins sub-models on.
-- `optional`: columns `create` may leave out because a callback or the database fills them,
-  such as a `.default()` column, since data-table's column types record no default. Nullable
-  columns and columns named `created_at` or `updated_at` are optional already.
+- `optional`: columns `create` may leave out because a callback or the database fills them.
+  Nullable columns and `created_at`/`updated_at` are optional already.
 - `metaTable` and `meta`: a key/value companion table and the typed fields read from it.
 
 ### `withContext<Context>()`
 
-Answers `{ createModel }` typed with `Context` in place of `ModelContext`, for models whose
-callbacks and methods read a context of their own, such as one registry among several.
+Answers `{ createModel }` typed with `Context` in place of `ModelContext`, for an app binding
+one registry per database. Declare `Context` as an interface extending `ModelContext`; an
+intersection type resolves eagerly and makes the models circular.
+
+```typescript
+interface FeedContext extends ModelContext {
+	models: BoundModels<FeedModels>;
+}
+
+export const { createModel } = withContext<FeedContext>();
+```
 
 ### `definition.bind(context, host?, options?)`
 
-Binds a model for a script, a seed or a test. `context` holds `db` and any member the app adds
-to `ModelContext`; `host` is what `ctx.get` reads through to, such as a
-`RequestContext`; `options.transactions` is `"database"` for an adapter with real transactions
-and `"none"`, the default, for D1 and Durable Object SQLite.
+Binds a model for a script, a seed or a test. `context` holds `db` and every member the app added
+to `ModelContext`; `host` is what `ctx.get` reads through to, such as a `RequestContext`;
+`options.transactions` is `"database"` for an adapter with real transactions and `"none"`, the
+default, for D1 and Durable Object SQLite.
 
 ### `definition.extend(value, options)`
 
-A sub-model pinned to one value of the base's `inheritance` column, with every scope, method
-and callback of the base. Its callbacks run after the base's; a scope or method named like one
+A sub-model pinned to one value of the base's `inheritance` column, with every scope, method and
+callback of the base; its own callbacks run after the base's. A scope or method named like one
 of the base's is a type error.
 
-### Bound Model
+### Bound model
 
 | Member                 | Answers                                                    |
 | ---------------------- | ---------------------------------------------------------- |
 | `query()`, scopes      | A data-table `Query` with the model's scopes chainable     |
-| `db`                   | The database it is bound to, for a method's raw statement  |
-| `context`              | The model context: `models`, `get` and the app's members   |
 | `unscoped()`           | The same, without the default scope                        |
 | `withMeta(keys)`       | A query loading only those meta keys                       |
 | `whereMeta(key, v)`    | A query keeping rows holding `v` under the key             |
@@ -262,87 +225,298 @@ of the base's is a type error.
 | `upsert(values, opts)` | `Result<Row, ValidationError>`, in one statement           |
 | `delete(key)`          | `Result<Row, ValidationError \| NotFound>`                 |
 | `transaction(fn)`      | Whatever `fn` returns, with `afterCommit` deferred         |
+| `db`                   | The database it is bound to, for a method's raw statement  |
+| `context`              | The model context                                          |
 | `load()`               | The bound model once a lazily loaded module has loaded     |
 
-A single key is the column's value, also for a table declaring `primaryKey: ["id"]`; a
-composite key is an object. A key of any other shape, such as a list, answers `null` from
-`find` and `NotFound` from `update` and `delete`. Every `update` sets the table's `updatedAt` column, so
-`update(key, {})` marks a row as changed, running the update callbacks.
+A single key is the column's value, a composite key an object; a key of any other shape, such as
+a list, answers `null` from `find` and `NotFound` from `update` and `delete`. Every `update` sets
+the table's `updatedAt` column, so `update(key, {})` marks a row as changed and runs the update
+callbacks.
 
 `upsert(values, { conflict, update })` is one `INSERT … ON CONFLICT` statement, so it runs no
-model callbacks and supplies its own `id`. `conflict` defaults to the primary key; `update`
-defaults to the values without the conflict and key columns and `createdAt`, and `update: {}`
-keeps a conflicting row as it is. It answers the row as it stands. A model with constraints
-reads the conflict target first, so a conflicting row outside them is refused and left as it
-is.
+callbacks and supplies its own `id`. `conflict` defaults to the primary key; `update` defaults to
+the values without the conflict and key columns and `createdAt`, and `update: {}` keeps a
+conflicting row as it is. A model with constraints reads the conflict target first, so a
+conflicting row outside them is refused and left as it is.
 
 A bulk write built from a query, `users.inTeam(teamId).update({ ... }, { touch: false })`, is
-data-table's own statement and runs no model callbacks; `touch: false` leaves `updatedAt` as it
-is, and `returning` answers the updated rows. On a lazily loaded entry, `db` and `context`
-answer before its module loads.
+data-table's own statement and runs no callbacks; `touch: false` leaves `updatedAt` as it is and
+`returning` answers the updated rows.
 
 ### `createModels(entries)`
 
-A registry of models keyed by the name each is bound under. An entry is a model or a function
-importing a module that default-exports one. `registry.bind(context, host?, options?)` binds
-every entry; `models.transaction(fn)` opens a unit of work across them.
+A registry keyed by the name each model is bound under. An entry is a model or a function
+importing a module that default-exports one. `registry.bind(context, host?, options?)` binds every
+entry, and the bound registry's `transaction(fn)` opens a unit of work across them.
 
 ### `field`
 
 Meta field codecs: `text`, `integer`, `number`, `boolean`, `timestamp`, `url` (`http` and
 `https` only, so a stored value is safe to link to), `enum(values)`, `json(schema)` and
-`list(field)`. Every field reads as `T | undefined` unless it declares
-`.default(value)`; `.required()` makes `create` refuse a write without it.
+`list(field)`. Every field reads as `T | undefined` unless it declares `.default(value)`;
+`.required()` makes `create` refuse a write without it.
 
 ### `models(registry, context, options?)` from `./router` and `./jobs`
 
 Middleware publishing the registry bound to each request or job run as `ctx.models` (or
-`options.property`), and under the `Models` context key.
+`options.property`) and under the `Models` context key. `options.transactions` is passed to
+the binding.
 
 ### `NotFound`
 
-The failure an update or delete answers when no row of the model has the key.
+The failure an update or delete answers when no visible row has the key, with `model` and `key`.
 
 ### `ConstraintViolation`
 
-The `ValidationError` a write answers when the database refuses it for a constraint, with
-`kind` (`"unique"`, `"foreign-key"`, `"not-null"` or `"check"`) and the `column` it covers.
+The `ValidationError` a write answers when the database refuses it, with `kind` (`"unique"`,
+`"foreign-key"`, `"not-null"` or `"check"`) and the `column` it covers.
 
-### `defineFactory`, `createFactories` from `./testing`
+### `./testing`
 
-Factories whose attributes draw from `@sdxc/sample` and write through the bound model.
-
-### `overrideModel(model, build)` from `./testing`
-
-Replaces members of a model in every binding until the returned function runs, including the
-registries middleware binds per request. `build` receives the original members, so a
-replacement wraps them: `overrideModel(Users, (users) => ({ create: vi.fn(users.create) }))`.
-
-### `publishModels(ctx, registry, context, options?)` from `./testing`
-
-Binds a registry with `ctx` as its host and publishes it as `ctx.models` and under `Models`,
-for a test calling a job or route handler with a context it built.
+- `defineFactory(model, attributes, options?)`: a factory whose attributes are values or
+  functions of `{ sample, sequence, create }`; `.trait(name, attributes)` adds a named set.
+- `createFactories(models, { seed, now? })`: `build`, `create` and `createMany` for a bound
+  registry, writing through the models so callbacks and constraints behave as in production.
+- `overrideModel(model, build)`: replaces members in every binding until the returned function
+  runs; `build` receives the original members, so a replacement can wrap them.
+- `publishModels(ctx, registry, context, options?)`: binds a registry with `ctx` as its host and
+  publishes it the way the middleware does, for a test calling a handler directly.
 
 ### Types
 
-`BoundModel<M>`, `ModelQuery<M>`, `ModelRow<M>`, `CreateValues<M>` and `UpdateValues<M>` name
-a model's bound type, query, row and write inputs from `typeof Model`. `AnyModel<Shape>`
-constrains a helper to models whose rows have `Shape`. `ModelContext` is what callbacks
-receive; augment it to type members the app supplies at binding. `BoundModels<Entries>` names
-a bound registry from an interface of its entries, for typing `models` on the context;
-`BoundRegistry<typeof models>` names one from the registry, for code outside the models.
-`ReservedName` lists the member names a scope or method cannot take: `where`, `having`,
-`orderBy`, `groupBy`, `limit`, `offset`, `distinct`, `with`, `select`, `join`, `leftJoin`,
-`rightJoin`, `withMeta`, `whereMeta`, `all`, `first`, `find`, `count`, `exists`, `insert`,
-`insertMany`, `update`, `delete`, `upsert`, `query`, `from`, `findBy`, `create`, `transaction`,
-`load`, `unscoped`, `db`, `context`, `then`, `catch` and `finally`.
+`BoundModel<M>`, `ModelQuery<M>`, `ModelRow<M>`, `CreateValues<M>` and `UpdateValues<M>` name a
+model's bound type, query, row and write inputs from `typeof Model`. `AnyModel<Shape>` constrains
+a helper to models whose rows have `Shape`. `ModelContext` is what callbacks receive.
+`BoundModels<Entries>` names a bound registry from an interface of its entries, and
+`BoundRegistry<typeof registry>` from the registry itself. `ReservedName` lists the member names a
+scope or method cannot take.
 
-## Patterns
+## Pattern: Scopes Over A Soft-Deleted Table
 
-### Pattern: Several Post Types In One Table
+A default scope hides archived rows from every read, including the row an `update` or `delete`
+targets; named scopes take arguments and chain in any order with data-table's own methods.
+
+```typescript
+import { createModel } from "@sdxc/data-model";
+import { lte } from "remix/data-table";
+
+import { tasks } from "./schema.js";
+
+export const Tasks = createModel(tasks, {
+	defaultScope: (query) => query.where({ archived_at: null }),
+	scopes: {
+		assignedTo: (query, userId: string) => query.where({ assignee_id: userId }),
+		open: (query) => query.where({ completed_at: null }),
+		dueBy: (query, instant: string) => query.where(lte("due_at", instant)).orderBy("due_at", "asc"),
+	},
+	methods: {
+		agenda(userId: string, until: string) {
+			return this.assignedTo(userId).open().dueBy(until);
+		},
+		async restore(id: string) {
+			return this.unscoped().where({ id }).update({ archived_at: null });
+		},
+	},
+});
+
+let tasks = Tasks.bind({ db });
+await tasks.agenda(userId, today).limit(10).all(); // archived tasks never appear
+await tasks.open().count(); // nor here
+await tasks.update(archivedId, { title: "x" }); // NotFound: the default scope hides it
+await tasks.restore(archivedId); // a bulk write through unscoped() reaches it
+```
+
+A scope refines a query and answers it, so it may call `where`, `having`, `orderBy`, `groupBy`,
+`limit`, `offset` and `distinct`; anything that changes the row type belongs in a method.
+
+## Pattern: Custom Methods That Answer Queries, Results Or Raw Rows
+
+`this` is the bound model, so a method composes its scopes, its queries, its siblings through
+`this.context.models` and, for what the builder cannot express, a raw statement on `this.db`.
+
+```typescript
+import { createModel } from "@sdxc/data-model";
+import { isFailure } from "@sdxc/result";
+import { sql } from "remix/data-table";
+
+import { bookmarks } from "./schema.js";
+
+export const Bookmarks = createModel(bookmarks, {
+	optional: ["id"],
+	methods: {
+		onHost(host: string) {
+			return this.query().where({ host }).orderBy("created_at", "desc");
+		},
+		async save(userId: string, url: string) {
+			let existing = await this.findBy({ user_id: userId, url });
+			if (existing !== null) return existing;
+			let created = await this.create({ user_id: userId, url, host: new URL(url).host });
+			if (isFailure(created)) throw created.error;
+			await this.context.models.activity.create({ user_id: userId, kind: "bookmarked" });
+			return created.data;
+		},
+		async topHosts(limit: number) {
+			return this.db.exec(sql`
+				select host, count(*) as bookmarks from bookmarks
+				group by host order by bookmarks desc limit ${limit}
+			`);
+		},
+	},
+});
+
+await ctx.models.bookmarks.onHost("example.com").limit(5).all(); // a query, still chainable
+await ctx.models.bookmarks.save(userId, "https://example.com/a"); // a promise of a row
+```
+
+A method answers a promise or a model query, which is what lets a lazily loaded entry call it
+before its module has loaded; a method named like a built-in member is a type error.
+
+## Pattern: Every Callback Around A Write
+
+Callbacks run in this order: `validate`, then `before*`, then the statement, then `after*`, and
+`afterCommit` once the enclosing unit of work succeeds. `validate` and every `before*` and
+`after*` callback may refuse with `fail(...)`; a refusal after the statement rolls it back where
+the database has real transactions.
+
+```typescript
+import { createModel } from "@sdxc/data-model";
+import { isFailure } from "@sdxc/result";
+import { fail } from "remix/data-table";
+
+import { documents } from "./schema.js";
+import { publishDocument } from "./jobs.js";
+import { slugify } from "./slugify.js";
+
+export const Documents = createModel(documents, {
+	optional: ["id", "slug", "version"],
+	callbacks: {
+		async validate(values) {
+			if (values.title !== undefined && values.title.trim() === "") {
+				return fail("Title is required", ["title"]);
+			}
+		},
+		async beforeCreate(values) {
+			return { ...values, id: crypto.randomUUID(), slug: slugify(values.title), version: 1 };
+		},
+		async beforeUpdate(values, _ctx, before) {
+			return { ...values, version: before.version + 1 };
+		},
+		async beforeDelete(row) {
+			if (row.published_at !== null) return fail("Unpublish the document first");
+		},
+		async afterCreate(row, ctx) {
+			let revision = await ctx.models.revisions.create({ document_id: row.id, body: row.body });
+			if (isFailure(revision)) return fail("Could not record the first revision");
+		},
+		async afterUpdate(row, ctx, before) {
+			if (row.body === before.body) return;
+			await ctx.models.revisions.create({ document_id: row.id, body: row.body });
+		},
+		async afterDelete(row, ctx) {
+			await ctx.models.revisions.query().where({ document_id: row.id }).delete();
+		},
+		async afterCommit(event, ctx) {
+			if (event.operation === "update" && event.changed.includes("published_at")) {
+				await ctx.jobs.enqueue(publishDocument, { id: event.row.id });
+			}
+		},
+	},
+});
+```
+
+`before*` callbacks see the previous one's rewrite and the row as it stands; `afterCommit`
+receives the row, the row before the write and the columns and `meta.<key>` entries that
+changed, so a side effect fires only for the change it cares about.
+
+## Pattern: Pin A Model To One Slice Of A Table
+
+`constraints` fixes columns to values: every read filters on them, every create writes them,
+and an update or delete of a row outside them answers `NotFound`. Two models over one table
+then never see each other's rows.
+
+```typescript
+import { createModel } from "@sdxc/data-model";
+import { fail } from "remix/data-table";
+
+import { channels } from "./schema.js";
+
+export const EmailChannels = createModel(channels, {
+	constraints: { kind: "email" },
+	optional: ["id"],
+	callbacks: {
+		async validate(values) {
+			if (values.address !== undefined && !values.address.includes("@")) {
+				return fail("Expected an email address", ["address"]);
+			}
+		},
+	},
+});
+
+export const WebhookChannels = createModel(channels, {
+	constraints: { kind: "webhook" },
+	optional: ["id"],
+});
+
+let emails = EmailChannels.bind({ db });
+await emails.create({ team_id, address: "ops@example.com" }); // written with kind: "email"
+await emails.query().where({ team_id }).count(); // email channels only
+await emails.update(webhookId, { address: "x" }); // NotFound
+await emails.upsert({ id: webhookId, team_id, address: "x" }); // refused, the webhook row is left as it is
+```
+
+A constrained column is never writable: `create` and `update` drop it from the values, and
+`unscoped()` lifts the default scope but keeps the constraints. `inheritance` plus `extend()`
+is the same mechanism with the discriminator and the base's scopes and callbacks inherited.
+
+## Pattern: Open-Ended Attributes As Typed Meta Fields
+
+A key/value companion table holds attributes the main table does not have columns for; the
+model declares each key once as a `field`, so rows read and write them as typed values under
+`meta`.
 
 ```typescript
 import { createModel, field } from "@sdxc/data-model";
+import { object, string } from "remix/data-schema";
+
+import { userMeta, users } from "./schema.js";
+
+export const Profiles = createModel(users, {
+	metaTable: { table: userMeta, foreignKey: "user_id", generateId: () => crypto.randomUUID() },
+	meta: {
+		locale: field.enum(["en", "es"]).default("en"),
+		website: field.url(),
+		links: field.list(field.url()),
+		newsletter: field.boolean().default(false),
+		theme: field.json(object({ accent: string() })),
+		bio: field.text(),
+	},
+});
+
+let profiles = Profiles.bind({ db });
+let profile = await profiles.create({ email, name, meta: { locale: "es", links: [a, b] } });
+profile.data.meta; // { locale: "es", website: undefined, links: [a, b], newsletter: false, ... }
+
+await profiles.update(id, { meta: { website: "https://example.com", links: null } }); // null removes a key
+await profiles.withMeta(["locale"]).where({ id }).first(); // loads one key, typed as such
+await profiles.whereMeta("links", a).all(); // any item of a list field matches
+await profiles.whereMeta("newsletter", true).count(); // one statement, joined on the meta table
+```
+
+Every field reads as `T | undefined` unless it declares `.default(value)`; `.required()` makes
+`create` refuse a write without it, and `update` refuse `null` for it. A stored value the codec
+rejects reads as missing, then as the default. `generateId` supplies the meta rows' primary key
+when the table's database does not.
+
+## Pattern: Sub-Models On A Discriminator
+
+One table holds every post type; `inheritance` names the discriminator and each `extend()` pins
+one value, inheriting the base's scopes and callbacks and adding its own meta fields.
+
+```typescript
+import { createModel, field } from "@sdxc/data-model";
+
+import { postMeta, posts } from "./schema.js";
 
 export const Posts = createModel(posts, {
 	inheritance: "type",
@@ -363,19 +537,17 @@ export const Articles = Posts.extend("article", {
 	},
 });
 
+let articles = Articles.bind({ db });
 let article = await articles.create({ author_id, meta: { slug: "hello", tags: ["remix"] } });
 article.data.type; // "article"
 article.data.meta.locale; // "en"
 ```
 
-An update's `meta` touches only the keys it names, and `null` removes one; an update naming only
-meta keys still touches the table's `updatedAt` column. Writes insert the new meta rows before
-deleting the older ones, so a failure between the two still reads the latest value.
-`whereMeta` joins the meta table into the read, so a broad key such as a locale stays one
-statement; each further `whereMeta` on the same query reads its matching owners first, so
-chain the broad key first and selective ones after it.
+An update's `meta` touches only the keys it names, and `null` removes one. `whereMeta` joins the
+meta table into the read; each further `whereMeta` on the same query resolves its owners first,
+so chain the broad key first and selective ones after it.
 
-### Pattern: Helpers Over Any Model
+## Pattern: Helpers Over Any Model
 
 ```typescript
 import type { AnyModel, BoundModel, ModelRow } from "@sdxc/data-model";
@@ -392,7 +564,7 @@ await forPost(ctx.models.comments, id); // comments rows
 
 A model whose rows lack `post_id: string` fails to type-check as the argument.
 
-### Pattern: Paging A Scope
+## Pattern: Paging A Scope
 
 ```typescript
 import { Pagination } from "@sdxc/pagination";
@@ -405,7 +577,7 @@ let page = await Pagination.byOffset(ctx.models.articles.live().orderBy("publish
 
 `Pagination.byKeyset` owns the ordering, so hand it a scope that only filters.
 
-### Pattern: Factories In A Test
+## Pattern: Factories In A Test
 
 ```typescript
 import { createModels } from "@sdxc/data-model";
