@@ -17,7 +17,7 @@ import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { SelectTcpMonitor } from "~/database/schema";
 
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
-import { tcpMonitorResults, tcpMonitors } from "~/database/schema";
+import { tcpMonitors } from "~/database/schema";
 
 /**
  * What a claimed monitor's check needs to read. Adding a column the check uses is one edit
@@ -57,17 +57,15 @@ export const TcpMonitors = createModel(tcpMonitors, {
 			let checkedAt = Date.now();
 			let id = generateUUID();
 
-			await this.db.create(
-				tcpMonitorResults,
-				{
+			unwrap(
+				await this.context.models.tcpMonitorResults.create({
 					id,
 					tcp_monitor_id: monitorId,
 					status: result.status,
 					response_time_ms: result.responseTimeMs,
 					error_message: result.errorMessage ?? null,
 					checked_at: checkedAt,
-				},
-				{ touch: true },
+				}),
 			);
 
 			unwrap(

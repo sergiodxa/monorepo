@@ -215,8 +215,8 @@ export const Leads = createModel(leads, {
 				[leadId],
 			);
 
-			await this.db.exec(`DELETE FROM ${getTableName(trialWatches)} WHERE lead_id = ?`, [leadId]);
-			await this.db.exec(`DELETE FROM ${getTableName(leads)} WHERE id = ?`, [leadId]);
+			await this.context.models.trialWatches.ofLead(leadId).delete();
+			await this.query().where({ id: leadId }).delete();
 		},
 
 		/**

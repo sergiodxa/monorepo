@@ -109,7 +109,7 @@ export const Teams = createModel(teams, {
 
 		/** Every team a subject belongs to, in no particular order. */
 		async listForSubject(subjectId: string): Promise<SelectTeam[]> {
-			let rows = await this.db.findMany(memberships, { where: { subject_id: subjectId } });
+			let rows = await this.context.models.memberships.ofSubject(subjectId).all();
 			if (rows.length === 0) return [];
 
 			return await this.query()
@@ -124,7 +124,7 @@ export const Teams = createModel(teams, {
 
 		/** Every team a subject belongs to, alongside their role and whether they own it. */
 		async listWithRoleForSubject(subjectId: string): Promise<TeamWithRole[]> {
-			let rows = await this.db.findMany(memberships, { where: { subject_id: subjectId } });
+			let rows = await this.context.models.memberships.ofSubject(subjectId).all();
 			if (rows.length === 0) return [];
 
 			let roleByTeamId = new Map(

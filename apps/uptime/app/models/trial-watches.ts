@@ -14,6 +14,7 @@ import type { ValidationError } from "@sdxc/validate";
 import { createModel } from "@sdxc/data-model";
 import { toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName, gte, inList } from "remix/data-table";
 
@@ -24,7 +25,7 @@ import { FREE_TRIAL_DAYS } from "~/app/lib/pricing";
 import { deleteOlderThan } from "~/app/lib/retention";
 import { claimDue } from "~/app/lib/scheduling";
 import { normalizeTrialUrl } from "~/app/lib/trial-identity";
-import { trialWatchResults, trialWatches } from "~/database/schema";
+import { trialWatches } from "~/database/schema";
 
 /**
  * How long a target is re-checked for before the wrap-up goes out and checking stops, under
@@ -201,8 +202,8 @@ export const TrialWatches = createModel(trialWatches, {
 			let active = watches.filter((watch) => watch.next_due_at !== null);
 			if (active.length === 0) return [];
 
-			let rows = await this.db
-				.query(trialWatchResults)
+			let rows = await this.context.models.trialWatchResults
+				.query()
 				.where(
 					inList(
 						"trial_watch_id",
@@ -233,16 +234,14 @@ export const TrialWatches = createModel(trialWatches, {
 			let now = Date.now();
 			let id = generateUUID();
 
-			await this.db.create(
-				trialWatchResults,
-				{
+			unwrap(
+				await this.context.models.trialWatchResults.create({
 					id,
 					trial_watch_id: watch.id,
 					status: result.status,
 					response_time_ms: result.responseTimeMs,
 					checked_at: now,
-				},
-				{ touch: true, returnRow: true },
+				}),
 			);
 
 			await this.db.exec(

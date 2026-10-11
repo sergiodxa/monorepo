@@ -16,14 +16,14 @@ import { endOfMonth, startOfDay, startOfMonth, toDayKey } from "@sdxc/dates";
 import { DAY_MS } from "@sdxc/dates/zone";
 import { isFailure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { and, eq, inList, notNull } from "remix/data-table";
+import { inList, notNull } from "remix/data-table";
 
 import type { HttpP99Scope } from "~/app/services/analytics";
 import type { MonitorStatus } from "~/database/schema";
 
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
-import { cronJobMonitors, dnsMonitors, monitors, tcpMonitors } from "~/database/schema";
+import { monitors } from "~/database/schema";
 
 /** The bucket size for a scheduled check's job id. */
 const MS_PER_MINUTE = 60_000;
@@ -216,11 +216,9 @@ export const Monitors = createModel(monitors, {
 
 			let [httpMonitors, teamDnsMonitors, teamTcpMonitors, teamCronJobs] = await Promise.all([
 				this.inTeam(teamId).where(notNull("enabled_at")).all(),
-				this.db.findMany(dnsMonitors, { where: { team_id: teamId, is_enabled: true } }),
-				this.db.findMany(tcpMonitors, { where: { team_id: teamId, is_enabled: true } }),
-				this.db.findMany(cronJobMonitors, {
-					where: and(eq("team_id", teamId), notNull("enabled_at")),
-				}),
+				this.context.models.dnsMonitors.inTeam(teamId).where({ is_enabled: true }).all(),
+				this.context.models.tcpMonitors.inTeam(teamId).where({ is_enabled: true }).all(),
+				this.context.models.cronJobMonitors.inTeam(teamId).where(notNull("enabled_at")).all(),
 			]);
 
 			let httpPings = intervalPings(httpMonitors, monthMs);

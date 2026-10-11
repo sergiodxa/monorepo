@@ -10,11 +10,11 @@
 import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
-import { isFailure } from "@sdxc/result";
+import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { isNull } from "remix/data-table";
 
-import { invites, memberships } from "~/database/schema";
+import { invites } from "~/database/schema";
 
 export const Invites = createModel(invites, {
 	optional: ["id"],
@@ -34,15 +34,12 @@ export const Invites = createModel(invites, {
 			let accepted = await this.update(inviteId, { accepted_at: Date.now() });
 			if (isFailure(accepted)) return accepted;
 
-			await this.db.create(
-				memberships,
-				{
-					id: generateUUID(),
+			unwrap(
+				await this.context.models.memberships.create({
 					team_id: accepted.data.team_id,
 					subject_id: subjectId,
 					role: "member",
-				},
-				{ touch: true, returnRow: true },
+				}),
 			);
 			return accepted;
 		},

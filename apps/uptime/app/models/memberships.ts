@@ -13,11 +13,10 @@ import type { ModelRow } from "@sdxc/data-model";
 import { createModel, NotFound } from "@sdxc/data-model";
 import { failure } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { notNull } from "remix/data-table";
 
 import type { SelectTeam } from "~/database/schema";
 
-import { memberships, teamDomains, teams } from "~/database/schema";
+import { memberships } from "~/database/schema";
 
 /** What a member may do on a team: an admin manages it, a member uses it. */
 export type MembershipRole = "member" | "admin";
@@ -68,11 +67,7 @@ export const Memberships = createModel(memberships, {
 			let hostname = (idToken.email ?? "").split("@").at(-1);
 			if (!hostname) throw new Error("Invalid email format");
 
-			let verified = await this.db
-				.query(teamDomains)
-				.where({ hostname })
-				.where(notNull("verified_at"))
-				.all();
+			let verified = await this.context.models.teamDomains.verified().where({ hostname }).all();
 			if (verified.length === 0) return null;
 
 			await Promise.allSettled(
@@ -81,7 +76,7 @@ export const Memberships = createModel(memberships, {
 				),
 			);
 
-			let firstTeam = await this.db.findOne(teams, { where: { id: verified[0]!.team_id } });
+			let firstTeam = await this.context.models.teams.find(verified[0]!.team_id);
 			if (!firstTeam) throw new Error("Failed to load the team joined by domain");
 			return firstTeam;
 		},

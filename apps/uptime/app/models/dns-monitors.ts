@@ -17,7 +17,7 @@ import { getTableName } from "remix/data-table";
 import type { SelectDnsMonitor, SelectDnsMonitorResult } from "~/database/schema";
 
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
-import { dnsMonitorResults, dnsMonitors } from "~/database/schema";
+import { dnsMonitors } from "~/database/schema";
 
 /**
  * How long a claimed registration lookup holds its monitor before another sweep may take it:
@@ -123,9 +123,8 @@ export const DnsMonitors = createModel(dnsMonitors, {
 			let checkedAt = Date.now();
 			let id = generateUUID();
 
-			await this.db.create(
-				dnsMonitorResults,
-				{
+			unwrap(
+				await this.context.models.dnsMonitorResults.create({
 					id,
 					dns_monitor_id: monitorId,
 					status: result.status,
@@ -137,8 +136,7 @@ export const DnsMonitors = createModel(dnsMonitors, {
 					response_time_ms: result.responseTimeMs,
 					error_message: result.errorMessage ?? null,
 					checked_at: checkedAt,
-				},
-				{ touch: true },
+				}),
 			);
 
 			unwrap(

@@ -19,7 +19,7 @@ import type { SelectFlowMonitor } from "~/database/schema";
 
 import { DEFAULT_FLOW_INTERVAL_SECONDS, isFlowIntervalSeconds } from "~/app/lib/pricing";
 import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
-import { flowMonitorResults, flowMonitors } from "~/database/schema";
+import { flowMonitors } from "~/database/schema";
 
 /**
  * The columns a claimed monitor's check reads. `team_id` rides along so the sweep can
@@ -58,9 +58,8 @@ export const FlowMonitors = createModel(flowMonitors, {
 			let checkedAt = Date.now();
 			let id = generateUUID();
 
-			await this.db.create(
-				flowMonitorResults,
-				{
+			unwrap(
+				await this.context.models.flowMonitorResults.create({
 					id,
 					flow_monitor_id: monitorId,
 					status: result.status,
@@ -74,8 +73,7 @@ export const FlowMonitors = createModel(flowMonitors, {
 					duration_ms: result.durationMs,
 					error_message: result.errorMessage,
 					checked_at: checkedAt,
-				},
-				{ touch: true },
+				}),
 			);
 
 			unwrap(

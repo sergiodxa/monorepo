@@ -15,7 +15,7 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { inList, notNull } from "remix/data-table";
 
-import { cronJobMonitors, cronJobPings } from "~/database/schema";
+import { cronJobMonitors } from "~/database/schema";
 
 /**
  * The next expected run for a cron expression in a timezone, as epoch milliseconds — what
@@ -86,16 +86,14 @@ export const CronJobMonitors = createModel(cronJobMonitors, {
 			let now = Date.now();
 			let id = generateUUID();
 
-			await this.db.create(
-				cronJobPings,
-				{
+			unwrap(
+				await this.context.models.cronJobPings.create({
 					id,
 					cron_job_monitor_id: monitor.id,
 					was_on_time: wasOnTime,
 					source_ip: metadata.sourceIp,
 					user_agent: metadata.userAgent,
-				},
-				{ touch: true },
+				}),
 			);
 
 			unwrap(

@@ -11,7 +11,6 @@ import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v4";
-import { getTableName } from "remix/data-table";
 
 import type {
 	FlowStatus,
@@ -24,7 +23,6 @@ import type {
 } from "~/database/schema";
 
 import {
-	flowMonitors,
 	statusPageCronJobs,
 	statusPageDnsMonitors,
 	statusPageFlowMonitors,
@@ -196,12 +194,10 @@ export const StatusPages = createModel(statusPages, {
 		 * world: a leak would have to be written into this `SELECT`.
 		 */
 		async listPublicFlowMonitors(teamId: string): Promise<PublicFlowMonitor[]> {
-			let result = await this.db.exec(
-				`SELECT id, name, last_status FROM ${getTableName(flowMonitors)} WHERE team_id = ?`,
-				[teamId],
-			);
-
-			return (result.rows ?? []) as unknown as PublicFlowMonitor[];
+			return await this.context.models.flowMonitors
+				.inTeam(teamId)
+				.select("id", "name", "last_status")
+				.all();
 		},
 	},
 
