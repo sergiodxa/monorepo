@@ -330,13 +330,16 @@ interface FeedModels {
 	items: typeof Items;
 }
 
-export const { createModel } = withContext<
-	ModelContext & { models: BoundModels<FeedModels> }
->();
+interface FeedContext extends ModelContext {
+	models: BoundModels<FeedModels>;
+}
+
+export const { createModel } = withContext<FeedContext>();
 ```
 
 The feed models import `createModel` from this module, and the registry's `bind` and middleware
-require whatever else that context declares.
+require whatever else that context declares. Declare the context as an interface, as above: an
+intersection type resolves every model at once and brings the cycle back.
 
 ## Keep several record types in one table
 
@@ -505,7 +508,7 @@ reproduces from its seed. A write that fails throws, with the `ValidationError` 
 
 To make a write fail or to count calls, replace the member on the model rather than on one
 bound copy. `overrideModel` applies to every binding until it is restored, including the
-registry the router binds per request, and hands you the original to wrap:
+registry the router binds per request, and hands you the original members to wrap:
 
 ```typescript
 import { overrideModel, publishModels } from "@sdxc/data-model/testing";
