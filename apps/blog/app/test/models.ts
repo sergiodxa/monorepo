@@ -8,7 +8,7 @@
 
 import type { Database } from "remix/data-table";
 
-import { Models } from "@sdxc/data-model";
+import { publishModels as publishRegistry } from "@sdxc/data-model/testing";
 
 import { models } from "~/app/models";
 
@@ -28,9 +28,6 @@ export function bindModels(db: Database) {
  * @param ctx The job context a test created with `createJobContext`.
  * @param db The database the job reads.
  */
-export function publishModels(
-	ctx: { set(key: object, value: unknown, options: { property: string }): void },
-	db: Database,
-): void {
-	ctx.set(Models, bindModels(db), { property: "models" });
+export function publishModels(ctx: Parameters<typeof publishRegistry>[0], db: Database): void {
+	publishRegistry(ctx, models, { db });
 }

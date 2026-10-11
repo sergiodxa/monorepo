@@ -10,7 +10,6 @@
 import type { ModelRow } from "@sdxc/data-model";
 
 import { field } from "@sdxc/data-model";
-import { sql } from "remix/data-table";
 
 import { Posts } from "./posts";
 
@@ -38,7 +37,7 @@ export const Likes = Posts.extend("like", {
 		 */
 		async destroy(id: string): Promise<boolean> {
 			let destroyed = await this.tombstone(id);
-			await this.db.exec(sql`delete from "bookmarks" where "post_id" = ${id}`);
+			await this.context.models.bookmarks.remove(id);
 			return destroyed;
 		},
 	},

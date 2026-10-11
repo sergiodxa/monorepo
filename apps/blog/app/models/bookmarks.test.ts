@@ -111,6 +111,64 @@ describe("bookmarks.claim", () => {
 	});
 });
 
+describe("bookmarks.readdress", () => {
+	test("moves a bookmark to a new address and forgets every reading of the old one", async () => {
+		let db = await testDatabase();
+		let author = await seedAuthor(db);
+		let models = bindModels(db);
+		let bookmark = unwrap(
+			await models.likes.create({
+				author_id: author,
+				meta: { title: "One", url: "https://example.com/a" },
+			}),
+		);
+		if (!bookmark) throw new Error("Seeding failed");
+		await models.bookmarks.claim(bookmark.id, "example.com/a", {
+			status: "moved",
+			httpStatus: 301,
+			finalUrl: "https://example.com/b",
+		});
+		await models.bookmarks.record(bookmark.id, {
+			status: "moved",
+			httpStatus: 301,
+			finalUrl: "https://example.com/b",
+		});
+		await models.bookmarks.review(bookmark.id);
+
+		await models.bookmarks.readdress(bookmark.id, "example.com/b");
+
+		let row = await models.bookmarks.find(bookmark.id);
+		expect(row).toMatchObject({
+			address: "example.com/b",
+			status: null,
+			http_status: null,
+			final_url: null,
+			checked_at: null,
+			flag: null,
+			flagged_at: null,
+			described_at: null,
+		});
+		expect(row?.reviewed_at).not.toBeNull();
+	});
+
+	test("gives a bookmark that never claimed an address its first one", async () => {
+		let db = await testDatabase();
+		let author = await seedAuthor(db);
+		let models = bindModels(db);
+		let bookmark = unwrap(
+			await models.likes.create({
+				author_id: author,
+				meta: { title: "One", url: "https://example.com/a" },
+			}),
+		);
+		if (!bookmark) throw new Error("Seeding failed");
+
+		await models.bookmarks.readdress(bookmark.id, "example.com/a");
+
+		expect((await models.bookmarks.findByAddress("example.com/a"))?.post_id).toBe(bookmark.id);
+	});
+});
+
 describe(BOOKMARKS_MIGRATION, () => {
 	test("computes every address as bookmarkAddress does", async () => {
 		let binding = createD1Database();

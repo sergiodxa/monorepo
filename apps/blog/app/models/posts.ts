@@ -12,7 +12,7 @@ import type { ModelRow } from "@sdxc/data-model";
 import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v7";
-import { inList, isNull, notNull, sql } from "remix/data-table";
+import { inList, isNull, notNull } from "remix/data-table";
 
 import { PostSearch } from "~/app/repositories/search";
 import { postMeta, posts } from "~/database/schema";
@@ -92,12 +92,13 @@ export const Posts = createModel(posts, {
 		},
 
 		/**
-		 * Stamps a post as sent to its followers, leaving `updated_at` alone because nothing a
-		 * reader sees changed. One statement, so it is safe on D1.
+		 * Stamps a post as sent to its followers, tombstone or not, leaving `updated_at` alone
+		 * because nothing a reader sees changed. One statement, so it is safe on D1.
 		 */
 		async markFederated(id: string): Promise<void> {
-			let now = new Date().toISOString();
-			await this.db.exec(sql`update "posts" set "federated_at" = ${now} where "id" = ${id}`);
+			await this.unscoped()
+				.where({ id })
+				.update({ federated_at: new Date().toISOString() }, { touch: false });
 		},
 
 		/** Stamps a post as having sent its Webmentions now, off the cron's list until it moves. */

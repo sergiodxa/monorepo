@@ -8,6 +8,7 @@
  */
 
 import { createModel } from "@sdxc/data-model";
+import { unwrap } from "@sdxc/result";
 import { notNull, sql } from "remix/data-table";
 
 import type { SelectBookmark } from "~/database/schema";
@@ -80,21 +81,25 @@ export const Bookmarks = createModel(bookmarks, {
 
 		/** Points a post's bookmark at a new address, forgetting everything read of the old one. */
 		async readdress(postId: string, address: string): Promise<void> {
-			await this.db.exec(sql`
-				insert into "bookmarks" ("post_id", "address") values (${postId}, ${address})
-				on conflict ("post_id") do update set
-					"address" = excluded."address",
-					"status" = null,
-					"http_status" = null,
-					"final_url" = null,
-					"checked_at" = null,
-					"flag" = null,
-					"flagged_at" = null,
-					"notified_at" = null,
-					"described_at" = null,
-					"archive_attempted_at" = null,
-					"archive_job" = null
-			`);
+			unwrap(
+				await this.upsert(
+					{
+						post_id: postId,
+						address,
+						status: null,
+						http_status: null,
+						final_url: null,
+						checked_at: null,
+						flag: null,
+						flagged_at: null,
+						notified_at: null,
+						described_at: null,
+						archive_attempted_at: null,
+						archive_job: null,
+					},
+					{ conflict: ["post_id"] },
+				),
+			);
 		},
 
 		/** Marks a CMS save of the bookmark, which closes every flag raised before it. */

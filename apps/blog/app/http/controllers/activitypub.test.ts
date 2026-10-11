@@ -490,6 +490,7 @@ describe("the activityPub.publish job", () => {
 			state: "accepted",
 		});
 		let queue = new TestQueue();
+		let edited = (await bindModels(db).posts.find(postId))?.updated_at;
 
 		await runPublish(postId, "2026-03-01T00:00:00.000Z", queue);
 		let outcomes = await drain(queue.take());
@@ -506,6 +507,7 @@ describe("the activityPub.publish job", () => {
 			},
 		]);
 		expect((await findForMentions(bindModels(db), postId))?.federated_at).not.toBeNull();
+		expect((await bindModels(db).posts.find(postId))?.updated_at).toBe(edited);
 
 		await runPublish(postId, "2026-03-02T00:00:00.000Z", queue);
 		await drain(queue.take());
