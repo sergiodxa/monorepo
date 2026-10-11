@@ -1,5 +1,5 @@
 /**
- * Drives the real application router — the same middleware chain and controllers
+ * Drives the real web router — the same middleware chain and controllers
  * the worker builds — end to end. A test supplies the platform every route bills
  * against and the newsletter every form subscribes to directly, because MSW's interceptors leave the router's form-data
  * middleware reading an empty body, failing every POST before validation.
@@ -13,7 +13,7 @@ import type { Newsletter } from "@sdxc/newsletter";
 
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 
-import application from "~/app/initializers/router";
+import { createWebRouter } from "~/app/initializers/router";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://books.test";
@@ -54,5 +54,5 @@ export async function fetchApp(path: string, options: FetchAppOptions = {}): Pro
 
 	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
 
-	return await application(billing, newsletter).fetch(request);
+	return await createWebRouter(billing, newsletter).fetch(request);
 }

@@ -21,6 +21,7 @@
 		"@sdxc/highlight": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/ip": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/location": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
