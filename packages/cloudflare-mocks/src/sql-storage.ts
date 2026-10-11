@@ -76,8 +76,8 @@ export class MockSqlStorageCursor<
 	 * Advances the cursor by one row.
 	 * @returns The next row, or `{ done: true }` once the cursor is exhausted.
 	 */
-	next(): { done?: false; value: T } | { done: true; value?: never } {
-		if (this.#index >= this.#rows.length) return { done: true };
+	next(): IteratorResult<T, undefined> {
+		if (this.#index >= this.#rows.length) return { done: true, value: undefined };
 
 		let value = this.#rows[this.#index] as T;
 		this.#index += 1;
