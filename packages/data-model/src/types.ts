@@ -18,11 +18,13 @@ import type {
 	RelationMapForTable,
 	SingleTableColumn,
 	SingleTableWhere,
+	TablePrimaryKey,
 	TableRow,
 	TableRowWith,
 	ValidationFailure,
 	WhereInput,
 	WriteResult,
+	WriteRowsResult,
 } from "remix/data-table";
 import type { ContextValue } from "remix/router";
 
@@ -96,12 +98,57 @@ type ScopeArguments<S> = S extends (query: never, ...args: infer Args) => unknow
 export type ModelMethod = (...args: any[]) => Promise<unknown> | { readonly "~modelQuery"?: true };
 
 /**
+ * The names a bound model or its queries already answer to, which a scope or a custom method
+ * cannot take: every call site would reach the member, never the scope or method.
+ */
+export type ReservedName =
+	| "where"
+	| "having"
+	| "orderBy"
+	| "groupBy"
+	| "limit"
+	| "offset"
+	| "distinct"
+	| "with"
+	| "select"
+	| "join"
+	| "leftJoin"
+	| "rightJoin"
+	| "withMeta"
+	| "whereMeta"
+	| "all"
+	| "first"
+	| "find"
+	| "count"
+	| "exists"
+	| "insert"
+	| "insertMany"
+	| "update"
+	| "delete"
+	| "upsert"
+	| "query"
+	| "from"
+	| "findBy"
+	| "create"
+	| "transaction"
+	| "load"
+	| "unscoped"
+	| "db"
+	| "context"
+	| "then"
+	| "catch"
+	| "finally";
+
+/**
  * The names of a model's methods that answer neither a promise nor a model query, which a
  * lazily loaded model could not produce before its module loads.
  */
 type InvalidMethodNames<Methods> = {
 	[Name in keyof Methods]: Methods[Name] extends ModelMethod ? never : Name & string;
 }[keyof Methods];
+
+/** The custom methods and scopes named like a member the model already has. */
+type ReservedMemberNames<Members> = Extract<keyof Members, ReservedName>;
 
 /**
  * What `createModel` and `extend` answer in place of a definition when a custom method breaks
@@ -111,12 +158,17 @@ export interface InvalidModel<Reason extends string> {
 	readonly "~error": Reason;
 }
 
-/** A definition, or the error naming the methods that answer a plain value. */
+/**
+ * A definition, or the error naming the methods that answer a plain value or the methods and
+ * scopes that take a reserved name.
+ */
 export type CheckedDefinition<S extends ModelShape, Methods> = [
-	InvalidMethodNames<Methods>,
+	ReservedMemberNames<Methods> | ReservedMemberNames<S["scopes"]>,
 ] extends [never]
-	? ModelDefinition<S>
-	: InvalidModel<`Custom methods must answer a promise or a model query: ${InvalidMethodNames<Methods>}`>;
+	? [InvalidMethodNames<Methods>] extends [never]
+		? ModelDefinition<S>
+		: InvalidModel<`Custom methods must answer a promise or a model query: ${InvalidMethodNames<Methods>}`>
+	: InvalidModel<`Reserved member names: ${ReservedMemberNames<Methods> | ReservedMemberNames<S["scopes"]>}`>;
 
 /** Rows a relation map loads, keyed by relation name. */
 type LoadedRelations<Relations> = Pretty<{
@@ -155,6 +207,8 @@ export interface ModelShape {
 	fields: FieldMap;
 	/** The discriminator column a base model extends on, or `never`. */
 	inheritance: string;
+	/** What callbacks receive and methods read as `this.context`. */
+	context: ModelContext;
 }
 
 /** The scopes of a shape, callable as methods that answer `Self`. */
@@ -234,10 +288,32 @@ export interface ModelQueryMethods<S extends ModelShape, Loaded, Row> {
 	count(): Promise<number>;
 	/** Whether any row matches. */
 	exists(): Promise<boolean>;
-	/** Updates every matching row in one statement, running no model callbacks. */
-	update(changes: Partial<S["columns"]>): Promise<WriteResult>;
+	/**
+	 * Updates every matching row in one statement, running no model callbacks. `touch: false`
+	 * leaves the table's `updatedAt` column as it is; `returning` answers the updated rows.
+	 */
+	update(
+		changes: Partial<S["columns"]>,
+		options: BulkUpdateOptions<S> & { returning: ReturningColumns<S> },
+	): Promise<WriteRowsResult<S["columns"]>>;
+	update(changes: Partial<S["columns"]>, options?: BulkUpdateOptions<S>): Promise<WriteResult>;
 	/** Deletes every matching row in one statement, running no model callbacks. */
 	delete(): Promise<WriteResult>;
+}
+
+/** What `returning` names: every column, or a list of them. */
+type ReturningColumns<S extends ModelShape> = "*" | Array<keyof S["columns"] & string>;
+
+/** How a bulk `update` built from a query writes. */
+export interface BulkUpdateOptions<S extends ModelShape> {
+	/**
+	 * Whether the statement sets the table's `updatedAt` column to the database's clock.
+	 *
+	 * @default true
+	 */
+	touch?: boolean;
+	/** The columns of every updated row to answer, which the database must support returning. */
+	returning?: ReturningColumns<S>;
 }
 
 /**
@@ -302,14 +378,24 @@ export interface FromQueryMethods<S extends ModelShape, Row, Where, Column> {
 	all(): Promise<Row[]>;
 }
 
-/** How `upsert` decides a row already exists. */
+/** What `upsert` writes. */
+export type UpsertValues<S extends ModelShape> = Omit<S["create"], "meta">;
+
+/** How `upsert` finds the conflicting row and what it writes to it. */
 export interface UpsertOptions<S extends ModelShape> {
 	/**
-	 * The unique columns the write conflicts on, read from the values to find the existing row.
+	 * The unique columns the insert conflicts on.
 	 *
 	 * @default The table's primary key.
 	 */
-	conflictTarget?: Array<keyof S["columns"] & string>;
+	conflict?: Array<keyof S["columns"] & string>;
+	/**
+	 * The columns a conflicting row takes; `{}` leaves it as it is. Constrained columns are never
+	 * written to it.
+	 *
+	 * @default The values, without the conflict and primary-key columns and `createdAt`.
+	 */
+	update?: Partial<S["columns"]>;
 }
 
 /**
@@ -323,6 +409,11 @@ export interface BoundModelMethods<S extends ModelShape> {
 	 * that runs a raw statement the query builder cannot express.
 	 */
 	readonly db: Database;
+	/**
+	 * The context the model is bound with: `models` for its siblings in the same binding and
+	 * unit of work, and every member the app supplies, such as `jobs`.
+	 */
+	readonly context: S["context"];
 	/** A query over the model's rows, with its constraints applied and its scopes chainable. */
 	query(): ModelQueryOf<S>;
 	/** A query loading only these meta keys; `query().withMeta(keys)`. */
@@ -344,14 +435,17 @@ export interface BoundModelMethods<S extends ModelShape> {
 	findBy(where: SingleTableWhere<S["table"]>): Promise<S["row"] | null>;
 	/** Inserts a row, running the create callbacks. */
 	create(values: S["create"]): Promise<Result<S["row"], ValidationError>>;
-	/** Updates the row with this key, running the update callbacks. */
+	/**
+	 * Updates the row with this key, running the update callbacks. Every update sets the table's
+	 * `updatedAt` column, so `update(key, {})` marks a row as changed.
+	 */
 	update(key: S["key"], values: S["update"]): Promise<Result<S["row"], ValidationError | NotFound>>;
 	/**
-	 * Inserts a row or updates the one it conflicts with, in one statement; the callbacks are the
-	 * create ones when no row existed and the update ones when one did.
+	 * Inserts a row, or writes `update` to the row it conflicts with, in one statement with no
+	 * read before it, and answers the row as it stands. Runs no model callbacks.
 	 */
 	upsert(
-		values: S["create"],
+		values: UpsertValues<S>,
 		options?: UpsertOptions<S>,
 	): Promise<Result<S["row"], ValidationError>>;
 	/** Deletes the row with this key, running the delete callbacks, and answers the deleted row. */
@@ -410,7 +504,11 @@ export interface ModelBase<S extends ModelShape> {
 	 * @param host What `get` reads through to, such as a `RequestContext`.
 	 * @param options Whether the database has real transactions.
 	 */
-	bind(context: ModelContextInit, host?: ContextHost, options?: BindOptions): BoundModelOf<S>;
+	bind(
+		context: ModelContextInit<S["context"]>,
+		host?: ContextHost,
+		options?: BindOptions,
+	): BoundModelOf<S>;
 }
 
 /**
@@ -475,7 +573,8 @@ type SubShape<
 		Pretty<S["methods"] & Methods>,
 		Pretty<S["fields"] & Fields>,
 		OptionalOf<S> | Optional,
-		never
+		never,
+		S["context"]
 	>,
 	"key"
 > & { key: S["key"] };
@@ -507,6 +606,8 @@ interface AnyShape<RowShape extends object> extends ModelShape {
 	fields: any;
 	// oxlint-disable-next-line typescript/no-explicit-any -- any discriminator satisfies the constraint
 	inheritance: any;
+	// oxlint-disable-next-line typescript/no-explicit-any -- any context satisfies the constraint
+	context: any;
 }
 
 /** The bound model of a definition: built-ins, scopes and custom methods. */
@@ -570,6 +671,24 @@ type RowWithMeta<Columns, Fields extends FieldMap> = keyof Fields extends never
 	? Columns
 	: Pretty<Columns & { meta: Pretty<DecodedMeta<Fields>> }>;
 
+/** Whether a type is a union of more than one member. */
+type IsUnion<Value, All = Value> = Value extends unknown
+	? [All] extends [Value]
+		? false
+		: true
+	: never;
+
+/**
+ * The primary-key input of a table: the column's value for a single-column key, however the
+ * table declared it (`primaryKey: ["id"]` included), and an object for a composite key.
+ */
+export type ModelKey<T extends AnyTable> =
+	TablePrimaryKey<T> extends readonly (infer Column extends keyof TableRow<T>)[]
+		? true extends IsUnion<Column>
+			? PrimaryKeyInput<T>
+			: TableRow<T>[Column]
+		: PrimaryKeyInput<T>;
+
 /**
  * The shape `createModel` builds from its inferred options.
  *
@@ -580,6 +699,7 @@ type RowWithMeta<Columns, Fields extends FieldMap> = keyof Fields extends never
  * @template Fields The declared meta fields.
  * @template Optional Columns `create` may leave out because a callback or the database fills them.
  * @template Inheritance The discriminator column, or `never`.
+ * @template Context What callbacks receive and methods read as `this.context`.
  */
 export type Shape<
 	T extends AnyTable,
@@ -589,13 +709,14 @@ export type Shape<
 	Fields extends FieldMap,
 	Optional extends string,
 	Inheritance extends string,
+	Context extends ModelContext = ModelContext,
 > = {
 	table: T;
 	constraints: Constraints;
 	optional: Optional;
 	columns: Narrow<TableRow<T>, Constraints>;
 	row: RowWithMeta<Narrow<TableRow<T>, Constraints>, Fields>;
-	key: PrimaryKeyInput<T>;
+	key: ModelKey<T>;
 	create: Pretty<CreateColumns<TableRow<T>, Constraints, Optional> & CreateMetaInput<Fields>>;
 	update: Pretty<
 		{
@@ -606,6 +727,7 @@ export type Shape<
 	methods: Methods;
 	fields: Fields;
 	inheritance: Inheritance;
+	context: Context;
 };
 
 /** What a `validate` callback receives: the columns written so far and any `meta`. */
@@ -655,32 +777,32 @@ export type CallbackFailure = ValidationFailure;
  */
 export interface Callbacks<S extends ModelShape> {
 	/** Runs first on every create, update and upsert; an update sees the key merged in. */
-	validate?(values: ValidateValues<S>, ctx: ModelContext): Awaitable<void | CallbackFailure>;
+	validate?(values: ValidateValues<S>, ctx: S["context"]): Awaitable<void | CallbackFailure>;
 	/** Rewrites the values a create writes. */
 	beforeCreate?(
 		values: S["create"],
-		ctx: ModelContext,
+		ctx: S["context"],
 	): Awaitable<S["create"] | void | CallbackFailure>;
 	/** Rewrites the changes an update writes. */
 	beforeUpdate?(
 		values: S["update"],
-		ctx: ModelContext,
+		ctx: S["context"],
 		before: S["row"],
 	): Awaitable<S["update"] | void | CallbackFailure>;
 	/** Refuses a delete by failing. */
-	beforeDelete?(row: S["row"], ctx: ModelContext): Awaitable<void | CallbackFailure>;
+	beforeDelete?(row: S["row"], ctx: S["context"]): Awaitable<void | CallbackFailure>;
 	/** Runs after the insert, with the created row. */
-	afterCreate?(row: S["row"], ctx: ModelContext): Awaitable<void | CallbackFailure>;
+	afterCreate?(row: S["row"], ctx: S["context"]): Awaitable<void | CallbackFailure>;
 	/** Runs after the update, with the row after and before it. */
 	afterUpdate?(
 		row: S["row"],
-		ctx: ModelContext,
+		ctx: S["context"],
 		before: S["row"],
 	): Awaitable<void | CallbackFailure>;
 	/** Runs after the delete, with the deleted row. */
-	afterDelete?(row: S["row"], ctx: ModelContext): Awaitable<void | CallbackFailure>;
+	afterDelete?(row: S["row"], ctx: S["context"]): Awaitable<void | CallbackFailure>;
 	/** Dispatches side effects once the write is committed: jobs, mail, webhooks. */
-	afterCommit?(event: ModelEvent<S["row"]>, ctx: ModelContext): Awaitable<void>;
+	afterCommit?(event: ModelEvent<S["row"]>, ctx: S["context"]): Awaitable<void>;
 }
 
 /** Where a model's meta rows live. */
@@ -776,10 +898,9 @@ export interface ExtendOptions<
 }
 
 /**
- * What a model's callbacks receive, extended the way a router's context is: an app augments
- * this interface with the properties its callbacks read, such as `jobs` or `log`, and every
- * binding then has to supply them. `models` is always present at runtime; augmenting it with
- * `BoundRegistry<typeof models>` types the other models a callback reaches.
+ * What callbacks receive and methods read as `this.context`, extended the way a router's
+ * context is: an app augments it with what its models read, such as `jobs`, and every binding
+ * supplies it. `models` is always present at runtime; type it with `BoundModels<AppModels>`.
  *
  * @example declare module "@sdxc/data-model" { interface ModelContext { jobs: JobEnqueuer } }
  */
@@ -790,8 +911,35 @@ export interface ModelContext {
 	get<Key extends object>(key: Key): ContextValue<Key> | undefined;
 }
 
-/** What binding supplies: every model-context member besides the ones the package provides. */
-export type ModelContextInit = Omit<ModelContext, "get" | "models">;
+/**
+ * What binding supplies: every model-context member besides the ones the package provides.
+ *
+ * @template Context The context the models are typed with.
+ */
+export type ModelContextInit<Context extends ModelContext = ModelContext> = Omit<
+	Context,
+	"get" | "models"
+>;
+
+/** Turns a union into the intersection of its members. */
+type Intersect<Union> = (Union extends unknown ? (value: Union) => void : never) extends (
+	value: infer Both,
+) => void
+	? Both
+	: never;
+
+/** The context one registry entry's model is typed with. */
+type EntryContext<Entry> = Entry extends AnyModel
+	? Entry["~types"]["shape"]["context"]
+	: Entry extends () => Promise<{ default: infer M extends AnyModel }>
+		? M["~types"]["shape"]["context"]
+		: never;
+
+/** What binding a registry supplies: every member the contexts of its models declare. */
+export type RegistryContextInit<Entries> = Omit<
+	Intersect<EntryContext<Entries[keyof Entries]>> & ModelContext,
+	"get" | "models"
+>;
 
 /** What a model context reads through to: a `RequestContext`, a `JobContext`, or any `get`. */
 export interface ContextHost {
@@ -816,6 +964,12 @@ export type RegistryEntry = AnyModel | (() => Promise<{ default: AnyModel }>);
 /** A registry's entries, keyed by the name they are bound under. */
 export type RegistryEntries = Record<string, RegistryEntry>;
 
+/**
+ * Entries keyed by the name they are bound under, as an interface lists them: `typeof Model`,
+ * or the type of a function importing one.
+ */
+export type EntriesOf<Entries> = { [Name in keyof Entries]: RegistryEntry };
+
 /** The bound model a registry entry becomes. */
 export type BoundEntry<Entry> = Entry extends AnyModel
 	? BoundModel<Entry>
@@ -823,8 +977,14 @@ export type BoundEntry<Entry> = Entry extends AnyModel
 		? BoundModel<M>
 		: never;
 
-/** A registry bound to one database and host: every entry as a bound model, plus `transaction`. */
-export type BoundModels<Entries extends RegistryEntries> = {
+/**
+ * A registry bound to one database and host: every entry as a bound model, plus `transaction`.
+ * Each entry's type resolves when it is read, so a context typed with an interface of entries
+ * lets a model's method reach a sibling without the registry's type depending on that method.
+ *
+ * @example interface ModelContext { models: BoundModels<{ users: typeof Users; teams: typeof Teams }> }
+ */
+export type BoundModels<Entries extends EntriesOf<Entries>> = {
 	readonly [Name in keyof Entries]: BoundEntry<Entries[Name]>;
 } & {
 	/**

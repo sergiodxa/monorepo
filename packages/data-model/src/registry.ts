@@ -13,7 +13,7 @@ import type {
 	BindOptions,
 	BoundModels,
 	ContextHost,
-	ModelContextInit,
+	RegistryContextInit,
 	RegistryEntries,
 } from "./types.js";
 
@@ -33,7 +33,11 @@ export interface ModelRegistry<Entries extends RegistryEntries> {
 	 * @param host What callbacks' `get` and `require` read through to.
 	 * @param options Whether the database has real transactions.
 	 */
-	bind(context: ModelContextInit, host?: ContextHost, options?: BindOptions): BoundModels<Entries>;
+	bind(
+		context: RegistryContextInit<Entries>,
+		host?: ContextHost,
+		options?: BindOptions,
+	): BoundModels<Entries>;
 }
 
 /**
@@ -66,7 +70,7 @@ export function createModels<const Entries extends RegistryEntries>(
  */
 export function bindLazily<Entries extends RegistryEntries>(
 	registry: ModelRegistry<Entries>,
-	context: () => ModelContextInit,
+	context: () => RegistryContextInit<Entries>,
 	host: ContextHost,
 	options: BindOptions | undefined,
 ): BoundModels<Entries> {

@@ -9,7 +9,9 @@
 
 import type { Result } from "@sdxc/result";
 import type { ValidationError } from "@sdxc/validate";
+import type { Database, WriteResult, WriteRowsResult } from "remix/data-table";
 
+import { column as c, fail, table } from "remix/data-table";
 import { describe, expectTypeOf, test } from "vitest";
 
 import { comments, postMeta, posts, users } from "./fixtures/schema.js";
@@ -18,16 +20,18 @@ import { openDatabase } from "./fixtures/sqlite.js";
 import type {
 	AnyModel,
 	BoundModel,
+	BoundModels,
 	BoundRegistry,
 	InvalidModel,
 	CreateValues,
+	ModelContext,
 	ModelQuery,
 	ModelRow,
 	NotFound,
 	UpdateValues,
 } from "./index.js";
 
-import { createModel, createModels, field } from "./index.js";
+import { createModel, createModels, field, withContext } from "./index.js";
 
 const USERS = createModel(users, {
 	optional: ["id", "role"],
@@ -264,5 +268,132 @@ describe("helpers over any model", () => {
 			Awaited<ReturnType<(typeof models)["users"]["findByEmail"]>>
 		>().toEqualTypeOf<ModelRow<typeof USERS> | null>();
 		expectTypeOf(models.articles.live()).toEqualTypeOf<ModelQuery<typeof ARTICLES>>();
+	});
+});
+
+/** The context the shop registry's models read: their siblings and an audit log. */
+interface ShopContext extends ModelContext {
+	models: BoundModels<ShopModels>;
+	audit: string[];
+}
+
+/** The shop registry's entries, which `this.context.models` resolves one at a time. */
+interface ShopModels {
+	users: typeof SHOP_USERS;
+	comments: typeof SHOP_COMMENTS;
+}
+
+const { createModel: createShopModel } = withContext<ShopContext>();
+
+const SHOP_COMMENTS = createShopModel(comments, { optional: ["id"] });
+
+const SHOP_USERS = createShopModel(users, {
+	optional: ["id", "role"],
+	methods: {
+		async welcome(postId: string) {
+			this.context.audit.push(postId);
+			let comment = await this.context.models.comments.create({ post_id: postId, body: "Hi" });
+			return comment;
+		},
+	},
+	callbacks: {
+		async afterCreate(row, ctx) {
+			let comment = await ctx.models.comments.create({ post_id: row.id, body: "Joined" });
+			if (comment.status === "failure") return fail("No welcome comment");
+		},
+	},
+});
+
+describe("the model context", () => {
+	test("an unannotated method reaching a sibling keeps the registry typed", () => {
+		let models = createModels({ users: SHOP_USERS, comments: SHOP_COMMENTS }).bind({
+			db: DB,
+			audit: [],
+		});
+
+		expectTypeOf<Awaited<ReturnType<(typeof models)["users"]["welcome"]>>>().toEqualTypeOf<
+			Result<ModelRow<typeof SHOP_COMMENTS>, ValidationError>
+		>();
+		expectTypeOf(models.users.context.audit).toEqualTypeOf<string[]>();
+	});
+
+	test("a registry's binding requires the members its models' context declares", () => {
+		let registry = createModels({ users: SHOP_USERS });
+		// @ts-expect-error the shop context declares an audit log the binding must supply
+		let bind = () => registry.bind({ db: DB });
+		expectTypeOf(bind).toBeFunction();
+	});
+
+	test("a model's context is ModelContext unless withContext names another", () => {
+		expectTypeOf(userModel.context).toEqualTypeOf<ModelContext>();
+	});
+
+	test("a lazy entry's db is the binding's database", () => {
+		let models = createModels({ articles: async () => ({ default: ARTICLES }) }).bind({ db: DB });
+		expectTypeOf(models.articles.db).toEqualTypeOf<Database>();
+	});
+});
+
+describe("keys and names", () => {
+	test("a one-column key declared as a list reads by its value", () => {
+		let keyed = table({
+			name: "keyed",
+			primaryKey: ["id"],
+			columns: { id: c.integer(), name: c.text() },
+		});
+		let model = createModel(keyed).bind({ db: DB });
+
+		expectTypeOf<Parameters<(typeof model)["find"]>[0]>().toEqualTypeOf<number>();
+	});
+
+	test("a composite key reads by its object", () => {
+		let pair = table({
+			name: "pairs",
+			primaryKey: ["left", "right"],
+			columns: { left: c.text(), right: c.text() },
+		});
+		let model = createModel(pair).bind({ db: DB });
+
+		expectTypeOf<Parameters<(typeof model)["find"]>[0]>().toEqualTypeOf<{
+			left: string;
+			right: string;
+		}>();
+	});
+
+	test("a method or scope named like a model member turns the definition into an error", () => {
+		let shadowMethod = () =>
+			createModel(users, {
+				methods: {
+					async db() {
+						return null;
+					},
+				},
+			});
+		let shadowScope = () => createModel(users, { scopes: { exists: (query) => query } });
+
+		expectTypeOf(shadowMethod).returns.toEqualTypeOf<InvalidModel<"Reserved member names: db">>();
+		expectTypeOf(shadowScope).returns.toEqualTypeOf<
+			InvalidModel<"Reserved member names: exists">
+		>();
+	});
+});
+
+describe("writes", () => {
+	test("a bulk update takes touch and answers rows only when asked to return them", () => {
+		let quiet = () => userModel.active().update({ name: "x" }, { touch: false });
+		let returning = () => userModel.active().update({ name: "x" }, { returning: "*" });
+
+		expectTypeOf(quiet).returns.toEqualTypeOf<Promise<WriteResult>>();
+		expectTypeOf(returning).returns.toEqualTypeOf<
+			Promise<WriteRowsResult<ModelRow<typeof USERS>>>
+		>();
+	});
+
+	test("upsert takes the columns create takes, and only columns", () => {
+		type Column = "id" | "email" | "name" | "role" | "deleted_at" | "created_at" | "updated_at";
+		expectTypeOf<Parameters<(typeof articles)["upsert"]>[0]>().not.toHaveProperty("meta");
+		expectTypeOf<Parameters<(typeof userModel)["upsert"]>[1]>().toEqualTypeOf<
+			{ conflict?: Column[]; update?: Partial<ModelRow<typeof USERS>> } | undefined
+		>();
 	});
 });

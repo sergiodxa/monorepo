@@ -10,7 +10,7 @@
 import type { AnyJobContext, JobMiddleware } from "@sdxc/jobs";
 
 import type { ModelRegistry } from "./registry.js";
-import type { BindOptions, BoundModels, ModelContextInit, RegistryEntries } from "./types.js";
+import type { BindOptions, BoundModels, RegistryContextInit, RegistryEntries } from "./types.js";
 
 import { Models } from "./context.js";
 import { bindLazily } from "./registry.js";
@@ -40,7 +40,7 @@ export interface ModelsJobMiddlewareOptions<Property extends string> extends Bin
  */
 export function models<Entries extends RegistryEntries, const Property extends string = "models">(
 	registry: ModelRegistry<Entries>,
-	context: (ctx: AnyJobContext) => ModelContextInit,
+	context: (ctx: AnyJobContext) => RegistryContextInit<Entries>,
 	options?: ModelsJobMiddlewareOptions<Property>,
 ): JobMiddleware<{ key: typeof Models; value: BoundModels<Entries>; property: Property }> {
 	let property = { property: options?.property ?? "models" };

@@ -18,6 +18,7 @@ export type {
 	FieldValue,
 	UpdateMeta,
 } from "./fields.js";
+export type { CreateModel } from "./model.js";
 export type { ModelRegistry } from "./registry.js";
 export type {
 	AnyBoundModels,
@@ -31,6 +32,7 @@ export type {
 	BoundModelView,
 	BoundModels,
 	BoundRegistry,
+	BulkUpdateOptions,
 	CallbackFailure,
 	Callbacks,
 	CheckedDefinition,
@@ -38,6 +40,7 @@ export type {
 	CreateEvent,
 	CreateValues,
 	DeleteEvent,
+	EntriesOf,
 	ExtendOptions,
 	FromQuery,
 	FromQueryMethods,
@@ -49,6 +52,7 @@ export type {
 	ModelContextInit,
 	ModelDefinition,
 	ModelEvent,
+	ModelKey,
 	ModelMethod,
 	ModelOptions,
 	ModelQuery,
@@ -58,7 +62,9 @@ export type {
 	ModelShape,
 	ModelTypes,
 	RegistryEntries,
+	RegistryContextInit,
 	RegistryEntry,
+	ReservedName,
 	Scope,
 	ScopeMap,
 	ScopeQuery,
@@ -67,11 +73,12 @@ export type {
 	UpdateEvent,
 	UpdateValues,
 	UpsertOptions,
+	UpsertValues,
 	ValidateValues,
 } from "./types.js";
 
 export { Models } from "./context.js";
-export { NotFound } from "./errors.js";
+export { ConstraintViolation, NotFound } from "./errors.js";
 export { field } from "./fields.js";
-export { createModel } from "./model.js";
+export { createModel, withContext } from "./model.js";
 export { createModels } from "./registry.js";

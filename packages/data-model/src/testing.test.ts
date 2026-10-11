@@ -7,16 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { createJobContext, job, jobs } from "@sdxc/jobs";
+import { failure, isFailure, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
 import { fail } from "remix/data-table";
-import { createContextKey, RequestContext } from "remix/router";
-import { describe, expect, test } from "vitest";
+import { createContextKey, createRouter, RequestContext } from "remix/router";
+import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { createIds, postMeta, posts, users } from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";
-import { createFactories, defineFactory } from "./testing.js";
+import { models as routerModels } from "./router.js";
+import { createFactories, defineFactory, overrideModel, publishModels } from "./testing.js";
 
-import { createModel, createModels, field } from "./index.js";
+import type { CreateValues } from "./index.js";
+
+import { createModel, createModels, field, Models } from "./index.js";
 
 /** Collects the welcome mails a created user sends, through the host context. */
 const OUTBOX = createContextKey<string[]>();
@@ -127,5 +132,81 @@ describe("factories", () => {
 
 		await expect(failing).rejects.toThrow("Could not create a users record");
 		await expect(failing).rejects.toHaveProperty("cause", expect.any(ValidationError));
+	});
+});
+
+describe("overrideModel", () => {
+	/** Removes the override a test installed, so the next test binds the real model. */
+	let restore = () => {};
+	afterEach(() => restore());
+
+	/** A user model whose method writes through its own `create`. */
+	function signUps() {
+		return createModel(users, {
+			methods: {
+				signUp(email: string) {
+					return this.create({ id: email, email, name: email, role: "member" });
+				},
+			},
+		});
+	}
+
+	test("a wrapped member calls through, and the model's own methods reach the wrapper", async () => {
+		let Users = signUps();
+		let create = vi.fn();
+		restore = overrideModel(Users, (users) => ({
+			create: create.mockImplementation((values: CreateValues<typeof Users>) =>
+				users.create(values),
+			),
+		}));
+		let { db } = openDatabase();
+
+		let user = unwrap(await Users.bind({ db }).signUp("a@example.com"));
+
+		expect(user.email).toBe("a@example.com");
+		expect(create).toHaveBeenCalledOnce();
+	});
+
+	test("a replaced member fails the write in a registry a router binds per request", async () => {
+		let Users = signUps();
+		restore = overrideModel(Users, () => ({
+			create: async () => failure(new ValidationError([{ message: "Injected" }])),
+		}));
+		let { db } = openDatabase();
+		let router = createRouter({
+			middleware: [routerModels(createModels({ users: Users }), () => ({ db }))],
+		});
+		router.get("/", async (ctx) => {
+			let result = await ctx.models.users.signUp("a@example.com");
+			return Response.json(isFailure(result) ? result.error.issues : null);
+		});
+
+		let response = await router.fetch(new Request("https://example.com/"));
+
+		expect(await response.json()).toEqual([{ message: "Injected" }]);
+	});
+
+	test("restoring binds the real model again", async () => {
+		let Users = signUps();
+		overrideModel(Users, () => ({ find: async () => null }))();
+		let { db } = openDatabase();
+		let users = Users.bind({ db });
+		unwrap(await users.signUp("a@example.com"));
+
+		expect(await users.find("a@example.com")).not.toBeNull();
+	});
+});
+
+describe("publishModels", () => {
+	test("publishes a registry on a hand-built job context as ctx.models", async () => {
+		let Users = createModel(users);
+		let { db } = openDatabase();
+		let ctx = createJobContext(jobs({ probe: job() }).probe, { id: "m1", attempts: 1 });
+
+		let models = publishModels(ctx, createModels({ users: Users }), { db });
+
+		expect(ctx.get(Models)).toBe(models);
+		expect((ctx as unknown as { models: unknown }).models).toBe(models);
+		expect(await models.users.query().count()).toBe(0);
 	});
 });

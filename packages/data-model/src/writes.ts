@@ -1,7 +1,7 @@
 /**
- * The four writes a bound model runs callbacks around: create, update, upsert and delete. Each
- * reads the row it affects first, so callbacks see the row before the statement and the event
- * names what changed; failures come back as `Result`s and only the unexpected ones throw.
+ * A bound model's writes: create, update and delete run its callbacks around a statement and
+ * read the affected row first, so callbacks see it before the change; upsert is one statement.
+ * Failures come back as `Result`s and only the unexpected ones throw.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -184,27 +184,11 @@ export function createRow(
 	config: ModelConfig,
 	values: Row,
 ): Promise<Result<Row, Error>> {
-	return runWrite(session, (scoped) =>
-		insert(
-			scoped,
-			config,
-			values,
-			async (columns) =>
-				(await scoped.db.create(config.table, columns, { returnRow: true })) as Row,
-		),
-	);
+	return runWrite(session, (scoped) => insert(scoped, config, values));
 }
 
-/**
- * The body of a create. `statement` writes the owner row, which is a plain insert for `create`
- * and `INSERT … ON CONFLICT DO UPDATE` for an `upsert` that found no row.
- */
-async function insert(
-	scoped: Session,
-	config: ModelConfig,
-	values: Row,
-	statement: (columns: Row) => Promise<Row>,
-): Promise<Outcome> {
+/** The body of a create: callbacks around the insert of the owner row and its meta. */
+async function insert(scoped: Session, config: ModelConfig, values: Row): Promise<Outcome> {
 	let ctx = modelContext(scoped);
 	let initial = split(config, values);
 
@@ -226,7 +210,11 @@ async function insert(
 
 	let row: Row;
 	try {
-		row = await statement({ ...columns, ...config.constraints });
+		row = (await scoped.db.create(
+			config.table,
+			{ ...columns, ...config.constraints },
+			{ returnRow: true },
+		)) as Row;
 	} catch (error) {
 		return statementFailure(error, config.tableName);
 	}
@@ -292,7 +280,7 @@ function modelRows(session: Session, config: ModelConfig): LooseQuery {
 }
 
 /**
- * The columns that mark a row as changed when only its meta was written: the table's declared
+ * The columns that mark a row as changed when an update names no column: the table's declared
  * `updatedAt` column at the database's clock, which is what a column update touches too.
  */
 function touch(session: Session, config: ModelConfig): Row {
@@ -301,7 +289,7 @@ function touch(session: Session, config: ModelConfig): Row {
 }
 
 /**
- * The body of an update, also used by `upsert` when a row conflicts.
+ * The body of an update.
  *
  * @param target Selects the row the statement updates, scoped the way the caller read it.
  */
@@ -333,9 +321,7 @@ async function change(
 	let metaIssues = validateMeta(config, meta, "update");
 	if (metaIssues.length > 0) return failed(toValidationError(metaIssues));
 
-	if (Object.keys(columns).length === 0 && namedKeys(config, meta).length > 0) {
-		columns = touch(scoped, config);
-	}
+	if (Object.keys(columns).length === 0) columns = touch(scoped, config);
 
 	let row: Row = withoutMeta(before);
 	if (Object.keys(columns).length > 0) {
@@ -367,42 +353,67 @@ async function change(
 	};
 }
 
+/** How `upsert` finds the conflicting row and what it writes to it. */
+export interface UpsertInput {
+	conflict?: readonly string[];
+	update?: Row;
+}
+
 /**
- * Inserts a row or updates the one it conflicts with, in one statement. The conflicting row is
- * read first by the conflict target's values, which decides whether the create or the update
- * callbacks run; a conflicting row the model's constraints exclude is refused.
+ * Inserts a row, or writes `update` to the row it conflicts with, as one
+ * `INSERT … ON CONFLICT` statement. An empty `update` keeps the conflicting row as it is, and
+ * the row is then read by the conflict columns, so the write always answers the row it found.
  */
 export function upsertRow(
 	session: Session,
 	config: ModelConfig,
 	values: Row,
-	conflictTarget: readonly string[] | undefined,
+	options: UpsertInput = {},
 ): Promise<Result<Row, Error>> {
 	return runWrite(session, async (scoped) => {
-		let target = conflictTarget ?? config.primaryKey;
-		let input = { ...values, ...config.constraints };
-		let present = target.every((column) => input[column] !== undefined);
-		let lookup: Row = {};
-		for (let column of target) lookup[column] = input[column];
+		let target = [...(options.conflict ?? config.primaryKey)];
+		let { columns } = split(config, values);
+		let inserted: Row = { ...columns, ...config.constraints };
+		let timestamps = getTableTimestamps(config.table);
+		let now = scoped.db.now();
 
-		let before = present
-			? await readRow(scoped, config, queryOf(scoped.db, config.table).where(lookup))
-			: null;
-		if (before === null) {
-			return insert(scoped, config, values, async (columns) => {
-				let result = await queryOf(scoped.db, config.table).upsert(columns, {
-					returning: "*",
-					conflictTarget: [...target],
-				});
-				if (result.row === null || result.row === undefined) {
-					throw new TypeError(`upsert() on ${config.tableName} returned no row`);
-				}
-				return result.row;
+		let update: Row = { ...(options.update ?? columns) };
+		if (options.update === undefined) {
+			for (let column of [...target, ...config.primaryKey]) delete update[column];
+			if (timestamps !== null) delete update[timestamps.createdAt];
+		}
+		for (let column of Object.keys(config.constraints)) delete update[column];
+
+		if (timestamps !== null) {
+			inserted[timestamps.createdAt] ??= now;
+			inserted[timestamps.updatedAt] ??= now;
+			if (Object.keys(update).length > 0) update[timestamps.updatedAt] ??= now;
+		}
+
+		let row: Row | null | undefined;
+		try {
+			let result = await queryOf(scoped.db, config.table).upsert(inserted, {
+				returning: "*",
+				conflictTarget: target,
+				update,
+				touch: false,
 			});
+			row = result.row;
+		} catch (error) {
+			return statementFailure(error, config.tableName);
+		}
+
+		if (row === null || row === undefined) {
+			let lookup: Row = {};
+			for (let column of target) lookup[column] = inserted[column];
+			row = await queryOf(scoped.db, config.table).where(lookup).first();
+		}
+		if (row === null || row === undefined) {
+			throw new TypeError(`upsert() on ${config.tableName} found no row to answer`);
 		}
 
 		let owned = Object.entries(config.constraints).every(([column, value]) =>
-			sameValue(before[column], value),
+			sameValue(row[column], value),
 		);
 		if (!owned) {
 			return failed(
@@ -412,14 +423,7 @@ export function upsertRow(
 			);
 		}
 
-		let owner = { ...lookup, ...config.constraints };
-		return change(
-			scoped,
-			config,
-			() => queryOf(scoped.db, config.table).where(owner),
-			before,
-			values,
-		);
+		return { result: success(await withMeta(scoped, config, row)), commits: [] };
 	});
 }
 

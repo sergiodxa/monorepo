@@ -15,6 +15,7 @@ import type {
 	BindOptions,
 	CheckedDefinition,
 	ContextHost,
+	ModelContext,
 	ModelContextInit,
 	ModelOptions,
 	Scope,
@@ -47,41 +48,65 @@ function define(config: ModelConfig): unknown {
 }
 
 /**
+ * The signature of `createModel`, with the context its callbacks receive and its methods read
+ * as `this.context` fixed to `Context`.
+ *
+ * @template Context The model context, `ModelContext` unless `withContext` names another.
+ */
+export interface CreateModel<Context extends ModelContext> {
+	/**
+	 * Defines a model over a data-table table.
+	 *
+	 * @param table The table the model reads and writes.
+	 * @param options Constraints, scopes, methods, callbacks and meta fields.
+	 */
+	<
+		T extends AnyTable,
+		Methods extends object,
+		const Constraints extends Partial<TableRow<T>> = {},
+		Scopes extends Record<string, Scope<SingleTableColumn<T>>> = {},
+		Fields extends FieldMap = {},
+		const Optional extends keyof TableRow<T> & string = never,
+		const Inheritance extends keyof TableRow<T> & string = never,
+	>(
+		table: T,
+		options?: ModelOptions<
+			Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance, Context>,
+			Constraints,
+			Scopes,
+			Methods,
+			Fields,
+			Optional,
+			Inheritance
+		>,
+	): CheckedDefinition<
+		Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance, Context>,
+		Methods
+	>;
+}
+
+/**
  * Defines a model over a data-table table. Its rows are the plain objects data-table returns,
  * with constrained columns narrowed and declared meta decoded under `meta`; its writes answer
  * `Result`s and run the callbacks; bind it, or register it, to use it.
  *
- * @param table The table the model reads and writes.
- * @param options Constraints, scopes, methods, callbacks and meta fields.
- * @returns The unbound definition.
  * @example
  * export const Users = createModel(users, {
  * 	scopes: { active: (query) => query.where({ deleted_at: null }) },
  * 	methods: { findByEmail(email: string) { return this.active().where({ email }).first(); } },
  * });
  */
-export function createModel<
-	T extends AnyTable,
-	Methods extends object,
-	const Constraints extends Partial<TableRow<T>> = {},
-	Scopes extends Record<string, Scope<SingleTableColumn<T>>> = {},
-	Fields extends FieldMap = {},
-	const Optional extends keyof TableRow<T> & string = never,
-	const Inheritance extends keyof TableRow<T> & string = never,
->(
-	table: T,
-	options?: ModelOptions<
-		Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance>,
-		Constraints,
-		Scopes,
-		Methods,
-		Fields,
-		Optional,
-		Inheritance
-	>,
-): CheckedDefinition<
-	Shape<T, Constraints, Scopes, Methods, Fields, Optional, Inheritance>,
-	Methods
-> {
-	return define(resolveConfig(table, (options ?? {}) as RawOptions)) as never;
+export const createModel: CreateModel<ModelContext> = (table: AnyTable, options?: object) =>
+	define(resolveConfig(table, (options ?? {}) as RawOptions)) as never;
+
+/**
+ * A `createModel` whose models type their context as `Context`, for an app binding several
+ * registries: each registry's models read `this.context.models` as that registry.
+ *
+ * @example export const { createModel } = withContext<ModelContext & { models: BoundModels<FeedModels> }>();
+ */
+export function withContext<Context extends ModelContext>(): {
+	createModel: CreateModel<Context>;
+} {
+	return { createModel: createModel as CreateModel<never> as CreateModel<Context> };
 }

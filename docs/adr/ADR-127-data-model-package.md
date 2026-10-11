@@ -1369,10 +1369,44 @@ and recursion guards on top.
   `afterCommit` acceptance case is uptime's team-domain create queuing its ownership check.
   Every `*Query` pagination twin became an unordered scope the caller orders.
 - Reader binds one registry per database (two Durable Objects and D1), each with
-  `transactions: "none"`; the single global `ModelContext` augmentation cannot type three
-  registries, so reader leaves it unaugmented.
-- Gaps the ports surfaced, still open: defaulted columns are required by `create`; methods
-  cannot reach sibling models or the context; an unannotated method return collapses the
-  registry type (TS7022); reserved method names fail only at runtime; a lazy entry's `db` is
-  unusable before `load()`; bulk `update` takes no `touch` option; there is no upsert,
-  insert-ignore or increment; bound methods cannot be spied on in tests.
+  `transactions: "none"`. A single global `ModelContext` augmentation types one registry, so
+  `withContext<Context>()` answers a `createModel` whose callbacks and `this.context` read a
+  context of the caller's, and each registry's `bind` and middleware require the members its
+  models' context declares.
+- Methods reach the context as `this.context`, the same object callbacks receive, so a method
+  calls a sibling through `this.context.models` inside the binding and unit of work it runs in.
+  A lazy entry answers `db` and `context` before its module loads, since both belong to the
+  binding.
+- `models` on the context is typed from an interface of the registry's entries
+  (`BoundModels<AppModels>`), never from `typeof registry`: the registry's type depends on every
+  model's methods, so a method reading a sibling through it made the registry circular (TS7022)
+  and collapsed `ctx.models`. An interface resolves each entry when it is read. Two models whose
+  unannotated methods call each other are a real cycle and need one annotation, and
+  `ModelRow<typeof Model>` inside the model's own definition is written `TableRow<typeof table>`.
+- A one-column key types as the column's value whether the table declares `primaryKey: "id"` or
+  `["id"]`, since data-table normalises a list it cannot read as a tuple to an array.
+- Reserved member names are a type error as well as a runtime one: `ReservedName` and the
+  runtime set are one record, so they cannot drift.
+- Every `update` touches `updatedAt`, so `update(key, {})` marks a row as changed and runs the
+  update callbacks; a separate `touch(key)` would have been a second way to say the same. A bulk
+  `update` from a query takes data-table's `touch` and `returning` options.
+- `upsert(values, { conflict, update })` is one `INSERT … ON CONFLICT` statement with no read
+  before it. Without the read it cannot tell an insert from an update, so it runs no model
+  callbacks, like a bulk write; `update: {}` is insert-or-ignore, after which the row is read by
+  the conflict columns so the write still answers a row. The callback-running upsert it replaces
+  had no callers. Building it surfaced a bug in the D1 and Durable Object adapters, which bound
+  the conflict clause's values before the insert's, fixed alongside.
+- There is no increment: data-table binds every written value as a parameter and has no
+  expression form, so `n = n + 1` would mean the model compiling its own SQL per dialect, for one
+  caller whose statement stays raw.
+- A database constraint refusal is a `ConstraintViolation`, a `ValidationError` whose `kind`
+  (`unique`, `foreign-key`, `not-null`, `check`) and `column` a caller matches without reading
+  issue paths.
+- `./testing` gains `overrideModel(model, build)`, which replaces members in every binding of a
+  model, including the per-request ones middleware makes, and `publishModels(ctx, registry,
+context)` for a test running a handler on a context it built.
+- A chained call on a lazy entry whose import fails rejects once, at the end of the chain; the
+  intermediate calls' promises no longer surface as unhandled rejections.
+- Still open: a `.default()` column needs an `optional` entry, and `created_at`/`updated_at` are
+  optional by name, because data-table's column and table types record neither defaults nor
+  timestamps.

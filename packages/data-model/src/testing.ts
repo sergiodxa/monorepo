@@ -1,7 +1,7 @@
 /**
- * Test factories over models. Values come from `@sdxc/sample`, so a run reproduces from its
- * seed, and records are written through the bound model, so callbacks, constraints and meta
- * behave in a fixture exactly as they do in production.
+ * Test helpers over models: factories whose values come from `@sdxc/sample` and write through
+ * the bound model, so callbacks and constraints behave as in production; overrides that replace
+ * a model's members in every binding; and publishing a registry on a hand-built context.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,10 +12,81 @@ import type { Sample, SampleOptions } from "@sdxc/sample";
 import { isFailure } from "@sdxc/result";
 import { createSample } from "@sdxc/sample";
 
-import type { AnyBoundModels, AnyModel, CreateValues, ModelRow } from "./types.js";
+import type { ModelRegistry } from "./registry.js";
+import type {
+	AnyBoundModels,
+	AnyModel,
+	BindOptions,
+	BoundModel,
+	BoundModels,
+	ContextHost,
+	CreateValues,
+	ModelRow,
+	RegistryContextInit,
+	RegistryEntries,
+} from "./types.js";
 
-import { bindModel } from "./bound.js";
+import { bindModel, OVERRIDES } from "./bound.js";
+import { Models } from "./context.js";
 import { configOf, SESSION } from "./session.js";
+
+/**
+ * Replaces members of a model in every binding made until the returned function restores it,
+ * including the registries middleware binds per request. `build` receives the freshly bound
+ * model, so a replacement can wrap the original, and the model's own methods reach it too.
+ *
+ * @param model The model whose bindings the override applies to.
+ * @param build Answers the members to replace, given the bound model before replacing them.
+ * @returns A function removing the override.
+ * @example let restore = overrideModel(Users, (users) => ({ create: vi.fn(users.create) }));
+ */
+export function overrideModel<M extends AnyModel>(
+	model: M,
+	build: (bound: BoundModel<M>) => Partial<BoundModel<M>>,
+): () => void {
+	let config = configOf(model);
+	if (config === undefined) throw new TypeError("overrideModel needs a model made by createModel");
+	OVERRIDES.set(config, build as never);
+	return () => {
+		OVERRIDES.delete(config);
+	};
+}
+
+/** A request or job context a test builds by hand, which models publish onto. */
+export interface PublishTarget extends ContextHost {
+	set(key: object, value: unknown, options: { property: string }): void;
+}
+
+/** How `publishModels` binds the registry. */
+export interface PublishModelsOptions extends BindOptions {
+	/**
+	 * The context property the bound registry installs as.
+	 *
+	 * @default "models"
+	 */
+	property?: string;
+}
+
+/**
+ * Binds a registry with `ctx` as its host and publishes it the way the `models()` middleware
+ * does, under the `Models` key and as `ctx.models`, for a test running a handler directly.
+ *
+ * @param ctx A context from `createJobContext` or `new RequestContext(...)`.
+ * @param registry The app's models.
+ * @param context The model context, such as `{ db }`.
+ * @param options The property name and whether the database has real transactions.
+ * @returns The bound registry it published.
+ */
+export function publishModels<Entries extends RegistryEntries>(
+	ctx: PublishTarget,
+	registry: ModelRegistry<Entries>,
+	context: RegistryContextInit<Entries>,
+	options?: PublishModelsOptions,
+): BoundModels<Entries> {
+	let models = registry.bind(context, ctx, options);
+	ctx.set(Models, models, { property: options?.property ?? "models" });
+	return models;
+}
 
 /** What an attribute function receives. */
 export interface AttributeContext {

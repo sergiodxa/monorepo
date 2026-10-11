@@ -9,16 +9,26 @@
 
 import type { AnyQuery, Database } from "remix/data-table";
 
+import { createD1Database } from "@sdxc/cloudflare-mocks";
+import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { InvalidOrderingError, Pagination } from "@sdxc/pagination";
 import { isFailure, isSuccess, unwrap } from "@sdxc/result";
 import { ValidationError } from "@sdxc/validate";
-import { column as c, fail, lte, Query, sql, table } from "remix/data-table";
+import { column as c, Database as DataTable, fail, lte, Query, sql, table } from "remix/data-table";
 import { describe, expect, test } from "vitest";
 
-import { createIds, postComments, posts, users } from "./fixtures/schema.js";
+import { intercept } from "./fixtures/intercept.js";
+import {
+	createIds,
+	createClock,
+	postComments,
+	posts,
+	SCHEMA_STATEMENTS,
+	users,
+} from "./fixtures/schema.js";
 import { openDatabase } from "./fixtures/sqlite.js";
 
-import { createModel, NotFound } from "./index.js";
+import { ConstraintViolation, createModel, NotFound } from "./index.js";
 
 /** Builds the models under test with a fresh id sequence, so each test starts from `id_0001`. */
 function setup() {
@@ -307,7 +317,7 @@ describe("writes", () => {
 		]);
 	});
 
-	test("a key declared on the table reads, updates and deletes by its object form", async () => {
+	test("a one-column key declared as a list reads, updates and deletes by its value", async () => {
 		let keyed = table({
 			name: "users",
 			primaryKey: ["id"],
@@ -326,10 +336,10 @@ describe("writes", () => {
 		let model = createModel(keyed).bind({ db });
 		unwrap(await model.create({ id: "u1", email: "a@example.com", name: "A", role: "x" }));
 
-		expect((await model.find({ id: "u1" }))?.name).toBe("A");
-		expect(unwrap(await model.update({ id: "u1" }, { name: "B" })).name).toBe("B");
-		expect(isSuccess(await model.delete({ id: "u1" }))).toBe(true);
-		expect(await model.find({ id: "u1" })).toBeNull();
+		expect((await model.find("u1"))?.name).toBe("A");
+		expect(unwrap(await model.update("u1", { name: "B" })).name).toBe("B");
+		expect(isSuccess(await model.delete("u1"))).toBe(true);
+		expect(await model.find("u1")).toBeNull();
 	});
 
 	test("a table validate failure comes back as a ValidationError", async () => {
@@ -381,18 +391,147 @@ describe("writes", () => {
 		expect(isFailure(orphan) && orphan.error).toBeInstanceOf(ValidationError);
 	});
 
-	test("upsert creates when nothing conflicts and updates when a row does", async () => {
+	test("a unique violation is a ConstraintViolation of kind unique", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		await users.create({ email: "pat@example.com", name: "Pat" });
+
+		let duplicate = await users.create({ email: "pat@example.com", name: "Other Pat" });
+
+		expect(isFailure(duplicate) && duplicate.error).toBeInstanceOf(ConstraintViolation);
+		expect(isFailure(duplicate) && duplicate.error).toMatchObject({
+			kind: "unique",
+			column: "email",
+		});
+	});
+
+	test("a foreign-key violation is a ConstraintViolation of kind foreign-key", async () => {
+		let { db, Articles } = setup();
+
+		let orphan = await Articles.bind({ db }).create({ author_id: "missing", published_at: null });
+
+		expect(isFailure(orphan) && orphan.error).toMatchObject({ kind: "foreign-key" });
+	});
+
+	test("upsert inserts, then writes the values to the row it conflicts with", async () => {
 		let { db, Users, calls } = setup();
 		let users = Users.bind({ db });
+		let values = { id: "u1", email: "a@example.com", name: "Ada", role: "member" } as const;
 
-		let created = unwrap(await users.upsert({ id: "u1", email: "a@example.com", name: "Ada" }));
-		let updated = unwrap(await users.upsert({ id: "u1", email: "a@example.com", name: "Ada L." }));
+		let created = unwrap(await users.upsert(values));
+		let updated = unwrap(await users.upsert({ ...values, name: "Ada L." }));
 
 		expect(created.name).toBe("Ada");
 		expect(updated.name).toBe("Ada L.");
+		expect(updated.created_at).toBe(created.created_at);
+		expect(updated.updated_at > created.updated_at).toBe(true);
 		expect(await users.query().count()).toBe(1);
-		expect(calls).toContain("beforeCreate");
-		expect(calls).toContain("beforeUpdate:Ada");
+		expect(calls).toEqual([]);
+	});
+
+	test("upsert writes only update to a conflicting row, and {} keeps it as it is", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		let values = { id: "u1", email: "a@example.com", name: "Ada", role: "member" } as const;
+		let created = unwrap(await users.upsert(values));
+
+		let renamed = unwrap(
+			await users.upsert(
+				{ ...values, name: "Ignored", role: "admin" },
+				{ conflict: ["email"], update: { role: "admin" } },
+			),
+		);
+		let kept = unwrap(
+			await users.upsert(
+				{ ...values, id: "u2", name: "Other" },
+				{ conflict: ["email"], update: {} },
+			),
+		);
+
+		expect(renamed).toMatchObject({ id: "u1", name: "Ada", role: "admin" });
+		expect(kept).toEqual(renamed);
+		expect(kept.updated_at).not.toBe(created.updated_at);
+		expect(await users.query().count()).toBe(1);
+	});
+
+	test("upsert on another unique column keeps the conflicting row's key", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		unwrap(await users.upsert({ id: "u1", email: "a@example.com", name: "Ada", role: "member" }));
+
+		let updated = unwrap(
+			await users.upsert(
+				{ id: "u2", email: "a@example.com", name: "Ada L.", role: "member" },
+				{ conflict: ["email"] },
+			),
+		);
+
+		expect(updated).toMatchObject({ id: "u1", name: "Ada L." });
+	});
+
+	test("upsert runs one statement, with no read before it", async () => {
+		let binding = createD1Database();
+		let { driver, operations } = intercept(createD1DatabaseAdapter(binding));
+		for (let statement of SCHEMA_STATEMENTS) await binding.exec(statement);
+		let db = new DataTable(driver, { now: createClock() });
+		let model = createModel(users).bind({ db });
+
+		unwrap(await model.upsert({ id: "u1", email: "a@example.com", name: "Ada", role: "member" }));
+
+		expect(operations.map((operation) => operation.kind)).toEqual(["upsert"]);
+	});
+
+	test("upsert on a sub-model refuses a conflicting row of another type", async () => {
+		let { db, Posts, Articles, Users } = setup();
+		let author = unwrap(await Users.bind({ db }).create({ email: "a@example.com", name: "A" }));
+		await Posts.bind({ db }).create({
+			id: "p1",
+			type: "like",
+			author_id: author.id,
+			published_at: null,
+		});
+
+		let result = await Articles.bind({ db }).upsert(
+			{ id: "p1", author_id: author.id },
+			{ update: {} },
+		);
+
+		expect(isFailure(result) && result.error.issues).toEqual([
+			{ message: "Conflicts with a row this model does not own", path: ["id"] },
+		]);
+	});
+
+	test("update with no values touches updatedAt and runs the update callbacks", async () => {
+		let { db, Users, calls } = setup();
+		let users = Users.bind({ db });
+		let created = unwrap(await users.create({ email: "a@example.com", name: "Ada" }));
+		calls.length = 0;
+
+		let touched = unwrap(await users.update(created.id, {}));
+
+		expect(touched.updated_at > created.updated_at).toBe(true);
+		expect(touched.name).toBe("Ada");
+		expect(calls).toEqual(["validate", "beforeUpdate:Ada", "afterUpdate:Ada->Ada"]);
+	});
+
+	test("a bulk update answers the updated rows it is asked to return", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		let created = unwrap(await users.create({ email: "a@example.com", name: "Ada" }));
+
+		let returned = await users.active().update({ name: "Loud" }, { returning: ["id", "name"] });
+
+		expect(returned.rows).toEqual([{ id: created.id, name: "Loud" }]);
+	});
+
+	test("a bulk update with touch: false leaves updatedAt as it is", async () => {
+		let { db, Users } = setup();
+		let users = Users.bind({ db });
+		let created = unwrap(await users.create({ email: "a@example.com", name: "Ada" }));
+
+		await users.active().update({ name: "Quiet" }, { touch: false });
+
+		expect((await users.find(created.id))?.updated_at).toBe(created.updated_at);
 	});
 
 	test("a bulk write built from a query runs no model callbacks", async () => {

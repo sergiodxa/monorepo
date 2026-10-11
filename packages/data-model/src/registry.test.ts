@@ -21,9 +21,9 @@ import { openDatabase } from "./fixtures/sqlite.js";
 import { models as jobModels } from "./jobs.js";
 import { models as routerModels } from "./router.js";
 
-import type { AnyBoundModels } from "./index.js";
+import type { AnyBoundModels, BoundModels, ModelContext } from "./index.js";
 
-import { createModel, createModels, Models } from "./index.js";
+import { createModel, createModels, Models, withContext } from "./index.js";
 
 /** Builds the models and counts how often the lazy module is imported. */
 function setup() {
@@ -149,6 +149,31 @@ describe("registry", () => {
 		await expect(models.broken.query().count()).rejects.toThrow("chunk failed to load");
 	});
 
+	test("a failed import rejects a chained call once, leaving no unhandled rejection", async () => {
+		let { Users } = setup();
+		let { db } = openDatabase();
+		let models = createModels({
+			users: Users,
+			broken: async (): Promise<{ default: typeof Users }> => {
+				throw new Error("chunk failed to load");
+			},
+		}).bind({ db });
+		let unhandled: unknown[] = [];
+		let record = (reason: unknown) => void unhandled.push(reason);
+		process.on("unhandledRejection", record);
+
+		try {
+			await expect(models.broken.active().where({ name: "A" }).count()).rejects.toThrow(
+				"chunk failed to load",
+			);
+			await new Promise((resolve) => setTimeout(resolve, 10));
+		} finally {
+			process.off("unhandledRejection", record);
+		}
+
+		expect(unhandled).toEqual([]);
+	});
+
 	test("a lazy model's async method answers a real promise, so instanceof checks hold", async () => {
 		let { registry } = setup();
 		let { db } = openDatabase();
@@ -186,6 +211,86 @@ describe("registry", () => {
 
 		await expect(run).rejects.toThrow("rolled back");
 		expect(await models.articles.query().count()).toBe(0);
+	});
+});
+
+/** The context the probe registry's models are typed with: its own models and an audit log. */
+interface ProbeContext extends ModelContext {
+	models: BoundModels<ProbeModels>;
+	audit: string[];
+}
+
+/** The probe registry's entries, which `ctx.models` resolves one at a time. */
+interface ProbeModels {
+	users: typeof PROBE_USERS;
+	articles: () => Promise<{ default: typeof PROBE_ARTICLES }>;
+}
+
+const { createModel: createProbeModel } = withContext<ProbeContext>();
+
+const PROBE_ARTICLES = createProbeModel(posts, {
+	constraints: { type: "article" },
+	optional: ["id"],
+	methods: {
+		async draftFor(authorId: string) {
+			this.context.audit.push(`draft:${authorId}`);
+			return this.create({ id: `a-${authorId}`, author_id: authorId, published_at: null });
+		},
+	},
+});
+
+const PROBE_USERS = createProbeModel(users, {
+	methods: {
+		async signUp(email: string) {
+			let user = unwrap(await this.create({ id: email, email, name: email, role: "member" }));
+			let draft = await this.context.models.articles.draftFor(user.id);
+			return { user, draft };
+		},
+	},
+});
+
+describe("methods reaching the context", () => {
+	/** Binds the probe registry, its articles entry loaded lazily. */
+	function bindProbes(audit: string[], options?: { transactions: "database" }) {
+		let { db } = openDatabase();
+		let registry = createModels({
+			users: PROBE_USERS,
+			articles: async () => ({ default: PROBE_ARTICLES }),
+		});
+		return { db, models: registry.bind({ db, audit }, undefined, options) };
+	}
+
+	test("a method reaches a sibling model and the members the binding supplied", async () => {
+		let audit: string[] = [];
+		let { models } = bindProbes(audit);
+
+		let { draft } = await models.users.signUp("a@example.com");
+
+		expect(unwrap(draft)).toMatchObject({ author_id: "a@example.com", type: "article" });
+		expect(audit).toEqual(["draft:a@example.com"]);
+	});
+
+	test("inside a unit of work, this.context.models binds to it", async () => {
+		let { models } = bindProbes([], { transactions: "database" });
+
+		let run = models.transaction(async (scoped) => {
+			await scoped.users.signUp("a@example.com");
+			throw new Error("rolled back");
+		});
+
+		await expect(run).rejects.toThrow("rolled back");
+		expect(await models.articles.query().count()).toBe(0);
+	});
+
+	test("a lazy entry answers db and context before its module loads", async () => {
+		let { registry, imports } = setup();
+		let { db } = openDatabase();
+		let models = registry.bind({ db });
+
+		expect(models.articles.db).toBe(db);
+		expect(models.articles.context.db).toBe(db);
+		expect(typeof models.articles.context.get).toBe("function");
+		expect(imports.articles).toBe(0);
 	});
 });
 

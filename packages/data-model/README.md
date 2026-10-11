@@ -69,8 +69,17 @@ await users.unscoped().where({ id }).first(); // including deleted ones
 ```
 
 Reads answer `null` for a missing row. `create`, `update`, `upsert` and `delete` answer a
-`Result`; a unique or foreign-key violation comes back as a `ValidationError` at the column the
-constraint covers, the same failure a `validate` callback produces.
+`Result`; a unique or foreign-key violation comes back as a `ConstraintViolation`, a
+`ValidationError` at the column the constraint covers whose `kind` names the constraint:
+
+```typescript
+import { ConstraintViolation } from "@sdxc/data-model";
+
+let created = await users.create({ email, name });
+if (isFailure(created) && created.error instanceof ConstraintViolation) {
+	if (created.error.kind === "unique") return "That email is taken";
+}
+```
 
 ### Publish Models Per Request
 
@@ -98,26 +107,47 @@ published. An entry written as an import loads on its first call in each invocat
 
 ### Dispatch Side Effects After Commit
 
-Callbacks receive a `ModelContext`. It carries `db` and `get(key)`, which reads what the host
-context published; anything else a callback reads, the app adds to the interface the way
-middleware adds properties to a router's context, and supplies wherever it binds:
+Callbacks receive a `ModelContext`, and methods read it as `this.context`. It carries `db`,
+`models` (the rest of the registry, bound to the same database and unit of work) and `get(key)`,
+which reads what the host context published; anything else a model reads, the app adds to the
+interface the way middleware adds properties to a router's context, and supplies wherever it
+binds:
 
 ```typescript
-import type { BoundRegistry } from "@sdxc/data-model";
+import type { BoundModels } from "@sdxc/data-model";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
-import type { models } from "./models/index.js";
+import type { Teams } from "./models/teams.js";
+import type { Users } from "./models/users.js";
+
+/** The registry's entries, one per line, which `ctx.models` resolves one at a time. */
+interface AppModels {
+	users: typeof Users;
+	teams: typeof Teams;
+}
 
 declare module "@sdxc/data-model" {
 	interface ModelContext {
 		jobs: JobEnqueuer;
-		models: BoundRegistry<typeof models>;
+		models: BoundModels<AppModels>;
 	}
 }
 ```
 
+Type `models` from an interface listing the entries rather than from `typeof registry`: an
+interface resolves each entry when it is read, so a method calling a sibling leaves the rest of
+the registry's type alone. Two models whose unannotated methods call each other still form a
+cycle; annotate the return type of one of them.
+
 ```typescript
 export const Users = createModel(users, {
+	methods: {
+		async signUp(email: string, name: string) {
+			let user = await this.create({ email, name });
+			if (isFailure(user)) return user;
+			return this.context.models.teams.create({ owner_id: user.data.id, name: "Personal" });
+		},
+	},
 	callbacks: {
 		async afterCommit(event, ctx) {
 			if (event.operation !== "create") return;
@@ -140,6 +170,26 @@ anything but a `Failure`; a throw or a returned `Failure` drops them. Writes rol
 the database has real transactions, so on D1 the user above stays written when the team fails,
 and no welcome job goes out for it.
 
+### Type Several Registries
+
+An app binding one registry per database types each registry's context on its own models.
+`withContext` answers a `createModel` whose callbacks and `this.context` read that context:
+
+```typescript
+import type { BoundModels, ModelContext } from "@sdxc/data-model";
+
+import { withContext } from "@sdxc/data-model";
+
+interface FeedModels {
+	feeds: typeof Feeds;
+	items: typeof Items;
+}
+
+export const { createModel } = withContext<ModelContext & { models: BoundModels<FeedModels> }>();
+```
+
+The registry's `bind` and middleware then require every member that context declares.
+
 ## API
 
 ### `createModel(table, options?)`
@@ -153,8 +203,11 @@ Defines a model. Options:
 - `defaultScope`: a scope every read applies, including the row an update or delete targets.
   `unscoped()` reads without it.
 - `methods`: custom methods, with `this` bound to the model, so a method composes its scopes,
-  its queries and the other methods. Each answers a promise or a model query; a method
-  answering a plain value turns the definition into an `InvalidModel` naming it.
+  its queries, the other methods and `this.context`. Each answers a promise or a model query; a
+  method answering a plain value, or a method or scope named like a member (see
+  `ReservedName`), turns the definition into an `InvalidModel` naming it. A method's signature
+  names its rows as `TableRow<typeof table>`, since `ModelRow<typeof Model>` inside the model's
+  own definition refers to the definition being inferred.
 - `callbacks`: `validate`, `beforeCreate`, `beforeUpdate`, `beforeDelete`, `afterCreate`,
   `afterUpdate`, `afterDelete` and `afterCommit`, all async and all receiving the
   `ModelContext`. `validate` and the `before*` callbacks fail with `fail(...)` from
@@ -162,8 +215,15 @@ Defines a model. Options:
 - `constraints`: columns pinned to fixed values. Every query filters on them, every create
   writes them, and an update or delete of a row outside them answers `NotFound`.
 - `inheritance`: the discriminator column `extend()` pins sub-models on.
-- `optional`: columns `create` may leave out because a callback or the database fills them.
+- `optional`: columns `create` may leave out because a callback or the database fills them,
+  such as a `.default()` column, since data-table's column types record no default. Nullable
+  columns and columns named `created_at` or `updated_at` are optional already.
 - `metaTable` and `meta`: a key/value companion table and the typed fields read from it.
+
+### `withContext<Context>()`
+
+Answers `{ createModel }` typed with `Context` in place of `ModelContext`, for models whose
+callbacks and methods read a context of their own, such as one registry among several.
 
 ### `definition.bind(context, host?, options?)`
 
@@ -184,6 +244,7 @@ of the base's is a type error.
 | ---------------------- | ---------------------------------------------------------- |
 | `query()`, scopes      | A data-table `Query` with the model's scopes chainable     |
 | `db`                   | The database it is bound to, for a method's raw statement  |
+| `context`              | The model context: `models`, `get` and the app's members   |
 | `unscoped()`           | The same, without the default scope                        |
 | `withMeta(keys)`       | A query loading only those meta keys                       |
 | `whereMeta(key, v)`    | A query keeping rows holding `v` under the key             |
@@ -192,13 +253,25 @@ of the base's is a type error.
 | `findBy(where)`        | `Row \| null`                                              |
 | `create(values)`       | `Result<Row, ValidationError>`                             |
 | `update(key, values)`  | `Result<Row, ValidationError \| NotFound>`                 |
-| `upsert(values, opts)` | `Result<Row, ValidationError>`                             |
+| `upsert(values, opts)` | `Result<Row, ValidationError>`, in one statement           |
 | `delete(key)`          | `Result<Row, ValidationError \| NotFound>`                 |
 | `transaction(fn)`      | Whatever `fn` returns, with `afterCommit` deferred         |
 | `load()`               | The bound model once a lazily loaded module has loaded     |
 
-A bulk write built from a query, `users.inTeam(teamId).update({ ... })`, is data-table's own
-statement and runs no model callbacks.
+A single key is the column's value, also for a table declaring `primaryKey: ["id"]`; a
+composite key is an object. Every `update` sets the table's `updatedAt` column, so
+`update(key, {})` marks a row as changed, running the update callbacks.
+
+`upsert(values, { conflict, update })` is one `INSERT … ON CONFLICT` statement with no read
+before it, so it runs no model callbacks and supplies its own `id`. `conflict` defaults to the
+primary key; `update` defaults to the values without the conflict and key columns and
+`createdAt`, and `update: {}` keeps a conflicting row as it is. It answers the row as it
+stands, and refuses a conflicting row outside the model's constraints.
+
+A bulk write built from a query, `users.inTeam(teamId).update({ ... }, { touch: false })`, is
+data-table's own statement and runs no model callbacks; `touch: false` leaves `updatedAt` as it
+is, and `returning` answers the updated rows. On a lazily loaded entry, `db` and `context`
+answer before its module loads.
 
 ### `createModels(entries)`
 
@@ -221,17 +294,39 @@ Middleware publishing the registry bound to each request or job run as `ctx.mode
 
 The failure an update or delete answers when no row of the model has the key.
 
+### `ConstraintViolation`
+
+The `ValidationError` a write answers when the database refuses it for a constraint, with
+`kind` (`"unique"`, `"foreign-key"`, `"not-null"` or `"check"`) and the `column` it covers.
+
 ### `defineFactory`, `createFactories` from `./testing`
 
 Factories whose attributes draw from `@sdxc/sample` and write through the bound model.
+
+### `overrideModel(model, build)` from `./testing`
+
+Replaces members of a model in every binding until the returned function runs, including the
+registries middleware binds per request. `build` receives the bound model, so a replacement
+wraps the original: `overrideModel(Users, (users) => ({ create: vi.fn(users.create) }))`.
+
+### `publishModels(ctx, registry, context, options?)` from `./testing`
+
+Binds a registry with `ctx` as its host and publishes it as `ctx.models` and under `Models`,
+for a test calling a job or route handler with a context it built.
 
 ### Types
 
 `BoundModel<M>`, `ModelQuery<M>`, `ModelRow<M>`, `CreateValues<M>` and `UpdateValues<M>` name
 a model's bound type, query, row and write inputs from `typeof Model`. `AnyModel<Shape>`
 constrains a helper to models whose rows have `Shape`. `ModelContext` is what callbacks
-receive; augment it to type members the app supplies at binding. `BoundRegistry<typeof models>`
-names a bound registry, for typing `ctx.models` in callbacks and in the router's context.
+receive; augment it to type members the app supplies at binding. `BoundModels<Entries>` names
+a bound registry from an interface of its entries, for typing `models` on the context;
+`BoundRegistry<typeof models>` names one from the registry, for code outside the models.
+`ReservedName` lists the member names a scope or method cannot take: `where`, `having`,
+`orderBy`, `groupBy`, `limit`, `offset`, `distinct`, `with`, `select`, `join`, `leftJoin`,
+`rightJoin`, `withMeta`, `whereMeta`, `all`, `first`, `find`, `count`, `exists`, `insert`,
+`insertMany`, `update`, `delete`, `upsert`, `query`, `from`, `findBy`, `create`, `transaction`,
+`load`, `unscoped`, `db`, `context`, `then`, `catch` and `finally`.
 
 ## Patterns
 

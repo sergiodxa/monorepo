@@ -10,7 +10,7 @@
 import type { Middleware, RequestContext } from "remix/router";
 
 import type { ModelRegistry } from "./registry.js";
-import type { BindOptions, BoundModels, ModelContextInit, RegistryEntries } from "./types.js";
+import type { BindOptions, BoundModels, RegistryContextInit, RegistryEntries } from "./types.js";
 
 import { Models } from "./context.js";
 import { bindLazily } from "./registry.js";
@@ -40,7 +40,7 @@ export interface ModelsMiddlewareOptions<Property extends string> extends BindOp
  */
 export function models<Entries extends RegistryEntries, const Property extends string = "models">(
 	registry: ModelRegistry<Entries>,
-	context: (ctx: RequestContext) => ModelContextInit,
+	context: (ctx: RequestContext) => RegistryContextInit<Entries>,
 	options?: ModelsMiddlewareOptions<Property>,
 ): Middleware<{ key: typeof Models; value: BoundModels<Entries>; property: Property }> {
 	let property = { property: options?.property ?? "models" };

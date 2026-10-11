@@ -27,6 +27,28 @@ export class NotFound extends Error {
 	}
 }
 
+/** The kinds of database constraint a write can violate. */
+export type ConstraintKind = "unique" | "foreign-key" | "not-null" | "check";
+
+/**
+ * A write the database refused for a constraint. It is a `ValidationError` whose one issue sits
+ * at the column the constraint covers, so a form renders it like any other, and its `kind`
+ * tells a duplicate (`"unique"`) apart from the other refusals.
+ */
+export class ConstraintViolation extends ValidationError {
+	override name = "ConstraintViolation";
+	readonly kind: ConstraintKind;
+	/** The column the constraint covers, when the database names it. */
+	readonly column: string | undefined;
+
+	constructor(kind: ConstraintKind, issue: StandardSchemaV1.Issue) {
+		super([issue]);
+		this.kind = kind;
+		let [column] = issue.path ?? [];
+		this.column = typeof column === "string" ? column : undefined;
+	}
+}
+
 /** A thrown failure, so a `before*` callback's refusal aborts the write's database transaction. */
 export class WriteAborted extends Error {
 	override name = "WriteAborted";
@@ -69,12 +91,12 @@ export function toValidationError(issues: ReadonlyArray<unknown>): ValidationErr
 }
 
 /** The messages a constraint violation reads as, by constraint kind. */
-const CONSTRAINT_MESSAGES = {
+const CONSTRAINT_MESSAGES: Record<ConstraintKind, string> = {
 	unique: "Already taken",
-	foreign: "Refers to a record that does not exist",
-	notNull: "Required",
+	"foreign-key": "Refers to a record that does not exist",
+	"not-null": "Required",
 	check: "Invalid value",
-} as const;
+};
 
 /**
  * SQLite and D1 report the columns (`UNIQUE constraint failed: users.email`), Postgres the
@@ -85,6 +107,15 @@ const SQLITE_CONSTRAINT =
 
 /** Postgres and MySQL name the violated constraint, or the key, in quotes. */
 const NAMED_CONSTRAINT = /(unique|foreign key|check|not-null)[^"'`]*["'`]([\w.]+)["'`]/i;
+
+/** Reads the constraint kind out of the word a database reports it with. */
+function kindOf(word: string): ConstraintKind {
+	let normalized = word.toLowerCase().replace(" ", "-");
+	if (normalized === "unique" || normalized === "check" || normalized === "not-null") {
+		return normalized;
+	}
+	return "foreign-key";
+}
 
 /** Reads the column a constraint name points at: `idx_users_email` and `users_email_key` → `email`. */
 function columnFromConstraintName(name: string, table: string): string {
@@ -105,41 +136,30 @@ function messages(error: unknown): string[] {
 	return found;
 }
 
-/** Turns one database message into an issue, or `null` when it reports no constraint. */
-function constraintIssue(message: string, table: string): StandardSchemaV1.Issue | null {
+/** Turns one database message into a violation, or `null` when it reports no constraint. */
+function constraintViolation(message: string, table: string): ConstraintViolation | null {
 	let sqlite = SQLITE_CONSTRAINT.exec(message);
 	if (sqlite !== null) {
-		let kind = (sqlite[1] ?? "").toUpperCase();
-		let text =
-			kind === "UNIQUE"
-				? CONSTRAINT_MESSAGES.unique
-				: kind === "NOT NULL"
-					? CONSTRAINT_MESSAGES.notNull
-					: kind === "CHECK"
-						? CONSTRAINT_MESSAGES.check
-						: CONSTRAINT_MESSAGES.foreign;
+		let kind = kindOf(sqlite[1] ?? "");
+		let text = CONSTRAINT_MESSAGES[kind];
 		let first = sqlite[2]?.split(",")[0]?.trim().replaceAll('"', "");
-		if (first === undefined || first === "") return { message: text };
+		if (first === undefined || first === "")
+			return new ConstraintViolation(kind, { message: text });
 		let segments = first.split(".");
 		let column = segments.length > 1 ? (segments.at(-1) ?? first) : first;
-		return {
+		return new ConstraintViolation(kind, {
 			message: text,
-			path: [kind === "CHECK" ? columnFromConstraintName(column, table) : column],
-		};
+			path: [kind === "check" ? columnFromConstraintName(column, table) : column],
+		});
 	}
 
 	let named = NAMED_CONSTRAINT.exec(message);
 	if (named !== null) {
-		let kind = (named[1] ?? "").toLowerCase();
-		let text =
-			kind === "unique"
-				? CONSTRAINT_MESSAGES.unique
-				: kind === "check"
-					? CONSTRAINT_MESSAGES.check
-					: kind === "not-null"
-						? CONSTRAINT_MESSAGES.notNull
-						: CONSTRAINT_MESSAGES.foreign;
-		return { message: text, path: [columnFromConstraintName(named[2] ?? "", table)] };
+		let kind = kindOf(named[1] ?? "");
+		return new ConstraintViolation(kind, {
+			message: CONSTRAINT_MESSAGES[kind],
+			path: [columnFromConstraintName(named[2] ?? "", table)],
+		});
 	}
 
 	return null;
@@ -150,8 +170,8 @@ function constraintIssue(message: string, table: string): StandardSchemaV1.Issue
  * for a failure that is not the caller's to handle, which the write rethrows.
  *
  * A table hook's `DataTableValidationError` keeps its issues; a constraint violation, raised as
- * `DataTableConstraintError` or carried in a database error's cause, is reported at the column
- * the constraint covers.
+ * `DataTableConstraintError` or carried in a database error's cause, is a `ConstraintViolation`
+ * at the column the constraint covers.
  *
  * @param error What the statement threw.
  * @param table The model's table name, stripped from constraint names.
@@ -160,8 +180,8 @@ export function fromWriteError(error: unknown, table: string): ValidationError |
 	if (error instanceof DataTableValidationError) return toValidationError(error.issues);
 
 	for (let message of messages(error)) {
-		let issue = constraintIssue(message, table);
-		if (issue !== null) return new ValidationError([issue]);
+		let violation = constraintViolation(message, table);
+		if (violation !== null) return violation;
 	}
 
 	if (error instanceof DataTableConstraintError) {

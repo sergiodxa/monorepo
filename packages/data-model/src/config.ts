@@ -12,7 +12,7 @@ import type { AnyTable, Database } from "remix/data-table";
 import { getTableName, getTablePrimaryKey } from "remix/data-table";
 
 import type { FieldMap } from "./fields.js";
-import type { Callbacks, MetaTableOptions } from "./types.js";
+import type { Callbacks, MetaTableOptions, ReservedName } from "./types.js";
 
 /** A plain row, as data-table returns it. */
 export type Row = Record<string, unknown>;
@@ -40,7 +40,12 @@ export interface LooseQuery {
 	insertMany(rows: Row[], options?: { returning?: "*" | string[] }): Promise<{ rows?: Row[] }>;
 	upsert(
 		values: Row,
-		options?: { returning?: "*" | string[]; conflictTarget?: string[] },
+		options?: {
+			returning?: "*" | string[];
+			conflictTarget?: string[];
+			update?: Row;
+			touch?: boolean;
+		},
 	): Promise<{ row?: Row | null }>;
 }
 
@@ -102,46 +107,52 @@ export interface RawOptions {
 }
 
 /**
- * Members of a model query and of a bound model, which a scope or a meta-less name must not
- * shadow, since every call site would silently reach the scope instead.
+ * Members of a model query and of a bound model, which a scope or a method must not shadow,
+ * since every call site would silently reach the member instead. Keyed by `ReservedName`, so
+ * the type-level check and this one name the same members.
  */
-const RESERVED_NAMES = new Set([
-	"where",
-	"having",
-	"orderBy",
-	"groupBy",
-	"limit",
-	"offset",
-	"distinct",
-	"with",
-	"select",
-	"join",
-	"leftJoin",
-	"rightJoin",
-	"withMeta",
-	"whereMeta",
-	"all",
-	"first",
-	"find",
-	"count",
-	"exists",
-	"insert",
-	"insertMany",
-	"update",
-	"delete",
-	"upsert",
-	"query",
-	"from",
-	"findBy",
-	"create",
-	"transaction",
-	"load",
-	"unscoped",
-	"db",
-	"then",
-	"catch",
-	"finally",
-]);
+const RESERVED: Record<ReservedName, true> = {
+	where: true,
+	having: true,
+	orderBy: true,
+	groupBy: true,
+	limit: true,
+	offset: true,
+	distinct: true,
+	with: true,
+	select: true,
+	join: true,
+	leftJoin: true,
+	rightJoin: true,
+	withMeta: true,
+	whereMeta: true,
+	all: true,
+	first: true,
+	find: true,
+	count: true,
+	exists: true,
+	insert: true,
+	insertMany: true,
+	update: true,
+	delete: true,
+	upsert: true,
+	query: true,
+	from: true,
+	findBy: true,
+	create: true,
+	transaction: true,
+	load: true,
+	unscoped: true,
+	db: true,
+	context: true,
+	// oxlint-disable-next-line unicorn/no-thenable -- a reserved name, read only as a key
+	then: true,
+	catch: true,
+	finally: true,
+};
+
+/** The reserved names, for lookups. */
+const RESERVED_NAMES: ReadonlySet<string> = new Set(Object.keys(RESERVED));
 
 /** Resolves a meta table's defaults, reading its primary key off the table. */
 function resolveMetaTable(options: MetaTableOptions): ResolvedMetaTable {

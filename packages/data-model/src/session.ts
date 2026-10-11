@@ -287,7 +287,7 @@ function replay(model: unknown, steps: readonly Step[]): unknown {
  * recorded calls on the loaded model right away, so an async method runs whether or not the
  * caller awaits it, and it is a real `Promise` settling with the member's result. Chaining a
  * further call records it and replays the longer chain, so a scope chains and pages as it does
- * on an eager model.
+ * on an eager model, and a failure surfaces on the end of the chain.
  */
 function deferred(load: () => Promise<unknown>, steps: readonly Step[]): unknown {
 	let settled = load().then((model) => replay(model, steps));
@@ -305,14 +305,24 @@ function deferred(load: () => Promise<unknown>, steps: readonly Step[]): unknown
 						(query as Record<string, (...args: unknown[]) => unknown>)[property]?.(...args),
 					);
 			}
-			return (...args: unknown[]) => deferred(load, [...steps, { property, args }]);
+			return (...args: unknown[]) => {
+				settled.catch(ignore);
+				return deferred(load, [...steps, { property, args }]);
+			};
 		},
 	});
 }
 
 /**
+ * Marks a chained call's own promise as handled once a longer chain replaces it: the longer
+ * chain carries the same failure to whoever awaits it, so it is reported there exactly once.
+ */
+function ignore(): void {}
+
+/**
  * A registry entry whose module loads on its first call. The import runs once per binding and
  * the bound model is kept; `load()` answers it, for code that needs a real `Query` in hand.
+ * `db` and `context` belong to the binding, so they answer before the module loads.
  */
 function lazyModel(loader: () => Promise<{ default: unknown }>, session: Session): unknown {
 	let loaded: Promise<unknown> | undefined;
@@ -333,6 +343,8 @@ function lazyModel(loader: () => Promise<{ default: unknown }>, session: Session
 		{
 			get(_, property) {
 				if (property === "load") return load;
+				if (property === "db") return session.db;
+				if (property === "context") return modelContext(session);
 				if (property === "then" || typeof property === "symbol") return undefined;
 				return (...args: unknown[]) => deferred(load, [{ property, args }]);
 			},
