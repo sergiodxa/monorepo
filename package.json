@@ -37,9 +37,9 @@
 		"happy-dom": "^20.14.5",
 		"msw": "^2.15.0",
 		"typescript": "^6.0.3",
-		"vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
-		"vite-plus": "0.2.9",
-		"vitest": "4.1.10"
+		"vite": "npm:@voidzero-dev/vite-plus-core@0.3.3",
+		"vite-plus": "0.3.3",
+		"vitest": "4.1.11"
 	},
 	"overrides": {
 		"miniflare": "5.20260926.0-alpha"

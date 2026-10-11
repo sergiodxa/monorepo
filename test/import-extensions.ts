@@ -2,7 +2,7 @@
  * Scanner for relative module specifiers that lack a file extension inside package sources.
  * Published packages are emitted by `tsc` with their specifiers untouched, and Node's ESM
  * loader resolves `./parse.js` while refusing `./parse`, so every relative specifier in
- * `packages/*​/src` carries the `.js` extension TypeScript maps back to the `.ts` source.
+ * the `src` folder of every package carries the `.js` extension TypeScript maps back to the `.ts` source.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

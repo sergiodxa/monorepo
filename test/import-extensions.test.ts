@@ -1,5 +1,5 @@
 /**
- * Repo-wide guard that every relative import inside `packages/*​/src` carries its `.js`
+ * Repo-wide guard that every relative import inside the `src` folder of every package carries its `.js`
  * extension, tests included. Emitted JavaScript keeps specifiers verbatim, so an
  * extensionless one only fails once a published package runs under Node.
  *

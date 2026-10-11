@@ -27,7 +27,7 @@ export function findUnregisteredApps(appsWithTests: string[], projectRoots: stri
 
 /**
  * Package test files the packages project cannot collect, because its glob
- * is anchored at `packages/*​/src/` and these sit outside it. Returned in
+ * is anchored at the `src` folder of every package and these sit outside it. Returned in
  * the order given, matching how the caller enumerated the filesystem.
  */
 export function findUncollectablePackageTests(testFiles: string[]): string[] {

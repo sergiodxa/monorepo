@@ -14,6 +14,6 @@
 	},
 	"dependencies": {
 		"@sdxc/duration": "workspace:*",
-		"jose": "^6.2.10"
+		"jose": "^6.2.12"
 	}
 }

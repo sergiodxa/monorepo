@@ -279,20 +279,22 @@ export type AbilitiesOf<G> = G extends AnyAbility
  * @example let can: Decisions<typeof abilities.article> = access.decide(abilities.article, { article, org });
  */
 export type Decisions<G> = {
-	readonly [K in keyof G as G[K] extends (...args: never[]) => unknown
-		? never
-		: K]: G[K] extends AnyAbility ? boolean : Decisions<G[K]>;
+	readonly [
+		K in keyof G as G[K] extends (...args: never[]) => unknown ? never : K
+	]: G[K] extends AnyAbility ? boolean : Decisions<G[K]>;
 };
 
 /** What a group's claims answer: a boolean per claim, nested as the group nests. */
 export type Claims<G> = {
-	readonly [K in keyof G as G[K] extends (...args: never[]) => unknown
-		? never
-		: G[K] extends AnyAbility
-			? ContextOf<G[K]> extends undefined
-				? K
-				: never
-			: K]: G[K] extends AnyAbility ? boolean : Claims<G[K]>;
+	readonly [
+		K in keyof G as G[K] extends (...args: never[]) => unknown
+			? never
+			: G[K] extends AnyAbility
+				? ContextOf<G[K]> extends undefined
+					? K
+					: never
+				: K
+	]: G[K] extends AnyAbility ? boolean : Claims<G[K]>;
 };
 
 /** The context `decide` takes for a group: every key its abilities need. */

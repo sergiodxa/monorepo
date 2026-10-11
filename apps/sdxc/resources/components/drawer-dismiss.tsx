@@ -7,8 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Handle } from "remix/component";
-
 import { hidden } from "@sdxc/u/layout";
 import { clientEntry, ref } from "remix/component";
 
@@ -17,7 +15,7 @@ import { clientEntry, ref } from "remix/component";
  * the back-forward cache comes back with the drawer closed, since the link that left it
  * closed it first.
  */
-export const DrawerDismiss = clientEntry(import.meta.url, function DrawerDismiss(_: Handle) {
+export const DrawerDismiss = clientEntry(import.meta.url, function DrawerDismiss() {
 	return () => (
 		<span
 			mix={[

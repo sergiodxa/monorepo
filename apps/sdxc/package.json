@@ -42,6 +42,6 @@
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/jsdoc": "workspace:*",
 		"cf": "1.0.0-beta.5",
-		"vite": "^8.2.2"
+		"vite": "^8.3.4"
 	}
 }

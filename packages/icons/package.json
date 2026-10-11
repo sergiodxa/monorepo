@@ -16,7 +16,7 @@
 		"remix": "3.0.0"
 	},
 	"devDependencies": {
-		"@types/node": "^26.4.0",
-		"lucide-static": "^1.38.0"
+		"@types/node": "^26.6.5",
+		"lucide-static": "^1.55.0"
 	}
 }

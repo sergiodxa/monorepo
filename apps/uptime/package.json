@@ -74,13 +74,13 @@
 		"remix": "3.0.0"
 	},
 	"devDependencies": {
-		"@cloudflare/vite-plugin": "^1.54.2",
+		"@cloudflare/vite-plugin": "^1.63.1",
 		"@pitlane/vite-plugin-remix": "0.8.0",
 		"@sdxc/cloudflare-mocks": "workspace:*",
 		"@sdxc/jwt": "workspace:*",
 		"@sdxc/messageformat": "workspace:*",
 		"fflate": "0.8.3",
-		"vite": "^8.2.2",
-		"wrangler": "^4.127.1"
+		"vite": "^8.3.4",
+		"wrangler": "^4.149.0"
 	}
 }

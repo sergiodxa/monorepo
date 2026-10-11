@@ -15,10 +15,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^5.20260901.1",
+		"@cloudflare/workers-types": "^5.20261011.1",
 		"@sdxc/data-table-d1": "workspace:*",
 		"@sdxc/data-table-sqlstorage": "workspace:*",
-		"@types/node": "^26.4.0",
+		"@types/node": "^26.6.5",
 		"remix": "3.0.0"
 	}
 }
