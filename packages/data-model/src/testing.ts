@@ -32,8 +32,8 @@ import { configOf, SESSION } from "./session.js";
 
 /**
  * Replaces members of a model in every binding made until the returned function restores it,
- * including the registries middleware binds per request. `build` receives the freshly bound
- * model, so a replacement can wrap the original, and the model's own methods reach it too.
+ * including the registries middleware binds per request. `build` receives the original
+ * members, so a replacement calls through to them, and the model's own methods reach it too.
  *
  * @param model The model whose bindings the override applies to.
  * @param build Answers the members to replace, given the bound model before replacing them.

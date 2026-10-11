@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+export type { ConstraintKind } from "./errors.js";
 export type {
 	AnyField,
 	CreateMeta,

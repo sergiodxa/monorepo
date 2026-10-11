@@ -17,7 +17,10 @@ import { wrapQuery } from "./query.js";
 import { modelContext, runUnitOfWork } from "./session.js";
 import { createRow, deleteRow, updateRow, upsertRow } from "./writes.js";
 
-/** Rewrites a freshly bound model's members, as a test installs it through `overrideModel`. */
+/**
+ * Rewrites a freshly bound model's members, as a test installs it through `overrideModel`. It
+ * receives a copy holding the original members, so a replacement calls through to them.
+ */
 export type Override = (model: Record<string, unknown>) => Record<string, unknown>;
 
 /** The override every binding of a model applies, keyed by the model's resolved config. */
@@ -72,7 +75,10 @@ export function bindModel(config: ModelConfig, session: Session): RuntimeModel {
 	Object.defineProperty(model, "context", { enumerable: true, get: () => modelContext(session) });
 
 	let override = OVERRIDES.get(config);
-	if (override !== undefined) Object.assign(model, override(model));
+	if (override !== undefined) {
+		let original = Object.defineProperties({}, Object.getOwnPropertyDescriptors(model));
+		Object.assign(model, override(original));
+	}
 
 	for (let name of Object.keys(config.scopes)) {
 		model[name] = (...args: unknown[]) =>

@@ -185,10 +185,16 @@ interface FeedModels {
 	items: typeof Items;
 }
 
-export const { createModel } = withContext<ModelContext & { models: BoundModels<FeedModels> }>();
+interface FeedContext extends ModelContext {
+	models: BoundModels<FeedModels>;
+}
+
+export const { createModel } = withContext<FeedContext>();
 ```
 
-The registry's `bind` and middleware then require every member that context declares.
+Declare the context as an interface: an intersection type is resolved eagerly and makes the
+models circular again. The registry's `bind` and middleware then require every member that
+context declares.
 
 ## API
 
@@ -306,8 +312,8 @@ Factories whose attributes draw from `@sdxc/sample` and write through the bound 
 ### `overrideModel(model, build)` from `./testing`
 
 Replaces members of a model in every binding until the returned function runs, including the
-registries middleware binds per request. `build` receives the bound model, so a replacement
-wraps the original: `overrideModel(Users, (users) => ({ create: vi.fn(users.create) }))`.
+registries middleware binds per request. `build` receives the original members, so a
+replacement wraps them: `overrideModel(Users, (users) => ({ create: vi.fn(users.create) }))`.
 
 ### `publishModels(ctx, registry, context, options?)` from `./testing`
 

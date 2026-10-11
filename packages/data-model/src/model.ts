@@ -101,9 +101,10 @@ export const createModel: CreateModel<ModelContext> = (table: AnyTable, options?
 
 /**
  * A `createModel` whose models type their context as `Context`, for an app binding several
- * registries: each registry's models read `this.context.models` as that registry.
+ * registries. `Context` is an interface extending `ModelContext`, which resolves its `models`
+ * lazily, so each registry's models read `this.context.models` as that registry.
  *
- * @example export const { createModel } = withContext<ModelContext & { models: BoundModels<FeedModels> }>();
+ * @example export const { createModel } = withContext<FeedContext>();
  */
 export function withContext<Context extends ModelContext>(): {
 	createModel: CreateModel<Context>;
