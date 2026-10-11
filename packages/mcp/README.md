@@ -156,6 +156,39 @@ is picked by the _person_ or attached by their client, and `resources/list` is w
 corpus in the client's picker. Captures arrive as `ctx.variables`, leaving
 `RequestContext.params` to the route's own params.
 
+### Import Handlers On First Use
+
+Wrap a handler's module in `lazy()` and a Worker starts without the code behind each tool or
+resource. The module default-exports what `createTool`, `createToolController` or
+`createResource` returns, so the declaration stays typed.
+
+```typescript
+import { lazy } from "@sdxc/mcp";
+
+mcp.tools.map(
+	toolset.searchPosts,
+	lazy(() => import("./tools/search-posts")),
+);
+mcp.tools.map(
+	toolset.documents,
+	lazy(() => import("./tools/documents")),
+);
+mcp.resources.map(
+	resourceset.article,
+	lazy(() => import("./resources/article")),
+);
+```
+
+A module imports once per isolate, and requests arriving together share that import. A group's
+controller is one module, so its tools share one load. A failed import answers that request as
+an unexpected failure, reaches `onError`, and is retried by the next request.
+
+A request imports only what its answer depends on. `tools/call` and `resources/read` import the
+one handler they reach; an unknown tool or URI imports nothing. Because `available` and `list`
+live in the module, `tools/list`, `resources/list` and `resources/templates/list` import every
+module they must ask. A list that includes a lazy handler is `"private"` by default, since its
+visibility is unknown until it loads; set `cacheScope` to override.
+
 ## Resource URIs
 
 The RFC 6570 template MCP publishes is derived from the pattern, so there is no second
@@ -285,6 +318,11 @@ group typed as an action is a type error, and throws at map time.
 
 Binds `read`, and optionally `list` and `available`, to one resource. Every pattern joins one
 matcher, so a URI matching more than one resource resolves to the most specific match.
+
+### `lazy(load: () => Promise<{ default: Target }>): Lazy<Target>`
+
+Wraps a dynamic import so `mcp.tools.map` and `mcp.resources.map` accept it wherever they take
+an implementation. The import runs on the first request that needs the module, once per isolate.
 
 ### `mcp.fetch(input: Request | RequestContext): Promise<Response>`
 

@@ -25,6 +25,8 @@ export { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors.js";
 export { createHandler } from "./handler.js";
 export type { CacheScope, HandlerOptions, McpHandler } from "./handler.js";
 export { ErrorCode } from "./jsonrpc.js";
+export { lazy } from "./lazy.js";
+export type { Lazy } from "./lazy.js";
 export { LATEST_PROTOCOL_VERSION, MetaKey, SUPPORTED_PROTOCOL_VERSIONS } from "./protocol.js";
 export type { ClientCapabilities, Implementation } from "./protocol.js";
 export { createResource, resource, resources, walkResources } from "./resources.js";

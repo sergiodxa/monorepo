@@ -18,6 +18,7 @@ import { createMultiMatcher } from "remix/route-pattern/match";
 
 import type { AnyRequestContext, ResourceContext, ToolContext } from "./context.js";
 import type { JsonRpcResponse, RequestId } from "./jsonrpc.js";
+import type { Lazy } from "./lazy.js";
 import type {
 	ReadResult,
 	Resource,
@@ -47,6 +48,7 @@ import {
 } from "./context.js";
 import { ForbiddenError, InvalidArgumentsError, ToolError } from "./errors.js";
 import { ErrorCode, isJsonRpcMessage, isRequest, reply, replyError } from "./jsonrpc.js";
+import { isLazy, once } from "./lazy.js";
 import {
 	decodeHeaderValue,
 	isMetadataProblem,
@@ -129,16 +131,32 @@ export interface HandlerOptions {
 	onError?(error: unknown, info: { method: string; tool?: string; uri?: string }): void;
 }
 
-interface ToolRegistration {
-	tool: Tool;
+/** What a tool call runs, once its implementation is in hand. */
+interface ToolBinding {
 	available: ((ctx: AnyRequestContext) => boolean) | undefined;
 	middleware: ToolMiddleware[];
 	handler: ToolHandler;
 }
 
+/**
+ * A mapped tool. Its declaration is known at startup; its binding resolves on demand,
+ * which is when a lazily mapped module is imported.
+ */
+interface ToolRegistration {
+	tool: Tool;
+	resolve: () => Promise<ToolBinding>;
+}
+
+/** A mapped resource, whose action resolves on demand the way a tool's binding does. */
 interface ResourceRegistration {
 	resource: Resource;
-	action: ResourceAction;
+	resolve: () => Promise<ResourceAction>;
+}
+
+/** A controller as `map()` reads it, once its module is in hand. */
+interface LoadedController {
+	middleware?: ToolMiddleware[];
+	actions: Record<string, unknown>;
 }
 
 /** What {@link createHandler} returns. */
@@ -148,23 +166,32 @@ export interface McpHandler {
 		 * Binds a handler to one tool, or a controller to a group of them.
 		 *
 		 * Mapping is what registers a tool: only a mapped tool exists, the same way only a
-		 * mapped route is served.
+		 * mapped route is served. Wrap the implementation in `lazy()` to import it on first use.
 		 *
 		 * @throws Error When a tool is mapped twice, or a nested group appears as an action.
 		 */
-		map<Schema extends ToolSchema>(tool: Tool<Schema>, action: ActionOrHandler<Schema>): void;
-		map<Group extends ToolGroup>(group: Group, controller: Controller<Group>): void;
+		map<Schema extends ToolSchema>(
+			tool: Tool<Schema>,
+			action: ActionOrHandler<Schema> | Lazy<ActionOrHandler<Schema>>,
+		): void;
+		map<Group extends ToolGroup>(
+			group: Group,
+			controller: Controller<Group> | Lazy<Controller<Group>>,
+		): void;
 	};
 	resources: {
 		/**
 		 * Binds list and read handlers to one resource.
 		 *
 		 * Every pattern joins one matcher, so a URI matching more than one resource resolves
-		 * to the most specific match.
+		 * to the most specific match. Wrap the action in `lazy()` to import it on first use.
 		 *
 		 * @throws Error When a resource is mapped twice.
 		 */
-		map<Pattern extends string>(resource: Resource<Pattern>, action: ResourceAction<Pattern>): void;
+		map<Pattern extends string>(
+			resource: Resource<Pattern>,
+			action: ResourceAction<Pattern> | Lazy<ResourceAction<Pattern>>,
+		): void;
 	};
 	/**
 	 * Answers one MCP request.
@@ -193,58 +220,66 @@ export function createHandler(options: HandlerOptions): McpHandler {
 	let matcher = createMultiMatcher<ResourceRegistration>();
 	let conditional = false;
 
-	function registerTool(tool: Tool, action: ActionOrHandler, shared: ToolMiddleware[]): void {
+	/** Turns an action into what a call runs, with the middleware its controller shares. */
+	function bind(action: ActionOrHandler, shared: ToolMiddleware[]): ToolBinding {
+		let resolved: Action =
+			typeof action === "function" ? { handler: action as ToolHandler } : (action as Action);
+
+		return {
+			available: resolved.available?.bind(resolved),
+			middleware: [...shared, ...(resolved.middleware ?? [])] as ToolMiddleware[],
+			handler: resolved.handler as ToolHandler,
+		};
+	}
+
+	function bindAction(controller: LoadedController, key: string): ToolBinding {
+		return bind(controller.actions[key] as ActionOrHandler, controller.middleware ?? []);
+	}
+
+	function registerTool(tool: Tool, resolve: () => Promise<ToolBinding>): void {
 		if (tools.has(tool.name)) {
 			throw new Error(`Tool ${JSON.stringify(tool.name)} is already mapped`);
 		}
 
-		let resolved: Action =
-			typeof action === "function" ? { handler: action as ToolHandler } : (action as Action);
-		if (resolved.available) conditional = true;
-
-		tools.set(tool.name, {
-			tool,
-			available: resolved.available?.bind(resolved),
-			middleware: [...shared, ...(resolved.middleware ?? [])] as ToolMiddleware[],
-			handler: resolved.handler as ToolHandler,
-		});
+		tools.set(tool.name, { tool, resolve });
 	}
 
 	return {
 		tools: {
 			map(target: Tool | ToolGroup, binding: unknown): void {
+				let deferred = isLazy(binding);
+				if (deferred) conditional = true;
+
 				if (isTool(target)) {
-					registerTool(target, binding as ActionOrHandler, []);
+					let load = once(binding as ActionOrHandler | Lazy<ActionOrHandler>);
+					let eager = deferred ? undefined : bind(binding as ActionOrHandler, []);
+					if (eager?.available) conditional = true;
+					registerTool(target, async () => eager ?? bind(await load(), []));
 					return;
 				}
 
-				let controller = binding as {
-					middleware?: ToolMiddleware[];
-					actions: Record<string, unknown>;
-				};
+				let load = once(binding as LoadedController | Lazy<LoadedController>);
 				for (let [key, node] of Object.entries(target)) {
 					if (!isTool(node)) {
 						throw new Error(
 							`${key} is a nested group; map it with its own map() call rather than as an action`,
 						);
 					}
-					registerTool(
-						node,
-						controller.actions[key] as ActionOrHandler,
-						controller.middleware ?? [],
-					);
+					let eager = deferred ? undefined : bindAction(binding as LoadedController, key);
+					if (eager?.available) conditional = true;
+					registerTool(node, async () => eager ?? bindAction(await load(), key));
 				}
 			},
 		},
 
 		resources: {
-			map(resource: Resource, action: ResourceAction): void {
+			map(resource: Resource, binding: ResourceAction | Lazy<ResourceAction>): void {
 				if (resources.has(resource.pattern)) {
 					throw new Error(`Resource ${JSON.stringify(resource.pattern)} is already mapped`);
 				}
-				if (action.available) conditional = true;
+				if (isLazy(binding) || binding.available) conditional = true;
 
-				let registration: ResourceRegistration = { resource, action };
+				let registration: ResourceRegistration = { resource, resolve: once(binding) };
 				resources.set(resource.pattern, registration);
 				matcher.add(resource.route, registration);
 			},
@@ -373,7 +408,9 @@ async function answer(
 		}
 
 		case "tools/list": {
-			let visible = [...registry.tools.values()].filter((entry) => entry.available?.(ctx) ?? true);
+			let entries = [...registry.tools.values()];
+			let bindings = await Promise.all(entries.map((entry) => entry.resolve()));
+			let visible = entries.filter((_, index) => bindings[index]?.available?.(ctx) ?? true);
 			return json(
 				reply(id, {
 					resultType: "complete",
@@ -392,8 +429,9 @@ async function answer(
 		case "resources/list": {
 			let entries: ResourceListing[] = [];
 			for (let entry of registry.resources.values()) {
-				if (!(entry.action.available?.(ctx) ?? true)) continue;
-				if (entry.action.list) entries.push(...(await entry.action.list(ctx)));
+				let action = await entry.resolve();
+				if (!(action.available?.(ctx) ?? true)) continue;
+				if (action.list) entries.push(...(await action.list(ctx)));
 				else if (!entry.resource.hasVariables) {
 					entries.push({ uri: entry.resource.href(), ...entry.resource.descriptor });
 				}
@@ -406,9 +444,12 @@ async function answer(
 		}
 
 		case "resources/templates/list": {
-			let templates = [...registry.resources.values()]
-				.filter((entry) => entry.resource.hasVariables)
-				.filter((entry) => entry.action.available?.(ctx) ?? true)
+			let candidates = [...registry.resources.values()].filter(
+				(entry) => entry.resource.hasVariables,
+			);
+			let actions = await Promise.all(candidates.map((entry) => entry.resolve()));
+			let templates = candidates
+				.filter((_, index) => actions[index]?.available?.(ctx) ?? true)
 				.map((entry) => entry.resource.descriptor);
 
 			return json(
@@ -453,11 +494,24 @@ async function callTool(
 	}
 
 	let entry = registry.tools.get(name);
-	if (!entry || !(entry.available?.(ctx) ?? true)) {
+	if (!entry) {
 		return json(replyError(id, ErrorCode.InvalidParams, `Unknown tool: ${name}`), 200);
 	}
 
 	let log = currentLog();
+
+	let binding: ToolBinding;
+	try {
+		binding = await entry.resolve();
+	} catch (error) {
+		log?.set({ mcp: { tool: name, is_error: true } });
+		return toolFailed(error, options, name, meta, id);
+	}
+
+	if (!(binding.available?.(ctx) ?? true)) {
+		return json(replyError(id, ErrorCode.InvalidParams, `Unknown tool: ${name}`), 200);
+	}
+
 	log?.set({ mcp: { tool: name } });
 
 	let checked = validateArguments(entry.tool, params?.arguments);
@@ -474,10 +528,10 @@ async function callTool(
 	ctx.set(ToolInput, checked.data, { property: "input" });
 	ctx.set(CurrentTool, entry.tool.descriptor, { property: "tool" });
 
-	let chain = [...(options.toolMiddleware ?? []), ...entry.middleware];
+	let chain = [...(options.toolMiddleware ?? []), ...binding.middleware];
 
 	try {
-		let result = await runChain(ctx as ToolContext, chain, entry);
+		let result = await runChain(ctx as ToolContext, chain, entry.tool, binding);
 		log?.set({ mcp: { is_error: result.isError === true } });
 		return json(reply(id, { resultType: "complete", ...result, _meta: meta }), 200);
 	} catch (error) {
@@ -492,18 +546,33 @@ async function callTool(
 			return json(replyError(id, ErrorCode.InvalidParams, error.message), 200);
 		}
 
-		log?.fail(error);
-		options.onError?.(error, { method: "tools/call", tool: name });
-		return json(
-			reply(id, {
-				resultType: "complete",
-				content: [{ type: "text", text: `The ${name} tool failed unexpectedly.` }],
-				isError: true,
-				_meta: meta,
-			}),
-			200,
-		);
+		return toolFailed(error, options, name, meta, id);
 	}
+}
+
+/**
+ * Answers a tool call that failed for a reason the caller cannot act on, whether the
+ * handler threw or its module would not import. The cause reaches `onError` and the log;
+ * the model reads one generic sentence.
+ */
+function toolFailed(
+	error: unknown,
+	options: HandlerOptions,
+	name: string,
+	meta: Record<string, unknown>,
+	id: RequestId,
+): Response {
+	currentLog()?.fail(error);
+	options.onError?.(error, { method: "tools/call", tool: name });
+	return json(
+		reply(id, {
+			resultType: "complete",
+			content: [{ type: "text", text: `The ${name} tool failed unexpectedly.` }],
+			isError: true,
+			_meta: meta,
+		}),
+		200,
+	);
 }
 
 /**
@@ -515,7 +584,8 @@ async function callTool(
 function runChain(
 	ctx: ToolContext,
 	chain: readonly ToolMiddleware[],
-	entry: ToolRegistration,
+	tool: Tool,
+	binding: ToolBinding,
 ): Promise<CallToolResult> {
 	let entered = -1;
 
@@ -527,8 +597,8 @@ function runChain(
 		if (middleware) return middleware(ctx, () => step(index + 1));
 
 		try {
-			let output = await entry.handler(ctx);
-			return toResult(output, entry.tool.descriptor.outputSchema !== undefined);
+			let output = await binding.handler(ctx);
+			return toResult(output, tool.descriptor.outputSchema !== undefined);
 		} catch (error) {
 			if (error instanceof ToolError) {
 				return { content: [{ type: "text", text: error.message }], isError: true };
@@ -577,13 +647,27 @@ async function readResource(
 	}
 
 	let match = matchUri(registry, uri);
-	if (!match || !(match.data.action.available?.(ctx) ?? true)) {
+	if (!match) {
 		return json(replyError(id, ErrorCode.InvalidParams, "Resource not found", { uri }), 200);
 	}
 
-	let { resource, action } = match.data;
-
+	let { resource } = match.data;
 	let log = currentLog();
+
+	let action: ResourceAction;
+	try {
+		action = await match.data.resolve();
+	} catch (error) {
+		log?.set({ mcp: { resource: resource.pattern } });
+		log?.fail(error);
+		options.onError?.(error, { method: "resources/read", uri });
+		return json(replyError(id, ErrorCode.InternalError, "Failed to read the resource"), 200);
+	}
+
+	if (!(action.available?.(ctx) ?? true)) {
+		return json(replyError(id, ErrorCode.InvalidParams, "Resource not found", { uri }), 200);
+	}
+
 	log?.set({ mcp: { resource: resource.pattern } });
 
 	ctx.set(ResourceUri, uri, { property: "uri" });
