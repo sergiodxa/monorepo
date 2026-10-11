@@ -10,6 +10,7 @@
 import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 
@@ -47,41 +48,28 @@ export function isEmptyDay(counters: TrialDailyCounters): boolean {
 }
 
 export const TrialDailyStats = createModel(trialDailyStats, {
-	optional: ["id", "new_leads", "urls_checked", "emails_sent", "free_signups", "paid_conversions"],
+	optional: ["new_leads", "urls_checked", "emails_sent", "free_signups", "paid_conversions"],
 
 	methods: {
 		/**
 		 * Writes one day's counters, replacing the day if it was already reported, in one
-		 * `INSERT … ON CONFLICT (date) DO UPDATE` that keeps the row's id and `created_at`: a
+		 * upsert keyed on `date` that keeps the row's id and `created_at`: a
 		 * second row would double every later total drawn from this table.
 		 */
 		async upsertDay(input: TrialDailyStatsInput): Promise<void> {
-			let now = Date.now();
-			let table = getTableName(trialDailyStats);
-
-			await this.db.exec(
-				`INSERT INTO ${table}
-				        (id, created_at, updated_at, date, new_leads, urls_checked, emails_sent,
-				         free_signups, paid_conversions)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-				 ON CONFLICT (date) DO UPDATE
-				    SET updated_at = excluded.updated_at,
-				        new_leads = excluded.new_leads,
-				        urls_checked = excluded.urls_checked,
-				        emails_sent = excluded.emails_sent,
-				        free_signups = excluded.free_signups,
-				        paid_conversions = excluded.paid_conversions`,
-				[
-					generateUUID(),
-					now,
-					now,
-					input.date,
-					input.newLeads,
-					input.urlsChecked,
-					input.emailsSent,
-					input.freeSignups,
-					input.paidConversions,
-				],
+			unwrap(
+				await this.upsert(
+					{
+						id: generateUUID(),
+						date: input.date,
+						new_leads: input.newLeads,
+						urls_checked: input.urlsChecked,
+						emails_sent: input.emailsSent,
+						free_signups: input.freeSignups,
+						paid_conversions: input.paidConversions,
+					},
+					{ conflict: ["date"] },
+				),
 			);
 		},
 
@@ -114,12 +102,6 @@ export const TrialDailyStats = createModel(trialDailyStats, {
 				freeSignups: Number(row?.freeSignups ?? 0),
 				paidConversions: Number(row?.paidConversions ?? 0),
 			};
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });

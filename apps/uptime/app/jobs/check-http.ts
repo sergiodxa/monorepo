@@ -11,9 +11,9 @@
 
 import type { CurrentJobContext } from "@sdxc/jobs";
 
+import { ConstraintViolation } from "@sdxc/data-model";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
-import { ValidationError } from "@sdxc/validate";
 
 import type { CheckHttpInput } from "~/app/jobs";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
@@ -213,6 +213,5 @@ async function notify(
 
 /** Whether `error` is the database rejecting an insert whose primary key is already taken. */
 function isDuplicateKey(error: Error): boolean {
-	if (!(error instanceof ValidationError)) return false;
-	return error.issues.some((issue) => issue.path?.[0] === "id");
+	return error instanceof ConstraintViolation && error.kind === "unique" && error.column === "id";
 }

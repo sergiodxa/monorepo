@@ -11,7 +11,8 @@ import type { WebhookDelivery, WebhookStore } from "@sdxc/billing";
 import type { BoundModel, ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
-import { getTableName, lt } from "remix/data-table";
+import { unwrap } from "@sdxc/result";
+import { lt } from "remix/data-table";
 
 import { billingWebhookDeliveries } from "~/database/schema";
 
@@ -36,27 +37,14 @@ export const BillingWebhookDeliveries = createModel(billingWebhookDeliveries, {
 		 * is judged against the bytes that arrived last.
 		 */
 		async record(delivery: WebhookDelivery): Promise<void> {
-			let now = Date.now();
-
-			await this.db.exec(
-				`INSERT INTO ${getTableName(billingWebhookDeliveries)}
-				        (id, created_at, updated_at, type, payload, valid, processed)
-				 VALUES (?, ?, ?, ?, ?, ?, ?)
-				 ON CONFLICT (id) DO UPDATE
-				    SET updated_at = excluded.updated_at,
-				        type = excluded.type,
-				        payload = excluded.payload,
-				        valid = excluded.valid,
-				        processed = excluded.processed`,
-				[
-					delivery.id,
-					now,
-					now,
-					delivery.type,
-					delivery.payload,
-					delivery.valid ? 1 : 0,
-					delivery.processed ? 1 : 0,
-				],
+			unwrap(
+				await this.upsert({
+					id: delivery.id,
+					type: delivery.type,
+					payload: delivery.payload,
+					valid: delivery.valid ? 1 : 0,
+					processed: delivery.processed ? 1 : 0,
+				}),
 			);
 		},
 

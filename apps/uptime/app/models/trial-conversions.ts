@@ -10,6 +10,7 @@
 import type { ModelRow } from "@sdxc/data-model";
 
 import { createModel } from "@sdxc/data-model";
+import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName, gte, lt } from "remix/data-table";
 
@@ -79,32 +80,28 @@ export const TrialConversions = createModel(trialConversions, {
 		 * @returns Whether this call was the one that created the row.
 		 */
 		async recordSignup(signup: TrialSignup): Promise<boolean> {
-			let now = Date.now();
+			let id = generateUUID();
 
-			let result = await this.db.exec(
-				`INSERT INTO ${getTableName(trialConversions)}
-				        (id, created_at, updated_at, owner_id, lead_created_at, emails_sent,
-				         watch_count, urls, landing_path, campaign_source, campaign_name,
-				         signed_up_at, paid_at)
-				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
-				 ON CONFLICT (owner_id) DO NOTHING`,
-				[
-					generateUUID(),
-					now,
-					now,
-					signup.ownerId,
-					signup.leadCreatedAt,
-					signup.emailsSent,
-					signup.watchCount,
-					JSON.stringify(signup.urls),
-					signup.attribution?.landingPath ?? null,
-					signup.attribution?.source ?? null,
-					signup.attribution?.campaign ?? null,
-					signup.signedUpAt,
-				],
+			let row = unwrap(
+				await this.upsert(
+					{
+						id,
+						owner_id: signup.ownerId,
+						lead_created_at: signup.leadCreatedAt,
+						emails_sent: signup.emailsSent,
+						watch_count: signup.watchCount,
+						urls: JSON.stringify(signup.urls),
+						landing_path: signup.attribution?.landingPath ?? null,
+						campaign_source: signup.attribution?.source ?? null,
+						campaign_name: signup.attribution?.campaign ?? null,
+						signed_up_at: signup.signedUpAt,
+						paid_at: null,
+					},
+					{ conflict: ["owner_id"], update: {} },
+				),
 			);
 
-			return (result.affectedRows ?? 0) > 0;
+			return row.id === id;
 		},
 
 		/**

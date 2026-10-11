@@ -19,8 +19,6 @@ import type { OptionalEmail, SelectUserPreferences, SupportedLanguage } from "~/
 import { userPreferences } from "~/database/schema";
 
 export const UserPreferences = createModel(userPreferences, {
-	optional: ["id"],
-
 	methods: {
 		/**
 		 * The preferences of every listed subject, keyed by subject id, in one query, for a job
@@ -69,12 +67,6 @@ export const UserPreferences = createModel(userPreferences, {
 			if (existing !== null && unsubscribed.includes(email)) return success(existing);
 
 			return await this.setUnsubscribedEmails(subjectId, [...unsubscribed, email]);
-		},
-	},
-
-	callbacks: {
-		async beforeCreate(values) {
-			return { ...values, id: values.id ?? generateUUID() };
 		},
 	},
 });
