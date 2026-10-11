@@ -5,7 +5,7 @@ section:
     title: Data & background work
     order: 6
 order: 3
-lastUpdated: 2026-10-09
+lastUpdated: 2026-10-11
 ---
 
 Once an app has more than a few tables, the code around them settles into a pattern: a module
@@ -66,7 +66,8 @@ export const Users = createModel(users, {
 ```
 
 `optional` lists the columns `create` may leave out because a callback or the database fills
-them; every other non-null column is required by the type of `create`. A scope receives a query
+them, a `.default()` column included; nullable columns and `created_at`/`updated_at` are
+optional already, and every other column is required by the type of `create`. A scope receives a query
 it may refine with `where`, `orderBy`, `limit` and the other methods that keep the row type, and
 answers it. `with()` and `select()` change the row, so they belong in a method.
 
@@ -74,7 +75,8 @@ The default scope keeps soft-deleted users out of every read without each call s
 remembering a filter: queries, scopes and `find` leave them out, and an update or delete of one
 answers `NotFound`. `unscoped()` reads past it, for the code that restores a user. A method
 answers a promise or a model query, so a model loaded on demand can answer it before its module
-loads; one answering a plain value turns the definition into a type error naming it.
+loads; one answering a plain value turns the definition into a type error naming it, and so
+does a method or scope named like a member the model already has, such as `exists` or `db`.
 
 Bind the definition to a database and use it:
 
@@ -94,8 +96,13 @@ await users.unscoped().where({ id }).first(); // including a deleted one
 Reads answer `null` for a missing row. Writes answer a `Result`: a `ValidationError` from
 [`@sdxc/validate`](/api/validate) when a callback, the table's own hooks or a database
 constraint refuses the write, and `NotFound` when an update or delete names a key the model has
-no row for. A unique index violation comes back as an issue at the indexed column, so a form
-renders the duplicate email the same way it renders a failed schema.
+no row for. A constraint the database enforces comes back as a `ConstraintViolation`, a
+`ValidationError` with its issue at the indexed column, so a form renders the duplicate email
+the same way it renders a failed schema, and code that treats a duplicate differently checks
+`error.kind === "unique"`.
+
+A table that declares its key as `primaryKey: ["id"]` still takes the key as a plain value:
+`users.find(id)`, `users.update(id, values)`.
 
 Every scope returns a real data-table query, so [`@sdxc/pagination`](/api/pagination) pages it
 unchanged:
@@ -179,28 +186,55 @@ through `ctx.database`, which only the job's handler sees.
 
 ## Dispatch side effects after commit
 
-Callbacks receive a model context, which you extend the way middleware extends a router's
-context. It starts with `db`, the database the model is bound to, and `get(key)`, which reads
-what the host context published. Anything a callback depends on, you declare on the interface,
-and every binding then has to supply it:
+Callbacks receive a model context, and methods read the same object as `this.context`. You
+extend it the way middleware extends a router's context. It starts with `db`, the database the
+model is bound to, and `get(key)`, which reads what the host context published. Anything a model
+depends on, you declare on the interface, and every binding then has to supply it:
 
 ```typescript {% title="config/model-context.d.ts" %}
-import type { BoundRegistry } from "@sdxc/data-model";
+import type { BoundModels } from "@sdxc/data-model";
 import type { JobEnqueuer } from "@sdxc/jobs";
 
-import type { models } from "~/models";
+import type { Articles } from "~/models/articles";
+import type { Users } from "~/models/users";
+
+interface AppModels {
+	users: typeof Users;
+	articles: typeof Articles;
+}
 
 declare module "@sdxc/data-model" {
 	interface ModelContext {
 		jobs: JobEnqueuer;
-		models: BoundRegistry<typeof models>;
+		models: BoundModels<AppModels>;
 	}
 }
 ```
 
-`models` is always there at runtime: the rest of the registry, bound to the same request. The
-declaration types it, so a callback calling another model is checked like any other call. A
-callback then reads `ctx.jobs` directly:
+`models` is always there at runtime: the rest of the registry, bound to the same request and
+unit of work. The declaration types it from an interface of the entries, which resolves each
+model only when it is read, so a method that calls a sibling keeps every other model typed.
+Typing it from the registry itself would make the registry's type depend on that method. Two
+models whose methods call each other need a return type written on one of them.
+
+A method reaches a sibling the same way:
+
+```typescript {% title="app/models/users.ts" %}
+export const Users = createModel(users, {
+	methods: {
+		async signUp(email: string, name: string) {
+			let user = await this.create({ email, name });
+			if (isFailure(user)) return user;
+			return this.context.models.teams.create({
+				owner_id: user.data.id,
+				name: "Personal",
+			});
+		},
+	},
+});
+```
+
+A callback reads `ctx.jobs` directly:
 
 ```typescript {% title="app/models/users.ts" %}
 import { createModel } from "@sdxc/data-model";
@@ -256,7 +290,53 @@ put anything with consequences outside the database in `afterCommit`.
 An update or delete built from a query, `ctx.models.users.inTeam(teamId).update({ ... })`, is one
 statement over every matching row and runs no model callbacks. It is the escape hatch for
 set-based writes; iterate and call `update(key, values)` per row when each row needs its
-callbacks.
+callbacks. It takes `{ touch: false }` to leave `updated_at` as it is, and `returning` to answer
+the rows it changed. `update(key, {})` with no values marks one row as changed.
+
+`upsert` writes a row or the one it conflicts with in a single statement, with no read first:
+
+```typescript
+await ctx.models.deliveries.upsert(
+	{ id: delivery.id, type: delivery.type, payload, processed: false },
+	{ update: { payload, processed: false } },
+);
+
+let claimed = await ctx.models.bookmarks.upsert(
+	{ post_id: postId, address },
+	{ conflict: ["post_id"], update: {} },
+);
+```
+
+`conflict` defaults to the primary key, and `update` to every value but the key and
+`created_at`; `update: {}` leaves a conflicting row as it was. Either way it answers the row as it
+stands, so the second call tells whether this address won. Being one statement, it runs no
+callbacks, so it takes the `id` a `beforeCreate` would otherwise fill.
+
+## Bind several registries
+
+An app with one database per tenant and a shared one binds a registry per database. Each
+registry types its models' context with `withContext`, which answers a `createModel` whose
+callbacks and `this.context` read that context instead of the global `ModelContext`:
+
+```typescript {% title="app/models/feed/context.ts" %}
+import type { BoundModels, ModelContext } from "@sdxc/data-model";
+import { withContext } from "@sdxc/data-model";
+
+import type { Feeds } from "./feeds";
+import type { Items } from "./items";
+
+interface FeedModels {
+	feeds: typeof Feeds;
+	items: typeof Items;
+}
+
+export const { createModel } = withContext<
+	ModelContext & { models: BoundModels<FeedModels> }
+>();
+```
+
+The feed models import `createModel` from this module, and the registry's `bind` and middleware
+require whatever else that context declares.
 
 ## Keep several record types in one table
 
@@ -422,6 +502,23 @@ An attribute's function runs only when the call does not override it, so the art
 create no extra users. Each factory draws from a stream derived from the seed by its name, so
 adding a factory leaves every other factory's values where they were, and a failing run
 reproduces from its seed. A write that fails throws, with the `ValidationError` as its cause.
+
+To make a write fail or to count calls, replace the member on the model rather than on one
+bound copy. `overrideModel` applies to every binding until it is restored, including the
+registry the router binds per request, and hands you the original to wrap:
+
+```typescript
+import { overrideModel, publishModels } from "@sdxc/data-model/testing";
+
+let restore = overrideModel(Users, (users) => ({ create: vi.fn(users.create) }));
+afterEach(() => restore());
+
+let ctx = createJobContext(jobs.sendWelcome, { id: "m1", attempts: 1 });
+let models = publishModels(ctx, registry, { db });
+```
+
+`publishModels` binds a registry and publishes it as `ctx.models`, for a test that calls a job
+handler with a context it built by hand.
 
 ## Where to go next
 
