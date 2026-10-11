@@ -9,13 +9,15 @@
 
 import type { Result } from "@sdxc/result";
 
-import { createModel, NotFound } from "@sdxc/data-model";
+import { NotFound } from "@sdxc/data-model";
 import { failure, success } from "@sdxc/result";
 
 import type { SelectFeed } from "~/database/feed-schema";
 
 import { feed, HUB_COOLOFF_MS } from "~/database/feed-schema";
 import { FEED_ROW_ID } from "~/database/refresh";
+
+import { createModel } from "./context";
 
 /** The hub a subscription is being requested from, with the credentials it is made under. */
 export interface PendingHub {
@@ -34,7 +36,7 @@ export const Feed = createModel(feed, {
 	methods: {
 		/** The feed's row, or `null` for an object nothing has subscribed to yet. */
 		current(): Promise<SelectFeed | null> {
-			return this.findBy({ id: FEED_ROW_ID });
+			return this.find(FEED_ROW_ID);
 		},
 
 		/**

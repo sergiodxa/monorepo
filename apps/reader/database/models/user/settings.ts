@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 
 import type { SelectSettings } from "~/database/schema";
 
 import { settings } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** The key of the one row `settings` holds, which the `CHECK` on its primary key enforces. */
 export const SETTINGS_ID = 1;

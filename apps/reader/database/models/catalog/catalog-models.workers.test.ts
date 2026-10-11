@@ -65,14 +65,14 @@ describe("a feed's catalog row", () => {
 		expect(await models.feeds.rename(id, "Example")).toBe(true);
 		expect(await models.feeds.stamp(id, NOW + 1)).toBe(true);
 		expect(await models.feeds.retire(id, NOW + 2)).toBe(true);
-		expect(await models.feeds.findBy({ id })).toMatchObject({
+		expect(await models.feeds.find(id)).toMatchObject({
 			title: "Example",
 			last_active_at: NOW + 1,
 			retired_at: NOW + 2,
 		});
 
 		expect(await models.feeds.revive(id)).toBe(true);
-		expect(await models.feeds.findBy({ id })).toMatchObject({ retired_at: null });
+		expect(await models.feeds.find(id)).toMatchObject({ retired_at: null });
 	});
 
 	test("reports every write against a purged feed as not landed", async () => {
@@ -144,7 +144,7 @@ describe("billing deliveries", () => {
 		await models.billingDeliveries.markProcessed(id);
 		await models.billingDeliveries.markProcessed(crypto.randomUUID());
 
-		let row = await models.billingDeliveries.findBy({ id });
+		let row = await models.billingDeliveries.find(id);
 		expect(row?.processed === true || Number(row?.processed) === 1).toBe(true);
 	});
 });

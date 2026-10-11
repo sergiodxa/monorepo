@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
-
 import { billingDeliveries } from "~/database/catalog-schema";
+
+import { createModel } from "./context";
 
 /** The billing endpoint's deliveries, each marked processed once its handler finished. */
 export const BillingDeliveries = createModel(billingDeliveries, {

@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 
 import { rules } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** A reader's filter rules, listed in the order they were written. */
 export const Rules = createModel(rules, {

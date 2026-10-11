@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 
 import { searches } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** A reader's saved searches, listed in the order their names read. */
 export const Searches = createModel(searches, {

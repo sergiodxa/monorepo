@@ -344,7 +344,7 @@ export let deliveries: WebhookStore = {
 	 * @returns The row, or `null` when this delivery has never arrived
 	 */
 	async find(id: string): Promise<WebhookDelivery | null> {
-		let row = await catalog().billingDeliveries.findBy({ id });
+		let row = await catalog().billingDeliveries.find(id);
 		if (row === null) return null;
 
 		return {

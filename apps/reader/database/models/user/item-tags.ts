@@ -7,10 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { inList } from "remix/data-table";
 
 import { itemTags } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** The label-to-post join rows, keyed by `tag_id` and `item_id`. */
 export const ItemTags = createModel(itemTags, {

@@ -7,11 +7,12 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 
-import { itemTags, tags } from "~/database/schema";
+import { tags } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** A reader's labels; deleting one removes it from every post in the same turn. */
 export const Tags = createModel(tags, {
@@ -37,7 +38,7 @@ export const Tags = createModel(tags, {
 
 		/** Takes the label off every post before the label goes, so no join row outlives it. */
 		async beforeDelete(tag, ctx) {
-			await ctx.db.deleteMany(itemTags, { where: { tag_id: tag.id } });
+			await ctx.models.itemTags.ofTag(tag.id).delete();
 		},
 	},
 });

@@ -7,10 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { isNull } from "remix/data-table";
 
 import { tokens } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** The rows describing a reader's agent tokens; a revoked one stays listed. */
 export const AgentTokens = createModel(tokens, {

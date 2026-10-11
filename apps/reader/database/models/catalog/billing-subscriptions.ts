@@ -7,11 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
-
 import type { SelectBillingSubscription } from "~/database/catalog-schema";
 
 import { billingSubscriptions } from "~/database/catalog-schema";
+
+import { createModel } from "./context";
 
 /** One projected subscription per reader, keyed by their OIDC subject. */
 export const BillingSubscriptions = createModel(billingSubscriptions, {

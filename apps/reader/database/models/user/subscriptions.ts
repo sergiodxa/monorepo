@@ -7,7 +7,6 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
@@ -16,6 +15,8 @@ import { isNull, notNull } from "remix/data-table";
 import type { SelectFeed } from "~/database/schema";
 
 import { feeds } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** The columns a subscription write may change; the key and the timestamps are the table's. */
 export interface SubscriptionChanges extends Partial<

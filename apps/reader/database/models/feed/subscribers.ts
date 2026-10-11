@@ -7,10 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 
 import { subscribers } from "~/database/feed-schema";
+
+import { createModel } from "./context";
 
 /** Who follows the feed, which is all that keeps it polling. */
 export const Subscribers = createModel(subscribers, {

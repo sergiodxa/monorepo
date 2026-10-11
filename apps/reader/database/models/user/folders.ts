@@ -7,14 +7,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { SelectFolder } from "~/database/schema";
 
-import { feedItems, feeds, folders } from "~/database/schema";
+import { folders } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** A reader's folders; deleting one unfiles its subscriptions and posts in the same turn. */
 export const Folders = createModel(folders, {
@@ -36,8 +37,8 @@ export const Folders = createModel(folders, {
 		 * name is idempotent: a document naming one folder over twenty feeds creates it once.
 		 */
 		async findOrCreate(title: string): Promise<SelectFolder> {
-			let existing = await this.byTitle(title);
-			return existing ?? unwrap(await this.create({ title }));
+			let id = TypeID.fromUUID("folder", generateUUID()).toString();
+			return unwrap(await this.upsert({ id, title }, { conflict: ["title"], update: {} }));
 		},
 	},
 
@@ -52,8 +53,8 @@ export const Folders = createModel(folders, {
 		 * post and leaves its feeds exactly as they were before anybody made it.
 		 */
 		async beforeDelete(folder, ctx) {
-			await ctx.db.updateMany(feeds, { folder_id: null }, { where: { folder_id: folder.id } });
-			await ctx.db.updateMany(feedItems, { folder_id: null }, { where: { folder_id: folder.id } });
+			await ctx.models.subscriptions.inFolder(folder.id).update({ folder_id: null });
+			await ctx.models.posts.query().where({ folder_id: folder.id }).update({ folder_id: null });
 		},
 	},
 });

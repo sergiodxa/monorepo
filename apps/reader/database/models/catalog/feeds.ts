@@ -7,9 +7,9 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
-
 import { catalogFeeds } from "~/database/catalog-schema";
+
+import { createModel } from "./context";
 
 /**
  * The feeds anybody has ever followed. Each life-cycle write is one statement answering

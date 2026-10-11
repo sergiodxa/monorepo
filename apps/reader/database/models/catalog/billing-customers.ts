@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { gt } from "remix/data-table";
 
 import type { SelectBillingCustomer } from "~/database/catalog-schema";
 
 import { billingCustomers } from "~/database/catalog-schema";
+
+import { createModel } from "./context";
 
 /** The readers behind each connection's customer ids, read by subject or by the platform's id. */
 export const BillingCustomers = createModel(billingCustomers, {

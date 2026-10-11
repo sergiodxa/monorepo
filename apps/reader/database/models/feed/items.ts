@@ -7,12 +7,13 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { gt } from "remix/data-table";
 
 import type { SelectItem } from "~/database/feed-schema";
 
 import { items } from "~/database/feed-schema";
+
+import { createModel } from "./context";
 
 /** The feed's canonical items, which every subscriber copies from. */
 export const Items = createModel(items, {

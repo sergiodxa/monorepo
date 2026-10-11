@@ -7,10 +7,11 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { createModel } from "@sdxc/data-model";
 import { isNull, notNull } from "remix/data-table";
 
 import { feedItems } from "~/database/schema";
+
+import { createModel } from "./context";
 
 /** One reader's posts, with scopes for the marks every count and single-post read filters on. */
 export const Posts = createModel(feedItems, {
