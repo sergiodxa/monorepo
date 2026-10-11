@@ -145,6 +145,7 @@ the rest convert one app at a time, completely, before the next starts.
 
 - MUST keep `bootstrap/` to entry points, and never import from it outside `bootstrap/`; no tsconfig declares a `~/bootstrap/*` alias
 - MUST NOT create `app/lib/`, `app/repositories/`, `app/data/` or any folder outside the table; an instance of a package is an initializer, a store is a model, generic code is a package
+- MUST lay `app/mcp/` out like routes: declarations in `tools/index.ts` and `resources/index.ts`, one handler file per tool or resource beside them (`tools/search-jobs.ts`, `resources/posting.ts`, each a default-exported `createTool(toolset.x, …)` / `createResource(resourceset.x, …)`), and the wiring in `app/initializers/mcp.ts`, which only creates the handler and calls `mcp.tools.map` / `mcp.resources.map` once per handler file; a handler never lives inline in the initializer, and shaping shared by several handlers goes in a module beside the folders (`app/mcp/postings.ts`)
 - MUST export a singleton from an initializer, or a function when the instance needs per-request or async input
 - MUST write the router's global middleware inline in `createRouter({ middleware: [...] })` and derive `AppContext` as `RouterContext` of that router; a stored `Middleware[]` erases what each middleware publishes
 - MUST render pages through `render({ assets })` from `remix/middleware/render`, adding what every page carries (document assets, a CSP nonce) in a `renderWith()` wrapper in `app/http/render.tsx`
