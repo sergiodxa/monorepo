@@ -9,11 +9,12 @@
 
 import type { Captcha } from "@sdxc/captcha";
 import type { Database as DataTable } from "remix/data-table";
-import type { RouterContext } from "remix/router";
+import type { Middleware, RouterContext } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import i18n from "@sdxc/i18n/middleware";
+import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
@@ -21,10 +22,7 @@ import { formData } from "remix/middleware/form-data";
 import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import * as board from "~/app/http/controllers/board";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import outbox from "~/app/http/controllers/outbox";
-import position from "~/app/http/controllers/position";
 import database from "~/app/http/middleware/database";
 import jobs from "~/app/http/middleware/jobs";
 import models from "~/app/http/middleware/models";
@@ -35,7 +33,6 @@ import { captchaProvider } from "~/app/initializers/captcha";
 import { openDatabase } from "~/app/initializers/database";
 import { FALLBACK_LANGUAGE, resources, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
 import { logger } from "~/app/initializers/logger";
-import mcp from "~/app/initializers/mcp";
 import routes from "~/routes/web";
 
 /** Submissions one caller may make per minute, comfortably above a person filling a form. */
@@ -45,7 +42,7 @@ const SUBMIT_LIMIT = 5;
 const MCP_LIMIT = 60;
 
 /** The context a handler sees once the global middleware has run. */
-export type AppContext = RouterContext<ReturnType<typeof application>>;
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
 
 declare module "remix/router" {
 	/** Types route helpers such as `createAction` with the context the global chain builds. */
@@ -56,14 +53,15 @@ declare module "remix/router" {
 
 /**
  * Builds the board's HTTP router. The middleware list is written inline, so the router's type
- * carries what each link publishes and {@link AppContext} reads it from there.
+ * carries what each link publishes and {@link AppContext} reads it from there. Every route is
+ * mapped through `lazy()`, so a request imports only the controller it reaches.
  *
  * @param openDb Opens the database every request and job reads through; a test hands in its
  * own, so what it drives is the router the worker builds.
  * @param guard The provider the submit form is verified against.
  * @returns The configured router the worker forwards requests to.
  */
-export default function application(
+export function createWebRouter(
 	openDb: () => DataTable = openDatabase,
 	guard: Captcha = captchaProvider(),
 ) {
@@ -89,22 +87,36 @@ export default function application(
 
 	router.map(routes.board, {
 		actions: {
-			index: board.index,
-			action: {
-				middleware: [callerBudget("submit", SUBMIT_LIMIT), captcha(guard)],
-				handler: board.action,
-			},
+			index: lazy(() => import("~/app/http/controllers/board").then((it) => it.index)),
+			action: lazy(
+				() => import("~/app/http/controllers/board").then((it) => it.action),
+				/**
+				 * `captcha()` refuses a failed challenge itself and the action never reads the
+				 * outcome it publishes, so it runs here as a plain guard, before the module loads.
+				 */
+				[callerBudget("submit", SUBMIT_LIMIT), captcha(guard) as Middleware],
+			),
 		},
 	});
 
-	router.map(routes.position, position);
+	router.map(
+		routes.position,
+		lazy(() => import("~/app/http/controllers/position")),
+	);
 
-	router.map(routes.outbox, outbox);
+	router.map(
+		routes.outbox,
+		lazy(() => import("~/app/http/controllers/outbox")),
+	);
 
-	router.map(routes.mcp, {
-		middleware: [callerBudget("mcp", MCP_LIMIT)],
-		handler: (ctx) => mcp.fetch(ctx),
-	});
+	router.map(
+		routes.mcp,
+		lazy(
+			() =>
+				import("~/app/initializers/mcp").then((it) => (ctx: AppContext) => it.default.fetch(ctx)),
+			[callerBudget("mcp", MCP_LIMIT)],
+		),
+	);
 
 	return router;
 }

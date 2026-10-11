@@ -96,14 +96,18 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
    it; blog's KV-backed redirects become `app/models/redirects.ts`.
 5. **The router's global middleware is written inline** in `createRouter({ middleware: [...] })`,
    and `AppContext` is `RouterContext` of that router. A stored `Middleware[]` widens the tuple
-   and erases what each middleware publishes.
-6. **Pages render through `render({ assets })` from `remix/middleware/render`,** with a
+   and erases what each middleware publishes. The factory is a named export called after the
+   route contract it maps, `createWebRouter` for `routes/web.ts`, since it builds a router.
+6. **Every route is mapped through `lazy()` from `@sdxc/lazy-route`,** so a request imports only
+   the controller it reaches. Guards the router owns go in `lazy()`'s second argument and answer
+   before the module loads.
+7. **Pages render through `render({ assets })` from `remix/middleware/render`,** with a
    `renderWith()` wrapper in `app/http/render.tsx` for what the app adds around every page
    (document assets, a CSP nonce). Apps do not rebuild rendering from `renderToStream`.
-7. **Feature names group files inside a layer once the layer gets crowded,** using the same name
+8. **Feature names group files inside a layer once the layer gets crowded,** using the same name
    in every layer (`app/jobs/trials/`, `app/services/trials/`, `resources/views/trials/`), so
    `**/trials/**` finds the whole feature.
-8. **`test/app-layout.test.ts` enforces the layout** for every app in its `CONVERTED_APPS` list:
+9. **`test/app-layout.test.ts` enforces the layout** for every app in its `CONVERTED_APPS` list:
    the allowed root folders, the allowed `app/` folders, entry points alone in `bootstrap/`, and no
    import into `bootstrap/` from outside it.
 
@@ -185,7 +189,7 @@ which in a monorepo is a package.
 ## Current Progress
 
 - [x] demo
-- [ ] books
+- [x] books
 - [ ] sdxc
 - [ ] blog
 - [ ] r3-auth

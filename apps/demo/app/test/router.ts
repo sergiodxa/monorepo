@@ -1,5 +1,5 @@
 /**
- * Drives the real application router — the same middleware chain, controllers and jobs the
+ * Drives the real web router — the same middleware chain, controllers and jobs the
  * worker builds — against a database holding the board's own schema. A test substitutes
  * nothing else, so what it asserts on is what a visitor gets.
  *
@@ -14,7 +14,7 @@ import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
 import { localCaptcha } from "~/app/initializers/captcha";
-import application from "~/app/initializers/router";
+import { createWebRouter } from "~/app/initializers/router";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://demo.test";
@@ -58,5 +58,5 @@ export async function fetchApp(
 
 	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
 
-	return await application(() => db, localCaptcha()).fetch(request);
+	return await createWebRouter(() => db, localCaptcha()).fetch(request);
 }

@@ -11,13 +11,13 @@ import * as cloudflare from "@sdxc/jobs/cloudflare";
 
 import { openDatabase } from "~/app/initializers/database";
 import { createDispatcher, drain } from "~/app/initializers/dispatcher";
-import application from "~/app/initializers/router";
+import { createWebRouter } from "~/app/initializers/router";
 
 export default {
-	/** Handles an incoming request by building the app router and forwarding it. */
+	/** Handles an incoming request by building the web router and forwarding it. */
 	async fetch(request: Request) {
-		let app = application();
-		return await app.fetch(request);
+		let router = createWebRouter();
+		return await router.fetch(request);
 	},
 
 	/**
