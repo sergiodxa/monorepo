@@ -258,7 +258,7 @@ describe("helpers over any model", () => {
 		let models = createModels({
 			users: USERS,
 			articles: async () => ({ default: ARTICLES }),
-		}).bind({ db: null as never });
+		}).bind({ db: DB });
 
 		expectTypeOf<
 			Awaited<ReturnType<(typeof models)["users"]["findByEmail"]>>
