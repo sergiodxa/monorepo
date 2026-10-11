@@ -23,7 +23,7 @@ import notFound from "~/app/http/controllers/docs-not-found";
 import { prepareArticle, tableOfContents } from "~/app/services/article";
 import { MARKDOWN_OPTIONS, readGuide } from "~/app/services/docs";
 import { buildGuidesNav } from "~/app/services/navigation";
-import { absoluteUrl } from "~/app/services/site";
+import { absoluteUrl } from "~/config/site";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";

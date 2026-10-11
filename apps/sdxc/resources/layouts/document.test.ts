@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { fetchApp } from "~/app/lib/test/router";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { fetchApp } from "~/app/test/router";
 
 /** Pages that compose into the document from different layouts: landing, guide, policy. */
 const PAGES = ["/", "/docs", "/security"];

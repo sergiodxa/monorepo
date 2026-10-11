@@ -85,7 +85,7 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   regardless of which host answered.
 
 - **Link assets through the manifest.** The document's stylesheets and client entry come
-  from `documentAssets()` in `app/services/assets.ts`, which reads the manifest
+  from `documentAssets()` in `app/initializers/assets.ts`, which reads the manifest
   `@pitlane/vite-plugin-remix` writes; a build hashes every file, so a hand-written
   `/assets/...` URL names a file the next build renames. A stylesheet joins by a side-effect
   `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
@@ -97,25 +97,25 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
 
 ## Reference files
 
-| Concern                                               | File                                                            |
-| ----------------------------------------------------- | --------------------------------------------------------------- |
-| The tag vocabulary and parse                          | `app/services/content.ts`                                       |
-| Manifests and their grouping                          | `app/services/packages.ts`                                      |
-| The landing copy                                      | `resources/content/home.md`                                     |
-| The group taxonomy                                    | `resources/content/groups.ts`                                   |
-| The guides and their sections                         | `app/services/docs.ts`, `resources/docs/`                       |
-| The four sidebars and the pager's order               | `app/services/navigation.ts`                                    |
-| The shared markdown pass, and the link rewriting      | `app/services/article.ts`                                       |
-| The applications the showcase and a package page name | `resources/content/apps.ts`, `app/services/showcase.ts`         |
-| Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/controllers/sponsors.tsx` |
-| The cache policy a documentation page carries         | `app/http/caching.ts`                                           |
-| The named option groups and their cookie              | `app/services/option-groups.ts`, `app/http/cookies.ts`          |
-| The `@sdxc/ui` subpath pages and how a module is read | `app/services/ui-exports.ts`, `scripts/ui-exports.ts`           |
-| The components per tag                                | `resources/components/`                                         |
-| The palette the theme reads                           | `resources/css/colors.css`                                      |
-| Built asset URLs (manifest)                           | `app/services/assets.ts`                                        |
-| The site's one origin, and its head metadata          | `app/services/site.ts`                                          |
-| The search corpus and its ranking                     | `app/services/search.ts`, `app/services/search-query.ts`        |
-| What the `Open` menu offers                           | `app/services/open-links.ts`                                    |
-| The markdown map a model reads                        | `app/services/llms.ts`                                          |
-| What the MCP endpoint declares, and what answers it   | `app/mcp/`, `bootstrap/mcp.ts`                                  |
+| Concern                                               | File                                                              |
+| ----------------------------------------------------- | ----------------------------------------------------------------- |
+| The tag vocabulary and parse                          | `app/services/content.ts`                                         |
+| Manifests and their grouping                          | `app/services/packages.ts`                                        |
+| The landing copy                                      | `resources/content/home.md`                                       |
+| The group taxonomy                                    | `resources/content/groups.ts`                                     |
+| The guides and their sections                         | `app/services/docs.ts`, `resources/docs/`                         |
+| The four sidebars and the pager's order               | `app/services/navigation.ts`                                      |
+| The shared markdown pass, and the link rewriting      | `app/services/article.ts`                                         |
+| The applications the showcase and a package page name | `resources/content/apps.ts`, `app/services/showcase.ts`           |
+| Who funds the work, and where the list is kept        | `app/services/sponsors.ts`, `app/http/controllers/sponsors.tsx`   |
+| The cache policy a documentation page carries         | `app/http/caching.ts`                                             |
+| The named option groups and their cookie              | `app/services/option-groups.ts`, `app/initializers/cookies.ts`    |
+| The `@sdxc/ui` subpath pages and how a module is read | `app/services/ui-exports.ts`, `scripts/ui-exports.ts`             |
+| The components per tag                                | `resources/components/`                                           |
+| The palette the theme reads                           | `resources/css/colors.css`                                        |
+| Built asset URLs (manifest)                           | `app/initializers/assets.ts`                                      |
+| The site's one origin, and its head metadata          | `config/site.ts`, `app/initializers/seo.ts`                       |
+| The search corpus and its ranking                     | `app/services/search.ts`, `app/services/search-query.ts`          |
+| What the `Open` menu offers                           | `app/services/open-links.ts`                                      |
+| The markdown map a model reads                        | `app/services/llms.ts`                                            |
+| What the MCP endpoint declares, and what answers it   | `app/mcp/tools/`, `app/mcp/resources/`, `app/initializers/mcp.ts` |

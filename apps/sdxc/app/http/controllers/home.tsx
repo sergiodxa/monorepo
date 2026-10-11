@@ -13,8 +13,8 @@ import { vstack } from "@sdxc/u/layout";
 import { is } from "@sdxc/u/size";
 import { createAction } from "remix/router";
 
-import { readOptionSelections } from "~/app/http/cookies";
-import { siteCache } from "~/app/services/cache";
+import { siteCache } from "~/app/initializers/cache";
+import { readOptionSelections } from "~/app/initializers/cookies";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";

@@ -22,7 +22,6 @@ import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
 import { CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pages";
 import { buildUtilitiesNav } from "~/app/services/navigation";
-import { absoluteUrl } from "~/app/services/site";
 import { findUtility, readUtility } from "~/app/services/utilities";
 import {
 	atWidth,
@@ -31,6 +30,7 @@ import {
 	RESPONSIVE_FAMILY,
 	STATE_FAMILY,
 } from "~/app/services/utility-calls";
+import { absoluteUrl } from "~/config/site";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
 import ReferenceProse from "~/resources/components/reference-prose";

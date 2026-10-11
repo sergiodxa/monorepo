@@ -18,8 +18,11 @@ import { LinkButton } from "@sdxc/ui";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** Renders the 404 document for unmatched routes. */
-export default function defaultHandler(ctx: RequestContext) {
+/**
+ * Renders the 404 document for unmatched routes. Takes only the member it reads, since the
+ * router infers its context from the very options this handler is passed in.
+ */
+export default function defaultHandler(ctx: Pick<RequestContext, "render">) {
 	return ctx.render(
 		<DocumentLayout title="Not found — sdxc" description="The requested page does not exist.">
 			<main mix={[vstack({ gap: 5, align: "center", justify: "center" }), p(24, 5)]}>

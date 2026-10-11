@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp } from "~/app/test/router";
 
 /** What a browser sends once the reader has switched the strip to bun. */
 const CHOSE_BUN = { cookie: "sdxc:options=package-manager%3Abun" };

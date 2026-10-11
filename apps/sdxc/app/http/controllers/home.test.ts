@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
 import { readPackageFacts } from "~/app/services/packages";
+import { fetchApp } from "~/app/test/router";
 
 describe("GET /", () => {
 	test("renders the landing document", async () => {

@@ -14,9 +14,9 @@ import type { SponsorRoster } from "~/app/services/sponsors";
 /** The cache every page reads the roster from, replaced per test. */
 let cache = new MemoryCache();
 
-vi.doMock("~/app/services/cache", () => ({ siteCache: () => cache }));
+vi.doMock("~/app/initializers/cache", () => ({ siteCache: () => cache }));
 
-let { fetchApp } = await import("~/app/lib/test/router");
+let { fetchApp } = await import("~/app/test/router");
 let { SPONSORS_CACHE_KEY } = await import("~/app/services/sponsors");
 
 /** A sponsor whose every field is derived from their login. */

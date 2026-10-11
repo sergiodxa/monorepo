@@ -10,15 +10,15 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { RequestContext } from "remix/router";
+import type { AnyRequestContext } from "@sdxc/mcp";
 
 import { toRemix } from "@sdxc/markdown/remix";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { withBundleCache } from "~/app/http/caching";
+import mcp from "~/app/initializers/mcp";
 import { readContent } from "~/app/services/content";
-import mcp from "~/bootstrap/mcp";
 import { POLICY_COMPONENTS } from "~/resources/components/markdown-components";
 import mcpSource from "~/resources/content/mcp.md?raw";
 import DocumentLayout from "~/resources/layouts/document";
@@ -29,8 +29,11 @@ import routes from "~/routes/web";
 const DESCRIPTION =
 	"Search and read the @sdxc package documentation over the Model Context Protocol: one stateless endpoint, every tool read-only, no credential.";
 
-/** Answers a `POST` as the protocol, with the router's own context in hand. */
-export function mcpEndpoint(ctx: RequestContext): Promise<Response> {
+/**
+ * Answers a `POST` as the protocol, with the router's own context in hand. Typed over any
+ * request context, which is what the MCP server reads from.
+ */
+export function mcpEndpoint(ctx: AnyRequestContext): Promise<Response> {
 	return mcp.fetch(ctx);
 }
 

@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp } from "~/app/test/router";
 
 /** The guide whose prose draws a package's source tree. */
 const GUIDE = "/docs/conventions/subpath-exports";

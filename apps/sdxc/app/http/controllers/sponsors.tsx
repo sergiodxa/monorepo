@@ -22,7 +22,7 @@ import { createAction } from "remix/router";
 import type { Sponsor } from "~/app/services/sponsors";
 
 import { withBundleCache } from "~/app/http/caching";
-import { siteCache } from "~/app/services/cache";
+import { siteCache } from "~/app/initializers/cache";
 import { readContent } from "~/app/services/content";
 import { readStoredSponsors, sponsorsTag } from "~/app/services/sponsors";
 import { LANDING_COMPONENTS } from "~/resources/components/landing";

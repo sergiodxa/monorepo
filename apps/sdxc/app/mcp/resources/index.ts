@@ -12,7 +12,7 @@
 
 import { resource, resources } from "@sdxc/mcp";
 
-import { SITE_URL } from "~/app/services/site";
+import { SITE_URL } from "~/config/site";
 
 export default resources({
 	package: resource(`${SITE_URL}/api/:name.md`, {

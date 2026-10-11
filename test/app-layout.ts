@@ -13,7 +13,7 @@ import { dirname, join, relative } from "node:path";
  * Apps already moved onto the layout. An app joins this list in the commit that converts it,
  * and from then on the guard keeps it there.
  */
-export const CONVERTED_APPS = ["demo", "books"];
+export const CONVERTED_APPS = ["demo", "books", "sdxc"];
 
 /**
  * Folders an app's root may hold, besides dot-folders, installed dependencies and build output.

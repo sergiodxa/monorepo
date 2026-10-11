@@ -18,10 +18,11 @@ import { when } from "@sdxc/u/state";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/services/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 import type { OptionSelections } from "~/app/services/option-groups";
 
-import { seo, SITE_URL } from "~/app/services/site";
+import { seo } from "~/app/initializers/seo";
+import { SITE_URL } from "~/config/site";
 import OptionGroupScope from "~/resources/components/option-groups";
 import SiteFooter from "~/resources/components/site-footer";
 

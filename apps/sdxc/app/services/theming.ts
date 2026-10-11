@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-const documents = import.meta.glob<ThemeReference>("../generated/theme.json", {
+const documents = import.meta.glob<ThemeReference>("../../resources/generated/theme.json", {
 	import: "default",
 });
 

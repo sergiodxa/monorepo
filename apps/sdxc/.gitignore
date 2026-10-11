@@ -2,7 +2,7 @@
 
 # Folders
 /.cloudflare
-/app/generated
+/resources/generated
 
 # Files
 .dev.vars

@@ -11,7 +11,7 @@
 import type { PropRow } from "~/app/services/components";
 import type { UiSubpath } from "~/app/services/ui-subpaths";
 
-const documents = import.meta.glob<UiExportDocument>("../generated/ui-exports.json", {
+const documents = import.meta.glob<UiExportDocument>("../../resources/generated/ui-exports.json", {
 	import: "default",
 });
 

@@ -15,7 +15,7 @@ let records: Record<string, unknown>[] = [];
 /** Stands in for the GitHub read so the test observes which token it receives. */
 let refreshSponsors = vi.fn(async (_cache: unknown, _token: string) => ({ current: [], past: [] }));
 
-vi.doMock("./logger", () => ({
+vi.doMock("~/app/initializers/logger", () => ({
 	logger: createLogger({ service: "sdxc", sink: (record) => void records.push(record) }),
 }));
 vi.doMock("~/app/services/sponsors", () => ({ refreshSponsors }));

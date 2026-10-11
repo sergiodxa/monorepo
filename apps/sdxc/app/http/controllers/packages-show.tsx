@@ -26,7 +26,7 @@ import type { PackageEntry } from "~/app/services/packages";
 
 import { withBundleCache } from "~/app/http/caching";
 import notFound from "~/app/http/controllers/docs-not-found";
-import { readOptionSelections } from "~/app/http/cookies";
+import { readOptionSelections } from "~/app/initializers/cookies";
 import { preparePackageReadme, tableOfContents } from "~/app/services/article";
 import {
 	buildPackageNav,
@@ -41,7 +41,7 @@ import {
 	listPackageGroups,
 	readPackageReadme,
 } from "~/app/services/packages";
-import { absoluteUrl } from "~/app/services/site";
+import { absoluteUrl } from "~/config/site";
 import CatalogueIndex from "~/resources/components/catalogue-index";
 import InstallCommand from "~/resources/components/install-command";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";

@@ -11,7 +11,7 @@ import { isFailure } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import { siteCache } from "~/app/services/cache";
+import { siteCache } from "~/app/initializers/cache";
 import { verifyGitHubDelivery } from "~/app/services/github-webhook";
 import { refreshSponsors } from "~/app/services/sponsors";
 import routes from "~/routes/web";

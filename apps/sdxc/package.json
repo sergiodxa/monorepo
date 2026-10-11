@@ -23,6 +23,7 @@
 		"@sdxc/http": "workspace:*",
 		"@sdxc/icons": "workspace:*",
 		"@sdxc/json-schema": "workspace:*",
+		"@sdxc/lazy-route": "workspace:*",
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/markdown": "workspace:*",
 		"@sdxc/math": "workspace:*",

@@ -1,12 +1,12 @@
 /**
- * Drives the real application router — the same middleware chain and controllers the
+ * Drives the real web router — the same middleware chain and controllers the
  * worker builds — end to end, so a test asserts against the bytes a visitor receives.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
-import application from "~/bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://sdxc.test";
@@ -29,5 +29,5 @@ export async function fetchApp(path: string, init: RequestInit = {}): Promise<Re
 
 	let request = new Request(new URL(path, ORIGIN), { ...init, headers });
 
-	return await application().fetch(request);
+	return await createWebRouter().fetch(request);
 }

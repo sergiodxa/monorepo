@@ -370,7 +370,7 @@ export default defineConfig({
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc/app/lib/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/sdxc/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {

@@ -26,7 +26,7 @@ import { THEMING_SLUG, CATALOGUE_SOURCE_BASE } from "~/app/services/catalogue-pa
 import { readComponent } from "~/app/services/components";
 import { toHeadline } from "~/app/services/headline";
 import { buildComponentsNav } from "~/app/services/navigation";
-import { absoluteUrl } from "~/app/services/site";
+import { absoluteUrl } from "~/config/site";
 import CompositionTree from "~/resources/components/composition-tree";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";

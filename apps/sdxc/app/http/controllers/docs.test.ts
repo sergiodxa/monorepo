@@ -10,9 +10,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
 import { listGuides } from "~/app/services/docs";
 import { listPackages } from "~/app/services/packages";
+import { fetchApp } from "~/app/test/router";
 
 describe("GET /docs", () => {
 	test("routes by intent, one card per guide section", async () => {

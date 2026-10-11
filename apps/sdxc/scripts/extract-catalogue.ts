@@ -1,7 +1,7 @@
 /**
  * Writes the catalogue documents the site reads. It walks the two catalogue packages
  * on disk, extracts every utility and component, and emits one JSON file per
- * catalogue under `app/generated`, plus the totals the landing copy quotes. `dev`, `build` and the test run each start by
+ * catalogue under `resources/generated`, plus the totals the landing copy quotes. `dev`, `build` and the test run each start by
  * running it, so the site and its tests always read the packages as they are now.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -39,7 +39,7 @@ const APP = dirname(dirname(fileURLToPath(import.meta.url)));
 const PACKAGES = join(APP, "..", "..", "packages");
 
 /** Where the documents are written, and where the services read them from. */
-const OUTPUT = join(APP, "app", "generated");
+const OUTPUT = join(APP, "resources", "generated");
 
 /**
  * The modules declaring types several components share. They are listed rather than

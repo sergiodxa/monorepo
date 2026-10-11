@@ -18,7 +18,7 @@ import { is, m, maxIs, p } from "@sdxc/u/size";
 import { when } from "@sdxc/u/state";
 import { leading, text, tracking, weight } from "@sdxc/u/typography";
 
-import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/app/services/site";
+import { AUTHOR_NAME, AUTHOR_URL, AUTHOR_X_URL } from "~/config/site";
 import routes from "~/routes/web";
 
 /** Where the collection is read and its issues are filed. */

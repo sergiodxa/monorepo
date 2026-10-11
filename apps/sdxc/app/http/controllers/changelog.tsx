@@ -19,7 +19,7 @@ import { createAction } from "remix/router";
 
 import type { Anchor } from "~/app/services/article";
 
-import { siteCache } from "~/app/services/cache";
+import { siteCache } from "~/app/initializers/cache";
 import { parseNotes, readChangelog } from "~/app/services/changelog";
 import { buildGuidesNav } from "~/app/services/navigation";
 import { DOCS_COMPONENTS } from "~/resources/components/markdown-components";

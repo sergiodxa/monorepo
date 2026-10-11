@@ -20,7 +20,7 @@ export const CLIENT_ENTRY_HREF = "/assets/browser.js";
 export const STYLESHEET_HREF = "/assets/index.css";
 
 /** The app's root, which every manifest key is relative to. */
-const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "../../..");
+const APP_DIR = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 /** An island export, however the formatter wraps the call's arguments. */
 const ISLAND = /clientEntry\(\s*import\.meta\.url/;

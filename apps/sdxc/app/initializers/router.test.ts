@@ -20,7 +20,7 @@ vi.doMock("./logger", () => ({
 	logger: createLogger({ service: "sdxc", sink: (record) => void records.push(record) }),
 }));
 
-let { fetchApp } = await import("~/app/lib/test/router");
+let { fetchApp } = await import("~/app/test/router");
 
 beforeEach(() => {
 	records = [];

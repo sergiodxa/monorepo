@@ -10,9 +10,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
 import { readPackageFacts } from "~/app/services/packages";
 import { listShowcase } from "~/app/services/showcase";
+import { fetchApp } from "~/app/test/router";
 
 describe("GET /philosophy", () => {
 	test("renders the six pillars", async () => {

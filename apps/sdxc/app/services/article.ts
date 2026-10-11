@@ -44,7 +44,7 @@ export interface Anchor {
  * quoting them is counted from the same run that built their pages.
  */
 const extractedCounts = import.meta.glob<{ utilities: number; components: number; rfcs: number }>(
-	"../generated/counts.json",
+	"../../resources/generated/counts.json",
 	{ eager: true, import: "default" },
 );
 

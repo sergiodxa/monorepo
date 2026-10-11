@@ -11,10 +11,10 @@
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { describe, expect, test } from "vitest";
 
-import { fetchApp, ORIGIN } from "~/app/lib/test/router";
 import { listCataloguePages } from "~/app/services/catalogue-pages";
 import { listGuides } from "~/app/services/docs";
 import { listPackages, readPackageReadme } from "~/app/services/packages";
+import { fetchApp, ORIGIN } from "~/app/test/router";
 
 /**
  * Posts one JSON-RPC message through the real router and reads the result back. A call

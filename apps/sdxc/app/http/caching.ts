@@ -13,7 +13,7 @@
 import { conditional, etag, policy, vary } from "@sdxc/http/cache";
 import { isSuccess } from "@sdxc/result";
 
-import { readOptionSelections } from "~/app/http/cookies";
+import { readOptionSelections } from "~/app/initializers/cookies";
 import { serializeOptionSelections } from "~/app/services/option-groups";
 
 /** How long a browser reuses its own copy before revalidating against the tag. */

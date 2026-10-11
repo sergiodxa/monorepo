@@ -101,15 +101,18 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
 6. **Every route is mapped through `lazy()` from `@sdxc/lazy-route`,** so a request imports only
    the controller it reaches. Guards the router owns go in `lazy()`'s second argument and answer
    before the module loads.
-7. **Pages render through `render({ assets })` from `remix/middleware/render`,** with a
+7. **Each MCP tool and resource handler is its own default-exported file** in `app/mcp/tools/` or
+   `app/mcp/resources/`, with the declarations in each folder's `index.ts`, mapped through
+   `lazy()` from `@sdxc/mcp` so a call imports only the handler it reaches.
+8. **Pages render through `render({ assets })` from `remix/middleware/render`,** with a
    `renderWith()` wrapper in `app/http/render.tsx` for what the app adds around every page
    (document assets, a CSP nonce). Apps do not rebuild rendering from `renderToStream`.
-8. **Feature names group files inside a layer once the layer gets crowded,** using the same name
+9. **Feature names group files inside a layer once the layer gets crowded,** using the same name
    in every layer (`app/jobs/trials/`, `app/services/trials/`, `resources/views/trials/`), so
    `**/trials/**` finds the whole feature.
-9. **`test/app-layout.test.ts` enforces the layout** for every app in its `CONVERTED_APPS` list:
-   the allowed root folders, the allowed `app/` folders, entry points alone in `bootstrap/`, and no
-   import into `bootstrap/` from outside it.
+10. **`test/app-layout.test.ts` enforces the layout** for every app in its `CONVERTED_APPS` list:
+    the allowed root folders, the allowed `app/` folders, entry points alone in `bootstrap/`, and no
+    import into `bootstrap/` from outside it.
 
 ## Consequences
 
@@ -190,7 +193,7 @@ which in a monorepo is a package.
 
 - [x] demo
 - [x] books
-- [ ] sdxc
+- [x] sdxc
 - [ ] blog
 - [ ] r3-auth
 - [ ] reader

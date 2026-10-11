@@ -9,8 +9,8 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp, ORIGIN } from "~/app/lib/test/router";
 import { readComponent } from "~/app/services/components";
+import { fetchApp, ORIGIN } from "~/app/test/router";
 import {
 	exampleComponents,
 	findPreview,

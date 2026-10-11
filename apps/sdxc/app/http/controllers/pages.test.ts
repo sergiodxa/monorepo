@@ -12,8 +12,8 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
 import { buildGuidesNav } from "~/app/services/navigation";
+import { fetchApp } from "~/app/test/router";
 
 /** What the changelog reads, as GitHub sends it. */
 const ENDPOINT = "https://api.github.com/repos/sergiodxa/monorepo/releases";

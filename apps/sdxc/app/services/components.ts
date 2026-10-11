@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-const documents = import.meta.glob<ComponentDocument>("../generated/components.json", {
+const documents = import.meta.glob<ComponentDocument>("../../resources/generated/components.json", {
 	import: "default",
 });
 

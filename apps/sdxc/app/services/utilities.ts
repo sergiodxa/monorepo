@@ -9,7 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-const documents = import.meta.glob<UtilityDocument>("../generated/utilities.json", {
+const documents = import.meta.glob<UtilityDocument>("../../resources/generated/utilities.json", {
 	import: "default",
 });
 

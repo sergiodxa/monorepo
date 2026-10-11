@@ -151,6 +151,7 @@ the rest convert one app at a time, completely, before the next starts.
 - MUST name a router initializer's factory after the route contract it maps, `create<Contract>Router` (`createWebRouter` for `routes/web.ts`, `createTenantRouter` for `routes/tenant.ts`), as a named export; it builds a router, so never `application`
 - MUST write the router's global middleware inline in `createRouter({ middleware: [...] })` and derive `AppContext` as `RouterContext` of that router; a stored `Middleware[]` erases what each middleware publishes
 - MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a request imports only the controller it reaches; a route group's guards go in `lazy()`'s second argument and answer before the module loads
+- MUST give each MCP tool and resource handler its own default-exported file in `app/mcp/tools/` or `app/mcp/resources/`, with the declarations in each folder's `index.ts`, and map every handler through `lazy()` from `@sdxc/mcp`; set `cacheScope: "public"` when no handler declares `available`, since lazy handlers make lists `"private"` by default
 - MUST render pages through `render({ assets })` from `remix/middleware/render`, adding what every page carries (document assets, a CSP nonce) in a `renderWith()` wrapper in `app/http/render.tsx`
 - SHOULD group a crowded layer by feature with the same folder name in every layer (`app/jobs/trials/`, `app/services/trials/`), so `**/trials/**` finds the whole feature
 
