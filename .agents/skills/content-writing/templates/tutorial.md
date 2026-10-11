@@ -6,7 +6,7 @@ This template demonstrates the structure and style for tutorials on sergiodxa.co
 
 ```yaml
 ---
-title: How to [Action] with [Technology]
+title: [Action] with [Technology]
 tech: package@1.0.0 @scope/package@2.0.0
 excerpt: [Complete sentence under 130 characters describing what the reader will accomplish.]
 ---
@@ -14,17 +14,18 @@ excerpt: [Complete sentence under 130 characters describing what the reader will
 
 Title guidance:
 
-- Keep `How to` at the start
+- Start with the verb, never with `How to`: the blog adds it, so the title must complete "how to …"
 - Make the rest of the title answer one specific question
 - Name the concrete pattern, feature, or tool
-- Avoid vague titles like `How to Improve Your App` when the tutorial is really about one narrower technique
+- Avoid vague titles like `Improve Your App` when the tutorial is really about one narrower technique
 
 Examples:
 
-- `How to Validate Third-Party API Responses with remix/data-schema`
-- `How to Build a Modal Route with Frame in Remix UI`
-- Avoid: `How to Work with APIs`
-- Avoid: `How to Build Better Apps`
+- `Validate Third-Party API Responses with remix/data-schema`
+- `Build a Modal Route with Frame in Remix UI`
+- Avoid: `How to Validate Third-Party API Responses` (the blog already adds "how to")
+- Avoid: `Work with APIs`
+- Avoid: `Build Better Apps`
 
 ## Opening (1-2 paragraphs)
 
@@ -66,19 +67,19 @@ export function doSomething(input: string) {
 
 Brief explanation of what this code does (1-2 sentences). Why this approach matters or what problem it solves (1-2 sentences).
 
-## Closing Section
+## Closing
 
-A brief "Final Thoughts" or conclusion section that covers:
+End with the last step. A short wrap-up paragraph after it, with no heading of its own, may cover:
 
-- When to use this pattern
+- That the reader now has the thing working ("And that's it, …")
 - Trade-offs or limitations
-- Related topics (without diving into them)
+- What the reader could add next (without diving into it)
 
 ## Example: Complete Tutorial
 
 ```markdown
 ---
-title: How to Add Rate Limiting to Your API
+title: Add Rate Limiting to Your API
 tech: hono@4.0.0
 excerpt: Protect your API endpoints from abuse by implementing token bucket rate limiting.
 ---
@@ -163,8 +164,6 @@ export default app;
 \`\`\`
 
 Apply the middleware to your API routes. All routes under `/api/*` now have rate limiting.
-
-## Final Thoughts
 
 Token bucket rate limiting allows short bursts while maintaining average rate limits. For production, consider using a distributed store like Redis instead of in-memory storage. You may also want different limits for authenticated versus anonymous users.
 ```

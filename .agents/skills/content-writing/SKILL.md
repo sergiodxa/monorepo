@@ -17,7 +17,7 @@ Content MUST be classified as either a **tutorial** or an **article** before wri
 
 Tutorials teach readers HOW to build something specific.
 
-- Tutorials MUST have titles starting with "How to"
+- Tutorials MUST have titles that start with an imperative verb and complete the phrase "how to …" without containing it (`Add an MCP Server to a Remix v3 App`), because the blog prefixes the title itself (the feed renders "I published how to ${title}")
 - Tutorials MUST focus on implementation steps
 - Tutorials MUST use code as the primary content
 - Tutorials MUST result in working functionality
@@ -60,9 +60,9 @@ Tutorials MUST include:
 
 Tutorial title rules:
 
-- Tutorials MUST keep the "How to" opening
-- Tutorials MUST answer a specific "How to" question, not a broad topic area
-- Tutorials SHOULD complete the title with the concrete outcome, pattern, or tool after "How to"
+- Tutorials MUST NOT start the title with "How to"; start with the verb instead
+- Tutorials MUST answer a specific "how to" question, not a broad topic area
+- Tutorials SHOULD complete the title with the concrete outcome, pattern, or tool after the verb
 - Tutorials SHOULD avoid generic endings like "in JavaScript" unless the language is part of the actual point
 
 Tech versions MUST be actual released versions. When uncertain, confirm with the author.
@@ -98,11 +98,11 @@ Article title rules:
 
 ### Closing Sections
 
-- Tutorials SHOULD use "Final Thoughts" as the closing heading
+- Tutorials MUST end with the last step, with no dedicated closing heading; a short wrap-up paragraph after it MAY close the post ("And that's it, …")
 - Articles SHOULD use "Conclusion" as the closing heading
-- Closing sections MUST be brief (2-4 sentences)
-- Closing sections MUST NOT introduce new concepts
-- Closing sections MAY suggest extensions the reader could explore: "You can extend this further by adding..."
+- Closing paragraphs and sections MUST be brief (2-4 sentences)
+- Closing paragraphs and sections MUST NOT introduce new concepts
+- Closing paragraphs and sections MAY suggest extensions the reader could explore: "From here we could add…"
 - Extension suggestions MUST NOT include implementation details, only ideas
 
 ## Code Blocks
@@ -200,9 +200,8 @@ Example:
 ### Spelling and Grammar
 
 - Content MUST use American English spelling
-- Content MUST NOT use dashes or em-dashes in prose
-- Content MAY use dashes in markdown lists and code
-- Content SHOULD use commas, colons, or periods instead of dashes
+- Content MAY use an em-dash in prose for an aside, sparingly
+- Content SHOULD prefer commas, colons, or periods when the sentence reads as well without a dash
 
 ### Headings
 
