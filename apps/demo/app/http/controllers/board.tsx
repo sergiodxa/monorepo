@@ -12,13 +12,13 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import type { AppContext } from "~/bootstrap/app";
+import type { AppContext } from "~/app/initializers/router";
 import type { Posting } from "~/database/schema";
 
 import { PostingSchema } from "~/app/http/validators/posting";
+import { cache, LISTING_KEY, LISTING_TTL } from "~/app/initializers/cache";
+import { turnstileSiteKey } from "~/app/initializers/captcha";
 import jobs from "~/app/jobs";
-import { cache, LISTING_KEY, LISTING_TTL } from "~/app/lib/cache";
-import { turnstileSiteKey } from "~/app/lib/captcha";
 import DocumentLayout from "~/resources/layouts/document";
 import BoardView from "~/resources/views/board";
 import routes from "~/routes/web";

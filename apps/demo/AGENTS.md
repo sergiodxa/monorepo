@@ -20,11 +20,11 @@ shortest correct version of a thing wins over the clever one.
 - MUST build every view out of `@sdxc/ui` components, styling through their own
   `variant`/`color`/`size` props and reaching for `@sdxc/u` mixins only for layout no
   component owns
-- MUST put every user-facing string in `app/locales/`, both languages, and read it through
-  `ctx.intl.t`
-- MUST build the router's global chain with `createMiddleware(...)` and type a controller's
-  context as `AppContext` from `bootstrap/app.tsx`, never a `Middleware[]` variable, which
-  erases what each middleware publishes
+- MUST put every user-facing string in `resources/locales/`, both languages, and read it
+  through `ctx.intl.t`
+- MUST write the router's global middleware inline in `createRouter({ middleware: [...] })` and
+  type a controller's context as `AppContext` from `app/initializers/router.tsx`, never a
+  `Middleware[]` variable, which erases what each middleware publishes
 - MUST keep models free of request concerns: a model callback never reads the language or the
   translator, so wording a message, and enqueueing the job that sends it in the visitor's
   language, stays in the controller or the MCP tool
@@ -33,13 +33,16 @@ shortest correct version of a thing wins over the clever one.
 
 ## Reference Files
 
-| Concern                       | File                       |
-| ----------------------------- | -------------------------- |
-| Router assembly, `AppContext` | `bootstrap/app.tsx`        |
-| MCP server                    | `bootstrap/mcp.ts`         |
-| Job dispatcher and its queue  | `app/jobs/dispatcher.ts`   |
-| Models and their registry     | `app/models/`              |
-| In-memory adapters            | `app/lib/`                 |
-| Palette the theme derives     | `resources/css/colors.css` |
-| Built asset URLs (manifest)   | `app/lib/assets.ts`        |
-| Router-level tests            | `app/lib/test/router.ts`   |
+| Concern                       | File                             |
+| ----------------------------- | -------------------------------- |
+| Worker entry point            | `bootstrap/worker.ts`            |
+| Router assembly, `AppContext` | `app/initializers/router.tsx`    |
+| MCP server                    | `app/initializers/mcp.ts`        |
+| Job dispatcher and its queue  | `app/initializers/dispatcher.ts` |
+| In-memory adapters            | `app/initializers/`              |
+| Built asset URLs (manifest)   | `app/initializers/assets.ts`     |
+| Document assets on each page  | `app/http/render.tsx`            |
+| Models and their registry     | `app/models/`                    |
+| Test factories                | `database/factories/`            |
+| Palette the theme derives     | `resources/css/colors.css`       |
+| Router-level tests            | `app/test/router.ts`             |

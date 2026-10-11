@@ -17,10 +17,10 @@ import * as memory from "@sdxc/jobs/memory";
 
 import type { DatabaseEffect } from "~/app/jobs/middleware/database";
 
+import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
 import { Database, database } from "~/app/jobs/middleware/database";
 import { models } from "~/app/models";
-import { logger } from "~/bootstrap/logger";
 
 /** The models a job reads as `ctx.models`, bound to the database the chain opened. */
 function modelsMiddleware() {

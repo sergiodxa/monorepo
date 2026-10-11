@@ -13,15 +13,15 @@ import { createD1Database } from "@sdxc/cloudflare-mocks";
 import { createD1DatabaseAdapter } from "@sdxc/data-table-d1";
 import { Database } from "remix/data-table";
 
-import { localCaptcha } from "~/app/lib/captcha";
-import application from "~/bootstrap/app";
+import { localCaptcha } from "~/app/initializers/captcha";
+import application from "~/app/initializers/router";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://demo.test";
 
 /** The schema every test database starts from, read from the migration the app ships. */
 const MIGRATION = readFileSync(
-	new URL("../../../database/migrations/0001-init.sql", import.meta.url),
+	new URL("../../database/migrations/0001-init.sql", import.meta.url),
 	"utf8",
 );
 

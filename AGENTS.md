@@ -121,6 +121,35 @@ bun cf:typegen                  # Generate TypeScript types for Cloudflare Worke
 - MUST write public blog content against what a reader can install: articles and tutorials may name and import the published `@sdxc/*` packages from npm, and must not reference `packages/*` paths, `workspace:*` versions, or anything that exists only inside this repo
 - MUST write Remix tutorials with Remix v3 route contracts, controllers, middleware context, `remix/data-schema`, and `remix/component`; do not use React Router route-module exports, `Route.*` types, `useLoaderData`, `useActionData`, React hooks, or top-level `remix` imports unless the post is explicitly about React or legacy React Router
 
+### App layout
+
+Every app is organised by kind of code, one home per kind ([ADR-129](./docs/adr/ADR-129-app-folder-layout.md)).
+Apps listed in `CONVERTED_APPS` in `test/app-layout.ts` are held to it by `test/app-layout.test.ts`;
+the rest convert one app at a time, completely, before the next starts.
+
+| If the code…                                                                                                             | It goes in                                                             |
+| ------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| is the Worker or browser entry point                                                                                     | `bootstrap/worker.ts`, `bootstrap/browser.ts`                          |
+| is a Durable Object class                                                                                                | `bootstrap/do/`, importing its logic from `app/`                       |
+| builds the one instance of something (logger, router, dispatcher, MCP handler, database, billing, flags, mailer, assets) | `app/initializers/`                                                    |
+| handles HTTP: controllers, middleware, input validators, the renderer wrapper                                            | `app/http/{controllers,middleware,validators}/`, `app/http/render.tsx` |
+| is a background job, an MCP tool, an email template                                                                      | `app/jobs/`, `app/mcp/`, `app/emails/`                                 |
+| reads or writes stored state, in any storage (D1, KV, R2, Durable Object)                                                | `app/models/`                                                          |
+| is a rule about one model                                                                                                | a method on that model                                                 |
+| is business logic across models or package instances, or a rule about none                                               | `app/services/`                                                        |
+| is an authorization rule                                                                                                 | `app/policies/`                                                        |
+| is a view, component, layout, stylesheet or translation                                                                  | `resources/` (`resources/locales/` for translations)                   |
+| is a route contract, a migration or schema, a test factory                                                               | `routes/`, `database/`, `database/factories/`                          |
+| is any other test helper                                                                                                 | `app/test/`                                                            |
+| is generic, with no knowledge of the app                                                                                 | a package                                                              |
+
+- MUST keep `bootstrap/` to entry points, and never import from it outside `bootstrap/`; no tsconfig declares a `~/bootstrap/*` alias
+- MUST NOT create `app/lib/`, `app/repositories/`, `app/data/` or any folder outside the table; an instance of a package is an initializer, a store is a model, generic code is a package
+- MUST export a singleton from an initializer, or a function when the instance needs per-request or async input
+- MUST write the router's global middleware inline in `createRouter({ middleware: [...] })` and derive `AppContext` as `RouterContext` of that router; a stored `Middleware[]` erases what each middleware publishes
+- MUST render pages through `render({ assets })` from `remix/middleware/render`, adding what every page carries (document assets, a CSP nonce) in a `renderWith()` wrapper in `app/http/render.tsx`
+- SHOULD group a crowded layer by feature with the same folder name in every layer (`app/jobs/trials/`, `app/services/trials/`), so `**/trials/**` finds the whole feature
+
 ### Publishing
 
 Every package ships to npm under the `@sdxc` scope through the daily release described in

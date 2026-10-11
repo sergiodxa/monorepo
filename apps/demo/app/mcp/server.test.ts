@@ -12,9 +12,10 @@ import type { Database } from "remix/data-table";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { beforeEach, expect, test } from "vitest";
 
-import { outbox } from "~/app/lib/mailer";
-import { bindModels, PostingFactory } from "~/app/lib/test/models";
-import { createTestDatabase, fetchApp, ORIGIN } from "~/app/lib/test/router";
+import { outbox } from "~/app/initializers/mailer";
+import { bindModels } from "~/app/test/models";
+import { createTestDatabase, fetchApp, ORIGIN } from "~/app/test/router";
+import { PostingFactory } from "~/database/factories/postings";
 
 /** What the endpoint answered, in the fields these tests read. */
 interface Body {

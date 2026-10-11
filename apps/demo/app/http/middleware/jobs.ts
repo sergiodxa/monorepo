@@ -12,7 +12,7 @@ import type { Middleware } from "remix/router";
 
 import { jobEnqueuer } from "@sdxc/jobs/router";
 
-import { createDispatcher, drain } from "~/app/jobs/dispatcher";
+import { createDispatcher, drain } from "~/app/initializers/dispatcher";
 
 /**
  * Creates middleware publishing `ctx.jobs` over a queue of the request's own, then running

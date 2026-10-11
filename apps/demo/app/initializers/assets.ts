@@ -12,8 +12,11 @@ import type { ScriptEntry } from "@pitlane/assets";
 import { createAssetResolver } from "@pitlane/assets";
 import manifest from "@pitlane/assets/manifest";
 
-/** Answers lookups by source path, relative to the app's root. */
-const assets = createAssetResolver(manifest);
+/**
+ * Answers lookups by source path, relative to the app's root. `render()` resolves the board's
+ * island through it to the chunk the build emitted, with its preloads.
+ */
+export const assets = createAssetResolver(manifest);
 
 /** What the document shell links: the stylesheets every page wears and the client entry. */
 export interface DocumentAssets {

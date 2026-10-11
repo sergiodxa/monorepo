@@ -11,9 +11,9 @@ import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
 import { PostingPublishedEmail } from "~/app/emails/posting-published";
+import { translatorFor } from "~/app/initializers/i18n";
+import { mailer } from "~/app/initializers/mailer";
 import jobs from "~/app/jobs";
-import { translatorFor } from "~/app/lib/i18n";
-import { mailer } from "~/app/lib/mailer";
 
 export default createJobHandler(jobs.sendConfirmation, async (ctx) => {
 	let posting = await ctx.models.postings.find(ctx.input.postingId);

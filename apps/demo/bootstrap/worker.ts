@@ -9,10 +9,9 @@
 
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 
-import { createDispatcher, drain } from "~/app/jobs/dispatcher";
-import { openDatabase } from "~/app/lib/database";
-
-import application from "./app";
+import { openDatabase } from "~/app/initializers/database";
+import { createDispatcher, drain } from "~/app/initializers/dispatcher";
+import application from "~/app/initializers/router";
 
 export default {
 	/** Handles an incoming request by building the app router and forwarding it. */

@@ -16,7 +16,7 @@ import { gap, grid, gridColumn, gridTemplate, vstack } from "@sdxc/u/layout";
 import { when } from "@sdxc/u/state";
 import { Alert, Button, Dialog, Form, Label, TextArea, TextField } from "@sdxc/ui";
 
-import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
+import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/initializers/captcha";
 import routes from "~/routes/web";
 
 /** The `id` the board's trigger names in `commandfor`. */

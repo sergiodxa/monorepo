@@ -15,7 +15,7 @@ import { is, maxIs, minBs, p } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/lib/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";

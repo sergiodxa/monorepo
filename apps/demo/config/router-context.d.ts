@@ -1,6 +1,6 @@
 import type { RemixNode } from "remix/component";
 /**
- * Router context values installed by globally-applied middleware. `bootstrap/app.tsx`
+ * Router context values installed by globally-applied middleware. `app/initializers/router.tsx`
  * installs `formData()` and `renderWith(createHtmlRenderer)`; both populate the context
  * through a transform rather than through a route handler's own typing, so this
  * augmentation is what surfaces them to a controller.

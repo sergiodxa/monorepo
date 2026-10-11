@@ -11,12 +11,13 @@ import type { Database } from "remix/data-table";
 
 import { beforeEach, expect, test } from "vitest";
 
-import { cache, LISTING_KEY } from "~/app/lib/cache";
-import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/lib/captcha";
-import { outbox } from "~/app/lib/mailer";
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { bindModels, PostingFactory } from "~/app/lib/test/models";
-import { createTestDatabase, fetchApp } from "~/app/lib/test/router";
+import { cache, LISTING_KEY } from "~/app/initializers/cache";
+import { LOCAL_ANSWER, LOCAL_FIELD } from "~/app/initializers/captcha";
+import { outbox } from "~/app/initializers/mailer";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { bindModels } from "~/app/test/models";
+import { createTestDatabase, fetchApp } from "~/app/test/router";
+import { PostingFactory } from "~/database/factories/postings";
 
 /**
  * Host the captcha provider serves its own widget from. The board links one script of its
@@ -144,13 +145,17 @@ test("renders one position on its own, formatted", async () => {
 	expect(html).toContain(`mailto:${posting.contact_email}`);
 });
 
+/**
+ * A frame's answer is written into a page that already has a document around it, so it
+ * carries the detail and no shell of its own.
+ */
 test("answers a frame with the detail alone", async () => {
 	let posting = await publishMarkdownPosting();
 
 	let html = await (await fetchApp(db, `/positions/${posting.id}?frame`)).text();
 
 	expect(html).toContain(RENDERED_DESCRIPTION);
-	expect(html).not.toContain("<!DOCTYPE html>");
+	expect(html).not.toContain("<html");
 	expect(html).not.toContain("<body");
 });
 

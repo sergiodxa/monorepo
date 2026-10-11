@@ -9,9 +9,10 @@
 
 import { expect, test } from "vitest";
 
-import { bindModels, PostingFactory } from "~/app/lib/test/models";
-import { createTestDatabase } from "~/app/lib/test/router";
 import { POSTING_LIFETIME_DAYS } from "~/app/models/posting";
+import { bindModels } from "~/app/test/models";
+import { createTestDatabase } from "~/app/test/router";
+import { PostingFactory } from "~/database/factories/postings";
 
 /** Milliseconds in one day, the unit the lifetime is stated in. */
 const DAY_MS = 86_400_000;

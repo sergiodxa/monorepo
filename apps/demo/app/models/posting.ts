@@ -12,7 +12,7 @@ import { TypeID } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { like, lt, or } from "remix/data-table";
 
-import { cache, LISTING_KEY } from "~/app/lib/cache";
+import { cache, LISTING_KEY } from "~/app/initializers/cache";
 import { postings } from "~/database/schema";
 
 /** How many days a posting stays on the board before the nightly sweep closes it. */

@@ -7,15 +7,18 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { Empty, LinkButton } from "@sdxc/ui";
+import type { RequestContext } from "remix/router";
 
-import type { AppContext } from "~/bootstrap/app";
+import { Empty, LinkButton } from "@sdxc/ui";
 
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
-/** Renders the 404 document for unmatched routes. */
-export default function defaultHandler(ctx: AppContext) {
+/**
+ * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
+ * router derives `AppContext` from the very options this handler is passed in.
+ */
+export default function defaultHandler(ctx: Pick<RequestContext, "render" | "intl" | "locale">) {
 	return ctx.render(
 		<DocumentLayout title={ctx.intl.t("notFound.title")} locale={ctx.locale}>
 			<Empty color="neutral">

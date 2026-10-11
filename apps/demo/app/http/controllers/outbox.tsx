@@ -12,7 +12,7 @@ import { font, fontSize, whiteSpace } from "@sdxc/u/typography";
 import { Card, Empty, Heading, HeadingScope, LinkButton, Separator, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import { outbox } from "~/app/lib/mailer";
+import { outbox } from "~/app/initializers/mailer";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

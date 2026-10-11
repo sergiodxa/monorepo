@@ -11,8 +11,8 @@ import type { I18n, Messages } from "@sdxc/i18n";
 
 import { createI18n } from "@sdxc/i18n";
 
-import en from "~/app/locales/en.json";
-import es from "~/app/locales/es.json";
+import en from "~/resources/locales/en.json";
+import es from "~/resources/locales/es.json";
 
 /** Languages the board answers in. */
 export const SUPPORTED_LANGUAGES = ["en", "es"];

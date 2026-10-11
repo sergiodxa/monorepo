@@ -20,7 +20,6 @@
 		"rootDirs": ["."],
 		"paths": {
 			"~/app/*": ["./app/*"],
-			"~/bootstrap/*": ["./bootstrap/*"],
 			"~/config/*": ["./config/*"],
 			"~/database/*": ["./database/*"],
 			"~/resources/*": ["./resources/*"],
