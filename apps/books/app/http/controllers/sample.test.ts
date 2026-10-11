@@ -10,8 +10,8 @@
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { describe, expect, test } from "vitest";
 
-import { subscribed } from "~/app/lib/test/newsletter";
-import { fetchApp } from "~/app/lib/test/router";
+import { subscribed } from "~/app/test/newsletter";
+import { fetchApp } from "~/app/test/router";
 
 /** The chapter's first heading, which only the unlocked page renders. */
 const CHAPTER_HEADING = "OAuth2 in Simple Terms";

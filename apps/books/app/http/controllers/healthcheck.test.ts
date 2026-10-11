@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp } from "~/app/test/router";
 
 describe("GET /healthcheck", () => {
 	test("answers plain-text OK", async () => {

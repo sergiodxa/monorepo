@@ -12,10 +12,10 @@ import type { MemoryDiscountSeed } from "@sdxc/billing/providers/memory";
 
 import { describe, expect, test } from "vitest";
 
-import { Discounts, Product } from "~/app/data/product";
-import { CLIENT_ENTRY_HREF } from "~/app/lib/test/assets-manifest";
-import { memoryBilling, withUnreadableDiscounts } from "~/app/lib/test/billing";
-import { fetchApp } from "~/app/lib/test/router";
+import { CLIENT_ENTRY_HREF } from "~/app/test/assets-manifest";
+import { memoryBilling, withUnreadableDiscounts } from "~/app/test/billing";
+import { fetchApp } from "~/app/test/router";
+import { Discounts, Product } from "~/config/products";
 
 /** What every campaign under test takes off the Complete package, in cents. */
 const CAMPAIGN_CENTS = 3000;

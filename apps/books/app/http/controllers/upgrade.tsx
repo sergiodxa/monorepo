@@ -20,9 +20,9 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { Discounts, Product } from "~/app/data/product";
 import { INVALID_EMAIL_MESSAGE, SubscribeSchema } from "~/app/http/validators/subscribe";
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
+import { Discounts, Product } from "~/config/products";
 import DocumentLayout from "~/resources/layouts/document";
 import UpgradeView from "~/resources/views/upgrade";
 import routes from "~/routes/web";

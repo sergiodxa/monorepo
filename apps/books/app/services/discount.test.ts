@@ -13,9 +13,9 @@ import type { Discount } from "@sdxc/billing";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Discounts, Product } from "~/app/data/product";
-import { memoryBilling, withUnreadableDiscounts } from "~/app/lib/test/billing";
 import { findApplicableDiscount, selectDiscount } from "~/app/services/discount";
+import { memoryBilling, withUnreadableDiscounts } from "~/app/test/billing";
+import { Discounts, Product } from "~/config/products";
 
 const HOUR = 60 * 60 * 1000;
 

@@ -18,9 +18,9 @@ import { createAction } from "remix/router";
 
 import type { PriceView, ReleaseView as ReleaseViewTypes } from "~/resources/views/release";
 
-import { Discounts, Product } from "~/app/data/product";
-import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
+import { OG_IMAGE_URL, seo } from "~/app/initializers/seo";
 import { findApplicableDiscount } from "~/app/services/discount";
+import { Discounts, Product } from "~/config/products";
 import DocumentLayout from "~/resources/layouts/document";
 import ReleaseView from "~/resources/views/release";
 import routes from "~/routes/web";

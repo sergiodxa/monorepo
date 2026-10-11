@@ -13,7 +13,7 @@ import type { Newsletter } from "@sdxc/newsletter";
 
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 
-import application from "~/bootstrap/app";
+import application from "~/app/initializers/router";
 
 /** The origin every test request is made against. */
 export const ORIGIN = "https://books.test";

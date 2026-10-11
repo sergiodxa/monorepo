@@ -11,9 +11,9 @@ import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { readSampleEpub } from "~/app/lib/sample-chapter";
-import { SAMPLE_LINK_TTL_SECONDS, signSampleLink } from "~/app/lib/sample-link";
-import { fetchApp } from "~/app/lib/test/router";
+import { readSampleEpub } from "~/app/services/sample-chapter";
+import { SAMPLE_LINK_TTL_SECONDS, signSampleLink } from "~/app/services/sample-link";
+import { fetchApp } from "~/app/test/router";
 
 /** A freshly minted link, failing the test when signing fails. */
 async function link(now?: Date): Promise<string> {

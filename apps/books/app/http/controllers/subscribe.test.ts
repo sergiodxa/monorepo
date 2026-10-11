@@ -12,9 +12,9 @@
 import { MemoryNewsletter } from "@sdxc/newsletter/memory";
 import { describe, expect, test } from "vitest";
 
-import { landFrom } from "~/app/lib/test/attribution";
-import { subscribed } from "~/app/lib/test/newsletter";
-import { fetchApp } from "~/app/lib/test/router";
+import { landFrom } from "~/app/test/attribution";
+import { subscribed } from "~/app/test/newsletter";
+import { fetchApp } from "~/app/test/router";
 
 /**
  * Posts the subscribe form against an in-memory newsletter, sending the attribution cookie a

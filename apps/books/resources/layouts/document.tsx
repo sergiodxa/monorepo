@@ -20,9 +20,9 @@ import { minBs } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/lib/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
-import { OG_IMAGE_URL, seo } from "~/app/lib/seo";
+import { OG_IMAGE_URL, seo } from "~/app/initializers/seo";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";

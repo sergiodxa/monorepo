@@ -15,7 +15,7 @@ import { supports } from "@sdxc/billing";
 import { currentLog } from "@sdxc/logger";
 import { isFailure, success } from "@sdxc/result";
 
-import { Discounts, Product } from "~/app/data/product";
+import { Discounts, Product } from "~/config/products";
 
 /** How many campaigns to read; the organization runs far fewer than this. */
 const PAGE_SIZE = 12;

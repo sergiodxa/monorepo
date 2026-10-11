@@ -18,10 +18,10 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import { Product } from "~/app/data/product";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import { emailAddress } from "~/app/http/validators/email-address";
 import { findApplicableDiscount } from "~/app/services/discount";
+import { Product } from "~/config/products";
 import routes from "~/routes/web";
 
 /**

@@ -11,7 +11,7 @@ import type { RequestContext } from "remix/router";
 
 import { createAction } from "remix/router";
 
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import HomeView from "~/resources/views/home";
 import routes from "~/routes/web";

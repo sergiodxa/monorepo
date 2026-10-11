@@ -13,7 +13,7 @@ import type { MemoryBillingOptions } from "@sdxc/billing/providers/memory";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { unwrap } from "@sdxc/result";
 
-import { Product } from "~/app/data/product";
+import { Product } from "~/config/products";
 
 /** The two live prices, in cents, as the platform states them. */
 export const ESSENTIALS_CENTS = 4900;

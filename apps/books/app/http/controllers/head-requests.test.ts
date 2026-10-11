@@ -10,7 +10,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp } from "~/app/test/router";
 
 describe("HEAD requests", () => {
 	test("answers a HEAD with the GET's status and headers and no body", async () => {

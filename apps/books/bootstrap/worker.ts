@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import application from "./app";
+import application from "~/app/initializers/router";
 
 export default {
 	/** Handles an incoming request by building the app router and forwarding it. */

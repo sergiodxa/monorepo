@@ -21,8 +21,8 @@ breaks something you cannot see from here:
   redirects to Polar. Those two names are the whole accepted set: anything else 404s
   before any billing call, so a crawler or a `HEAD` probe cannot leave a real checkout
   object behind at the provider.
-- **The Polar product ids** in `app/lib/billing.ts` and **the discount ids** in
-  `app/data/product.ts` identify live products and campaigns. Everything else names a
+- **The Polar product ids** in `app/initializers/billing.ts` and **the discount ids** in
+  `config/products.ts` identify live products and campaigns. Everything else names a
   package by its own slug — `essentials` and `complete` — which is what the webhook
   branches on and what a catalog read is addressed by.
 - **`/`, `/release`, `/sample`, `/upgrade`, and `/og.jpg`** are published in newsletters
@@ -48,7 +48,7 @@ breaks something you cannot see from here:
   for the `expires` and `signature` query the unlocked page minted (an HMAC under
   `SAMPLE_LINK_SECRET`); anything else is a 303 to `/sample`, where the address mints a fresh
   link. That link is the whole gate, so keep it out of anything persisted or shared. The EPUB's
-  identifier stays fixed in `app/lib/sample-chapter.ts`; move `SAMPLE_MODIFIED` whenever
+  identifier stays fixed in `app/services/sample-chapter.ts`; move `SAMPLE_MODIFIED` whenever
   `sample.md` changes.
 - **The webhook only tags customers who are already subscribers.** A purchase from a
   non-subscriber is logged and otherwise ignored.
@@ -76,15 +76,15 @@ breaks something you cannot see from here:
 - **Validation** is `remix/data-schema` through `@sdxc/validate`. Never Zod.
 - **Errors** are `@sdxc/result`: services return a `Result`, and controllers decide what a
   visitor sees. Never surface an upstream provider's error text to a visitor.
-- **Billing** is `@sdxc/billing`: the Polar connection is built once in `app/lib/billing.ts`
+- **Billing** is `@sdxc/billing`: the Polar connection is built once in `app/initializers/billing.ts`
   and published as `ctx.billing` by the middleware, and every call answers a `Result`
   rather than throwing. Address a package by its slug, never by a product id.
 - **The newsletter** is `@sdxc/newsletter`: the Buttondown list is built once in
-  `app/lib/newsletter.ts` and published as `ctx.newsletter` by the middleware. Controllers
+  `app/initializers/newsletter.ts` and published as `ctx.newsletter` by the middleware. Controllers
   branch on `NewsletterError.code` (`suppressed`, `invalid_address`), never on a vendor's
   own error codes, and the Buttondown API version is pinned by the package.
 - **Attribution** is `@sdxc/attribution`: its middleware keeps the visitor's first and last
-  touch in the cookie `app/lib/cookies.ts` builds, signed with `COOKIE_SECRET`, and publishes
+  touch in the cookie `app/initializers/cookies.ts` builds, signed with `COOKIE_SECRET`, and publishes
   them as `ctx.attribution`. Forms render no hidden campaign fields; the subscribe service
   receives the touch through `toCampaign`, and checkouts pass `toMetadata`.
 - **Logging** is `@sdxc/logger`, one wide event per request: controllers write through
@@ -111,12 +111,12 @@ would link both copies.
 ## Assets
 
 The document links its stylesheets and the client entry through `documentAssets()` in
-`app/lib/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes. A build
+`app/initializers/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes. A build
 hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a
 file the next build renames. A stylesheet joins by a side-effect `import "….css"` in
-`resources/layouts/document.tsx`, in cascade order. The renderer looks the assets up per
+`resources/layouts/document.tsx`, in cascade order. The renderer in `app/http/render.tsx` looks the assets up per
 render, since a Worker may not await at module scope; tests read the fixed manifest in
-`app/lib/test/assets-manifest.ts`, aliased in the root Vitest config.
+`app/test/assets-manifest.ts`, aliased in the root Vitest config.
 
 ## Cross-origin protection
 
@@ -130,9 +130,9 @@ events, which is why the bypass has its own regression test.
 Run tests from the repo root with `bun run test`, which runs them under Vitest. `vp test run
 --project books` scopes a run to this app.
 
-- **Router-level tests** go through `fetchApp()` in `app/lib/test/router.ts`, which
+- **Router-level tests** go through `fetchApp()` in `app/test/router.ts`, which
   builds the real router. Pass `billing` to bill the request against the in-memory
-  platform from `app/lib/test/billing.ts`, and `newsletter` to subscribe it to a
+  platform from `app/test/billing.ts`, and `newsletter` to subscribe it to a
   `MemoryNewsletter` (an empty one is the default), then assert on that list's state.
   Never mock outbound HTTP for the newsletter: with MSW's interceptors installed, the
   form-data middleware sees an empty body and every POST fails validation before

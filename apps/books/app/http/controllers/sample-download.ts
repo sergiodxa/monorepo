@@ -11,8 +11,8 @@ import { redirect } from "@sdxc/http/response";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { CHAPTER_FILE, readSampleEpub } from "~/app/lib/sample-chapter";
-import { verifySampleLink } from "~/app/lib/sample-link";
+import { CHAPTER_FILE, readSampleEpub } from "~/app/services/sample-chapter";
+import { verifySampleLink } from "~/app/services/sample-link";
 import routes from "~/routes/web";
 
 /** The name a browser saves the file under. */

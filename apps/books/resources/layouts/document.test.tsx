@@ -7,19 +7,21 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { createHtmlRenderer } from "~/bootstrap/app";
+import { withDocumentAssets } from "~/app/http/render";
+import { assets } from "~/app/initializers/assets";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import DocumentLayout from "~/resources/layouts/document";
 
 /** Renders an empty page composed into the document, hydrating it when asked. */
 async function renderPage(hydrates: boolean) {
-	let router = createRouter();
+	let router = createRouter({ middleware: [render({ assets }), renderWith(withDocumentAssets)] });
 
 	router.get("/", (ctx) =>
-		createHtmlRenderer(ctx)(
+		ctx.render(
 			<DocumentLayout title="Books" canonical="https://books.test/" hydrates={hydrates}>
 				<main />
 			</DocumentLayout>,

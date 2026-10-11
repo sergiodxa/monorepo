@@ -10,7 +10,7 @@
 import { PolarBilling } from "@sdxc/billing/providers/polar";
 import { env } from "cloudflare:workers";
 
-import { Product } from "~/app/data/product";
+import { Product } from "~/config/products";
 
 /**
  * The live Polar product behind each package slug. Every id names a product

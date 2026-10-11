@@ -8,12 +8,15 @@
 
 import type { RequestContext } from "remix/router";
 
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import NotFoundView from "~/resources/views/not-found";
 
-/** Renders the 404 document for unmatched routes. */
-export default function defaultHandler(ctx: RequestContext) {
+/**
+ * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
+ * router infers its context from the very options this handler is passed in.
+ */
+export default function defaultHandler(ctx: Pick<RequestContext, "render" | "url">) {
 	let description = "The requested page could not be found.";
 
 	return ctx.render(

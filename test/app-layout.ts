@@ -13,15 +13,19 @@ import { dirname, join, relative } from "node:path";
  * Apps already moved onto the layout. An app joins this list in the commit that converts it,
  * and from then on the guard keeps it there.
  */
-export const CONVERTED_APPS = ["demo"];
+export const CONVERTED_APPS = ["demo", "books"];
 
-/** Folders an app's root may hold, besides dot-folders, installed dependencies and build output. */
+/**
+ * Folders an app's root may hold, besides dot-folders, installed dependencies and build output.
+ * `public/` holds the static files Cloudflare serves as they are.
+ */
 export const APP_ROOT_FOLDERS = new Set([
 	"app",
 	"bootstrap",
 	"config",
 	"database",
 	"docs",
+	"public",
 	"resources",
 	"routes",
 	"scripts",

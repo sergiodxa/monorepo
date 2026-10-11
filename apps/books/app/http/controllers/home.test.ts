@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { BROWSER } from "~/app/lib/test/attribution";
-import { fetchApp } from "~/app/lib/test/router";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { BROWSER } from "~/app/test/attribution";
+import { fetchApp } from "~/app/test/router";
 
 describe("GET /", () => {
 	test("renders the pitch and the subscribe form", async () => {

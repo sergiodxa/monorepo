@@ -13,9 +13,9 @@ import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Discounts, Product } from "~/app/data/product";
-import { memoryBilling, purchase } from "~/app/lib/test/billing";
-import { fetchApp } from "~/app/lib/test/router";
+import { memoryBilling, purchase } from "~/app/test/billing";
+import { fetchApp } from "~/app/test/router";
+import { Discounts, Product } from "~/config/products";
 
 /** The address every reader under test submits. */
 const READER = "reader@example.com";

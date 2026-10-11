@@ -72,6 +72,7 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
 | is a view, component, layout or stylesheet                                                                              | `resources/`            |
 | is a translation                                                                                                        | `resources/locales/`    |
 | is a route contract                                                                                                     | `routes/`               |
+| is static app configuration (site profile, product catalog, security.txt)                                               | `config/`               |
 | is a migration or table schema                                                                                          | `database/`             |
 | is a test factory                                                                                                       | `database/factories/`   |
 | is any other test helper                                                                                                | `app/test/`             |
@@ -89,7 +90,8 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
 3. **`app/lib/` does not exist.** An instance of a package is an initializer, generic code is a
    package, and app logic is a model method or a service. Generic code duplicated across apps
    (the asset lookup in all eight, cost tracking in auth-saas and uptime, article extraction in
-   blog and reader) moves to packages after the layout change, as its own work.
+   blog and reader) is a candidate for a package after the layout change; each extraction is
+   proposed and agreed before the package is created.
 4. **`app/repositories/` and `app/data/` do not exist.** Every store is a model, whatever backs
    it; blog's KV-backed redirects become `app/models/redirects.ts`.
 5. **The router's global middleware is written inline** in `createRouter({ middleware: [...] })`,
@@ -190,4 +192,4 @@ which in a monorepo is a package.
 - [ ] reader
 - [ ] uptime
 - [ ] auth-saas
-- [ ] Extract the duplicated generic code into packages (asset lookup, cost tracking, article extraction)
+- [ ] Propose packages for the duplicated generic code (asset lookup, cost tracking, article extraction)

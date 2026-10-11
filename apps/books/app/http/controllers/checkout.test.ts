@@ -14,10 +14,10 @@ import type { MemoryBilling } from "@sdxc/billing/providers/memory";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { Discounts, Product } from "~/app/data/product";
-import { landFrom } from "~/app/lib/test/attribution";
-import { COMPLETE_CENTS, ESSENTIALS_CENTS, memoryBilling } from "~/app/lib/test/billing";
-import { fetchApp } from "~/app/lib/test/router";
+import { landFrom } from "~/app/test/attribution";
+import { COMPLETE_CENTS, ESSENTIALS_CENTS, memoryBilling } from "~/app/test/billing";
+import { fetchApp } from "~/app/test/router";
+import { Discounts, Product } from "~/config/products";
 
 /** What a launch campaign takes off the Complete package, in cents. */
 const CAMPAIGN_CENTS = 3000;

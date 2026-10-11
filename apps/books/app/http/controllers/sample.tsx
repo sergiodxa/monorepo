@@ -21,9 +21,9 @@ import {
 	SubscribeSchema,
 	screenSubscriberEmail,
 } from "~/app/http/validators/subscribe";
-import { CHAPTER_FILE, readChapter } from "~/app/lib/sample-chapter";
-import { signSampleLink } from "~/app/lib/sample-link";
-import { seo } from "~/app/lib/seo";
+import { seo } from "~/app/initializers/seo";
+import { CHAPTER_FILE, readChapter } from "~/app/services/sample-chapter";
+import { signSampleLink } from "~/app/services/sample-link";
 import { subscribe } from "~/app/services/subscribe";
 import DocumentLayout from "~/resources/layouts/document";
 import SampleView from "~/resources/views/sample";

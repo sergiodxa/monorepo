@@ -15,9 +15,11 @@ import { BillingError, BillingWebhook } from "@sdxc/billing";
 import { parseEmailAddress } from "@sdxc/email-address";
 import { NewsletterError } from "@sdxc/newsletter";
 import { isFailure, isSuccess } from "@sdxc/result";
+import { createAction } from "remix/router";
 
-import { Product } from "~/app/data/product";
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
+import { Product } from "~/config/products";
+import routes from "~/routes/web";
 
 /** The newsletter metadata values that drive purchase segmentation. */
 const TIERS: Record<string, string> = {
@@ -105,5 +107,8 @@ export function retryDelivery(error: unknown): boolean {
 	return error instanceof BillingError && error.retryable;
 }
 
+/** Verifies each delivery's signature and dispatches it to {@link handlers}. */
+const WEBHOOK = new BillingWebhook(polar, handlers, { retry: retryDelivery });
+
 /** POST /webhooks/polar — records a paid order against the buyer's newsletter profile. */
-export default new BillingWebhook(polar, handlers, { retry: retryDelivery });
+export default createAction(routes.webhooks.polar, (ctx) => WEBHOOK.handler(ctx));

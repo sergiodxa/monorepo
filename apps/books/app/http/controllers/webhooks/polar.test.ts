@@ -18,10 +18,10 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { RequestContext } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { Product } from "~/app/data/product";
 import { handlers, retryDelivery } from "~/app/http/controllers/webhooks/polar";
-import { memoryBilling, purchase } from "~/app/lib/test/billing";
-import { fetchApp } from "~/app/lib/test/router";
+import { memoryBilling, purchase } from "~/app/test/billing";
+import { fetchApp } from "~/app/test/router";
+import { Product } from "~/config/products";
 
 /** A third-party origin, standing in for the platform's webhook delivery. */
 const FOREIGN_ORIGIN = "https://api.polar.sh";

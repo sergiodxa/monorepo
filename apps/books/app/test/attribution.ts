@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { fetchApp } from "~/app/lib/test/router";
+import { fetchApp } from "~/app/test/router";
 
 /** A desktop browser's `User-Agent`, since the middleware records nothing for an automated client. */
 export const BROWSER =
