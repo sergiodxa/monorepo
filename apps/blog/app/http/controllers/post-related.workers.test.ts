@@ -77,6 +77,15 @@ describe("a tutorial page", () => {
 		expect(html).toContain(`href="/tutorials/${TOKEN}-second"`);
 	});
 
+	test("links each technology badge to a search filtered by that tag", async () => {
+		let html = await (await get(`/tutorials/${TOKEN}-first`)).text();
+		let href = `/search?${new URLSearchParams({ q: `tag:"${TAG}"` })}`;
+		let start = html.indexOf(`<a href="${href}"`);
+
+		expect(start).toBeGreaterThan(-1);
+		expect(html.slice(start, html.indexOf("</a>", start))).toContain(`>${TAG}</span>`);
+	});
+
 	test("serves the same section on its own at the frame's address", async () => {
 		let html = await (await get(`/frames/posts/tutorials/${TOKEN}-first/related`)).text();
 

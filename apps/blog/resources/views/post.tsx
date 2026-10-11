@@ -17,7 +17,15 @@ import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
 import { basis, contents, flexWrap, gap, grid, grow, hstack, shrink } from "@sdxc/u/layout";
 import { bleed, bs, is, m, mbs, mi, minIs, p } from "@sdxc/u/size";
-import { overflowWrap, tabSize, text, textTransform, tracking, weight } from "@sdxc/u/typography";
+import {
+	overflowWrap,
+	tabSize,
+	text,
+	textDecoration,
+	textTransform,
+	tracking,
+	weight,
+} from "@sdxc/u/typography";
 import { Badge, Card, Heading, Link, LinkButton, Typeset } from "@sdxc/ui";
 import { Frame, unsafeHTML } from "remix/component";
 
@@ -149,9 +157,15 @@ export function PostView() {
 								{model.post.tags.length > 0 && (
 									<div mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
 										{model.post.tags.map((tag) => (
-											<Badge key={tag} color="brand" variant="secondary" mix={[mf("p-category")]}>
-												{tag}
-											</Badge>
+											<a
+												key={tag}
+												href={`${routes.search.href()}?${new URLSearchParams({ q: `tag:"${tag}"` })}`}
+												mix={[textDecoration("none")]}
+											>
+												<Badge color="brand" variant="secondary" mix={[mf("p-category")]}>
+													{tag}
+												</Badge>
+											</a>
 										))}
 									</div>
 								)}
