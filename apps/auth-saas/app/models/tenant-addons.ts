@@ -18,6 +18,15 @@ import { tenantAddons } from "~/database/schema";
 /** Mints an `addon_` TypeID for a new tenant add-on row. */
 const addonId = typeid("addon");
 
+/** A subscription's add-on, as a checkout that produced it records it. */
+export interface AttachTenantAddonInput {
+	tenant_id: string;
+	product_slug: string;
+	subscription_id: string;
+	status: string;
+	current_period_end: number | null;
+}
+
 /**
  * Tenant add-ons, each unique by its subscription id.
  *
@@ -34,6 +43,17 @@ export const TenantAddons = createModel(tenantAddons, {
 		/** The add-on a provider's subscription id was recorded against. */
 		findBySubscriptionId(subscriptionId: string) {
 			return this.findBy({ subscription_id: subscriptionId });
+		},
+
+		/**
+		 * Records a subscription's add-on in one statement; a subscription already recorded keeps
+		 * its row, so two callers attaching the same checkout land one add-on.
+		 */
+		attach(input: AttachTenantAddonInput) {
+			return this.upsert(
+				{ ...input, id: addonId(generateUUID()).toString() },
+				{ conflict: ["subscription_id"], update: {} },
+			);
 		},
 	},
 

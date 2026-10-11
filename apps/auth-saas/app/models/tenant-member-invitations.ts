@@ -53,8 +53,7 @@ export const TenantMemberInvitations = createModel(tenantMemberInvitations, {
 			tokenHash: string;
 			now: number;
 		}): Promise<TableRow<typeof tenantMemberInvitations> | null> {
-			let spent = await this.db
-				.query(tenantMemberInvitations)
+			let spent = await this.query()
 				.where(
 					and(
 						eq("token_hash", input.tokenHash),

@@ -16,7 +16,7 @@ import { typeid } from "@sdxc/typeid";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, sql } from "remix/data-table";
 
-import { memberships, tenants } from "~/database/schema";
+import { memberships } from "~/database/schema";
 
 import type { TenantRow } from "./tenants";
 
@@ -120,12 +120,15 @@ export const Memberships = createModel(memberships, {
 			let rows = await this.ofSubject(subjectId).all();
 			if (rows.length === 0) return [];
 
-			let found = await this.db.findMany(tenants, {
-				where: inList(
-					"id",
-					rows.map((membership) => membership.tenant_id),
-				),
-			});
+			let found = await this.context.models.tenants
+				.query()
+				.where(
+					inList(
+						"id",
+						rows.map((membership) => membership.tenant_id),
+					),
+				)
+				.all();
 			let tenantsById = new Map(found.map((tenant) => [tenant.id, tenant]));
 
 			let administered: AdministeredTenant[] = [];

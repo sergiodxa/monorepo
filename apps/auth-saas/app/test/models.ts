@@ -6,9 +6,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { PublishTarget } from "@sdxc/data-model/testing";
 import type { Database } from "remix/data-table";
 
-import { Models } from "@sdxc/data-model";
+import { publishModels as publishRegistry } from "@sdxc/data-model/testing";
 import { unwrap } from "@sdxc/result";
 
 import type { Models as BoundModels } from "~/app/models";
@@ -32,11 +33,8 @@ export function bindModels(db: Database): BoundModels {
  * @param ctx The job context a test created with `createJobContext`.
  * @param db The database the job reads.
  */
-export function publishModels(
-	ctx: { set(key: object, value: unknown, options: { property: string }): void },
-	db: Database,
-): void {
-	ctx.set(Models, bindModels(db), { property: "models" });
+export function publishModels(ctx: PublishTarget, db: Database): void {
+	publishRegistry(ctx, models, { db });
 }
 
 /**

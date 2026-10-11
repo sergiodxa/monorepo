@@ -79,11 +79,8 @@ export async function attachCheckoutSubscription(
 		return;
 	}
 
-	let existing = await models.tenantAddons.findBySubscriptionId(subscriptionId);
-	if (existing) return;
-
 	unwrap(
-		await models.tenantAddons.create({
+		await models.tenantAddons.attach({
 			tenant_id: checkout.tenant_id,
 			product_slug: checkout.product_slug,
 			subscription_id: subscriptionId,

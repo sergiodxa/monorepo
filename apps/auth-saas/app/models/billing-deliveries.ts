@@ -36,18 +36,21 @@ export const BillingDeliveries = createModel(billingDeliveries, {
 	optional: ["processed"],
 
 	methods: {
-		/** Records a delivery as unprocessed, replacing any row already sharing its id. */
-		async record(
-			delivery: DeliveryInput,
-		): Promise<Result<TableRow<typeof billingDeliveries>, Error>> {
+		/**
+		 * Records a delivery as unprocessed in one statement, replacing any row already sharing
+		 * its id while keeping that row's `received_at`.
+		 */
+		record(delivery: DeliveryInput): Promise<Result<TableRow<typeof billingDeliveries>, Error>> {
 			let fields = {
 				type: delivery.type,
 				payload: delivery.payload,
 				valid: delivery.valid,
 				processed: false,
 			};
-			if ((await this.find(delivery.id)) !== null) return this.update(delivery.id, fields);
-			return this.create({ id: delivery.id, ...fields, received_at: Date.now() });
+			return this.upsert(
+				{ id: delivery.id, ...fields, received_at: Date.now() },
+				{ update: fields },
+			);
 		},
 
 		/** Marks a delivery handled; an id never recorded is left alone and still succeeds. */
