@@ -8,8 +8,8 @@
  */
 import { createJobHandler } from "@sdxc/jobs";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 
 /**
  * Only queues: each publish stamps its post once its fan-out is queued, so a post queued

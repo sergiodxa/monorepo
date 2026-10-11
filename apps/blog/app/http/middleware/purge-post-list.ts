@@ -10,7 +10,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { TAGS } from "~/app/services/cache";
+import { TAGS } from "~/app/initializers/cache";
 
 /** Methods that can change what a listing would render. */
 const WRITE_METHODS: ReadonlySet<string> = new Set(["POST", "PUT", "PATCH", "DELETE"]);

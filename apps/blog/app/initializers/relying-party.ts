@@ -14,8 +14,8 @@ import * as s from "remix/data-schema";
 
 import type { AuthProfile as UserProfile } from "~/app/models/users";
 
-import { issuer } from "~/app/auth/issuer";
 import { getEnv } from "~/app/http/middleware/env";
+import { issuer } from "~/app/initializers/issuer";
 import routes from "~/routes/web";
 
 /**

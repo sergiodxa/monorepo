@@ -1,7 +1,7 @@
 /**
  * MCP tool answering `search_posts`.
  *
- * Data access stays in the repository layer, so this projects and nothing else.
+ * Data access stays in the search model, so this projects and nothing else.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,7 +11,7 @@ import { createTool, ToolError } from "@sdxc/mcp";
 import { isFailure } from "@sdxc/result";
 
 import toolset from "~/app/mcp/tools";
-import { PostSearch } from "~/app/repositories/search";
+import { PostSearch } from "~/app/models/search";
 
 /**
  * Searches the published corpus, best match first.

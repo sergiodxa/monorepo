@@ -5,7 +5,7 @@
  * `server/discover`, `tools/list`, `resources/templates/list` — answer straight from
  * registration data. That is also what makes them worth asserting: mapping is what
  * registers a tool, and the expected lists below are what would catch a declared tool
- * missing from `bootstrap/mcp.ts`.
+ * missing from `app/initializers/mcp.ts`.
  *
  * The handlers themselves reach a database this app covers at the repository layer, so
  * their behaviour is asserted there and by `@sdxc/mcp`'s own tests.
@@ -18,10 +18,9 @@ import { Log } from "@sdxc/logger";
 import { LATEST_PROTOCOL_VERSION, MetaKey } from "@sdxc/mcp";
 import { describe, expect, test } from "vitest";
 
+import mcp from "~/app/initializers/mcp";
 import resourceset from "~/app/mcp/resources";
 import routes from "~/routes/web";
-
-import mcp from "./mcp";
 
 /** Every tool this server is expected to serve, in the order it lists them. */
 const EXPECTED_TOOLS = [

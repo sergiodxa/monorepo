@@ -13,8 +13,8 @@ import { isFailure, succeeded } from "@sdxc/result";
 import { createAction } from "remix/router";
 
 import { SearchViewModel } from "~/app/http/view-models/search";
-import { PostSearch } from "~/app/repositories/search";
-import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
+import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
+import { PostSearch } from "~/app/models/search";
 import { SearchView } from "~/resources/views/search";
 import routes from "~/routes/web";
 

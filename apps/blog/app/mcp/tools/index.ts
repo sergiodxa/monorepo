@@ -53,71 +53,67 @@ export default tools({
 		annotations: READ_ONLY,
 	}),
 
-	posts: tools({
-		list: tool("list_posts", {
-			title: "List posts",
-			description:
-				"List this blog's published articles or tutorials, newest first. Use search_posts when looking for a topic; use this to see what exists.",
-			input: s.object({
-				type: s.enum_(["articles", "tutorials"]).meta({ description: "Which collection to list." }),
-				limit: s.defaulted(
-					s
-						.integer()
-						.pipe(checks.min(1), checks.max(100))
-						.meta({ description: "How many posts to return." }),
-					20,
-				),
-				offset: s.defaulted(
-					s
-						.integer()
-						.pipe(checks.min(0))
-						.meta({ description: "How many posts to skip, for paging through the list." }),
-					0,
-				),
-			}),
-			annotations: READ_ONLY,
+	listPosts: tool("list_posts", {
+		title: "List posts",
+		description:
+			"List this blog's published articles or tutorials, newest first. Use search_posts when looking for a topic; use this to see what exists.",
+		input: s.object({
+			type: s.enum_(["articles", "tutorials"]).meta({ description: "Which collection to list." }),
+			limit: s.defaulted(
+				s
+					.integer()
+					.pipe(checks.min(1), checks.max(100))
+					.meta({ description: "How many posts to return." }),
+				20,
+			),
+			offset: s.defaulted(
+				s
+					.integer()
+					.pipe(checks.min(0))
+					.meta({ description: "How many posts to skip, for paging through the list." }),
+				0,
+			),
 		}),
-
-		get: tool("get_post", {
-			title: "Read a post",
-			description:
-				"Read one published article or tutorial in full, as Markdown. Needs the slug, which search_posts and list_posts return.",
-			input: s.object({
-				type: s
-					.enum_(["articles", "tutorials"])
-					.meta({ description: "Which collection the post belongs to." }),
-				slug: s
-					.string()
-					.pipe(checks.minLength(1), checks.maxLength(200))
-					.meta({ description: "The post's URL slug, without the collection prefix." }),
-			}),
-			annotations: READ_ONLY,
-		}),
+		annotations: READ_ONLY,
 	}),
 
-	glossary: tools({
-		list: tool("list_glossary", {
-			title: "List glossary terms",
-			description:
-				"List every term defined in this blog's glossary. Short enough to read whole, so there is no glossary search.",
-			input: s.object({}, { unknownKeys: "error" }),
-			annotations: READ_ONLY,
+	getPost: tool("get_post", {
+		title: "Read a post",
+		description:
+			"Read one published article or tutorial in full, as Markdown. Needs the slug, which search_posts and list_posts return.",
+		input: s.object({
+			type: s
+				.enum_(["articles", "tutorials"])
+				.meta({ description: "Which collection the post belongs to." }),
+			slug: s
+				.string()
+				.pipe(checks.minLength(1), checks.maxLength(200))
+				.meta({ description: "The post's URL slug, without the collection prefix." }),
 		}),
-
-		get: tool("get_glossary_term", {
-			title: "Read a glossary term",
-			description: "Read one glossary term's full definition. Needs the slug from list_glossary.",
-			input: s.object({
-				slug: s
-					.string()
-					.pipe(checks.minLength(1), checks.maxLength(200))
-					.meta({ description: "The term's slug, as list_glossary reports it." }),
-			}),
-			annotations: READ_ONLY,
-		}),
+		annotations: READ_ONLY,
 	}),
 
-	bookmarks: tool("list_bookmarks", {
+	listGlossary: tool("list_glossary", {
+		title: "List glossary terms",
+		description:
+			"List every term defined in this blog's glossary. Short enough to read whole, so there is no glossary search.",
+		input: s.object({}, { unknownKeys: "error" }),
+		annotations: READ_ONLY,
+	}),
+
+	getGlossaryTerm: tool("get_glossary_term", {
+		title: "Read a glossary term",
+		description: "Read one glossary term's full definition. Needs the slug from list_glossary.",
+		input: s.object({
+			slug: s
+				.string()
+				.pipe(checks.minLength(1), checks.maxLength(200))
+				.meta({ description: "The term's slug, as list_glossary reports it." }),
+		}),
+		annotations: READ_ONLY,
+	}),
+
+	listBookmarks: tool("list_bookmarks", {
 		title: "List bookmarks",
 		description:
 			"List the external links this blog's author has bookmarked, newest first. Each is a title, somebody else's URL and that page's own short description, so there is nothing here to read in full.",

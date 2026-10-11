@@ -17,8 +17,8 @@ import type { BlogModels } from "~/app/models";
 
 import { ActivityPub } from "~/app/http/middleware/activitypub";
 import { Database } from "~/app/http/middleware/database";
+import { BLOG_KEYS } from "~/app/initializers/activitypub-keys";
 import { createFederation, federationQueue } from "~/app/services/activitypub";
-import { BLOG_KEYS } from "~/app/services/activitypub-keys";
 
 /**
  * Publishes the federation for the job about to run, over the database `database()`

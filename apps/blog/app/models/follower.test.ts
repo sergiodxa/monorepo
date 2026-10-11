@@ -12,9 +12,8 @@ import { InvalidCursorError } from "@sdxc/pagination";
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
+import { FollowerRepository } from "~/app/models/follower";
 import { testDatabase } from "~/app/test/database";
-
-import { FollowerRepository } from "./follower";
 
 const ACTOR = "https://sergiodxa.com/activitypub/actor";
 

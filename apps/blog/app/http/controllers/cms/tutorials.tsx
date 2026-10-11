@@ -14,11 +14,11 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { TutorialSchema } from "~/app/http/validators/cms/tutorial";
 import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
+import { TAGS } from "~/app/initializers/cache";
 import jobs from "~/app/jobs";
 import { isPublishedAt, tutorialTags } from "~/app/models/post-values";
-import { TutorialSchema } from "~/app/schemas/cms/tutorial";
-import { TAGS } from "~/app/services/cache";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views/cms/tutorials";
 import routes from "~/routes/web";
 

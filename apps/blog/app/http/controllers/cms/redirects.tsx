@@ -13,8 +13,8 @@ import { succeeded } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import { Redirect } from "~/app/repositories/redirect";
-import { RedirectSchema } from "~/app/schemas/cms/redirect";
+import { RedirectSchema } from "~/app/http/validators/cms/redirect";
+import { Redirect } from "~/app/models/redirect";
 import { createRedirectsService } from "~/app/services/redirects";
 import { CMSRedirectsIndexView, CMSRedirectsNewView } from "~/resources/views/cms/redirects";
 import routes from "~/routes/web";

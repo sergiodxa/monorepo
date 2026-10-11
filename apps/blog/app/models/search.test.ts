@@ -14,13 +14,12 @@ import { succeeded, unwrap } from "@sdxc/result";
 import { sql } from "remix/data-table";
 import { beforeEach, describe, expect, test } from "vitest";
 
+import { openDatabase } from "~/app/initializers/database";
 import { serializeTags } from "~/app/models/post-values";
-import { openDatabase } from "~/app/services/database";
+import { PostSearch } from "~/app/models/search";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
-
-import { PostSearch } from "./search";
 
 /** The migration that creates and backfills the search projection. */
 const SEARCH_MIGRATION = "0006_PostSearch.sql";

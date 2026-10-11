@@ -19,10 +19,9 @@ import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import type * as schema from "~/database/schema";
 
 import createEnvMiddleware from "~/app/http/middleware/env";
+import { htmlRenderer } from "~/app/http/render";
 import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
-
-import { htmlRenderer } from "../../../bootstrap/app";
 
 import { logoutController } from "./auth";
 

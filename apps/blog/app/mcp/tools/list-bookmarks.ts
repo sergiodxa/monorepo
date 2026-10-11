@@ -22,7 +22,7 @@ import {
  * its description always present, an empty string when it has none. A row with an
  * unparseable date sorts last, so every bookmark still appears in the page.
  */
-export default createTool(toolset.bookmarks, async (ctx) => {
+export default createTool(toolset.listBookmarks, async (ctx) => {
 	let bookmarks = await ctx.models.likes.findAll();
 
 	let published = bookmarks

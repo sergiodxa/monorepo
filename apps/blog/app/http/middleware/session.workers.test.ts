@@ -10,11 +10,10 @@
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAdmin, signedInCookie } from "~/app/test/session";
 import routes from "~/routes/web";
-
-import createApplication from "../../../bootstrap/app";
 
 /** The secret the app holds when it is configured. */
 const SECRET = "configured-secret";
@@ -42,7 +41,7 @@ function environment(secret: string | undefined): App.Env {
 
 /** Opens the CMS dashboard as the browser holding `cookie`, empty for one holding none. */
 function openDashboard(secret: string | undefined, cookie: string) {
-	return createApplication(environment(secret)).fetch(
+	return createWebRouter(environment(secret)).fetch(
 		new Request(new URL(routes.cms.dashboard.href(), "https://blog.test"), {
 			headers: { cookie },
 			redirect: "manual",

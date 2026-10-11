@@ -11,8 +11,8 @@ import { createD1Database } from "@sdxc/cloudflare-mocks";
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
+import { openDatabase } from "~/app/initializers/database";
 import { bookmarkAddress, cleanUrl, waybackSnapshotUrl } from "~/app/models/post-values";
-import { openDatabase } from "~/app/services/database";
 import { testDatabase } from "~/app/test/database";
 import { applyMigrations, seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";

@@ -10,8 +10,8 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import { htmlRenderer } from "~/app/http/render";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
-import { htmlRenderer } from "~/bootstrap/app";
 import { CMSDashboardView } from "~/resources/views/cms/dashboard";
 
 /** Renders a page composed into the document through the renderer production uses. */

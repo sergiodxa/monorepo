@@ -14,13 +14,12 @@ import { walk, walkResources } from "@sdxc/mcp";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { MCP_RATE_LIMIT } from "~/app/mcp/rate-limit";
+import { MCP_RATE_LIMIT } from "~/app/http/middleware/mcp-rate-limit";
+import { htmlRenderer } from "~/app/http/render";
 import resourceset from "~/app/mcp/resources";
 import toolset from "~/app/mcp/tools";
 import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
-
-import { htmlRenderer } from "../../../bootstrap/app";
 
 import mcpPage, { mcpMarkdownPage } from "./mcp";
 

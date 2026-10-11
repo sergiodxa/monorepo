@@ -11,7 +11,7 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { htmlRenderer } from "~/bootstrap/app";
+import { htmlRenderer } from "~/app/http/render";
 import routes from "~/routes/web";
 
 import { CMSDashboardView } from "./dashboard";

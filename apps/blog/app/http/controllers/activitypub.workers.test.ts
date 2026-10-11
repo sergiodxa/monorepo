@@ -13,12 +13,11 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
 import { ACTOR_ID } from "~/config/activitypub";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 const RUN = crypto.randomUUID().slice(0, 8);
@@ -50,7 +49,7 @@ function environment(): App.Env {
 /** Sends one request through the router the Worker entrypoint builds. */
 function fetchPath(path: string, accept?: string) {
 	let headers = accept === undefined ? undefined : { accept };
-	return createApplication(environment()).fetch(new Request(new URL(path, ORIGIN), { headers }));
+	return createWebRouter(environment()).fetch(new Request(new URL(path, ORIGIN), { headers }));
 }
 
 beforeAll(async () => {

@@ -5,7 +5,7 @@ This document defines app-specific rules for `apps/blog`.
 ## Rules
 
 - MUST keep the app SSR-only using `remix/component/server` rendering (`renderToString`) and HTML responses.
-- MUST keep Cloudflare Worker bootstrap in `bootstrap/worker.ts` and router creation in `bootstrap/app.tsx`.
+- MUST keep the Worker entry point in `bootstrap/worker.ts` and router creation in `createWebRouter()` in `app/initializers/router.tsx`.
 - MUST map every route through `lazy()` from `@sdxc/lazy-route`, so a cold isolate imports the controllers it serves rather than the whole route table. A new route added with a static import silently puts its module back on every cold start.
 - MUST pass a CMS route's guards as `lazy()`'s second argument (`CMS_GUARDS` / `CMS_WRITE_GUARDS`), never as a `middleware` field wrapping the loader: a stand-in is an object, not a function, so it cannot be an action object's `handler`.
 - MUST read and write data through `ctx.models` (the `@sdxc/data-model` models in `app/models/`, published by the `models()` middleware in requests and jobs), never ad-hoc DB queries in controllers. Logic that spans post types lives in `app/services/posts.ts` and takes `ctx.models`; a pure rule over post values lives in `app/models/post-values.ts`, which no model imports back.
@@ -25,7 +25,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST keep every link and form a full document navigation: `bootstrap/browser.ts` stops the runtime's `navigate` listener before `run()`, and that listener MUST NOT be re-enabled without re-testing navigation on Safari. Soft navigation made navigating out of a post flash unstyled there: the runtime keeps every generated atomic rule in one constructed `adoptedStyleSheets` entry and releases the rules the incoming page doesn't use (57 of 145 leaving a post), which Safari repaints during. Keying the head children, serving every stylesheet on every page, and wrapping the swap in a view transition all failed to fix it. The document shell loads the entry as `<script type="module" async>` plus a matching `modulepreload` — `async`, never a deferred plain module script, or a late-arriving frame template waits on the slowest frame on the page.
 - MUST put every hydrated component (`clientEntry()`) in its own file under `resources/components/`, declaring its module path as `/resources/components/<file>.tsx#<Export>` (the key `loadModule` looks up), with `type` props since they are serialized. A public page MUST work without it: the island adds behavior to server-rendered markup that already does the job (the search dialog is a plain `GET` form before its islands load).
 - MUST resolve a server-rendered `<Frame>` through `ctx.router.fetch()` (as `createHtmlRenderer` does), never a network `fetch()` of the page's own URL, which leaves the frame empty in production.
-- MUST link the document's stylesheets and client entry through `documentAssets()` in `app/services/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
+- MUST link the document's stylesheets and client entry through `documentAssets()` in `app/initializers/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
 - MUST keep the `bootstrap/browser.ts` glob to `resources/components/`, where the islands live: a layout or view in the client bundle compiles its stylesheets a second time, and that copy differs from the server's by vendor prefixes, so every page would link both.
 - MUST keep code-block syntax colors in `resources/css/highlight.css` as a dedicated theme (not a flat reuse of generic UI text colors), while its chrome (surface, border, gutter, selection) derives from the app's palette scales. The file declares the `--highlight-*` properties that `@sdxc/highlight/styles.css` paints each token type from; the selectors themselves belong to the package.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
@@ -97,7 +97,8 @@ This document defines app-specific rules for `apps/blog`.
 
 - Routing and mapping
   - `routes/web.ts`
-  - `bootstrap/app.tsx`
+  - `app/initializers/router.tsx`
+  - `app/http/render.tsx` (the `ctx.render` controllers reach)
 - Public controllers
   - `app/http/controllers/feed.tsx`
   - `app/http/controllers/articles.tsx`
@@ -126,7 +127,7 @@ This document defines app-specific rules for `apps/blog`.
   - `app/models/articles.ts`, `app/models/tutorials.ts`, `app/models/likes.ts`, `app/models/glossary.ts`
   - `app/models/post-values.ts` (publish state, ordering, bookmark URLs, tutorial tags)
   - `app/services/posts.ts` (reads across post types)
-  - `app/repositories/feed.ts`
+  - `app/models/feed.ts`, `app/models/search.ts`, `app/models/follower.ts`, `app/models/redirect.ts` (stores outside the data-model registry)
 - Federation
   - `app/services/activitypub.ts`
   - `app/services/federated-posts.ts`

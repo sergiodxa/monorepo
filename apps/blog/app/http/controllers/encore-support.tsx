@@ -15,7 +15,7 @@ import { Session } from "remix/session";
 
 import type { AppContext } from "~/app/http/context";
 
-import { SupportRequestSchema } from "~/app/schemas/encore-support";
+import { SupportRequestSchema } from "~/app/http/validators/encore-support";
 import { EncoreSupportView } from "~/resources/views/encore-support";
 import routes from "~/routes/web";
 

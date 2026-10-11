@@ -11,11 +11,11 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { bindModels } from "~/app/test/models";
 import { seedAdmin } from "~/app/test/session";
-import createApplication from "~/bootstrap/app";
 
 /** A suffix keeping these slugs apart from other files sharing the storage. */
 const SUFFIX = crypto.randomUUID().slice(0, 8);
@@ -37,7 +37,7 @@ function environment(): App.Env {
 
 /** Builds the router and sends one request through it, the way the Worker entrypoint does. */
 function fetchPath(path: string) {
-	return createApplication(environment()).fetch(new Request(new URL(path, "https://blog.test")));
+	return createWebRouter(environment()).fetch(new Request(new URL(path, "https://blog.test")));
 }
 
 beforeAll(async () => {

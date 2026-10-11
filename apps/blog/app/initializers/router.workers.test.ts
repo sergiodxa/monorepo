@@ -13,12 +13,11 @@ import { parse } from "@sdxc/well-known/security-txt";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAdmin, signedInCookie } from "~/app/test/session";
 import { SECURITY_TXT } from "~/config/security-txt";
 import routes from "~/routes/web";
-
-import createApplication from "./app";
 
 /** Deferred work the request handed to `waitUntil`, kept so nothing escapes the test. */
 let deferred: Array<Promise<unknown>> = [];
@@ -40,7 +39,7 @@ function environment(): App.Env {
 
 /** Builds the router and sends one request through it, the way the Worker entrypoint does. */
 function fetchPath(path: string, init?: RequestInit) {
-	return createApplication(environment()).fetch(
+	return createWebRouter(environment()).fetch(
 		new Request(new URL(path, "https://blog.test"), init),
 	);
 }

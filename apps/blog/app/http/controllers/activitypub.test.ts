@@ -32,7 +32,7 @@ import database, { Database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import jobs from "~/app/jobs";
 import publish from "~/app/jobs/activitypub/publish";
-import { FollowerRepository } from "~/app/repositories/follower";
+import { FollowerRepository } from "~/app/models/follower";
 import { federationQueue } from "~/app/services/activitypub";
 import { findForMentions } from "~/app/services/posts";
 import {

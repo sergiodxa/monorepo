@@ -10,10 +10,9 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import { htmlRenderer } from "~/app/http/render";
 import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
-
-import { htmlRenderer } from "../../../bootstrap/app";
 
 import privacyPage, { markdownPage } from "./encore-privacy";
 

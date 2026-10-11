@@ -13,7 +13,7 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { parseSafe } from "remix/data-schema";
 
-import { LoginQuerySchema, ReturnPathSchema } from "~/app/schemas/auth";
+import { LoginQuerySchema, ReturnPathSchema } from "~/app/http/validators/auth";
 import routes from "~/routes/web";
 
 /**

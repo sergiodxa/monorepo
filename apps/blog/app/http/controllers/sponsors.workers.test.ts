@@ -13,9 +13,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { SponsorRoster } from "~/app/services/sponsors";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { SPONSORS_CACHE_KEY } from "~/app/services/sponsors";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 
@@ -36,7 +35,7 @@ function environment(): App.Env {
 
 /** Requests `path` from a fresh application. */
 function request(path: string) {
-	return createApplication(environment()).fetch(new Request(new URL(path, ORIGIN)));
+	return createWebRouter(environment()).fetch(new Request(new URL(path, ORIGIN)));
 }
 
 /** A sponsor whose every field is derived from their login. */

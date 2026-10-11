@@ -13,12 +13,11 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 
@@ -62,12 +61,12 @@ function environment(): App.Env {
 
 /** Requests one page through the real router. */
 function get(path: string): Promise<Response> {
-	return createApplication(environment()).fetch(new Request(new URL(path, ORIGIN)));
+	return createWebRouter(environment()).fetch(new Request(new URL(path, ORIGIN)));
 }
 
 /** Calls the `search_posts` tool through the real router, as an MCP client would. */
 async function searchPosts(args: Record<string, unknown>): Promise<McpBody> {
-	let response = await createApplication(environment()).fetch(
+	let response = await createWebRouter(environment()).fetch(
 		new Request(new URL("/mcp", ORIGIN), {
 			method: "POST",
 			headers: {

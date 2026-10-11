@@ -13,12 +13,11 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 
@@ -59,7 +58,7 @@ function environment(): App.Env {
 
 /** The links of this file's posts a `/search` page lists for `q`, in the order it lists them. */
 async function found(q: string): Promise<Array<string>> {
-	let response = await createApplication(environment()).fetch(
+	let response = await createWebRouter(environment()).fetch(
 		new Request(new URL(`/search?${new URLSearchParams({ q })}`, ORIGIN)),
 	);
 	let html = await response.text();
@@ -74,7 +73,7 @@ async function searchResults(
 	query: string,
 	extra: Record<string, unknown> = {},
 ): Promise<Array<{ slug: string; url: string; kind: string; title: string }>> {
-	let response = await createApplication(environment()).fetch(
+	let response = await createWebRouter(environment()).fetch(
 		new Request(new URL("/mcp", ORIGIN), {
 			method: "POST",
 			headers: {
@@ -247,7 +246,7 @@ describe("bookmarks", () => {
 	});
 
 	test("show their address in the search panel, and the tool answers their URL", async () => {
-		let response = await createApplication(environment()).fetch(
+		let response = await createWebRouter(environment()).fetch(
 			new Request(
 				new URL(`/frames/search?${new URLSearchParams({ q: `${TOKEN} routing` })}`, ORIGIN),
 			),
@@ -267,7 +266,7 @@ describe("bookmarks", () => {
 	});
 
 	test("show their description in the search panel, and the tool answers it as the excerpt", async () => {
-		let response = await createApplication(environment()).fetch(
+		let response = await createWebRouter(environment()).fetch(
 			new Request(new URL(`/frames/search?${new URLSearchParams({ q: "wombats" })}`, ORIGIN)),
 		);
 		let html = await response.text();
@@ -376,7 +375,7 @@ describe("a search of filters alone", () => {
 	});
 
 	test("lists newest first in the dialog too", async () => {
-		let response = await createApplication(environment()).fetch(
+		let response = await createWebRouter(environment()).fetch(
 			new Request(new URL(`/frames/search?${new URLSearchParams({ q: `tag:${TAG}` })}`, ORIGIN)),
 		);
 		let html = await response.text();

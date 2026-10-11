@@ -15,7 +15,7 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
-import { GlossarySchema } from "~/app/schemas/cms/glossary";
+import { GlossarySchema } from "~/app/http/validators/cms/glossary";
 import { CMSGlossaryActionView, CMSGlossaryIndexView } from "~/resources/views/cms/glossary";
 import routes from "~/routes/web";
 

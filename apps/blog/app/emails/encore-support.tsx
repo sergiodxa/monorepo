@@ -14,7 +14,7 @@ import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
-import type { SupportRequest } from "~/app/schemas/encore-support";
+import type { SupportRequest } from "~/app/http/validators/encore-support";
 
 /** Shown in place of an optional field the visitor left blank, so the table keeps its rows. */
 const NOT_PROVIDED = "Not provided";

@@ -10,14 +10,13 @@ import type { JobDispatcherContext, JobEnqueuer } from "@sdxc/jobs";
 
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { logger } from "~/app/initializers/logger";
+import { jobQueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { logger } from "~/bootstrap/logger";
-
-import { activityPub } from "./middleware/activitypub";
-import { database } from "./middleware/database";
-import { mail } from "./middleware/mail";
-import { models } from "./middleware/models";
-import { jobQueue } from "./queue";
+import { activityPub } from "~/app/jobs/middleware/activitypub";
+import { database } from "~/app/jobs/middleware/database";
+import { mail } from "~/app/jobs/middleware/mail";
+import { models } from "~/app/jobs/middleware/models";
 
 /**
  * The registry both worker entrypoints run through. The timeout sits under the

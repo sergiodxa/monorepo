@@ -18,7 +18,7 @@ import { createSpamFilter, DEFAULT_RULES } from "@sdxc/spam";
 import { authorEmail } from "@sdxc/spam/author-email";
 import { stopForumSpam } from "@sdxc/spam/stop-forum-spam";
 
-import type { SupportRequest } from "~/app/schemas/encore-support";
+import type { SupportRequest } from "~/app/http/validators/encore-support";
 
 import { EncoreSupportEmail } from "~/app/emails/encore-support";
 

@@ -10,7 +10,7 @@
 import { parseSafe } from "remix/data-schema";
 import { describe, expect, test } from "vitest";
 
-import { SupportRequestSchema } from "./encore-support";
+import { SupportRequestSchema } from "~/app/http/validators/encore-support";
 
 /** A valid submission with `email` replaced, as the form posts it. */
 function submission(email: string): FormData {

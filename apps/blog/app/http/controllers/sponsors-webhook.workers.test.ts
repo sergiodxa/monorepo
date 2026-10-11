@@ -12,7 +12,7 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
-import createApplication from "../../../bootstrap/app";
+import { createWebRouter } from "~/app/initializers/router";
 
 const ORIGIN = "https://blog.test";
 const SECRET = "sponsors-webhook-secret";
@@ -47,7 +47,7 @@ async function deliver(
 	let body = JSON.stringify({ action: "created" });
 	let signature = Hex.encode(unwrap(await hmac.sign(options.secret ?? SECRET, body)));
 
-	return await createApplication(environment(options.env)).fetch(
+	return await createWebRouter(environment(options.env)).fetch(
 		new Request(new URL("/webhooks/sponsors", ORIGIN), {
 			method: "POST",
 			headers: {

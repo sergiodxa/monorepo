@@ -1,7 +1,7 @@
 /**
- * Assembles the blog HTTP application. Wires global middleware, maps public,
- * RSS, auth, admin-guarded CMS, and MCP routes onto the fetch router, and provides
- * the streaming HTML renderer controllers reach through `ctx.render`.
+ * The blog's fetch-router: the global middleware chain, and the public, RSS, auth,
+ * admin-guarded CMS and MCP routes mapped onto their controllers, with the renderer
+ * controllers reach through `ctx.render` installed last.
  *
  * Every route is mapped through `lazy()`, so the URL surface is complete at startup
  * while each controller is imported by the first request that reaches it. A cold
@@ -13,7 +13,6 @@
 
 import type { Transport } from "@sdxc/mail";
 import type { SpamFilter } from "@sdxc/spam";
-import type { RenderFunction } from "remix/middleware/render";
 import type { Middleware, RequestContext } from "remix/router";
 
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -37,10 +36,9 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
-import { Renderer, render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
-import type { AppContext, BlogRenderer, RenderOptions } from "~/app/http/context";
+import type { AppContext } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
 import activityPub from "~/app/http/middleware/activitypub";
@@ -50,6 +48,7 @@ import { isAuthenticated } from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import githubWebhook from "~/app/http/middleware/github-webhook";
+import mcpRateLimit from "~/app/http/middleware/mcp-rate-limit";
 import models from "~/app/http/middleware/models";
 import pingHubFor from "~/app/http/middleware/ping-hub";
 import purgePostList from "~/app/http/middleware/purge-post-list";
@@ -58,19 +57,16 @@ import requireAdmin from "~/app/http/middleware/require-admin";
 import session from "~/app/http/middleware/session";
 import supportDesk from "~/app/http/middleware/support-desk";
 import webmentionRateLimit from "~/app/http/middleware/webmention-rate-limit";
+import { htmlRenderer } from "~/app/http/render";
 import { loginFor } from "~/app/http/return-path";
-import { SECURITY_POLICY } from "~/app/http/security-policy";
-import { jobQueue } from "~/app/jobs/queue";
-import mcpRateLimit from "~/app/mcp/rate-limit";
-import { assets, documentAssets } from "~/app/services/assets";
-import { createDatabase } from "~/app/services/database";
+import { createDatabase } from "~/app/initializers/database";
+import { logger } from "~/app/initializers/logger";
+import { jobQueue } from "~/app/initializers/queue";
 import { PROFILE } from "~/config/profile";
+import { SECURITY_POLICY } from "~/config/security-policy";
 import { SECURITY_TXT } from "~/config/security-txt";
-import { DocumentAssets } from "~/resources/layouts/document";
 import { NotFoundView } from "~/resources/views/not-found";
 import routes from "~/routes/web";
-
-import { logger } from "./logger";
 
 /**
  * Paths where a non-`GET` request signals a machine caller, since a reader's browser sends
@@ -157,7 +153,7 @@ function activityPubService(env: App.Env): Middleware {
 		let [{ createFederation, federationQueue }, { BLOG_KEYS }, { WorkerKVCache }] =
 			await Promise.all([
 				import("~/app/services/activitypub"),
-				import("~/app/services/activitypub-keys"),
+				import("~/app/initializers/activitypub-keys"),
 				import("@sdxc/cache/worker-kv"),
 			]);
 		return createFederation({
@@ -170,7 +166,7 @@ function activityPubService(env: App.Env): Middleware {
 	});
 }
 
-/** Services {@link createApplication} otherwise builds from the Worker's bindings. */
+/** Services {@link createWebRouter} otherwise builds from the Worker's bindings. */
 export interface ApplicationOptions {
 	/** Delivers Encore support requests in place of the `EMAIL` binding. */
 	mailTransport?: Transport;
@@ -197,40 +193,39 @@ export interface ApplicationOptions {
  * @param options Services a test substitutes for the ones the bindings provide.
  * @returns Configured router instance for the worker fetch entrypoint.
  */
-export default function createApplication(env: App.Env, options: ApplicationOptions = {}) {
-	let globalMiddleware: Array<Middleware<any>> = [
-		headRequests(),
-		log(logger),
-		getClientIP(),
-		trace(),
-		createEnvMiddleware(env),
-		noWWW(),
-		trailingSlash(),
-		wellKnown({
-			"security.txt": serve(securityTxt, () => SECURITY_TXT),
-			nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
-		}),
-		asyncContext(),
-		database(createDatabase),
-		models(),
-		jobEnqueuer(jobQueue),
-		workersCache({ cache: () => platformCache }),
-		/**
-		 * Refuses an unsafe request a browser sent from another origin before any session is
-		 * read, so a page elsewhere can never write to the CMS with an editor's cookie. The
-		 * machine paths take cross-origin callers by design and read no cookie.
-		 */
-		cop({ insecureBypassPatterns: [...MACHINE_PATHS] }),
-		htmlOnly(session),
-		formData(),
-		methodOverride(),
-		htmlOnly(redirects),
-		htmlOnly(auth),
-		securityHeaders(SECURITY_POLICY),
-		...htmlRenderer(),
-	];
+export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) {
 	let router = createRouter<AppContext>({
-		middleware: globalMiddleware,
+		middleware: [
+			headRequests(),
+			log(logger),
+			getClientIP(),
+			trace(),
+			createEnvMiddleware(env),
+			noWWW(),
+			trailingSlash(),
+			wellKnown({
+				"security.txt": serve(securityTxt, () => SECURITY_TXT),
+				nodeinfo: serve(nodeInfoLinks, () => NODEINFO_LINKS),
+			}),
+			asyncContext(),
+			database(createDatabase),
+			models(),
+			jobEnqueuer(jobQueue),
+			workersCache({ cache: () => platformCache }),
+			/**
+			 * Refuses an unsafe request a browser sent from another origin before any session is
+			 * read, so a page elsewhere can never write to the CMS with an editor's cookie. The
+			 * machine paths take cross-origin callers by design and read no cookie.
+			 */
+			cop({ insecureBypassPatterns: [...MACHINE_PATHS] }),
+			htmlOnly(session),
+			formData(),
+			methodOverride(),
+			htmlOnly(redirects),
+			htmlOnly(auth),
+			securityHeaders(SECURITY_POLICY),
+			...htmlRenderer(),
+		],
 
 		async defaultHandler(ctx) {
 			return ctx.render(
@@ -387,7 +382,7 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 				 * whose `handler` must be a function. The server is built at module scope,
 				 * so deferring the import is what keeps it off a cold start.
 				 */
-				handler: async (ctx) => (await import("./mcp")).default.fetch(ctx),
+				handler: async (ctx) => (await import("~/app/initializers/mcp")).default.fetch(ctx),
 			},
 		},
 	});
@@ -466,39 +461,4 @@ export default function createApplication(env: App.Env, options: ApplicationOpti
 	);
 
 	return router;
-}
-
-/**
- * The middleware that publishes the blog's `ctx.render`: `render()` streams the document,
- * resolves each `<Frame>` through this same router with the visitor's headers, and maps every
- * island to its built chunk; the blog's renderer then lays the view and its assets over it.
- *
- * @returns The two middleware, in the order they must run.
- */
-export function htmlRenderer() {
-	return [
-		render({ assets }),
-		renderWith((ctx) => createHtmlRenderer(ctx.get(Renderer) as RenderFunction)),
-	] as const;
-}
-
-/**
- * Creates the request-scoped renderer used by controllers via `ctx.render`, rendering a
- * view with its model inside the document's assets through the request's `render()`, which
- * leads the stream with `<!DOCTYPE html>` and keeps every page in standards mode.
- *
- * @param renderPage The renderer `render()` published for this request.
- */
-function createHtmlRenderer(renderPage: RenderFunction): BlogRenderer {
-	return async function renderView(ViewComponent, viewModel, options?: RenderOptions) {
-		let View = ViewComponent();
-		let pageAssets = await documentAssets();
-		let headers = new Headers(options?.headers);
-		headers.set("content-type", "text/html; charset=utf-8");
-
-		return renderPage(
-			<DocumentAssets value={pageAssets}>{View({ model: viewModel })}</DocumentAssets>,
-			{ status: options?.status ?? 200, headers },
-		);
-	};
 }

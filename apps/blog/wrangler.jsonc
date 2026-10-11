@@ -14,7 +14,7 @@
 	"observability": {
 		"enabled": true,
 	},
-	// Serves the tagged public pages `app/services/cache.ts` declares, and backs the
+	// Serves the tagged public pages `app/initializers/cache.ts` declares, and backs the
 	// purge the CMS runs after a write. `cross_version_cache` stays off so entries
 	// belong to the version that stored them: a deploy then starts on an empty cache,
 	// which makes shipping a fix a way out of a bad page rather than a wait for the
@@ -83,7 +83,7 @@
 		},
 	],
 	// Caller budget for the public, unauthenticated MCP endpoint (see
-	// `app/mcp/rate-limit.ts`). This binding rather than a KV counter because the endpoint
+	// `app/http/middleware/mcp-rate-limit.ts`). This binding rather than a KV counter because the endpoint
 	// bills nothing per call: a KV read plus write per counted request would cost several
 	// times the request being protected. `namespace_id` is a Worker-local identifier, not an
 	// account resource, so nothing has to be provisioned for it; `period` accepts only 10 or
@@ -120,7 +120,7 @@
 	// value written here. A local run only logs the message it would have sent.
 	"send_email": [{ "name": "EMAIL" }],
 
-	// Background jobs (`app/jobs/dispatcher.ts`): Webmention verification and sending, and
+	// Background jobs (`app/initializers/dispatcher.ts`): Webmention verification and sending, and
 	// the bookmark checks.
 	// One message per invocation keeps a slow source or endpoint from holding up others.
 	"queues": {

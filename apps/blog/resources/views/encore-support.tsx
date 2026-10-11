@@ -36,7 +36,7 @@ import {
 	SUPPORT_MESSAGE_MIN,
 	SUPPORT_PLATFORMS,
 	SUPPORT_TOPICS,
-} from "~/app/schemas/encore-support";
+} from "~/app/http/validators/encore-support";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
 

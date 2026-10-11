@@ -15,6 +15,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
+import { htmlRenderer } from "~/app/http/render";
 import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
 	SEARCH_DEBOUNCE_MS,
@@ -26,8 +27,6 @@ import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import { BlogLayout } from "~/resources/layouts/blog";
 import { SEARCH_DIALOG_INPUT_ID, SearchFrameView } from "~/resources/views/search-frame";
 import routes from "~/routes/web";
-
-import { htmlRenderer } from "../../bootstrap/app";
 
 /** The modules the runtime is asked for while the page hydrates, by the chunk the manifest names. */
 const CLIENT_MODULES: Record<string, () => Promise<unknown>> = {

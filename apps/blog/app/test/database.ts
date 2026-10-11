@@ -11,7 +11,7 @@ import type { Database } from "remix/data-table";
 
 import { createD1Database } from "@sdxc/cloudflare-mocks";
 
-import { openDatabase } from "~/app/services/database";
+import { openDatabase } from "~/app/initializers/database";
 
 import { applyMigrations } from "./fixtures";
 

@@ -4,8 +4,8 @@ import { toHTML } from "@sdxc/markdown/html";
 import { isFailure } from "@sdxc/result";
 import { outboundLinks, plan } from "@sdxc/webmention/sender";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 /**
  * Plans what a post notifies after it was created, updated or deleted: every page its
  * content links to now, plus every page it notified before and no longer links to, and

@@ -13,7 +13,7 @@ import workersCache from "@sdxc/workers-cache/middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { PUBLIC_PAGE, TAGS } from "./cache";
+import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 
 /**
  * Serves one post route through the real middleware, registered the way the

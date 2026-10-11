@@ -15,12 +15,11 @@ import { succeeded, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
 import { PROFILE } from "~/config/profile";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 const SLUG = `microformats-${crypto.randomUUID().slice(0, 8)}`;
@@ -52,7 +51,7 @@ function environment(): App.Env {
 /** Renders one page through the real router and parses it with the page's own URL as base. */
 async function parsePage(path: string) {
 	let url = new URL(path, ORIGIN).href;
-	let response = await createApplication(environment()).fetch(new Request(url));
+	let response = await createWebRouter(environment()).fetch(new Request(url));
 	expect(response.status).toBe(200);
 	return ok(parse(await response.text(), url));
 }

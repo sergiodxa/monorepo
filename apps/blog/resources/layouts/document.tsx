@@ -15,7 +15,7 @@ import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/services/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";

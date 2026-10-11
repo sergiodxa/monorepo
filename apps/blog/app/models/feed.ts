@@ -1,5 +1,5 @@
 /**
- * Feed repository for blog. Composes a single time-ordered public activity
+ * The blog's activity feed model. Composes a single time-ordered public activity
  * feed by loading articles, tutorials, bookmarks, and glossary entries in
  * parallel, normalizing them to a shared item shape, and sorting newest-first.
  *

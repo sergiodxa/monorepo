@@ -8,8 +8,8 @@
  */
 import { createJobHandler } from "@sdxc/jobs";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 
 /**
  * Only queues: each send stamps its post, so a post queued twice before its send runs

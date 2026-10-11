@@ -11,12 +11,11 @@ import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { serializeTags } from "~/app/models/post-values";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 
@@ -43,7 +42,7 @@ function environment(): App.Env {
 
 /** Requests one URL through the real router. */
 function get(path: string): Promise<Response> {
-	return createApplication(environment()).fetch(new Request(new URL(path, ORIGIN)));
+	return createWebRouter(environment()).fetch(new Request(new URL(path, ORIGIN)));
 }
 
 beforeAll(async () => {

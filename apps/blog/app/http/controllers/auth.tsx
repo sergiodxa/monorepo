@@ -13,9 +13,9 @@ import { redirect } from "@sdxc/http/response";
 import { isFailure, wrap } from "@sdxc/result";
 import { createAction, createController, type Middleware } from "remix/router";
 
-import { relyingParty } from "~/app/auth/relying-party";
 import { isAuthenticated, login, logout } from "~/app/http/middleware/auth";
 import { parseReturnPath, requestedReturnPath } from "~/app/http/return-path";
+import { relyingParty } from "~/app/initializers/relying-party";
 import { UnverifiedEmailError } from "~/app/models/users";
 import { LoginView } from "~/resources/views/auth/login";
 import { LogoutView } from "~/resources/views/auth/logout";

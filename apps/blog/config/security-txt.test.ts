@@ -1,7 +1,7 @@
 /**
  * Holds the site's security.txt to its annual review: the expiry test starts failing 30
  * days before `Expires`, so the contact is looked at before the file goes stale. The
- * served file is checked through the router in `bootstrap/app.workers.test.ts`.
+ * served file is checked through the router in `app/initializers/router.workers.test.ts`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026

@@ -8,7 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { Feed } from "~/app/repositories/feed";
+import type { Feed } from "~/app/models/feed";
 
 import { normalizeUrl } from "~/app/models/post-values";
 import routes from "~/routes/web";

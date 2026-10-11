@@ -25,7 +25,7 @@ import { bindModels, publishModels } from "~/app/test/models";
 /** Every `enqueueMany` call, standing in for the queue the dispatcher writes to. */
 let enqueued = vi.fn<(job: unknown, inputs: unknown[]) => Promise<void>>(async () => {});
 
-vi.doMock("~/app/jobs/dispatcher", () => ({ dispatcher: { enqueueMany: enqueued } }));
+vi.doMock("~/app/initializers/dispatcher", () => ({ dispatcher: { enqueueMany: enqueued } }));
 
 let digest = (await import("./digest")).default;
 let sweep = (await import("./sweep")).default;

@@ -21,9 +21,8 @@ import { MemoryCheck } from "@sdxc/spam/memory";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { SUPPORT_RATE_LIMIT, SUPPORT_SENDER } from "~/app/services/support-desk";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 const PATH = "/apps/encore/support";
@@ -106,7 +105,7 @@ interface SubmitOptions {
 
 /** Posts the form the way a same-origin browser does. */
 function submit(body: URLSearchParams, options: SubmitOptions = {}) {
-	let app = createApplication(environment(options.env), {
+	let app = createWebRouter(environment(options.env), {
 		mailTransport: options.transport,
 		spamFilter: options.spamFilter ?? createSpamFilter({ checks: [] }),
 	});
@@ -127,7 +126,7 @@ function submit(body: URLSearchParams, options: SubmitOptions = {}) {
 
 /** Loads the page, carrying a session cookie when one is given. */
 function load(cookie?: string) {
-	let app = createApplication(environment());
+	let app = createWebRouter(environment());
 	return app.fetch(new Request(new URL(PATH, ORIGIN), { headers: cookie ? { cookie } : {} }));
 }
 

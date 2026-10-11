@@ -140,7 +140,7 @@ the rest convert one app at a time, completely, before the next starts.
 | is an authorization rule                                                                                                 | `app/policies/`                                                        |
 | is a view, component, layout, stylesheet or translation                                                                  | `resources/` (`resources/locales/` for translations)                   |
 | is a route contract, a migration or schema, a test factory                                                               | `routes/`, `database/`, `database/factories/`                          |
-| is static app configuration (site profile, product catalog, security.txt)                                                | `config/`                                                              |
+| is static app configuration (site profile, product catalog, security.txt, security headers policy)                       | `config/`                                                              |
 | is any other test helper                                                                                                 | `app/test/`                                                            |
 | is generic, with no knowledge of the app                                                                                 | a package                                                              |
 

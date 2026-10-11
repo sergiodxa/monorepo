@@ -20,7 +20,7 @@ import { isFailure, success, wrap } from "@sdxc/result";
 import type { BlogModels } from "~/app/models";
 
 import jobs from "~/app/jobs";
-import { FollowerRepository } from "~/app/repositories/follower";
+import { FollowerRepository } from "~/app/models/follower";
 import { FederatedPosts } from "~/app/services/federated-posts";
 import { findMentionable } from "~/app/services/posts";
 import {

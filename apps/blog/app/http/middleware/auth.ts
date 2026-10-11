@@ -17,7 +17,7 @@ import { Session } from "remix/session";
 
 import type * as schema from "~/database/schema";
 
-import { relyingParty } from "~/app/auth/relying-party";
+import { relyingParty } from "~/app/initializers/relying-party";
 
 /**
  * Session key used to store the authenticated user id.

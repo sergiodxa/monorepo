@@ -16,11 +16,10 @@ import { RSS } from "@sdxc/rss";
 import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { createWebRouter } from "~/app/initializers/router";
 import { migratedDatabase } from "~/app/test/d1";
 import { seedAuthor } from "~/app/test/fixtures";
 import { bindModels } from "~/app/test/models";
-
-import createApplication from "../../../bootstrap/app";
 
 const ORIGIN = "https://blog.test";
 const SLUG = `syndication-${crypto.randomUUID().slice(0, 8)}`;
@@ -53,7 +52,7 @@ function environment(): App.Env {
 
 /** Fetches one path through the real router. */
 async function fetchPath(path: string) {
-	let response = await createApplication(environment()).fetch(new Request(new URL(path, ORIGIN)));
+	let response = await createWebRouter(environment()).fetch(new Request(new URL(path, ORIGIN)));
 	expect(response.status).toBe(200);
 	return response;
 }

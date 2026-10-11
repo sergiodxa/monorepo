@@ -194,7 +194,7 @@ which in a monorepo is a package.
 - [x] demo
 - [x] books
 - [x] sdxc
-- [ ] blog
+- [x] blog
 - [ ] r3-auth
 - [ ] reader
 - [ ] uptime

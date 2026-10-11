@@ -27,12 +27,11 @@ import auth from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
 import models from "~/app/http/middleware/models";
+import { htmlRenderer } from "~/app/http/render";
 import { testDatabase } from "~/app/test/database";
 import { blankSearchFrame } from "~/app/test/frames";
 import { bindModels } from "~/app/test/models";
 import routes from "~/routes/web";
-
-import { htmlRenderer } from "../../../bootstrap/app";
 
 import { callbackAction, loginController } from "./auth";
 

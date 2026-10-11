@@ -1,5 +1,5 @@
 /**
- * Redirect repository for blog, backed by the REDIRECTS KV namespace. Reads,
+ * The blog's redirect rules model, backed by the REDIRECTS KV namespace. Reads,
  * lists, upserts, and deletes redirect rules, normalizing `from` paths and
  * parsing both legacy plain-string and structured JSON values into one contract.
  *

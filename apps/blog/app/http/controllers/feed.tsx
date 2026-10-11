@@ -10,9 +10,9 @@
 import { createAction } from "remix/router";
 
 import { FeedViewModel } from "~/app/http/view-models/feed";
-import { Feed } from "~/app/repositories/feed";
+import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
+import { Feed } from "~/app/models/feed";
 import { siteActor } from "~/app/services/activitypub";
-import { NEGOTIATED_ACTIVITY, PUBLIC_PAGE, TAGS } from "~/app/services/cache";
 import { FeedView } from "~/resources/views/feed";
 import routes from "~/routes/web";
 

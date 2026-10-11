@@ -1,7 +1,7 @@
 import { createJobHandler } from "@sdxc/jobs";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 /**
  * The weekly bookmark check: queues one inspection per bookmark, so a slow origin delays
  * nobody else, and one archive per bookmark still without a Wayback Machine capture whose

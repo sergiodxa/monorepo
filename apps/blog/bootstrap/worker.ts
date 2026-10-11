@@ -9,9 +9,8 @@
 
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 
-import { dispatcher } from "~/app/jobs/dispatcher";
-
-import createApplication from "./app";
+import { dispatcher } from "~/app/initializers/dispatcher";
+import { createWebRouter } from "~/app/initializers/router";
 
 /** The queue and cron entrypoints, bound to the dispatcher every job runs through. */
 const handlers = cloudflare.worker(dispatcher);
@@ -26,7 +25,7 @@ export default {
 			env.COOKIE_SESSION_SECRET.get(),
 		]);
 
-		let router = createApplication({
+		let router = createWebRouter({
 			IS_PROD,
 			CLIENT_ID,
 			CLIENT_SECRET,

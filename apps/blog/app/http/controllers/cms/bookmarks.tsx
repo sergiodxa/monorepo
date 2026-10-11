@@ -15,10 +15,10 @@ import { createController } from "remix/router";
 import type { SelectBookmark } from "~/database/schema";
 
 import { getAuthUser } from "~/app/http/middleware/auth";
+import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/http/validators/cms/bookmark";
 import jobs from "~/app/jobs";
 import { flagOf, isOpen, statusOf } from "~/app/models/bookmarks";
 import { bookmarkAddress, bookmarkLabel, cleanUrl } from "~/app/models/post-values";
-import { BookmarkPrefillSchema, BookmarkSchema } from "~/app/schemas/cms/bookmark";
 import { createBookmark, updateBookmark } from "~/app/services/bookmarks";
 import { CMSBookmarksActionView, CMSBookmarksIndexView } from "~/resources/views/cms/bookmarks";
 import routes from "~/routes/web";

@@ -9,7 +9,7 @@ import type { JobMiddleware } from "@sdxc/jobs";
 import type { Database as DataTable } from "remix/data-table";
 
 import { Database } from "~/app/http/middleware/database";
-import { createDatabase } from "~/app/services/database";
+import { createDatabase } from "~/app/initializers/database";
 
 /**
  * Publishes the database for the job about to run.

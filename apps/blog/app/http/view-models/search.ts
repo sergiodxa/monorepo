@@ -16,7 +16,7 @@ import { toPlainText } from "@sdxc/markdown/plain";
 import { isFailure } from "@sdxc/result";
 import { excerpt, highlight } from "@sdxc/search/query";
 
-import type { PostSearch } from "~/app/repositories/search";
+import type { PostSearch } from "~/app/models/search";
 
 import routes from "~/routes/web";
 

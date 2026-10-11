@@ -22,10 +22,10 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import type { AuthProfile } from "~/app/auth/relying-party";
+import type { AuthProfile } from "~/app/initializers/relying-party";
 
-import { relyingParty } from "~/app/auth/relying-party";
 import createEnvMiddleware from "~/app/http/middleware/env";
+import { relyingParty } from "~/app/initializers/relying-party";
 import routes from "~/routes/web";
 
 /** The origin the blog answers on, which every login destination is held to. */

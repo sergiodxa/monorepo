@@ -11,7 +11,7 @@ import { createAction } from "remix/router";
 
 import { isAdmin } from "~/app/http/middleware/auth";
 import { TutorialsViewModel } from "~/app/http/view-models/tutorials";
-import { PUBLIC_PAGE, TAGS } from "~/app/services/cache";
+import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { TutorialsView } from "~/resources/views/tutorials";
 import routes from "~/routes/web";
 

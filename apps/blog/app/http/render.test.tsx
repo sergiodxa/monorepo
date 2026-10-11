@@ -10,9 +10,8 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import { htmlRenderer } from "~/app/http/render";
 import DocumentLayout from "~/resources/layouts/document";
-
-import { htmlRenderer } from "./app";
 
 function TestView() {
 	return function TestPage({ model }: { model: { title: string } }) {

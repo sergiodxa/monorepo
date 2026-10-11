@@ -12,9 +12,8 @@ import { keyProviderConformance } from "@sdxc/activitypub/testing";
 import { isFailure, unwrap } from "@sdxc/result";
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { BlogKeyProvider } from "~/app/initializers/activitypub-keys";
 import { ACTOR_ID } from "~/config/activitypub";
-
-import { BlogKeyProvider } from "./activitypub-keys";
 
 let privateKeyPem = "";
 let publicKeyPem = "";

@@ -14,7 +14,7 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v7";
 import { inList, isNull, notNull } from "remix/data-table";
 
-import { PostSearch } from "~/app/repositories/search";
+import { PostSearch } from "~/app/models/search";
 import { postMeta, posts } from "~/database/schema";
 
 import {

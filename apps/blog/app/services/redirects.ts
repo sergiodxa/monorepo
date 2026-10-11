@@ -9,7 +9,7 @@
 
 import { env } from "cloudflare:workers";
 
-import { Redirect } from "~/app/repositories/redirect";
+import { Redirect } from "~/app/models/redirect";
 
 /** Wraps the REDIRECTS KV namespace behind app-level redirect operations. */
 export class RedirectsService {
