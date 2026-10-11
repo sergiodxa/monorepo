@@ -164,6 +164,18 @@ describe("createSQLStorageDatabaseAdapter", () => {
 		);
 	});
 
+	test("an upsert binds its insert values before the update it writes on conflict", async () => {
+		await db.query(users).upsert({ id: 1, email: "first@example.com" }, { update: { email: "x" } });
+		await db
+			.query(users)
+			.upsert({ id: 1, email: "ignored@example.com" }, { update: { email: "second@example.com" } });
+
+		expect(await db.findOne(users, { where: { id: 1 } })).toEqual({
+			id: 1,
+			email: "second@example.com",
+		});
+	});
+
 	test("emits no transaction statement of its own, so ordinary writes land", async () => {
 		await db.create(users, { id: 1, email: "first@example.com" });
 		await db.create(users, { id: 2, email: "second@example.com" });
