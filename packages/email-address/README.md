@@ -1,19 +1,23 @@
 # @sdxc/email-address
 
-Email address parsing and normalization, disposable-domain detection, and mail-server checks.
+Email address parsing, normalization, disposable-domain and mail-server checks.
+
+Each check lives under its own export path, so code that only parses bundles neither the
+~130 KB disposable-domain list nor the DNS client. Every failure carries a `reason` code that
+an app maps to its own message.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/email-address
 ```
 
-Checks return [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values; install it
-alongside to narrow them with `isFailure` and `isSuccess`.
+Every check returns a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result);
+install it alongside to narrow them with `isFailure` and `isSuccess`.
 
 ## Usage
 
-### Parse An Address
+### Parse an address
 
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
@@ -23,27 +27,30 @@ let parsed = parseEmailAddress("  Jane.Doe@Bücher.Example ");
 
 if (isSuccess(parsed)) parsed.data;
 // {
-//   address: "Jane.Doe@xn--bcher-kva.example",
-//   canonical: "jane.doe@xn--bcher-kva.example",
+//   address: "Jane.Doe@xn--bcher-kva.example",   store and send to this
+//   canonical: "jane.doe@xn--bcher-kva.example", compare and index on this
 //   localPart: "Jane.Doe",
 //   domain: "xn--bcher-kva.example",
 // }
 else parsed.error.reason; // "local-part-invalid", "domain-invalid", …
 ```
 
-### Refuse A Disposable Address
+### Refuse disposable and role addresses
 
 ```typescript
-import type { EmailAddress } from "@sdxc/email-address";
-
+import { parseEmailAddress } from "@sdxc/email-address";
 import { checkDisposable } from "@sdxc/email-address/disposable";
+import { checkRoleAccount } from "@sdxc/email-address/role-account";
+import { isSuccess } from "@sdxc/result";
 
-function refuseDisposable(address: EmailAddress) {
-	return checkDisposable(address); // failure for jane@inbox.mailinator.com
+let parsed = parseEmailAddress("jane@inbox.mailinator.com");
+if (isSuccess(parsed)) {
+	checkDisposable(parsed.data); // failure: reason "disposable-domain", domain "mailinator.com"
+	checkRoleAccount(parsed.data); // success: the same address
 }
 ```
 
-### Check The Domain Receives Mail
+### Check the domain receives mail
 
 ```typescript
 import { checkMailServer } from "@sdxc/email-address/mail-server";
@@ -52,7 +59,7 @@ let servers = await checkMailServer("example.com");
 // success({ domain: "example.com", hosts: ["mx1.example.com"], implicit: false, ttl: 300 })
 ```
 
-### Suggest A Fix For A Mistyped Provider
+### Suggest a fix for a mistyped provider
 
 ```typescript
 import type { EmailAddress } from "@sdxc/email-address";
@@ -66,39 +73,20 @@ function didYouMean(address: EmailAddress) {
 
 ## API
 
-Each capability has its own export path, so code that only parses bundles neither the
-~130 KB disposable-domain list nor the DNS client. Every failure carries a `reason` code, so an
-app maps each one to its own message.
-
 ### `@sdxc/email-address`
 
-#### `parseEmailAddress(input): Result<EmailAddress, InvalidEmailAddressError>`
+#### `parseEmailAddress(input: string): Result<EmailAddress, InvalidEmailAddressError>`
 
 NFKC-normalizes and trims the input, splits it at the last `@`, and accepts an RFC 5322
-dot-atom local part (plus non-ASCII per RFC 6531, except controls, invisible format characters,
-unassigned and private-use code points, and spaces) of at most 64 UTF-8 octets. Quoted local
-parts (`"jane doe"@example.com`) are refused. The domain follows `normalizeDomain`, and the
-whole `address` is at most 254 octets (RFC 5321).
+dot-atom local part (non-ASCII allowed per RFC 6531) of at most 64 UTF-8 octets, a domain by
+the `normalizeDomain` rule, and a whole address of at most 254 octets. Quoted local parts are
+refused.
 
-An `EmailAddress` holds:
+#### `normalizeDomain(input: string): Result<string, InvalidEmailAddressError>`
 
-- `address` - the local part as entered, `@`, and the ASCII domain. Store and send to this one:
-  RFC 5321 lets a mail host treat local-part case as significant.
-- `canonical` - `address` with the local part lowercased. Key uniqueness and lookups on this
-  one. Dots and `+tags` stay: only the mail host knows whether `j.ane+news@` and `jane@` share a
-  mailbox, and a wrong guess merges two people.
-- `localPart` - NFKC-normalized, case as entered.
-- `domain` - lowercased and ASCII-encoded (punycode), the form DNS and SMTP use.
-
-#### `normalizeDomain(input): Result<string, InvalidEmailAddressError>`
-
-The domain rule on its own, for a bare domain such as one an organization claims. The input is
-NFKC-normalized and trimmed, any ASCII besides letters, digits, `-` and `.` is refused, and the
-rest is IDNA-encoded the way the
-[URL standard](https://developer.mozilla.org/en-US/docs/Web/API/URL/hostname) parses a host. The
-result needs at least two labels of 1–63 letters, digits and inner hyphens, at most 253
-characters, and a top-level label that is not all digits, so IP literals, single-label names
-(`localhost`) and a trailing root dot (`example.com.`) are refused.
+The domain rule on its own, for a bare domain such as one an organization claims: NFKC,
+trimmed, IDNA-encoded to lowercase ASCII, at least two labels, and a top-level label that is
+not all digits. IP literals, `localhost` and a trailing root dot are refused.
 
 ```typescript
 normalizeDomain("Straße.DE"); // success("xn--strae-oqa.de")
@@ -106,7 +94,7 @@ normalizeDomain("Straße.DE"); // success("xn--strae-oqa.de")
 
 #### `InvalidEmailAddressError`
 
-The failure of both functions. `reason` is one of:
+The failure of both functions; `reason` is an `EmailAddressReason`.
 
 | Reason                | Meaning                                                  |
 | --------------------- | -------------------------------------------------------- |
@@ -116,88 +104,108 @@ The failure of both functions. `reason` is one of:
 | `local-part-invalid`  | Not a dot-atom: quoted, spaces, stray dots, a second `@` |
 | `domain-empty`        | Nothing after the `@`                                    |
 | `domain-too-long`     | Encoded domain over 253 characters                       |
-| `domain-invalid`      | Not a hostname by the rules above                        |
+| `domain-invalid`      | Not a public hostname                                    |
 | `address-too-long`    | Whole address over 254 octets                            |
-
-`EmailAddress` and `EmailAddressReason` are exported as types.
 
 ### `@sdxc/email-address/disposable`
 
-The bundled list is the
+Checks against the bundled
 [disposable-email-domains](https://github.com/disposable-email-domains/disposable-email-domains)
-blocklist, dedicated to the public domain under
-[CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/) and taken on 2026-09-27. A domain
-matches when it equals a listed domain or is a subdomain of one: `x.mailinator.com` matches
-`mailinator.com`. To accept a listed domain anyway, test for it before calling
-`checkDisposable`.
+blocklist ([CC0-1.0](https://creativecommons.org/publicdomain/zero/1.0/)). A domain matches
+when it equals a listed domain or sits under one: `x.mailinator.com` matches `mailinator.com`.
 
-#### `checkDisposable(address): Result<EmailAddress, DisposableDomainError>`
+#### `checkDisposable(address: EmailAddress): Result<EmailAddress, DisposableDomainError>`
 
-Passes the address through unchanged, or fails with a `DisposableDomainError` whose `reason` is
-`"disposable-domain"` and whose `domain` is the listed entry it matched.
+The same address, or a `DisposableDomainError` whose `reason` is `"disposable-domain"` and
+whose `domain` is the listed entry it matched.
 
-#### `isDisposableDomain(domain): boolean` / `findDisposableDomain(domain): string | null`
+#### `findDisposableDomain(domain: string): string | null`
 
-Whether an ASCII domain is listed, or which entry it matched. Case and one trailing dot are
-ignored; pass an internationalized domain in its ASCII form, as `normalizeDomain` returns it.
+The listed entry an ASCII domain matches, or `null`. Case and one trailing dot are ignored;
+pass an internationalized domain in the ASCII form `normalizeDomain` returns.
+
+#### `isDisposableDomain(domain: string): boolean`
+
+Whether `findDisposableDomain` finds an entry.
 
 ### `@sdxc/email-address/mail-server`
 
-#### `checkMailServer(domain, options?): Promise<Result<MailServers, MailServerError>>`
+#### `checkMailServer(domain: string, options?: DoH.ResolveOptions): Promise<Result<MailServers, MailServerError>>`
 
-Checks that an ASCII domain can receive mail, the way a sending server finds its hosts, over
-DNS over HTTPS through [`@sdxc/doh`](https://www.npmjs.com/package/@sdxc/doh). `options` go to
-each lookup: `resolver` (Cloudflare by default), `timeoutMs` (default `5000`), `signal`,
-`dnssec` and `checkingDisabled`.
+Finds the mail hosts of an ASCII domain the way a sending server does, over DNS over HTTPS
+through [`@sdxc/doh`](https://www.npmjs.com/package/@sdxc/doh). `options` go to each lookup:
+`resolver` (Cloudflare by default), `timeoutMs` (default `5000`), `signal`, `dnssec` and
+`checkingDisabled`.
 
-| Answer                                   | Result                                  |
-| ---------------------------------------- | --------------------------------------- |
-| MX records                               | `hosts` by ascending preference         |
-| Only an RFC 7505 null MX (`0 .`)         | `null-mx`                               |
-| No MX, but an A or AAAA address          | `implicit: true`, `hosts: [domain]`     |
-| No MX and no address                     | `no-mail-server`                        |
-| NXDOMAIN                                 | `domain-not-found`                      |
-| SERVFAIL, timeout, other resolver errors | `lookup-failed` (the answer is unknown) |
+| Answer                                   | Result                                    |
+| ---------------------------------------- | ----------------------------------------- |
+| MX records                               | `hosts` by ascending preference           |
+| Only an RFC 7505 null MX (`0 .`)         | `null-mx`                                 |
+| No MX, but an A or AAAA address          | `implicit: true`, `hosts: [domain]`       |
+| No MX and no address                     | `no-mail-server`                          |
+| NXDOMAIN                                 | `domain-not-found`                        |
+| SERVFAIL, timeout, other resolver errors | `lookup-failed`, so the answer is unknown |
 
-`MailServers` holds `domain`, `hosts`, `implicit`, and `ttl`, the smallest TTL among the records
-the answer rests on (`null` when none reported one). `MailServerError` holds `reason` and, for
-`domain-not-found` and `lookup-failed`, the DNS error as `cause`. `MailServerReason` is exported
-as a type.
+It confirms the domain receives mail; confirm the mailbox itself by sending it a link or code.
 
-This proves the domain can receive mail, never that the mailbox exists: that takes an SMTP
-conversation, which serverless runtimes cannot open and which gets the prober blocklisted.
-Confirm a mailbox by sending it a link or code.
+#### `MailServerError`
+
+The failure of `checkMailServer`: `reason` is a `MailServerReason`, and `cause` holds the DNS
+error behind `domain-not-found` and `lookup-failed`.
 
 ### `@sdxc/email-address/role-account`
 
-#### `checkRoleAccount(address): Result<EmailAddress, RoleAccountError>`
+#### `checkRoleAccount(address: EmailAddress): Result<EmailAddress, RoleAccountError>`
 
-Fails with a `RoleAccountError` whose `reason` is `"role-account"` and whose `role` is the match
-when the local part, lowercased and with any `+tag` removed, names a function rather than a
-person: `abuse`, `admin`, `administrator`, `billing`, `contact`, `do-not-reply`, `donotreply`,
-`ftp`, `help`, `hostmaster`, `info`, `mailer-daemon`, `marketing`, `news`, `no-reply`, `noc`,
+The same address, or a `RoleAccountError` whose `reason` is `"role-account"` and whose `role`
+is the match, when the whole local part, lowercased and without its `+tag`, names a function:
+`abuse`, `admin`, `administrator`, `billing`, `contact`, `do-not-reply`, `donotreply`, `ftp`,
+`help`, `hostmaster`, `info`, `mailer-daemon`, `marketing`, `news`, `no-reply`, `noc`,
 `noreply`, `postmaster`, `root`, `sales`, `security`, `support`, `sysadmin`, `usenet`, `uucp`,
-`webmaster`, `www`. Only the whole local part counts, so `sales-jane@` passes.
+`webmaster` or `www`. `Support+billing@` matches; `sales-jane@` passes.
 
 ### `@sdxc/email-address/typo`
 
-#### `suggestDomain(address): EmailAddress | null`
+#### `suggestDomain(address: EmailAddress): EmailAddress | null`
 
 The address with its domain replaced by the provider it most likely meant, or `null`. The
 providers are `gmail.com`, `yahoo.com`, `hotmail.com`, `outlook.com`, `icloud.com`,
-`googlemail.com`, `protonmail.com`, `yandex.com` and `fastmail.com`. A domain one edit away
-(insert, delete, substitute, swap two adjacent letters) is corrected, or two edits away for
-providers of ten characters or more; `mail.com`, `email.com` and `ymail.com` get no suggestion.
+`googlemail.com`, `protonmail.com`, `yandex.com` and `fastmail.com`; a domain one edit away
+(two for providers of ten characters or more) is corrected, and `mail.com`, `email.com` and
+`ymail.com` are left alone.
 
-## Pattern: Validate A Sign-Up Address
+### Types
+
+#### `EmailAddress`
+
+`address` (local part as entered, ASCII domain) is the form to store and deliver to, since a
+mail host may treat local-part case as significant. `canonical` lowercases the local part and
+keeps dots and `+tags`, the form to key uniqueness on. `localPart` and `domain` are the halves.
+
+#### `EmailAddressReason`
+
+The union of `InvalidEmailAddressError` reasons in the table above.
+
+#### `MailServers`
+
+`domain`, `hosts`, `implicit`, and `ttl`: the smallest TTL among the records the answer rests
+on, or `null` when none reported one.
+
+#### `MailServerReason`
+
+`"null-mx" | "no-mail-server" | "domain-not-found" | "lookup-failed"`.
+
+## Pattern: Validate a sign-up address
 
 Parse first, run the checks that need no network, then the DNS check, and decide what an
-unknown answer means.
+unknown answer means. Here `lookup-failed` fails open, so a resolver outage never blocks a
+sign-up and the confirmation email stays the real test.
 
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
 import { checkDisposable } from "@sdxc/email-address/disposable";
 import { checkMailServer } from "@sdxc/email-address/mail-server";
+import { checkRoleAccount } from "@sdxc/email-address/role-account";
 import { suggestDomain } from "@sdxc/email-address/typo";
 import { isFailure } from "@sdxc/result";
 
@@ -210,6 +218,9 @@ async function validateSignUpEmail(input: string) {
 	let disposable = checkDisposable(parsed.data);
 	if (isFailure(disposable)) return { error: disposable.error.reason };
 
+	let role = checkRoleAccount(parsed.data);
+	if (isFailure(role)) return { error: role.error.reason };
+
 	let servers = await checkMailServer(parsed.data.domain, { timeoutMs: 2000 });
 	if (isFailure(servers) && servers.error.reason !== "lookup-failed") {
 		return { error: servers.error.reason, suggestion };
@@ -219,13 +230,10 @@ async function validateSignUpEmail(input: string) {
 }
 ```
 
-`lookup-failed` fails open here: a resolver outage never blocks a sign-up, and the confirmation
-email is the real test. Fail closed instead where a bad address costs more than a lost sign-up.
+## Pattern: Store one form, index the other
 
-## Pattern: Store One Form, Index The Other
-
-Keep `address` for sending and a unique index on `canonical`, so a second sign-up with different
-capitalization finds the existing account.
+Keep `address` for sending and a unique index on `canonical`, so a second sign-up with
+different capitalization finds the existing account.
 
 ```typescript
 import { parseEmailAddress } from "@sdxc/email-address";
@@ -247,7 +255,34 @@ async function findOrCreateUser(users: Users, input: string) {
 }
 ```
 
-## Pattern: Cache Mail-Server Answers
+## Pattern: Verify a claimed organization domain
+
+Normalize a bare domain, refuse a disposable one unless you allow it explicitly, and confirm
+it receives mail before sending a verification email to it.
+
+```typescript
+import { normalizeDomain } from "@sdxc/email-address";
+import { findDisposableDomain } from "@sdxc/email-address/disposable";
+import { checkMailServer } from "@sdxc/email-address/mail-server";
+import { isFailure } from "@sdxc/result";
+
+let allowedDomains = new Set(["example-partner.com"]);
+
+async function claimDomain(input: string) {
+	let domain = normalizeDomain(input);
+	if (isFailure(domain)) return { error: domain.error.reason };
+
+	let listed = findDisposableDomain(domain.data);
+	if (listed !== null && !allowedDomains.has(listed)) return { error: "disposable-domain" };
+
+	let servers = await checkMailServer(domain.data);
+	if (isFailure(servers)) return { error: servers.error.reason };
+
+	return { domain: domain.data, hosts: servers.data.hosts };
+}
+```
+
+## Pattern: Cache mail-server answers
 
 A burst of sign-ups from one domain costs one lookup when the answer is cached for its `ttl`.
 
