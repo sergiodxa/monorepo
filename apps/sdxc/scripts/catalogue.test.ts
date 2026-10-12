@@ -16,6 +16,7 @@ import {
 	collectTheme,
 	collectUsage,
 	componentName,
+	cssProperty,
 	pairExamples,
 	readBarrel,
 	readComponent,
@@ -185,6 +186,36 @@ describe("readUtility", () => {
 
 	test("reports nothing for a name the module does not declare", () => {
 		expect(readUtility(UTILITY_MODULE, { name: "m", family: "size", module: "p" })).toBeNull();
+	});
+});
+
+describe("cssProperty", () => {
+	/** One documented call and the output it emits, as `pairExamples` hands them over. */
+	function emitting(output: string) {
+		return [{ call: "u.x()", output }];
+	}
+
+	test("names the one property an output sets", () => {
+		expect(cssProperty(emitting('css({ paddingInline: "1rem" })'))).toBe("padding-inline");
+	});
+
+	test("counts vendor-prefixed copies as the same property", () => {
+		expect(cssProperty(emitting('css({ maskImage: "none", WebkitMaskImage: "none" })'))).toBe(
+			"mask-image",
+		);
+	});
+
+	test("leaves a composite unnamed, so its page keeps the utility's own name", () => {
+		expect(
+			cssProperty(
+				emitting('css({ display: "grid", alignItems: "center", "& > *": { gridArea: "1 / 1" } })'),
+			),
+		).toBeNull();
+		expect(cssProperty(emitting('css({ display: "flex", flexDirection: "column" })'))).toBeNull();
+	});
+
+	test("leaves a variant keyed by a selector or an at-rule unnamed", () => {
+		expect(cssProperty(emitting('css({ "&:hover": { color: "red" } })'))).toBeNull();
 	});
 });
 

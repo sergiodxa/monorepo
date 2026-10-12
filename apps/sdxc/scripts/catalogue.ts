@@ -475,18 +475,72 @@ function isOutput(example: string): boolean {
 
 /**
  * The CSS property the utility sets, which is what the page is titled after: a reader
- * looking for `padding` finds it by that name rather than by `p`. A utility whose
- * first declaration is keyed by a selector or an at-rule sets no single property —
- * every variant does this — so it keeps its own name instead.
+ * looking for `padding` finds it by that name rather than by `p`. Only a utility whose
+ * first output sets one property, counting its vendor-prefixed copies as the same one,
+ * is titled this way; a composite such as `zstack`, or a variant keyed by a selector or an
+ * at-rule, keeps its own name.
  */
-function cssProperty(examples: UtilityExample[]): string | null {
+export function cssProperty(examples: UtilityExample[]): string | null {
 	let first = examples[0]?.output;
-	if (!first) return null;
+	if (!first?.startsWith("css(")) return null;
 
-	let key = /^css\(\s*\{\s*([A-Za-z][A-Za-z0-9]*)\s*:/.exec(first)?.[1];
-	if (!key) return null;
+	let keys = topLevelKeys(first);
+	if (keys.some((key) => !/^[A-Za-z][A-Za-z0-9]*$/.test(key))) return null;
 
-	return key.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+	let properties = new Set(
+		keys.map((key) => {
+			let unprefixed = key.replace(/^(Webkit|Moz|ms)(?=[A-Z])/, "");
+			return unprefixed.charAt(0).toLowerCase() + unprefixed.slice(1);
+		}),
+	);
+	if (properties.size !== 1) return null;
+
+	let [property = ""] = properties;
+	return property.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+/**
+ * The keys of the outermost object literal in a `css({ … })` output, in order. Nested
+ * objects, calls and strings are skipped whole, so a selector's declarations never read
+ * as the host's own; a quoted key is returned with its quotes, which no property name has.
+ */
+function topLevelKeys(output: string): string[] {
+	let keys: string[] = [];
+	let depth = 0;
+	let quote: string | null = null;
+	let token = "";
+
+	for (let index = output.indexOf("{"); index < output.length; index++) {
+		let char = output[index] ?? "";
+
+		if (quote !== null) {
+			token += char;
+			if (char === "\\") token += output[++index] ?? "";
+			else if (char === quote) quote = null;
+			continue;
+		}
+
+		if (char === '"' || char === "'" || char === "`") {
+			quote = char;
+			token += char;
+		} else if (char === "{" || char === "(" || char === "[") {
+			depth++;
+			token = "";
+		} else if (char === "}" || char === ")" || char === "]") {
+			depth--;
+			token = "";
+			if (depth === 0) break;
+		} else if (char === ":" && depth === 1) {
+			keys.push(token.trim());
+			token = "";
+		} else if (char === "," && depth === 1) {
+			token = "";
+		} else if (depth === 1) {
+			token += char;
+		}
+	}
+
+	return keys;
 }
 
 /** How the function is called, written the way the package is imported. */
