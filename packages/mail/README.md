@@ -1,37 +1,26 @@
 # @sdxc/mail
 
-Transport-agnostic transactional email: pluggable transports, one mailer that normalizes
-every message, and a `remix/component` layout kit that renders both body parts.
+Transport-agnostic transactional email with pluggable transports and `remix/component` rendering.
 
-A `Mailer` owns normalization — sender defaults, address coercion, plain-text derivation,
-validation — and hands the result to a `Transport`, the only piece that knows a provider.
-Delivery is a value rather than an exception: `send()` returns a `Result` and never throws.
+A `Mailer` applies sender defaults, coerces addresses, derives the plain-text part and validates
+each message, then hands it to a `Transport`, the only piece that knows a provider. `send()`
+answers a `Result` and never throws.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/mail
 ```
 
-Send outcomes are reported as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure`
-and `unwrap` come from, and bodies are `remix/component` trees from
-[`remix`](https://www.npmjs.com/package/remix). The middleware records deferred sends on
-the current log from [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and
-`@sdxc/mail/markdown` renders documents parsed by
-[`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown), painted by
-[`@sdxc/highlight`](https://www.npmjs.com/package/@sdxc/highlight). All four install
-alongside this package.
-
-Entry points: `@sdxc/mail` for the mailer, renderer, MIME builder and layout kit;
-`@sdxc/mail/markdown` for markdown bodies; `@sdxc/mail/memory` and `@sdxc/mail/cloudflare`
-for transports; `@sdxc/mail/middleware` for the router middleware; `@sdxc/mail/unsubscribe`
-for the endpoint behind a one-click unsubscribe link. A transport ships from
-its own subpath, so importing one never pulls another's platform dependency into a bundle.
+Outcomes are `Result`s from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and
+bodies are `remix/component` trees from [`remix`](https://www.npmjs.com/package/remix). The
+middleware logs through [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), and
+`./markdown` renders documents from [`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown)
+painted by [`@sdxc/highlight`](https://www.npmjs.com/package/@sdxc/highlight).
 
 ## Usage
 
-### Send A Message
+### Send a message
 
 ```typescript
 import { Mailer } from "@sdxc/mail";
@@ -53,33 +42,27 @@ let result = await mailer.send({
 if (isFailure(result)) console.warn(result.error.message);
 ```
 
-The plain-text part is derived from the HTML, so a message ships both parts without a
-second authoring step.
+The plain-text part is derived from the HTML, so every message ships both.
 
-### Author An Email As A Class
+### Author an email as a class
 
 ```tsx
-import type { Email as EmailContract } from "@sdxc/mail";
 import type { Handle } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
 function InviteBody(handle: Handle<{ team: string; url: string }>) {
-	return () => {
-		let { team, url } = handle.props;
-
-		return (
-			<Email.Layout preview={`Join ${team}`} title="Invite">
-				<Email.Heading>You have been invited</Email.Heading>
-				<Email.Text>Join {team} to keep an eye on your services.</Email.Text>
-				<Email.Button href={url}>Accept invite</Email.Button>
-				<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
-			</Email.Layout>
-		);
-	};
+	return () => (
+		<Email.Layout preview={`Join ${handle.props.team}`} title="Invite">
+			<Email.Heading>You have been invited</Email.Heading>
+			<Email.Text>Join {handle.props.team} to start collaborating.</Email.Text>
+			<Email.Button href={handle.props.url}>Accept invite</Email.Button>
+			<Email.Footer>You received this because someone invited you to a team.</Email.Footer>
+		</Email.Layout>
+	);
 }
 
-export class TeamInviteEmail implements EmailContract {
+export class TeamInviteEmail implements Email {
 	constructor(private invite: { team: string; email: string; url: string; subject: string }) {}
 
 	get to() {
@@ -94,13 +77,15 @@ export class TeamInviteEmail implements EmailContract {
 		return <InviteBody team={this.invite.team} url={this.invite.url} />;
 	}
 }
+
+await mailer.send(new TeamInviteEmail(invite));
 ```
 
-`Email` names both the contract in type space and the layout kit in value space, so
-`implements Email` and `<Email.Layout>` come from one import. Hand the class straight to
-`send()`: `await mailer.send(new TeamInviteEmail(invite))`.
+`Email` is both the contract (type) and the layout kit (value), so one import covers
+`implements Email` and `<Email.Layout>`. The subject arrives as a string, already in the
+recipient's language.
 
-### Publish A Mailer On The Request Context
+### Publish a mailer on the request context
 
 ```typescript
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
@@ -123,10 +108,10 @@ router.post("/invites", async (context) => {
 });
 ```
 
-`context.email` is a request-scoped `Mailer`. Whatever `later()` queued is flushed after
-the response is produced, and each outcome lands on the invocation's log.
+`context.email` is a request-scoped `Mailer`; what `later()` queued is sent once the response
+is produced, and each outcome lands on the invocation's log.
 
-### Test Without Mocking A Provider
+### Test against the memory transport
 
 ```typescript
 import { Mailer } from "@sdxc/mail";
@@ -142,33 +127,30 @@ expect(transport.last?.email).toBeInstanceOf(TeamInviteEmail);
 expect(transport.last?.text).toContain(invite.url);
 ```
 
-Recorded messages are the normalized ones a provider would have received, so defaults,
-coerced address lists and the derived text part are all visible.
+Recorded messages are the normalized ones a provider receives: defaults applied, address
+lists coerced and the text part derived.
 
 ## API
 
 ### `new Mailer(options: MailerOptions)`
 
-Sends mail through a transport, applying one app's sender identity to every message.
-`options` carries `transport`, `from`, and optionally `replyTo` and `headers` — the last
-added to every message, with per-message headers winning.
+A mailer bound to one transport and sender identity. `options` holds `transport`, `from`, and
+optionally `replyTo` and `headers`; per-message headers win over `headers`.
 
-### `mailer.send(input, overrides?): Promise<Result<SentMessage, MailError>>`
+### `mailer.send(input: Message | Email, overrides?: SendOptions): Promise<Result<SentMessage, MailError>>`
 
-Normalizes and delivers one message, awaiting the outcome. Never throws: a render
-failure, an invalid message, a rejected delivery and a transport that throws all arrive as
-a `MailError` failure. `input` is a plain `Message` or an `Email`; `overrides` replace
-fields for this send only.
+Normalizes and delivers one message. A render failure, an invalid message, a rejected delivery
+and a throwing transport all answer a `MailError` failure. `overrides` replace fields for this
+send only.
 
-### `mailer.later(input, overrides?): void`
+### `mailer.later(input: Message | Email, overrides?: SendOptions): void`
 
-Queues a message for the next `flush()`. Nothing is rendered or validated yet, which is
-what gives a fire-and-forget send a defined lifetime.
+Queues a message for the next `flush()`; rendering and validation happen at flush time.
 
 ### `mailer.flush(): Promise<Result<SentMessage, MailError>[]>`
 
-Sends everything `later()` queued and empties the queue, returning one result per message
-in queue order. Never throws. The middleware calls this for you.
+Sends and empties the queue, answering one result per message in queue order. The middleware
+calls it for you.
 
 ### `mailer.pending: number`
 
@@ -176,294 +158,216 @@ How many messages wait for the next `flush()`.
 
 ### `render(element: RemixElement): Promise<RenderedEmail>`
 
-Renders a body tree to `{ html, text }`, deriving the text part from that same HTML. A
-whole document is given an XHTML 1.0 Transitional doctype and a fragment is left alone,
-since Outlook hands the document to Word, which drops into a quirks mode that collapses
-table cell heights without it.
+Renders a body tree to `{ html, text }`, deriving `text` from the HTML. A whole document gets
+an XHTML 1.0 Transitional doctype, which keeps Outlook out of quirks mode.
 
 ### `buildMimeMessage(message: NormalizedMessage): string`
 
-Assembles a normalized message into a raw RFC 5322 message, for a transport whose
-provider takes MIME instead of structured fields. It ships from the root because it is
-plain string assembly with no platform import; see
-[MIME Guarantees](#mime-guarantees) for what it produces.
+Assembles a raw RFC 5322 message for a provider that takes MIME. Bodies go into
+`multipart/alternative` ordered text, HTML, calendar (a single part ships without a boundary);
+headers fold at 78 characters, non-ASCII names and subjects become RFC 2047 encoded words, each
+part is quoted-printable or base64, whichever is smaller, line endings are CRLF, and `Bcc` is
+left to the envelope.
 
 ### `isEmail(value: Message | Email): value is Email`
 
-Reports whether a value is an `Email` rather than a plain `Message`. Discrimination is
-structural: a callable `body` is the one member only an email has.
+`true` when the value has a callable `body`, the one member only an `Email` has.
 
 ### `formatAddress(address: Address): string`
 
-Formats an address as an RFC 5322 mailbox — `user@example.com` without a display name,
-`Name <user@example.com>` with one — quoting the name only when it holds characters that
-would change how the mailbox parses.
+An RFC 5322 mailbox: `user@example.com`, or `Name <user@example.com>` with the name quoted when
+it needs to be.
 
 ### `toAddressList(value: Address | Address[] | undefined): Address[]`
 
-Coerces the single-or-list shape callers write into the list shape transports read,
-treating a missing value as no recipients. Returns a new array, so later mutation of the
-caller's array cannot leak into a message.
+A new array from the single-or-list shape callers write; `undefined` becomes `[]`.
 
 ### `htmlToText(html: string): string`
 
-Derives the plain-text alternative from rendered HTML: link targets survive as
-`label (href)`, an image becomes its alt text, lists number or bullet their items, blocks
-become blank lines, and table rows become single lines. Anything marked
-`data-skip-in-text` is dropped, which is how an element says it belongs to the HTML part
-alone. `render()` applies this for you.
+The plain-text alternative of rendered HTML: links become `label (href)`, images their alt
+text, lists keep numbers or bullets, and table rows become lines. Elements marked
+`data-skip-in-text` are dropped.
 
 ### `MailError`
 
-The error every send failure reports. The original provider or render error is kept as
-`cause`, so one log line can name the root problem.
+The error of every failed send, with the provider or render error kept as `cause`.
 
-### `Email` (layout kit)
+### `Email` layout kit
 
-Unbranded components for email bodies. Every rule is an inline style on a table, which is
-the only layout mail clients agree on, and every color is a prop so the kit ships no
-product identity.
+Unbranded components laid out with inline-styled tables, every color a prop.
 
-- **`Email.Layout`** — the full HTML document, wrapping the body in a centered card. It
-  renders the only `<head>` and the only `<style>`, which is why web fonts and the dark
-  stylesheet are its props. Props: `children?`, `preview?` (inbox preheader, hidden in
-  the body), `logo?`, `title?`, `lang?`, `background?`, `surface?`, `color?`,
-  `fontFamily?`, `fonts?`, `width?`, `darkStyles?`.
-- **`Email.Heading`** — Props: `children?`, `level?` (`1 | 2 | 3`), `color?`, `align?`.
-- **`Email.Text`** — Props: `children?`, `color?`, `muted?`, `size?`, `align?`.
-- **`Email.Link`** — an inline link opening in a new tab, inheriting the color around it
-  so the underline carries the meaning. Props: `href`, `children?`, `color?`,
-  `underline?`.
-- **`Email.CodeInline`** — a short run of code inside a sentence, sized in `em`. Props:
-  `children?`.
-- **`Email.Section`** — a full-width band as a single-cell table, padding on the cell and
-  everything else on the table. Props: `children?`, `padding?`, `background?`, `align?`.
-- **`Email.Row`** — puts its columns side by side as one table row, which is what an
-  email uses instead of flex or grid. It does not wrap, so keep the count low. Props:
-  `children?`, `gap?`.
-- **`Email.Column`** — one cell of a `Row`. A numeric width is written bare to the
-  attribute and in pixels to the style, because Outlook reads the first and everything
-  newer reads the second. Props: `children?`, `width?`, `align?`, `valign?`, `padding?`.
-- **`Email.Button`** — a link in a single-cell table, padding on the cell, so it stays a
-  button in Outlook, where Word supports neither `display:inline-block` nor padding on an
-  inline element. Props: `href`, `children?`, `background?`, `color?`, `radius?`.
-- **`Email.Table`** — a set of facts as label/value rows. Props: `rows`
-  (`EmailTableRow[]`), `borderColor?`.
-- **`Email.Img`** — an image with the resets an inbox needs. `alt` is required because
-  most readers see it: every major client blocks remote images until asked. Props: `src`,
-  `alt`, `width?`, `height?`, `radius?`, `gap?`.
-- **`Email.Hr`** — a rule drawn as a top border rather than the native element, which
-  several clients render as an inset two-tone groove. Props: `color?`, `gap?`.
-- **`Email.Footer`** — de-emphasized content under a hairline. Props: `children?`,
-  `color?`, `borderColor?`.
+| Component          | Props                                                                                                                                      |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Email.Layout`     | `preview?`, `logo?`, `title?`, `lang?`, `background?`, `surface?`, `color?`, `fontFamily?`, `fonts?`, `width?`, `darkStyles?`, `children?` |
+| `Email.Heading`    | `level?` (`1 \| 2 \| 3`), `color?`, `align?`, `children?`                                                                                  |
+| `Email.Text`       | `color?`, `muted?`, `size?`, `align?`, `children?`                                                                                         |
+| `Email.Link`       | `href`, `color?`, `underline?`, `children?`                                                                                                |
+| `Email.CodeInline` | `children?`                                                                                                                                |
+| `Email.Section`    | `padding?`, `background?`, `align?`, `children?`                                                                                           |
+| `Email.Row`        | `gap?`, `children?` (`Email.Column`s side by side, no wrapping)                                                                            |
+| `Email.Column`     | `width?`, `align?`, `valign?`, `padding?`, `children?`                                                                                     |
+| `Email.Button`     | `href`, `background?`, `color?`, `radius?`, `children?`                                                                                    |
+| `Email.Table`      | `rows` (`EmailTableRow[]`), `borderColor?`                                                                                                 |
+| `Email.Img`        | `src`, `alt`, `width?`, `height?`, `radius?`, `gap?`                                                                                       |
+| `Email.Hr`         | `color?`, `gap?`                                                                                                                           |
+| `Email.Footer`     | `color?`, `borderColor?`, `children?`                                                                                                      |
+
+`Email.Layout` renders the document, its only `<head>` and `<style>`, the hidden `preview`
+preheader, and a dark-mode stylesheet. `Email.MONO_FAMILY` and `Email.CODE_COLOR` are the font
+stack and fill the code components use.
 
 ### Types
 
-`Result` below comes from `@sdxc/result` and `RemixElement` from `remix/component`.
-
-```typescript
-interface Address {
-	email: string;
-	name?: string;
-}
-
-interface Message {
-	from?: Address;
-	to: Address | Address[];
-	cc?: Address | Address[];
-	bcc?: Address | Address[];
-	replyTo?: Address | Address[];
-	subject: string;
-	html?: string;
-	text?: string;
-	headers?: Record<string, string>;
-	/** Explicit values; omitted means "now" and a generated id. Set both to keep tests deterministic. */
-	date?: Date;
-	messageId?: string;
-	/** Optional mail only; see "Bulk Mail". */
-	unsubscribe?: Unsubscribe;
-	list?: MailingList;
-	/** A calendar object sent beside the bodies; see "Calendar Invitations". */
-	calendar?: CalendarPart;
-}
-
-interface CalendarPart {
-	/** iTIP method written as `method=`, e.g. `REQUEST`; must match the content's `METHOD`. */
-	method: string;
-	/** The serialized iCalendar object. */
-	content: string;
-	/** Also attach the calendar as a file with this name, e.g. `invite.ics`. */
-	filename?: string;
-}
-
-interface Unsubscribe {
-	/** Must be `https:`; receives the RFC 8058 POST with no session. */
-	url: string | URL;
-	/** A bare address (sent with `?subject=unsubscribe`) or a full `mailto:` URI. */
-	mailto?: string;
-	/** `false` omits `List-Unsubscribe-Post`. Defaults to `true`. */
-	oneClick?: boolean;
-}
-
-interface MailingList {
-	/** RFC 2919 list-id, e.g. `digest.example.com`. */
-	id: string;
-	name?: string;
-}
-
-interface Email {
-	readonly to: Address | Address[];
-	readonly subject: string;
-	body(): RemixElement;
-	readonly replyTo?: Address | Address[];
-	readonly headers?: Record<string, string>;
-	readonly unsubscribe?: Unsubscribe;
-	readonly list?: MailingList;
-	readonly calendar?: CalendarPart;
-}
-
-interface Transport {
-	send(message: NormalizedMessage): Promise<Result<SentMessage, MailError>>;
-}
-
-interface SentMessage {
-	/** Provider identifier when it returns one, otherwise the message's own `Message-ID`. */
-	messageId: string;
-}
-```
-
-`NormalizedMessage` is what a transport receives: every field of `Message` with defaults
-applied, address fields as lists, `date` and `messageId` always present, a derived `text`
-part, `headers` including the generated `List-*` ones, `unsubscribe` and `list` as the
-option or `null`, `calendar` when one was set, and `email` carrying the source `Email` when the message came from one — which
-transports ignore and tests use to identify a send by type. `RenderedEmail` is
-`{ html, text }`, `SendOptions` is `Partial<Message>`, `MailerOptions` is the
-constructor's options object, `EmailTableRow` is one `{ label, value }` row of an
-`Email.Table`, and `EmailFont` is one web font for `Email.Layout` to declare: `family`, a
-required `fallback` stack, and optional `src`, `weight` and `style`.
+- `Message`: what a caller writes: `to`, `subject`, `html` and/or `text`, and optionally `from`,
+  `cc`, `bcc`, `replyTo`, `headers`, `date`, `messageId`, `unsubscribe`, `list` and `calendar`.
+  Address fields take an `Address` or a list.
+- `Email`: an email class: `to`, `subject` and `body(): RemixElement`, plus optional `replyTo`,
+  `headers`, `unsubscribe`, `list` and `calendar`.
+- `NormalizedMessage`: what a transport receives: address fields as lists, `date` and
+  `messageId` always set, the derived `text`, the generated `List-*` headers, `unsubscribe` and
+  `list` as the option or `null`, and `email` holding the source `Email` when there was one.
+- `Transport`: `{ send(message: NormalizedMessage): Promise<Result<SentMessage, MailError>> }`.
+- `SentMessage`: `{ messageId }`, the provider's id or the message's own `Message-ID`.
+- `Address`: `{ email, name? }`.
+- `Unsubscribe`: `{ url, mailto?, oneClick? }`; `url` must be `https:`, `mailto` is an address
+  or a `mailto:` URI, and `oneClick` (default `true`) writes `List-Unsubscribe-Post`.
+- `MailingList`: `{ id, name? }`, written as `List-Id`.
+- `CalendarPart`: `{ method, content, filename? }`, an iCalendar object whose `method` matches
+  its `METHOD`; `filename` also attaches it as a file.
+- `MailerOptions`, `SendOptions` (`Partial<Message>`), `RenderedEmail` (`{ html, text }`),
+  `EmailTableRow` (`{ label, value }`) and `EmailFont` (`family`, `fallback`, and optional
+  `src: { url, format }`, `weight` and `style`).
 
 ### `@sdxc/mail/markdown`
 
 #### `Markdown`
 
-Renders a parsed document through the layout kit. Props: `document`. Parsing stays with
-the caller, so one document renders in an inbox and on a page, and mail that carries no
-markdown pays for no parser.
-
-The mapping is lossy where an inbox cannot lay out what markdown expresses: headings stop
-at level three, a table becomes a real `<table>`, an alert becomes a labelled block quote,
-and a footnote's body becomes a labelled block under the prose pointing at it. Raw HTML,
-block and inline alike, arrives as escaped text, which keeps a document from any source
-safe to send.
+Renders a parsed `@sdxc/markdown` document (`document` prop) through the layout kit. Headings
+stop at level three, alerts become labelled quotes, footnotes become labelled blocks, and raw
+HTML arrives as escaped text.
 
 #### `CodeBlock`
 
-A fenced block of code, highlighted, inside a single-cell table — Outlook paints a `<pre>`
-with a background to the width of its text rather than the column. Props: `code`,
-`language?`, `tokens?`. A painted document carries its runs on the code node and
-`Markdown` passes them through as `tokens`; given `code` alone the block tokenizes itself,
-and an unknown language renders unpainted.
+A highlighted code block in a single-cell table. Props: `code`, `language?`, `tokens?`; without
+`tokens` it highlights itself, and an unknown language renders unpainted.
 
 ### `@sdxc/mail/memory`
 
 #### `new MemoryTransport(options?: MemoryTransportOptions)`
 
-Records every delivery instead of sending it, so tests assert on real behavior rather than
-on a mocked SDK module. `options.mime` also records the assembled raw message; it is off
-by default because most tests read the normalized one.
-
-- **`transport.messages`** — every recorded normalized message, oldest first
-- **`transport.last`** — the most recent message, or `undefined`
-- **`transport.deliveries`** — every delivery as `{ message, mime? }`, oldest first
-- **`transport.lastMime`** — the raw MIME of the most recent delivery, or `undefined`
-- **`transport.find(predicate)`** — the first message matching a predicate
-- **`transport.clear()`** — forgets every delivery, so one instance serves several tests
+Records every delivery instead of sending it. `options.mime: true` also records the raw
+message. Members: `messages`, `last`, `deliveries` (`RecordedDelivery[]`, each
+`{ message, mime? }`), `lastMime`, `find(predicate)` and `clear()`.
 
 ### `@sdxc/mail/cloudflare`
 
 #### `new CloudflareTransport(binding: SendEmailBinding)`
 
-Delivers through the Workers email sending binding, which composes the message from
-structured fields, so the transport assembles no MIME and the app imports no platform
-class. Success carries the identifier the platform assigned; a refusal arrives as a
-`MailError` carrying the platform's rejection as `cause`.
-
-The binding writes its own `Date` and `Message-ID`, so the values a normalized message
-carries stay local, and it takes one `replyTo` mailbox rather than a list, so the first is
-the one that ships. Its payload has no field for an alternative part, so a `calendar`
-travels as one attachment typed `text/calendar; method=…; charset=UTF-8`, named by
-`filename` or `invite.ics`. `SendEmailBinding`, `SendEmailMessage`, `SendEmailAttachment`
-and `SendEmailResult` are
-exported as the seam those platform assumptions live behind, declared locally so this
-package typechecks outside a Workers project. See the
-[Cloudflare email routing docs](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/)
-for declaring the binding and verifying a sending domain.
+Delivers through the Workers
+[`send_email` binding](https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/).
+The binding writes its own `Date` and `Message-ID`, ships the first `replyTo` only, and receives
+a `calendar` as a `text/calendar` attachment named by `filename` or `invite.ics`.
+`SendEmailBinding`, `SendEmailMessage`, `SendEmailAttachment` and `SendEmailResult` type the
+binding.
 
 ### `@sdxc/mail/middleware`
 
-#### `mail(options: MailMiddlewareOptions): Middleware`
+#### `mail(options: MailMiddlewareOptions): Middleware` (default export)
 
-Publishes a request-scoped `Mailer` as `context.email` and flushes its deferred queue once
-`next()` resolves. `options` carries `transport` — a `Transport`, or a
-`(context) => Transport` factory when it is resolved per request — plus `from`, and
-optionally `replyTo` and `headers`.
-
-A delivered message sets `mail.sent` on the invocation's log and notes the provider's
-message id; a failed one is a `mail.send_failed` warning, since the response is already
-out. With no log current the outcomes are dropped. The module augments `RequestContext`,
-so `context.email` is typed wherever the middleware is imported. Despite the name, it is
-the object that _sends_ mail, not the current user's address.
+Publishes a request-scoped `Mailer` as `context.email` and flushes its queue after `next()`.
+`options` takes `transport` (a `Transport`, or `(context) => Transport` per request), `from`,
+`replyTo?` and `headers?`. Each deferred send logs `mail.sent` or a `mail.send_failed` warning
+on the current log.
 
 ### `@sdxc/mail/unsubscribe`
 
-#### `signUnsubscribeToken(secret, claims, options?): Promise<Result<string, MailError>>`
+#### `signUnsubscribeToken(secret: string, claims: { subject: string; list: string }, options?: UnsubscribeToken.SignOptions): Promise<Result<string, MailError>>`
 
-Signs `{ subject, list }` into one URL path segment: the hex HMAC-SHA-256 followed by the
-base64url payload. `subject` must be an opaque id — an email address is refused, since the
-token lands in URLs and logs — and `list` a name without colons. `options.expiresAt` makes
-the link stop working; omitted, it never expires, because a provider may POST long after
-delivery. `options.purpose` (default `"unsubscribe:v1:"`) prefixes the MAC input, so a
-secret shared with something else cannot mint these tokens.
+A URL-safe token: hex HMAC-SHA-256 then the base64url payload. `subject` is an opaque id (an
+email address is refused) and `list` holds no colon. `options.expiresAt` sets an expiry;
+`options.purpose` (default `"unsubscribe:v1:"`) separates this secret's use from others.
 
-#### `verifyUnsubscribeToken(secret, token, options?): Promise<Result<UnsubscribeToken.Claims, InvalidUnsubscribeTokenError>>`
+#### `verifyUnsubscribeToken(secret: string, token: string, options?: UnsubscribeToken.Options): Promise<Result<UnsubscribeToken.Claims, InvalidUnsubscribeTokenError>>`
 
-Checks the MAC in constant time and returns `{ subject, list, issuedAt }`. Malformed,
-tampered, foreign-key, foreign-purpose and expired tokens all fail with the same
-`InvalidUnsubscribeTokenError`, so the endpoint answers every case alike. `issuedAt` is
-`null` for a token whose payload names only `list:subject`, the shape an app signing with
-the same scheme by hand produces; pass that app's `purpose` to verify its links.
+Checks the MAC in constant time and answers `{ subject, list, issuedAt }`. Every bad token
+(malformed, tampered, other secret or purpose, expired) fails with the same
+`InvalidUnsubscribeTokenError`. `issuedAt` is `null` for a payload holding only `list:subject`.
 
 #### `isOneClickUnsubscribe(form: FormData): boolean`
 
-Whether a parsed body is RFC 8058's `List-Unsubscribe=One-Click`, URL-encoded or
-multipart. It tells the provider's POST, which reads no response, from a person pressing
-the confirmation page's button.
+`true` for RFC 8058's `List-Unsubscribe=One-Click` body, telling the provider's POST apart from
+a person submitting a confirmation form.
 
-## Bulk Mail
+## Pattern: Choosing Between `send()` And `later()`
 
-Gmail and Yahoo require one-click unsubscribe on subscribed and marketing mail: a
-`List-Unsubscribe` header with an HTTPS URL, `List-Unsubscribe-Post:
-List-Unsubscribe=One-Click`, both covered by DKIM, and the unsubscribe honored within two
-days. With those present the provider shows its own "Unsubscribe" button, and a recipient
-who presses it stops receiving mail instead of reporting spam. Transactional mail
-(verification, resets, sign-in alerts) is exempt and leaves the options unset.
-
-An optional email declares its target and list; the mailer writes the headers:
+Await `send()` when the response depends on the outcome; queue with `later()` when a failed
+send must not fail the request.
 
 ```typescript
-import type { Email, MailingList, Unsubscribe } from "@sdxc/mail";
+import { isFailure } from "@sdxc/result";
+
+router.post("/password-reset", async (context) => {
+	let result = await context.email.send(new PasswordResetEmail(user));
+	if (isFailure(result)) return new Response("Could not send the email", { status: 502 });
+	return new Response(null, { status: 204 });
+});
+
+router.post("/invites", async (context) => {
+	context.email.later(new TeamInviteEmail(invite)); // sent after the response, failures logged
+	return new Response(null, { status: 204 });
+});
+```
+
+Outside the middleware, call `mailer.flush()` yourself, for example at the end of a job.
+
+## Pattern: One-Click Unsubscribe For Bulk Mail
+
+Gmail and Yahoo require one-click unsubscribe on subscribed and marketing mail. An email declares
+its target and list, and the mailer writes the headers:
+
+```tsx
+import type { MailingList, Unsubscribe } from "@sdxc/mail";
+
+import { Email } from "@sdxc/mail";
+import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
+import { unwrap } from "@sdxc/result";
 
 class DailyDigestEmail implements Email {
-	// to, subject, body() ...
+	constructor(
+		private member: { id: string; email: string },
+		private token: string,
+	) {}
+
+	get to() {
+		return { email: this.member.email };
+	}
+
+	get subject() {
+		return "Your daily digest";
+	}
 
 	get unsubscribe(): Unsubscribe {
-		return { url: this.digest.unsubscribeUrl, mailto: "unsubscribe@example.com" };
+		return {
+			url: `https://example.com/unsubscribe/${this.token}`,
+			mailto: "unsubscribe@example.com",
+		};
 	}
 
 	get list(): MailingList {
 		return { id: "daily-digest.example.com", name: "Daily digest" };
 	}
+
+	body() {
+		return (
+			<Email.Layout title="Daily digest">
+				<Email.Text>Here is what happened today.</Email.Text>
+			</Email.Layout>
+		);
+	}
 }
+
+let token = unwrap(await signUnsubscribeToken(secret, { subject: member.id, list: "digest" }));
+await mailer.send(new DailyDigestEmail(member, token));
 ```
 
 ```text
@@ -472,37 +376,33 @@ List-Unsubscribe-Post: List-Unsubscribe=One-Click
 List-Id: Daily digest <daily-digest.example.com>
 ```
 
-The send fails with a `MailError` when the URL is not `https:`, `mailto` names no address,
-`list.id` is not a list-id, or the mailer, message or email headers already contain
-`List-Unsubscribe`, `List-Unsubscribe-Post` or `List-Id` (any case) alongside the matching
-option — a half-migrated email fails loudly instead of sending two targets. A hand-written
-header keeps working while its option is unset.
-
-The URL receives a POST from the provider's servers with no cookies, so it carries a
-signed token and sits outside any auth guard. `GET` renders a confirmation and changes
-nothing, because link scanners follow every URL; `POST` acts:
+The provider POSTs to the URL with no cookies, so the endpoint sits outside any auth guard and
+trusts only the token. `GET` shows a confirmation and changes nothing, since link scanners
+follow every URL:
 
 ```typescript
 import { isOneClickUnsubscribe, verifyUnsubscribeToken } from "@sdxc/mail/unsubscribe";
-import { isSuccess } from "@sdxc/result";
+import { isFailure } from "@sdxc/result";
 
-let claims = await verifyUnsubscribeToken(env.UNSUBSCRIBE_SECRET, token);
-if (isSuccess(claims)) await unsubscribe(claims.data.subject, claims.data.list);
-if (isOneClickUnsubscribe(formData)) return new Response(null, { status: 200 });
-return renderDonePage();
+router.post("/unsubscribe/:token", async (context) => {
+	let claims = await verifyUnsubscribeToken(secret, context.params.token);
+	if (isFailure(claims)) return new Response("Link expired", { status: 400 });
+
+	await removeSubscription(claims.data.subject, claims.data.list);
+
+	let form = await context.request.formData();
+	if (isOneClickUnsubscribe(form)) return new Response(null, { status: 200 });
+	return new Response("You are unsubscribed.");
+});
 ```
 
-Rotating the secret breaks every link already delivered. DKIM coverage of the two headers
-is decided by the transport's platform (Cloudflare's `send_email` binding signs for the
-verified domain); check a delivered message's `h=` tag lists `list-unsubscribe` and
-`list-unsubscribe-post`.
+A send fails with a `MailError` when the URL is not `https:` or a `List-*` header is also set by
+hand. Rotating the secret invalidates every delivered link.
 
-## Calendar Invitations
+## Pattern: Calendar Invitations
 
-An iTIP invitation (RFC 5546) is a calendar object sent as a `text/calendar` part whose
-`method=` parameter repeats the object's `METHOD`; Gmail, Outlook and Apple Mail read it
-and show the event with accept and decline buttons. A message or an email carries one as
-`calendar`, with the content written by any iCalendar library:
+A message or email carrying `calendar` reaches Gmail, Outlook and Apple Mail as an invitation
+with accept and decline buttons. Write the content with any iCalendar library:
 
 ```typescript
 await mailer.send({
@@ -513,10 +413,6 @@ await mailer.send({
 });
 ```
 
-`buildMimeMessage` places the calendar last in `multipart/alternative`, the most
-preferred part, and with `filename` also attaches it as `application/ics` inside
-`multipart/mixed`, for clients that only offer attachments:
-
 ```text
 multipart/mixed
 ├── multipart/alternative
@@ -526,106 +422,10 @@ multipart/mixed
 └── application/ics; name="invite.ics"  (attachment)
 ```
 
-The send fails with a `MailError` when `method` is not a token or `filename` is not
-printable ASCII free of quotes, backslashes and slashes, since both are written into
-headers. A calendar still needs a body beside it, for clients that show no invitation.
-
-## MIME Guarantees
-
-What `buildMimeMessage` produces, for a transport that speaks raw messages:
-
-- **Structure** — several parts produce `multipart/alternative` ordered plain text, HTML,
-  calendar, which RFC 2046 reads as least to most preferred; a single part produces a
-  single-part message with no boundary, and a calendar attachment wraps the body in
-  `multipart/mixed`.
-- **Headers** — `From`, `To`, `Cc`, `Reply-To`, `Subject`, `Date`, `Message-ID`,
-  `MIME-Version`, then custom headers, then the `Content-*` headers. `Bcc` is absent,
-  since those recipients are addressed by the envelope, and a custom header repeating a
-  derived name is dropped rather than emitted twice.
-- **Folding** — a header past 78 characters folds at an existing space and the
-  continuation keeps that space, so unfolding restores the value character for character.
-  A longer run with no space in it is left long, since folding inside a token corrupts it.
-- **Encoded words** — a non-ASCII subject or display name becomes base64 RFC 2047 encoded
-  words, chunked on character boundaries and sized so the line still fits the limit. A
-  display name is encoded rather than quoted, because a quoted encoded word reaches the
-  reader literally.
-- **Part encoding** — quoted-printable while text stays mostly ASCII, keeping the raw
-  message readable, and base64 once escaping would inflate the body more than base64 does.
-- **Boundaries** — the boundary carries a random UUID and is checked against the encoded
-  bodies; base64's alphabet has no `-` and quoted-printable escapes a leading one, so no
-  body line reads as a delimiter.
-- **Line endings** — every break is CRLF, whatever the caller's bodies used, and both
-  encodings wrap at 76 characters.
-
-## Dark Mode
-
-`Email.Layout` declares `color-scheme: light dark` and ships the dark half of it, because
-declaring one without shipping it is worse than declaring nothing: Apple Mail reads the
-declaration as a promise the message paints its own dark mode and stops remapping colors.
-
-Every element therefore carries two things. The inline style is the light baseline, kept
-by clients that strip `<style>`. A class — `mail-page`, `mail-surface`, `mail-text`,
-`mail-muted`, `mail-rule`, `mail-action`, `mail-action-label` — is what the layout's
-`prefers-color-scheme: dark` block overrides with `!important`. A class is emitted only
-where the caller left that color to the kit, so passing `color` to a `Heading` opts it out
-of the dark rule.
-
-Components of your own that paint inside the card pass their rules as `darkStyles`,
-appended inside that same media query:
-
-```tsx
-<Email.Layout darkStyles=".status-down{color:#f87171 !important;}">
-```
-
-That stylesheet is a text node and therefore escaped, so CSS passed here uses descendant
-and class selectors rather than `>` or `&`.
-
-## Pattern: Deciding Between `send()` And `later()`
-
-`send()` when the outcome must be known before responding, so the caller branches on the
-`Result` and changes the response:
-
-```typescript
-import { isFailure } from "@sdxc/result";
-
-let result = await mailer.send(new PasswordResetEmail(user));
-if (isFailure(result)) return new Response("Could not send the reset email", { status: 502 });
-```
-
-`later()` when a failed send must not fail the operation. Queued messages flush after the
-response is produced, so they cannot influence it, and their failures are logged:
-
-```typescript
-context.email.later(new TeamInviteEmail(invite));
-return new Response(null, { status: 204 });
-```
-
-That gives a fire-and-forget send a defined lifetime, which an unawaited promise does not
-have.
-
-## Pattern: Translating A Subject For The Recipient
-
-A subject belongs in the _reader's_ language, which is not always the request language: an
-invite is composed by one person and read by another. The package resolves no locales — a
-subject reaches it as a string the application already translated — so the application
-picks the language and hands the translator to the constructor:
-
-```typescript
-let translate = await translatorFor(invite.locale);
-let subject = translate("invite.subject", { team: invite.team });
-
-await mailer.send(new TeamInviteEmail({ ...invite, subject }));
-```
-
-Choose that locale in this order: the recipient's stored preference, the locale recorded
-on the record being acted on, then the app's fallback. The requester's own locale is the
-last resort, since the common mistake is sending in the sender's language rather than the
-reader's.
+Keep a body beside the calendar for clients that show no invitation; `filename` adds the
+attachment for clients that only offer files.
 
 ## Pattern: Rendering Markdown As A Body
-
-A document parsed elsewhere renders into the same card as a hand-authored body, with its
-code fences painted:
 
 ```tsx
 import { highlight } from "@sdxc/highlight/markdown";
@@ -646,26 +446,87 @@ let { html, text } = await render(
 await mailer.send({ to: { email: "user@example.com" }, subject: "Release notes", html, text });
 ```
 
-Highlighting is optional: a document handed over unpainted still renders, with each block
-tokenized as it is drawn.
+Highlighting is optional: an unpainted document still renders, each code block highlighting
+itself.
 
-## Pattern: Switching Providers
+## Pattern: Brand Fonts And Dark Mode
 
-Sender configuration is a plain object and the transport is the only provider-aware piece,
-so a switch is one construction site:
+`Email.Layout` declares `color-scheme: light dark` and paints its own dark variant. Inline styles
+are the light baseline; the kit's classes (`mail-page`, `mail-surface`, `mail-text`,
+`mail-muted`, `mail-rule`, `mail-action`, `mail-action-label`) carry the dark overrides, and only
+where a color was left to the kit. Your own components add rules through `darkStyles`:
+
+```tsx
+import { Email } from "@sdxc/mail";
+
+<Email.Layout
+	fonts={[
+		{
+			family: "Inter",
+			fallback: "Helvetica, Arial, sans-serif",
+			src: { url: "https://example.com/inter.woff2", format: "woff2" },
+			weight: 400,
+		},
+	]}
+	fontFamily="Inter, Helvetica, Arial, sans-serif"
+	darkStyles=".status-down{color:#f87171 !important;}"
+>
+	<Email.Text>
+		Status: <span class="status-down">down</span>
+	</Email.Text>
+	<Email.Row gap={16}>
+		<Email.Column width={120}>
+			<Email.Img src="https://example.com/chart.png" alt="Uptime chart" width={120} />
+		</Email.Column>
+		<Email.Column>
+			<Email.Table rows={[{ label: "Since", value: "02:14 UTC" }]} />
+		</Email.Column>
+	</Email.Row>
+</Email.Layout>;
+```
+
+`fallback` is the font most readers see, since Gmail, Yahoo and Outlook ignore `@font-face`.
+`darkStyles` is escaped as text, so use descendant and class selectors, not `>` or `&`.
+
+## Pattern: A Transport For Another Provider
+
+A transport turns a `NormalizedMessage` into one provider call. For a provider that takes raw
+MIME, `buildMimeMessage` does the assembly:
 
 ```typescript
+import type { NormalizedMessage, SentMessage, Transport } from "@sdxc/mail";
+import type { Result } from "@sdxc/result";
+
+import { buildMimeMessage, MailError, Mailer } from "@sdxc/mail";
+import { failure, success } from "@sdxc/result";
+
+class RawMimeTransport implements Transport {
+	constructor(
+		private endpoint: string,
+		private apiKey: string,
+	) {}
+
+	async send(message: NormalizedMessage): Promise<Result<SentMessage, MailError>> {
+		let response = await fetch(this.endpoint, {
+			method: "POST",
+			headers: { authorization: `Bearer ${this.apiKey}`, "content-type": "message/rfc822" },
+			body: buildMimeMessage(message),
+		});
+		if (!response.ok) {
+			return failure(new MailError("Provider rejected the message", { cause: response.status }));
+		}
+		return success({ messageId: message.messageId });
+	}
+}
+
 let mailer = new Mailer({
-	transport: new CloudflareTransport(env.EMAIL), // the only line that changes
+	transport: new RawMimeTransport("https://mail.example.com/send", apiKey),
 	from: { email: "no-reply@example.com", name: "Example" },
-	replyTo: { email: "hello@example.com" },
 });
 ```
 
-Emails, services and tests are untouched, which also makes a switch reversible. Providers
-differ in what they carry, though: check any field a new transport is quiet about, and
-verify the first deliveries for real, since headers, both body parts and spam placement
-are only observable end to end.
+Emails, handlers and tests stay the same when the transport changes; verify the first real
+deliveries, since headers and spam placement are observable only end to end.
 
 ## Versioning
 
