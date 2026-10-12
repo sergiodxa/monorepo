@@ -11,7 +11,7 @@ import { del, form, get, post, route } from "remix/routes";
 
 /**
  * The app's route map. Each leaf carries `.href(params)` for building a URL and is the key
- * `bootstrap/app.tsx` maps a controller onto.
+ * `app/initializers/router.tsx` maps a controller onto.
  *
  * @example routes.feed.href({ feed: "01J..." });
  */

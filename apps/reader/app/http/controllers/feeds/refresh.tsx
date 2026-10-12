@@ -20,12 +20,12 @@ import { redirect } from "@sdxc/http/response";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The query parameter the feed page reads the outcome of a check out of. */

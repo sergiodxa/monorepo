@@ -17,7 +17,7 @@ import { m, maxIs, mbs, pbs } from "@sdxc/u/size";
 import { text, weight } from "@sdxc/u/typography";
 import { Alert, Button, Description, Input, Label, Select, Text } from "@sdxc/ui";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import { AGENT_SCOPES } from "~/database/schema";

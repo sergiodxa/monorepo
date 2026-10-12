@@ -26,8 +26,8 @@ const DEFAULT_LANGUAGE: Language = "en";
  * client bundle ships only the locales a page actually renders in.
  */
 const LOCALE_LOADERS: Record<Language, () => Promise<{ default: Messages }>> = {
-	en: () => import("~/app/locales/en"),
-	es: () => import("~/app/locales/es"),
+	en: () => import("~/resources/locales/en"),
+	es: () => import("~/resources/locales/es"),
 };
 
 /** Narrows the document's `lang` to a language with a loader, falling back otherwise. */

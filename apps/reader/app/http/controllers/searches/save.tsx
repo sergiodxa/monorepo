@@ -20,7 +20,7 @@ import { forgetRailSearches } from "~/app/http/controllers/chrome";
 import { FEED_PARAM, queueUrl, queueViewOf, SHOW_PARAM } from "~/app/http/controllers/queue-view";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 

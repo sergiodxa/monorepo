@@ -21,8 +21,8 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { exportFilename, subscriptionsOpml } from "~/app/lib/data-export";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
+import { exportFilename, subscriptionsOpml } from "~/app/services/data-export";
 import routes from "~/routes/web";
 
 /** The media type OPML travels under, which a reader offering an import looks for. */

@@ -12,7 +12,7 @@ import type { I18n } from "@sdxc/i18n";
 import { createTranslator } from "@sdxc/i18n";
 import { describe, expect, test } from "vitest";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { keepingLinkParameters, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import routes from "~/routes/web";

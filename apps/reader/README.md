@@ -29,13 +29,13 @@ publishes its head, and a reader opening the
 app compares that against what they have and materializes what they are missing behind the
 page they were served.
 
-Plans are sold through Polar, reached with `@sdxc/billing` from `app/lib/billing.ts`. The
+Plans are sold through Polar, reached with `@sdxc/billing` from `app/initializers/billing.ts`. The
 platform delivers to `POST /webhooks/billing`, which verifies the signature, records the
 delivery, and re-reads what the customer holds rather than trusting what arrived; a cron
 trigger re-reads every reader who has ever bought something, so a lost delivery is repaired
 within a day. The tier each reader is on lives on their own object, which is where every
 limit is compared against the count it caps, and where `@sdxc/authz` decides what the tier,
-the operational switches and an agent token's scope allow (`app/authz/`).
+the operational switches and an agent token's scope allow (`app/policies/`).
 
 Observability is enabled. The KV namespace and D1 database ids in `wrangler.jsonc` are
 placeholders; [First deploy](./docs/first-deploy.md) lists them with everything else that has
@@ -144,7 +144,7 @@ to exist before the first deploy.
 The feed catalog in D1 is migrated from `database/catalog-migrations`. Each reader's and each
 feed's own SQLite migrates itself when its Durable Object boots.
 
-Code reads and writes those tables through `@sdxc/data-model` models in `database/models/`,
+Code reads and writes those tables through `@sdxc/data-model` models in `app/models/`,
 one registry per database: `user/` for a reader's object, `feed/` for a feed's object and
 `catalog/` for D1.
 

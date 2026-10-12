@@ -14,16 +14,16 @@ import type { Router } from "remix/router";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { UserStoreDouble } from "~/app/lib/test/store";
+import type { UserStoreDouble } from "~/app/test/store";
 
-import { readPresentation, writePresentation } from "~/app/http/cookies";
-import { createTestRouter, ORIGIN, VIEWER } from "~/app/lib/test/controller";
-import { createUserStoreDouble, DEFAULT_SETTINGS } from "~/app/lib/test/store";
+import { readPresentation, writePresentation } from "~/app/initializers/cookies";
+import { createTestRouter, ORIGIN, VIEWER } from "~/app/test/controller";
+import { createUserStoreDouble, DEFAULT_SETTINGS } from "~/app/test/store";
 import routes from "~/routes/web";
 
 let store: UserStoreDouble = createUserStoreDouble();
 
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 let { default: appearance, FACE_FIELD, THEME_FIELD } = await import("./appearance");
 let { default: settings } = await import("./settings");

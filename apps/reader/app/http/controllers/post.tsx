@@ -29,16 +29,16 @@ import { Empty, HeadingScope, LinkButton, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { Article as Extracted, ArticleOutcome } from "~/app/lib/article";
-import type { FeedStore } from "~/database/feed-do";
+import type { FeedStore } from "~/app/models/feed-store";
+import type { Article as Extracted, ArticleOutcome } from "~/app/services/article";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { exactDate } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { FRAME_PARAM, isFrameRequest } from "~/app/http/render";
-import { peekArticle, readArticle } from "~/app/lib/article";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
+import { peekArticle, readArticle } from "~/app/services/article";
 import SaveToggle from "~/resources/components/save-toggle";
 import AppLayout from "~/resources/layouts/app";
 import Article from "~/resources/views/article";

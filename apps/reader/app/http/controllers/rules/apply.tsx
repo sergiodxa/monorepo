@@ -22,7 +22,7 @@ import {
 } from "~/app/http/controllers/rules/manage";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** POST /rules/previewed — acts on the posts a previewed candidate matched. */

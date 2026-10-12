@@ -13,7 +13,7 @@ import { setupServer } from "msw/node";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { MAX_IMAGE_BYTES, mediaUrl } from "~/app/lib/media";
+import { MAX_IMAGE_BYTES, mediaUrl } from "~/app/services/media";
 import routes from "~/routes/web";
 
 import media from "./media";

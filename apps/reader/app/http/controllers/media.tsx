@@ -30,7 +30,7 @@ import {
 	retrieveImage,
 	servedType,
 	verifiedSource,
-} from "~/app/lib/media";
+} from "~/app/services/media";
 import routes from "~/routes/web";
 
 /** The signed pair the address carries, which is the whole of what this route reads. */

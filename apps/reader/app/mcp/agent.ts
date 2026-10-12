@@ -17,13 +17,13 @@ import { ForbiddenError } from "@sdxc/mcp";
 import { getContext } from "remix/middleware/async-context";
 import { createContextKey } from "remix/router";
 
-import type { ReaderClaims } from "~/app/authz/access";
-import type { Tier } from "~/app/lib/entitlement";
+import type { UserStore } from "~/app/models/user-store";
+import type { ReaderClaims } from "~/app/policies/access";
+import type { Tier } from "~/app/services/entitlement";
 import type { AgentScope } from "~/database/schema";
-import type { UserStore } from "~/database/user-do";
 
 import { readAgentToken } from "~/app/mcp/token";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** Who the request is for, what it may do, and what the account is entitled to. */
@@ -86,6 +86,9 @@ export function requireWriteScope(): ToolMiddleware {
 		return next();
 	};
 }
+
+/** What a writing tool declares about itself, hidden and refused alike for a read token. */
+export const WRITES = { available: mayWrite, middleware: [requireWriteScope()] };
 
 /** The verified agent, for code holding no context of its own. */
 export function currentAgent(): AgentIdentity {

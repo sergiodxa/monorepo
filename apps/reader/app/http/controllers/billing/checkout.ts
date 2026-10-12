@@ -13,13 +13,13 @@ import { isFailure } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
-import type { Tier } from "~/app/lib/entitlement";
+import type { Tier } from "~/app/services/entitlement";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { CONNECTION, failureFields, polar } from "~/app/lib/billing";
-import { isTier, TIER_PRODUCTS } from "~/app/lib/entitlement";
-import { findBillingCustomer, linkBillingCustomer } from "~/database/registry";
+import { CONNECTION, failureFields, polar } from "~/app/initializers/billing";
+import { findBillingCustomer, linkBillingCustomer } from "~/app/models/registry";
+import { isTier, TIER_PRODUCTS } from "~/app/services/entitlement";
 import routes from "~/routes/web";
 
 /** The tier named by the path, before it is checked against the two that are for sale. */

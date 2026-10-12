@@ -20,11 +20,11 @@ import type { Router } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { restoreFlags, serveFlags } from "~/app/test/flags";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 /**
@@ -42,7 +42,7 @@ const PACKAGE_MODULES: Record<string, () => Promise<unknown>> = {
 };
 
 let store = createUserStoreDouble();
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 let { default: reading } = await import("./reading");
 

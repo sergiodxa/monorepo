@@ -11,10 +11,10 @@ import type { Router } from "remix/router";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { UserStoreDouble } from "~/app/lib/test/store";
+import type { UserStoreDouble } from "~/app/test/store";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 /** The post every request below acts on. */
@@ -22,7 +22,7 @@ const ITEM_ID = "01J0ITEM000000000000000000";
 
 let store: UserStoreDouble = createUserStoreDouble();
 
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 let { default: read } = await import("./read");
 

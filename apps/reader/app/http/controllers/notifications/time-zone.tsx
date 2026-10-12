@@ -12,7 +12,7 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** What the script posts, which is one resolved IANA name and nothing else. */

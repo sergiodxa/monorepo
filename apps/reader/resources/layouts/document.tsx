@@ -16,7 +16,7 @@ import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 import { getContext } from "remix/middleware/async-context";
 
-import type { DocumentAssets as Assets } from "~/app/lib/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 import type { Theme } from "~/database/schema";
 
 import "@sdxc/ui/reset.css";

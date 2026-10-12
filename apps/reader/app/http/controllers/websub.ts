@@ -25,7 +25,7 @@ import { env } from "cloudflare:workers";
 import * as s from "remix/data-schema";
 import { createController } from "remix/router";
 
-import { feedStore } from "~/database/feed-do";
+import { feedStore } from "~/app/models/feed-store";
 import routes from "~/routes/web";
 
 /** The path this route matches: the feed to reach, and the secret half of the address. */

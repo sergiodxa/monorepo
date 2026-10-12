@@ -12,8 +12,8 @@ import type { Middleware } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 
-import { RETURN_TO_COOKIE } from "~/app/http/cookies";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { RETURN_TO_COOKIE } from "~/app/initializers/cookies";
 import routes from "~/routes/web";
 
 /**

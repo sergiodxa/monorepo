@@ -19,7 +19,7 @@ import { createAction } from "remix/router";
 import { localPath } from "~/app/http/controllers/items/save";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The path this route matches, which carries the post and the label coming off it. */

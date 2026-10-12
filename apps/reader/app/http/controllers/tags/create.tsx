@@ -24,7 +24,7 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The query parameter a label's page reads the outcome of a label action out of. */

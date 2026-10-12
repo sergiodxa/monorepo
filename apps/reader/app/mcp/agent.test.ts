@@ -19,9 +19,9 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { AgentIdentity } from "~/app/mcp/agent";
 
-import abilities from "~/app/authz/abilities";
-import policy, { agentRole } from "~/app/authz/policy";
 import { Agent, agentOf, mayWrite, requireWriteScope } from "~/app/mcp/agent";
+import abilities from "~/app/policies/abilities";
+import policy, { agentRole } from "~/app/policies/policy";
 
 /** The tool a call is for, which the middleware carries but never reads. */
 const TOOL = {

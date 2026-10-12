@@ -14,8 +14,8 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { userStore } from "~/app/models/user-store";
 import { QUIET_FROM_HOUR, QUIET_TO_HOUR } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import routes from "~/routes/web";
 
 /** The query parameter the settings page reads the outcome of a submission out of. */

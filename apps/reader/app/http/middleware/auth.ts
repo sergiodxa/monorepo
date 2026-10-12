@@ -15,7 +15,7 @@ import { currentLog } from "@sdxc/logger";
 import { getContext } from "remix/middleware/async-context";
 import { auth as createAuthMiddleware, Auth } from "remix/middleware/auth";
 
-import { relyingParty } from "~/app/auth/relying-party";
+import { relyingParty } from "~/app/initializers/relying-party";
 
 /**
  * The signed-in reader, as the app names the claims it shows a person back to themselves

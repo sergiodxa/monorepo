@@ -34,8 +34,8 @@ import {
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
-import { features } from "~/app/lib/flags";
-import { userStore } from "~/database/user-do";
+import { features } from "~/app/initializers/flags";
+import { userStore } from "~/app/models/user-store";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";

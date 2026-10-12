@@ -19,16 +19,16 @@ import type { Router } from "remix/router";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
-import type { FeedStore } from "~/database/feed-do";
-import type { UserStore } from "~/database/user-do";
+import type { FeedStore } from "~/app/models/feed-store";
+import type { UserStore } from "~/app/models/user-store";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { restoreFlags, serveFlags } from "~/app/lib/test/flags";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { restoreFlags, serveFlags } from "~/app/test/flags";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 let store = createUserStoreDouble();
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 /**
  * The feed's own object, which answers for the checks rather than the reader's store: the
@@ -37,7 +37,7 @@ vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
  */
 let health = vi.fn(async (): Promise<FeedStore.Health | null> => null);
 let feedStore = vi.fn((_feedId: string) => ({ health }));
-vi.doMock("~/database/feed-do", () => ({ feedStore }));
+vi.doMock("~/app/models/feed-store", () => ({ feedStore }));
 
 let { default: feed } = await import("./feed");
 

@@ -22,13 +22,13 @@ import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { writePresentation } from "~/app/http/cookies";
 import i18n from "~/app/http/middleware/i18n";
 import presentation from "~/app/http/middleware/presentation";
 import { htmlRendering } from "~/app/http/render";
-import { SECURITY_POLICY } from "~/app/http/security-policy";
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { ORIGIN } from "~/app/lib/test/controller";
+import { writePresentation } from "~/app/initializers/cookies";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { ORIGIN } from "~/app/test/controller";
+import { SECURITY_POLICY } from "~/config/security-policy";
 
 /**
  * A page rendered through the middleware that decides how it is painted, carrying whatever

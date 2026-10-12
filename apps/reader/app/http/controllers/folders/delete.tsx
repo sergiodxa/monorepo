@@ -19,7 +19,7 @@ import { createAction } from "remix/router";
 import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The path this route matches, which carries the folder being deleted. */

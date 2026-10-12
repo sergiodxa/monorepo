@@ -24,7 +24,7 @@ import { localPath } from "~/app/http/controllers/items/save";
 import { NAME_FIELD, TAG_PARAM } from "~/app/http/controllers/tags/create";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The field naming a label the reader already has, which the picker submits. */

@@ -20,7 +20,7 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /** Renders the 404 document for unmatched routes. */
-export default function defaultHandler(ctx: RequestContext) {
+export default function defaultHandler(ctx: Pick<RequestContext, "render" | "intl" | "locale">) {
 	let title = ctx.intl.t("notFound.title");
 	let description = ctx.intl.t("notFound.description");
 

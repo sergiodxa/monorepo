@@ -26,7 +26,7 @@ import { NAME_FIELD, SCOPE_FIELD, TOKEN_PARAM } from "~/app/http/controllers/tok
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { mintAgentToken } from "~/app/mcp/token";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import AppLayout, { PAGE_COLUMN } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 

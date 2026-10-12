@@ -21,7 +21,7 @@ import { createAction } from "remix/router";
 import { chrome } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import { SAVE_IN_PLACE_HEADER, SHELF_FULL_STATUS } from "~/resources/components/save-toggle";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";

@@ -13,7 +13,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { CachedFeed, CachedSearch } from "~/app/http/controllers/chrome";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
 import routes from "~/routes/web";
 
 /**

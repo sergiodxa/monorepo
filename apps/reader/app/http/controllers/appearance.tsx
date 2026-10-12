@@ -17,10 +17,10 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { writePresentation } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { writePresentation } from "~/app/initializers/cookies";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The query parameter the settings page reads the outcome of a submission out of. */

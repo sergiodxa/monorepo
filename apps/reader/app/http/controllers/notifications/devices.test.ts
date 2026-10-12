@@ -11,15 +11,15 @@ import type { Router } from "remix/router";
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { UserStoreDouble } from "~/app/lib/test/store";
+import type { UserStoreDouble } from "~/app/test/store";
 
-import { createTestRouter, ORIGIN, VIEWER } from "~/app/lib/test/controller";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, ORIGIN, VIEWER } from "~/app/test/controller";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 let store: UserStoreDouble = createUserStoreDouble();
 
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 let { default: devices } = await import("./devices");
 

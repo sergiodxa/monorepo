@@ -12,11 +12,11 @@ import type { Router } from "remix/router";
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { UserStoreDouble } from "~/app/lib/test/store";
+import type { UserStoreDouble } from "~/app/test/store";
 
-import { createTestRouter, fetchRoute } from "~/app/lib/test/controller";
-import { createUserStoreDouble } from "~/app/lib/test/store";
-import { unsubscribeUrl } from "~/app/push/unsubscribe";
+import { unsubscribeUrl } from "~/app/services/unsubscribe";
+import { createTestRouter, fetchRoute } from "~/app/test/controller";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 /** The reader a link is signed for. */
@@ -27,11 +27,11 @@ let reached: string[] = [];
 
 vi.mock("cloudflare:workers", async (importOriginal) => {
 	let original = await importOriginal<typeof import("cloudflare:workers")>();
-	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	let { withUnsubscribeSecret } = await import("~/app/test/unsubscribe-secret");
 	return { ...original, env: withUnsubscribeSecret(original.env) };
 });
 
-vi.doMock("~/database/user-do", () => ({
+vi.doMock("~/app/models/user-store", () => ({
 	userStore: (subject: string) => {
 		reached.push(subject);
 		return store;

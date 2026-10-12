@@ -25,7 +25,7 @@ import { createAction } from "remix/router";
 import { forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The query parameter a folder's page reads the outcome of a folder action out of. */

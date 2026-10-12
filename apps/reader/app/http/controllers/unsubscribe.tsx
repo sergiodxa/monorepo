@@ -19,8 +19,8 @@ import { Button, Heading, Text } from "@sdxc/ui";
 import * as s from "remix/data-schema";
 import { createController } from "remix/router";
 
-import { unsubscribingReader } from "~/app/push/unsubscribe";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
+import { unsubscribingReader } from "~/app/services/unsubscribe";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

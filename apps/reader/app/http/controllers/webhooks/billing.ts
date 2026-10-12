@@ -12,9 +12,9 @@ import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 import { createAction } from "remix/router";
 
-import { polar } from "~/app/lib/billing";
-import { syncCustomer, UnknownCustomerError } from "~/app/lib/billing-sync";
-import { deliveries } from "~/database/registry";
+import { polar } from "~/app/initializers/billing";
+import { deliveries } from "~/app/models/registry";
+import { syncCustomer, UnknownCustomerError } from "~/app/services/billing-sync";
 import routes from "~/routes/web";
 
 /**

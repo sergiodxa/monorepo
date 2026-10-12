@@ -16,7 +16,7 @@ import { withoutTracking } from "@sdxc/attribution/parameters";
 import { formatDate, formatParts } from "@sdxc/dates";
 import { calendarDayAt } from "@sdxc/dates/zone";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 import type { TagChips } from "~/resources/views/tag-chips";
 import type { Timeline } from "~/resources/views/timeline";
 

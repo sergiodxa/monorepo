@@ -17,12 +17,12 @@ import type { Router } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
-import type { Article } from "~/app/lib/article";
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
+import type { Article } from "~/app/services/article";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { restoreFlags } from "~/app/lib/test/flags";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { restoreFlags } from "~/app/test/flags";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 /** The subscription the fixture post came from, which the page names above the article. */
@@ -35,7 +35,7 @@ const ITEM_ID = "item-1";
 const SUMMARY = "The opening sentence of the post, as the feed published it.";
 
 let store = createUserStoreDouble();
-vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
+vi.doMock("~/app/models/user-store", () => ({ userStore: () => store }));
 
 /**
  * Every reach for an article the page makes. Held as one instance each for the life of
@@ -44,7 +44,7 @@ vi.doMock("~/database/user-do", () => ({ userStore: () => store }));
 const peek = vi.fn<(url: string) => Promise<Article | null>>();
 const read = vi.fn<(post: { url: string; summary: string | null }) => Promise<Article>>();
 
-vi.doMock("~/app/lib/article", () => ({ peekArticle: peek, readArticle: read }));
+vi.doMock("~/app/services/article", () => ({ peekArticle: peek, readArticle: read }));
 
 let { default: post } = await import("./post");
 

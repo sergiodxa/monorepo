@@ -23,14 +23,14 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { chrome } from "~/app/http/controllers/chrome";
 import { exactDate, timelineCopy, timelineEntries } from "~/app/http/controllers/timeline-entries";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
+import { userStore } from "~/app/models/user-store";
 import { RULE_ACTIONS, RULE_FIELDS, RULE_VALUE_LENGTH } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import Timeline from "~/resources/views/timeline";
 import routes from "~/routes/web";

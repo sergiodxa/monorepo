@@ -17,7 +17,7 @@ import { createAction } from "remix/router";
 import { rulesPage } from "~/app/http/controllers/rules/manage";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The path this route matches, which carries the rule being deleted. */

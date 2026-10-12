@@ -17,8 +17,8 @@ refuses to deploy against an id the account does not own.
 | Unsubscribe signing key | `bunx wrangler secrets-store secret create <store_id> --name READER_UNSUBSCRIBE_SECRET --scopes workers --remote` | Keep the `store_id` in `secrets_store_secrets` if it is this account's store |
 | Rate limiter            | None                                                                                                              | Confirm `namespace_id` `2001` is unused by another Worker on the account     |
 
-The two Durable Object classes, `UserDO` and `FeedDO`, are created by the deploy itself from the
-`migrations` block. Each object migrates its own SQLite the first time it boots, so the
+The two Durable Object classes, `UserDO` and `FeedDO` in `app/models/`, are created by the
+deploy itself from the `migrations` block. Each object migrates its own SQLite the first time it boots, so the
 `database/migrations` chain, `0018-push-vapid-key` included, needs no command.
 
 The account also needs:

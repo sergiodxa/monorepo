@@ -23,10 +23,10 @@ import { fontSize, textAlign, textDecoration } from "@sdxc/u/typography";
 import { Heading, Text } from "@sdxc/ui";
 import { createController } from "remix/router";
 
-import { relyingParty } from "~/app/auth/relying-party";
-import { RETURN_TO_COOKIE, writePresentation } from "~/app/http/cookies";
-import { reconcileSubject } from "~/app/lib/billing-sync";
-import { userStore } from "~/database/user-do";
+import { RETURN_TO_COOKIE, writePresentation } from "~/app/initializers/cookies";
+import { relyingParty } from "~/app/initializers/relying-party";
+import { userStore } from "~/app/models/user-store";
+import { reconcileSubject } from "~/app/services/billing-sync";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

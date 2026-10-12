@@ -13,8 +13,8 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { CONNECTION, failureFields, polar } from "~/app/lib/billing";
-import { findBillingCustomer } from "~/database/registry";
+import { CONNECTION, failureFields, polar } from "~/app/initializers/billing";
+import { findBillingCustomer } from "~/app/models/registry";
 import routes from "~/routes/web";
 
 /**

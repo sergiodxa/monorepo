@@ -10,9 +10,9 @@
 
 import i18nMiddleware from "@sdxc/i18n/middleware";
 
-import { LANGUAGE_COOKIE } from "~/app/http/cookies";
-import en from "~/app/locales/en";
-import es from "~/app/locales/es";
+import { LANGUAGE_COOKIE } from "~/app/initializers/cookies";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
 
 /** Every language the app ships a full dictionary for, and the order a detector matches in. */
 const SUPPORTED_LANGUAGES = ["en", "es"];

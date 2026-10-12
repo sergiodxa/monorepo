@@ -10,12 +10,12 @@ import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
 
-import type { Presentation } from "~/app/http/cookies";
+import type { Presentation } from "~/app/initializers/cookies";
 
 /**
- * `bootstrap/app.tsx` installs `formData()` and `renderWith(createHtmlRenderer)`, both of
- * which populate the context through a transform rather than through the route handler's
- * own typing, so this augmentation is what surfaces them to a controller.
+ * The router installs `formData()` and `renderWith(withDocumentAssets)`, both of which
+ * populate the context through a transform rather than through the route handler's own
+ * typing, so this augmentation is what surfaces them to a controller.
  */
 declare module "remix/router" {
 	interface RequestContext {

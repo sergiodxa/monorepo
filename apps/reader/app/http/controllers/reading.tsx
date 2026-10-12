@@ -57,7 +57,7 @@ import * as f from "remix/data-schema/form-data";
 import { createController } from "remix/router";
 
 import type { QueueView } from "~/app/http/controllers/queue-view";
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { FAILED_PARAM, FRESH_PARAM, SWEPT_PARAM } from "~/app/http/controllers/feeds/refresh-all";
@@ -80,9 +80,9 @@ import {
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
-import { features } from "~/app/lib/flags";
+import { features } from "~/app/initializers/flags";
+import { userStore } from "~/app/models/user-store";
 import { SAVED_SEARCH_LIMIT, SEARCH_NAME_LENGTH } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import AppLayout, {
 	ActionLabel,
 	AppNavLink,

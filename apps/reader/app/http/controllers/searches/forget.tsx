@@ -18,7 +18,7 @@ import { forgetRailSearches } from "~/app/http/controllers/chrome";
 import { SAVED_PARAM } from "~/app/http/controllers/searches/save";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The one path segment this route carries, which is the saved search being forgotten. */

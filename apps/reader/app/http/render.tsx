@@ -14,7 +14,7 @@ import { currentLog } from "@sdxc/logger";
 import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 import { render, renderWith } from "remix/middleware/render";
 
-import { assets, documentAssets } from "~/app/lib/assets";
+import { assets, documentAssets } from "~/app/initializers/assets";
 import { DocumentAssets } from "~/resources/layouts/document";
 
 /** The header the renderer sends, naming a sub-request as a frame's. */
@@ -82,17 +82,23 @@ export function withDocumentAssets(ctx: RequestContext) {
 }
 
 /**
- * The middleware pair that installs `ctx.render`, in order. Render failures go to the log
- * explicitly, since a Worker discards the default console-based error hook.
+ * Sends a render failure to the request's log. A Worker discards the default console-based
+ * error hook, so without it a page that failed mid-stream leaves no trace.
+ *
+ * @param error - What the render threw.
+ */
+export function logRenderFailure(error: unknown): void {
+	currentLog()?.fail(error, { render: { failed: true } });
+}
+
+/**
+ * The middleware pair that installs `ctx.render` on a test router, in order, typed as plain
+ * `Middleware` so every test router shares one `Router` type. The app's router writes the
+ * same pair inline, where what each publishes reaches the controllers.
  */
 export function htmlRendering(): Middleware[] {
 	return [
-		render({
-			assets,
-			onError(error) {
-				currentLog()?.fail(error, { render: { failed: true } });
-			},
-		}) as Middleware,
+		render({ assets, onError: logRenderFailure }) as Middleware,
 		renderWith(withDocumentAssets) as Middleware,
 	];
 }

@@ -79,10 +79,10 @@ import {
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
 import { isFrameRequest } from "~/app/http/render";
-import { features } from "~/app/lib/flags";
-import { feedStore } from "~/database/feed-do";
+import { features } from "~/app/initializers/flags";
+import { feedStore } from "~/app/models/feed-store";
+import { userStore } from "~/app/models/user-store";
 import { VELOCITIES } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import AppLayout, {
 	ActionLabel,
 	BAND_FIELD_HEIGHT,

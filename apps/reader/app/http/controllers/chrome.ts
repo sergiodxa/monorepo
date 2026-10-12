@@ -27,16 +27,16 @@ import { WorkerKVCache } from "@sdxc/cache/worker-kv";
 import { isFailure } from "@sdxc/result";
 import { env, waitUntil } from "cloudflare:workers";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 import type { Shortcuts } from "~/resources/components/shortcuts";
 import type { AppLayout } from "~/resources/layouts/app";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { FRAME_PARAM } from "~/app/http/render";
-import { features } from "~/app/lib/flags";
-import { proxiedImage } from "~/app/lib/media";
+import { features } from "~/app/initializers/flags";
+import { userStore } from "~/app/models/user-store";
+import { proxiedImage } from "~/app/services/media";
 import { QUIET_POSTS_PER_DAY } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";
 

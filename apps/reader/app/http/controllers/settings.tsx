@@ -30,9 +30,9 @@ import { text, weight } from "@sdxc/u/typography";
 import { Alert, Button, Checkbox, Description, Label, LinkButton, Select, Text } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
-import type { Presentation } from "~/app/http/cookies";
-import type { Tier } from "~/app/lib/entitlement";
-import type { UserStore } from "~/database/user-do";
+import type { Presentation } from "~/app/initializers/cookies";
+import type { UserStore } from "~/app/models/user-store";
+import type { Tier } from "~/app/services/entitlement";
 
 import { APPEARANCE_PARAM, FACE_FIELD, THEME_FIELD } from "~/app/http/controllers/appearance";
 import { chrome } from "~/app/http/controllers/chrome";
@@ -51,13 +51,13 @@ import {
 } from "~/app/http/controllers/notifications/quiet-hours";
 import { exactDate, shortDate } from "~/app/http/controllers/timeline-entries";
 import tokensSection from "~/app/http/controllers/tokens/section";
-import { writePresentation } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { overBy, TIERS, tierRank } from "~/app/lib/entitlement";
-import { vapidPublicKey } from "~/app/push/vapid";
+import { writePresentation } from "~/app/initializers/cookies";
+import { vapidPublicKey } from "~/app/initializers/vapid";
+import { userStore } from "~/app/models/user-store";
+import { overBy, TIERS, tierRank } from "~/app/services/entitlement";
 import { READING_FACES, THEMES } from "~/database/schema";
-import { userStore } from "~/database/user-do";
 import { PushRegistration } from "~/resources/components/push-registration";
 import AppLayout, { PAGE_COLUMN, pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";

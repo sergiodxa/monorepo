@@ -17,7 +17,7 @@ import { createAction } from "remix/router";
 import { TOKEN_PARAM } from "~/app/http/controllers/tokens/section";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import routes from "~/routes/web";
 
 /** The one segment this route carries, read the way every other id on this surface is. */

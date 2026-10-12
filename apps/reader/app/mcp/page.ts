@@ -14,10 +14,10 @@ import { currentLog } from "@sdxc/logger";
 import { ToolError } from "@sdxc/mcp";
 import { DEFAULT_MAX_QUERY_LENGTH, DEFAULT_MAX_QUERY_TERMS } from "@sdxc/search/query";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { currentAgent } from "~/app/mcp/agent";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 
 /** One post as a model reads it, which is a row of a list and the link to the publisher. */
 export interface AgentPost {

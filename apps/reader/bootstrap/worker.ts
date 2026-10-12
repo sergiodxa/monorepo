@@ -1,6 +1,6 @@
 /**
  * Cloudflare Worker entry point. Its `fetch` handler reads the session secret and KV
- * binding off the environment, builds the application router and forwards the request to
+ * binding off the environment, builds the web router and forwards the request to
  * it; its `scheduled` handler runs the daily billing reconciliation; and it re-exports both
  * Durable Objects so the runtime can find the classes its bindings name.
  *
@@ -10,13 +10,12 @@
 
 import { env } from "cloudflare:workers";
 
-import { reconcileBilling } from "~/app/lib/billing-sync";
+import { logger } from "~/app/initializers/logger";
+import { createWebRouter } from "~/app/initializers/router";
+import { reconcileBilling } from "~/app/services/billing-sync";
 
-import application from "./app";
-import { logger } from "./logger";
-
-export { FeedDO } from "~/database/feed-do";
-export { UserDO } from "~/database/user-do";
+export { FeedDO } from "~/app/models/feed-store";
+export { UserDO } from "~/app/models/user-store";
 
 /**
  * Whether the request arrived on a host that serves HTTPS, which decides the session
@@ -34,13 +33,13 @@ function isSecureHost(request: Request): boolean {
 export default {
 	/** Handles an incoming request by building the app router and forwarding to it. */
 	async fetch(request: Request) {
-		let app = application({
+		let router = createWebRouter({
 			kv: env.KV,
 			cookieSecret: env.COOKIE_SESSION_SECRET,
 			secure: isSecureHost(request),
 		});
 
-		return await app.fetch(request);
+		return await router.fetch(request);
 	},
 
 	/**

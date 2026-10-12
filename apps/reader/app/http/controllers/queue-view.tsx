@@ -17,7 +17,7 @@
 
 import type { Handle } from "remix/component";
 
-import type { UserStore } from "~/database/user-do";
+import type { UserStore } from "~/app/models/user-store";
 
 import { SEARCH_PARAM } from "~/resources/layouts/app";
 import routes from "~/routes/web";

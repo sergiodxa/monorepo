@@ -11,7 +11,7 @@ import type { AnyTable, TableRow } from "remix/data-table";
 
 import { column as c, table } from "remix/data-table";
 
-import type { Tier } from "~/app/lib/entitlement";
+import type { Tier } from "~/app/services/entitlement";
 
 /** Payload accepted when writing a row, with database defaults left out. */
 type InsertRow<sourceTable extends AnyTable> = Partial<TableRow<sourceTable>>;

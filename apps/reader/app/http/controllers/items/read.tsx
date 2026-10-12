@@ -16,7 +16,7 @@ import { createAction } from "remix/router";
 import { chrome, forgetRailFeeds } from "~/app/http/controllers/chrome";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { userStore } from "~/database/user-do";
+import { userStore } from "~/app/models/user-store";
 import { READ_IN_PLACE_HEADER } from "~/resources/components/read-toggle";
 import AppLayout, { pageNote } from "~/resources/layouts/app";
 import routes from "~/routes/web";

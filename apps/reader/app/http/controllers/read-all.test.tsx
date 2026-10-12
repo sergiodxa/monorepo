@@ -9,8 +9,8 @@
 
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createTestRouter, fetchRoute, VIEWER } from "~/app/lib/test/controller";
-import { createUserStoreDouble } from "~/app/lib/test/store";
+import { createTestRouter, fetchRoute, VIEWER } from "~/app/test/controller";
+import { createUserStoreDouble } from "~/app/test/store";
 import routes from "~/routes/web";
 
 let store = createUserStoreDouble();
@@ -18,7 +18,7 @@ let store = createUserStoreDouble();
 /** Answers with whatever the current test set up, so `beforeEach` can hand out a fresh one. */
 let userStore = vi.fn(() => store);
 
-vi.doMock("~/database/user-do", () => ({ userStore }));
+vi.doMock("~/app/models/user-store", () => ({ userStore }));
 
 let { default: readAll } = await import("./read-all");
 

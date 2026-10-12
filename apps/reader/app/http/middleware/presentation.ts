@@ -15,7 +15,7 @@
 
 import type { Middleware } from "remix/router";
 
-import { PRESENTATION_COOKIE, readPresentation } from "~/app/http/cookies";
+import { PRESENTATION_COOKIE, readPresentation } from "~/app/initializers/cookies";
 
 /** Resolves the request's presentation, falling back to the defaults for any value that is not one. */
 export let presentation: Middleware = async (ctx, next) => {
