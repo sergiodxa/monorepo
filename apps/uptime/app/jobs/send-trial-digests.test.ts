@@ -14,6 +14,7 @@
 
 import type { Transport } from "@sdxc/mail";
 
+import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
@@ -27,7 +28,6 @@ import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/sch
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
 import jobs from "~/app/jobs";
-import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
 import { createTestDatabase } from "~/app/test/db";
@@ -52,7 +52,7 @@ async function runJob(db: Database, options: { transport?: Transport } = {}) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendTrialDigests, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {

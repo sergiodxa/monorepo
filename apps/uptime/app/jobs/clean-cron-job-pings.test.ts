@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Database } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
@@ -17,7 +18,6 @@ import type { UptimeModels } from "~/app/models";
 
 import jobs from "~/app/jobs";
 import cleanCronJobPings from "~/app/jobs/clean-cron-job-pings";
-import { Database } from "~/app/jobs/middleware/database";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, publishModels } from "~/app/test/models";
@@ -52,7 +52,7 @@ describe("cleanCronJobPings", () => {
 		let record: Record<string, unknown> = {};
 		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.cleanCronJobPings, { id: "message-1", attempts: 1, log });
-		ctx.set(Database, db, { property: "database" });
+		ctx.set(Database, db, { property: "db" });
 		publishModels(ctx, db);
 		await cleanCronJobPings(ctx);
 		log.emit();

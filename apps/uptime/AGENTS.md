@@ -47,7 +47,7 @@ Reference files are examples of good code that agents can refer to when performi
   - `routes/api-groups.ts` <- Route maps grouping the API leaves each controller handles
 - HTTP Layer
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
-  - `app/http/middleware/database.ts` <- Middleware to store database instance in the request context
+  - `@sdxc/database-middleware` <- Publishes the database as `ctx.db` on requests (router) and jobs (`./jobs`, in the dispatcher)
   - `app/http/middleware/models.ts` <- Middleware publishing `ctx.models`, bound to the request's database and job enqueuer
   - `app/http/view-models/not-found.ts` <- View model for 404 responses
 - Data Layer

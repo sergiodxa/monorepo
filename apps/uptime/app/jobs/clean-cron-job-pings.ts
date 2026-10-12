@@ -37,14 +37,14 @@ export default createJobHandler(jobs.cleanCronJobPings, async (ctx) => {
 	apportionCost(await ctx.models.teams.countMonitorsByTeam());
 
 	let deleted = await deleteOlderThan(
-		ctx.database,
+		ctx.db,
 		"cron_job_pings",
 		"created_at",
 		now - PING_RETENTION_DAYS * DAY_MS,
 	);
 
 	let redacted = await redactOlderThan(
-		ctx.database,
+		ctx.db,
 		"cron_job_pings",
 		"created_at",
 		PING_DETAIL_COLUMNS,

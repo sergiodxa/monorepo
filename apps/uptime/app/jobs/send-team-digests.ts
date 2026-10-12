@@ -93,7 +93,7 @@ export async function sendTeamDigests(ctx: CurrentJobContext, period: DigestPeri
 	let now = Date.now();
 	let reported = digestWindow(period, now);
 	let recipients = await listDigestRecipients(
-		ctx.database,
+		ctx.db,
 		period,
 		startOfDay(new Date(now), BOUND_ZONE).getTime(),
 	);
@@ -202,7 +202,7 @@ async function digestTeam(
 		return { sent: 0, skipped: members.length };
 	}
 
-	let monitors = await listDigestMonitors(ctx.database, team.id, reported.since, reported.until);
+	let monitors = await listDigestMonitors(ctx.db, team.id, reported.since, reported.until);
 
 	/**
 	 * Nothing was checked, so nothing is reported and no stamp is written, leaving the team
@@ -291,7 +291,7 @@ async function digestTeam(
 		}
 
 		/** Only now: the stamp is what keeps a redelivered trigger from sending a second copy. */
-		await markDigestSent(ctx.database, member.id, period, now);
+		await markDigestSent(ctx.db, member.id, period, now);
 		sent++;
 	}
 

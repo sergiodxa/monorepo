@@ -152,7 +152,7 @@ export default createJobHandler(jobs.reportCosts, async (ctx) => {
  * that estimate. KV rides the same weights, off by roughly 1e-8 cents a day.
  */
 async function recordStorage(ctx: CurrentJobContext): Promise<void> {
-	let result = await ctx.database.exec(
+	let result = await ctx.db.exec(
 		`SELECT team_id AS teamId, COUNT(*) AS count
 			   FROM (SELECT m.team_id
 			           FROM monitor_results r JOIN monitors m ON m.id = r.monitor_id

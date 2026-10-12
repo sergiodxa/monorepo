@@ -18,6 +18,7 @@ import {
 	ManagementErrorCode,
 	SubjectNotFoundError,
 } from "@sdxc/auth/management-client";
+import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
@@ -32,7 +33,6 @@ import { TeamDeletedEmail } from "~/app/emails/team-deleted";
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
 import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
-import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -169,7 +169,7 @@ async function runJob(db: Database, mailTransport: Transport = transport) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.deleteAccounts, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: mailTransport, from: MAIL_FROM }), {
 		property: "mailer",

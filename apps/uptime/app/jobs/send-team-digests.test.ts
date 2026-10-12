@@ -11,6 +11,7 @@ import type { ManagementClient } from "@sdxc/auth/management-client";
 import type { Transport } from "@sdxc/mail";
 
 import { SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { Database as JobDatabase } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { Mailer, MailError } from "@sdxc/mail";
@@ -29,7 +30,6 @@ import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
 import jobs from "~/app/jobs";
 import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
-import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
@@ -104,7 +104,7 @@ async function runJob(db: Database, period: DigestPeriod, options: { transport?:
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(job, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
 	ctx.set(JobMailer, new Mailer({ transport: options.transport ?? transport, from: MAIL_FROM }), {

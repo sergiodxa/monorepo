@@ -15,6 +15,7 @@
 import type { Billing, CustomerRef, EntitlementState } from "@sdxc/billing";
 import type { Result } from "@sdxc/result";
 
+import { Database } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { success, unwrap } from "@sdxc/result";
@@ -23,7 +24,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { Database } from "~/app/jobs/middleware/database";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, publishModels } from "~/app/test/models";
@@ -81,7 +81,7 @@ async function run() {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.reconcileSubscriptions, { id: "message-1", attempts: 1, log });
-	ctx.set(Database, db, { property: "database" });
+	ctx.set(Database, db, { property: "db" });
 	publishModels(ctx, db);
 
 	await reconcileSubscriptions(ctx);

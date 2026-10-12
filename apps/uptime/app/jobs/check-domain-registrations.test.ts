@@ -48,7 +48,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDomainRegistrations = (await import("./check-domain-registrations")).default;
 
@@ -104,7 +104,7 @@ async function runJob(db: Database) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkDomainRegistrations, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",

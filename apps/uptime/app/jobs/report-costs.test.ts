@@ -56,7 +56,7 @@ vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: bi
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let reportCosts = (await import("./report-costs")).default;
 let { publishModels } = await import("~/app/test/models");
 
@@ -137,7 +137,7 @@ async function run() {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 
 	let ctx = createJobContext(jobs.reportCosts, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 
 	/** Emitted however the run ends, so the record of a run that asked for a retry survives it. */

@@ -111,7 +111,7 @@ let {
 } = await import("~/app/services/dns/discovery");
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("~/app/jobs/check-dns")).default;
 
@@ -427,7 +427,7 @@ describe("scheduled and on-demand checks", () => {
 		);
 
 		let ctx = createJobContext(jobs.checkDns, { id: "message-1", attempts: 1 });
-		ctx.set(JobDatabase, db, { property: "database" });
+		ctx.set(JobDatabase, db, { property: "db" });
 		publishModels(ctx, db);
 		ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 			property: "mailer",

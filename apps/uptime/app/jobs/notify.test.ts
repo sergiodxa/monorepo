@@ -77,7 +77,7 @@ vi.doMock("~/app/services/alerts/dispatch", () => ({
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let notify = (await import("./notify")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
@@ -93,7 +93,7 @@ let record: Record<string, unknown> = {};
 async function runJob(db: Database, input: NotifyInput) {
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.notify, { id: "message-1", attempts: 1, input, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport: new MemoryTransport(), from: MAIL_FROM }), {
 		property: "mailer",

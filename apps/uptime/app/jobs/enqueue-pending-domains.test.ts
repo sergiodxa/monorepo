@@ -32,7 +32,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }
 let { createTestDatabase } = await import("~/app/test/db");
 let { bindModels, publishModels, recordJobs } = await import("~/app/test/models");
 let jobs = (await import("~/app/jobs")).default;
-let { Database } = await import("~/app/jobs/middleware/database");
+let { Database } = await import("@sdxc/database-middleware");
 let enqueuePendingDomains = (await import("./enqueue-pending-domains")).default;
 
 describe("enqueuePendingDomains", () => {
@@ -59,7 +59,7 @@ describe("enqueuePendingDomains", () => {
 			attempts: 1,
 			log,
 		});
-		ctx.set(Database, db, { property: "database" });
+		ctx.set(Database, db, { property: "db" });
 		publishModels(ctx, db);
 		await enqueuePendingDomains(ctx);
 		log.emit();

@@ -102,7 +102,7 @@ export default createJobHandler(jobs.clean, async (ctx) => {
 	 */
 	for (let entry of RETAINED_TABLES) {
 		let cutoff = now - entry.retentionDays * DAY_MS;
-		let swept = await deleteOlderThan(ctx.database, entry.table, entry.dateColumn, cutoff);
+		let swept = await deleteOlderThan(ctx.db, entry.table, entry.dateColumn, cutoff);
 		tables.push(record(entry.table, swept));
 	}
 

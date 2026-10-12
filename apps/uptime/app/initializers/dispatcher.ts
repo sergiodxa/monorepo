@@ -11,18 +11,19 @@
 import type { JobDispatcherContext } from "@sdxc/jobs";
 import type { AnyJobDefinition } from "@sdxc/jobs";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import featureFlags from "@sdxc/flags/middleware/dispatcher";
 import { createJobDispatcher } from "@sdxc/jobs";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
+import { createDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { admin } from "~/app/jobs/middleware/admin";
 import { costLedger } from "~/app/jobs/middleware/cost-ledger";
-import { database } from "~/app/jobs/middleware/database";
 import { destinations } from "~/app/jobs/middleware/destinations";
 import { mailer } from "~/app/jobs/middleware/mailer";
 import { models } from "~/app/jobs/middleware/models";
@@ -85,7 +86,7 @@ export const dispatcher = createJobDispatcher({
 	 */
 	middleware: [
 		costLedger(),
-		database(),
+		database(createDatabase),
 		models(),
 		mailer(),
 		destinations(),

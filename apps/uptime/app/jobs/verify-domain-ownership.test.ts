@@ -10,6 +10,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Database } from "@sdxc/database-middleware";
 import { CLOUDFLARE } from "@sdxc/doh";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
@@ -19,7 +20,6 @@ import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
 import jobs from "~/app/jobs";
-import { Database } from "~/app/jobs/middleware/database";
 import verifyDomainOwnership from "~/app/jobs/verify-domain-ownership";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, publishModels, recordJobs } from "~/app/test/models";
@@ -91,7 +91,7 @@ describe("verifyDomainOwnership", () => {
 			input: { teamDomainId },
 			log,
 		});
-		ctx.set(Database, db, { property: "database" });
+		ctx.set(Database, db, { property: "db" });
 		publishModels(ctx, db);
 
 		await verifyDomainOwnership(ctx);

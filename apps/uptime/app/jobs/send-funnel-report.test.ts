@@ -51,7 +51,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
@@ -81,7 +81,7 @@ async function runJob() {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.sendFunnelReport, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(JobMailer, new Mailer({ transport, from: MAIL_FROM }), { property: "mailer" });
 

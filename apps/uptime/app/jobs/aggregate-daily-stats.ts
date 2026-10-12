@@ -143,7 +143,7 @@ async function aggregateD1(
 		values.push(source.inconclusiveStatus);
 	}
 
-	let result = await ctx.database.exec(
+	let result = await ctx.db.exec(
 		`SELECT
 				${source.monitorIdColumn} AS monitorId,
 				COUNT(*) AS totalChecks,
@@ -178,7 +178,7 @@ async function aggregateD1(
 async function aggregateCron(ctx: CurrentJobContext, date: string): Promise<number> {
 	let { start, end } = utcDayBounds(date);
 
-	let result = await ctx.database.exec(
+	let result = await ctx.db.exec(
 		`SELECT
 				cron_job_monitor_id AS monitorId,
 				COUNT(*) AS totalChecks,

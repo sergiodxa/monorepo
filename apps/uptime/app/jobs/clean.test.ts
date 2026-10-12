@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { Database } from "@sdxc/database-middleware";
 import { idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
@@ -15,7 +16,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import jobs from "~/app/jobs";
 import clean from "~/app/jobs/clean";
-import { Database } from "~/app/jobs/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, publishModels } from "~/app/test/models";
 import {
@@ -93,7 +93,7 @@ describe("clean", () => {
 		let record: Record<string, unknown> = {};
 		let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1, log });
-		ctx.set(Database, db, { property: "database" });
+		ctx.set(Database, db, { property: "db" });
 		publishModels(ctx, db);
 		await clean(ctx);
 		log.emit();
@@ -249,7 +249,7 @@ describe("clean trial cleanup", () => {
 
 	async function run() {
 		let ctx = createJobContext(jobs.clean, { id: "message-1", attempts: 1 });
-		ctx.set(Database, db, { property: "database" });
+		ctx.set(Database, db, { property: "db" });
 		publishModels(ctx, db);
 		await clean(ctx);
 	}

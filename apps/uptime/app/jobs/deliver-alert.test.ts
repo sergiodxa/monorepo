@@ -23,7 +23,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Destinations } = await import("~/app/jobs/middleware/destinations");
 let { default: deliverAlert, MAX_ATTEMPTS } = await import("./deliver-alert");
 let { bindModels, publishModels } = await import("~/app/test/models");
@@ -111,7 +111,7 @@ async function run(
 		attempts: options.attempts ?? 1,
 		input: { alertId: alert.id, eventId: event.id, message: messageFor(event.event_type) },
 	});
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(
 		Destinations,

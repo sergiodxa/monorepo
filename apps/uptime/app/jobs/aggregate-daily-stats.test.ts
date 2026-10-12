@@ -35,7 +35,7 @@ vi.doMock("~/app/services/analytics", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let aggregateDailyStats = (await import("./aggregate-daily-stats")).default;
 /**
  * Imported dynamically, after the mocks above, since the models reach `~/app/initializers/queue`,
@@ -48,7 +48,7 @@ async function runJob(db: Database) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.aggregateDailyStats, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 
 	await aggregateDailyStats(ctx);

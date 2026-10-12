@@ -96,7 +96,7 @@ vi.doMock("~/app/services/flow-check", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { bindModels, publishModels } = await import("~/app/test/models");
 let checkFlows = (await import("./check-flows")).default;
 
@@ -110,7 +110,7 @@ async function runJob(db: Database) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkFlows, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	await installFlags(ctx);
 
