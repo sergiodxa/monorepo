@@ -144,13 +144,7 @@ Every export carries JSDoc, so the editor shows each full signature.
   `HeadingScope`.
 - `prefers-reduced-motion`, `prefers-contrast: more` and `prefers-reduced-transparency` are handled
   by the animations and the theme.
-- Every small control reaches a pointer target of `--ui-target-size`: 24px by default (WCAG 2.5.8),
-  44px under `pointer: coarse`. The visible control keeps its size; an invisible `::after` carries
-  the target.
-- Titles wrap with `text-wrap: balance`, body copy with `text-wrap: pretty`, and changing numbers
-  (counts, readouts, dates, page numbers, key caps) use tabular figures.
-- Floating panels keep their corners concentric: the panel radius is `--ui-radius-md` plus
-  `--ui-surface-padding`, so overriding either keeps rows and panel aligned.
+- Small controls reach a pointer target of `--ui-target-size` (24px, 44px on coarse pointers).
 - In development, a missing accessible name or id linkage (an icon-only `Button`, a `Dialog` without
   `id`, a `Command.Item` without `value`) logs a `console.warn`.
 
@@ -195,8 +189,7 @@ Every export carries JSDoc, so the editor shows each full signature.
 - `Breadcrumbs`, `Pagination`, `Sidebar` — a trail of parents, a pager landmark, and an app shell
   rail whose collapse rides a checkbox's `:checked`.
 - `Disclosure`, `Accordion` — `<details>` sections, alone or stacked.
-- `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link;
-  `numeric` on `.Column` or `.Cell` sets `data-numeric`, end alignment and tabular figures.
+- `Table` — a table whose `.Column` takes a sort `href` and whose `.LoadMore` row is a link.
 - `GridList`, `Tree`, `ListBox` — an interactive row list, nested `<details>`, and selectable rows.
 - `SelectionIndicator`, `DropIndicator`, `SentinelRow` — a selection marker, a drop-position bar,
   and a muted row holding a loading or "load more" control.
@@ -337,13 +330,9 @@ DOM-free state that dispatches `change`; an island subscribes and re-renders.
 CSS-only factories keyed off `[open]`/`:popover-open` (or a `when` selector), each collapsing to an
 opacity fade under reduced motion.
 
-- `enterExit({ opacity?, scale?, translate?, blur?, exit?, duration?, exitDuration?, easing?, exitEasing?, when? })`
-  — the composer behind the rest. Exits default to 75% of `duration`, and `exit` sets separate
-  leaving values, so a panel can leave more quietly than it arrived. Transitions retarget when
-  interrupted mid-flight.
+- `enterExit(options?)` — the composer behind the rest; `exit` sets quieter leaving values.
 - `fade(options?)`, `zoom(options?)`, `slide({ from, ... })` — a fade, a fade with scale, and a fade
-  with an offset from `"top" | "right" | "bottom" | "left"`; each takes `blur`, and `zoom`/`slide`
-  exit halfway back.
+  with an offset from `"top" | "right" | "bottom" | "left"`.
 - `spin()`, `pulse()`, `shimmer()`, `textShimmer()` — continuous motion for busy and loading states.
 - `scrollShadow()`, `scrollProgress()`, `scrollFade()`, `viewReveal()` — scroll- and view-timeline
   effects.
@@ -352,26 +341,11 @@ opacity fade under reduced motion.
 
 ### Styles
 
-Recipes for a `mix` array: `floatingSurface()`, `surfaceInset({ scale? })`, `panelChrome()`, `semanticColorPanel()`,
-`interactiveTransition()`, `fieldStackLayout()`, `outputCaptionText()`, `graphicHostStyle()`,
-`rangeThumbAppearance(sizeVar, borderWidthVar)`, `rtlAwareGradientDirection(propertyName)`,
-`chartPalette(property, combinator?)` (one of `CHART_COLOR_SLOT_COUNT` chart colors from
-`data-color`) and `legendToggle()`.
-
-- `hitArea({ anchor? })` — grows a small control's pointer target to `--ui-target-size`. The default
-  `"inset"` anchor needs a positioned host; `"flex-center"` suits a flex host positioned any way.
-- `surfacePadding(scale)` and `concentricRadius(padding, rowRadius?)` — the padding and matching
-  outer radius `surfaceInset()` applies, for a panel laid out by hand.
-
-| Variable                                     | Default                         | Read by                               |
-| -------------------------------------------- | ------------------------------- | ------------------------------------- |
-| `--ui-target-size`                           | `1.5rem`, `2.75rem` when coarse | `hitArea()`, `Button`, `Slider`       |
-| `--ui-surface-padding`                       | `0.25rem`                       | `surfaceInset()`, menus, list popups  |
-| `--ui-shadow-ring`, `--ui-shadow-ring-hover` | layered 1px ring, per theme     | `floatingSurface()`, `Dialog`, `Card` |
-| `--ui-image-outline`                         | 10% black, 10% white when dark  | `ImagePlaceholder.Image`, `Avatar`    |
-| `--ui-button-icon-size-{sm,md,lg}`           | `2rem`, `2.5rem`, `3rem`        | icon-only `Button`                    |
-| `--ui-tag-remove-size`                       | `1rem`                          | `TagGroup.Remove`                     |
-| `--ui-checkbox-size`                         | `1.25rem`                       | `Checkbox`                            |
+Recipes for a `mix` array: `floatingSurface()`, `surfaceInset()`, `hitArea()`, `panelChrome()`,
+`semanticColorPanel()`, `interactiveTransition()`, `fieldStackLayout()`, `outputCaptionText()`,
+`graphicHostStyle()`, `rangeThumbAppearance(sizeVar, borderWidthVar)`,
+`rtlAwareGradientDirection(propertyName)`, `chartPalette(property, combinator?)` (one of
+`CHART_COLOR_SLOT_COUNT` chart colors from `data-color`) and `legendToggle()`.
 
 ### Utilities
 
