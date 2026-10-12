@@ -9,7 +9,7 @@
 
 import { createModel } from "@sdxc/data-model";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 import { like, lt, or } from "remix/data-table";
 
 import { cache, LISTING_KEY } from "~/app/initializers/cache";
