@@ -2,7 +2,7 @@
  * Layout component for public blog pages. Composes the shared document shell,
  * forwarding the page's title, description, canonical and social tags, and draws
  * the silvered body, the site's `h-card`, the main navigation bar and the search
- * dialog it opens before the page children, giving every public page one shell.
+ * dialog before the page children, and the footer after them: every public page's shell.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -26,6 +26,7 @@ import { Dialog } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
 import { PROFILE } from "~/config/profile";
+import { BlogFooter } from "~/resources/components/blog-footer";
 import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
 import { PillLabel } from "~/resources/components/pill-label";
 import { searchFrameSrc } from "~/resources/components/search-box";
@@ -91,7 +92,6 @@ let navigationItems: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.tutorials.href(), label: "Tutorials" },
 	{ href: routes.bookmarks.href(), label: "Bookmarks" },
 	{ href: routes.glossary.href(), label: "Glossary" },
-	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
 ];
 
 /**
@@ -219,6 +219,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 						</Dialog>
 					</header>
 					{children}
+					<BlogFooter />
 				</div>
 			</DocumentLayout>
 		);
