@@ -8,7 +8,7 @@
  */
 
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { borderEdge, fg } from "@sdxc/u/color";
+import { borderEdge, colorMix, fg } from "@sdxc/u/color";
 import { listStyle } from "@sdxc/u/general";
 import { gap, grid } from "@sdxc/u/layout";
 import { m, p, pb, pbe, pi } from "@sdxc/u/size";
@@ -26,6 +26,16 @@ import {
 import { SearchResult } from "~/resources/components/search-result";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import routes from "~/routes/web";
+
+/**
+ * The hairline between the box and the results: the panel's text color at low strength, so
+ * it stays equally faint against the panel in light and dark themes.
+ */
+const SEPARATOR_COLOR = colorMix(
+	"oklab",
+	{ color: "var(--ui-neutral-fg-emphasis)", weight: 10 },
+	"transparent",
+);
 
 /** The dialog's search box id, apart from the `/search` page's own box. */
 export const SEARCH_DIALOG_INPUT_ID = "site-search-q";
@@ -78,7 +88,7 @@ export function SearchFrameView() {
 										m(0),
 										pi(4),
 										pb(4),
-										borderEdge("block-start", { color: "neutral", width: 1 }),
+										borderEdge("block-start", { color: SEPARATOR_COLOR, width: 1 }),
 										text("sm"),
 										fg("neutral.muted"),
 									]
@@ -93,7 +103,7 @@ export function SearchFrameView() {
 								gap(2),
 								p(2),
 								pbe(4),
-								borderEdge("block-start", { color: "neutral", width: 1 }),
+								borderEdge("block-start", { color: SEPARATOR_COLOR, width: 1 }),
 							]}
 						>
 							<ol

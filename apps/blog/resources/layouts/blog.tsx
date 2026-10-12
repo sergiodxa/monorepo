@@ -13,6 +13,7 @@ import type { Handle, RemixNode } from "remix/component";
 
 import { mf } from "@sdxc/microformats/ui";
 import { bg, fg, radialGradient } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, gridArea, gridTemplate, hstack, items, self } from "@sdxc/u/layout";
 import { media } from "@sdxc/u/responsive";
@@ -187,6 +188,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							mix={[
 								p(0),
 								gap(0),
+								rounded("1.75rem"),
 								is("min(40rem, 100% - 2rem)"),
 								maxIs("none"),
 								maxBs("calc(100dvh - 2 * min(12vh, 6rem))"),
