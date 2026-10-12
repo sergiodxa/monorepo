@@ -1,54 +1,58 @@
 # @sdxc/response
 
-Semantic helpers that build [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response)
-objects for JSON APIs and redirects.
+Semantic helpers that build `Response` objects for JSON APIs and redirects.
 
-Each helper is a named wrapper over
-[`Response.json()`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static)
-with the [status code](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status)
-baked in, so a handler says what it means — `notFound({ error })` rather than
-`Response.json(body, { status: 404 })` at every call site. Success helpers merge `ok: true`
-into the body and error helpers merge `ok: false`, giving a client one field to branch on.
+Each helper names its status code, so a handler says what it means — `notFound({ error })` in place
+of `Response.json({ error, ok: false }, { status: 404 })`. Success helpers merge `ok: true` into the
+body and error helpers merge `ok: false`, giving a client one field to branch on.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/response
 ```
 
-`redirect` accepts path-only targets through
-[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location), which installs alongside
-this package.
+[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location) installs alongside it; `redirect`
+accepts its `Location` values as targets.
 
 ## Usage
 
-### Answer With JSON
+### Answer with JSON
 
 ```typescript
 import { notFound, ok } from "@sdxc/response";
 
-let article = await findArticle(slug);
-if (!article) return notFound({ error: "Article not found" });
-
-return ok({ article });
+export async function showArticle(slug: string) {
+	let article = await findArticle(slug);
+	if (!article) return notFound({ error: "Article not found" });
+	return ok({ article });
+}
 ```
 
-`ok({ article })` is the response `Response.json({ article, ok: true }, { status: 200 })`
-builds, and `notFound({ error })` the one with `status: 404` and `ok: false`.
+`ok({ article })` is `Response.json({ article, ok: true }, { status: 200 })`. The result is a plain
+[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response): `status`, `headers` and
+`json()` read the way they do on any other.
 
-### Read One Back
+### Add headers
 
-The return value is a plain `Response`, so a test or a fetch client reads it the way it
-reads any other HTTP response:
+The second argument is a `ResponseInit` without `status`, because the helper owns the status.
 
 ```typescript
 import { created } from "@sdxc/response";
 
-let response = created({ article: { id: "art_1" } });
+let response = created({ article: { id: "art_1" } }, { headers: { Location: "/articles/art_1" } });
 
 response.status; // 201
-response.headers.get("Content-Type"); // the JSON type Response.json() sets
 await response.json(); // { article: { id: "art_1" }, ok: true }
+```
+
+### Answer without a body
+
+```typescript
+import { noContent } from "@sdxc/response";
+
+await deleteArticle(id);
+return noContent(); // 204, body null
 ```
 
 ### Redirect
@@ -56,231 +60,199 @@ await response.json(); // { article: { id: "art_1" }, ok: true }
 ```typescript
 import { redirect } from "@sdxc/response";
 
-return redirect("/login");
-// 307, Location: /login, null body
-
-return redirect("/articles", { status: redirect.Status.SeeOther });
-// 303, Location: /articles
-```
-
-### Discriminate Success From Failure
-
-```typescript
-let response = await fetch("/api/articles", { method: "POST", body });
-let result = await response.json();
-
-if (result.ok) console.log(result.article);
-else console.error(result.error);
+redirect("/login"); // 307, Location: /login
+redirect("/articles", { status: redirect.Status.SeeOther }); // 303
 ```
 
 ## API
 
-### The Shared Shape
-
-Every JSON helper takes the same two arguments:
+Every JSON helper shares one signature, and differs only in status and the `ok` value:
 
 ```typescript
 function helper<T>(input: T, init?: Omit<ResponseInit, "status" | "statusText">): Response;
 ```
 
-`input` is spread into the body alongside the `ok` discriminant, and `init` is forwarded to
-the `Response` for headers and other options. `status` and `statusText` are omitted from
-`init` because the helper owns the status — a different status means a different helper.
-`ok` is merged after `input`, so the discriminant is always the one the helper stands for.
+`input` is spread into the body, then `ok` is set on top, so the body's `ok` always matches the
+helper. `init` carries headers and any other option through to the `Response`.
 
-### Success Responses
+### Success
 
-Success helpers merge `ok: true` into the body.
+These merge `ok: true` (typed as the literal `true`).
 
-#### `ok<T>(input: T, init?): Response`
+| Helper     | Status | Use it for                                                    |
+| ---------- | ------ | ------------------------------------------------------------- |
+| `ok`       | `200`  | A read, or a write whose result the client wants back         |
+| `created`  | `201`  | A new resource; send its URL in a `Location` header           |
+| `accepted` | `202`  | Work queued for later; return what the client follows up with |
 
-A `200`. The default answer for a read, or for a write whose result the client wants back.
+### `noContent(init?): Response`
+
+A `204` with a `null` body — `new Response(null, { ...init, status: 204 })`. It carries no `ok`
+field; the status alone is the outcome.
+
+### Client errors
+
+These merge `ok: false` (typed as the literal `false`).
+
+| Helper                  | Status | Use it when                                                 |
+| ----------------------- | ------ | ----------------------------------------------------------- |
+| `badRequest`            | `400`  | The request is unreadable — unparseable body, wrong shape   |
+| `unauthorized`          | `401`  | The caller is unknown; send a `WWW-Authenticate` challenge  |
+| `paymentRequired`       | `402`  | The account must pay or upgrade first                       |
+| `forbidden`             | `403`  | The caller is known and denied                              |
+| `notFound`              | `404`  | No such resource, or the caller may not know it exists      |
+| `methodNotAllowed`      | `405`  | The path exists for other methods; send an `Allow` header   |
+| `notAcceptable`         | `406`  | Nothing the endpoint produces matches the `Accept` header   |
+| `conflict`              | `409`  | The request contradicts current state, such as a duplicate  |
+| `gone`                  | `410`  | The resource was removed for good                           |
+| `preconditionFailed`    | `412`  | A conditional header such as `If-Match` failed              |
+| `requestEntityTooLarge` | `413`  | The body is over the size limit                             |
+| `unsupportedMediaType`  | `415`  | The `Content-Type` is not one the endpoint accepts          |
+| `unprocessableEntity`   | `422`  | The request parsed and failed validation or a business rule |
+| `tooManyRequests`       | `429`  | The caller is rate limited; send `Retry-After`              |
+
+### Server errors
+
+These also merge `ok: false`.
+
+| Helper                | Status | Use it when                                             |
+| --------------------- | ------ | ------------------------------------------------------- |
+| `internalServerError` | `500`  | Something broke that is not the caller's fault          |
+| `notImplemented`      | `501`  | The endpoint exists and the feature does not yet        |
+| `badGateway`          | `502`  | An upstream service answered with something unusable    |
+| `serviceUnavailable`  | `503`  | Temporarily down; send `Retry-After` when you can guess |
+| `gatewayTimeout`      | `504`  | An upstream service took too long                       |
+
+### `redirect(target: URL | Location | string, init?: redirect.Init): Response`
+
+A redirect with `target` in the `Location` header and a `null` body, at `307` unless
+`init.status` says otherwise. It throws `Invalid redirect target` for a target
+[`Location.canParse`](https://www.npmjs.com/package/@sdxc/location) rejects.
+
+### `redirect.Status`
+
+| Member      | Status | Follow-up request                              |
+| ----------- | ------ | ---------------------------------------------- |
+| `SeeOther`  | `303`  | Always a `GET`                                 |
+| `Temporary` | `307`  | Same method — a `POST` stays a `POST`; default |
+| `Permanent` | `308`  | Same method, and clients cache the redirect    |
+
+### Types
+
+#### `redirect.Init`
+
+`Omit<ResponseInit, "status" | "statusText"> & { status?: redirect.Status }`.
+
+## Pattern: Validating A Request Body
+
+`400` says the request could not be read; `422` says it was read and rejected. Keying field errors
+by name lets the client attach each message to its input.
 
 ```typescript
-return ok({ articles }, { headers: { "Cache-Control": "public, max-age=60" } });
-// 200 { articles: [...], ok: true }
+import { badRequest, created, unprocessableEntity } from "@sdxc/response";
+
+export async function createArticle(request: Request) {
+	let body: unknown = await request.json().catch(() => null);
+	if (typeof body !== "object" || body === null) {
+		return badRequest({ error: "Expected a JSON object" });
+	}
+
+	let { title } = body as { title?: unknown };
+	if (typeof title !== "string" || title.trim() === "") {
+		return unprocessableEntity({ errors: { title: "Title is required" } });
+	}
+
+	let article = await insertArticle({ title });
+	return created({ article }, { headers: { Location: `/articles/${article.id}` } });
+}
 ```
 
-#### `created<T>(input: T, init?): Response`
+## Pattern: Narrowing The Body On The Client
 
-A `201`, for a request that created a resource. Pair it with a `Location` header when the
-new resource has a URL.
+Because `ok` is a literal type, a union of the bodies an endpoint returns narrows on one check, and
+the client keeps no list of which statuses are failures.
 
 ```typescript
-return created({ article }, { headers: { Location: `/articles/${article.id}` } });
-// 201 { article: {...}, ok: true }
+type CreateArticle =
+	{ article: { id: string; title: string }; ok: true } | { error: string; ok: false };
+
+let response = await fetch("/api/articles", {
+	method: "POST",
+	headers: { "Content-Type": "application/json" },
+	body: JSON.stringify({ title: "Hello" }),
+});
+let result = (await response.json()) as CreateArticle;
+
+if (result.ok) console.info(result.article.id);
+else console.error(result.error);
 ```
 
-#### `accepted<T>(input: T, init?): Response`
+## Pattern: Post-Redirect-Get After A Form
 
-A `202`, for work that was queued rather than finished. Return whatever the client needs to
-follow up, such as a job id.
-
-```typescript
-return accepted({ jobId: job.id });
-// 202 { jobId: "job_1", ok: true }
-```
-
-#### `noContent(init?): Response`
-
-A `204` — `new Response(null, { status: 204 })`, with `init` merged in for headers.
-
-This is the one helper that skips `Response.json()`. A `204` means "no representation" and
-the platform forbids a body on one, so there is no `ok` field to merge either: the status
-alone carries the outcome.
-
-```typescript
-await deleteArticle(id);
-return noContent();
-// 204, response.body === null
-```
-
-### Redirects
-
-#### `redirect(target: URL | Location | string, init?: redirect.Init): Response`
-
-A redirect whose `Location` header is `target` and whose body is `null` — the longhand is
-`new Response(null, { status, headers: { Location } })`. The status defaults to
-`redirect.Status.Temporary` (`307`).
-
-`target` is a `URL`, a string path, or a
-[`Location`](https://www.npmjs.com/package/@sdxc/location); anything `Location.canParse`
-rejects throws `Invalid redirect target`.
+A browser reloading after a `307` resubmits the form, since `307` keeps the method. Answer a
+successful submission with `303` so the follow-up is a `GET`, and set any cookie in the same
+response.
 
 ```typescript
 import { Location } from "@sdxc/location";
 import { redirect } from "@sdxc/response";
 
-redirect(new URL("/dashboard", request.url));
+export async function publishArticle(request: Request) {
+	let form = await request.formData();
+	let slug = String(form.get("slug"));
+	await markPublished(slug);
 
-redirect(new Location({ pathname: "/articles", search: "status=draft&page=1" }));
-// 307, Location: /articles?status=draft&page=1
-
-redirect("/logout", {
-	status: redirect.Status.SeeOther,
-	headers: { "Set-Cookie": "session=; Max-Age=0" },
-});
+	return redirect(new Location({ pathname: `/articles/${slug}`, search: "published=1" }), {
+		status: redirect.Status.SeeOther,
+		headers: { "Set-Cookie": "flash=published; Path=/; Max-Age=60" },
+	});
+}
 ```
 
-#### `redirect.Status`
+## Pattern: Guarding An Endpoint
 
-An enum of the three redirect statuses worth using.
-
-| Member      | Status                                                                          | Behavior                                         |
-| ----------- | ------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `SeeOther`  | [`303`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/303) | Turns the follow-up request into a `GET`         |
-| `Temporary` | [`307`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/307) | Preserves the method — a `POST` stays a `POST`   |
-| `Permanent` | [`308`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/308) | Preserves the method, and is cached as permanent |
-
-Redirect after a successful `POST` with `303`: the default `307` replays the same method at
-the new location, and `303` forces the `GET` that post-redirect-get depends on. Numeric
-literals work too — `{ status: 303 }` is `{ status: redirect.Status.SeeOther }` — and the
-enum reads better at the call site.
-
-#### `redirect.Init`
+Auth, method and rate-limit checks each answer with the status and the header a client needs to
+recover.
 
 ```typescript
-type Init = Omit<ResponseInit, "status" | "statusText"> & {
-	status?: redirect.Status;
-};
+import { methodNotAllowed, ok, tooManyRequests, unauthorized } from "@sdxc/response";
+
+export async function handle(request: Request) {
+	if (request.method !== "GET") {
+		return methodNotAllowed({ error: "Use GET" }, { headers: { Allow: "GET" } });
+	}
+
+	let token = request.headers.get("Authorization");
+	if (!token) {
+		return unauthorized(
+			{ error: "invalid_token" },
+			{ headers: { "WWW-Authenticate": 'Bearer realm="api"' } },
+		);
+	}
+
+	if (await isRateLimited(token)) {
+		return tooManyRequests({ error: "Slow down" }, { headers: { "Retry-After": "60" } });
+	}
+
+	return ok({ items: await listItems(token) });
+}
 ```
-
-### Client Error Responses
-
-Error helpers merge `ok: false` into the body and share the signature of the success
-helpers; only the status differs. So `conflict({ error })` is
-`Response.json({ error, ok: false }, { status: 409 })`.
-
-| Helper                  | Status | Use it when                                                                      |
-| ----------------------- | ------ | -------------------------------------------------------------------------------- |
-| `badRequest`            | `400`  | The request itself is malformed — unparseable body, wrong shape, missing field   |
-| `unauthorized`          | `401`  | The caller is unknown; send a `WWW-Authenticate` challenge alongside it          |
-| `paymentRequired`       | `402`  | The account needs to pay or upgrade before it can do this                        |
-| `forbidden`             | `403`  | The caller is known and denied                                                   |
-| `notFound`              | `404`  | No such resource, or the caller has no business knowing one exists               |
-| `methodNotAllowed`      | `405`  | The path exists but not for this method; pair it with an `Allow` header          |
-| `notAcceptable`         | `406`  | Nothing the endpoint produces satisfies the request's `Accept` header            |
-| `conflict`              | `409`  | The request contradicts current state — a duplicate record, a concurrent edit    |
-| `preconditionFailed`    | `412`  | A conditional header did not hold, such as a failed optimistic-concurrency check |
-| `gone`                  | `410`  | The resource was deliberately and permanently removed                            |
-| `requestEntityTooLarge` | `413`  | The body or upload is over the size limit                                        |
-| `unsupportedMediaType`  | `415`  | The request's `Content-Type` is not one the endpoint accepts                     |
-| `unprocessableEntity`   | `422`  | The request parsed fine and failed validation or a business rule                 |
-| `tooManyRequests`       | `429`  | The caller is rate limited; send `Retry-After` so they know when to come back    |
-
-```typescript
-return unauthorized(
-	{ error: "invalid_token" },
-	{ headers: { "WWW-Authenticate": `Bearer realm="${issuer}"` } },
-);
-
-return unprocessableEntity({ issues: issues.map((issue) => issue.message) });
-// 422 { issues: ["Invalid URL"], ok: false }
-
-return tooManyRequests({ error: "Rate limit exceeded" }, { headers: { "Retry-After": "60" } });
-```
-
-Reach for `422` over `400` for field-level errors, and key them by field so the client can
-attach each message to its input: `400` says the request was unreadable, `422` says it was
-read and rejected.
-
-### Server Error Responses
-
-These also merge `ok: false`.
-
-| Helper                | Status | Use it when                                                              |
-| --------------------- | ------ | ------------------------------------------------------------------------ |
-| `internalServerError` | `500`  | Something broke that is not the caller's fault                           |
-| `notImplemented`      | `501`  | The endpoint exists and the functionality is not built                   |
-| `badGateway`          | `502`  | An upstream service answered with something unusable                     |
-| `serviceUnavailable`  | `503`  | Temporarily down — maintenance, an overloaded dependency, a tripped fuse |
-| `gatewayTimeout`      | `504`  | An upstream service took too long                                        |
-
-Log the detail behind a `500` and return a message that gives an attacker nothing. Send
-`Retry-After` with a `503` when there is a credible estimate.
-
-## Pattern: Narrowing The Parsed Body
-
-The `ok` field is typed as a literal — `true` on the success helpers, `false` on the error
-ones — so a union of the bodies an endpoint can return narrows on a single check:
-
-```typescript
-type CreateArticle = { article: Article; ok: true } | { error: string; ok: false };
-
-let result: CreateArticle = await response.json();
-
-if (result.ok) return result.article;
-throw new Error(result.error);
-```
-
-That check holds regardless of which status the endpoint chose, which is what makes the
-field worth merging: the client keeps no list of which statuses are failures.
 
 ## Pattern: Asserting On Responses In Tests
 
-Helpers return responses, so a test reads the status and the body directly:
+Helpers return plain responses, so a test reads status and body directly.
 
 ```typescript
+import { conflict } from "@sdxc/response";
 import { expect, test } from "vitest";
 
-test("rejects a duplicate slug", async () => {
-	let response = await app.fetch(new Request(url, { method: "POST", body }));
+test("a duplicate slug answers 409", async () => {
+	let response = conflict({ error: "That slug is taken" });
 
 	expect(response.status).toBe(409);
+	expect(response.headers.get("Content-Type")).toContain("application/json");
 	expect(await response.json()).toEqual({ error: "That slug is taken", ok: false });
 });
-```
-
-## Pattern: Post-Redirect-Get After A Form Submission
-
-A browser that reloads after a `307` resubmits the form, because `307` preserves the
-method. Answer a successful submission with `303` so the follow-up is a `GET`:
-
-```typescript
-import { redirect } from "@sdxc/response";
-
-await createArticle(input);
-return redirect(`/articles/${input.slug}`, { status: redirect.Status.SeeOther });
 ```
 
 ## Versioning
