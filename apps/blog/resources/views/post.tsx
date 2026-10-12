@@ -33,6 +33,7 @@ import { Frame, unsafeHTML } from "remix/component";
 import type { PostViewModel } from "~/app/http/view-models/post";
 
 import { discussIntent } from "~/app/services/share";
+import { permalink } from "~/app/services/webmention";
 import { PROFILE } from "~/config/profile";
 import { BlogLayout } from "~/resources/layouts/blog";
 import routes from "~/routes/web";
@@ -215,7 +216,13 @@ export function PostView() {
 											Download EPUB
 										</Link>
 										<Link
-											href={discussIntent({ title: model.post.title, permalink: model.post.url })}
+											href={discussIntent({
+												title: model.post.title,
+												permalink: permalink({
+													postType: model.post.typePath,
+													slug: model.post.slug,
+												}).href,
+											})}
 											target="_blank"
 											rel="noopener"
 											mix={[text("sm")]}

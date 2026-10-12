@@ -113,16 +113,25 @@ async function cmsPage(path: string): Promise<string> {
 }
 
 describe("Discuss on X", () => {
-	test("links a public post to X prefilled with its title and permalink", async () => {
+	test("links a public post to X prefilled with its title and canonical permalink", async () => {
 		let response = await fetchPath(`/articles/${SLUG}`);
 		let body = await response.text();
+		let url = permalink({ postType: "articles", slug: SLUG }).href;
 
 		expect(response.status).toBe(200);
 		expect(body).toContain("Discuss on X");
-		expect(body).toContain(
-			attribute(
-				discussIntent({ title: "Sharing on X", permalink: `https://blog.test/articles/${SLUG}` }),
-			),
+		expect(body).toContain(attribute(discussIntent({ title: "Sharing on X", permalink: url })));
+	});
+
+	test("shares the canonical permalink when the page is reached on another host", async () => {
+		let body = await (await fetchPath(`/articles/${SLUG}`)).text();
+		let requestUrl = `https://blog.test/articles/${SLUG}`;
+
+		expect(new URL(permalink({ postType: "articles", slug: SLUG })).origin).not.toBe(
+			"https://blog.test",
+		);
+		expect(body).not.toContain(
+			attribute(discussIntent({ title: "Sharing on X", permalink: requestUrl })),
 		);
 	});
 });
