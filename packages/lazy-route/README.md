@@ -1,61 +1,63 @@
 # @sdxc/lazy-route
 
-Maps a route to a module that is imported on the first request that reaches it.
+Maps a route to a module imported on the first request that reaches it.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/lazy-route
 ```
 
-It stands in for a handler mapped on a [`remix`](https://www.npmjs.com/package/remix) fetch router, which installs alongside this package.
+It plugs into the router from [`remix`](https://www.npmjs.com/package/remix), which installs alongside it.
 
 ## Usage
 
-### Basic Example
+### Defer a route
 
-Replace the static import with a loader. The route is still mapped at startup, so matching and URL generation are unchanged, but the module behind it arrives with the first request that matches.
+Replace the static import with a loader. The route is still mapped at startup, so matching and `href()` work as before; the module arrives with the first request that matches.
 
 ```typescript
 import { lazy } from "@sdxc/lazy-route";
+import { createRouter } from "remix/router";
+import { get, route } from "remix/routes";
 
-// Before
-import bookmarks from "./controllers/bookmarks";
-router.map(routes.bookmarks, bookmarks);
+let routes = route({ bookmarks: get("/bookmarks") });
 
-// After
+let router = createRouter();
+
 router.map(
 	routes.bookmarks,
-	lazy(() => import("./controllers/bookmarks")),
+	lazy(() => import("./controllers/bookmarks.js")),
 );
 ```
 
-### Actions And Controllers
+The loader runs once and every later request reuses its module.
 
-Both work from the same call, because the router decides which shape it wants from the target it was given rather than from the module.
+### Map actions and controllers alike
+
+A module that default-exports a `createAction(...)` maps to a single route, and one that default-exports a `createController(...)` maps to a route map. The router picks the shape from the route it is given.
 
 ```typescript
-// A single route, whose module default-exports a `createAction(...)`
 router.map(
 	routes.home,
-	lazy(() => import("./controllers/home")),
+	lazy(() => import("./controllers/home.js")),
 );
-
-// A route map, whose module default-exports a `createController(...)`
 router.map(
 	routes.session,
-	lazy(() => import("./controllers/session")),
+	lazy(() => import("./controllers/session.js")),
 );
 ```
 
-A controller's actions share one load: the first request to any of them imports the module, and every other action is served from it without importing again.
+Every action of a controller shares one import: the first request to any of them loads the module for all.
 
-### Middleware The Module Declares
+### Keep the module's own middleware
 
-Whatever an action or controller declares travels with it and runs ahead of the handler, in the order the router would have run it.
+The `middleware` an action or controller declares travels with it and runs after the router's chain and before the handler, exactly as it does when imported statically.
 
 ```typescript
 // ./controllers/settings.ts
+import { createController } from "remix/router";
+
 export default createController(routes.settings, {
 	middleware: [requireAdmin],
 	actions: {
@@ -64,35 +66,31 @@ export default createController(routes.settings, {
 });
 ```
 
-`requireAdmin` runs before `index`, after the router's own chain, exactly as it does when the controller is imported statically.
+### Guard a route before it loads
 
-### Guards The Router Owns
-
-A group of routes that shares a guard passes it as the second argument, where it runs before anything the module declares — and answers before the module is loaded at all.
+Middleware passed as the second argument runs ahead of the module's own, and a guard that answers does so without importing the module.
 
 ```typescript
 router.map(
-	routes.admin.articles,
-	lazy(() => import("./controllers/admin/articles"), [requireAdmin, purgeListing]),
+	routes.admin,
+	lazy(() => import("./controllers/admin.js"), [requireAdmin]),
 );
 ```
 
-### Loading A Named Export
+### Load a named export
 
-A loader may resolve the handler itself, for a module that exports it under a name.
+A loader may resolve the handler itself instead of a module with a `default` export.
 
 ```typescript
 router.map(
 	routes.health,
-	lazy(() => import("./controllers/health").then((it) => it.check)),
+	lazy(() => import("./controllers/health.js").then((module) => module.check)),
 );
 ```
 
 ## API
 
 ### `lazy(load, middleware?)`
-
-Returns a stand-in for the route's module, typed as that module's default export, to pass wherever an action or a controller goes.
 
 ```typescript
 function lazy<module>(
@@ -101,109 +99,130 @@ function lazy<module>(
 ): Loaded<module>;
 ```
 
-`load` is called at most once, on the first request that matches the route, and its result is reused for every request after that. It may resolve either a module with a `default` export or the handler value itself.
+Returns a stand-in typed as the module's default export (or as the resolved value when it has no `default`), to pass wherever `router.map()` takes an action or a controller. `load` runs on the first matching request and its result serves every request after it, including a rejected import.
 
-`middleware` runs ahead of whatever the module declares. It is typed as middleware with no context transform, so a middleware that publishes a context value is rejected: the loaded handler's type is the module's own and cannot grow to know a value declared at the map call. Publish those from the router's chain, or from inside the module.
+`middleware` runs before the module's own chain. It takes middleware with no context transform: publish context values from the router's chain or from inside the module.
 
-The return type is the module's own, so pointing a route at the wrong module stays a type error at the `router.map()` call — a controller mapped to a single route, an action mapped to a route map, and a controller missing an action the route map declares are all rejected there.
+Because the stand-in keeps the module's type, mapping a controller to a single route, an action to a route map, or a controller missing a declared action is a type error at `router.map()`. The router's own runtime checks for those mistakes run on the first request instead, and throw a `TypeError` naming the problem.
 
-```typescript
-let handler = lazy(() => import("./controllers/bookmarks"));
-// typed as
-let handler: typeof import("./controllers/bookmarks").default;
-```
+## Pattern: Deferring The Whole Route Table
 
-### What Moves To The First Request
-
-A static map validates a controller's actions against its route map while the router is being built. A lazy one cannot, because the actions are not there yet, so those checks run on the first request to the route and throw with the same detail.
-
-| Mistake                                        | Reported                                        |
-| ---------------------------------------------- | ----------------------------------------------- |
-| A controller mapped to a single route          | At the map call, and again on the first request |
-| An action mapped to a route map                | At the map call, and again on the first request |
-| A controller missing a declared action         | At the map call, and again on the first request |
-| A module whose default export is not a handler | At the `lazy()` call, and on the first request  |
-
-## Pattern: Deciding What To Defer
-
-The saving is the cost of the modules a request does not need, so the routes worth deferring are the ones with the heaviest module graphs. On a server that starts once, that cost is paid once; on a runtime that starts an isolate per cold request, it is paid again every time, and in full, including the routes that request will never touch.
-
-Deferring the whole table is usually the right default. Each route pays a single import on the first request that reaches it, and every route the process never serves costs nothing beyond its pattern.
+Each route pays one import on its first request, and a route the process never serves costs only its pattern. On a runtime that starts an isolate per cold request, deferring every route keeps startup to the router itself.
 
 ```typescript
 import { lazy } from "@sdxc/lazy-route";
+import { createRouter } from "remix/router";
+import { get, route } from "remix/routes";
+
+let routes = route({
+	home: get("/"),
+	search: get("/search"),
+	account: get("/account"),
+});
+
+let router = createRouter();
 
 router.map(
 	routes.home,
-	lazy(() => import("./controllers/home")),
+	lazy(() => import("./controllers/home.js")),
 );
 router.map(
 	routes.search,
-	lazy(() => import("./controllers/search")),
+	lazy(() => import("./controllers/search.js")),
 );
 router.map(
-	routes.admin,
-	lazy(() => import("./controllers/admin")),
+	routes.account,
+	lazy(() => import("./controllers/account.js")),
 );
+
+export default { fetch: (request: Request) => router.fetch(request) };
 ```
 
-Point the loader at a bare `import()` and let the bundler split the chunk. A loader that computes its specifier cannot be split, and the deferral buys nothing.
+Point each loader at a bare `import()` with a literal specifier so the bundler splits the module into its own chunk.
 
-## Pattern: Keeping A Group's Guard In One Place
+## Pattern: One Guard For A Route Group
 
-A stand-in is an object rather than a function, so it cannot be the `handler` of an outer action object. A composition root that owns a route group's guard passes it to `lazy()` instead of wrapping the loader.
+A section that shares its guards passes the same list to every `lazy()` call. An unauthorized request is answered before the controller it targets is imported, so a section nobody may enter is never loaded.
 
 ```typescript
 import type { Middleware } from "remix/router";
 
 import { lazy } from "@sdxc/lazy-route";
+import { createRouter } from "remix/router";
+import { get, route } from "remix/routes";
 
-const ADMIN_GUARDS: Middleware[] = [requireSignIn, requireAdmin];
+let routes = route({
+	admin: {
+		dashboard: get("/admin"),
+		articles: get("/admin/articles"),
+	},
+});
+
+let requireAdmin: Middleware = (context, next) => {
+	if (context.request.headers.get("x-role") !== "admin") {
+		return new Response("Forbidden", { status: 403 });
+	}
+	return next();
+};
+
+let router = createRouter();
 
 router.map(
 	routes.admin.dashboard,
-	lazy(() => import("./controllers/admin/dashboard"), ADMIN_GUARDS),
+	lazy(() => import("./controllers/admin/dashboard.js"), [requireAdmin]),
 );
 router.map(
 	routes.admin.articles,
-	lazy(() => import("./controllers/admin/articles"), ADMIN_GUARDS),
+	lazy(() => import("./controllers/admin/articles.js"), [requireAdmin]),
 );
 ```
 
-The guard answers an unauthorized request without importing the controller it protects, so a section nobody is allowed into is never loaded.
+## Pattern: A Route Map Spread Across Modules
 
-## Pattern: A Route Map Assembled From Several Modules
-
-A stand-in is a valid action in its own right, so a route map whose actions live in different modules maps one loader per action.
+A stand-in is a valid action on its own, so a route map whose actions live in different files maps one loader per action. Inside `createController()` they keep the route map's typing and run behind the controller's middleware, which answers before any of them loads.
 
 ```typescript
-import { lazy } from "@sdxc/lazy-route";
+import type { Middleware } from "remix/router";
 
-router.map(routes.feeds, {
-	actions: {
-		all: lazy(() => import("./controllers/feeds/all")),
-		articles: lazy(() => import("./controllers/feeds/articles")),
-		tutorials: lazy(() => import("./controllers/feeds/tutorials")),
+import { lazy } from "@sdxc/lazy-route";
+import { createController, createRouter } from "remix/router";
+import { get, route } from "remix/routes";
+
+let routes = route({
+	feeds: {
+		all: get("/feeds"),
+		articles: get("/feeds/articles"),
+		tutorials: get("/feeds/tutorials"),
 	},
 });
-```
 
-`createController()` takes them just as well, so a group that shares a guard keeps the route map's typing on each action while its modules stay deferred. The guard runs before any of them loads.
+let requireSignIn: Middleware = (context, next) => {
+	if (!context.request.headers.has("authorization")) {
+		return new Response("Unauthorized", { status: 401 });
+	}
+	return next();
+};
 
-```typescript
+let router = createRouter();
+
 router.map(
 	routes.feeds,
 	createController(routes.feeds, {
 		middleware: [requireSignIn],
 		actions: {
-			all: lazy(() => import("./controllers/feeds/all")),
-			articles: lazy(() => import("./controllers/feeds/articles")),
+			all: lazy(() => import("./controllers/feeds/all.js")),
+			articles: lazy(() =>
+				import("./controllers/feeds/posts.js").then((module) => module.articles),
+			),
+			tutorials: lazy(() =>
+				import("./controllers/feeds/posts.js").then((module) => module.tutorials),
+			),
 		},
 	}),
 );
 ```
 
-Where the actions share a module, several loaders may name the same specifier — one for each named export the route map asks for. They share a chunk, imported once for whichever action arrives first.
+`articles` and `tutorials` name the same specifier to pick different named exports; they share one chunk, imported by whichever of them is requested first.
 
 ## Versioning
 
