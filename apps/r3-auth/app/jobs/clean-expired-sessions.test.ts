@@ -11,6 +11,7 @@
 import type { Database as DataTableDatabase } from "remix/data-table";
 
 import { publishModels } from "@sdxc/data-model/testing";
+import { Database } from "@sdxc/database-middleware";
 import { createJobContext } from "@sdxc/jobs";
 import { Log } from "@sdxc/logger";
 import { unwrap } from "@sdxc/result";
@@ -21,7 +22,6 @@ import type { AuthModels } from "~/app/models";
 
 import jobs from "~/app/jobs";
 import handler from "~/app/jobs/clean-expired-sessions";
-import { Database } from "~/app/jobs/middleware/database";
 import { models as registry } from "~/app/models";
 import { createTestModels } from "~/app/test/models";
 import { sessions } from "~/database/schema";
@@ -63,7 +63,7 @@ async function run(): Promise<Record<string, unknown>> {
 	let records: Record<string, unknown>[] = [];
 	let log = new Log({ kind: "job", sink: (record) => void records.push(record) });
 	let ctx = createJobContext(jobs.cleanExpiredSessions, { id: "message-1", attempts: 1, log });
-	ctx.set(Database, db, { property: "database" });
+	ctx.set(Database, db, { property: "db" });
 	publishModels(ctx, registry, { db });
 
 	await log.run(() => handler(ctx));

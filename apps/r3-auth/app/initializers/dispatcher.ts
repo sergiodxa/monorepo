@@ -9,14 +9,15 @@
 
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
+import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
 import { models } from "~/app/jobs/middleware/models";
 
 /** Reports a completed run to the monitor watching it. The token resolves per call. */
@@ -29,7 +30,7 @@ const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), models()],
+	middleware: [database(createDatabase), models()],
 	queue: cloudflare.queue(() => env.QUEUE),
 
 	/**
