@@ -1,5 +1,5 @@
 /**
- * Tests frame resolution through the app's rendering chain on workerd, where a response body is
+ * Tests frame resolution through the app's renderer and frame guard on workerd, where a response body is
  * read in pieces: the renderer inlines a frame's first piece in place and streams the rest after
  * it, so a fragment past one piece's size must still land whole inside its frame's template.
  *
@@ -8,17 +8,22 @@
  */
 
 import { css, Frame } from "remix/component";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { htmlRendering } from "./render";
+import { assetResolver } from "~/app/initializers/assets";
+
+import { frameFailures } from "./frame-failures";
 
 /** How many rows the fragment renders, enough to run its markup well past 4 KB. */
 const ROWS = 200;
 
 /** A page with one deferred frame, and the fragment behind it rendered as a frame route does. */
 async function visit() {
-	let router = createRouter({ middleware: htmlRendering() });
+	let router = createRouter({
+		middleware: [render({ assets: assetResolver }), frameFailures()],
+	});
 
 	router.get("/fragment", (ctx) =>
 		ctx.render(
@@ -43,7 +48,7 @@ async function visit() {
 	return await (await router.fetch(new Request("https://uptime.test/"))).text();
 }
 
-describe("a frame rendered through htmlRendering() on workerd", () => {
+describe("a frame rendered through the renderer and frameFailures() on workerd", () => {
 	test("lands its whole fragment inside its template", async () => {
 		let html = await visit();
 		let template = /<template id="[^"]+">([\s\S]*?)<\/template>/.exec(html);

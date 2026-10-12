@@ -43,7 +43,7 @@ export default createAction(routes.app.team.tcpMonitors.index, {
 			.all();
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · TCP monitors`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · TCP monitors`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

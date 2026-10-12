@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Touch } from "@sdxc/attribution";
 import type { IdToken } from "@sdxc/auth/id-token";
 import type { I18n } from "@sdxc/i18n";
@@ -42,6 +43,7 @@ import routes from "~/routes/web";
 interface AuthErrorContext {
 	render: Renderer<RemixNode>;
 	intl: I18n;
+	assets: DocumentAssets;
 }
 
 /**
@@ -112,7 +114,7 @@ async function languageHeaders(
 /** Renders the sign-in failure page, showing `message` verbatim as supplied by the caller. */
 function authError(ctx: AuthErrorContext, message: string) {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("auth.error.signInFailedTitle")}>
+		<DocumentLayout assets={ctx.assets} title={ctx.intl.t("auth.error.signInFailedTitle")}>
 			<main mix={[flex(), flexCol(), minBs("100vh")]}>
 				<div
 					mix={[

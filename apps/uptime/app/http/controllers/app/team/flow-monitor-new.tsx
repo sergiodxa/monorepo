@@ -33,7 +33,7 @@ export default createAction(routes.app.team.flowMonitors.new, {
 		let verifiedDomains = await ctx.models.teamDomains.verifiedHostnames(ctx.team.id);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New flow monitor`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New flow monitor`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

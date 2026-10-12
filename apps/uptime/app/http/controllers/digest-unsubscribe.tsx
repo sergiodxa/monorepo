@@ -52,7 +52,7 @@ function renderPage(copy: { title: string; body: string }, footer: RemixNode, st
 	let ctx = getContext();
 
 	return ctx.render(
-		<DocumentLayout title={copy.title} locale={ctx.locale}>
+		<DocumentLayout assets={ctx.assets} title={copy.title} locale={ctx.locale}>
 			<main mix={[vstack({ gap: 8, align: "center", justify: "center" }), minBs("100vh"), p(8)]}>
 				<Card mix={[maxIs("560px"), mi("auto")]}>
 					<Card.Content mix={[vstack({ gap: 5, align: "center" }), textAlign("center"), p(10, 8)]}>

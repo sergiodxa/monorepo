@@ -89,7 +89,7 @@ export default createAction(routes.app.team.dnsMonitors.show, {
 		let registrationReason = registrationReasonKey(monitor);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

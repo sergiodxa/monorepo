@@ -25,7 +25,7 @@ import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
@@ -96,7 +96,7 @@ afterAll(() => server.close());
 /** Renders straight through `renderToString`, the whole document this page produces. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -131,6 +131,7 @@ function createTestRouter(session: Session) {
 			},
 			seedSession(session),
 			i18n as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

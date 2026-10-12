@@ -2,13 +2,14 @@
  * Root HTML document layout for the uptime app. It renders the outer html/head/body
  * shell with charset and viewport meta tags, an optional page title, an indexable
  * page's metadata and structured data, the stylesheets imported below in cascade order, and
- * the client entry with the import map its chunks resolve through, both read from the asset
- * manifest. It is the shared document wrapper every server-rendered page is composed into.
+ * the client entry with the import map its chunks resolve through, both from the `assets` the
+ * page passes in. It is the shared document wrapper every server-rendered page is composed into.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { Seo } from "@sdxc/seo";
@@ -17,10 +18,7 @@ import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
-
 import { SEO } from "~/app/initializers/seo";
-import { CspNonce } from "~/resources/components/csp-nonce";
 
 import "@sdxc/ui/reset.css";
 import "~/resources/css/colors.css";
@@ -42,15 +40,6 @@ const fontFaceCss = `
 			url("/fonts/mona-sans.woff2") format("woff2");
 	}
 `;
-
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(handle: Handle<{ value: Assets; children: RemixNode }, Assets>) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
 
 /**
  * The Cloudflare Web Analytics site token — public by construction, since
@@ -75,6 +64,11 @@ namespace DocumentLayout {
 
 	export interface Props {
 		children: RemixNode;
+		/**
+		 * The request's `ctx.assets`: the stylesheets and client entry the build emitted, and the
+		 * CSP nonce the import map carries.
+		 */
+		assets: DocumentAssets;
 		title?: string;
 		/** The request's detected language (`ctx.locale`), set as `<html lang>`. Defaults to `"en"` for the few call sites that don't have it in scope yet. */
 		locale?: string;
@@ -101,11 +95,9 @@ namespace DocumentLayout {
  * runtime appends reuses.
  */
 export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
-	let nonce = handle.context.get(CspNonce)?.nonce;
-
 	return () => {
-		let { title, locale = "en", preload = [], seo, children } = handle.props;
-		let { script, stylesheets } = handle.context.get(DocumentAssets);
+		let { assets, title, locale = "en", preload = [], seo, children } = handle.props;
+		let { script, stylesheets, nonce } = assets;
 
 		return (
 			<html lang={locale} class="system">

@@ -35,7 +35,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { admin } from "~/app/http/middleware/admin";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { bindModels, recordJobs } from "~/app/test/models";
 import { memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -48,7 +48,7 @@ let sessionStorage = createMemorySessionStorage();
 
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -121,6 +121,7 @@ async function renderSettings(
 			models(),
 			admin(() => fakeAdmin),
 			session(sessionCookie, sessionStorage),
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});

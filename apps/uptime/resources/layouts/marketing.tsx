@@ -95,7 +95,7 @@ function buildFooterGrid(footerColumns: FooterColumn[]): FooterCell[] {
  * @example
  * let chrome = buildMarketingChrome(ctx.intl.t);
  * return ctx.render(
- * 	<DocumentLayout title={...}>
+ * 	<DocumentLayout assets={ctx.assets} title={...}>
  * 		<MarketingLayout isSignedIn={isSignedIn} {...chrome}>
  * 			{...}
  * 		</MarketingLayout>

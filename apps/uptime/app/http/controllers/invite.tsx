@@ -36,7 +36,10 @@ export default createAction(routes.invite, {
 
 		let renderError = (message: string) =>
 			ctx.render(
-				<DocumentLayout title={ctx.intl.t("page.acceptInvite.errors.pageTitle")}>
+				<DocumentLayout
+					assets={ctx.assets}
+					title={ctx.intl.t("page.acceptInvite.errors.pageTitle")}
+				>
 					<main mix={[flex(), flexCol(), minBs("100vh")]}>
 						<div
 							mix={[

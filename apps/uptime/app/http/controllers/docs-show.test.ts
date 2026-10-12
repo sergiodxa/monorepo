@@ -25,7 +25,7 @@ import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api/problems";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 import docsShow from "./docs-show";
@@ -33,7 +33,7 @@ import docsShow from "./docs-show";
 /** Renders through `renderToString`, sufficient for this page's plain-element tree. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -54,6 +54,7 @@ async function getDocsShow(slug: string) {
 				return next();
 			},
 			i18n as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

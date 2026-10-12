@@ -334,7 +334,7 @@ export default createAction(routes.app.team.monitors.edit, {
 		let deleteMonitorDescriptionId = "delete-monitor-description";
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${monitor.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

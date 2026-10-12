@@ -58,7 +58,11 @@ export default createAction(routes.app.team.monitorsImport, {
 		let report = session?.get(MONITOR_IMPORT_REPORT) as MonitorImportReport | undefined;
 
 		return ctx.render(
-			<DocumentLayout title={ctx.intl.t("page.monitorsImport.meta.title")} locale={ctx.locale}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={ctx.intl.t("page.monitorsImport.meta.title")}
+				locale={ctx.locale}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

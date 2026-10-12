@@ -28,7 +28,7 @@ Rules are written following RFC 2119, which defines the keywords "MUST", "MUST N
 
 - MUST NOT use `as any` anywhere in the code, including tests, scripts, controllers, middleware, repositories, views, and config files.
 - MUST NOT call `getContext()` inside controllers when `ctx` is available.
-- MUST link the document's stylesheets and client entry through `documentAssets()` in `app/initializers/assets.ts`, which reads the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in cascade order. The renderer in `app/http/render.tsx` looks the assets up per render; a test renderer wraps its node with `withDocumentAssets()` from `app/test/document-assets.tsx`.
+- MUST link the document's stylesheets and client entry through `ctx.assets`, which the router's `assets()` middleware (`@sdxc/assets-middleware`) resolves once per request through `assetResolver` in `app/initializers/assets.ts`, over the asset manifest `@pitlane/vite-plugin-remix` writes: a build hashes every file, so a hand-written `/assets/...` URL or a `?url` stylesheet import names a file the next build renames. A stylesheet joins by a side-effect `import "….css"` in `resources/layouts/document.tsx`, in cascade order. Every page passes the assets to its document explicitly, `<DocumentLayout assets={ctx.assets}>`, and the document stamps `ctx.assets.nonce` (the security headers' CSP nonce) on the import map. A test router installs `testAssets()` from `app/test/document-assets.ts` ahead of its renderer.
 - MUST keep the `bootstrap/browser.ts` glob to `resources/components/`, where every `clientEntry()` island lives: a layout or view in the client bundle compiles its stylesheets a second time, and that copy differs from the server's by vendor prefixes, so every page would link both.
 
 ## Reference Files
@@ -41,7 +41,7 @@ Reference files are examples of good code that agents can refer to when performi
 - Initializers
   - `app/initializers/router.tsx` <- `createWebRouter`: global middleware and every route mapped through `lazy()`
   - `app/initializers/dispatcher.ts` <- The job dispatcher both queue and cron handlers delegate to
-  - `app/initializers/assets.ts` <- Built asset URLs (stylesheets, client entry, import map) from the manifest
+  - `app/initializers/assets.ts` <- The asset resolver over the build manifest, read by the router's `assets()` and `render()` middleware
 - Configuration
   - `routes/web.ts` <- Registry of routes
   - `routes/api-groups.ts` <- Route maps grouping the API leaves each controller handles

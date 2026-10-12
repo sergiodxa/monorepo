@@ -33,7 +33,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import { language as languageCookie, returnTo } from "~/app/initializers/cookies";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -191,7 +191,7 @@ afterAll(() => server.close());
 /** Renders straight through `renderToString`, the whole document these pages produce. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -230,6 +230,7 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 			}),
 			auth as Middleware,
 			i18n as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

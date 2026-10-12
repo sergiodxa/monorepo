@@ -85,7 +85,7 @@ export default createAction(routes.app.team.reports.index, {
 		};
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${t("header.title")}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${t("header.title")}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

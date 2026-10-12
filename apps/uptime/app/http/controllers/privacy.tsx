@@ -40,6 +40,7 @@ export default createAction(routes.legal.privacy, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={ctx.intl.t("legal.privacy.meta.title")}
 			locale={ctx.locale}
 			seo={{

@@ -23,7 +23,7 @@ import { describe, expect, test } from "vitest";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	BASE_PRICE_USD,
 	formatPings,
@@ -39,7 +39,7 @@ import marketingAudience from "./marketing-audience";
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -60,6 +60,7 @@ async function getAudience(slug: string) {
 				return next();
 			},
 			i18n as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

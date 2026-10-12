@@ -41,6 +41,7 @@ export default createAction(routes.app.team.maintenanceWindows.new, {
 
 		return ctx.render(
 			<DocumentLayout
+				assets={ctx.assets}
 				title={`${ctx.team.name} · ${ctx.intl.t("page.createMaintenance.header.title")}`}
 			>
 				<AppShell

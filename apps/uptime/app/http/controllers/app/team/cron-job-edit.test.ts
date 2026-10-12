@@ -13,16 +13,19 @@ import type { Middleware, RequestHandler } from "remix/router";
 import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
+import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { htmlRendering } from "~/app/http/render";
+import { assetResolver } from "~/app/initializers/assets";
 import { createTestDatabase } from "~/app/test/db";
+import { testAssets } from "~/app/test/document-assets";
 import { cronJobMonitors, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -73,7 +76,13 @@ async function send(
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.cronJobs.edit, {
-		middleware: [seedTeam(team, membership), i18n, ...htmlRendering()],
+		middleware: [
+			seedTeam(team, membership),
+			i18n,
+			testAssets(),
+			render({ assets: assetResolver }),
+			frameFailures(),
+		],
 		handler,
 	});
 

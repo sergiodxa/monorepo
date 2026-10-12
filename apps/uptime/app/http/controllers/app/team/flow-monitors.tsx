@@ -62,7 +62,7 @@ export default createAction(routes.app.team.flowMonitors.index, {
 		let newHref = routes.app.team.flowMonitors.new.href({ team: ctx.team.slug });
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Flow monitors`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Flow monitors`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

@@ -30,7 +30,7 @@ import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/initializers/seo";
 import { findClaimViolations } from "~/app/services/public-claims";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/test/honeypot";
 import { BASE_PRICE_USD, formatPings, formatUsd, INCLUDED_PINGS } from "~/config/pricing";
 import routes from "~/routes/web";
@@ -49,7 +49,7 @@ let { default: home } = await import("./home");
 /** Renders through `renderToString`, sufficient since this page emits a plain node tree. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -81,6 +81,7 @@ async function getHome(viewer: Viewer | null) {
 			seedAuth(viewer),
 			i18n as Middleware,
 			testHoneypot(),
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

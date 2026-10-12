@@ -29,7 +29,7 @@ import { describe, expect, test } from "vitest";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { bindModels } from "~/app/test/models";
 import routes from "~/routes/web";
 
@@ -40,7 +40,7 @@ type Db = ReturnType<typeof createTestDatabase>["db"];
 /** Renders through `renderToString`, which suffices for a page built from plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -84,6 +84,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST", body?: strin
 			}) as Middleware,
 			i18n as Middleware,
 			formData() as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

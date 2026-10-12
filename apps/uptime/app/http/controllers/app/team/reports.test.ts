@@ -25,7 +25,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, statusPages, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -88,7 +88,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 /** A request-scoped HTML renderer standing in for the bootstrap's. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
-		let stream = renderToStream(await withDocumentAssets(node), { frameSrc: ctx.request.url });
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });
@@ -105,6 +105,7 @@ async function visit(
 		middleware: [
 			seedTeam(fixture.team, fixture.membership),
 			i18n,
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 		handler,

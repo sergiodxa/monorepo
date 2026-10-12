@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { I18n } from "@sdxc/i18n";
 import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
@@ -23,6 +24,7 @@ import NotFoundView from "~/resources/views/not-found";
 interface RenderContext {
 	render: Renderer<RemixNode>;
 	intl: I18n;
+	assets: DocumentAssets;
 }
 
 /** Renders the fallback 404 document for unmatched routes. */
@@ -33,7 +35,7 @@ export default function defaultHandler(ctx: RenderContext) {
 	};
 
 	return ctx.render(
-		<DocumentLayout title={props.title}>
+		<DocumentLayout assets={ctx.assets} title={props.title}>
 			<NotFoundView {...props} goBackHomeLabel={ctx.intl.t("notFound.goBackHome")} />
 		</DocumentLayout>,
 		{ status: 404 },

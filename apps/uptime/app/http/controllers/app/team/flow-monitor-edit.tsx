@@ -58,7 +58,7 @@ export default createAction(routes.app.team.flowMonitors.edit, {
 		});
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Edit ${monitor.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${monitor.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

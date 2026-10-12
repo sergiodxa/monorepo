@@ -376,6 +376,7 @@ export default createAction(routes.home, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={t("landing.meta.title")}
 			locale={ctx.locale}
 			seo={{

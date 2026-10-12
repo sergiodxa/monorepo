@@ -27,7 +27,7 @@ import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/sch
 
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { bindModels } from "~/app/test/models";
 import { memberships, optionalEmails, teams, userPreferences } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -37,7 +37,7 @@ import * as accountModule from "./account";
 
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -134,6 +134,7 @@ async function renderAccount(db: Database, team: SelectTeam, membership: SelectM
 			asyncContext(),
 			database(db),
 			models(),
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});

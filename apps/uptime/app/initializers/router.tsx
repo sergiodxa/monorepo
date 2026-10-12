@@ -1,8 +1,8 @@
 /**
  * The uptime fetch-router: the global middleware stack, then every route mapped through
  * `lazy()`, so a cold isolate imports only the controllers it serves across the marketing
- * site, the signed-in app and the API. The rendering chain comes from `~/app/http/render`,
- * so a test router renders and resolves frames through the same middleware production runs.
+ * site, the signed-in app and the API. The chain ends by publishing the document's assets
+ * as `ctx.assets`, then the renderer every page and frame streams through.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -10,6 +10,7 @@
 
 import type { Middleware, RequestContext } from "remix/router";
 
+import { assets } from "@sdxc/assets-middleware";
 import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import { database } from "@sdxc/database-middleware";
@@ -20,10 +21,11 @@ import { honeypot } from "@sdxc/honeypot/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { lazy } from "@sdxc/lazy-route";
+import { currentLog } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
-import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
@@ -31,18 +33,20 @@ import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import auth, { getViewer } from "~/app/http/middleware/auth";
+import { frameFailures } from "~/app/http/middleware/frame-failures";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import requireRole from "~/app/http/middleware/require-role";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { createSessionMiddleware } from "~/app/http/middleware/session";
-import { htmlRendering } from "~/app/http/render";
+import { assetResolver } from "~/app/initializers/assets";
 import { polar } from "~/app/initializers/billing";
 import { createDatabase } from "~/app/initializers/database";
 import { flags } from "~/app/initializers/flags";
@@ -221,11 +225,32 @@ export function createWebRouter(options: WebRouterOptions) {
 				insecureBypassPatterns: MACHINE_PATH_PREFIXES.map((prefix) => `${prefix}{path...}`),
 			}),
 			/**
-			 * Right before the renderer, so the headers land on the response it produced and the
-			 * renderer can read the nonce while the handler still runs.
+			 * Right before the assets and the renderer, so the headers land on the response it
+			 * produced and the nonce exists before `assets()` reads it into `ctx.assets`.
 			 */
 			securityHeaders(SECURITY_POLICY),
-			...htmlRendering(),
+			/**
+			 * Publishes `ctx.assets`, the stylesheets and client entry every page's document links,
+			 * resolved once per request. After the security headers, whose nonce it carries.
+			 */
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+				nonce: (ctx) =>
+					ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
+			}),
+			/**
+			 * Frames resolve back through this router, so a fragment shares the request's cookies
+			 * and middleware; every island hydrates from the chunk the resolver names for it.
+			 */
+			render({
+				assets: assetResolver,
+				/** Sends render failures to the request's log, since a Worker discards the console. */
+				onError(error) {
+					currentLog()?.fail(error, { render: { failed: true } });
+				},
+			}),
+			frameFailures(),
 		],
 		/**
 		 * Renders the translated 404 page for unmatched paths. A path under

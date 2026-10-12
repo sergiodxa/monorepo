@@ -115,7 +115,7 @@ export default createAction(routes.app.team.account, {
 		let preferredLanguage = preferences?.preferred_language ?? null;
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Account`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Account`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

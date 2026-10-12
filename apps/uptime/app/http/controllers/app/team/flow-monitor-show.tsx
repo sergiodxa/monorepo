@@ -65,7 +65,7 @@ export default createAction(routes.app.team.flowMonitors.show, {
 		if (!monitor) return notFound("Not Found");
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${monitor.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${monitor.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

@@ -33,6 +33,7 @@ export default createAction(routes.legal.terms, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={ctx.intl.t("legal.terms.meta.title")}
 			locale={ctx.locale}
 			seo={{

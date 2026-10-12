@@ -52,7 +52,7 @@ import {
 	createTestBilling,
 } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { honeypotFields, testHoneypot } from "~/app/test/honeypot";
 import { BASE_PRICE_USD } from "~/config/pricing";
 import { memberships, teams } from "~/database/schema";
@@ -124,7 +124,7 @@ let { default: trialCheck } = await import("./index");
 /** Renders through `renderToString`, sufficient for a page that outputs plain HTML. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -226,6 +226,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 			i18n as Middleware,
 			formData() as Middleware,
 			testHoneypot(),
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

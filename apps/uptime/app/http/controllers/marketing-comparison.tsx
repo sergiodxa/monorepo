@@ -175,7 +175,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 			description: t("notFound.description"),
 		};
 		return ctx.render(
-			<DocumentLayout title={props.title}>
+			<DocumentLayout assets={ctx.assets} title={props.title}>
 				<NotFoundView {...props} goBackHomeLabel={t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
@@ -201,6 +201,7 @@ export default createAction(routes.marketing.comparison, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={content.metaTitle}
 			locale={ctx.locale}
 			seo={{

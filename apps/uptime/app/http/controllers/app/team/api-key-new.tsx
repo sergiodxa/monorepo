@@ -62,7 +62,7 @@ export default createAction(routes.app.team.apiKeys.new, {
 		if (!viewer) throw new Error("requireUser must run before this handler");
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New API key`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New API key`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

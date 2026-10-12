@@ -41,7 +41,7 @@ import {
 import i18n from "~/app/http/middleware/i18n";
 import { hasMarketingConsent } from "~/app/models/leads";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/test/honeypot";
 import { useMailServerDns } from "~/app/test/mail-servers";
 import routes from "~/routes/web";
@@ -74,7 +74,7 @@ let dns = useMailServerDns();
 /** Renders through `renderToString` — this page renders no `<Frame>`. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -137,6 +137,7 @@ async function submit(
 			i18n as Middleware,
 			formData() as Middleware,
 			testHoneypot(),
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

@@ -63,6 +63,7 @@ export default createAction(routes.trust, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={ctx.intl.t("trust.meta.title")}
 			locale={ctx.locale}
 			seo={{

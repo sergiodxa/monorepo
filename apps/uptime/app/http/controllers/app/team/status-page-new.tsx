@@ -99,6 +99,7 @@ export default createAction(routes.app.team.statusPages.new, {
 
 		return ctx.render(
 			<DocumentLayout
+				assets={ctx.assets}
 				title={`${ctx.team.name} · ${ctx.intl.t("page.createStatusPage.header.title")}`}
 			>
 				<AppShell

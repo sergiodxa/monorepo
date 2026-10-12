@@ -542,6 +542,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={t("page.trial.meta.title", { days })}
 			locale={ctx.locale}
 			seo={{

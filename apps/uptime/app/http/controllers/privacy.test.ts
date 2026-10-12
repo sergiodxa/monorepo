@@ -27,7 +27,7 @@ import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/initializers/seo";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 import privacy from "./privacy";
@@ -35,7 +35,7 @@ import privacy from "./privacy";
 /** Renders through `renderToString` — this page renders no `<Frame>`, so no `resolveFrame` is needed. */
 function createTestRenderer(): Renderer<RemixNode> {
 	return async (node, init) => {
-		let html = await renderToString(await withDocumentAssets(node));
+		let html = await renderToString(node);
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(html, { ...init, headers });
@@ -66,6 +66,7 @@ async function getPrivacy(viewer: Viewer | null) {
 			models(),
 			seedAuth(viewer),
 			i18n as Middleware,
+			testAssets(),
 			renderWith(createTestRenderer) as Middleware,
 		],
 	});

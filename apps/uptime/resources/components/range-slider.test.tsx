@@ -15,7 +15,7 @@
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 
 import { RangeSlider } from "./range-slider";
 
@@ -72,7 +72,7 @@ describe("RangeSlider", () => {
 		let { h } = await hydrationData(await render());
 		let moduleUrl = Object.values(h)[0]?.moduleUrl ?? "";
 
-		let { href } = await assets.getScriptEntry(moduleUrl);
+		let { href } = await assetResolver.getScriptEntry(moduleUrl);
 
 		expect(href).toBe("/assets/resources/components/range-slider.js");
 	});

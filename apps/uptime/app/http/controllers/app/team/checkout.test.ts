@@ -36,7 +36,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import models from "~/app/http/middleware/models";
 import { createActiveSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
 import routes from "~/routes/web";
@@ -49,7 +49,7 @@ vi.spyOn(console, "info").mockImplementation(() => {});
 
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -119,6 +119,7 @@ async function renderCheckout(
 			log() as Middleware,
 			billing({ provider: platform }),
 			attribution({ store: "session" }),
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});

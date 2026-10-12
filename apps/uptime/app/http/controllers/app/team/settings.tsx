@@ -158,7 +158,7 @@ export default createAction(routes.app.team.settings, {
 		let hasPendingDomainVerification = domains.some((domain) => domain.verified_at === null);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Settings`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Settings`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

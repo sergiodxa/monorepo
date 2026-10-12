@@ -32,7 +32,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite
 
 import { SEO } from "~/app/initializers/seo";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	dnsMonitorRecords,
 	dnsMonitors,
@@ -92,7 +92,7 @@ function serveSummaries(rows: unknown[]) {
  */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -137,6 +137,7 @@ async function get(db: Database, slug: string, headers?: HeadersInit): Promise<R
 			asyncContext(),
 			database(db),
 			models(),
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});

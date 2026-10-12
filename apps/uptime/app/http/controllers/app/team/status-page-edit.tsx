@@ -114,7 +114,7 @@ export default createAction(routes.app.team.statusPages.edit, {
 		let indexHref = routes.app.team.statusPages.index.href({ team: ctx.team.slug });
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Edit ${page.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${page.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

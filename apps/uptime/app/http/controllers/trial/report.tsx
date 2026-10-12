@@ -233,6 +233,7 @@ export default createAction(routes.trial.report, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={t("page.trial.report.meta.title", { days: TRIAL_WATCH_DURATION_DAYS })}
 			locale={locale}
 			seo={{

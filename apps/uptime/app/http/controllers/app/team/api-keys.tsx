@@ -52,7 +52,7 @@ export default createAction(routes.app.team.apiKeys.index, {
 		let newApiKey = ctx.get(Session)?.get("newApiKey") as NewApiKey | undefined;
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · API keys`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · API keys`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

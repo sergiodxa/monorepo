@@ -303,6 +303,7 @@ export default createAction(routes.statusPage, async (ctx) => {
 
 	let response = await ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={page.title}
 			locale={ctx.locale}
 			seo={{

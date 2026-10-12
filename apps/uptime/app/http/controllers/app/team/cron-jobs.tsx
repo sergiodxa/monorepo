@@ -43,7 +43,10 @@ export default createAction(routes.app.team.cronJobs.index, {
 			.all();
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.cronJobs.header.title")}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.cronJobs.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

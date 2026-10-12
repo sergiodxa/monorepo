@@ -26,7 +26,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -68,10 +68,10 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 	};
 }
 
-/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain. */
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit): Promise<Response> {
-		let stream = renderToStream(await withDocumentAssets(node), { frameSrc: ctx.request.url });
+		let stream = renderToStream(node, { frameSrc: ctx.request.url });
 		let headers = new Headers(init?.headers);
 		headers.set("content-type", "text/html; charset=utf-8");
 		return new Response(stream, { ...init, headers });
@@ -87,7 +87,12 @@ async function send(
 ): Promise<Response> {
 	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.monitors.new, {
-		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
+		middleware: [
+			seedTeam(team, membership),
+			i18n,
+			testAssets(),
+			renderWith(createHtmlRenderer) as Middleware,
+		],
 		handler,
 	});
 

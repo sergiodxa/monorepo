@@ -107,7 +107,7 @@ export default createAction(routes.app.team.checkout, {
 		 */
 		function notice(message: string, signedIn: Viewer) {
 			return ctx.render(
-				<DocumentLayout title={`${ctx.team.name} · Billing`}>
+				<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Billing`}>
 					<AppShell
 						team={ctx.team}
 						currentPath={ctx.url.pathname}

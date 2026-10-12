@@ -1,7 +1,7 @@
 /**
- * Tests the rendering chain's response contract: the doctype ahead of the JSX-rendered markup,
- * which keeps every page in standards mode, the CSP nonce it hands the document, which must
- * match the one the response's policy names, and the asset manifest's files it links.
+ * Tests the app's security policy on a rendered document: the headers it sends, and the nonce it
+ * names, which the assets middleware carries to the document's import map and which must match.
+ * Also checks the document links the files the asset manifest names.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,26 +9,31 @@
 
 import type { Middleware } from "remix/router";
 
-import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import { assetResolver } from "~/app/initializers/assets";
 import { CHUNK_SPECIFIER, CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
-import { SECURITY_POLICY } from "~/config/security-policy";
+import { testAssets } from "~/app/test/document-assets";
 import DocumentLayout from "~/resources/layouts/document";
 
-import { htmlRendering } from "./render";
+import { SECURITY_POLICY } from "./security-policy";
 
-/**
- * Fetches a full document by routing a real request through the renderer, so it
- * receives the same `RequestContext` production hands it.
- */
-async function renderDocument() {
-	let router = createRouter({ middleware: htmlRendering() });
+/** Renders a document through the app's security headers, assets and renderer, as production does. */
+async function renderSecuredDocument() {
+	let router = createRouter({
+		middleware: [
+			securityHeaders(SECURITY_POLICY) as Middleware,
+			testAssets((ctx) => ctx.get(SecurityHeadersKey)?.nonce),
+			render({ assets: assetResolver }),
+		],
+	});
 
 	router.get("/", (ctx) =>
 		ctx.render(
-			<DocumentLayout title="Test">
+			<DocumentLayout assets={ctx.assets} title="Test">
 				<p>Body</p>
 			</DocumentLayout>,
 		),
@@ -37,38 +42,7 @@ async function renderDocument() {
 	return await router.fetch(new Request("https://uptime.test/"));
 }
 
-describe("htmlRendering", () => {
-	test("the document starts with the doctype, before anything else", async () => {
-		let response = await renderDocument();
-		let html = await response.text();
-
-		expect(html.startsWith("<!DOCTYPE html>")).toBe(true);
-		expect(html.indexOf("<html")).toBe("<!DOCTYPE html>".length);
-	});
-
-	test("keeps the HTML content type", async () => {
-		let response = await renderDocument();
-
-		expect(response.headers.get("content-type")?.toLowerCase()).toBe("text/html; charset=utf-8");
-	});
-});
-
-describe("htmlRendering with the security policy", () => {
-	/** Renders a document through the app's security headers and renderer, as production does. */
-	async function renderSecuredDocument() {
-		let router = createRouter({
-			middleware: [securityHeaders(SECURITY_POLICY) as Middleware, ...htmlRendering()],
-		});
-		router.get("/", (ctx) =>
-			ctx.render(
-				<DocumentLayout title="Test">
-					<p>Body</p>
-				</DocumentLayout>,
-			),
-		);
-		return await router.fetch(new Request("https://uptime.test/"));
-	}
-
+describe("SECURITY_POLICY on a rendered document", () => {
 	test("stamps the import map with the nonce the Report-Only policy names", async () => {
 		let response = await renderSecuredDocument();
 		let html = await response.text();

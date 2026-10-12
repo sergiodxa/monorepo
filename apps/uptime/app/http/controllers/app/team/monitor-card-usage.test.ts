@@ -59,7 +59,7 @@ let { intl } = createTranslator({
 	fallbackLanguage: "en",
 })();
 
-/** Minimal request-scoped HTML renderer standing in for the app's `htmlRendering()` chain. */
+/** Minimal request-scoped HTML renderer standing in for the app's `render()` middleware. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });

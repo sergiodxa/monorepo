@@ -70,7 +70,7 @@ export default createAction(routes.app.team.dnsMonitors.new, {
 		let t = withPrefix(ctx.intl.t, "page.createDnsMonitor.form.fields");
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New DNS monitor`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New DNS monitor`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

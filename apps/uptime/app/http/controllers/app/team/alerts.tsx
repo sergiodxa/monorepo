@@ -62,7 +62,10 @@ export default createAction(routes.app.team.alerts.index, {
 		}
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.alerts.header.title")}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.alerts.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

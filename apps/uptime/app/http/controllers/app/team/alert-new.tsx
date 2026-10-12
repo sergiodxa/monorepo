@@ -48,7 +48,10 @@ export default createAction(routes.app.team.alerts.new, {
 		let t = withPrefix(ctx.intl.t, "page.alerts.form.fields");
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${ctx.intl.t("page.createAlert.header.title")}`}>
+			<DocumentLayout
+				assets={ctx.assets}
+				title={`${ctx.team.name} · ${ctx.intl.t("page.createAlert.header.title")}`}
+			>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

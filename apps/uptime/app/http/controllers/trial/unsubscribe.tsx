@@ -45,7 +45,7 @@ function renderPage(title: string, body: string, locale: string, footer: RemixNo
 	let ctx = getContext();
 
 	return ctx.render(
-		<DocumentLayout title={title} locale={locale}>
+		<DocumentLayout assets={ctx.assets} title={title} locale={locale}>
 			<main mix={[vstack({ gap: 8, align: "center", justify: "center" }), minBs("100vh"), p(8)]}>
 				<Card mix={[maxIs("560px"), mi("auto")]}>
 					<Card.Content mix={[vstack({ gap: 5, align: "center" }), textAlign("center"), p(10, 8)]}>

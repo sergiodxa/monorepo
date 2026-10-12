@@ -6,7 +6,7 @@
  * binding this form reaches for without supplying fails by name.
  * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds
  * `ctx.team`/`ctx.membership`/`ctx.intl` directly, and `ctx.render` is backed by
- * a minimal renderer mirroring the app's `htmlRendering()` chain.
+ * a minimal renderer mirroring the app's `render()` middleware.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -35,7 +35,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import {
 	flowMonitors,
 	memberships,
@@ -74,7 +74,7 @@ let statusPageEditModule = statusPageEditAction as unknown as { handler: Request
 /** Stand-in for app/initializers/router.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -182,6 +182,7 @@ async function get(
 			asyncContext(),
 			database(db),
 			models(),
+			testAssets(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],
 	});

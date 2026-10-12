@@ -46,7 +46,7 @@ export default createAction(routes.app.team.statusPages.index, {
 		let countsByPageId = new Map(pages.map((page, index) => [page.id, attachedCounts[index] ?? 0]));
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Status pages`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Status pages`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

@@ -56,7 +56,7 @@ export default createAction(routes.app.team.maintenanceWindows.edit, {
 		let fields = withPrefix(ctx.intl.t, "page.maintenanceWindows.form.fields");
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · ${heading}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · ${heading}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

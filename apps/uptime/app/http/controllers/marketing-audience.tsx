@@ -41,7 +41,7 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 			description: ctx.intl.t("notFound.description"),
 		};
 		return ctx.render(
-			<DocumentLayout title={props.title}>
+			<DocumentLayout assets={ctx.assets} title={props.title}>
 				<NotFoundView {...props} goBackHomeLabel={ctx.intl.t("notFound.goBackHome")} />
 			</DocumentLayout>,
 			{ status: 404 },
@@ -50,6 +50,7 @@ export default createAction(routes.marketing.audience, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${content.metaTitle}`}
 			locale={ctx.locale}
 			seo={{

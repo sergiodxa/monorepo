@@ -35,7 +35,7 @@ export default createController(routes.logout, {
 		/** GET /logout — confirmation page. */
 		index(ctx) {
 			return ctx.render(
-				<DocumentLayout title={ctx.intl.t("page.logout.title")}>
+				<DocumentLayout assets={ctx.assets} title={ctx.intl.t("page.logout.title")}>
 					<main mix={[flex(), flexCol(), minBs("100vh")]}>
 						<div
 							mix={[

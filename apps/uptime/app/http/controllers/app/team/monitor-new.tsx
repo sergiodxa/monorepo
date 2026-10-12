@@ -47,7 +47,7 @@ export default createAction(routes.app.team.monitors.new, {
 		let prefill = ctx.url.searchParams.get(MONITOR_URL_PREFILL)?.slice(0, MAX_PREFILL_LENGTH);
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · New monitor`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · New monitor`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

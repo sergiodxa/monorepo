@@ -31,7 +31,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { flowMonitors, memberships, monitors, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
 import routes from "~/routes/web";
@@ -68,7 +68,7 @@ let statusPageNewModule = statusPageNewAction as unknown as { handler: RequestHa
  */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -136,6 +136,7 @@ describe("GET /app/:team/status-pages/new", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -175,6 +176,7 @@ describe("GET /app/:team/status-pages/new", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -202,6 +204,7 @@ describe("GET /app/:team/status-pages/new", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -246,6 +249,7 @@ describe("GET /app/:team/status-pages/new", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -278,6 +282,7 @@ describe("GET /app/:team/status-pages/new", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});

@@ -60,7 +60,7 @@ export default createAction(routes.app.team.alerts.edit, {
 		let indexHref = routes.app.team.alerts.index.href({ team: ctx.team.slug });
 
 		return ctx.render(
-			<DocumentLayout title={`${ctx.team.name} · Edit ${alert.name}`}>
+			<DocumentLayout assets={ctx.assets} title={`${ctx.team.name} · Edit ${alert.name}`}>
 				<AppShell
 					team={ctx.team}
 					currentPath={ctx.url.pathname}

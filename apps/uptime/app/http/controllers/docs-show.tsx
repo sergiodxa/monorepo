@@ -80,6 +80,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 	let renderNotFound = () => {
 		return ctx.render(
 			<DocumentLayout
+				assets={ctx.assets}
 				title={`${ctx.intl.t("docs.error.notFoundTitle")} | ${ctx.intl.t("docs.meta.title")}`}
 				locale={ctx.locale}
 			>
@@ -155,6 +156,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${frontmatter.title} | ${ctx.intl.t("docs.meta.title")}`}
 			locale={ctx.locale}
 			seo={{

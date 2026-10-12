@@ -26,7 +26,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
-import { withDocumentAssets } from "~/app/test/document-assets";
+import { testAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
 import routes from "~/routes/web";
@@ -36,7 +36,7 @@ import * as dashboardModule from "./dashboard";
 /** Stand-in for `renderWith(createHtmlRenderer)`, with `resolveFrame` returning an empty string for this single-request page test. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
-		let stream = renderToStream(await withDocumentAssets(node), {
+		let stream = renderToStream(node, {
 			frameSrc: ctx.request.url,
 			resolveFrame: async () => "",
 		});
@@ -121,6 +121,7 @@ describe("app/team/dashboard", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -153,6 +154,7 @@ describe("app/team/dashboard", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -194,6 +196,7 @@ describe("app/team/dashboard", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
@@ -218,6 +221,7 @@ describe("app/team/dashboard", () => {
 				asyncContext(),
 				database(db),
 				models(),
+				testAssets(),
 				renderWith(createHtmlRenderer) as Middleware,
 			],
 		});
