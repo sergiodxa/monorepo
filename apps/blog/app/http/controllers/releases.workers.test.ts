@@ -1,7 +1,7 @@
 /**
- * Tests the weekly releases posts through the real router and D1: the CMS lists each post
- * with its "Post on X" link and saves an edit to its title and content while keeping the
- * package list the share text names.
+ * Tests the weekly releases posts through the real router and D1: the public permalink, the
+ * Activity list, the /releases topic, the site feed and the ActivityStreams `Note`, and the
+ * CMS listing each post with its "Post on X" link and saving an edit to it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -15,7 +15,7 @@ import { env } from "cloudflare:test";
 import { beforeAll, describe, expect, test } from "vitest";
 
 import { createWebRouter } from "~/app/initializers/router";
-import { releaseShareText, shareIntent } from "~/app/services/share";
+import { discussIntent, releaseShareText, shareIntent } from "~/app/services/share";
 import { permalink } from "~/app/services/webmention";
 import { migratedDatabase } from "~/app/test/d1";
 import { bindModels } from "~/app/test/models";
@@ -70,6 +70,46 @@ beforeAll(async () => {
 		unwrap(
 			await bindModels(db).releases.publishWeek({ slug: SLUG, packages: PACKAGES }, adminId),
 		) ?? "";
+});
+
+describe("a releases post's public pages", () => {
+	test("reads at its permalink with a Discuss on X link to its canonical permalink", async () => {
+		let response = await fetchPath(`/releases/${SLUG}`);
+		let body = await response.text();
+		let url = permalink({ postType: "releases", slug: SLUG }).href;
+
+		expect(response.status).toBe(200);
+		expect(body).toContain("remix-utils");
+		expect(body).toContain(
+			attribute(discussIntent({ title: "What I released this week", permalink: url })),
+		);
+	});
+
+	test("appears on the Activity list and the /releases topic page", async () => {
+		let href = `/releases/${SLUG}`;
+
+		expect(await (await fetchPath("/")).text()).toContain(href);
+		let topic = await fetchPath("/releases");
+		expect(topic.status).toBe(200);
+		expect(await topic.text()).toContain(href);
+	});
+
+	test("is an entry of the site feed", async () => {
+		let body = await (await fetchPath(routes.rss.feed.href())).text();
+
+		expect(body).toContain(`/releases/${SLUG}`);
+	});
+
+	test("federates as a Note", async () => {
+		let response = await fetchPath(`/releases/${SLUG}`, {
+			headers: { accept: "application/activity+json" },
+		});
+		let document = (await response.json()) as { type?: string; content?: string };
+
+		expect(response.status).toBe(200);
+		expect(document.type).toBe("Note");
+		expect(document.content).toContain("@sdxc/result");
+	});
 });
 
 describe("the releases CMS", () => {
