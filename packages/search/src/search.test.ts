@@ -30,11 +30,13 @@ import { ParameterBudgetError, SearchError } from "./errors.js";
 import { parseQuery } from "./query.js";
 import { defineSearch } from "./search.js";
 
-/** Every `sql` block of the README, which is the storage guidance an app copies. */
+/** Every `sql` block of the README's storage pattern, which is the guidance an app copies. */
 const README_DDL = [
-	...readFileSync(join(import.meta.dirname, "..", "README.md"), "utf8").matchAll(
-		/```sql\n([\s\S]*?)```/g,
-	),
+	...(
+		readFileSync(join(import.meta.dirname, "..", "README.md"), "utf8")
+			.split(/^## /m)
+			.find((section) => section.startsWith("Pattern: Storing an FTS5 index")) ?? ""
+	).matchAll(/```sql\n([\s\S]*?)```/g),
 ]
 	.map((block) => block[1] ?? "")
 	.join("\n");
