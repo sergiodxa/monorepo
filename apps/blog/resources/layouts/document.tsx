@@ -11,7 +11,7 @@
 import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, Props as TagProps, RemixNode } from "remix/component";
 
-import { colorScheme } from "@sdxc/u/color";
+import { bg, colorScheme } from "@sdxc/u/color";
 import { overflow } from "@sdxc/u/overflow";
 import { when } from "@sdxc/u/state";
 import { ImportMap } from "remix/component/server";
@@ -100,6 +100,12 @@ export default function DocumentLayout(handle: Handle<DocumentLayout.Props>) {
 				class="system"
 				mix={[
 					colorScheme("light dark"),
+					/**
+					 * The canvas color the browser shows past the page's edges, as when pulling to
+					 * reload: the lightest neutral, matching the top of the body's sheen and the
+					 * `theme-color` below, so the page reads as continuous with the browser.
+					 */
+					bg("neutral.tint"),
 					/** A modal holds the reader's attention, so the page behind it stays where it was left. */
 					when("&:has(dialog:modal)", overflow("hidden")),
 				]}
