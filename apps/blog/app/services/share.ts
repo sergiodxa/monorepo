@@ -217,3 +217,33 @@ export function postIntent(post: PostShare.Post): string {
 export function discussIntent(post: { title: string; permalink: string }): string {
 	return shareIntent(`${oneLine(post.title)} ${post.permalink}`);
 }
+
+/**
+ * The names a releases post lists: all of them when they fit, else the first `shown` with
+ * "and N more" for the rest.
+ */
+function packageList(names: ReadonlyArray<string>, shown: number): string {
+	let listed = names.slice(0, shown);
+	let rest = names.length - shown;
+	if (rest > 0) return `${listed.join(", ")} and ${String(rest)} more`;
+	if (listed.length < 2) return listed.join("");
+	return `${listed.slice(0, -1).join(", ")} and ${listed.at(-1) ?? ""}`;
+}
+
+/**
+ * The text the author shares a weekly releases post with: `This week I released {packages}
+ * {permalink}`, naming as many packages as fit in 280 and counting the rest as "and N more",
+ * so a week of dependency upgrades listing every package still fits.
+ *
+ * @param post The package names in the post's order, and the absolute permalink.
+ */
+export function releaseShareText(post: {
+	packages: ReadonlyArray<string>;
+	permalink: string;
+}): string {
+	for (let shown = post.packages.length; shown > 0; shown--) {
+		let text = `This week I released ${packageList(post.packages, shown)} ${post.permalink}`;
+		if (xLength(text) <= X_LIMIT) return text;
+	}
+	return `This week I released ${String(post.packages.length)} packages ${post.permalink}`;
+}

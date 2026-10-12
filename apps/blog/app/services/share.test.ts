@@ -15,6 +15,7 @@ import {
 	discussIntent,
 	postIntent,
 	postShareText,
+	releaseShareText,
 	ShareTextOverflow,
 	shareIntent,
 	teaserBudget,
@@ -195,5 +196,29 @@ describe("intents", () => {
 		expect(discussIntent({ title: "Hello world", permalink: PERMALINK })).toBe(
 			shareIntent(`Hello world ${PERMALINK}`),
 		);
+	});
+});
+
+describe("releaseShareText", () => {
+	/** A releases post's permalink. */
+	let permalink = "https://sergiodxa.com/releases/2026-w42";
+
+	test("names one package, or every package joined with a final and", () => {
+		expect(releaseShareText({ packages: ["remix-utils"], permalink })).toBe(
+			`This week I released remix-utils ${permalink}`,
+		);
+		expect(
+			releaseShareText({ packages: ["@sdxc/result", "remix-auth", "remix-utils"], permalink }),
+		).toBe(`This week I released @sdxc/result, remix-auth and remix-utils ${permalink}`);
+	});
+
+	test("counts the packages past 280 as and N more, keeping the text within it", () => {
+		let packages = Array.from({ length: 40 }, (_, index) => `@sdxc/package-${String(index)}`);
+		let text = releaseShareText({ packages, permalink });
+
+		expect(xLength(text)).toBeLessThanOrEqual(X_LIMIT);
+		expect(text).toMatch(/^This week I released @sdxc\/package-0, .+ and \d+ more https:\/\//);
+		let shown = text.split(", ").length;
+		expect(text).toContain(` and ${String(packages.length - shown)} more `);
 	});
 });
