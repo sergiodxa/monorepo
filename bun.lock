@@ -488,6 +488,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/well-known": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
@@ -608,6 +609,7 @@
         "@sdxc/dates": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
         "remix": "3.0.0",
@@ -634,6 +636,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/types": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
@@ -662,6 +665,9 @@
     "packages/cloudflare-mocks": {
       "name": "@sdxc/cloudflare-mocks",
       "version": "0.0.1",
+      "dependencies": {
+        "@sdxc/uuid": "workspace:*",
+      },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
         "@sdxc/data-table-d1": "workspace:*",
@@ -867,6 +873,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/types": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@standard-schema/spec": "^1.1.0",
       },
@@ -895,6 +902,7 @@
       },
       "devDependencies": {
         "@cloudflare/workers-types": "^5.20261011.1",
+        "@sdxc/uuid": "workspace:*",
       },
       "peerDependencies": {
         "vitest": "^4.1.10",
@@ -1005,6 +1013,7 @@
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
         "@sdxc/types": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.0.0",
       },
       "devDependencies": {
@@ -1081,6 +1090,7 @@
       "version": "0.0.1",
       "dependencies": {
         "@sdxc/duration": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "jose": "^6.2.12",
       },
     },
@@ -1131,6 +1141,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/markdown": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.0.0",
       },
     },
@@ -1193,6 +1204,7 @@
         "@sdxc/markdown": "workspace:*",
         "@sdxc/outbound": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
         "remix": "3.0.0",
@@ -1237,6 +1249,7 @@
         "@sdxc/ip": "workspace:*",
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "@sdxc/validate": "workspace:*",
         "@sdxc/webhooks": "workspace:*",
         "remix": "3.0.0",
@@ -1355,6 +1368,7 @@
         "@sdxc/logger": "workspace:*",
         "@sdxc/result": "workspace:*",
         "@sdxc/structured-fields": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.0.0",
       },
     },
@@ -1566,6 +1580,7 @@
         "@remix-run/ui": "0.12.1",
         "@sdxc/icons": "workspace:*",
         "@sdxc/u": "workspace:*",
+        "@sdxc/uuid": "workspace:*",
         "remix": "3.0.0",
       },
     },

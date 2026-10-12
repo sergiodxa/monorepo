@@ -91,18 +91,24 @@ let second = generateUUID();
 first < second; // true, even when Date.now() did not advance
 ```
 
-### Scope: entity IDs only
+### Identifiers and secrets
 
-This decision covers values that identify stored rows. Values whose job is to be unguessable,
-or that are never stored as keys, keep their random generator. A v7 value exposes its creation
-time and has 74 random bits instead of 122.
+Every identifier in the repo comes from `@sdxc/uuid`, and every secret comes from
+`randomToken` in `@sdxc/crypto`. `@sdxc/uuid/v4` is the only module that calls
+`crypto.randomUUID()`, in code, tests and documentation alike. A UUID is never a secret: a v7
+value exposes its creation time and has 74 random bits, and `randomToken` defaults to 256 bits
+in a URL-safe encoding.
 
-| Value                                                     | Generator                        |
-| --------------------------------------------------------- | -------------------------------- |
-| Row primary keys (users, posts, monitors, tenants, ...)   | `@sdxc/uuid/v7`                  |
-| Rows whose creation time is private                       | `@sdxc/uuid/v4`                  |
-| OAuth authorization codes, tokens, invite and reset links | Random secret, unchanged         |
-| JWT `jti`, correlation IDs, MIME boundaries, leases       | `crypto.randomUUID()`, unchanged |
+| Value                                                         | Generator                         |
+| ------------------------------------------------------------- | --------------------------------- |
+| Row primary keys (users, posts, monitors, tenants, ...)       | `@sdxc/uuid/v7`                   |
+| Rows whose creation time is private                           | `@sdxc/uuid/v4`                   |
+| JWT `jti`, correlation and request IDs, leases, test fixtures | `@sdxc/uuid/v4`                   |
+| Authorization codes, client secrets, OAuth `state`, tickets   | `randomToken` from `@sdxc/crypto` |
+| Report, unsubscribe, invite and reset tokens                  | `randomToken` from `@sdxc/crypto` |
+
+Secrets that used to be UUIDs stay valid: their consumers accept both a stored UUID and the
+new token format, so values issued before the change keep working until they expire.
 
 ### Existing data
 
@@ -114,9 +120,10 @@ keep ordering by `created_at`.
 
 ### Repo rule
 
-`AGENTS.md` gains a rule: entity IDs come from `generateUUID()` in `@sdxc/uuid/v7`, never from
-`crypto.randomUUID()`. Use `@sdxc/uuid/v4` only when the entity's creation time must stay
-private.
+`AGENTS.md` requires identifiers from `@sdxc/uuid` and secrets from `randomToken`, and
+forbids `crypto.randomUUID()` outside `@sdxc/uuid/v4`. `test/random-uuid.test.ts` enforces
+it: it fails on any other reference to `randomUUID` in an app, a package or one of the repo's
+`sdxc-*` agent skills.
 
 ## Consequences
 
@@ -182,7 +189,11 @@ one app at a time.
 
 **Priority:** Medium
 
-1. Add the entity-ID rule to `AGENTS.md`
+1. Add the identifier and secret rule to `AGENTS.md`
+2. Replace every `crypto.randomUUID()` outside `@sdxc/uuid/v4` with `@sdxc/uuid/v4`, or with
+   `randomToken` where the value is a secret, and move every secret minted with
+   `generateUUID()` to `randomToken`
+3. Add `test/random-uuid.test.ts` so a new reference fails CI
 
 ## Alternatives Considered
 
