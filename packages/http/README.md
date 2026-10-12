@@ -2,43 +2,26 @@
 
 Response builders, content negotiation, and HTTP caching for the Fetch API.
 
-Named status codes and content types, response helpers that carry both, `Accept`
-negotiation, and the `Cache-Control` and `ETag` bookkeeping a conditional response needs.
-Each concern is its own subpath export, so importing the status codes leaves the caching
-layer out of the bundle.
+Each concern is its own entry point — status codes, content types, response builders,
+`Accept` negotiation, `Cache-Control` and validators, and `HEAD` middleware — so a handler
+imports only the surface it uses.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/http
 ```
 
-`etag` and `precondition` report their outcome as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure` and
-`isSuccess` come from. Cache ages are written as
-[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) values, digests come from
-[`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto), redirect targets are parsed by
-[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location), and the cache and middleware
-subpaths build on the typed headers and router of
-[`remix`](https://www.npmjs.com/package/remix). All install alongside this package.
+It installs alongside [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) (the
+`Result` that `etag` and `precondition` answer),
+[`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration) (cache ages),
+[`@sdxc/crypto`](https://www.npmjs.com/package/@sdxc/crypto),
+[`@sdxc/location`](https://www.npmjs.com/package/@sdxc/location) and
+[`remix`](https://www.npmjs.com/package/remix) (typed headers and the router).
 
 ## Usage
 
-Each entry point is imported on its own, so a handler carries only the surface it uses:
-
-- `@sdxc/http/content-type` — MIME type constants for
-  [`Content-Type`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Type)
-  values.
-- `@sdxc/http/status-code` — status and status text pairs, shaped as a `ResponseInit`.
-- `@sdxc/http/response` — one builder per content kind.
-- `@sdxc/http/response/json` — a JSON body with a named status.
-- `@sdxc/http/response/html` — an HTML body with a named status.
-- `@sdxc/http/negotiate` — [`Accept`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Accept)
-  header parsing and dispatch.
-- `@sdxc/http/cache` — `Cache-Control` policies, validators, and conditional requests.
-- `@sdxc/http/middleware/head-requests` — router middleware that answers `HEAD` from `GET`.
-
-### Answer With JSON
+### Answer with JSON
 
 ```typescript
 import { badRequest, notFound, ok } from "@sdxc/http/response/json";
@@ -54,44 +37,56 @@ export async function handler(request: Request): Promise<Response> {
 }
 ```
 
-Each function writes the status, the status text, and `Content-Type: application/json` for
-you, so the name of the function is the whole declaration.
+Each function writes the status, the status text and `Content-Type: application/json`.
+`@sdxc/http/response/html` exports the same names for HTML strings.
 
-### Serve The Format A Client Asked For
+### Use named statuses and content types
 
 ```typescript
+import { Json } from "@sdxc/http/content-type";
+import { Accepted } from "@sdxc/http/status-code";
+
+let headers = new Headers({ "Content-Type": Json }); // "application/json"
+return new Response(JSON.stringify({ queued: true }), { ...Accepted, headers }); // 202 Accepted
+```
+
+A status constant is a `{ status, statusText }` pair, the shape `ResponseInit` takes.
+
+### Serve the format the client asked for
+
+```typescript
+import { vary } from "@sdxc/http/cache";
 import { respond } from "@sdxc/http/negotiate";
 import { csv, html, json } from "@sdxc/http/response";
 
 export async function handler(request: Request): Promise<Response> {
 	let report = await buildReport();
 
-	return respond(request, {
+	let response = respond(request, {
 		json: () => json(report),
 		html: () => html(renderReport(report)),
 		csv: () => csv(toCsv(report)),
 		default: () => json(report),
 	});
+
+	vary(response.headers, "Accept");
+	return response;
 }
 ```
 
-Handlers are tried in the order the client's `Accept` header prefers, and one URL serves a
-browser, a spreadsheet, and a script. Without a `default`, a request that matches nothing is
-answered with a `406 Not Acceptable`. A negotiated response wants `vary(headers, ["Accept"])`
-alongside it, so a shared cache keeps the variants apart.
+Handlers are tried in the order the `Accept` header prefers; with no `default`, a request
+matching none gets `406 Not Acceptable`.
 
-### Cache A Page And Answer Its Revalidations
+### Cache a page and answer its revalidations
 
 ```typescript
-import { conditional, etag, Policies, vary } from "@sdxc/http/cache";
+import { conditional, etag, Policies } from "@sdxc/http/cache";
 import { html } from "@sdxc/http/response";
 import { isSuccess } from "@sdxc/result";
 
 export async function handler(request: Request): Promise<Response> {
 	let body = await renderPage();
-
 	let headers = new Headers({ "Cache-Control": Policies.revalidate().toString() });
-	vary(headers, ["Accept-Language"]);
 
 	let tag = await etag(body, { weak: true });
 	if (isSuccess(tag)) headers.set("ETag", tag.data);
@@ -100,11 +95,10 @@ export async function handler(request: Request): Promise<Response> {
 }
 ```
 
-The client stores the page and checks back before every reuse; `conditional` answers that
-check with a `304` whenever the validator still holds, so the body crosses the network only
-when it changed.
+The client checks back before every reuse, and `conditional` answers with a `304` while the
+`ETag` still matches.
 
-### Answer `HEAD` Like `GET`
+### Answer `HEAD` like `GET`
 
 ```typescript
 import { headRequests } from "@sdxc/http/middleware/head-requests";
@@ -116,382 +110,220 @@ let router = createRouter({ middleware: [headRequests()] });
 router.get("/page", () => html(renderPage()));
 ```
 
-A `HEAD` to `/page` now reports the status and headers of the `GET` with no body, and runs
-through the same middleware chain, so a guard that refuses one refuses the other.
+A `HEAD` to `/page` gets the `GET`'s status and headers with no body, through the same
+middleware chain.
 
 ## API
 
 ### `@sdxc/http/content-type`
 
-MIME type constants, each the bare type with no `charset` parameter, so one value both
-compares against a parsed header and writes into a new one.
+MIME type constants, each the bare type with no `charset`, so one value both compares
+against a parsed header and writes a new one.
 
-```typescript
-import { HTML, Json } from "@sdxc/http/content-type";
+- **Text:** `Text`, `HTML`, `CSS`, `JavaScript`, `CSV`, `XML`, `Markdown`
+- **Application:** `Json`, `JSONLines`, `ApplicationXML`, `PDF`, `ZIP`, `GZip`,
+  `FormURLEncoded`, `OctetStream`, `FormData`
+- **Image:** `PNG`, `JPEG`, `GIF`, `WebP`, `SVG`, `ICO`, `AVIF`
+- **Audio and video:** `MP3`, `WAV`, `OGG`, `WebMAudio`, `MP4`, `WebMVideo`
+- **Font:** `WOFF`, `WOFF2`, `TTF`, `OTF`
+- **Streaming:** `EventStream`, `NDJson`
 
-headers.set("Content-Type", Json); // "application/json"
-```
-
-**Text:** `Text`, `HTML`, `CSS`, `JavaScript`, `CSV`, `XML`, `Markdown`.
-
-**Application:** `Json`, `JSONLines`, `ApplicationXML`, `PDF`, `ZIP`, `GZip`,
-`FormURLEncoded`, `OctetStream`, `FormData`.
-
-**Image:** `PNG`, `JPEG`, `GIF`, `WebP`, `SVG`, `ICO`, `AVIF`.
-
-**Audio and video:** `MP3`, `WAV`, `OGG`, `WebMAudio`, `MP4`, `WebMVideo`.
-
-**Font:** `WOFF`, `WOFF2`, `TTF`, `OTF`.
-
-**Streaming:** `EventStream`, `NDJson`.
-
-`Json` is spelled that way rather than `JSON` so it does not shadow the global `JSON`.
+`Json` is spelled so it leaves the global `JSON` unshadowed.
 
 ### `@sdxc/http/status-code`
 
-Each constant is a `{ status, statusText }` object, which is exactly the shape a
-`ResponseInit` wants, so it drops straight into a response.
+Each constant is a `{ status, statusText }` object that spreads into a `ResponseInit`.
 
-```typescript
-import { NotFound } from "@sdxc/http/status-code";
+- **1xx:** `Continue`, `SwitchingProtocols`
+- **2xx:** `Ok`, `Created`, `Accepted`, `NoContent`, `ResetContent`, `PartialContent`
+- **3xx:** `MultipleChoices`, `MovedPermanently`, `Found`, `SeeOther`, `NotModified`,
+  `TemporaryRedirect`, `PermanentRedirect`
+- **4xx:** `BadRequest`, `Unauthorized`, `PaymentRequired`, `Forbidden`, `NotFound`,
+  `MethodNotAllowed`, `NotAcceptable`, `ProxyAuthRequired`, `RequestTimeout`, `Conflict`,
+  `Gone`, `LengthRequired`, `PreconditionFailed`, `PayloadTooLarge`, `URITooLong`,
+  `UnsupportedMediaType`, `RangeNotSatisfiable`, `ExpectationFailed`, `ImATeapot`,
+  `UnprocessableEntity`, `TooEarly`, `UpgradeRequired`, `PreconditionRequired`,
+  `TooManyRequests`, `RequestHeaderFieldsTooLarge`, `UnavailableForLegalReasons`
+- **5xx:** `InternalServerError`, `NotImplemented`, `BadGateway`, `ServiceUnavailable`,
+  `GatewayTimeout`, `HTTPVersionNotSupported`
 
-return Response.json({ error: "Not found" }, NotFound); // 404 Not Found
-```
-
-**1xx:** `Continue`, `SwitchingProtocols`.
-
-**2xx:** `Ok`, `Created`, `Accepted`, `NoContent`, `ResetContent`, `PartialContent`.
-
-**3xx:** `MultipleChoices`, `MovedPermanently`, `Found`, `SeeOther`, `NotModified`,
-`TemporaryRedirect`, `PermanentRedirect`.
-
-**4xx:** `BadRequest`, `Unauthorized`, `PaymentRequired`, `Forbidden`, `NotFound`,
-`MethodNotAllowed`, `NotAcceptable`, `ProxyAuthRequired`, `RequestTimeout`, `Conflict`,
-`Gone`, `LengthRequired`, `PreconditionFailed`, `PayloadTooLarge`, `URITooLong`,
-`UnsupportedMediaType`, `RangeNotSatisfiable`, `ExpectationFailed`, `ImATeapot`,
-`UnprocessableEntity`, `TooEarly`, `UpgradeRequired`, `PreconditionRequired`,
-`TooManyRequests`, `RequestHeaderFieldsTooLarge`, `UnavailableForLegalReasons`.
-
-**5xx:** `InternalServerError`, `NotImplemented`, `BadGateway`, `ServiceUnavailable`,
-`GatewayTimeout`, `HTTPVersionNotSupported`.
-
-#### `StatusCode`
-
-The type every constant satisfies: `{ readonly status: number; readonly statusText: string }`.
+`StatusCode` is the type every constant satisfies.
 
 ### `@sdxc/http/response`
 
-Each builder takes a body plus an optional `ResponseInit`, sets the matching `Content-Type`,
-and returns a plain
-[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+Each builder takes a body plus an optional `ResponseInit`, sets the `Content-Type`, and
+returns a plain [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-```typescript
-import { csv, markdown, xml } from "@sdxc/http/response";
+#### `json<T>(body: T, init?: ResponseInit): Response`
 
-xml("<root><item>Hello</item></root>"); // text/xml
-csv("name,age\nAda,36"); // text/csv; charset=utf-8
-markdown("# Hello"); // text/markdown
-```
+Serializes any value through `Response.json`.
 
-`json(body, init?)` serializes any value through `Response.json`. `text`, `html`, `css`,
-`javascript`, `xml` and `markdown` each take a string and write their own type.
-`pdf(body, init?)` writes `application/pdf` and takes a `Blob`, `ArrayBuffer` or
-`ReadableStream`.
+#### `text`, `html`, `css`, `javascript`, `xml`, `markdown` `(body: string, init?: ResponseInit): Response`
+
+Write their own type with `charset=utf-8`.
 
 #### `csv(body: string | ReadableStream<Uint8Array>, init?: ResponseInit): Response`
 
-Writes `text/csv; charset=utf-8`, so a client decodes accented and non-Latin cells as UTF-8.
-The body is a whole document or a stream of its UTF-8 bytes, which sends each row as it is
-written instead of holding the file in memory:
+Writes `text/csv; charset=utf-8`; a stream body sends each row as it is written.
 
-```typescript
-import { csv } from "@sdxc/http/response";
+#### `pdf(body: Blob | ArrayBuffer | ReadableStream, init?: ResponseInit): Response`
 
-let encoder = new TextEncoder();
+Writes `application/pdf`.
 
-return csv(
-	new ReadableStream<Uint8Array>({
-		async start(controller) {
-			controller.enqueue(encoder.encode("name,city\r\n"));
-			for await (let row of readRows()) {
-				controller.enqueue(encoder.encode(`${row.name},${row.city}\r\n`));
-			}
-			controller.close();
-		},
-	}),
-);
-```
+#### `file(body: Blob | ArrayBuffer | ReadableStream, filename: string, init?: ResponseInit): Response`
+
+A download of opaque bytes: `application/octet-stream` plus `attachment(filename)`.
 
 #### `attachment(filename: string): string`
 
 A [`Content-Disposition`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Disposition)
-value that makes a response a download saved under `filename`. The quoted `filename` always
-holds an ASCII version of the name, with quotes and backslashes escaped and every other
-character outside printable ASCII shown as `_`. A name that needed such a replacement also
-gets an RFC 8187 `filename*`, which browsers prefer, carrying the exact name in UTF-8.
+value that saves the response as `filename`. A non-ASCII name gets an ASCII fallback plus an
+exact UTF-8 `filename*`.
 
 ```typescript
-import { attachment } from "@sdxc/http/response";
-
-attachment("report.csv");
-// 'attachment; filename="report.csv"'
 attachment("Café report.csv");
 // "attachment; filename=\"Caf_ report.csv\"; filename*=UTF-8''Caf%C3%A9%20report.csv"
-attachment("報告.csv");
-// "attachment; filename=\"__.csv\"; filename*=UTF-8''%E5%A0%B1%E5%91%8A.csv"
 ```
-
-Pass it in the `headers` of any builder, so a CSV or a PDF download keeps its own type:
-
-```typescript
-return csv(report, { headers: { "Content-Disposition": attachment("report-2026-08.csv") } });
-```
-
-#### `file(body: Blob | ArrayBuffer | ReadableStream, filename: string, init?: ResponseInit): Response`
-
-A download of opaque bytes: `application/octet-stream` plus the `Content-Disposition` that
-`attachment(filename)` writes.
 
 #### `stream(body: ReadableStream, init?: ResponseInit): Response`
 
-A Server-Sent Events stream: `text/event-stream`, `Cache-Control: no-cache`, and
+A Server-Sent Events response: `text/event-stream`, `Cache-Control: no-cache` and
 `Connection: keep-alive`.
 
-#### `noContent(init?): Response`
+#### `noContent(init?: Omit<ResponseInit, "status" | "statusText">): Response`
 
-A `204 No Content` with no body. The status is fixed, so `init` carries headers only.
+A `204 No Content` with no body.
 
 #### `redirect(target: URL | Location | string, init?: redirect.Init): Response`
 
-Writes `Location` and defaults to `307`. The target is validated first, so an unparsable one
-throws at the call site rather than reaching a client as a broken redirect.
-
-`redirect.Status` names the three worth choosing between: `SeeOther` (303) turns a `POST`
-into a `GET`, while `Temporary` (307) and `Permanent` (308) keep the method.
+Writes `Location` with status `307` by default, and throws on a target that does not parse.
+`redirect.Status` names `SeeOther` (303, turns a `POST` into a `GET`), `Temporary` (307) and
+`Permanent` (308); `redirect.Init` is a `ResponseInit` whose `status` is one of them.
 
 ### `@sdxc/http/response/json`
-
-One function per status, each taking a value plus optional headers and writing the JSON body,
-the status, and the status text together.
 
 `ok`, `created`, `accepted`, `badRequest`, `unauthorized`, `paymentRequired`, `forbidden`,
 `notFound`, `methodNotAllowed`, `notAcceptable`, `conflict`, `gone`, `preconditionFailed`,
 `payloadTooLarge`, `unsupportedMediaType`, `unprocessableEntity`, `tooManyRequests`,
 `internalServerError`, `notImplemented`, `badGateway`, `serviceUnavailable`,
-`gatewayTimeout`.
-
-```typescript
-import { created } from "@sdxc/http/response/json";
-
-return created({ id: user.id }); // 201 Created, application/json
-```
+`gatewayTimeout` — each `(body: T, init?)`, writing a JSON body with its status; `init`
+carries headers.
 
 ### `@sdxc/http/response/html`
 
-The same names, taking an HTML string and writing `text/html`.
-
-```typescript
-import { notFound } from "@sdxc/http/response/html";
-
-return notFound("<h1>Page Not Found</h1>"); // 404 Not Found, text/html
-```
+The same names, each taking an HTML string and writing `text/html`.
 
 ### `@sdxc/http/negotiate`
 
 #### `accepts(request: Request): AcceptList`
 
-Reads the request's `Accept` header, treating an absent one as `*/*`.
+Parses the request's `Accept` header, reading an absent one as `*/*`.
 
-#### `new AcceptList(header: string)`
+#### `AcceptList`
 
-A parsed `Accept` header, sorted by quality, so preference is queried without re-parsing.
+A parsed `Accept` header sorted by quality. Types are full MIME types or the shorthands
+`json`, `html`, `xml`, `text`, `markdown`, `css`, `javascript`, `csv`, `pdf`.
 
-#### `list.includes(type: string): boolean`
-
-Whether a type is accepted. Takes a full MIME type or a shorthand — `json`, `html`, `xml`,
-`text`, `markdown`, `css`, `javascript`, `csv`, `pdf` — and a wildcard header matches
-everything.
-
-#### `list.all(): string[]`
-
-The accepted types, highest quality first.
-
-#### `list.preferred(...types: string[]): string | null`
-
-The first of your candidates the client asks for, walking its preferences in order. A
-wildcard header picks the first candidate, making your own order the tiebreaker.
-
-#### `list.toShortType(mimeType: string): string | null`
-
-The shorthand for a MIME type, or `null` when it has none.
+- `new AcceptList(header: string)`
+- `includes(type: string): boolean` — whether the type is accepted.
+- `all(): string[]` — accepted types, highest quality first.
+- `preferred(...types: string[]): string | null` — the candidate the client prefers most; a
+  wildcard picks the first candidate.
+- `toShortType(mimeType: string): string | null` — the shorthand for a MIME type.
 
 ```typescript
 let list = new AcceptList("text/html, application/json;q=0.9");
-
-list.includes("json"); // true
-list.all(); // ["text/html", "application/json"]
 list.preferred("application/json", "text/html"); // "text/html"
-list.toShortType("application/json"); // "json"
 ```
 
 #### `respond(request: Request, handlers: respond.Handlers): Response`
 
-Calls the handler for the client's most preferred type, falling back to `default` and
-otherwise answering `406 Not Acceptable`.
-
-#### `respond.Handlers`
-
-The handlers object: an optional `() => Response` under each shorthand, plus `default`.
+Calls the handler for the most preferred type, then `default`, then answers
+`406 Not Acceptable`. `respond.Handlers` holds an optional `() => Response` per shorthand
+plus `default`.
 
 ### `@sdxc/http/cache`
 
-`Cache-Control` policies, validators, and conditional requests, built on the typed
-`CacheControl`, `IfNoneMatch`, `IfMatch`, and `Vary` classes from `remix/headers`. Every age
-is a duration, so `"1 hour"` reads as an hour at the call site and converts to whole seconds
-internally.
+Built on the typed `CacheControl` header from `remix/headers`. Every age is a duration
+(`"1 hour"`, `"5 minutes"`), written as whole seconds.
 
 #### `policy(options?: PolicyOptions): CacheControl`
 
 Builds a
 [`Cache-Control`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Cache-Control)
-value from a description of intent, returning the header class itself so the result composes
-with anything that accepts one.
+header emitting only the options passed: `visibility` (`"public" | "private"`), the ages
+`maxAge`, `sMaxAge`, `staleWhileRevalidate` and `staleIfError`, and the flags `noCache`,
+`noStore`, `noTransform`, `mustRevalidate`, `proxyRevalidate` and `immutable`.
 
 ```typescript
-import { policy } from "@sdxc/http/cache";
-
 policy({ visibility: "public", maxAge: "1 hour", sMaxAge: "1 day" }).toString();
 // "public, max-age=3600, s-maxage=86400"
 ```
 
-`PolicyOptions` carries `visibility` (`"public" | "private"`), the ages `maxAge`, `sMaxAge`,
-`staleWhileRevalidate` and `staleIfError`, and the flags `noCache`, `noStore`, `noTransform`,
-`mustRevalidate`, `proxyRevalidate` and `immutable`. Only what you pass is emitted.
-`visibility` has no default: where an edge cache sits in front of the origin, `public` is
-what allows one client's body to be served to another, so it is always written out.
-
 #### `Policies`
 
-The recurring policies, named after the outcome each produces, so the safe answer is also the
-short one to write.
+The recurring policies, each returning a `CacheControl`:
 
-```typescript
-import { Policies } from "@sdxc/http/cache";
-
-Policies.noStore(); // "no-store"
-Policies.private({ maxAge: "5 minutes" }); // "private, max-age=300"
-Policies.immutable(); // "public, max-age=31536000, immutable"
-Policies.revalidate(); // "private, no-cache"
-```
-
-`noStore()` suits one-time payloads and anything a stored copy would turn into a security
-problem. `private({ maxAge })` requires its age, because a browser given none applies its own
-heuristic freshness. `immutable()` fits URLs whose bytes never change, meaning fingerprinted
-asset names. `revalidate()` is the policy for authenticated HTML, and pairs `private` with
-`no-cache` because that first directive is what keeps a shared cache out.
+- `Policies.noStore()` — `no-store`, for one-time and sensitive payloads.
+- `Policies.private({ maxAge })` — `private, max-age=…`, a per-user copy fresh for `maxAge`.
+- `Policies.immutable()` — `public, max-age=31536000, immutable`, for fingerprinted URLs.
+- `Policies.revalidate()` — `private, no-cache`, for authenticated HTML.
 
 #### `etag(body: BinaryLike, options?: EtagOptions): Promise<Result<string, CryptoError>>`
 
-Derives a validator from the bytes of a payload: SHA-256, base64url, quoted. Pass
-`{ weak: true }` for content that varies in insignificant ways between renders, such as
-server-rendered HTML carrying a timestamp.
-
-```typescript
-await etag(body); // '"uU0nuZNNPgilLlLX2n2r-sSE7-N6U4DukIj3rOLvzek"'
-await etag(body, { weak: true }); // 'W/"uU0nuZNNPgilLlLX2n2r-…"'
-```
-
-Hashing costs CPU proportional to the payload, which suits HTML and JSON responses rather
-than large bodies that are never revalidated.
+A quoted SHA-256 base64url validator of the bytes; `{ weak: true }` writes a `W/` tag for
+content that varies insignificantly between renders.
 
 #### `lastModified(date: Date | number): string`
 
-Formats a `Date` or epoch milliseconds as the HTTP-date a `Last-Modified` validator carries.
-HTTP dates hold whole seconds, so two writes in the same second share a validator; a
-content-derived `ETag` is the stronger choice where one is available.
-
-```typescript
-lastModified(new Date("2015-10-21T07:28:00Z")); // "Wed, 21 Oct 2015 07:28:00 GMT"
-```
+Formats a date as the HTTP-date a `Last-Modified` header carries, to whole seconds.
 
 #### `ifModifiedSince(headers: Headers): Date | null`
 
-Reads the `If-Modified-Since` date from a request. An absent or unparsable value reads as
-`null`, so callers send the full body rather than assert freshness they cannot prove.
+The request's `If-Modified-Since` date, or `null` when absent or unparsable.
 
 #### `isModifiedSince(modifiedAt: Date | number, since: Date | number): boolean`
 
-Whether a resource changed after the copy a client holds. Both times are compared as whole
-seconds, so a change in the same second as the client's copy counts as unmodified.
+Whether the resource changed after `since`, compared to the second.
 
 #### `conditional(request: Request, response: Response): Promise<Response>`
 
-Downgrades a response to a `304` when the request's validators still describe it.
-`If-None-Match` is evaluated with weak comparison and decides on its own whenever present;
-`If-Modified-Since` is consulted in its absence.
-
-Only a `GET` or `HEAD` answered with `200` is eligible, and every other method and status
-passes through untouched, so this is safe at the end of any handler. The `304` keeps only
-`Cache-Control`, `Content-Location`, `Date`, `ETag`, `Expires`, and `Vary`. Repeating `Vary`
-matters: a shared cache without it can no longer tell which negotiated variant was validated.
+Turns a `200` answer to a `GET` or `HEAD` into a `304` when the request's `If-None-Match`
+matches the response's `ETag` (or, absent that header, `If-Modified-Since` covers its
+`Last-Modified`), keeping only `Cache-Control`,
+`Content-Location`, `Date`, `ETag`, `Expires` and `Vary`. Any other response passes through.
 
 #### `precondition(request: Request, options: PreconditionOptions): Result<string, PreconditionFailedError>`
 
-Checks a write request's `If-Match` against the resource's current validator, so a client
-cannot overwrite a change it never saw. An absent `If-Match` passes, `*` passes, and every
-other value is compared strongly, so a weak tag fails. The failure is returned rather than
-thrown, which keeps answering with a `412` your decision.
-
-```typescript
-import { precondition } from "@sdxc/http/cache";
-import { preconditionFailed } from "@sdxc/http/response/html";
-import { isFailure } from "@sdxc/result";
-
-let checked = precondition(request, { etag: current });
-if (isFailure(checked)) return preconditionFailed("<h1>Precondition Failed</h1>");
-```
+Checks a write's `If-Match` against `options.etag`, the resource's current tag. An absent
+`If-Match` or `*` passes; any other value is compared strongly.
 
 #### `PreconditionFailedError`
 
-The failed precondition, carrying the `etag` the resource is actually at for logs and
-diagnostics.
+The failure `precondition` returns, carrying the resource's current `etag`.
 
 #### `vary(headers: Headers, names: string | string[]): Headers`
 
-Adds request header names to a response's
-[`Vary`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Vary), merging
-into whatever is already there. The `Headers` object is mutated in place and returned, and
-names are normalized to lowercase.
-
-```typescript
-let headers = new Headers({ Vary: "Accept-Encoding" });
-vary(headers, ["Accept-Language", "Cookie"]);
-headers.get("Vary"); // "accept-encoding, accept-language, cookie"
-```
-
-Each listed header multiplies the variants a shared cache stores for the URL, so the list is
-a cost rather than documentation. Varying on `Cookie` leaves shared caching off for any
-request that carries one; a response that genuinely differs per user wants
-`Policies.private()`.
+Merges lowercase names into the
+[`Vary`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Vary) header,
+mutating and returning `headers`. Each name multiplies the variants a shared cache stores.
 
 #### Types
 
-`CacheVisibility`, `PolicyOptions`, `PrivatePolicyOptions`, `EtagOptions`, and
-`PreconditionOptions` are exported from this subpath.
+`CacheVisibility`, `PolicyOptions`, `PrivatePolicyOptions`, `EtagOptions` and
+`PreconditionOptions`.
 
 ### `@sdxc/http/middleware/head-requests`
 
 #### `headRequests(): Middleware`
 
-Router middleware that dispatches a `HEAD` as a `GET`, then strips the body while keeping the
-status and headers, as RFC 9110 requires. Place it first in the global chain so `HEAD` runs
-through the same auth and rate limiting as `GET`.
+Router middleware that dispatches a `HEAD` as a `GET` and drops the body, keeping status and
+headers. Place it first in the global chain.
 
 ## Pattern: A Validated API Endpoint
 
-A `Result` from [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) and the
-status-named JSON helpers put the whole endpoint in one straight line, with each outcome
-spelled as the status it answers with:
+Pair [`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate) with the status-named
+JSON helpers so each outcome reads as the status it answers with.
 
 ```typescript
 import { badRequest, created } from "@sdxc/http/response/json";
@@ -514,18 +346,14 @@ export async function handler(request: Request): Promise<Response> {
 }
 ```
 
-`validate` reads the
-[`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) body according to its
-`Content-Type`, so the same endpoint accepts JSON and a form submission.
-
 ## Pattern: A Conditional Write
 
-Read and write can share one validator: the read hands the client an `ETag`, and the write
-requires that same tag back, which is what turns a blind overwrite into a detected conflict:
+The read hands out an `ETag`; the write requires it back, so a client cannot overwrite a
+change it never saw.
 
 ```typescript
 import { etag, precondition } from "@sdxc/http/cache";
-import { conflict, ok, preconditionFailed } from "@sdxc/http/response/json";
+import { ok, preconditionFailed } from "@sdxc/http/response/json";
 import { isFailure, unwrap } from "@sdxc/result";
 
 export async function show(id: string): Promise<Response> {
@@ -543,16 +371,43 @@ export async function update(request: Request, id: string): Promise<Response> {
 	if (isFailure(checked)) return preconditionFailed({ etag: checked.error.etag });
 
 	let saved = await writeDocument(id, await request.json());
-	if (!saved) return conflict({ error: "Document changed" });
-
 	return ok(saved);
 }
 ```
 
+## Pattern: Revalidate by Modification Time
+
+When a record stores its update time, `Last-Modified` validates it, and checking
+`If-Modified-Since` first skips loading the body for a client whose copy is current.
+
+```typescript
+import { ifModifiedSince, isModifiedSince, lastModified, Policies } from "@sdxc/http/cache";
+import { json } from "@sdxc/http/response";
+import { NotModified } from "@sdxc/http/status-code";
+
+export async function handler(request: Request, id: string): Promise<Response> {
+	let updatedAt = await readArticleUpdatedAt(id);
+	let headers = new Headers({
+		"Cache-Control": Policies.private({ maxAge: "1 minute" }).toString(),
+		"Last-Modified": lastModified(updatedAt),
+	});
+
+	let since = ifModifiedSince(request.headers);
+	if (since && !isModifiedSince(updatedAt, since)) {
+		return new Response(null, { ...NotModified, headers });
+	}
+
+	return json(await readArticle(id), { headers });
+}
+```
+
+`conditional` reaches the same `304` from the response's own `Last-Modified` when the body
+is already built.
+
 ## Pattern: A Cached Asset Route
 
-Fingerprinted asset URLs are the one case where a response can be cached for a year without
-revalidation, since a new build produces a new URL rather than new bytes at the old one:
+Fingerprinted asset URLs change with their bytes, so the response is cached for a year with
+no revalidation.
 
 ```typescript
 import { Policies } from "@sdxc/http/cache";
@@ -564,6 +419,81 @@ export async function handler(request: Request): Promise<Response> {
 
 	if (asset.type === "css") return css(asset.source, { headers });
 	return javascript(asset.source, { headers });
+}
+```
+
+## Pattern: A Streamed CSV Download
+
+A streamed `csv` sends rows as they are read, and `attachment` makes the browser save it.
+
+```typescript
+import { Policies } from "@sdxc/http/cache";
+import { attachment, csv } from "@sdxc/http/response";
+
+export function handler(): Response {
+	let encoder = new TextEncoder();
+	let body = new ReadableStream<Uint8Array>({
+		async start(controller) {
+			controller.enqueue(encoder.encode("name,city\r\n"));
+			for await (let row of readRows()) {
+				controller.enqueue(encoder.encode(`${row.name},${row.city}\r\n`));
+			}
+			controller.close();
+		},
+	});
+
+	return csv(body, {
+		headers: {
+			"Content-Disposition": attachment("Customers – 2026.csv"),
+			"Cache-Control": Policies.noStore().toString(),
+		},
+	});
+}
+```
+
+## Pattern: Post, Redirect, Get
+
+A form handler answers each outcome with a builder: `303` sends the browser to the new
+resource with a `GET`, and an invalid submission re-renders with `422`.
+
+```typescript
+import { redirect } from "@sdxc/http/response";
+import { unprocessableEntity } from "@sdxc/http/response/html";
+
+export async function handler(request: Request): Promise<Response> {
+	let form = await request.formData();
+	let title = form.get("title");
+	if (typeof title !== "string" || title === "") {
+		return unprocessableEntity(renderForm({ error: "Title is required" }));
+	}
+
+	let post = await createPost(title);
+	return redirect(`/posts/${post.id}`, { status: redirect.Status.SeeOther });
+}
+```
+
+## Pattern: Server-Sent Events
+
+`stream` sets the event-stream headers; the body is any `ReadableStream` of encoded events.
+
+```typescript
+import { stream } from "@sdxc/http/response";
+
+export function handler(request: Request): Response {
+	let encoder = new TextEncoder();
+	let body = new ReadableStream<Uint8Array>({
+		start(controller) {
+			let timer = setInterval(() => {
+				controller.enqueue(encoder.encode(`data: ${new Date().toISOString()}\n\n`));
+			}, 1000);
+			request.signal.addEventListener("abort", () => {
+				clearInterval(timer);
+				controller.close();
+			});
+		},
+	});
+
+	return stream(body);
 }
 ```
 
