@@ -2,21 +2,23 @@
 
 Router middleware that turns a thrown `Response` into the request's response.
 
-It is what makes `throw redirect(to)` work at any call depth: a helper can end the request without being handed the request context, and without every caller checking a return value.
+With it installed, `throw redirect(to)` works at any call depth: a helper ends the request without
+being handed the request context, and its callers never check a return value.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/catch-response-middleware
 ```
 
-It goes on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) (v3) installs alongside it.
+It goes on a `remix/router` middleware chain, so [`remix`](https://www.npmjs.com/package/remix) (v3)
+installs alongside it.
 
 ## Usage
 
-### Basic Example
+### Install it on the router
 
-Install it on the router's global chain, and any `Response` thrown below it answers the request.
+Any `Response` thrown below the middleware answers the request.
 
 ```typescript
 import { catchResponse } from "@sdxc/catch-response-middleware";
@@ -26,27 +28,34 @@ import { createRouter } from "remix/router";
 let router = createRouter({ middleware: [catchResponse()] });
 
 router.get("/dashboard", () => {
-	throw redirect("/login", { status: 303 });
+	throw redirect("/login", 303);
 });
 ```
 
-Without it the router rejects instead: it inspects only the value a middleware or handler _returns_ and has no catch of its own, so a thrown `Response` escapes `router.fetch()` as a rejected promise and surfaces as a 500. A middleware receives `next()` as a promise it can `try`/`catch`, and may return any `Response` it likes.
+The router itself reads only the `Response` a handler or middleware returns, so a thrown one
+rejects `router.fetch()`. This middleware is the try/catch around `next()` that turns it back into
+the response.
 
-### Throwing From A Helper
+### Throw from a helper
 
-The throw site does not have to be the handler, which is where the ergonomics come from: a helper typed `(): User` needs no null check at any call site.
+The throw site can be any number of frames below the handler, so a helper returns the value its
+callers want and ends the request otherwise.
 
 ```typescript
 import { redirect } from "remix/response/redirect";
 
-function currentUser(): User {
-	let user = readViewer();
-	if (!user) throw redirect("/login", { status: 303 });
+interface User {
+	id: string;
+}
+
+function currentUser(request: Request): User {
+	let user = readUser(request);
+	if (!user) throw redirect("/login", 303);
 	return user;
 }
 
-router.get("/dashboard", () => {
-	let user = currentUser(); // a User, or a redirect
+router.get("/dashboard", ({ request }) => {
+	let user = currentUser(request);
 	return Response.json({ id: user.id });
 });
 ```
@@ -55,15 +64,16 @@ router.get("/dashboard", () => {
 
 ### `catchResponse(): Middleware`
 
-Returns a middleware for a router's, controller's, or route's `middleware` chain. It takes no options and adds nothing to the request context.
+Returns a middleware for a router's or route's `middleware` chain; it takes no options and adds
+nothing to the request context. It returns whatever `next()` resolves to, answers with any
+`Response` thrown downstream — by a handler, a helper or another middleware — and re-throws every
+other value unchanged, so real errors still reach the runtime.
 
-It awaits `next()` and returns that response untouched — same instance, same status, same headers. When `next()` rejects with a `Response`, that response answers the request, whether it was thrown by the handler, by a helper any number of frames deeper, or by another middleware downstream. Anything else re-throws unchanged, so a `TypeError` still reaches the runtime with its stack intact: this is not an error boundary.
+## Pattern: Order It Below Response-Observing Middleware
 
-## Pattern: Ordering Against Response-Observing Middleware
-
-Install `catchResponse()` _below_ every middleware that reads or decorates the response — logging, server timing, compression, CORS headers, session commits.
-
-A throw unwinds the chain, so a middleware between the throw site and the catch never resumes after its own `next()`, and whatever it had queued to do to the response is skipped. Only the middleware above `catchResponse()` sees the response it recovers.
+A throw unwinds the chain, so a middleware between the throw site and `catchResponse()` never
+resumes after its own `next()`. Install it below every middleware that reads or decorates the
+response — sessions, logging, timing, CORS — so they see the recovered response.
 
 ```typescript
 import { catchResponse } from "@sdxc/catch-response-middleware";
@@ -75,14 +85,70 @@ import { createMemorySessionStorage } from "remix/session-storage/memory";
 let cookie = createCookie("session", { secrets: ["s3cret"] });
 let storage = createMemorySessionStorage();
 
-// The session's Set-Cookie lands on the thrown redirect.
-createRouter({ middleware: [session(cookie, storage), catchResponse()] });
-
-// Reversed, the throw unwinds past the commit and the session is silently lost.
-createRouter({ middleware: [catchResponse(), session(cookie, storage)] });
+let router = createRouter({
+	middleware: [session(cookie, storage), catchResponse()],
+});
 ```
 
-One instance, high in the chain, is the usual answer. Scoping it to a single route works — the nearest instance above the throw site catches — but leaves throws from every other route uncaught.
+Here the session's `Set-Cookie` lands on a thrown redirect. With the two reversed, the throw skips
+the session commit and the redirect goes out without it.
+
+## Pattern: Guard A Route From Middleware
+
+A route-level middleware throws to stop the request before the handler runs; the global
+`catchResponse()` above it turns the throw into the response.
+
+```typescript
+import type { Middleware } from "remix/router";
+
+import { catchResponse } from "@sdxc/catch-response-middleware";
+import { redirect } from "remix/response/redirect";
+import { createRouter } from "remix/router";
+
+let requireUser: Middleware = ({ request }, next) => {
+	if (!request.headers.has("Authorization")) throw redirect("/login", 303);
+	return next();
+};
+
+let router = createRouter({ middleware: [catchResponse()] });
+
+router.get("/settings", {
+	middleware: [requireUser],
+	handler: () => new Response("Your settings"),
+});
+```
+
+## Pattern: Throw Error Responses From Data Helpers
+
+Any status works, not only redirects. A loader helper throws a 404 or 403 and the handler only
+deals with the record it got back. [`@sdxc/response`](https://www.npmjs.com/package/@sdxc/response)
+builds those JSON responses.
+
+```typescript
+import { catchResponse } from "@sdxc/catch-response-middleware";
+import { forbidden, notFound } from "@sdxc/response";
+import { createRouter } from "remix/router";
+
+interface Post {
+	id: string;
+	ownerId: string;
+	title: string;
+}
+
+async function requireOwnPost(id: string, userId: string): Promise<Post> {
+	let post = await findPost(id);
+	if (!post) throw notFound({ error: "Post not found" });
+	if (post.ownerId !== userId) throw forbidden({ error: "Not your post" });
+	return post;
+}
+
+let router = createRouter({ middleware: [catchResponse()] });
+
+router.get("/posts/:id", async ({ params, request }) => {
+	let post = await requireOwnPost(params.id, readUserId(request));
+	return Response.json(post);
+});
+```
 
 ## Versioning
 
