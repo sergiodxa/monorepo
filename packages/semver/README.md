@@ -4,27 +4,26 @@ SemVer 2.0.0 parsing, precedence ordering and range-free version comparisons.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/semver
 ```
 
-`parse()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
+`parse()` answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
-### Comparing Two Versions
+### Compare two versions
 
 ```typescript
 import { satisfies } from "@sdxc/semver";
 
-satisfies("1.9.0", "^", "1.4.2"); // true
-satisfies("1.5.0", "~", "1.4.2"); // false
 satisfies("2.0.0", ">", "1.99.99"); // true
-
-satisfies("nightly", ">", "1.0.0"); // false — "nightly" is not a version
+satisfies("1.9.0", "^", "1.4.2"); // true, same major
+satisfies("1.5.0", "~", "1.4.2"); // false, a later minor
+satisfies("nightly", ">", "1.0.0"); // false, not a version
 ```
 
-### Sorting A List Of Versions
+### Sort a list of versions
 
 ```typescript
 import { compare } from "@sdxc/semver";
@@ -36,7 +35,7 @@ import { compare } from "@sdxc/semver";
 // ["1.0.0-beta.2", "1.0.0-beta.11", "1.0.0-rc.1", "1.0.0"]
 ```
 
-### Reading A Version's Elements
+### Read a version's elements
 
 ```typescript
 import { parse } from "@sdxc/semver";
@@ -45,50 +44,25 @@ import { isFailure } from "@sdxc/result";
 let result = parse("v2.1.0-rc.3+build.9");
 
 if (isFailure(result)) {
-	console.error(result.error.message); // Invalid version: "v2.1.0-rc.3+build.9"
-	return;
+	result.error.message; // Invalid version: "..."
+} else {
+	result.data; // { major: 2, minor: 1, patch: 0, prerelease: ["rc", "3"] }
 }
-
-result.data; // { major: 2, minor: 1, patch: 0, prerelease: ["rc", "3"] }
 ```
 
 ## API
 
 ### `parse(text: string): Result<SemVer, InvalidSemVerError>`
 
-Read a version string into its elements, returning a `Success<SemVer>` or a `Failure<InvalidSemVerError>` naming the rejected text. The grammar is SemVer 2.0.0 with one addition: an optional leading `v`, as a git tag or a user agent writes it. Build metadata is dropped, since it carries no precedence.
-
-```typescript
-parse("1.2.3"); // { status: "success", data: { major: 1, minor: 2, patch: 3, prerelease: [] } }
-parse("v1.0.0-rc.1"); // prerelease: ["rc", "1"]
-parse("01.2.3"); // { status: "failure", error: InvalidSemVerError } — a padded element
-```
+Reads a version into its elements, or fails with an `InvalidSemVerError`. The grammar is SemVer 2.0.0 plus an optional leading `v`; build metadata is dropped, and padded elements such as `01.2.3` are rejected.
 
 ### `compare(a: string, b: string): number`
 
-Order two version strings by SemVer 2.0.0 precedence, ready to hand to [`Array.prototype.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort). Returns a negative number when `a` comes first, a positive one when `b` does, and `0` when the two rank equally.
-
-The ordering is total, so a list whose entries come from somewhere unchecked — a registry, a tag listing, user input — sorts in one call. Text that is not a version ranks below every version and ties with other such text, which collects those entries at the front where the caller can see them.
-
-```typescript
-compare("1.9.0", "1.10.0"); // negative — elements compare as numbers
-compare("1.0.0-rc.1", "1.0.0"); // negative — a prerelease precedes its release
-compare("1.2.3+a", "1.2.3+b"); // 0 — build metadata carries no precedence
-compare("latest", "0.0.0"); // negative — text that is not a version sorts first
-```
+Orders two version strings by precedence, ready for [`Array.prototype.sort`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort): negative when `a` comes first, positive when `b` does, `0` when they rank equally. Text that is not a version ranks below every version and ties with other such text, so any list sorts in one call.
 
 ### `satisfies(value: string, comparison: SemVerComparison, against: string): boolean`
 
-Answer whether `value` stands in the named relation to `against`. Either side that is not a version answers `false`, so a field holding something else matches nothing instead of failing the check.
-
-A prerelease takes part by precedence alone: `1.2.4-rc.1` satisfies `^ 1.2.3`, because it outranks `1.2.3` and shares its major. Test a release channel by comparing against the prerelease you mean — `satisfies(value, ">=", "1.2.4-rc.1")` — when that is the boundary you want.
-
-```typescript
-satisfies("1.2.3", "=", "1.2.3"); // true
-satisfies("1.4.5", "~", "1.4.2"); // true, the same minor
-satisfies("1.5.0", "~", "1.4.2"); // false, a later minor
-satisfies("0.3.0", "^", "0.2.3"); // false, the left-most non-zero element moved
-```
+Whether `value` stands in the named relation to `against`. Either side that is not a version answers `false`. A prerelease takes part by precedence alone, so `1.2.4-rc.1` satisfies `^ 1.2.3`.
 
 | Comparison | Holds when                                                             |
 | ---------- | ---------------------------------------------------------------------- |
@@ -103,11 +77,11 @@ satisfies("0.3.0", "^", "0.2.3"); // false, the left-most non-zero element moved
 
 ### `InvalidSemVerError`
 
-Error describing text that fails the SemVer 2.0.0 grammar. It arrives inside a `Failure` value.
+The error inside a failed `parse()`. `text` holds the rejected input verbatim, `name` is `"InvalidSemVerError"`, and `message` is `Invalid version: "<text>"` with the text JSON-quoted so whitespace and empty strings stay visible.
 
-- `text`: `string` - The rejected text, kept verbatim for diagnostics
-- `name`: `string` - Always `"InvalidSemVerError"`
-- `message`: `string` - `Invalid version: "<text>"`, quoted so whitespace and empty strings stay visible in logs
+### Precedence
+
+Major, minor and patch compare as numbers, so `1.10.0` follows `1.9.0`; build metadata never counts. A prerelease precedes its release. Prerelease identifiers compare one by one: numerically when both are numeric, by character otherwise, a numeric identifier below a textual one, and a shorter list first when the other continues (`1.0.0-alpha` precedes `1.0.0-alpha.1`).
 
 ### Types
 
@@ -122,7 +96,7 @@ interface SemVer {
 }
 ```
 
-A version taken apart for precedence. `prerelease` holds the dot-separated identifiers after the `-` and is empty for a release. Build metadata is absent, so two versions differing only in it are the same `SemVer`.
+A parsed version. `prerelease` holds the dot-separated identifiers after the `-`, empty for a release.
 
 #### `SemVerComparison`
 
@@ -130,17 +104,11 @@ A version taken apart for precedence. `prerelease` holds the dot-separated ident
 type SemVerComparison = "=" | "!=" | "<" | "<=" | ">" | ">=" | "~" | "^";
 ```
 
-The comparisons `satisfies()` accepts. It is a closed union, so an editor offers the eight as a list and a stored value round-trips through a schema.
-
-### Precedence Rules
-
-Versions compare element by element: major, then minor, then patch, each as a number rather than as text, so `1.10.0` follows `1.9.0`. Build metadata is ignored throughout.
-
-A version carrying a prerelease precedes the same version without one. Two prereleases compare identifier by identifier: numerically when both identifiers are numeric, by character otherwise, with a numeric identifier ranking below a textual one. When one list runs out while the other continues, the shorter one comes first, so `1.0.0-alpha` precedes `1.0.0-alpha.1`.
+The comparisons `satisfies()` accepts, a closed union that stores and validates as plain data.
 
 ## Pattern: Gating A Feature On A Client Version
 
-Store the comparison and the version as data, and let an operator edit the rule without a deploy.
+Keep the rule as data so an operator can change it without a deploy.
 
 ```typescript
 import type { SemVerComparison } from "@sdxc/semver";
@@ -158,43 +126,71 @@ function allows(rule: VersionRule, clientVersion: string): boolean {
 
 allows({ comparison: "^", version: "2.0.0" }, "2.4.1"); // true
 allows({ comparison: ">=", version: "3.0.0" }, "2.4.1"); // false
+allows({ comparison: ">=", version: "3.0.0" }, "unknown"); // false
 ```
 
-## Pattern: Picking The Newest Published Version
+## Pattern: Picking The Newest Stable Version
 
-Registries hand back whatever they hold, including placeholders and tags. Sorting with `compare()` needs no filtering pass first, because the newest version is the last entry either way.
+Sort with `compare()`, then skip prereleases by reading the parsed elements. Entries that are not versions sort to the front and never win.
 
 ```typescript
-import { compare } from "@sdxc/semver";
+import { compare, parse } from "@sdxc/semver";
+import { isSuccess } from "@sdxc/result";
 
-function newest(versions: string[]): string | undefined {
-	return [...versions].sort(compare).at(-1);
+function newestStable(versions: string[]): string | undefined {
+	return [...versions]
+		.sort(compare)
+		.reverse()
+		.find((version) => {
+			let result = parse(version);
+			return isSuccess(result) && result.data.prerelease.length === 0;
+		});
 }
 
-newest(["0.0.0-pre.1", "2026.9.4", "2026.10.1"]); // "2026.10.1"
-newest(["0.0.0-pre.9", "0.0.0-pre.10"]); // "0.0.0-pre.10"
+newestStable(["latest", "1.4.0", "2.0.0-rc.1", "1.10.0"]); // "1.10.0"
 ```
 
-## Pattern: Deciding Whether An Upgrade Is Breaking
+## Pattern: Checking Whether An Upgrade Is Compatible
 
-Parse both sides once and read the elements, when the question is about the shape of the change rather than about a threshold.
+`^` answers "same compatibility line, and not a downgrade", including the `0.x` and `0.0.x` cases.
 
 ```typescript
+import { satisfies } from "@sdxc/semver";
+
+function isCompatibleUpgrade(from: string, to: string): boolean {
+	return satisfies(to, "^", from);
+}
+
+isCompatibleUpgrade("1.4.2", "1.9.0"); // true
+isCompatibleUpgrade("1.4.2", "2.0.0"); // false
+isCompatibleUpgrade("0.2.3", "0.3.0"); // false, below 1.0.0 the minor is the line
+```
+
+## Pattern: Reporting Invalid Entries
+
+Validate input once with `parse()` and name each rejection from the error's `text`.
+
+```typescript
+import type { SemVer } from "@sdxc/semver";
+
 import { parse } from "@sdxc/semver";
 import { isFailure } from "@sdxc/result";
 
-function isBreaking(from: string, to: string): boolean {
-	let before = parse(from);
-	let after = parse(to);
+function readVersions(input: string[]): { versions: SemVer[]; rejected: string[] } {
+	let versions: SemVer[] = [];
+	let rejected: string[] = [];
 
-	if (isFailure(before) || isFailure(after)) return true;
-	if (before.data.major !== 0) return after.data.major !== before.data.major;
+	for (let text of input) {
+		let result = parse(text);
+		if (isFailure(result)) rejected.push(result.error.text);
+		else versions.push(result.data);
+	}
 
-	return after.data.minor !== before.data.minor;
+	return { versions, rejected };
 }
 
-isBreaking("1.4.2", "1.9.0"); // false
-isBreaking("0.2.3", "0.3.0"); // true — below 1.0.0 the minor carries compatibility
+readVersions(["1.0.0", "v2.1.0", "1.2", " 3.0.0"]);
+// two SemVer values, rejected: ["1.2", " 3.0.0"]
 ```
 
 ## Versioning
