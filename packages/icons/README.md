@@ -3,25 +3,23 @@
 [Lucide](https://lucide.dev) icons as `remix/component` components, one tree-shakeable export per
 icon.
 
-Lucide publishes its icons as framework-agnostic data — a list of SVG tag and attribute
-pairs per icon. This package turns that data into components ahead of time and ships them,
-so an icon is a plain import with no codegen step of your own, and a bundler drops the ~1700
-icons you never name. The prop contract matches
-[`lucide-react`](https://www.npmjs.com/package/lucide-react): the same defaults, the same
-prop names, the same `aria-hidden` fallback.
+The icons ship prebuilt, so each one is a plain import and a bundler keeps only the ones you name.
+Props and defaults match [`lucide-react`](https://www.npmjs.com/package/lucide-react).
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/icons
 ```
 
-Every icon is a `remix/component` component, so [`remix`](https://www.npmjs.com/package/remix)
-installs alongside this package and renders them.
+The icons render through `remix/component`, from [`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Render An Icon
+### Render an icon
+
+Every icon in the [Lucide catalog](https://lucide.dev/icons/) is exported as
+`<PascalCaseName>Icon`: `heart` is `HeartIcon`, `circle-alert` is `CircleAlertIcon`.
 
 ```tsx
 import { HeartIcon } from "@sdxc/icons";
@@ -36,11 +34,7 @@ function LikeButton() {
 }
 ```
 
-Every icon in the [Lucide catalog](https://lucide.dev/icons/) is exported as
-`<PascalCaseName>Icon`, so `activity` is `ActivityIcon` and `circle-alert` is
-`CircleAlertIcon`.
-
-### Size, Color And Stroke
+### Set size, color and stroke
 
 ```tsx
 import { CircleAlertIcon } from "@sdxc/icons";
@@ -50,14 +44,13 @@ function ErrorBanner() {
 }
 ```
 
-`color` sets the stroke and defaults to `currentColor`, so an icon inherits the surrounding
-text color until you say otherwise. A `className` is appended to the `lucide` and
-`lucide-<name>` classes the icon always carries.
+`color` defaults to `currentColor`, so an icon follows the surrounding text color. `className` is
+added to the `lucide` and `lucide-<name>` classes every icon carries.
 
-### Name An Icon For Assistive Technology
+### Give an icon an accessible name
 
-An icon renders with `aria-hidden="true"`, which is what you want beside visible text. An
-`aria-*` attribute or a `role` replaces that fallback and gives the icon its own name:
+An icon renders `aria-hidden="true"`, which suits an icon beside visible text. Pass any `aria-*`
+attribute or a `role` and the icon is exposed with that name instead:
 
 ```tsx
 import { TrashIcon } from "@sdxc/icons";
@@ -71,11 +64,10 @@ function DeleteButton() {
 }
 ```
 
-### Render An Icon Chosen At Runtime
+### Render an icon chosen at runtime
 
-When the icon arrives as data — a content field, a config value, a row in a database — render
-`<Icon name />`. The `name` prop is typed as the union of every icon in the catalog, so a
-misspelling is a compile error:
+When the icon comes from data, render `<Icon name />`. `name` is typed as the union of every icon
+name, so a misspelling is a compile error:
 
 ```tsx
 import type { IconName } from "@sdxc/icons";
@@ -103,31 +95,23 @@ function NavLink({ props }: Handle<NavLinkProps>) {
 
 ### `<PascalCaseName>Icon`
 
-One component per Lucide icon, each its own module. It renders a 24x24 `<svg>` with Lucide's
-default attributes and the icon's own elements inside.
+One component per Lucide icon, each in its own module. It renders an `<svg>` with a 24x24 viewBox,
+no fill and round line caps, and accepts `LucideProps`:
 
-Props, as `LucideProps`:
+- `size`: width and height, default `24`.
+- `color`: stroke color, default `"currentColor"`.
+- `strokeWidth`: stroke width in viewBox units, default `2`.
+- `absoluteStrokeWidth`: scales `strokeWidth` against `size`, so the stroke keeps the same visual
+  weight at any size.
 
-- `size?`: `number | string` — width and height, defaulting to `24`.
-- `color?`: `string` — stroke color, defaulting to `"currentColor"`.
-- `strokeWidth?`: `number | string` — stroke width in the 24x24 viewBox's units, defaulting
-  to `2`.
-- `absoluteStrokeWidth?`: `boolean` — scales `strokeWidth` against `size`, so a stroke stays
-  visually the same weight across icons rendered at different sizes.
-- Every other `<svg>` prop — `className`, `style`, `aria-*`, `mix` — reaches the root
-  element untouched.
-
-```tsx
-<ActivityIcon size={32} color="teal" absoluteStrokeWidth />
-```
-
-Children render inside the `<svg>`, after the icon's own elements, which is where an extra
-`<title>` or decoration belongs.
+Every other `<svg>` prop (`className`, `style`, `aria-*`, `mix`) reaches the root element.
+Children render inside the `<svg>` after the icon's own elements, and an icon with children skips
+the `aria-hidden` default.
 
 ### `Icon`
 
-Renders the icon matching `name` and forwards the rest of its props to it. `IconProps` is
-`LucideProps` plus `name: IconName`.
+Renders the icon whose kebab-case name is `name`, forwarding the remaining `LucideProps`. It reaches
+the whole catalog's data, so prefer the specific `<XyzIcon>` import wherever the icon is known.
 
 ```tsx
 <Icon name="heart" size={16} color="red" />
@@ -135,19 +119,16 @@ Renders the icon matching `name` and forwards the rest of its props to it. `Icon
 
 ### `iconExportNames`
 
-An object mapping every icon's kebab-case name (`"circle-alert"`) to the identifier its data
-is stored under (`"circleAlert"`). `Object.keys(iconExportNames)` is the full catalog, which
-is what an icon picker enumerates.
+An object keyed by every icon's kebab-case name (`"circle-alert"`); `Object.keys(iconExportNames)`
+lists the full catalog.
 
-### `createLucideIcon(iconName: string, iconNode: IconNode): Component`
+### `createLucideIcon(iconName: string, iconNode: IconNode)`
 
-Builds an icon component from a name and its SVG node data, giving a drawing of your own the
-same props, defaults and classes as every shipped icon.
+Builds an icon component from a kebab-case name and SVG node data, with the same props, defaults
+and classes as every shipped icon.
 
-```typescript
-import { createLucideIcon } from "@sdxc/icons";
-
-let CustomIcon = createLucideIcon("custom", [["path", { d: "M4 4h16v16H4z" }]]);
+```tsx
+let SquareOutlineIcon = createLucideIcon("square-outline", [["path", { d: "M4 4h16v16H4z" }]]);
 ```
 
 ### Types
@@ -166,14 +147,12 @@ interface IconProps extends LucideProps {
 	name: IconName;
 }
 
-/** The union of every Lucide icon name. */
 type IconName = keyof typeof iconExportNames;
 ```
 
 ## Pattern: Building An Icon Picker
 
-`iconExportNames` carries the catalog and `<Icon />` renders any entry of it, so a picker is
-a list of keys and one component:
+`iconExportNames` lists the catalog and `<Icon />` draws any entry of it:
 
 ```tsx
 import type { IconName } from "@sdxc/icons";
@@ -191,7 +170,7 @@ function IconPicker({ props }: Handle<{ query: string }>) {
 				.slice(0, 60)
 				.map((name) => (
 					<li>
-						<button value={name}>
+						<button name="icon" value={name}>
 							<Icon name={name} size={20} />
 							{name}
 						</button>
@@ -202,18 +181,32 @@ function IconPicker({ props }: Handle<{ query: string }>) {
 }
 ```
 
-The same keys are what a stored icon name validates against, so a value round-trips from the
-picker through your database and back into `<Icon name />`.
+## Pattern: Validating A Stored Icon Name
+
+An icon name read from a form or a database is a plain string. Validate it against the catalog with
+[`remix/data-schema`](https://www.npmjs.com/package/remix) and it becomes an `IconName` that
+`<Icon />` accepts:
+
+```tsx
+import type { IconName } from "@sdxc/icons";
+
+import { Icon, iconExportNames } from "@sdxc/icons";
+import { enum_, parseSafe } from "remix/data-schema";
+
+let IconNameSchema = enum_(Object.keys(iconExportNames) as [IconName, ...IconName[]]);
+
+function renderStoredIcon(value: unknown) {
+	let result = parseSafe(IconNameSchema, value);
+	if (!result.success) return null;
+	return <Icon name={result.value} size={20} />;
+}
+```
 
 ## Pattern: Keeping Icons Out Of The Client Bundle
 
-`<Icon />` reaches the whole catalog's data, because it resolves a name that only exists at
-render time. Server-rendered components never ship their code to the browser, so that
-catalog costs the page nothing: `<Icon name />` is the right call anywhere the server draws
-the markup.
-
-A component wrapped in `clientEntry` is bundled for the browser, and there the specific
-import is what you want — it carries one icon's data:
+Server-rendered components never ship to the browser, so `<Icon name />` costs the page nothing
+there. Inside a `clientEntry` component, which the browser loads, import the specific icon so the
+bundle carries one icon's data:
 
 ```tsx
 import type { Handle } from "remix/component";
@@ -243,28 +236,32 @@ export let LikeButton = clientEntry(
 );
 ```
 
-An island that genuinely needs a data-driven icon can take the resolved component as a prop
-from its server-rendered parent, which keeps the choice on the server and the bundle at one
-icon.
-
 ## Pattern: Adding An Icon Lucide Doesn't Ship
 
-A brand mark or a product glyph becomes a component through the same factory the catalog
-uses, so it accepts `size`, `color` and `strokeWidth` and sits beside Lucide icons without a
-second set of rules:
+A brand mark or product glyph drawn on Lucide's grid (24x24 viewBox, stroke width 2, no fill)
+becomes a component that takes `size`, `color` and `strokeWidth` like the rest:
 
 ```tsx
-import { createLucideIcon } from "@sdxc/icons";
+import { createLucideIcon, HeartIcon } from "@sdxc/icons";
 
-export let SparkIcon = createLucideIcon("spark", [
+let SparkIcon = createLucideIcon("spark", [
 	["path", { d: "M12 2v6" }],
 	["path", { d: "m16 6-4 4-4-4" }],
 	["circle", { cx: "12", cy: "16", r: "4" }],
 ]);
+
+function Toolbar() {
+	return () => (
+		<nav>
+			<SparkIcon size={20} absoluteStrokeWidth />
+			<HeartIcon size={20} absoluteStrokeWidth />
+		</nav>
+	);
+}
 ```
 
-Draw the paths against a 24x24 viewBox with a stroke width of 2 and no fill, the geometry
-every Lucide icon is authored in, and the icon scales with the rest of them.
+The component carries the `lucide` and `lucide-spark` classes, so stylesheets targeting icons
+reach it too.
 
 ## Versioning
 
