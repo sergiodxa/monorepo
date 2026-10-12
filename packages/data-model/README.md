@@ -25,6 +25,7 @@ The `./jobs` entry point needs [`@sdxc/jobs`](https://www.npmjs.com/package/@sdx
 
 ```typescript
 import { createModel } from "@sdxc/data-model";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { fail } from "remix/data-table";
 
 import { users } from "./schema.js";
@@ -45,7 +46,7 @@ export const Users = createModel(users, {
 			if (values.name === "") return fail("Name is required", ["name"]);
 		},
 		async beforeCreate(values) {
-			return { ...values, id: values.id ?? crypto.randomUUID(), email: values.email.toLowerCase() };
+			return { ...values, id: values.id ?? generateUUID(), email: values.email.toLowerCase() };
 		},
 	},
 });
@@ -382,6 +383,7 @@ the database has real transactions.
 ```typescript
 import { createModel } from "@sdxc/data-model";
 import { isFailure } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { fail } from "remix/data-table";
 
 import { documents } from "./schema.js";
@@ -397,7 +399,7 @@ export const Documents = createModel(documents, {
 			}
 		},
 		async beforeCreate(values) {
-			return { ...values, id: crypto.randomUUID(), slug: slugify(values.title), version: 1 };
+			return { ...values, id: generateUUID(), slug: slugify(values.title), version: 1 };
 		},
 		async beforeUpdate(values, _ctx, before) {
 			return { ...values, version: before.version + 1 };
@@ -477,12 +479,13 @@ model declares each key once as a `field`, so rows read and write them as typed 
 
 ```typescript
 import { createModel, field } from "@sdxc/data-model";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { object, string } from "remix/data-schema";
 
 import { userMeta, users } from "./schema.js";
 
 export const Profiles = createModel(users, {
-	metaTable: { table: userMeta, foreignKey: "user_id", generateId: () => crypto.randomUUID() },
+	metaTable: { table: userMeta, foreignKey: "user_id", generateId: () => generateUUID() },
 	meta: {
 		locale: field.enum(["en", "es"]).default("en"),
 		website: field.url(),
