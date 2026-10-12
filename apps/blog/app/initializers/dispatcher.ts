@@ -8,13 +8,14 @@
  */
 import type { JobDispatcherContext, JobEnqueuer } from "@sdxc/jobs";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 
+import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { jobQueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
 import { activityPub } from "~/app/jobs/middleware/activitypub";
-import { database } from "~/app/jobs/middleware/database";
 import { mail } from "~/app/jobs/middleware/mail";
 import { models } from "~/app/jobs/middleware/models";
 
@@ -25,7 +26,7 @@ import { models } from "~/app/jobs/middleware/models";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), models(), mail(), activityPub(enqueuer)],
+	middleware: [database(createDatabase), models(), mail(), activityPub(enqueuer)],
 	timeout: "2 minutes",
 	queue: jobQueue,
 });

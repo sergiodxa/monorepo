@@ -31,7 +31,7 @@ This document defines app-specific rules for `apps/blog`.
 - MUST ensure changes pass `bunx tsc -p apps/blog/tsconfig.json`.
 - MUST use namespaces for types only; no runtime values, functions, or classes inside namespaces.
 - MUST receive `ctx` as a handler argument in `app/http/controllers/**/*` (actions, handlers, and inline middleware callbacks) and use that value directly.
-- MUST read the database in HTTP handlers from `ctx.db`, published by the global `database()` middleware in `app/http/middleware/database.ts`.
+- MUST read the database in HTTP handlers from `ctx.db`, published by `database()` from `@sdxc/database-middleware` in the router, and in job handlers from the same `ctx.db`, published by its `./jobs` entry in the dispatcher.
 - MUST keep Cloudflare/environment typing declarations in `config/*.d.ts` (outside `app/`) and include them in app TS config.
 - MUST derive production mode in `bootstrap/worker.ts` from runtime request/environment signals, not `import.meta.env.PROD`.
 
