@@ -4,23 +4,32 @@ Read JSDoc out of JavaScript and TypeScript source text into a JSON documentatio
 
 ## Installation
 
-```bash
-npm add @sdxc/jsdoc
+```sh
+npm add @sdxc/jsdoc typescript
 ```
 
-`extract()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
+`extract()` parses with [`typescript`](https://www.npmjs.com/package/typescript), a peer
+dependency, and reports failures as a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
-### Extract One Module
+### Extract one module
+
+`extract()` reads one file's text — no file system, no imports followed, no type checker — and
+documents what it exports.
 
 ```typescript
 import { extract } from "@sdxc/jsdoc";
 import { isFailure } from "@sdxc/result";
 
 let source = `
-/** Adds two numbers. */
-export function add(a: number, b: number): number {
+/**
+ * Adds two numbers.
+ * @param a - The first addend.
+ * @returns The sum.
+ */
+export function add(a: number, b = 1): number {
 	return a + b;
 }
 `;
@@ -28,26 +37,64 @@ export function add(a: number, b: number): number {
 let result = extract(source, { path: "src/add.ts" });
 if (isFailure(result)) throw result.error;
 
-result.data.children[0]?.name; // "add"
-result.data.children[0]?.signatures[0]?.returns; // "number"
+let [add] = result.data.children;
+add?.id; // "src/add#add"
+add?.kind; // "function"
+add?.signatures[0]?.parameters[0]; // { name: "a", type: "number", description: "The first addend.", ... }
+add?.signatures[0]?.parameters[1]?.default; // "1"
+add?.signatures[0]?.returns; // "number"
 ```
 
-### Build The Document A Site Reads
+### Read a symbol's tags
 
-Extract every module a package ships, then assemble them into one `DocProject`.
+Each comment is split into its description and block tags, with aliases collapsed (`@return`
+becomes `returns`, `@arg` becomes `param`). `findTag` and `findTags` accept `null`, so a symbol
+without a comment needs no guard.
 
 ```typescript
-import type { DocModule } from "@sdxc/jsdoc";
+import type { DocNode } from "@sdxc/jsdoc";
+
+import { findTag, findTags } from "@sdxc/jsdoc";
+
+function summarize(node: DocNode) {
+	return {
+		description: node.comment?.description ?? "",
+		returns: findTag(node.comment, "returns")?.text ?? null,
+		examples: findTags(node.comment, "example").map((tag) => tag.text),
+		deprecated: node.flags.deprecated,
+	};
+}
+```
+
+### Parse a comment on its own
+
+Block tags start a line; the `/**` and `*/` markers are optional.
+
+```typescript
+import { parseComment } from "@sdxc/jsdoc";
+
+let comment = parseComment(`/**
+ * Greets someone.
+ * @param {string} name - The subject.
+ */`);
+
+comment.description; // "Greets someone."
+comment.tags; // [{ tag: "param", name: "name", type: "string", text: "The subject." }]
+```
+
+### Assemble the document a site reads
+
+Extract every module a package ships and stamp the result with `SCHEMA_VERSION`.
+
+```typescript
+import type { DocModule, DocProject } from "@sdxc/jsdoc";
 
 import { extract, SCHEMA_VERSION } from "@sdxc/jsdoc";
 import { isFailure } from "@sdxc/result";
 
 let files = new Map([
 	["src/index.ts", 'export { add } from "./add.js";'],
-	[
-		"src/add.ts",
-		"/** Adds two numbers. */\nexport function add(a: number, b: number) {\n\treturn a + b;\n}",
-	],
+	["src/add.ts", "/** Adds two numbers. */\nexport function add(a: number, b: number) {}"],
 ]);
 
 let modules: DocModule[] = [];
@@ -57,50 +104,33 @@ for (let [path, source] of files) {
 	modules.push(result.data);
 }
 
-let project = { schema: SCHEMA_VERSION, name: "math", version: "1.4.0", modules };
-```
-
-### Parse A Comment On Its Own
-
-```typescript
-import { findTag, parseComment } from "@sdxc/jsdoc";
-
-let comment = parseComment("/** Adds. @param a - The addend. @returns The sum. */");
-
-comment.description; // "Adds."
-findTag(comment, "returns")?.text; // "The sum."
+let project: DocProject = { schema: SCHEMA_VERSION, name: "math", version: "1.4.0", modules };
+let json = JSON.stringify(project);
 ```
 
 ## API
 
 ### `extract(source: string, options?: ExtractOptions): Result<DocModule, ExtractError>`
 
-Reads one file's source text into its documentation module: the header comment, the symbols it exports, and the exports it forwards to other modules. It touches nothing outside the string it is given — no file system, no imports followed, no type checker — so the same text always yields the same document.
+Reads one file into a `DocModule`: its header comment, its exported symbols and the exports it
+forwards. Symbols tagged `@internal` are dropped, along with everything under them.
 
-- `options.path`: Path the text came from, which selects the dialect from its extension (`.tsx` and `.jsx` enable JSX) and is recorded on every node's `source` (default `"module.ts"`)
-- `options.id`: Prefix for every node id, as `<id>#<name>` (default: `path` with its extension removed)
-- `options.includeInternal`: Keep symbols tagged `@internal`, dropped by default so a published site shows only what its readers can use (default `false`)
+- `options.path`: where the text came from; `.tsx` and `.jsx` enable JSX, and it is recorded on
+  every node's `source` (default `"module.ts"`)
+- `options.id`: prefix for node ids, `<id>#<name>` (default: `path` without its extension)
+- `options.includeInternal`: keep `@internal` symbols (default `false`)
 
-The file's first `/** … */` block is the module's header when a blank line follows it, when a second block follows it, or when the first statement is an import; otherwise it documents the declaration below it.
-
-Returns a `DocModule`, or an `ExtractError` listing every syntax error with its position.
-
-```typescript
-let result = extract(source, { path: "src/add.ts", includeInternal: true });
-```
+The file's first `/** … */` block is the module comment when a blank line, a second block or an
+import follows it; otherwise it documents the declaration below it.
 
 ### `parseComment(raw: string): DocComment`
 
-Splits one JSDoc block into the prose before its first block tag and the tags after it. Accepts the comment with or without its `/**`/`*/` markers, collapses aliases (`@arg` and `@argument` become `param`, `@return` becomes `returns`), and keeps fenced code inside an `@example` intact even when that code contains tags of its own.
-
-```typescript
-parseComment("/** @param {string} name - The subject. */").tags;
-// [{ tag: "param", name: "name", type: "string", text: "The subject." }]
-```
+Splits one JSDoc block into the prose before its first block tag and the tags after it. Fenced
+code inside an `@example` stays intact, tags included.
 
 ### `findTag(comment: DocComment | null, tag: string): DocTag | null`
 
-First tag with the given canonical name, or `null`. Takes `null` for a symbol with no comment, so a renderer asks the same way everywhere.
+The first tag with the given canonical name, or `null`.
 
 ### `findTags(comment: DocComment | null, tag: string): DocTag[]`
 
@@ -108,7 +138,8 @@ Every tag with the given canonical name, in source order.
 
 ### `inlineLinks(text: string): DocLink[]`
 
-Every `{@link}`, `{@linkcode}` and `{@linkplain}` in a description or tag text, each with the raw text it occupies and the offset it starts at, so a renderer substitutes anchors without rescanning the markdown.
+Every `{@link}`, `{@linkcode}` and `{@linkplain}` in a description or tag text, with its raw text
+and starting offset. Reads `{@link target}`, `{@link target|label}` and `{@link target label}`.
 
 ```typescript
 inlineLinks("See {@link parseComment|the parser}.");
@@ -117,60 +148,41 @@ inlineLinks("See {@link parseComment|the parser}.");
 
 ### `SCHEMA_VERSION: number`
 
-The number to write into `DocProject.schema`. It rises whenever a field changes meaning or disappears, so a site recognizes a document written by an older version of this package.
+The value for `DocProject.schema`. It rises whenever a field changes meaning or disappears.
 
 ### `ExtractError`
 
-The failure `extract` reports for text that will not parse, delivered inside a `Failure`. Its message leads with the first syntax error, since a later one is usually a consequence of it.
-
-- `path`: `string` - Path the caller passed for the source text
-- `diagnostics`: `DocDiagnostic[]` - Every syntax error found, in source order, each `{ message, line, column }` with 1-based positions
+The error inside the `Failure` for text that does not parse. `path` is the path passed in,
+`diagnostics` lists every syntax error in source order, and the message leads with the first.
 
 ### Types
 
 #### `ExtractOptions`
 
-Options accepted by `extract()`, documented above alongside the function.
+The options of `extract()`.
 
 #### `DocProject`
 
-The document a site reads. The caller assembles it from the modules it extracted, in whatever order it wants them presented.
-
-```typescript
-interface DocProject {
-	schema: number;
-	name: string;
-	version: string | null;
-	modules: DocModule[];
-}
-```
+`{ schema, name, version, modules }`: the document a site reads, assembled by the caller in the
+order it wants modules presented.
 
 #### `DocModule`
 
-One extracted file.
-
-```typescript
-interface DocModule {
-	id: string;
-	path: string;
-	comment: DocComment | null;
-	children: DocNode[];
-	reExports: DocReExport[];
-}
-```
+`{ id, path, comment, children, reExports }`: one extracted file.
 
 #### `DocNode`
 
-One documented symbol. Members of classes, interfaces, enums and namespaces are the same shape under `children`, so one recursive renderer covers the whole tree.
+One documented symbol. Members of classes, interfaces, enums and namespaces are `DocNode`s under
+`children`, so one recursive renderer covers the tree.
 
 ```typescript
 interface DocNode {
-	id: string;
+	id: string; // "src/point#Point.x" for a member
 	name: string;
 	kind: DocKind;
 	comment: DocComment | null;
 	source: DocSource;
-	type: string | null;
+	type: string | null; // annotation, alias right-hand side or enum initializer
 	signatures: DocSignature[];
 	typeParameters: DocTypeParameter[];
 	extends: string[];
@@ -180,86 +192,79 @@ interface DocNode {
 }
 ```
 
-`DocKind` is one of `function`, `class`, `interface`, `type-alias`, `variable`, `enum`, `enum-member`, `namespace`, `property`, `method`, `accessor` or `constructor`.
+#### `DocKind`
+
+`function`, `class`, `interface`, `type-alias`, `variable`, `enum`, `enum-member`, `namespace`,
+`property`, `method`, `accessor` or `constructor`.
+
+#### `DocFlags`
+
+`default`, `optional`, `readonly`, `static`, `abstract`, `async`, `deprecated`, `internal` and
+`visibility` (`"public" | "protected" | "private"`), always present.
 
 #### `DocComment` and `DocTag`
 
-```typescript
-interface DocComment {
-	description: string;
-	tags: DocTag[];
-}
-
-interface DocTag {
-	tag: string;
-	name: string | null;
-	type: string | null;
-	text: string;
-}
-```
+`DocComment` is `{ description, tags }`. `DocTag` is `{ tag, name, type, text }`: `name` is the
+subject of `@param`, `@property`, `@template`, `@typedef` and `@callback`, `type` the text inside
+`{…}`, and `text` the rest without the `-` separator.
 
 #### `DocSignature`, `DocParameter` and `DocTypeParameter`
 
-A symbol with one signature documents itself, so `DocSignature.comment` is filled in only for an overloaded symbol, where each signature keeps the comment written above it.
-
-```typescript
-interface DocSignature {
-	comment: DocComment | null;
-	typeParameters: DocTypeParameter[];
-	parameters: DocParameter[];
-	returns: string | null;
-}
-
-interface DocParameter {
-	name: string;
-	type: string | null;
-	description: string | null;
-	optional: boolean;
-	rest: boolean;
-	default: string | null;
-}
-```
+`DocSignature` is `{ comment, typeParameters, parameters, returns }`; `comment` is filled in per
+overload, and `returns` is `null` when inferred. `DocParameter` is
+`{ name, type, description, optional, rest, default }`, merged with its `@param` tag.
+`DocTypeParameter` is `{ name, constraint, default, description }`, merged with its `@template`
+tag.
 
 #### `DocReExport`
 
-An export forwarded from another module, for the caller to resolve against the modules it holds. `kind` is `named` for `export { a } from`, `all` for `export *`, or `namespace` for `export * as ns`.
+`{ kind, module, name, exported, typeOnly }`: a forwarded export for the caller to resolve.
+`kind` is `named` for `export { a } from`, `all` for `export *`, or `namespace` for
+`export * as ns`; `module` is the specifier as written.
 
-```typescript
-interface DocReExport {
-	kind: "named" | "all" | "namespace";
-	module: string;
-	name: string | null;
-	exported: string | null;
-	typeOnly: boolean;
-}
-```
+#### `DocSource`, `DocLink` and `DocDiagnostic`
 
-#### `DocFlags`, `DocSource`, `DocLink` and `DocDiagnostic`
-
-`DocFlags` carries `default`, `optional`, `readonly`, `static`, `abstract`, `async`, `deprecated`, `internal` and `visibility`, always present so a template reads `flags.deprecated` without guarding. `DocSource` is `{ path, line, column }` with 1-based positions. `DocLink` is `{ raw, target, text, index }`. `DocDiagnostic` is `{ message, line, column }`.
+`DocSource` is `{ path, line, column }` and `DocDiagnostic` is `{ message, line, column }`, both
+1-based. `DocLink` is `{ raw, target, text, index }`.
 
 ## Pattern: Resolving A Barrel
 
-An `index.ts` that only re-exports produces no symbols of its own. Extract every module a package ships, then follow `reExports` to decide what each entry point publishes and under which name.
+An `index.ts` that only re-exports has no symbols of its own. Follow `reExports` across the
+extracted modules to list what an entry point publishes, under the name it publishes it.
 
 ```typescript
 import type { DocModule, DocNode } from "@sdxc/jsdoc";
 
+function resolve(from: string, specifier: string): string {
+	let url = new URL(specifier, `file:///${from}`);
+	return url.pathname.slice(1).replace(/\.js$/, ".ts");
+}
+
 function published(byPath: Map<string, DocModule>, module: DocModule): DocNode[] {
-	return module.reExports.flatMap((forwarded) => {
-		let target = byPath.get(resolve(module.path, forwarded.module));
-		if (!target) return [];
-		if (forwarded.kind === "all") return published(byPath, target);
-		return target.children
-			.filter((node) => node.name === forwarded.name)
-			.map((node) => ({ ...node, name: forwarded.exported ?? node.name }));
-	});
+	let forwarded = module.reExports
+		.filter((entry) => entry.kind !== "namespace")
+		.flatMap((entry) => {
+			let target = byPath.get(resolve(module.path, entry.module));
+			if (!target) return [];
+			if (entry.kind === "all") return published(byPath, target);
+			return target.children
+				.filter((node) => node.name === entry.name)
+				.map((node) => ({ ...node, name: entry.exported ?? node.name }));
+		});
+	return [...module.children, ...forwarded];
+}
+
+function entryPoint(modules: DocModule[], path: string): DocNode[] {
+	let byPath = new Map(modules.map((module) => [module.path, module]));
+	let entry = byPath.get(path);
+	return entry ? published(byPath, entry) : [];
 }
 ```
 
 ## Pattern: Linking Symbols To Each Other
 
-`{@link}` targets are written as names, not ids. Index the tree by name once, then turn each link into an href the site can route to.
+`{@link}` targets are names. Index the tree by name once, then replace each link with an anchor
+to the node's id.
 
 ```typescript
 import type { DocModule } from "@sdxc/jsdoc";
@@ -282,11 +287,12 @@ function linkify(modules: DocModule[], text: string): string {
 }
 ```
 
-Walking the links in reverse keeps every earlier offset valid while the text is rewritten.
+Walking the links in reverse keeps every earlier offset valid while the text changes.
 
-## Pattern: Grouping A Page By Kind
+## Pattern: Rendering The Tree By Kind
 
-`DocNode.kind` is the only thing a page needs to lay symbols out, and the tree is uniform, so the same grouping works for a module and for the members of a class.
+The tree is uniform, so one function groups a module's symbols and a class's members alike, and
+`flags` drive the badges.
 
 ```typescript
 import type { DocKind, DocNode } from "@sdxc/jsdoc";
@@ -296,6 +302,50 @@ function byKind(nodes: DocNode[]): Map<DocKind, DocNode[]> {
 	for (let node of nodes) groups.set(node.kind, [...(groups.get(node.kind) ?? []), node]);
 	return groups;
 }
+
+function outline(nodes: DocNode[], depth = 0): string[] {
+	return [...byKind(nodes)].flatMap(([kind, group]) => [
+		`${"  ".repeat(depth)}${kind}:`,
+		...group.flatMap((node) => {
+			let badges = [node.flags.static && "static", node.flags.deprecated && "deprecated"];
+			let label = [node.name, ...badges.filter(Boolean)].join(" ");
+			return [`${"  ".repeat(depth + 1)}${label}`, ...outline(node.children, depth + 2)];
+		}),
+	]);
+}
+```
+
+## Pattern: Reporting Syntax Errors
+
+Point at each line that failed to parse instead of failing the whole build with one message.
+
+```typescript
+import { extract } from "@sdxc/jsdoc";
+import { isFailure } from "@sdxc/result";
+
+let result = extract(source, { path: "src/broken.ts" });
+
+if (isFailure(result)) {
+	for (let { message, line, column } of result.error.diagnostics) {
+		process.stderr.write(`${result.error.path}:${line}:${column} ${message}\n`);
+	}
+}
+```
+
+## Pattern: A Maintainers' Build With Internal Symbols
+
+Keep `@internal` symbols for a contributors' site and give its node ids their own prefix, so its
+anchors never collide with the public site's.
+
+```typescript
+import { extract } from "@sdxc/jsdoc";
+
+let result = extract(source, {
+	path: "src/cache.ts",
+	id: "internal/cache",
+	includeInternal: true,
+});
+// node ids read "internal/cache#<name>", and nodes with flags.internal stay in the tree
 ```
 
 ## Versioning
