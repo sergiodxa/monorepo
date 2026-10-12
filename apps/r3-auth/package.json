@@ -19,6 +19,7 @@
 		"@sdxc/crypto": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/database-middleware": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/duration": "workspace:*",
 		"@sdxc/email-address": "workspace:*",

@@ -12,6 +12,7 @@ import type { Transport } from "@sdxc/mail";
 import type { Database as DataTable } from "remix/data-table";
 
 import billing from "@sdxc/billing/middleware";
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
@@ -28,7 +29,6 @@ import type Limiters from "~/app/services/rate-limiters";
 
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { models } from "~/app/http/middleware/models";
 import { rateLimiters } from "~/app/http/middleware/rate-limiters";
@@ -79,7 +79,7 @@ export function createWebRouter(options: WebRouterOptions) {
 		middleware: [
 			headRequests(),
 			asyncContext(),
-			database(() => options.db ?? createDatabase()),
+			database(options.db ?? createDatabase()),
 			models(),
 			rateLimiters(() => options.limiters ?? createRateLimiters()),
 			log(logger),
