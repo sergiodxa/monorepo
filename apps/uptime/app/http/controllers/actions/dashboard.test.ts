@@ -9,6 +9,7 @@
 
 import type { RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -16,7 +17,6 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { teams } from "~/database/schema";
@@ -44,7 +44,7 @@ async function postSetDashboardTab(
 	body: Record<string, string>,
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData()],
+		middleware: [asyncContext(), database(db), models(), formData()],
 	});
 	router.map(routes.actions.setDashboardTab, {
 		middleware: [teamContextMiddleware(team, null) as never],

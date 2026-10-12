@@ -14,6 +14,7 @@
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Session as SessionType } from "remix/session";
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { formData } from "remix/middleware/form-data";
@@ -24,7 +25,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
@@ -85,7 +85,7 @@ async function postAccountAction(
 	} = {},
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData()],
+		middleware: [asyncContext(), database(db), models(), formData()],
 	});
 	(router.map as LooseRouterMap)(route, {
 		middleware: [viewerMiddleware(viewer, options.session)],

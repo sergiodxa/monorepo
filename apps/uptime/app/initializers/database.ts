@@ -25,7 +25,7 @@ let database: Database | undefined;
  *
  * @returns A database bound to the `DB` binding, shared by every request this isolate serves.
  * @example
- * let middleware = [database(createDatabase)];
+ * let middleware = [database(createDatabase())];
  */
 export function createDatabase(): Database {
 	return (database ??= new Database(

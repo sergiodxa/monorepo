@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
@@ -25,7 +26,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
@@ -93,7 +93,7 @@ async function send(
 	membership: SelectMembership,
 	windowId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
+	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.maintenanceWindows.edit, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,

@@ -9,6 +9,7 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -16,7 +17,6 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
 import { checkConformance } from "~/app/test/openapi";
@@ -117,7 +117,7 @@ async function createMaintenanceWindowRow(
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(maintenanceWindowRoutes, maintenanceWindowController);
 

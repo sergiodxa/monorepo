@@ -12,6 +12,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -20,7 +21,6 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -81,7 +81,7 @@ async function send(
 	params: Record<string, string>,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
+		middleware: [asyncContext(), database(db), models(), formData() as Middleware],
 	});
 	router.map(routes.actions.monitor.http.updateSsl, {
 		middleware: [seedTeam(team, membership)],

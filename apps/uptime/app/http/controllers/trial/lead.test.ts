@@ -13,6 +13,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
@@ -37,7 +38,6 @@ import {
 	TRIAL_WATCH_REPEATED,
 	TRIAL_WATCH_STARTED,
 } from "~/app/http/controllers/trial/session";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { hasMarketingConsent } from "~/app/models/leads";
 import { createTestDatabase } from "~/app/test/db";
@@ -122,7 +122,7 @@ async function submit(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			((ctx, next) => {

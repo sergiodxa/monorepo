@@ -22,6 +22,7 @@ import {
 	createKVNamespace,
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
@@ -36,7 +37,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -137,7 +137,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

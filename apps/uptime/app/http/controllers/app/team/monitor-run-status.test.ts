@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -23,7 +24,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -92,7 +92,7 @@ async function send(
 	membership: SelectMembership,
 	monitorId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
+	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.monitors.runStatus, {
 		middleware: [seedTeam(team, membership)],
 		handler: monitorRunStatus.handler,

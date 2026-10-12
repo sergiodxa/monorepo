@@ -26,6 +26,7 @@
 		"@sdxc/csv": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/database-middleware": "workspace:*",
 		"@sdxc/dates": "workspace:*",
 		"@sdxc/doh": "workspace:*",
 		"@sdxc/email-address": "workspace:*",

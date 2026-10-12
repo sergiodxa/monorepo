@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -14,7 +15,6 @@ import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
@@ -58,7 +58,7 @@ async function dispatch(
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(teamRoutes, teamController);
 
@@ -247,7 +247,7 @@ describe("PATCH /api/v1/team", () => {
 	/** Sends `request` through the team controller, bypassing the JSON-body `dispatch`. */
 	async function send(db: Db, request: Request) {
 		let router = createRouter({
-			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+			middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 		});
 		router.map(teamRoutes, teamController);
 		return router.fetch(request);

@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
@@ -17,7 +18,6 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { useMailServerDns } from "~/app/test/mail-servers";
@@ -63,7 +63,7 @@ async function postAlertAction(
 	records: Record<string, unknown>[] = [],
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), log() as Middleware, formData()],
+		middleware: [asyncContext(), database(db), models(), log() as Middleware, formData()],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped

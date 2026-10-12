@@ -12,6 +12,7 @@ import type { Middleware } from "remix/router";
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv, createRateLimit } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
@@ -25,7 +26,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { database } from "~/app/http/middleware/database";
 import { encodeId } from "~/app/services/typed-id";
 import { billedEvents, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -162,7 +162,7 @@ async function dispatch(db: Db, request: Request) {
 		middleware: [
 			CONFORMANCE,
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			getClientIP(),

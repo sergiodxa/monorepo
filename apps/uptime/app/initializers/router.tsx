@@ -12,6 +12,7 @@ import type { Middleware, RequestContext } from "remix/router";
 
 import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
+import { database } from "@sdxc/database-middleware";
 import featureFlags from "@sdxc/flags/middleware/router";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { Honeypot } from "@sdxc/honeypot";
@@ -35,7 +36,6 @@ import { createRouter } from "remix/router";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import auth, { getViewer } from "~/app/http/middleware/auth";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import requireRole from "~/app/http/middleware/require-role";
@@ -157,7 +157,7 @@ export function createWebRouter(options: WebRouterOptions) {
 			 * Publishes `ctx.db` on every surface. The session, the auth guard and every
 			 * controller below read from it, so it leads the chain that reaches storage.
 			 */
-			database(createDatabase),
+			database(createDatabase()),
 			/**
 			 * Publishes `ctx.jobs` on every surface, over the same billed queue the dispatcher
 			 * writes through, so a controller enqueues without importing the dispatcher.

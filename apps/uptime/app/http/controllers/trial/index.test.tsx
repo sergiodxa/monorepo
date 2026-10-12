@@ -22,6 +22,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { Log } from "@sdxc/logger";
 import { failure, success } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
@@ -44,7 +45,6 @@ import type {
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import {
 	createActiveSubscription,
@@ -211,7 +211,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: () => testBilling }) as Middleware,
 			((ctx, next) => {

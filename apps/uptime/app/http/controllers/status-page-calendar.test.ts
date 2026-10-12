@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { parse } from "@sdxc/icalendar";
 import { stringifyRecurrence } from "@sdxc/icalendar/rrule";
@@ -20,7 +21,6 @@ import { describe, expect, test } from "vitest";
 
 import type { InsertMaintenanceWindow } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
@@ -113,7 +113,7 @@ async function createWindow(
 /** Sends a GET through a router mapping both calendar routes. */
 async function get(db: Database, path: string): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), seedLocale()],
+		middleware: [asyncContext(), database(db), models(), seedLocale()],
 	});
 	router.map(routes.statusPageCalendar, statusPageCalendar as RequestHandler<any>);
 	router.map(routes.statusPageMaintenanceEvent, statusPageMaintenanceEvent as RequestHandler<any>);

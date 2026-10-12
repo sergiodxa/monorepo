@@ -15,6 +15,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { SubjectNotFoundError } from "@sdxc/auth/management-client";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { failure, unwrap } from "@sdxc/result";
 import { renderToStream } from "remix/component/server";
@@ -32,7 +33,6 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { admin } from "~/app/http/middleware/admin";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
@@ -117,7 +117,7 @@ async function renderSettings(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			admin(() => fakeAdmin),
 			session(sessionCookie, sessionStorage),

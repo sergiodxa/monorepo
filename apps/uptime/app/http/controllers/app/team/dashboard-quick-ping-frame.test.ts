@@ -19,6 +19,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
@@ -35,7 +36,6 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
@@ -201,7 +201,7 @@ async function createHarness() {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: createTestBilling() }),
 			session(sessionCookie, sessionStorage),

@@ -14,13 +14,13 @@
 
 import type { Middleware } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";
 import { createTestBilling } from "~/app/test/billing";
@@ -86,7 +86,7 @@ async function subscribe(externalId: string, product = MONITORING_PRODUCT) {
  */
 async function dispatch(delivery: { body: string; headers: Headers }) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), log() as Middleware],
+		middleware: [asyncContext(), database(db) as Middleware, models(), log() as Middleware],
 	});
 	router.map(routes.webhooks.polar, polarWebhook);
 

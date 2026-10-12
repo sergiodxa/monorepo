@@ -13,10 +13,10 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
 
@@ -29,7 +29,7 @@ describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 503 when the PING_RESULTS binding is not configured", async () => {
 		let { db } = createTestDatabase();
 
-		let router = createRouter({ middleware: [database(() => db), models()] });
+		let router = createRouter({ middleware: [database(db), models()] });
 		router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 
 		let request = new Request(`https://example.com${routes.healthcheckAnalyticsEngine.href()}`);

@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 
 import { parse } from "@sdxc/csv";
+import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -18,7 +19,6 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vit
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { ApiKeyScope, MonitorStatus } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
@@ -187,7 +187,7 @@ async function seedDay(
 
 async function dispatch(path: string, options: { key?: string; accept?: string } = {}) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(reportsRoutes, reportsController);
 

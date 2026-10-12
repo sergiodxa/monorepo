@@ -11,6 +11,7 @@
  */
 
 import { parse as parseChallenge } from "@sdxc/auth/bearer-challenge";
+import { database } from "@sdxc/database-middleware";
 import { isFailure, unwrap } from "@sdxc/result";
 import { parse as parseMetadata } from "@sdxc/well-known/oauth-protected-resource";
 import { createRouter } from "remix/router";
@@ -19,7 +20,6 @@ import { describe, expect, test } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import protectedResource from "~/app/http/controllers/api/protected-resource";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { createTestDatabase } from "~/app/test/db";
@@ -55,7 +55,7 @@ async function seedApiKey(
 }
 
 async function dispatch(db: Db, scope: ApiKeyScope, headers: Record<string, string> = {}) {
-	let router = createRouter({ middleware: [database(() => db), models()] });
+	let router = createRouter({ middleware: [database(db), models()] });
 
 	router.get("/test", {
 		middleware: [requireApiKey(scope)],
@@ -138,7 +138,7 @@ describe("requireApiKey", () => {
 
 /** Serves a guarded API path beside the metadata controller, as the worker maps them. */
 async function dispatchApi(db: Db, url: string, headers: Record<string, string> = {}) {
-	let router = createRouter({ middleware: [database(() => db), models()] });
+	let router = createRouter({ middleware: [database(db), models()] });
 	router.map(routes.api.metadata, protectedResource);
 	router.get("/api/v1/monitors", {
 		middleware: [requireApiKey("monitors:write")],

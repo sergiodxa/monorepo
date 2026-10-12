@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
@@ -18,7 +19,6 @@ import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
 import { auth, type Viewer } from "~/app/http/middleware/auth";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { language } from "~/app/initializers/cookies";
@@ -60,7 +60,7 @@ async function dispatch(db: Db, options: { viewer?: Viewer; headers?: HeadersIni
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			session(cookie, storage),
 			(_ctx, next) => {

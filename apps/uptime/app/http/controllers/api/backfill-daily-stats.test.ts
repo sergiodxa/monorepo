@@ -10,6 +10,7 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
@@ -18,7 +19,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { checkConformance } from "~/app/test/openapi";
 
 /** Checks every exchange against the API document; see `checkConformance`. */
@@ -65,7 +65,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models(), jobEnqueuer(jobQueue)],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models(), jobEnqueuer(jobQueue)],
 	});
 	router.map(routes.api.v1.backfillDailyStats, backfillDailyStatsCreate);
 

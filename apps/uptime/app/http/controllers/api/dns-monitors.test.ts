@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { HttpResponse, http } from "msw";
@@ -18,7 +19,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
@@ -98,7 +98,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]): Prom
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(dnsMonitorsRoutes, dnsMonitorsController);
 

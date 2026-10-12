@@ -9,6 +9,7 @@
  */
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -16,7 +17,6 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
@@ -105,7 +105,7 @@ async function createAlertEventRow(db: Db, alertId: string, overrides: Record<st
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(alertRoutes, alertController);
 

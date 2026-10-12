@@ -19,6 +19,7 @@ import {
 	createKVNamespace,
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { unwrap } from "@sdxc/result";
 import { http, HttpResponse } from "msw";
@@ -29,7 +30,6 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { SEO } from "~/app/initializers/seo";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
@@ -135,7 +135,7 @@ async function get(db: Database, slug: string, headers?: HeadersInit): Promise<R
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

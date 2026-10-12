@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -15,7 +16,6 @@ import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { markInFlight } from "~/app/test/idempotency";
@@ -80,7 +80,7 @@ async function dispatch(
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(statusPagesRoutes, statusPagesController);
 
@@ -322,7 +322,7 @@ describe("POST /api/v1/status-pages with an Idempotency-Key", () => {
 	/** Runs `request` through the collection controller behind the conformance check. */
 	async function send(db: Db, request: Request) {
 		let router = createRouter({
-			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+			middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 		});
 		router.map(statusPagesRoutes, statusPagesController);
 		return router.fetch(request);

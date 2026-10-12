@@ -16,6 +16,7 @@ import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
@@ -25,7 +26,6 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -76,7 +76,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST", body?: strin
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });

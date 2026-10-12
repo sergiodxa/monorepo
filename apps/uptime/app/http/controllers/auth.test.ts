@@ -16,6 +16,7 @@ import { attribution } from "@sdxc/attribution/middleware";
 import { BillingError } from "@sdxc/billing";
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { JWK, JWT } from "@sdxc/jwt";
 import { log } from "@sdxc/logger/middleware";
@@ -29,7 +30,6 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { language as languageCookie, returnTo } from "~/app/initializers/cookies";
 import { createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -219,7 +219,7 @@ function createTestRouter(db: ReturnType<typeof createTestDatabase>["db"], sessi
 		middleware: [
 			headRequests(),
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			billing({ provider: platform }),

@@ -16,6 +16,7 @@ import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
 import { asyncContext } from "remix/middleware/async-context";
@@ -26,7 +27,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { database } from "~/app/http/middleware/database";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
@@ -144,7 +144,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: () => testBilling }),
 			formData() as Middleware,

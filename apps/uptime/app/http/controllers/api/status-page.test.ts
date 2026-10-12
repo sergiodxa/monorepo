@@ -8,6 +8,7 @@
  */
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -15,7 +16,6 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
 import { checkConformance } from "~/app/test/openapi";
@@ -103,7 +103,7 @@ async function dispatch(
 	request: { method: string; path: string; key?: string; body?: Record<string, unknown> },
 ) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(statusPageRoutes, statusPageController);
 
@@ -526,7 +526,7 @@ describe("PATCH /api/v1/status-pages/:statusPageId", () => {
 	/** Runs `request` through the item controller behind the conformance check. */
 	async function send(db: Db, request: Request) {
 		let router = createRouter({
-			middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+			middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 		});
 		router.map(statusPageRoutes, statusPageController);
 		return router.fetch(request);

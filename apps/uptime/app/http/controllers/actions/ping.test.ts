@@ -18,6 +18,7 @@ import {
 	createDurableObjectNamespace,
 	createEnv,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -33,7 +34,6 @@ import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectTeam } from "~/database/schema";
 
 import { auth } from "~/app/http/middleware/auth";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { signIn } from "~/app/test/auth";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
@@ -148,7 +148,7 @@ function createTestRouter(db: Db) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: () => testBilling }),
 			session(sessionCookie, sessionStorage),

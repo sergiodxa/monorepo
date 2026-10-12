@@ -16,6 +16,7 @@ import {
 	createEnv,
 	createRateLimit,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createEngine } from "@sdxc/flags-engine";
 import { EngineProvider } from "@sdxc/flags-engine/provider";
 import { InMemoryFlagStore } from "@sdxc/flags-engine/store/memory";
@@ -31,7 +32,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi 
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { FLAG_SET, flags } from "~/app/initializers/flags";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -202,7 +202,7 @@ async function dispatch(
 		middleware: [
 			CONFORMANCE,
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: () => testBilling }),
 			featureFlags(flags),

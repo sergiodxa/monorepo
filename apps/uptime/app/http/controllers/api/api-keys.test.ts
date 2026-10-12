@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { DataTableStore, idempotencyKeys } from "@sdxc/idempotency/data-table";
 import { success, unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
@@ -19,7 +20,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import apiKeysController from "~/app/http/controllers/api/api-keys";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import { createTestDatabase } from "~/app/test/db";
@@ -58,7 +58,7 @@ async function createApiKey(db: Db, teamId: string, scopes: ApiKeyScope[]) {
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(apiKeysRoutes, apiKeysController);
 

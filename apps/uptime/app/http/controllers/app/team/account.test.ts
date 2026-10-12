@@ -13,6 +13,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
@@ -24,7 +25,6 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { OptionalEmail, SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
@@ -132,7 +132,7 @@ async function renderAccount(db: Database, team: SelectTeam, membership: SelectM
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

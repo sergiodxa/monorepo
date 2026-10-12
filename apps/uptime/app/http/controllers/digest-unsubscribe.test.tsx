@@ -12,6 +12,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { Base64Url, Hex, hmac } from "@sdxc/crypto";
+import { database } from "@sdxc/database-middleware";
 import { signUnsubscribeToken } from "@sdxc/mail/unsubscribe";
 import { unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
@@ -24,7 +25,6 @@ import { renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { wantsEmail } from "~/app/models/user-preferences";
@@ -88,7 +88,7 @@ async function visit(db: Db, token: string, method: "GET" | "POST", oneClick = t
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			((ctx, next) => {
 				ctx.set(Auth, { ok: false });

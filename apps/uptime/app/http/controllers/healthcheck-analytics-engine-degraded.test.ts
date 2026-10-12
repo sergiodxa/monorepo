@@ -12,12 +12,12 @@
  */
 
 import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
 
@@ -52,7 +52,7 @@ describe("GET /healthcheck/analytics-engine", () => {
 	test("returns 200 degraded when the write binding works but the read API fails", async () => {
 		let { db } = createTestDatabase();
 
-		let router = createRouter({ middleware: [database(() => db), models()] });
+		let router = createRouter({ middleware: [database(db), models()] });
 		router.map(routes.healthcheckAnalyticsEngine, healthcheckAnalyticsEngine);
 
 		let request = new Request(`https://example.com${routes.healthcheckAnalyticsEngine.href()}`);

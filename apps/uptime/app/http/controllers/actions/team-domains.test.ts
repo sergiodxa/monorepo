@@ -14,6 +14,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
@@ -22,7 +23,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
@@ -97,7 +97,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			jobEnqueuer(jobQueue),
 			formData() as Middleware,

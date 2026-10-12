@@ -10,6 +10,7 @@
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -18,7 +19,6 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { htmlRendering } from "~/app/http/render";
@@ -71,7 +71,7 @@ async function send(
 	membership: SelectMembership,
 	monitorId: string,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
+	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.cronJobs.edit, {
 		middleware: [seedTeam(team, membership), i18n, ...htmlRendering()],
 		handler,

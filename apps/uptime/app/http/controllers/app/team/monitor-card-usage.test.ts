@@ -21,6 +21,7 @@ import type {
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
@@ -36,7 +37,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createActiveSubscription } from "~/app/test/billing";
 import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/test/db";
 import { memberships, monitorResults, teams } from "~/database/schema";
@@ -174,7 +174,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			renderWith(createHtmlRenderer) as Middleware,

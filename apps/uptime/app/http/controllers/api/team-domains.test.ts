@@ -10,6 +10,7 @@
 import type { QueueMock } from "@sdxc/cloudflare-mocks";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -17,7 +18,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
 import { markInFlight } from "~/app/test/idempotency";
@@ -89,7 +89,7 @@ async function dispatch(
 	},
 ) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(teamDomainsRoutes, teamDomainsController);
 

@@ -19,6 +19,7 @@ import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 import { attribution } from "@sdxc/attribution/middleware";
 import billing from "@sdxc/billing/middleware";
 import { MemoryBilling } from "@sdxc/billing/providers/memory";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
@@ -32,7 +33,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createActiveSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -114,7 +114,7 @@ async function renderCheckout(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			billing({ provider: platform }),

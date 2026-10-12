@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware } from "remix/router";
 
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createCookie } from "remix/cookie";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -28,7 +29,6 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { MonitorImportReport } from "~/app/http/validators/monitor-import";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { MAX_IMPORT_LINES } from "~/app/http/validators/monitor-import";
 import { createTestDatabase } from "~/app/test/db";
@@ -120,7 +120,7 @@ async function submit(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			session(sessionCookie, sessionStorage),
 			seedTeam(team, membership),

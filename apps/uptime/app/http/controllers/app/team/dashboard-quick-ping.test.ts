@@ -14,6 +14,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
 import { createEnv } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { renderToStream } from "remix/component/server";
 import { createCookie } from "remix/cookie";
@@ -30,7 +31,6 @@ import type { QuickPingError, QuickPingResult } from "~/app/http/controllers/act
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import en from "~/resources/locales/en";
@@ -147,7 +147,7 @@ async function render(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			session(sessionCookie, sessionStorage),
 			renderWith(createHtmlRenderer) as Middleware,

@@ -18,6 +18,7 @@ import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
+import { database } from "@sdxc/database-middleware";
 import { log } from "@sdxc/logger/middleware";
 import { unwrap } from "@sdxc/result";
 import { createCookie } from "remix/cookie";
@@ -32,7 +33,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { TEAM_LOGO_ERROR } from "~/app/http/controllers/app/team/settings";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import { createTestBilling } from "~/app/test/billing";
@@ -136,7 +136,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			billing({ provider: platform }),

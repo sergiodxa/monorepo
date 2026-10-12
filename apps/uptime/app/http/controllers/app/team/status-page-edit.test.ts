@@ -22,6 +22,7 @@ import {
 	createKVNamespace,
 	createQueue,
 } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
@@ -33,7 +34,6 @@ import { describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
 import {
@@ -180,7 +180,7 @@ async function get(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			renderWith(createHtmlRenderer) as Middleware,
 		],

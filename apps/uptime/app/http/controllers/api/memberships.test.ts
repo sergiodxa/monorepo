@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -15,7 +16,6 @@ import { describe, expect, test } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { membershipsIndex } from "~/app/http/controllers/api/memberships";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
@@ -62,7 +62,7 @@ async function createMembershipRow(db: Db, teamId: string, role: "member" | "adm
 
 async function dispatch(db: Db, request: Request): Promise<Response> {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(routes.api.v1.memberships, membershipsIndex);
 

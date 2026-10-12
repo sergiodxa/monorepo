@@ -18,6 +18,7 @@ import type { Route } from "remix/routes";
 
 import billing from "@sdxc/billing/middleware";
 import { createEnv, createQueue } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { jobEnqueuer } from "@sdxc/jobs/router";
 import { Log } from "@sdxc/logger";
 import { log } from "@sdxc/logger/middleware";
@@ -31,7 +32,6 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
@@ -125,7 +125,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			jobEnqueuer(jobQueue),
 			log() as Middleware,
@@ -535,7 +535,7 @@ describe("playMonitor for a caller asking for JSON", () => {
 		let router = createRouter({
 			middleware: [
 				asyncContext(),
-				database(() => db),
+				database(db),
 				models(),
 				jobEnqueuer(jobQueue),
 				formData() as Middleware,

@@ -11,6 +11,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 
 import { parse } from "@sdxc/csv";
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -20,7 +21,6 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -115,7 +115,7 @@ async function download(
 	query: Record<string, string> = {},
 	language = "en",
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => fixture.db), models()] });
+	let router = createRouter({ middleware: [asyncContext(), database(fixture.db), models()] });
 	router.map(routes.app.team.reports.download, {
 		middleware: [seedTeam(fixture.team, fixture.membership), i18n],
 		handler,

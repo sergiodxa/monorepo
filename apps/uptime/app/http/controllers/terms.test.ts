@@ -13,6 +13,7 @@ import type { RemixNode } from "remix/component";
 import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { renderToString } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -22,7 +23,6 @@ import { describe, expect, test } from "vitest";
 
 import type { Viewer } from "~/app/http/middleware/auth";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/initializers/seo";
@@ -62,7 +62,7 @@ async function getTerms(viewer: Viewer | null) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			seedAuth(viewer),
 			i18n as Middleware,

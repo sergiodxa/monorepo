@@ -9,6 +9,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
@@ -16,7 +17,6 @@ import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, SelectCronJobMonitor, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { encodeId } from "~/app/services/typed-id";
@@ -78,7 +78,7 @@ async function createCronJobRow(
 
 async function dispatch(db: Db, request: Request) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(cronJobRoutes, cronJobController);
 

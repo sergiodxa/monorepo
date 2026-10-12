@@ -12,6 +12,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
@@ -19,7 +20,6 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/schema";
@@ -75,7 +75,7 @@ async function send(
 	params: Record<string, string>,
 ): Promise<Response> {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData() as Middleware],
+		middleware: [asyncContext(), database(db), models(), formData() as Middleware],
 	});
 	router.map(route, { middleware: [seedTeam(team, membership)], handler });
 

@@ -15,6 +15,7 @@ import type { RemixNode } from "remix/component";
 import type { Database } from "remix/data-table";
 import type { Middleware, RequestContext, RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { renderToStream } from "remix/component/server";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
@@ -25,7 +26,6 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { AlertConfig, SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -87,7 +87,7 @@ async function send(
 	team: SelectTeam,
 	membership: SelectMembership,
 ): Promise<Response> {
-	let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
+	let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 	router.map(routes.app.team.alerts.history, {
 		middleware: [seedTeam(team, membership), i18n, renderWith(createHtmlRenderer) as Middleware],
 		handler,

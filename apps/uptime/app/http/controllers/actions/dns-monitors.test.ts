@@ -14,6 +14,7 @@ import type { AnalyticsEngineMock } from "@sdxc/cloudflare-mocks";
 
 import billing from "@sdxc/billing/middleware";
 import { createAnalyticsEngine, createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { CLOUDFLARE } from "@sdxc/doh";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
@@ -28,7 +29,6 @@ import type { DnsRecordType } from "~/app/models/dns-monitor-records";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
 import { createTestDatabase } from "~/app/test/db";
@@ -189,7 +189,7 @@ async function postDnsMonitorAction(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			billing({ provider: () => testBilling }),
 			formData(),

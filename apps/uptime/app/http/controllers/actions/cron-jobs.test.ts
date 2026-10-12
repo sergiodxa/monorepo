@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -15,7 +16,6 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
@@ -48,7 +48,7 @@ async function postCronJobAction(
 	headers: Record<string, string> = {},
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData(), i18n],
+		middleware: [asyncContext(), database(db), models(), formData(), i18n],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped

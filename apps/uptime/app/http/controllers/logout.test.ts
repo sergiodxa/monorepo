@@ -12,6 +12,7 @@ import type { Renderer } from "remix/middleware/render";
 import type { Middleware } from "remix/router";
 
 import { createEnv, createKVNamespace } from "@sdxc/cloudflare-mocks";
+import { database } from "@sdxc/database-middleware";
 import { log } from "@sdxc/logger/middleware";
 import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
@@ -23,7 +24,6 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { database } from "~/app/http/middleware/database";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
@@ -122,7 +122,7 @@ function createTestRouter(session: Session) {
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			log() as Middleware,
 			(ctx, next) => {

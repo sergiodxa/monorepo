@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { createRouter, type Middleware } from "remix/router";
@@ -14,7 +15,6 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { apiKeys, memberships, teams } from "~/database/schema";
@@ -55,7 +55,7 @@ async function postApiKeyAction(
 	body: Record<string, string | string[]>,
 ) {
 	let router = createRouter({
-		middleware: [asyncContext(), database(() => db), models(), formData()],
+		middleware: [asyncContext(), database(db), models(), formData()],
 	});
 	/**
 	 * Casts `router.map` itself so this helper can map several differently-shaped

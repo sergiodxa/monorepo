@@ -9,6 +9,7 @@
 
 import type { Middleware, RequestHandler } from "remix/router";
 
+import { database } from "@sdxc/database-middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 import { createRouter } from "remix/router";
@@ -17,7 +18,6 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
@@ -64,7 +64,7 @@ describe("app/team/index", () => {
 	test("redirects to the team's dashboard", async () => {
 		let { db, team, membership } = await createFixture();
 
-		let router = createRouter({ middleware: [asyncContext(), database(() => db), models()] });
+		let router = createRouter({ middleware: [asyncContext(), database(db), models()] });
 		router.map(routes.app.team.index, {
 			middleware: [seedTeam(team, membership)],
 			handler: (indexModule.default as { handler: RequestHandler<any> }).handler,

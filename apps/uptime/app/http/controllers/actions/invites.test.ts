@@ -11,6 +11,7 @@ import type { Database } from "remix/data-table";
 import type { Middleware, RequestHandler } from "remix/router";
 import type { Route } from "remix/routes";
 
+import { database } from "@sdxc/database-middleware";
 import { createTranslator } from "@sdxc/i18n";
 import { MemoryTransport } from "@sdxc/mail/memory";
 import mail from "@sdxc/mail/middleware";
@@ -23,7 +24,6 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { createTestDatabase } from "~/app/test/db";
 import { useMailServerDns } from "~/app/test/mail-servers";
@@ -94,7 +94,7 @@ async function send(
 	let router = createRouter({
 		middleware: [
 			asyncContext(),
-			database(() => db),
+			database(db),
 			models(),
 			formData() as Middleware,
 			mail({ transport, from: MAIL_FROM }),

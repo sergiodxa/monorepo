@@ -11,6 +11,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { database } from "@sdxc/database-middleware";
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
 import { asyncContext } from "remix/middleware/async-context";
@@ -19,7 +20,6 @@ import { describe, expect, test } from "vitest";
 
 import type { ApiKeyScope, InsertFlowMonitorResult, SelectTeam } from "~/database/schema";
 
-import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
@@ -142,7 +142,7 @@ async function dispatch(
 	},
 ) {
 	let router = createRouter({
-		middleware: [CONFORMANCE, asyncContext(), database(() => db), models()],
+		middleware: [CONFORMANCE, asyncContext(), database(db), models()],
 	});
 	router.map(flowMonitorsRoutes, flowMonitorsController);
 
