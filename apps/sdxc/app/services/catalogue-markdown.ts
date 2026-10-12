@@ -11,6 +11,7 @@ import type { ComponentReference, PropRow, PropsTable } from "~/app/services/com
 import type { ThemeDeclaration, ThemeReference } from "~/app/services/theming";
 import type { UiExportReference, UiSymbol } from "~/app/services/ui-exports";
 import type { UtilityReference } from "~/app/services/utilities";
+import type { UtilityExampleSource } from "~/app/services/utility-examples";
 
 import {
 	atWidth,
@@ -19,6 +20,7 @@ import {
 	RESPONSIVE_FAMILY,
 	STATE_FAMILY,
 } from "~/app/services/utility-calls";
+import { themeScales } from "~/app/services/utility-theme";
 
 /** The theme page's heading and lead, which its HTML page states too. */
 export const THEMING_TITLE = "Theming";
@@ -31,10 +33,15 @@ export const THEMING_SUMMARY =
  * One utility's page, titled by the CSS property it sets the way the HTML page is.
  *
  * @param reference - The utility as the catalogue document holds it.
+ * @param examples - The live examples its page draws, each printed as its code.
  * @returns The page as markdown: every documented call beside the CSS it emits, the
- * same call with a custom value, on a state and at a width, and the variables it reads.
+ * examples, the same call with a custom value, on a state and at a width, and how a
+ * theme customizes the scales it reads.
  */
-export function utilityMarkdown(reference: UtilityReference): string {
+export function utilityMarkdown(
+	reference: UtilityReference,
+	examples: UtilityExampleSource[] = [],
+): string {
 	let paired = reference.examples.filter((example) => example.output !== null);
 	let snippets = reference.examples.filter((example) => example.output === null);
 	let blocks = [
@@ -56,15 +63,26 @@ export function utilityMarkdown(reference: UtilityReference): string {
 		);
 	}
 
-	if (snippets.length > 0) {
-		blocks.push("## Examples", ...snippets.map((example) => fence(example.call, "ts")));
+	if (examples.length > 0 || snippets.length > 0) {
+		blocks.push(
+			"## Examples",
+			...examples.flatMap((example) => [
+				`### ${example.title}`,
+				example.description,
+				fence(example.code, "tsx"),
+			]),
+			...snippets.map((example) => fence(example.call, "ts")),
+		);
 	}
 
-	blocks.push(
-		"## Using a custom value",
-		"Every scale argument also takes a raw CSS value, which passes through untouched.",
-		fence(customValue(reference), "ts"),
-	);
+	let custom = customValue(reference);
+	if (custom !== null) {
+		blocks.push(
+			"## Using a custom value",
+			"Every scale argument also takes a raw CSS value, which passes through untouched.",
+			fence(custom, "ts"),
+		);
+	}
 
 	if (reference.family !== STATE_FAMILY) {
 		blocks.push(
@@ -82,11 +100,20 @@ export function utilityMarkdown(reference: UtilityReference): string {
 		);
 	}
 
-	if (reference.tokens.length > 0) {
+	let scales = themeScales(reference);
+	if (scales.length > 0) {
 		blocks.push(
-			"## Customizing the theme",
-			"The custom properties this utility reads, which a theme redefines.",
-			reference.tokens.map((token) => `- ${code(token)}`).join("\n"),
+			"## Customizing your theme",
+			...scales
+				.flatMap((scale) => [
+					`### ${scale.title}`,
+					scale.lead,
+					fence(scale.css, "css"),
+					scale.declaration === null ? null : fence(scale.declaration, "ts"),
+					scale.usageLead,
+					fence(scale.usage, "ts"),
+				])
+				.filter((block): block is string => block !== null),
 		);
 	}
 

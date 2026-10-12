@@ -21,6 +21,7 @@ import { readTheme } from "~/app/services/theming";
 import { listUiExports, readUiExport } from "~/app/services/ui-exports";
 import { isUiSubpath, UI_SUBPATH_TITLES, UI_SUBPATHS } from "~/app/services/ui-subpaths";
 import { listUtilityFamilies, readUtility } from "~/app/services/utilities";
+import { listUtilityExamples } from "~/app/services/utility-examples";
 import routes from "~/routes/web";
 
 /** Where the packages' sources are read on GitHub, which every page's `Open` menu links. */
@@ -119,7 +120,8 @@ export async function listCataloguePages(): Promise<CataloguePage[]> {
  */
 export async function readUtilityMarkdown(utility: string): Promise<string | null> {
 	let reference = await readUtility(utility);
-	return reference === null ? null : utilityMarkdown(reference);
+	if (reference === null) return null;
+	return utilityMarkdown(reference, await listUtilityExamples(utility));
 }
 
 /**

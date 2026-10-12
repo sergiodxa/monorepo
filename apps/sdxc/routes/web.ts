@@ -85,6 +85,8 @@ export default route({
 		preview: get("/frames/previews/:component"),
 		/** One of the live examples its reference page lists under the preview. */
 		example: get("/frames/previews/:component/:example"),
+		/** One live example of a `@sdxc/u` utility, as its reference page lists it. */
+		utility: get("/frames/u/:utility/:example"),
 	},
 
 	/**

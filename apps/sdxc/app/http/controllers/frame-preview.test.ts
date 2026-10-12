@@ -217,3 +217,21 @@ describe("/examples/*path", () => {
 		expect(response.headers.get("location")).toBe("/api/ui");
 	});
 });
+
+describe("GET /frames/u/:utility/:example", () => {
+	test("draws the example above the code its page prints", async () => {
+		let response = await fetchApp("/frames/u/p/basic");
+		let body = await response.text();
+
+		expect(response.status).toBe(200);
+		expect(body).not.toContain("<html");
+		expect(body).toContain(">p(8)</div>");
+	});
+
+	test("answers an unknown example with a 404 fragment naming it", async () => {
+		let response = await fetchApp("/frames/u/p/nothing");
+
+		expect(response.status).toBe(404);
+		expect(await response.text()).toContain("No example “nothing” for “p”.");
+	});
+});

@@ -15,11 +15,14 @@ export const STATE_FAMILY = "state";
 /** The family whose utilities already are the responsive variants, likewise. */
 export const RESPONSIVE_FAMILY = "responsive";
 
-/** The same call with a raw CSS length in place of a scale step. */
-export function customValue(reference: UtilityReference): string {
+/**
+ * The same call with a raw CSS length in place of a scale step, or `null` when the first
+ * documented call passes no numeric step, so a page offers the section only where it applies.
+ */
+export function customValue(reference: UtilityReference): string | null {
 	let call = firstCall(reference);
 	let custom = call.replace(/\((\d+(\.\d+)?)\)/, '("2.75rem")');
-	return custom === call ? call : custom;
+	return custom === call ? null : custom;
 }
 
 /** The same call, scoped to the pointer being over the element. */

@@ -1,9 +1,8 @@
 /**
- * `GET /api/u/:utility` — one utility's reference. Every block on the page
- * is read from the module it documents: the quick-reference table is the paired
- * `@example` tags, the theme section is the variables the implementation reads, and
- * the link out is the `@see` the author wrote. Nothing here can disagree with the
- * utility, because there is nothing here the utility did not say.
+ * `GET /api/u/:utility` — one utility's reference. The quick-reference table is the
+ * paired `@example` tags, each live example is a frame drawn from its own module with the
+ * code cut from that module's source, and the theme section is the scales the utility
+ * reads. Each block is read from code, so the page and the utility agree.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -12,7 +11,8 @@
 import { fg } from "@sdxc/u/color";
 import { vstack } from "@sdxc/u/layout";
 import { m } from "@sdxc/u/size";
-import { font, nowrap, text } from "@sdxc/u/typography";
+import { font, nowrap, text, weight } from "@sdxc/u/typography";
+import { Frame } from "remix/component";
 import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
@@ -30,6 +30,8 @@ import {
 	RESPONSIVE_FAMILY,
 	STATE_FAMILY,
 } from "~/app/services/utility-calls";
+import { listUtilityExamples } from "~/app/services/utility-examples";
+import { themeScales } from "~/app/services/utility-theme";
 import { absoluteUrl } from "~/config/site";
 import PageActions from "~/resources/components/page-actions";
 import PageTitle from "~/resources/components/page-title";
@@ -54,18 +56,23 @@ export default createAction(routes.api.utility, async (ctx) => {
 
 	let table = reference.examples.filter((example) => example.output !== null);
 	let snippets = reference.examples.filter((example) => example.output === null);
+	let live = await listUtilityExamples(utility);
+	let scales = themeScales(reference);
+	let custom = customValue(reference);
 
 	let anchors: Anchor[] = [
 		table.length > 0 ? { id: "quick-reference", text: "Quick reference", level: 2 } : null,
-		snippets.length > 0 ? { id: "examples", text: "Examples", level: 2 } : null,
-		{ id: "custom-value", text: "Using a custom value", level: 2 },
+		live.length > 0 || snippets.length > 0 ? { id: "examples", text: "Examples", level: 2 } : null,
+		...live.map((example) => ({ id: `example-${example.slug}`, text: example.title, level: 3 })),
+		custom === null ? null : { id: "custom-value", text: "Using a custom value", level: 2 },
 		reference.family === STATE_FAMILY
 			? null
 			: { id: "states", text: "Applying on a state", level: 2 },
 		reference.family === RESPONSIVE_FAMILY
 			? null
 			: { id: "responsive", text: "Responsive design", level: 2 },
-		reference.tokens.length > 0 ? { id: "theme", text: "Customizing the theme", level: 2 } : null,
+		scales.length > 0 ? { id: "theme", text: "Customizing your theme", level: 2 } : null,
+		...scales.map((scale) => ({ id: scale.id, text: scale.title, level: 3 })),
 	].filter((anchor): anchor is Anchor => anchor !== null);
 
 	let response = await ctx.render(
@@ -125,13 +132,23 @@ export default createAction(routes.api.utility, async (ctx) => {
 						</ReferenceSection>
 					) : null}
 
-					{snippets.length > 0 ? (
-						<ReferenceSection
-							id="examples"
-							title="Examples"
-							lead="Calls that compose other mixins rather than emitting declarations of their own."
-						>
-							<div mix={[vstack({ gap: 4, align: "stretch" })]}>
+					{live.length > 0 || snippets.length > 0 ? (
+						<ReferenceSection id="examples" title="Examples">
+							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+								{live.map((example) => (
+									<section key={example.slug} mix={[vstack({ gap: 3, align: "stretch" })]}>
+										<h3
+											id={`example-${example.slug}`}
+											mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
+										>
+											{example.title}
+										</h3>
+										<p mix={[m(0), text("base"), fg("neutral")]}>
+											<ReferenceProse>{example.description}</ReferenceProse>
+										</p>
+										<Frame src={routes.frames.utility.href({ utility, example: example.slug })} />
+									</section>
+								))}
 								{snippets.map((example) => (
 									<Snippet key={example.call} code={example.call} language="typescript" />
 								))}
@@ -139,13 +156,15 @@ export default createAction(routes.api.utility, async (ctx) => {
 						</ReferenceSection>
 					) : null}
 
-					<ReferenceSection
-						id="custom-value"
-						title="Using a custom value"
-						lead="Every scale argument also takes a raw CSS value, which passes through untouched."
-					>
-						<Snippet code={customValue(reference)} language="typescript" />
-					</ReferenceSection>
+					{custom === null ? null : (
+						<ReferenceSection
+							id="custom-value"
+							title="Using a custom value"
+							lead="Every scale argument also takes a raw CSS value, which passes through untouched."
+						>
+							<Snippet code={custom} language="typescript" />
+						</ReferenceSection>
+					)}
 
 					{reference.family === STATE_FAMILY ? null : (
 						<ReferenceSection
@@ -167,21 +186,31 @@ export default createAction(routes.api.utility, async (ctx) => {
 						</ReferenceSection>
 					)}
 
-					{reference.tokens.length > 0 ? (
-						<ReferenceSection
-							id="theme"
-							title="Customizing the theme"
-							lead="The custom properties this utility reads, which a theme redefines."
-						>
-							<ReferenceTable
-								label={`${reference.name} theme variables`}
-								columns={["Variable"]}
-								rows={reference.tokens.map((token) => [
-									<code mix={[font("mono"), text("sm"), fg("neutral.emphasis"), nowrap()]}>
-										{token}
-									</code>,
-								])}
-							/>
+					{scales.length > 0 ? (
+						<ReferenceSection id="theme" title="Customizing your theme">
+							<div mix={[vstack({ gap: 10, align: "stretch" })]}>
+								{scales.map((scale) => (
+									<section key={scale.id} mix={[vstack({ gap: 3, align: "stretch" })]}>
+										<h3
+											id={scale.id}
+											mix={[m(0), fg("neutral.emphasis"), text("lg"), weight("semibold")]}
+										>
+											{scale.title}
+										</h3>
+										<p mix={[m(0), text("base"), fg("neutral")]}>
+											<ReferenceProse>{scale.lead}</ReferenceProse>
+										</p>
+										<Snippet code={scale.css} language="css" />
+										{scale.declaration === null ? null : (
+											<Snippet code={scale.declaration} language="typescript" />
+										)}
+										<p mix={[m(0), text("base"), fg("neutral")]}>
+											<ReferenceProse>{scale.usageLead}</ReferenceProse>
+										</p>
+										<Snippet code={scale.usage} language="typescript" />
+									</section>
+								))}
+							</div>
 						</ReferenceSection>
 					) : null}
 

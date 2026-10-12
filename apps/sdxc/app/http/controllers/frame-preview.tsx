@@ -1,8 +1,8 @@
 /**
- * `GET /frames/previews/:component` and `/frames/previews/:component/:example` — a
- * component's live preview, or one of its live examples, as an HTML fragment for a
- * `<Frame>` to load. Reference pages and guides embed the same fragment, so a demo is
- * written once and its islands hydrate wherever it appears.
+ * `GET /frames/previews/:component`, `/frames/previews/:component/:example` and
+ * `/frames/u/:utility/:example` — a component's live preview, one of its live examples, or
+ * one utility example, as an HTML fragment for a `<Frame>` to load. Pages and guides embed
+ * the same fragment, so a demo is written once and its islands hydrate wherever it appears.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,8 +16,11 @@ import { createAction } from "remix/router";
 
 import type { ComponentPreview as Preview } from "~/resources/components/ui-previews.server";
 
+import { listUtilityExamples } from "~/app/services/utility-examples";
 import ComponentPreview from "~/resources/components/component-preview";
 import { findExample, findPreview } from "~/resources/components/preview-registry.server";
+import UtilityExample from "~/resources/components/utility-example";
+import { findUtilityExample } from "~/resources/components/utility-example-registry.server";
 import routes from "~/routes/web";
 
 /** The opening preview a component's reference page leads with. */
@@ -33,6 +36,34 @@ export const frameExample = createAction(routes.frames.example, async (ctx) => {
 		ctx.params,
 	);
 	return await renderPreview(ctx, findExample(component, example), `${component}/${example}`);
+});
+
+/**
+ * One `@sdxc/u` example, drawn above the code its page prints. The code is read from the
+ * example's source rather than the module, so the page and the frame print the same text.
+ */
+export const frameUtilityExample = createAction(routes.frames.utility, async (ctx) => {
+	let { utility, example } = s.parse(
+		s.object({ utility: s.string(), example: s.string() }),
+		ctx.params,
+	);
+
+	let module = await findUtilityExample(utility, example);
+	let source = (await listUtilityExamples(utility)).find((it) => it.slug === example);
+	if (module === null || source === undefined) {
+		return await ctx.render(
+			<p>
+				No example “{example}” for “{utility}”.
+			</p>,
+			{ status: 404 },
+		);
+	}
+
+	return await ctx.render(
+		<UtilityExample code={source.code} align={module.align}>
+			{module.render()}
+		</UtilityExample>,
+	);
 });
 
 /**
