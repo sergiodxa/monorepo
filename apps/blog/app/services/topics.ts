@@ -23,9 +23,13 @@ import type { Til } from "~/app/models/tils";
 import type { Tutorial } from "~/app/models/tutorials";
 import type { SelectTopic } from "~/database/schema";
 
+import { readInBatches } from "~/app/models/batches";
 import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import { PostSearch } from "~/app/models/search";
 import { isBuiltInTopic } from "~/app/models/topics";
+
+/** Bound values a model's read by id spends beyond the ids: its type and default scope. */
+const MODEL_RESERVED_PARAMETERS = 10;
 
 /**
  * One match of a topic with the post it found, read through the post's own model. A kind
@@ -116,13 +120,15 @@ export async function topicPosts(
 	});
 }
 
-/** Reads rows by id, skipping the read when there are none, and indexes them by id. */
+/**
+ * Reads rows by id and indexes them by id, in batches that leave room for the model's own
+ * scope and metadata bindings, so a topic matching hundreds of posts still loads.
+ */
 async function byIds<Row extends { id: string }>(
 	ids: Array<string>,
 	read: (ids: Array<string>) => Promise<Array<Row>>,
 ): Promise<Map<string, Row>> {
-	if (ids.length === 0) return new Map();
-	let rows = await read(ids);
+	let rows = await readInBatches(ids, read, MODEL_RESERVED_PARAMETERS);
 	return new Map(rows.map((row) => [row.id, row]));
 }
 

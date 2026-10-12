@@ -23,6 +23,7 @@ import type { BlogModels } from "~/app/models";
 import type { Kind } from "~/app/models/kinds";
 import type { PostType } from "~/app/models/post-values";
 
+import { readInBatches } from "~/app/models/batches";
 import { KINDS, kindNamed, kindOfType, POST_KINDS } from "~/app/models/kinds";
 import {
 	bookmarkLabel,
@@ -407,8 +408,8 @@ export class PostSearch {
 	}
 
 	/**
-	 * Reads each hit's post back from the source tables in two batched queries, keeping the
-	 * search's order. A post deleted between the search and this read is left out, and so is
+	 * Reads each hit's post back from the source tables in batched queries sized for D1, keeping
+	 * the search's order. A post deleted between the search and this read is left out, and so is
 	 * one whose metadata a result shows is all blank, which no listing page shows either.
 	 */
 	private static async hits(
@@ -419,10 +420,15 @@ export class PostSearch {
 
 		let ids = rows.map((row) => row.post_id);
 		let [posts, meta] = await Promise.all([
-			db.findMany(schema.posts, { where: inList("id", ids) }),
-			db.findMany(schema.postMeta, {
-				where: and(inList("post_id", ids), inList("key", RESULT_META_KEYS)),
-			}),
+			readInBatches(ids, (batch) => db.findMany(schema.posts, { where: inList("id", batch) })),
+			readInBatches(
+				ids,
+				(batch) =>
+					db.findMany(schema.postMeta, {
+						where: and(inList("post_id", batch), inList("key", RESULT_META_KEYS)),
+					}),
+				RESULT_META_KEYS.length,
+			),
 		]);
 
 		let postsById = new Map(posts.map((post) => [post.id, post]));
