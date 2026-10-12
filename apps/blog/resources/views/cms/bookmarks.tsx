@@ -325,11 +325,24 @@ function CheckReport(handle: Handle<{ check: CMSBookmarksActionView.Check }>) {
 }
 
 /**
- * Builds the CMS page used to create or edit a bookmark.
+ * Builds the CMS page used to create or edit a bookmark. An edit with a `deleteAction` also
+ * offers Delete, confirmed in a modal whose form sits beside the edit form, since forms
+ * cannot nest.
  */
 export function CMSBookmarksActionView() {
 	return ({ model, assets }: { model: CMSBookmarksActionView.Props; assets: DocumentAssets }) => {
-		let { action, check, conflict, description, mode, notice, submitLabel, title, values } = model;
+		let {
+			action,
+			check,
+			conflict,
+			deleteAction,
+			description,
+			mode,
+			notice,
+			submitLabel,
+			title,
+			values,
+		} = model;
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.bookmarks.index.href()}>
@@ -387,8 +400,46 @@ export function CMSBookmarksActionView() {
 								>
 									Back to list
 								</LinkButton>
+								{deleteAction ? (
+									<Button
+										type="button"
+										commandfor="delete-bookmark"
+										command="show-modal"
+										color="danger"
+										variant="outline"
+										mix={[mis("auto")]}
+									>
+										Delete
+									</Button>
+								) : null}
 							</div>
 						</Form>
+
+						{deleteAction ? (
+							<Modal id="delete-bookmark">
+								<Form method="post" action={deleteAction}>
+									<input type="hidden" name="_method" value="DELETE" />
+									<Modal.Description>
+										Delete bookmark <strong>{values.title || values.url}</strong>? This action
+										cannot be undone.
+									</Modal.Description>
+									<Modal.Footer>
+										<Button type="submit" color="danger">
+											Confirm delete
+										</Button>
+										<Button
+											type="button"
+											commandfor="delete-bookmark"
+											command="close"
+											color="neutral"
+											variant="outline"
+										>
+											Cancel
+										</Button>
+									</Modal.Footer>
+								</Form>
+							</Modal>
+						) : null}
 					</Card>
 				</main>
 			</CMSLayout>
