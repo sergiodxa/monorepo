@@ -13,7 +13,7 @@ import type { ValidationError } from "@sdxc/validate";
 
 import { createModel } from "@sdxc/data-model";
 import { success } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { SelectClient, SelectGrant } from "~/database/schema";
 

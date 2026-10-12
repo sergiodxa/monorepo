@@ -14,7 +14,7 @@ import type { ValidationError } from "@sdxc/validate";
 import { randomToken } from "@sdxc/crypto";
 import { createModel } from "@sdxc/data-model";
 import { isFailure, success } from "@sdxc/result";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { PageWindow } from "~/app/models/subjects";
 import type { SelectClient } from "~/database/schema";
