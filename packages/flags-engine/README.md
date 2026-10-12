@@ -585,9 +585,12 @@ export class TenantFlagStore implements FlagStore {
 Then point the conformance suite at it, giving each test a tenant of its own:
 
 ```typescript
+import { conformance } from "@sdxc/flags-engine/conformance";
+import { generateUUID } from "@sdxc/uuid/v4";
+
 conformance({
 	name: "TenantFlagStore",
-	create: () => new TenantFlagStore(randomUUID()),
+	create: () => new TenantFlagStore(generateUUID()),
 	seed: (store, set) => db.flagSets.upsert(store.tenantId, set),
 });
 ```

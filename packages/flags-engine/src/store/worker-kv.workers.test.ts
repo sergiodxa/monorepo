@@ -8,6 +8,7 @@
  */
 
 import { isFailure, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { env } from "cloudflare:test";
 import { describe, expect, test } from "vitest";
 
@@ -24,7 +25,7 @@ const FLAG_SET = {
 
 /** A key no other test has taken, since every test in the file shares one namespace. */
 function key(): string {
-	return `flags:${crypto.randomUUID()}`;
+	return `flags:${generateUUID()}`;
 }
 
 conformance({
