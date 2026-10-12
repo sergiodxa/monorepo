@@ -2,30 +2,28 @@
 
 Offset and keyset pagination with parameter parsing and `Link` headers.
 
-One vocabulary for both strategies: a `Pagination` value object holding the arithmetic, two
-statics that page a query you already composed, one place where request parameters are
-validated, and one function that writes the navigation into a response's headers.
-
-The package returns data and writes headers. It constructs no responses and renders nothing,
-and it reads no request context, so the same calls work in a route handler, an export job, or
-a feed generator.
+A `Pagination` value object holds the page arithmetic, two statics page a `remix/data-table`
+query you already composed, `parsePageParams()` validates the request's paging parameters, and
+`paginate()` writes the navigation into a response's headers. Nothing reads request context, so
+the same calls work in a route handler, an export job or a feed generator.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/pagination
 ```
 
-Every fallible call answers with a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which is where `isFailure` comes
-from, and parameter parsing fails with a `ValidationError` from
-[`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate). The two strategies page a
-query built with `remix/data-table`, from
-[`remix`](https://www.npmjs.com/package/remix). All three install alongside this package.
+Fallible calls answer a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+parameter parsing fails with the `ValidationError` from
+[`@sdxc/validate`](https://www.npmjs.com/package/@sdxc/validate), and queries come from
+`remix/data-table` in [`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Page Arithmetic On Its Own
+The examples page `articles` and `events` tables declared with `remix/data-table`, through a
+`db` database from the same package.
+
+### Page arithmetic
 
 ```typescript
 import { Pagination } from "@sdxc/pagination";
@@ -34,22 +32,23 @@ let pagination = new Pagination({ page: 3, perPage: 25, total: 892 });
 
 pagination.pages; // 36
 pagination.offset; // 50
-pagination.limit; // 25
 pagination.from; // 51
 pagination.to; // 75
+pagination.next; // 4
+
+new Pagination({ page: 500, perPage: 25, total: 892 }).page; // 36, clamped
 ```
 
-The constructor is the one place clamping happens, so a request for page 500 of 36 resolves to
-page 36 and every derived value agrees with it.
-
-### Offset Paging, With A Numbered Pager
+### Offset paging from request parameters
 
 ```typescript
 import { Pagination, parsePageParams } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 
-let params = parsePageParams(url.searchParams);
-if (isFailure(params)) return redirect(url.pathname);
+import { articles } from "./schema.js";
+
+let params = parsePageParams(url.searchParams); // ?page=3&perPage=25
+if (isFailure(params)) return new Response("Bad Request", { status: 400 });
 
 let page = await Pagination.byOffset(db.query(articles).where({ author_id: authorId }), {
 	page: params.data.page,
@@ -57,26 +56,27 @@ let page = await Pagination.byOffset(db.query(articles).where({ author_id: autho
 });
 if (isFailure(page)) throw page.error;
 
-page.data.items; // Article[]
+page.data.items; // the rows of page 3
 page.data.pagination.total; // 892
-page.data.pagination.series(); // the pager range, gaps included
 ```
 
-Offset paging costs two queries per page, one to count and one to fetch. Pass `total` when it
-is already known and the count is skipped.
+`byOffset()` runs a count and a fetch; pass `total` when the count is already known and only the
+fetch runs.
 
-### Keyset Paging, For A Long Feed
+### Keyset paging for a long feed
 
 ```typescript
 import { Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
+
+import { events } from "./schema.js";
 
 let page = await Pagination.byKeyset(db.query(events).where({ team_id: teamId }), {
 	orderBy: [
 		["created_at", "desc"],
 		["id", "desc"],
 	],
-	cursor: params.data.cursor,
+	cursor: url.searchParams.get("cursor"),
 	limit: 50,
 });
 if (isFailure(page)) throw page.error;
@@ -85,310 +85,176 @@ page.data.items;
 page.data.cursors; // { next: string | null, prev: string | null }
 ```
 
-`byKeyset()` owns the ordering, so hand it a query carrying joins and predicates but no sort
-keys. It reads one row past the limit to learn whether a further page exists, rather than
-counting.
+`byKeyset()` applies the ordering itself, so pass a query with its joins and filters but no
+`orderBy`. The last sort key breaks ties, and every ordering column must be in the selected row.
 
-### Advertising A Page In The Response
+### Advertise the page in the response
 
 ```typescript
 import { paginate } from "@sdxc/pagination";
 
-let headers = new Headers();
-headers.set("Cache-Control", "private, max-age=60");
-
-paginate(headers, page.data, { url });
-
-headers.get("Link");
-// <https://api.example.com/articles?page=1>; rel="first",
-// <https://api.example.com/articles?page=2>; rel="prev",
-// <https://api.example.com/articles?page=4>; rel="next",
-// <https://api.example.com/articles?page=36>; rel="last"
-headers.get("X-Total-Count"); // "892"
+return Response.json(page.data.items, {
+	headers: paginate(new Headers(), page.data, { url }),
+});
+// Link: <https://api.example.com/articles?page=1>; rel="first",
+//       <https://api.example.com/articles?page=2>; rel="prev",
+//       <https://api.example.com/articles?page=4>; rel="next",
+//       <https://api.example.com/articles?page=36>; rel="last"
+// X-Total-Count: 892
 ```
 
 ## API
 
 ### `new Pagination(init: PaginationInit)`
 
-Page arithmetic for one page of one query, from `page`, `perPage`, and `total`. The instance is
-frozen, and non-finite, fractional, and negative inputs are normalized rather than trusted,
-because they arrive from query strings.
+A frozen value object built from `page`, `perPage` and `total`. Inputs are truncated to whole
+numbers, and `page` is clamped to `1..pages`, so every derived value agrees with it.
 
-Every value beyond the three inputs is a getter on the prototype, computed on read:
-
-| Getter    | Type             | Description                                                      |
-| --------- | ---------------- | ---------------------------------------------------------------- |
-| `page`    | `number`         | Resolved page, always within `1..pages`                          |
-| `perPage` | `number`         | Rows per page                                                    |
-| `total`   | `number`         | Total rows across every page                                     |
-| `pages`   | `number`         | Page count; `1` even for an empty result, so `page` stays valid  |
-| `offset`  | `number`         | Rows to skip to reach this page                                  |
-| `limit`   | `number`         | Rows to take; the same as `perPage`, named for the query builder |
-| `from`    | `number`         | 1-based index of the first row, or `0` when there are no rows    |
-| `to`      | `number`         | 1-based index of the last row, or `0` when there are no rows     |
-| `hasPrev` | `boolean`        | Whether a page precedes this one                                 |
-| `hasNext` | `boolean`        | Whether a page follows this one                                  |
-| `prev`    | `number \| null` | Previous page, or `null` on the first page                       |
-| `next`    | `number \| null` | Next page, or `null` on the last page                            |
+| Getter               | Value                                                       |
+| -------------------- | ----------------------------------------------------------- |
+| `page`, `perPage`    | The resolved page and its size                              |
+| `total`, `pages`     | Rows across every page, and the page count (`1` when empty) |
+| `offset`, `limit`    | Rows to skip and to take, for a query builder               |
+| `from`, `to`         | 1-based indexes of the first and last row, `0` when empty   |
+| `hasPrev`, `hasNext` | Whether a page precedes or follows this one                 |
+| `prev`, `next`       | The neighbouring page number, or `null` at either end       |
 
 ### `pagination.series(options?: PageSeriesOptions): PageSeries`
 
-Builds the pager range, with a gap marker only where numbers are actually elided. `window` is
-how many pages show either side of the current one, default `1`; the first and last pages are
-always present regardless of it.
+The pager range: the first and last pages, `window` pages either side of the current one
+(default `1`), and a `{ type: "gap" }` item wherever numbers are elided.
 
 ```typescript
 new Pagination({ page: 18, perPage: 25, total: 892 }).series();
-// [
-//   { type: "page", page: 1, current: false },
-//   { type: "gap" },
-//   { type: "page", page: 17, current: false },
-//   { type: "page", page: 18, current: true },
-//   { type: "page", page: 19, current: false },
-//   { type: "gap" },
-//   { type: "page", page: 36, current: false },
-// ]
+// 1, gap, 17, 18 (current), 19, gap, 36
 ```
-
-Page numbers need a total, so `series()` belongs to offset paging. A keyset page carries
-`cursors` instead, and renders older and newer links from those.
 
 ### `pagination.toJSON(): PaginationJSON`
 
-Returns every value as own properties, which `JSON.stringify()` calls for you. It is the only
-way an instance serializes: the getters live on the prototype, so `{ ...pagination }` produces
-`{}` and `Object.keys(pagination)` produces `[]`.
+Every getter as a plain property, which is what `JSON.stringify()` writes. The values live on
+the prototype, so spread the result of `toJSON()` rather than the instance.
 
-### `Pagination.byOffset(query, options): Promise<Result<Page<T>, PaginationError>>`
+### `Pagination.byOffset(query, options: OffsetOptions): Promise<Result<Page<T>, PaginationError>>`
 
-Counts a composed query, then executes it with `limit` and `offset` applied. `options.page` is
-1-based and clamped against the total, `options.perPage` is the page size, and `options.total`
-supplies a count that is already known.
-
-The query runs twice, which is safe because the builder's chaining returns new query values
-rather than mutating in place, and its `count()` wraps the composed predicate in a subquery
-that ignores limit, offset, and ordering. A database that refuses comes back as
+Counts the query, then fetches `options.page` (1-based, clamped against the total) of
+`options.perPage` rows. `options.total` skips the count. A database failure answers
 `QueryFailedError`.
 
-### `Pagination.byKeyset(query, options): Promise<Result<KeysetPage<T>, PaginationError>>`
+### `Pagination.byKeyset(query, options: KeysetOptions): Promise<Result<KeysetPage<T>, PaginationError>>`
 
-Seeks a composed query from an opaque cursor.
+Seeks the query from an opaque cursor and returns `limit` rows with the cursors of the
+neighbouring pages.
 
-- `options.orderBy`: Sort keys, most significant first; the last one is the tiebreaker
-- `options.unique`: Declares that a one-column ordering is already unique, such as a primary key
-- `options.after`: Seek forward from this cursor
-- `options.before`: Seek backward from this cursor
-- `options.cursor`: Seek in whichever direction the cursor was minted for
-- `options.limit`: Rows per page
+- `orderBy`: `[column, direction]` sort keys, most significant first; the last breaks ties
+- `unique`: `true` allows a single sort key that is already unique, such as a primary key
+- `cursor`: seeks in the direction the cursor was minted for
+- `after` / `before`: seek forward or backward from a cursor
+- `limit`: rows per page
 
-The ordering must be deterministic, so a single sort key is refused unless `unique: true` says
-it is already unique — rows sharing a sort value otherwise straddle the page boundary and are
-skipped or served twice. At most one of `after`, `before`, and `cursor` may be given. `cursor`
-is what lets one query parameter carry both directions, since the direction rides inside the
-opaque value, and paging backward runs the query reversed and reverses the rows again so a page
-always reads in the requested order.
+At most one of `cursor`, `after` and `before` may be given; an empty string counts as absent.
+Rows always come back in `orderBy` order, whichever way the page was sought.
 
-```typescript
-let page = await Pagination.byKeyset(db.query(events), {
-	orderBy: [["id", "desc"]],
-	unique: true,
-	limit: 50,
-});
-```
+### `parsePageParams(searchParams, options?: ParsePageParamsOptions): Result<PageParams, ValidationError>`
 
-### `parsePageParams(searchParams, options?): Result<PageParams, ValidationError>`
+Reads `page`, `perPage` and `cursor` into `{ page, perPage, cursor }`. `page` must be a whole
+number from 1 and defaults to 1; `perPage` must be a whole number within `1..options.maxPerPage`
+(default `100`) and defaults to `options.perPage` (default `25`); `cursor` is `null` when absent.
+A blank parameter counts as absent, and a page past the end parses, for `Pagination` to clamp.
 
-Validates the paging parameters on a request URL under the default names `page`, `perPage`, and
-`cursor`, answering `{ page, perPage, cursor }` with `cursor` `null` when absent.
-`options.perPage` is the size used when the request does not ask for one, and
-`options.maxPerPage` the largest a request may ask for.
+### `createPaging(options?: CreatePagingOptions): Paging`
 
-A page that is not a whole number at or above 1 fails, and so does a page size outside
-`1..maxPerPage`, which is what stops a client asking for every row. A blank parameter
-(`?page=`) is treated as absent. A page _past the end_ succeeds: clamping belongs to
-`Pagination`, which needs the total to know where the end is.
+Binds parameter names and page-size limits once, returning `parse(searchParams)` and
+`paginate(headers, page, { url })`, so a route reads the same spelling it writes into its links.
+`options.names` overrides any of `page`, `perPage` and `cursor`; `options.perPage` and
+`options.maxPerPage` are the parsing limits.
 
-### `createPaging(options?): Paging`
+### `paginate(headers, page, options: PaginateOptions): Headers`
 
-Binds parameter names and page-size limits to the two functions that need them, returning
-`parse(searchParams)` and `paginate(headers, page, options)` with those names applied.
-`options.names` spells each parameter, defaulted per field, while `options.perPage` and
-`options.maxPerPage` carry the limits.
+Writes navigation for a `Page<T>` or a `KeysetPage<T>` into `headers` and returns the same
+instance. An offset page gets `first`, `prev`, `next` and `last` links plus `X-Total-Count`; a
+keyset page gets `prev` and `next`. Links are built from `options.url` with every other query
+parameter kept. Existing paging relations in
+[`Link`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Link) are replaced
+and every other relation is kept, so the call is safe to repeat.
 
-Two halves care what the parameters are called: parsing reads them off an incoming URL, and
-`paginate()` writes them into the `Link` URLs it advertises. Custom names exist only in this
-factory, so an API cannot accept `?per_page=50` while advertising `?perPage=50`.
+### `parseLinkHeader(header: string | null): LinkValue[]`
 
-```typescript
-let PAGING = createPaging({
-	names: { page: "page", perPage: "per_page", cursor: "cursor" },
-	perPage: 25,
-	maxPerPage: 100,
-});
+Splits a `Link` header into `{ target, rels, raw }` entries in source order, per
+[RFC 8288](https://www.rfc-editor.org/rfc/rfc8288). A `null` header answers `[]`, and a
+malformed entry is skipped.
 
-let params = PAGING.parse(url.searchParams);
-PAGING.paginate(headers, page, { url }); // ?per_page=… in every Link
-```
+### `serializeLinkHeader(links: readonly string[]): string | null`
 
-### `paginate(headers, page, options): Headers`
-
-Writes a page's navigation into a response's own headers and returns the same instance, so the
-call can sit inline in a response's argument list. `page` is a `Page<T>` or a `KeysetPage<T>`
-and the shape decides what is emitted; `options.url` is the URL the links are built from.
-
-An offset page emits `first`, `prev`, `next`, `last`, and `X-Total-Count`. A keyset page emits
-`prev` and `next` only, and no total: it runs no count query, so it cannot know how many pages
-there are. Every other query parameter is carried over, so filters and sort options survive
-paging, and the parameter belonging to the other strategy is dropped so an offset link never
-advertises a stale cursor.
-
-`X-Total-Count` is replaced, and
-[`Link`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Link) is merged:
-`rel="preload"`, `rel="canonical"`, and `rel="alternate"` share that header, so only the four
-paging relations are dropped before the new ones are appended. That also makes the call
-idempotent. Splitting the existing value respects angle brackets and quoted strings, per
-[RFC 8288](https://www.rfc-editor.org/rfc/rfc8288), so a hint whose URL contains a comma comes
-back out byte for byte.
-
-The `url` is explicit rather than configured, so a service behind a proxy passes its public URL
-and advertises that instead of an internal hostname. The total uses `X-Total-Count` because
-that is the name existing client libraries look for, which is worth the `X-` prefix
-[RFC 6648](https://www.rfc-editor.org/rfc/rfc6648) otherwise discourages.
-
-### `parseLinkHeader(header): LinkValue[]`
-
-Parses a `Link` header value into `{ target, rels, raw }` entries, in source order, the
-[RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) splitting `paginate()` itself runs on the way
-in. Exported for a client reading a page it did not build: following `rel="next"` off a response
-this package wrote, or off any other server's `Link` header. A `null` header answers `[]`, and a
-malformed entry is dropped rather than raising, so one bad link never fails a whole header.
-
-```typescript
-import { parseLinkHeader } from "@sdxc/pagination";
-
-let links = parseLinkHeader(response.headers.get("Link"));
-let next = links.find((link) => link.rels.includes("next"))?.target ?? null;
-```
-
-`raw` carries the entry's exact source text, which is what lets a caller re-emit a link it does
-not otherwise understand byte for byte.
-
-### `serializeLinkHeader(links): string | null`
-
-Joins link-value strings — built with `serializeLink(target, rel)` or carried over as `raw` from
-a parsed entry — back into one header value, or `null` for an empty list. `paginate()` uses it to
-write the header it merges into; a caller assembling its own `Link` value from scratch uses it the
-same way.
+Joins link-value strings, such as the `raw` of parsed entries, into one header value, or `null`
+for an empty list.
 
 ### `encodeCursor(direction, columns, values): Result<string, UnencodableCursorValueError>`
 
-Encodes a page boundary as an opaque, URL-safe cursor. `byKeyset()` calls it for you; it is
-exported for tests and for a store that pages itself. A cursor is plain base64url — opaque but
-not secret — so it carries only ordering keys the client is already allowed to see.
+Encodes a page boundary as a URL-safe base64url cursor. Cursors are opaque but readable, so
+order by columns the client may see. A `null` or non-primitive value fails.
 
-### `decodeCursor(cursor): Result<DecodedCursor, InvalidCursorError>`
+### `decodeCursor(cursor: string): Result<DecodedCursor, InvalidCursorError>`
 
-Decodes and validates a cursor into `{ direction, columns, values }`. Bad base64url, bad UTF-8,
-bad JSON, and a merely plausible payload all collapse into `InvalidCursorError`, so a
-client-supplied cursor never reaches `JSON.parse` and throws.
+Decodes a cursor into `{ direction, columns, values }`; any malformed input answers
+`InvalidCursorError`.
 
 ### Defaults
 
-`DEFAULT_PAGING_NAMES` is `{ page: "page", perPage: "perPage", cursor: "cursor" }`, the spelling
-the standalone functions read and write. `DEFAULT_PER_PAGE` is `25` and `DEFAULT_MAX_PER_PAGE`
-is `100`.
+`DEFAULT_PAGING_NAMES` is `{ page: "page", perPage: "perPage", cursor: "cursor" }`,
+`DEFAULT_PER_PAGE` is `25` and `DEFAULT_MAX_PER_PAGE` is `100`.
 
 ### Errors
 
-All of them extend `PaginationError`, so one `instanceof` check covers paging while the
-subclasses let a handler tell a client's mistake apart from an infrastructure failure.
+Every error extends `PaginationError`.
 
-| Error                         | Meaning                                                | Typical answer   |
-| ----------------------------- | ------------------------------------------------------ | ---------------- |
-| `InvalidCursorError`          | Undecodable cursor, or one issued for another ordering | `400`            |
-| `InvalidOrderingError`        | The ordering cannot page deterministically             | a bug, not input |
-| `UnencodableCursorValueError` | A row's ordering value is `null` or not a primitive    | a schema problem |
-| `QueryFailedError`            | The database refused; the throw is kept in `cause`     | `500`            |
+| Error                         | Cause                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| `InvalidCursorError`          | A malformed cursor, one minted for another ordering, or two cursors given                        |
+| `InvalidOrderingError`        | No sort keys, a repeated column, a lone non-unique key, or a query that already has an `orderBy` |
+| `UnencodableCursorValueError` | A row's ordering value is `null` or not a primitive                                              |
+| `QueryFailedError`            | The database threw; the original error is in `cause`                                             |
 
 ### Types
 
-```typescript
-type PageSeriesItem = { type: "page"; page: number; current: boolean } | { type: "gap" };
+`Page<T>` is `{ items, pagination }` and `KeysetPage<T>` is `{ items, cursors }`, with
+`KeysetCursors` holding `next` and `prev`. `PageSeries` is an array of `PageSeriesItem`, either
+`{ type: "page", page, current }` or `{ type: "gap" }`. `OrderByTuple` is
+`[column, OrderDirection]`, where a column may be table-qualified (`"events.created_at"`).
+`LinkValue` is a parsed `Link` entry and `DecodedCursor` a decoded cursor, with `CursorDirection`
+and `CursorValue`. `OffsetQuery` and `KeysetQuery` describe the query methods each strategy
+calls. The options and results above are `PaginationInit`, `PaginationJSON`, `PageSeriesOptions`,
+`OffsetOptions`, `KeysetOptions`, `ParsePageParamsOptions`, `PageParams`, `CreatePagingOptions`,
+`PagingNames`, `Paging` and `PaginateOptions`.
 
-type PageSeries = PageSeriesItem[];
+## Pattern: One API, Both Strategies
 
-type OrderByTuple = readonly [column: string, direction: "asc" | "desc"];
-
-interface Page<T> {
-	items: T[];
-	pagination: Pagination;
-}
-
-interface KeysetPage<T> {
-	items: T[];
-	cursors: { next: string | null; prev: string | null };
-}
-
-interface LinkValue {
-	target: string;
-	rels: string[];
-	raw: string;
-}
-```
-
-`PageSeriesItem` is a discriminated union, so a pager is a `switch` over `type` that reads
-properties, with no arithmetic and no comparison back to `pagination.page`. An `OrderByTuple`
-column may be qualified (`"events.created_at"`); the unqualified segment is what is read off a
-result row when a cursor is minted, so an ordering column must be present in the query's
-projection.
-
-The options and result shapes named in the signatures above — `PaginationInit`,
-`PaginationJSON`, `PageSeriesOptions`, `OffsetOptions`, `KeysetOptions`, `KeysetCursors`,
-`OffsetQuery`, `KeysetQuery`, `PaginateOptions`, `PagingNames`, `Paging`, `CreatePagingOptions`,
-`ParsePageParamsOptions`, `PageParams`, `CursorValue`, `CursorDirection`, `DecodedCursor`, and
-`LinkValue` — are exported as types too.
-
-## Pattern: One Route, Both Strategies
-
-Binding the parameter names once means both handlers spell the page size the same way in the
-query string they read and in the `Link` URLs they emit.
+Bind the parameter names once so both handlers read `?per_page=` and write it into their links.
 
 ```typescript
 import { createPaging, Pagination } from "@sdxc/pagination";
 import { isFailure } from "@sdxc/result";
 
-let PAGING = createPaging({
-	names: { page: "page", perPage: "per_page", cursor: "cursor" },
-	perPage: 25,
-	maxPerPage: 100,
-});
+import { articles, events } from "./schema.js";
 
-/** A rendered list: numbered pager, all four relations, and a total. */
-export async function listArticles(url: URL, authorId: string) {
-	// A malformed page or size is not worth an error page; drop the query string
-	// and let the canonical URL render the first page.
-	let params = PAGING.parse(url.searchParams);
-	if (isFailure(params)) return Response.redirect(new URL(url.pathname, url), 302);
+let paging = createPaging({ names: { perPage: "per_page" }, perPage: 20, maxPerPage: 50 });
 
-	let page = await Pagination.byOffset(db.query(articles).where({ author_id: authorId }), {
-		page: params.data.page,
-		perPage: params.data.perPage,
+export async function listArticles(url: URL) {
+	let params = paging.parse(url.searchParams);
+	if (isFailure(params)) return Response.json(params.error.issues, { status: 400 });
+
+	let page = await Pagination.byOffset(db.query(articles), params.data);
+	if (isFailure(page)) return new Response(null, { status: 500 });
+
+	return Response.json(page.data.items, {
+		headers: paging.paginate(new Headers(), page.data, { url }),
 	});
-	if (isFailure(page)) throw page.error;
-
-	return Response.json(
-		{ data: page.data.items, series: page.data.pagination.series() },
-		{ headers: PAGING.paginate(new Headers(), page.data, { url }) },
-	);
 }
 
-/** A JSON feed: cursor links only, walked by following them. */
-export async function listEvents(url: URL, teamId: string) {
-	let params = PAGING.parse(url.searchParams);
-	if (isFailure(params)) return new Response("Bad Request", { status: 400 });
+export async function listEvents(url: URL) {
+	let params = paging.parse(url.searchParams);
+	if (isFailure(params)) return Response.json(params.error.issues, { status: 400 });
 
-	let page = await Pagination.byKeyset(db.query(events).where({ team_id: teamId }), {
+	let page = await Pagination.byKeyset(db.query(events), {
 		orderBy: [
 			["created_at", "desc"],
 			["id", "desc"],
@@ -396,27 +262,71 @@ export async function listEvents(url: URL, teamId: string) {
 		cursor: params.data.cursor,
 		limit: params.data.perPage,
 	});
-	if (isFailure(page)) throw page.error;
+	if (isFailure(page)) return new Response(null, { status: 500 });
 
 	return Response.json(page.data.items, {
-		headers: PAGING.paginate(new Headers(), page.data, { url }),
+		headers: paging.paginate(new Headers(), page.data, { url }),
 	});
 }
 ```
 
-Either strategy works with either response kind; this pairing is the common one, since a
-numbered pager needs a total and a long feed is cheaper to seek than to offset.
+## Pattern: Answering Each Error
 
-## Pattern: Rendering A Pager From `series()`
+A bad cursor is the client's mistake, a bad ordering is the code's, and a failed query is the
+database's.
+
+```typescript
+import {
+	InvalidCursorError,
+	InvalidOrderingError,
+	Pagination,
+	QueryFailedError,
+} from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
+
+import { events } from "./schema.js";
+
+export async function listEvents(url: URL) {
+	let page = await Pagination.byKeyset(db.query(events), {
+		orderBy: [["id", "asc"]],
+		unique: true,
+		after: url.searchParams.get("after"),
+		before: url.searchParams.get("before"),
+		limit: 50,
+	});
+
+	if (isFailure(page)) {
+		if (page.error instanceof InvalidCursorError) {
+			return Response.json({ error: page.error.message }, { status: 400 });
+		}
+		if (page.error instanceof QueryFailedError) reportError(page.error.cause);
+		if (page.error instanceof InvalidOrderingError) reportError(page.error);
+		return new Response(null, { status: 500 });
+	}
+
+	return Response.json({
+		data: page.data.items,
+		next: page.data.cursors.next,
+		prev: page.data.cursors.prev,
+	});
+}
+```
+
+## Pattern: Rendering A Numbered Pager
+
+`series()` states what each item is, so the pager is a loop with no arithmetic.
 
 ```tsx
+import type { Handle } from "remix/component";
 import type { PageSeries } from "@sdxc/pagination";
 
-function Pager({ series }: { series: PageSeries }) {
-	return (
-		<nav>
-			{series.map((item) => {
-				if (item.type === "gap") return <span aria-hidden>…</span>;
+import { css } from "remix/component";
+
+export function Pager(handle: Handle<{ series: PageSeries }>) {
+	return () => (
+		<nav aria-label="Pages" mix={css({ display: "flex", gap: "0.5rem" })}>
+			{handle.props.series.map((item) => {
+				if (item.type === "gap") return <span aria-hidden="true">…</span>;
 				if (item.current) return <span aria-current="page">{item.page}</span>;
 				return <a href={`?page=${item.page}`}>{item.page}</a>;
 			})}
@@ -425,19 +335,71 @@ function Pager({ series }: { series: PageSeries }) {
 }
 ```
 
-No arithmetic, no `typeof` narrowing, and no comparison back to the current page: the item
-states what it is. `PageSeries` is a plain type, so a hydrating client imports it and renders
-the array the server already computed while the class stays on the server.
+Render it with `<Pager series={page.data.pagination.series({ window: 2 })} />`.
 
-## Pattern: Serializing Into An Envelope
+## Pattern: Page Numbers In The Body
 
-Headers are the interoperable way to express navigation, and they keep the response body the
-resource itself. When a client genuinely needs the numbers in the body, serialize the value
-object rather than rebuilding it:
+When a client wants the numbers in the payload, put the value object there; `toJSON()` writes
+every getter.
 
 ```typescript
-return Response.json({ data: page.data.items, meta: page.data.pagination });
-// meta is the full plain shape, via toJSON()
+import { paginate, Pagination } from "@sdxc/pagination";
+import { isFailure } from "@sdxc/result";
+
+import { articles } from "./schema.js";
+
+let page = await Pagination.byOffset(db.query(articles), { page: 2, perPage: 25 });
+if (isFailure(page)) throw page.error;
+
+return Response.json(
+	{ data: page.data.items, meta: page.data.pagination },
+	{ headers: paginate(new Headers(), page.data, { url }) },
+);
+// meta: { page: 2, perPage: 25, total: 892, pages: 36, offset: 25, ..., next: 3 }
+```
+
+## Pattern: Following Next Links As A Client
+
+`parseLinkHeader()` reads any server's `Link` header, so a client walks a paginated API until
+`rel="next"` runs out.
+
+```typescript
+import { parseLinkHeader } from "@sdxc/pagination";
+
+export async function fetchAll<T>(start: string): Promise<T[]> {
+	let items: T[] = [];
+	let next: string | null = start;
+
+	while (next !== null) {
+		let response = await fetch(next);
+		items.push(...((await response.json()) as T[]));
+
+		let links = parseLinkHeader(response.headers.get("Link"));
+		next = links.find((link) => link.rels.includes("next"))?.target ?? null;
+	}
+
+	return items;
+}
+```
+
+## Pattern: Paging Links Beside Other Links
+
+`paginate()` keeps relations it does not own, so a preload or canonical link set earlier
+survives, and `serializeLinkHeader()` rebuilds a header from parsed entries.
+
+```typescript
+import { paginate, parseLinkHeader, serializeLinkHeader } from "@sdxc/pagination";
+
+let headers = new Headers({ Link: '</app.css>; rel="preload"; as="style"' });
+paginate(headers, page.data, { url });
+// Link: </app.css>; rel="preload"; as="style", <…?page=1>; rel="first", …
+
+let withoutPreload = parseLinkHeader(headers.get("Link"))
+	.filter((link) => !link.rels.includes("preload"))
+	.map((link) => link.raw);
+let value = serializeLinkHeader(withoutPreload);
+if (value === null) headers.delete("Link");
+else headers.set("Link", value);
 ```
 
 ## Versioning
