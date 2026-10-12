@@ -2,30 +2,23 @@
 
 JSON Feed 1.1 builder and parser.
 
-It builds feeds for publishing and reads feeds published by other sites, covering every field
-the format defines. Custom extension objects — the `_`-prefixed keys a publisher attaches —
-are carried through both ways, so a feed with a custom module survives a read and a write
-unchanged.
-
-Fields are camelCase, so [JSON Feed](https://www.jsonfeed.org)'s `home_page_url` is
-`homePageUrl` here and its `date_published` is `datePublished`. The document written out, and
-the one read in, uses the format's own names.
+Build feeds to publish and read feeds others publish, covering every field
+[JSON Feed](https://www.jsonfeed.org) defines. Fields are camelCase (`homePageUrl`,
+`datePublished`); the document written out and read in uses the format's own names
+(`home_page_url`, `date_published`). Custom `_`-prefixed extension objects round-trip unchanged.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/json-feed
 ```
 
-Every entry point that reads a feed returns a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this
-package.
+Reading a feed answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+which installs alongside this package.
 
 ## Usage
 
-### Build A Feed
-
-Describe the feed first, append items, then serialize.
+### Build a feed
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
@@ -34,7 +27,6 @@ let feed = new JSONFeed({
 	title: "My Blog",
 	homePageUrl: "https://example.com",
 	feedUrl: "https://example.com/feed.json",
-	description: "Articles about web development",
 	authors: [{ name: "Jane Doe", url: "https://example.com/jane" }],
 	language: "en-US",
 });
@@ -44,66 +36,59 @@ feed.addItem({
 	url: "https://example.com/posts/hello-world",
 	title: "Hello World",
 	contentHtml: "<p>Full post content</p>",
-	summary: "A short summary",
 	datePublished: new Date().toISOString(),
 	tags: ["updates"],
 });
-
-let json = feed.toString();
 ```
 
-The version URL is written for you, and a field left empty is left out, so the document holds
-nothing a reader would have to test before using.
+An item requires only an `id`, which must stay the same across every edit of that item. Dates
+are RFC 3339 strings, which is what `toISOString()` produces.
 
-### Serve A Feed
-
-`toJSON` returns the document itself, so `JSON.stringify` reaches it whether you hand it the
-instance or the document.
+### Serialize it
 
 ```typescript
-return new Response(JSON.stringify(feed, null, "\t"), {
+let json = feed.toString();
+
+return new Response(JSON.stringify(feed), {
 	headers: { "content-type": JSONFeed.mediaType },
 });
 ```
 
-### Read A Feed
+The version URL is written for you and empty fields are left out. `toJSON()` returns the
+document, so `JSON.stringify` accepts the instance directly.
+
+### Parse a feed
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
 import { isFailure } from "@sdxc/result";
 
 let result = JSONFeed.parse(json);
-if (isFailure(result)) return recordBadFeed(result.error);
+if (isFailure(result)) throw result.error;
 
-let feed = result.data;
-console.log(feed.feed.title);
-for (let item of feed.items) console.log(item.title, item.url);
+result.data.feed.title;
+for (let item of result.data.items) item.title;
 ```
 
-### Fetch A Feed
+### Fetch a feed
 
 ```typescript
 let result = await JSONFeed.fetch("https://example.com/feed.json");
 ```
 
-The request asks for `application/feed+json` and accepts `application/json`, which is what
-many publishers serve a feed as. The response must be `ok`; its content type is not consulted,
-because the version URL inside the document is the reliable evidence.
+The request accepts `application/feed+json` and `application/json`; any `ok` response whose body
+declares a JSON Feed version URL parses.
 
 ## API
 
 ### `new JSONFeed(feed: JSONFeed.Feed)`
 
-Creates a feed with the given metadata and no items. `title` is required.
+Creates a feed with the given metadata and no items. Throws `JSONFeedParseError` without a
+`title`.
 
 ### `feed.feed`
 
-The metadata, as a clone. Assigning a new `JSONFeed.Feed` replaces it and leaves the items in
-place.
-
-```typescript
-feed.feed = { ...feed.feed, language: "en-US" };
-```
+The metadata, as a clone. Assigning a new `JSONFeed.Feed` replaces it and keeps the items.
 
 ### `feed.items`
 
@@ -111,130 +96,173 @@ The items, as clones, in the order they were added.
 
 ### `feed.version`
 
-The version URL this feed declares: the one a parsed document carried, or JSON Feed 1.1 for a
-feed built here.
+The version URL the feed declares: the one a parsed document carried, or JSON Feed 1.1.
 
-### `feed.addItem(item: JSONFeed.Item)`
+### `feed.addItem(item: JSONFeed.Item): void`
 
-Appends one item. `id` is required, and must stay the same across every edit of that item.
+Appends a clone of the item. Throws `JSONFeedParseError` without an `id`.
 
-### `feed.removeItem(id: string)`
+### `feed.removeItem(id: string): void`
 
 Removes the item carrying that id.
 
-### `feed.toJSON()`
+### `feed.toJSON(): JSONFeed.Document`
 
-Returns the JSON Feed document: every field under the name the format gives it, in the order
-the format lists them, without the ones this feed left empty.
+The JSON Feed document: format field names, in the format's order, empty fields omitted.
 
-### `feed.toString()`
+### `feed.toString(): string`
 
-Serializes the document to JSON text.
+The document as JSON text.
 
-### `JSONFeed.parse(source: string)`
+### `JSONFeed.parse(source: string): Result<JSONFeed, JSONFeedParseError>`
 
-Parses JSON Feed text. Reports a failure when the text is not JSON, when it declares no JSON
-Feed version URL, or when it carries no title or no `items` array.
+Parses JSON Feed text. Fails when the text is not JSON or lacks a version URL, a title or an
+`items` array; within that, each field is kept only when usably typed, and items without an id
+are dropped.
 
-### `JSONFeed.fromJSON(value: unknown)`
+### `JSONFeed.fromJSON(value: unknown): Result<JSONFeed, JSONFeedParseError>`
 
-Reads a feed out of an already-parsed value, for a caller that parsed the text for some other
-purpose first.
+`parse` for a value you already ran through `JSON.parse`.
 
-### `JSONFeed.fetch(input: URL | RequestInfo, init?: RequestInit)`
+### `JSONFeed.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<Result<JSONFeed, JSONFeedFetchError | JSONFeedParseError>>`
 
-Retrieves a document and parses it.
+Requests the feed and parses the body. An `accept` header in `init` replaces the default one.
 
-### `JSONFeed.version(value: unknown)`
+### `JSONFeed.version(value: unknown): string | undefined`
 
-The JSON Feed version URL a value declares, or `undefined` when it declares none. This is how
-to recognize a feed among other JSON, since the version URL is the only field that separates
-one.
+The JSON Feed version URL a value declares, or `undefined` for any other JSON.
 
 ### `JSONFeed.mediaType`
 
-`application/feed+json`, the media type a JSON Feed is served under.
+`"application/feed+json"`.
 
-### Errors
+### `JSONFeedParseError`, `JSONFeedFetchError`
 
-`JSONFeedParseError` reports a value that is not a usable document, and is thrown by the
-constructor and `addItem` when required fields are missing. `JSONFeedFetchError` reports a
-request that failed or answered with an error status.
+`JSONFeedParseError` reports a value that is not a usable feed, or a missing `title`/`id` when
+building. `JSONFeedFetchError` reports a request that failed or answered a non-`ok` status.
 
 ### Types
 
-`JSONFeed.Feed`, `JSONFeed.Item`, `JSONFeed.Author`, `JSONFeed.Attachment`, `JSONFeed.Hub`,
-and `JSONFeed.ExtensionKey` describe a feed as this package holds it. `JSONFeed.Document`,
-`JSONFeed.DocumentItem`, and `JSONFeed.DocumentAttachment` describe it as JSON Feed writes it,
-which is what `toJSON` returns.
+- `JSONFeed.Feed`, `JSONFeed.Item`, `JSONFeed.Author`, `JSONFeed.Attachment`, `JSONFeed.Hub`: a
+  feed as this package holds it, camelCase. `Feed` and `Item` accept extension keys.
+- `JSONFeed.ExtensionKey`: `` `_${string}` ``, the name of a publisher extension.
+- `JSONFeed.Document`, `JSONFeed.DocumentItem`, `JSONFeed.DocumentAttachment`: the feed as JSON
+  Feed writes it, which is what `toJSON` returns.
 
-## Pattern: Publish An Extension
+## Pattern: A Podcast Feed
 
-Extension names start with an underscore, which is what reserves them from any future version
-of the format. Write one as a field like any other, and it round-trips.
+Attachments carry the episode files; hubs let readers subscribe to change notifications.
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
 
 let feed = new JSONFeed({
-	title: "The Record",
-	_blue_shed: {
-		about: "https://blueshed-podcasts.com/json-feed-extension-docs",
-		explicit: false,
-	},
+	title: "The Weekly Show",
+	homePageUrl: "https://podcast.example.com",
+	feedUrl: "https://podcast.example.com/feed.json",
+	icon: "https://podcast.example.com/icon.png",
+	favicon: "https://podcast.example.com/favicon.png",
+	hubs: [{ type: "WebSub", url: "https://hub.example.com" }],
 });
 
 feed.addItem({
-	id: "https://therecord.example/1",
-	contentText: "Episode one",
-	_blue_shed: { season: 1 },
+	id: "episode-1",
+	title: "Episode 1",
+	contentText: "Show notes for the first episode.",
+	image: "https://podcast.example.com/episode-1.jpg",
+	datePublished: "2026-02-07T14:04:00-05:00",
+	attachments: [
+		{
+			url: "https://podcast.example.com/episode-1.mp3",
+			mimeType: "audio/mpeg",
+			sizeInBytes: 48_000_000,
+			durationInSeconds: 3_600,
+		},
+	],
+});
+
+let response = new Response(feed.toString(), {
+	headers: { "content-type": JSONFeed.mediaType },
 });
 ```
 
-Reading that document back yields the same objects, untouched:
+## Pattern: Publish An Extension
 
-```typescript
-let result = JSONFeed.parse(feed.toString());
-if (isFailure(result)) throw result.error;
-
-result.data.feed["_blue_shed"]; // { about: "…", explicit: false }
-```
-
-## Pattern: Read A Feed Someone Else Publishes
-
-A published feed is written by software you do not control, so the parser takes each field
-only when the document typed it usably and discards the items JSON Feed says to discard.
+Any field whose name starts with an underscore is written as-is and read back unchanged.
 
 ```typescript
 import { JSONFeed } from "@sdxc/json-feed";
 import { isFailure } from "@sdxc/result";
 
-let result = await JSONFeed.fetch(url);
-if (isFailure(result)) return recordFailure(result.error);
+let feed = new JSONFeed({
+	title: "The Record",
+	_blue_shed: { about: "https://blueshed-podcasts.com/json-feed-extension-docs", explicit: false },
+});
 
-for (let item of result.data.items) {
-	/** Every item has an id: one without a usable one was discarded on the way in. */
-	await save({
-		id: item.id,
-		url: item.url ?? item.id,
-		body: item.contentHtml ?? escapeHtml(item.contentText ?? ""),
-		publishedAt: item.datePublished ? new Date(item.datePublished) : undefined,
-	});
+feed.addItem({ id: "1", contentText: "Episode one", _blue_shed: { season: 1 } });
+
+let result = JSONFeed.parse(feed.toString());
+if (isFailure(result)) throw result.error;
+
+result.data.feed["_blue_shed"]; // { about: "…", explicit: false }
+result.data.items[0]?.["_blue_shed"]; // { season: 1 }
+```
+
+## Pattern: Import Items From Someone Else's Feed
+
+Every parsed item has an id; the rest is optional. `contentHtml` is the publisher's markup,
+unsanitized, and `contentText` is plain text to escape before rendering as HTML.
+
+```typescript
+import { JSONFeed } from "@sdxc/json-feed";
+import { isFailure } from "@sdxc/result";
+
+let result = await JSONFeed.fetch("https://example.com/feed.json");
+if (isFailure(result)) return result.error;
+
+let entries = result.data.items.map((item) => ({
+	id: item.id,
+	url: item.url ?? item.id,
+	html: item.contentHtml ?? escapeHtml(item.contentText ?? ""),
+	author: item.authors?.[0]?.name ?? item.author?.name,
+	publishedAt: item.datePublished ? new Date(item.datePublished) : undefined,
+}));
+```
+
+## Pattern: Recognize A Feed Among Other JSON
+
+When a URL may serve any JSON, check the version URL before reading it as a feed.
+
+```typescript
+import { JSONFeed } from "@sdxc/json-feed";
+
+let response = await fetch(url);
+let value: unknown = await response.json();
+
+if (JSONFeed.version(value)) {
+	let result = JSONFeed.fromJSON(value);
 }
 ```
 
-## Notes
+## Pattern: Edit A Feed And Write It Back
 
-1. Dates are the strings the document holds, so write them in RFC 3339 style —
-   `2026-02-07T14:04:00-05:00`, which is what `Date.prototype.toISOString` produces.
-2. An item requires only an `id`. The format asks for `contentHtml` or `contentText` and
-   instructs a reader to keep an item carrying neither, so both are optional here.
-3. `contentHtml` is the one field holding HTML. `contentText` is plain text, and rendering it
-   as markup means escaping it first.
-4. Nothing is sanitized. An item's markup is whatever the publisher wrote, and escaping it is
-   the responsibility of whatever renders it.
-5. A parsed feed keeps the version URL it declared, so a JSON Feed 1.0 document — including
-   its singular `author` — writes back out as the 1.0 document it was.
+A parsed feed keeps the version it declared, so a JSON Feed 1.0 document, with its singular
+`author`, writes back out as 1.0.
+
+```typescript
+import { JSONFeed } from "@sdxc/json-feed";
+import { isFailure } from "@sdxc/result";
+
+let result = JSONFeed.parse(stored);
+if (isFailure(result)) throw result.error;
+
+let feed = result.data;
+feed.feed = { ...feed.feed, expired: true };
+feed.removeItem("https://example.com/posts/retracted");
+
+feed.version; // "https://jsonfeed.org/version/1" when the source was 1.0
+let updated = feed.toString();
+```
 
 ## Versioning
 
