@@ -15,6 +15,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vi
 
 import type { SearchViewModel } from "~/app/http/view-models/search";
 
+import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import { pageRenderer } from "~/app/test/renderer";
 import { WIDE_SCREEN } from "~/resources/components/nav-pill";
 import {
@@ -738,14 +739,11 @@ describe("the search dialog's quick links", () => {
 		await hydrate(router);
 	}
 
-	test("lists the sections and Sponsor under the empty box, leaving out the page the reader is on", async () => {
+	test("lists every kind's topic and Sponsor under the empty box, leaving out the page the reader is on", async () => {
 		await open("/");
 
 		expect(quickLinks()).toEqual([
-			"/articles",
-			"/tutorials",
-			"/bookmarks",
-			"/glossary",
+			...KINDS.map((kind) => `/${POST_KINDS[kind].topic}`),
 			"/sponsors",
 		]);
 		expect(input().getAttribute("aria-controls")).toBe(SEARCH_QUICK_LINKS_ID);

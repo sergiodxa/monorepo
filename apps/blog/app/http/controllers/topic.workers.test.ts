@@ -162,10 +162,11 @@ describe("an author's topic", () => {
 		expect(page).toMatch(/href="\/tutorials"[^>]*>Tutorial<\/a>/);
 	});
 
-	test("is listed on /topics, and a slug no topic has answers 404", async () => {
+	test("is listed on /topics and in the sitemap, and a slug no topic has answers 404", async () => {
 		let index = await html("/topics");
 		expect(index).toContain(`href="/topics/${TOPIC_SLUG}"`);
 		expect(index).toContain('href="/articles"');
+		expect(await html("/sitemap.xml")).toContain(`${ORIGIN}/topics/${TOPIC_SLUG}<`);
 		expect((await request("/topics/no-such-topic")).status).toBe(404);
 		expect((await request(`/topics/${TOPIC_SLUG}.xml`)).status).toBe(404);
 	});

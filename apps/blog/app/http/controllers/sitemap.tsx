@@ -1,7 +1,7 @@
 /**
- * HTTP action for the XML sitemap. It combines section URLs with published articles and
- * tutorials, deriving `lastmod` hints from the freshest creation date per section, so
- * crawlers get a canonical index of the site's public pages.
+ * HTTP action for the XML sitemap. It combines section URLs, the topic index and every author's
+ * topic with published articles and tutorials, deriving `lastmod` hints from the freshest
+ * creation date per section, so crawlers get a canonical index of the site's public pages.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,8 @@ import { xml } from "@sdxc/http/response";
 import { Sitemap } from "@sdxc/sitemap";
 import { createAction } from "remix/router";
 
+import { topicPath } from "~/app/http/view-models/topic";
+import { isBuiltInTopic } from "~/app/models/topics";
 import routes from "~/routes/web";
 
 /** Serves the XML sitemap covering the section pages and every published post. */
@@ -22,10 +24,11 @@ export default createAction(
 	 * @returns XML response for the sitemap endpoint.
 	 */
 	async function sitemapAction(ctx) {
-		let [articles, tutorials, likes] = await Promise.all([
+		let [articles, tutorials, likes, topics] = await Promise.all([
 			ctx.models.articles.findAll({ includePreview: false }),
 			ctx.models.tutorials.findAll({ includePreview: false }),
 			ctx.models.likes.findAll(),
+			ctx.models.topics.findAll(),
 		]);
 
 		let sitemap = new Sitemap();
@@ -55,6 +58,11 @@ export default createAction(
 		});
 
 		sitemap.append(new URL(routes.glossary.href(), ctx.url));
+
+		sitemap.append(new URL(routes.topics.href(), ctx.url));
+		for (let topic of topics) {
+			if (!isBuiltInTopic(topic.slug)) sitemap.append(new URL(topicPath(topic), ctx.url));
+		}
 
 		for (let article of articles) {
 			sitemap.append(
