@@ -32,6 +32,8 @@ export namespace PostKind {
 		 * `"entry"` as an entry of the topic page, `"external"` on the page a bookmark saved.
 		 */
 		permalink: "page" | "entry" | "external";
+		/** The kind's resource in the CMS routes, which the CMS navigation links to. */
+		cms: string;
 		/** The emoji a row of this kind leads with in the index, search and share text. */
 		icon: string;
 		/** The tone the row's emoji is tinted with. */
@@ -55,6 +57,7 @@ export const POST_KINDS = {
 		names: ["article", "articles"],
 		topic: "articles",
 		permalink: "page",
+		cms: "articles",
 		icon: "📝",
 		tint: "brand.emphasis",
 		label: "Article",
@@ -66,6 +69,7 @@ export const POST_KINDS = {
 		names: ["tutorial", "tutorials"],
 		topic: "tutorials",
 		permalink: "page",
+		cms: "tutorials",
 		icon: "🛠️",
 		tint: "brand",
 		label: "Tutorial",
@@ -77,6 +81,7 @@ export const POST_KINDS = {
 		names: ["glossary", "glossaries"],
 		topic: "glossary",
 		permalink: "entry",
+		cms: "glossary",
 		icon: "📘",
 		tint: "neutral",
 		label: "Glossary",
@@ -88,6 +93,7 @@ export const POST_KINDS = {
 		names: ["bookmark", "bookmarks", "like", "likes"],
 		topic: "bookmarks",
 		permalink: "external",
+		cms: "bookmarks",
 		icon: "🔖",
 		tint: "neutral.emphasis",
 		label: "Bookmark",
@@ -99,6 +105,7 @@ export const POST_KINDS = {
 		names: ["release", "releases"],
 		topic: "releases",
 		permalink: "page",
+		cms: "releases",
 		icon: "📦",
 		tint: "success",
 		label: "Release",
@@ -110,6 +117,7 @@ export const POST_KINDS = {
 		names: ["note", "notes"],
 		topic: "notes",
 		permalink: "page",
+		cms: "notes",
 		icon: "💬",
 		tint: "brand",
 		label: "Note",
@@ -121,6 +129,7 @@ export const POST_KINDS = {
 		names: ["til", "tils"],
 		topic: "til",
 		permalink: "page",
+		cms: "tils",
 		icon: "💡",
 		tint: "warning",
 		label: "TIL",

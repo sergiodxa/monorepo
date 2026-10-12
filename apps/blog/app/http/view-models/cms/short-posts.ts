@@ -257,7 +257,7 @@ export class ShortPostViewModel {
 
 	/** The CMS routes of a kind's screens. */
 	private static routesOf(kind: ShortPostViewModel.Kind) {
-		return kind === "note" ? routes.cms.notes : routes.cms.tils;
+		return routes.cms[POST_KINDS[kind].cms];
 	}
 }
 

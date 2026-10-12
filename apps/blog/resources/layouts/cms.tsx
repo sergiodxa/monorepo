@@ -18,6 +18,7 @@ import { m, maxIs, mbe, mi, pb, pbe, pbs, pi } from "@sdxc/u/size";
 import { font, text } from "@sdxc/u/typography";
 import { Heading, NavLink } from "@sdxc/ui";
 
+import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
@@ -45,15 +46,16 @@ export namespace CMSLayout {
 	};
 }
 
-let cmsNavigationItems: Array<CMSLayout.NavigationItem> = [
+/**
+ * The dashboard, then every kind's list in registry order, so a new kind shows up here
+ * once the registry names its CMS resource, then the screens no kind owns.
+ */
+const CMS_NAVIGATION_ITEMS: Array<CMSLayout.NavigationItem> = [
 	{ href: routes.cms.dashboard.href(), label: "Dashboard" },
-	{ href: routes.cms.articles.index.href(), label: "Articles" },
-	{ href: routes.cms.tutorials.index.href(), label: "Tutorials" },
-	{ href: routes.cms.notes.index.href(), label: "Notes" },
-	{ href: routes.cms.tils.index.href(), label: "TILs" },
-	{ href: routes.cms.bookmarks.index.href(), label: "Bookmarks" },
-	{ href: routes.cms.glossary.index.href(), label: "Glossary" },
-	{ href: routes.cms.releases.index.href(), label: "Releases" },
+	...KINDS.map((kind) => ({
+		href: routes.cms[POST_KINDS[kind].cms].index.href(),
+		label: POST_KINDS[kind].plural,
+	})),
 	{ href: routes.cms.topics.index.href(), label: "Topics" },
 	{ href: routes.cms.redirects.index.href(), label: "Redirects" },
 	{ href: routes.cms.webmentions.index.href(), label: "Webmentions" },
@@ -83,7 +85,7 @@ export function CMSLayout(handle: Handle<CMSLayout.Props>) {
 							Dashboard
 						</Heading>
 						<nav aria-label="Dashboard" mix={[hstack({ gap: 2 }), flexWrap("wrap")]}>
-							{cmsNavigationItems.map((item) => {
+							{CMS_NAVIGATION_ITEMS.map((item) => {
 								let isActive = activePath === item.href;
 
 								return (
