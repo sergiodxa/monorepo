@@ -21,13 +21,13 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DnsRecordType } from "~/app/lib/dns-record-value";
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
+import type { DnsRecordType } from "~/app/services/dns-record-value";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors } from "~/database/schema";
 
 /** One answered `(name, type)` query: this is the whole RRset, and it is trustworthy. */
@@ -84,9 +84,12 @@ vi.doMock("cloudflare:workers", () => ({
  * The platform the sweep bills against. The job has no request behind it, so it reads the
  * configured platform from this module, which is replaced with a real in-memory one.
  */
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: createTestBilling() }));
+vi.doMock("~/app/initializers/billing", () => ({
+	...realBillingModule,
+	polar: createTestBilling(),
+}));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
@@ -107,7 +110,7 @@ let {
 	sweepNames,
 } = await import("./dns-discovery");
 let jobs = (await import("~/app/jobs")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("~/app/jobs/check-dns")).default;

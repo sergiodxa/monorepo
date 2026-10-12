@@ -23,7 +23,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { HttpDailyAggregate } from "~/app/services/analytics";
 
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { monitorDailyStats } from "~/database/schema";
 
 let getHttpDailyAggregateMock = vi.fn(async (): Promise<Result<HttpDailyAggregate[], Error>> =>
@@ -38,10 +38,10 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let aggregateDailyStats = (await import("./aggregate-daily-stats")).default;
 /**
- * Imported dynamically, after the mocks above, since the models reach `~/app/lib/queue`,
+ * Imported dynamically, after the mocks above, since the models reach `~/app/initializers/queue`,
  * which reads `env` at module load, and a static import would be hoisted.
  */
-let { publishModels } = await import("~/app/lib/test/models");
+let { publishModels } = await import("~/app/test/models");
 
 /** Runs the handler over a context carrying the test's database, and returns its record. */
 async function runJob(db: Database) {

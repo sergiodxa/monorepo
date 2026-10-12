@@ -26,8 +26,8 @@ import type { MonitorStatus, SelectLead, SelectTrialWatch } from "~/database/sch
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { installFlags } from "~/app/lib/test/flags";
+import { createTestDatabase } from "~/app/test/db";
+import { installFlags } from "~/app/test/flags";
 import { trialWatches } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -79,7 +79,7 @@ vi.doMock("~/app/services/http-check", () => ({
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let checkTrialWatches = (await import("./check-trial-watches")).default;
 
 let transport = new MemoryTransport();

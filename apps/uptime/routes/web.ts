@@ -12,7 +12,7 @@ import { del, form, get, patch, post, put, resources, route } from "remix/routes
 
 /**
  * The application route map. Each leaf is a typed route with `.href(params)` for
- * building URLs and is used as the key when mapping controllers in `bootstrap/app.tsx`.
+ * building URLs and is used as the key when mapping controllers in `app/initializers/router.tsx`.
  *
  * @example
  * routes.app.team.href({ team: "acme" });
@@ -334,7 +334,7 @@ export default route({
 
 	/**
 	 * A separate route-map group, not a URL prefix (paths stay `/actions/:team/...`),
-	 * so `bootstrap/app.tsx` can lay `requireRole("admin")` over exactly this group: a
+	 * so `app/initializers/router.tsx` can lay `requireRole("admin")` over exactly this group: a
 	 * `router.map()` call takes one middleware chain over every leaf within it.
 	 */
 	teamAdminActions: {
@@ -393,7 +393,7 @@ export default route({
 
 	/**
 	 * Inbound webhooks from third parties, grouped under one path prefix so
-	 * `bootstrap/app.tsx` exempts it from cross-origin protection and language
+	 * `app/initializers/router.tsx` exempts it from cross-origin protection and language
 	 * resolution; each leaf verifies its own signature over the request body.
 	 */
 	webhooks: {
@@ -415,7 +415,7 @@ export default route({
 
 		/**
 		 * Bearer-API-key-gated public REST API. Each resource groups its CRUD leaves via
-		 * `resources()`, plus any non-standard action as an extra key. `bootstrap/app.tsx`
+		 * `resources()`, plus any non-standard action as an extra key. `app/initializers/router.tsx`
 		 * maps each leaf with its own `requireApiKey(scope)` since read/write scopes differ.
 		 */
 		v1: {

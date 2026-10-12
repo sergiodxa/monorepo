@@ -13,9 +13,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TrialDailyStatsInput } from "~/app/models/trial-daily-stats";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { isEmptyDay } from "~/app/models/trial-daily-stats";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { trialDailyStats } from "~/database/schema";
 
 let db: Database;

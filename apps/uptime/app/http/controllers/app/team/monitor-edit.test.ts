@@ -1,6 +1,6 @@
 /**
  * Tests for the HTTP monitor edit page controller. `cloudflare:workers` is mocked
- * because `~/app/lib/queue` reads `env` at module load, and the mock's strict,
+ * because `~/app/initializers/queue` reads `env` at module load, and the mock's strict,
  * bindingless env matches what a page doing only a GET render and 404 guard needs.
  * Validation-error rendering belongs to the separate `update-monitor` action and is
  * covered by its own suite. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams`
@@ -29,14 +29,14 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./monitor-edit")).default as { handler: RequestHandler<any> };
 

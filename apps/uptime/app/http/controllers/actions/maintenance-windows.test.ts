@@ -21,7 +21,7 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors, maintenanceWindows, memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 

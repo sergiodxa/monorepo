@@ -13,10 +13,10 @@ import { createModel } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName, gte, lt } from "remix/data-table";
 
-import type { BatchedSweepResult } from "~/app/lib/retention";
+import type { BatchedSweepResult } from "~/app/services/retention";
 import type { SelectTrialWatchResult } from "~/database/schema";
 
-import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/lib/retention";
+import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/services/retention";
 import { trialWatchResults, trialWatches } from "~/database/schema";
 
 /** Results a digest renders for one target: an hourly bar over a day, with room to spare. */

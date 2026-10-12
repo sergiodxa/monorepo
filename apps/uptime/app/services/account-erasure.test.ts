@@ -20,11 +20,11 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectTeam } from "~/database/schema";
 
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
-import { createTestBilling, entitlementState } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import { eraseAccount, planAccountErasure } from "~/app/services/account-erasure";
+import { createTestBilling, entitlementState } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import {
 	invites,
 	memberships,

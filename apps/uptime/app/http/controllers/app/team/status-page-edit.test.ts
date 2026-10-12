@@ -1,7 +1,7 @@
 /**
  * Tests for the edit status-page form controller. `cloudflare:workers` is mocked
  * before the dynamic import because the models' import chain pulls in
- * `~/app/lib/queue`, which reads the `QUEUE` binding; the
+ * `~/app/initializers/queue`, which reads the `QUEUE` binding; the
  * bindings behind it are in-memory implementations, and the env is strict, so a
  * binding this form reaches for without supplying fails by name.
  * `requireUser`/`requireTeam`/`i18n` are bypassed the same way auth is: a stand-in middleware seeds
@@ -34,9 +34,8 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import {
 	flowMonitors,
 	memberships,
@@ -44,6 +43,7 @@ import {
 	statusPages,
 	teams,
 } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -71,7 +71,7 @@ let { default: statusPageEditAction } = await import("./status-page-edit");
  */
 let statusPageEditModule = statusPageEditAction as unknown as { handler: RequestHandler<any> };
 
-/** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
+/** Stand-in for app/initializers/router.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(await withDocumentAssets(node), {

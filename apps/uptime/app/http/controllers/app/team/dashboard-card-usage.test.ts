@@ -1,6 +1,6 @@
 /**
  * Tests for the dashboard "Monthly Pings Usage" stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/lib/queue` reads `env` at module
+ * `cloudflare:workers` is mocked because `~/app/initializers/queue` reads `env` at module
  * load. Both figures the card shows come from the local database, so there is no
  * network client to stand in for. `ctx.team`/`ctx.membership`/auth/intl state is
  * seeded directly, standing in for the real `requireUser`/`requireTeam`/i18n
@@ -34,9 +34,9 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitorResults, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -58,7 +58,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardUsage = (await import("./dashboard-card-usage")).default as {
 	handler: RequestHandler<any>;

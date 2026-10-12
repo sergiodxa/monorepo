@@ -20,13 +20,13 @@ import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 import { createAction } from "remix/router";
 
-import type { DnsRecordType } from "~/app/lib/dns-record-value";
 import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { PingStatus } from "~/app/services/analytics";
+import type { DnsRecordType } from "~/app/services/dns-record-value";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { PING_BODY } from "~/app/http/openapi/ping";
-import { features } from "~/app/lib/flags";
+import { features } from "~/app/initializers/flags";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";

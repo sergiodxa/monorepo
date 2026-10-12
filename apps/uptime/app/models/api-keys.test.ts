@@ -15,10 +15,10 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { UptimeModels } from "~/app/models";
 import type { ApiKeyScope } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
 import { hashApiKey } from "~/app/services/api-key";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { apiKeys } from "~/database/schema";
 
 let db: Database;

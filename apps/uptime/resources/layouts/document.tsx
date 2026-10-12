@@ -17,9 +17,9 @@ import { m } from "@sdxc/u/size";
 import { font } from "@sdxc/u/typography";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/lib/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
-import { SEO } from "~/app/lib/seo";
+import { SEO } from "~/app/initializers/seo";
 import { CspNonce } from "~/resources/components/csp-nonce";
 
 import "@sdxc/ui/reset.css";

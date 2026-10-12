@@ -11,7 +11,7 @@ import type { Mailer as MailerClient } from "@sdxc/mail";
 
 import { createContextKey } from "remix/router";
 
-import { createMailer } from "~/app/lib/mailer";
+import { createMailer } from "~/app/initializers/mailer";
 
 /** Where a job's mailer lives on the context, installed as `ctx.mailer`. */
 export const Mailer = createContextKey<MailerClient>();

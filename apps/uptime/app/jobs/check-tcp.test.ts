@@ -21,14 +21,14 @@ import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { InsertTcpMonitor } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { installFlags } from "~/app/lib/test/flags";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { installFlags } from "~/app/test/flags";
 import { tcpMonitors, teams } from "~/database/schema";
 
 let checkTcpConnectionMock = vi.fn(
@@ -72,12 +72,12 @@ let realIngest = billing.usage.ingest.bind(billing.usage);
 let ingestMock = vi.spyOn(billing.usage, "ingest");
 
 /** The job has no request behind it, so it reads the configured platform from this module. */
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let jobs = (await import("~/app/jobs")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkTcp = (await import("./check-tcp")).default;

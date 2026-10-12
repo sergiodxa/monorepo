@@ -94,9 +94,7 @@ import {
 	TRIAL_URL_FIELD,
 	TURNSTILE_FIELD,
 } from "~/app/http/validators/trial";
-import { BASE_PRICE_USD, FREE_TRIAL_DAYS } from "~/app/lib/pricing";
-import { SEO } from "~/app/lib/seo";
-import { trialProbeOptions } from "~/app/lib/trial-probe";
+import { SEO } from "~/app/initializers/seo";
 import { recordAdhocPing } from "~/app/services/adhoc-ping";
 import { apportionCostByTeam } from "~/app/services/cost";
 import {
@@ -107,6 +105,8 @@ import {
 import { HttpCheck } from "~/app/services/http-check";
 import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import { guardTrialProbe } from "~/app/services/trial-guard";
+import { trialProbeOptions } from "~/app/services/trial-probe";
+import { BASE_PRICE_USD, FREE_TRIAL_DAYS } from "~/config/pricing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";
@@ -449,7 +449,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 	/**
 	 * How long the free report runs for. Interpolated into every line that quotes it, so the
 	 * page, the emails and the scheduling that actually stops the watch all read the term from
-	 * `~/app/lib/pricing` instead of each spelling out a number of their own.
+	 * `~/config/pricing` instead of each spelling out a number of their own.
 	 */
 	let days = FREE_TRIAL_DAYS;
 
@@ -522,7 +522,7 @@ export async function renderTrialPage(view: TrialPageView = {}, init?: ResponseI
 
 	/**
 	 * The subscription price, formatted for the request's locale and interpolated rather
-	 * than written into six translations, so `~/app/lib/pricing` stays the only place the
+	 * than written into six translations, so `~/config/pricing` stays the only place the
 	 * product's price is stated.
 	 */
 	let price = BASE_PRICE_USD.toLocaleString(ctx.locale, {

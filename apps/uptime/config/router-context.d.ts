@@ -11,7 +11,7 @@ import type { Renderer } from "remix/middleware/render";
 import type {} from "remix/router";
 
 /**
- * `bootstrap/app.tsx` installs `renderWith(createHtmlRenderer)` in its global middleware
+ * `app/initializers/router.tsx` installs `renderWith(createHtmlRenderer)` in its global middleware
  * chain, populating this context the same way `log`/`team`/`membership`/`language` do
  * from their own modules — route handlers are typed against the router's plain context.
  */

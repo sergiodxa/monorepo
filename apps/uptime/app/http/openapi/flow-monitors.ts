@@ -14,8 +14,8 @@ import { defineOperation } from "@sdxc/openapi";
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
 import { MAX_SOURCE_LENGTH } from "~/app/http/validators/flow-monitor";
-import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
 import { typedId } from "~/app/services/typed-id";
+import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/config/pricing";
 import { flowStatuses } from "~/database/schema";
 import routes from "~/routes/web";
 

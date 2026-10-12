@@ -17,11 +17,15 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { withPrefix } from "~/app/lib/prefixed-translate";
-import { REPORT_DIALECTS } from "~/app/lib/report-dialect";
-import { presetRange, REPORT_PRESETS } from "~/app/lib/report-range";
-import { isSubmitted, REPORT_MONITOR_TYPES, resolveReportRequest } from "~/app/lib/report-request";
 import { getYesterdayDateUtc } from "~/app/models/monitor-daily-stats";
+import { withPrefix } from "~/app/services/prefixed-translate";
+import { REPORT_DIALECTS } from "~/app/services/report-dialect";
+import { presetRange, REPORT_PRESETS } from "~/app/services/report-range";
+import {
+	isSubmitted,
+	REPORT_MONITOR_TYPES,
+	resolveReportRequest,
+} from "~/app/services/report-request";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";

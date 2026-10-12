@@ -6,7 +6,7 @@
  *
  * Unauthenticated by the auth chain's standards — the sender has no session and no `Origin` —
  * so the signature over the raw body is the authentication, checked by the endpoint before any
- * handler below runs. See `bootstrap/app.tsx` for how the `/webhooks/` prefix is exempted from
+ * handler below runs. See `app/initializers/router.tsx` for how the `/webhooks/` prefix is exempted from
  * cross-origin protection.
  *
  * Every handler does the same thing on purpose: it re-reads the customer's entitlement
@@ -24,7 +24,7 @@ import { BillingWebhook } from "@sdxc/billing";
 import { isFailure } from "@sdxc/result";
 import { getContext } from "remix/middleware/async-context";
 
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
 import { webhookStore } from "~/app/models/billing-webhook-deliveries";
 import { syncEntitlements } from "~/app/services/entitlements";
 import { attributionProperties, trackSubscriptionStarted } from "~/app/services/funnel-events";

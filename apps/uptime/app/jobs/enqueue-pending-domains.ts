@@ -10,8 +10,8 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
+import { enqueueMany } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { enqueueMany } from "~/app/lib/queue";
 import { apportionCostByTeam } from "~/app/services/cost";
 
 export default createJobHandler(jobs.enqueuePendingDomains, async (ctx) => {

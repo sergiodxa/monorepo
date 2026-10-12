@@ -14,8 +14,8 @@ import { defineOperation } from "@sdxc/openapi";
 
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
-import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
 import { typedId } from "~/app/services/typed-id";
+import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/config/timezones";
 import { cronJobStatuses } from "~/database/schema";
 import routes from "~/routes/web";
 

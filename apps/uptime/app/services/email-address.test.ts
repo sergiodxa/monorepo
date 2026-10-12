@@ -10,8 +10,8 @@
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { checkEmailAddress, refuseUndeliverableRecipient } from "~/app/services/email-address";
+import { useMailServerDns } from "~/app/test/mail-servers";
 
 /** Answers the lookups; every domain receives mail unless a test says otherwise. */
 let dns = useMailServerDns();

@@ -1,6 +1,6 @@
 /**
  * Tests for the HTTP monitors list page controller. `cloudflare:workers` is mocked
- * because `~/app/lib/queue` reads `env` at module load — following the exact
+ * because `~/app/initializers/queue` reads `env` at module load — following the exact
  * pattern established in `app/http/controllers/actions/monitors.test.ts` — and MSW
  * intercepts outbound HTTP so a stray network call would be visible rather than silent;
  * the page itself no longer makes one. `getViewer()`/`ctx.team`/`ctx.membership`/`ctx.teams` are
@@ -31,8 +31,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -40,7 +40,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./http-monitors")).default as { handler: RequestHandler<any> };
 

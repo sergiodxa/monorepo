@@ -24,8 +24,8 @@ import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 import { isFailure } from "@sdxc/result";
 
+import { MONITORING_PRODUCT, polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { MONITORING_PRODUCT, polar } from "~/app/lib/billing";
 import { syncEntitlements } from "~/app/services/entitlements";
 
 /** Subscriptions read per page, which keeps the whole walk to a handful of requests. */

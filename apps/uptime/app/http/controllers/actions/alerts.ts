@@ -14,8 +14,8 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { MonitorScope } from "~/app/lib/monitor-scope";
 import type { UptimeModels } from "~/app/models";
+import type { MonitorScope } from "~/app/services/monitor-scope";
 import type { AlertConfig } from "~/database/schema";
 
 import {
@@ -24,10 +24,10 @@ import {
 	type CreateAlertValues,
 	UpdateAlertSchema,
 } from "~/app/http/validators/alert";
-import { parseMonitorScope } from "~/app/lib/monitor-scope";
 import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { trackAlertConfigured } from "~/app/services/funnel-events";
+import { parseMonitorScope } from "~/app/services/monitor-scope";
 import { isResolvableScope } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 

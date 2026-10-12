@@ -21,12 +21,12 @@ import { describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * The models middleware reaches `~/app/lib/queue`, which imports `env` from
+ * The models middleware reaches `~/app/initializers/queue`, which imports `env` from
  * `cloudflare:workers`, so this test installs one before importing below. No
  * bindings are supplied, so reading one throws by name — proof these paths touch none.
  */
@@ -34,7 +34,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { updateSsl } = await import("./ssl");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /** Creates an in-memory database seeded with one team, a membership, and a monitor. */
 async function createFixture() {

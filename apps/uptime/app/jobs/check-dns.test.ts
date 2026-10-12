@@ -23,15 +23,15 @@ import { failure, unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DnsRecordType } from "~/app/lib/dns-record-value";
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { DnsRecordImport } from "~/app/models/dns-monitor-records";
 import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
+import type { DnsRecordType } from "~/app/services/dns-record-value";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { InsertDnsMonitor } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors, teams } from "~/database/schema";
 
 /** One answered `(name, type)` query: this is the whole RRset, and it is trustworthy. */
@@ -110,9 +110,9 @@ let realIngest = billing.usage.ingest.bind(billing.usage);
 let ingestMock = vi.spyOn(billing.usage, "ingest");
 
 /** The job has no request behind it, so it reads the configured platform from this module. */
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let realDnsCheckModule = await import("~/app/services/dns-check");
 
@@ -122,7 +122,7 @@ vi.doMock("~/app/services/dns-check", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("./check-dns")).default;

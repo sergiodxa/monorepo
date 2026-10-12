@@ -29,8 +29,8 @@ let sendBatch = vi.spyOn(queue, "sendBatch");
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
-let { createTestDatabase } = await import("~/app/lib/test/db");
-let { bindModels, publishModels, recordJobs } = await import("~/app/lib/test/models");
+let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels, publishModels, recordJobs } = await import("~/app/test/models");
 let jobs = (await import("~/app/jobs")).default;
 let { Database } = await import("~/app/jobs/middleware/database");
 let enqueuePendingDomains = (await import("./enqueue-pending-domains")).default;

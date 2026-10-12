@@ -39,8 +39,8 @@ import { createAction } from "remix/router";
 import type { MarketingContent } from "~/resources/content/marketing";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { monthlyCostForUsage } from "~/app/lib/pricing";
-import { getSoftwareApplicationSchema, SEO } from "~/app/lib/seo";
+import { getSoftwareApplicationSchema, SEO } from "~/app/initializers/seo";
+import { monthlyCostForUsage } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -122,7 +122,7 @@ function formatMonthlyUsd(locale: string, amount: number): string {
 }
 
 /**
- * What we charge for a cost-comparison row: computed from `app/lib/pricing.ts`
+ * What we charge for a cost-comparison row: computed from `config/pricing.ts`
  * using the row's own `usage`, so every table tracks the live pricing model.
  * Falls back to the row's authored `ourCost` for seat-priced scenarios.
  */

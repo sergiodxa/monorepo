@@ -17,15 +17,15 @@ import type { CurrentJobContext } from "@sdxc/jobs";
 import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { CronJobStatus, SelectCronJobMonitor } from "~/database/schema";
 
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { shouldNotifyCronJobResult } from "~/app/services/alerts";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 
 export default createJobHandler(jobs.checkCronJobs, async (ctx) => {
 	let monitors = await ctx.models.cronJobMonitors.actionable().all();

@@ -26,7 +26,7 @@ import {
 	compileSqliteStatement,
 	createSqliteDatabaseAdapter,
 	createTestDatabase,
-} from "~/app/lib/test/db";
+} from "~/app/test/db";
 import {
 	cronJobMonitors,
 	cronJobPings,
@@ -50,7 +50,7 @@ let p99Query = vi.fn(async (_scope: HttpP99Scope): Promise<Result<number | null,
 );
 vi.doMock("~/app/services/analytics", () => ({ getHttpP99ResponseTime: p99Query }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { scheduledJobId } = await import("~/app/models/monitors");
 
 /** Creates a monitor through the model, failing the test when the write is refused. */

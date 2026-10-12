@@ -7,10 +7,10 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { UptimeModels } from "~/app/models";
+import type { MonitorScope, MonitorScopeType } from "~/app/services/monitor-scope";
 
-import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
+import { MONITOR_SCOPE_TYPES } from "~/app/services/monitor-scope";
 
 /** One monitor as a scope choice needs it: enough to name it and to store it. */
 export interface ScopeMonitor {

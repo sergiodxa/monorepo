@@ -19,11 +19,7 @@ import { isFailure } from "@sdxc/result";
 
 import type { TeamDigestMonitor as MonitorReport } from "~/app/emails/shared/team-digest";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
-import type {
-	DigestPeriod,
-	DigestRecipient,
-	TeamDigestMonitor,
-} from "~/app/repositories/team-digests";
+import type { DigestPeriod, DigestRecipient, TeamDigestMonitor } from "~/app/models/team-digests";
 import type { OptionalEmail, SelectTeam, SelectUserPreferences } from "~/database/schema";
 
 import { emailTranslator } from "~/app/emails/locale";
@@ -34,18 +30,18 @@ import {
 } from "~/app/emails/shared/team-digest";
 import { TeamDailyDigestEmail } from "~/app/emails/team-daily-digest";
 import { TeamWeeklyDigestEmail } from "~/app/emails/team-weekly-digest";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { features } from "~/app/lib/flags";
-import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
-import { formatUptime, uptimeRatio, worstStatus } from "~/app/lib/uptime-report";
-import { wantsEmail } from "~/app/models/user-preferences";
+import { features } from "~/app/initializers/flags";
 import {
 	listDigestMonitors,
 	listDigestRecipients,
 	markDigestSent,
-} from "~/app/repositories/team-digests";
+} from "~/app/models/team-digests";
+import { wantsEmail } from "~/app/models/user-preferences";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
 import { resolveSubjects } from "~/app/services/subjects";
+import { signDigestUnsubscribeToken } from "~/app/services/unsubscribe-token";
+import { formatUptime, uptimeRatio, worstStatus } from "~/app/services/uptime-report";
 
 /** The zone every window and the once-a-day bound are counted in. */
 const BOUND_ZONE = "UTC";

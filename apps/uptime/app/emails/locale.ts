@@ -11,13 +11,13 @@
 import { createTranslator } from "@sdxc/i18n";
 import { currentLog } from "@sdxc/logger";
 
-import de from "~/app/locales/de";
-import en from "~/app/locales/en";
-import es from "~/app/locales/es";
-import fr from "~/app/locales/fr";
-import it from "~/app/locales/it";
-import ja from "~/app/locales/ja";
 import { supportedLanguages } from "~/database/schema";
+import de from "~/resources/locales/de";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
+import fr from "~/resources/locales/fr";
+import it from "~/resources/locales/it";
+import ja from "~/resources/locales/ja";
 
 /**
  * Language an email is written in when nothing better is known about its reader.

@@ -1,7 +1,7 @@
 /**
  * Query validation for the report builder and its downloads. The builder submits as `GET`,
  * so everything arrives in the query string; the shape is checked here and the range and
- * monitor filter are resolved against the team in `~/app/lib/report-request`.
+ * monitor filter are resolved against the team in `~/app/services/report-request`.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -9,7 +9,7 @@
 
 import * as s from "remix/data-schema";
 
-import { REPORT_DIALECTS } from "~/app/lib/report-dialect";
+import { REPORT_DIALECTS } from "~/app/services/report-dialect";
 
 /**
  * The builder's fields. `monitors` is one `<select>` value: `all`, `status-page:<id>` or

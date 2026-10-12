@@ -49,7 +49,7 @@ import {
 	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
-} from "~/app/lib/pricing";
+} from "~/config/pricing";
 
 /** Slider bounds, in minutes: as often as every minute, as rarely as hourly. */
 const MIN_FREQUENCY = 1;
@@ -155,7 +155,7 @@ export const PricingCalculator = clientEntry(
 			/**
 			 * The model's own figures, formatted for the visitor's locale, ready for the
 			 * copy that quotes them — every pricing string interpolates these, keeping
-			 * `app/lib/pricing.ts` the one place a price is stated (see its docblock).
+			 * `config/pricing.ts` the one place a price is stated (see its docblock).
 			 */
 			let pricingCopyValues = {
 				price: money.format(BASE_PRICE_USD),

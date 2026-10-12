@@ -28,12 +28,12 @@ const DEFAULT_LANGUAGE: Language = "en";
  * renders in instead of every language's translation bundle.
  */
 const localeLoaders: Record<Language, () => Promise<{ default: Messages }>> = {
-	en: () => import("~/app/locales/en"),
-	es: () => import("~/app/locales/es"),
-	de: () => import("~/app/locales/de"),
-	ja: () => import("~/app/locales/ja"),
-	fr: () => import("~/app/locales/fr"),
-	it: () => import("~/app/locales/it"),
+	en: () => import("~/resources/locales/en"),
+	es: () => import("~/resources/locales/es"),
+	de: () => import("~/resources/locales/de"),
+	ja: () => import("~/resources/locales/ja"),
+	fr: () => import("~/resources/locales/fr"),
+	it: () => import("~/resources/locales/it"),
 };
 
 /** Narrows the document's `lang` to a language with a loader, falling back otherwise. */

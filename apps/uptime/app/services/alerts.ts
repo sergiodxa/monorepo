@@ -13,11 +13,11 @@ import type { Result } from "@sdxc/result";
 
 import { isFailure, unwrap, wrap } from "@sdxc/result";
 
-import type { MonitorScopeType } from "~/app/lib/monitor-scope";
 import type { UptimeModels } from "~/app/models";
 import type { DnsRecordDiff } from "~/app/models/dns-monitor-records";
 import type { AlertEventType, IncidentSummary } from "~/app/services/alert-message";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
+import type { MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
 import type {
@@ -39,16 +39,16 @@ import type {
 
 import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
+import { enqueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { repeatCooldownMinutes } from "~/app/lib/alert-policy";
-import { sortDnsFindings } from "~/app/lib/dns-findings";
-import { absoluteUrl } from "~/app/lib/origin";
-import { enqueue } from "~/app/lib/queue";
 import { alertMessage } from "~/app/services/alert-message";
+import { repeatCooldownMinutes } from "~/app/services/alert-policy";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
+import { sortDnsFindings } from "~/app/services/dns-findings";
 import { registrationIsDown, shouldAlertOnRegistration } from "~/app/services/domain-registration";
 import { classifyExpiry } from "~/app/services/expiry";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
+import { absoluteUrl } from "~/config/origin";
 import routes from "~/routes/web";
 
 /**
@@ -58,7 +58,7 @@ import routes from "~/routes/web";
  */
 /**
  * The cooldown a repeat notification for `alert` is actually spaced by. The numbers
- * live in `~/app/lib/alert-policy`, which has no imports, so the alert form can quote
+ * live in `~/app/services/alert-policy`, which has no imports, so the alert form can quote
  * the floor without pulling `~/app/services/cost` or `cloudflare:workers` into its bundle.
  */
 function repeatCooldown(alert: SelectAlert): number {
@@ -68,7 +68,7 @@ function repeatCooldown(alert: SelectAlert): number {
 /**
  * Builds an absolute dashboard link from a route's relative `href()` path. Kept as its own
  * name because every call site here is about a dashboard page; the origin it resolves against
- * is shared with every other email link (`~/app/lib/origin`).
+ * is shared with every other email link (`~/config/origin`).
  */
 export function dashboardUrl(path: string): string {
 	return absoluteUrl(path);

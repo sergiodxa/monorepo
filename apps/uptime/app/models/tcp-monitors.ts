@@ -16,7 +16,7 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 import type { SelectTcpMonitor } from "~/database/schema";
 
-import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
+import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/services/scheduling";
 import { tcpMonitors } from "~/database/schema";
 
 /**

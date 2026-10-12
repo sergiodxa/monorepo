@@ -30,10 +30,9 @@ import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
-import { SEO } from "~/app/lib/seo";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import en from "~/app/locales/en";
+import { SEO } from "~/app/initializers/seo";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import {
 	dnsMonitorRecords,
 	dnsMonitors,
@@ -45,6 +44,7 @@ import {
 	statusPages,
 	teams,
 } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -67,7 +67,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: publicStatusPageModule } = await import("./status-page");
 
 /** The Analytics Engine SQL API endpoint the page's summaries are queried through. */
@@ -86,7 +86,7 @@ function serveSummaries(rows: unknown[]) {
 }
 
 /**
- * Matches `bootstrap/app.tsx`'s `renderWith(createHtmlRenderer)` wiring; a
+ * Matches `app/initializers/router.tsx`'s `renderWith(createHtmlRenderer)` wiring; a
  * single-request page test only needs `resolveFrame` to return an empty
  * string.
  */

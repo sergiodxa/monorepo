@@ -20,7 +20,7 @@ import { Button } from "@sdxc/ui";
 import { createController } from "remix/router";
 import { Session } from "remix/session";
 
-import { relyingParty } from "~/app/auth/relying-party";
+import { relyingParty } from "~/app/initializers/relying-party";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

@@ -20,12 +20,12 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { InsertMonitor } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 
 interface CalculateCall {
 	expiresAt: number | null;
@@ -74,9 +74,9 @@ let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkSsl = (await import("./check-ssl")).default;
 /**
  * Imported dynamically, after the `cloudflare:workers` mock above, since the models reach
- * `~/app/lib/queue`, which reads `env` at module load, and a static import would be hoisted.
+ * `~/app/initializers/queue`, which reads `env` at module load, and a static import would be hoisted.
  */
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
 function enqueued(): NotifyEnvelope[] {

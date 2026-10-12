@@ -60,8 +60,8 @@ import { fontSize, textAlign, truncate, weight } from "@sdxc/u/typography";
 import { Breadcrumbs, Menu, Sidebar } from "@sdxc/ui";
 import { menuKeys } from "@sdxc/ui/mixins";
 
-import { withPrefix } from "~/app/lib/prefixed-translate";
-import { teamLogoUrl } from "~/app/lib/team-logo";
+import { withPrefix } from "~/app/services/prefixed-translate";
+import { teamLogoUrl } from "~/app/services/team-logo";
 import AppToaster from "~/resources/components/app-toaster";
 import Avatar from "~/resources/components/avatar";
 import FlashToast from "~/resources/components/flash-toast";

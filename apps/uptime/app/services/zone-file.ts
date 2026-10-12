@@ -17,9 +17,13 @@ import type { ZoneFile } from "@sdxc/zone-file";
 import { failure, isFailure, success } from "@sdxc/result";
 import { parse } from "@sdxc/zone-file";
 
-import type { DnsRecordType } from "~/app/lib/dns-record-value";
+import type { DnsRecordType } from "~/app/services/dns-record-value";
 
-import { isDnsRecordType, normalizeDnsName, storedRecordValue } from "~/app/lib/dns-record-value";
+import {
+	isDnsRecordType,
+	normalizeDnsName,
+	storedRecordValue,
+} from "~/app/services/dns-record-value";
 
 /**
  * Largest paste that is parsed at all, in bytes — the same ceiling DNS providers put on a

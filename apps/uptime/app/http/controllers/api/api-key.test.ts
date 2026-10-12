@@ -18,11 +18,11 @@ import type { ApiKeyScope } from "~/database/schema";
 import { apiKeyDestroy } from "~/app/http/controllers/api/api-key";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
+import { checkConformance } from "~/app/test/openapi";
+import { expectProblem } from "~/app/test/problem";
 import { apiKeys, teams } from "~/database/schema";
 import routes from "~/routes/web";
 

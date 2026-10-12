@@ -3,9 +3,8 @@
 	"include": [
 		"app/**/*",
 		"bootstrap/**/*",
-		"config/**/*.d.ts",
+		"config/**/*",
 		"database/**/*",
-		"infrastructure/**/*",
 		"resources/**/*",
 		"routes/**/*",
 		"vite.config.ts",
@@ -25,10 +24,8 @@
 		],
 		"paths": {
 			"~/app/*": ["./app/*"],
-			"~/bootstrap/*": ["./bootstrap/*"],
 			"~/config/*": ["./config/*"],
 			"~/database/*": ["./database/*"],
-			"~/infrastructure/*": ["./infrastructure/*"],
 			"~/resources/*": ["./resources/*"],
 			"~/routes/*": ["./routes/*"]
 		}

@@ -31,16 +31,16 @@ import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestBilling } from "~/app/lib/test/billing";
+import { createTestBilling } from "~/app/test/billing";
 import {
 	applyMigrations,
 	compileSqliteStatement,
 	createSqliteDatabaseAdapter,
 	createTestDatabase,
-} from "~/app/lib/test/db";
+} from "~/app/test/db";
 import {
 	alertEvents,
 	alerts,
@@ -74,6 +74,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let queue: QueueMock<{ job: string; body?: unknown }> = createQueue();
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		QUEUE: queue,
@@ -82,8 +83,6 @@ vi.doMock("cloudflare:workers", () => ({
 		CLOUDFLARE_ANALYTICS_TOKEN: "test-token",
 	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
-	/** Present so `~/app/do/geo-fetch` can extend it at module load. */
-	DurableObject: class {},
 }));
 
 /**
@@ -96,9 +95,9 @@ let realIngest = billing.usage.ingest.bind(billing.usage);
 let ingestMock = vi.spyOn(billing.usage, "ingest");
 
 /** The job has no request behind it, so it reads the configured platform from this module. */
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
@@ -107,9 +106,9 @@ let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkHttp = (await import("./check-http")).default;
 /**
  * Imported dynamically, after the `cloudflare:workers` mock above, since the models reach
- * `~/app/lib/queue`, which reads `env` at module load, and a static import would be hoisted.
+ * `~/app/initializers/queue`, which reads `env` at module load, and a static import would be hoisted.
  */
-let { publishModels } = await import("~/app/lib/test/models");
+let { publishModels } = await import("~/app/test/models");
 
 /**
  * Builds the context the handler receives, carrying the database its chain would publish,

@@ -19,7 +19,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { checkConformance } from "~/app/lib/test/openapi";
+import { checkConformance } from "~/app/test/openapi";
 
 /** Checks every exchange against the API document; see `checkConformance`. */
 const CONFORMANCE = checkConformance({ backfillDailyStatsCreate: null });
@@ -33,11 +33,11 @@ let queue = createQueue({ name: "uptime" });
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({ QUEUE: queue }) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { createTestDatabase } = await import("~/app/lib/test/db");
+let { createTestDatabase } = await import("~/app/test/db");
 let { teams } = await import("~/database/schema");
 let { backfillDailyStatsCreate } = await import("./backfill-daily-stats");
-let { jobQueue } = await import("~/app/lib/queue");
-let { bindModels } = await import("~/app/lib/test/models");
+let { jobQueue } = await import("~/app/initializers/queue");
+let { bindModels } = await import("~/app/test/models");
 let routes = (await import("~/routes/web")).default;
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

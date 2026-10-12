@@ -16,7 +16,7 @@ import { getTableName } from "remix/data-table";
 
 import type { SelectDnsMonitor, SelectDnsMonitorResult } from "~/database/schema";
 
-import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
+import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/services/scheduling";
 import { dnsMonitors } from "~/database/schema";
 
 /**

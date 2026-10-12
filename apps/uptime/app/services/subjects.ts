@@ -12,7 +12,7 @@ import type { ManagementClient } from "@sdxc/auth/management-client";
 import { SubjectNotFoundError } from "@sdxc/auth/management-client";
 import { isFailure } from "@sdxc/result";
 
-import { mapWithConcurrency } from "~/app/lib/concurrency";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 
 /**
  * Resolves every listed subject id to its profile at the identity provider, in

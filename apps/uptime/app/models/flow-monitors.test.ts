@@ -13,9 +13,9 @@ import { describe, expect, test } from "vitest";
 
 import type { FlowCheckResult } from "~/app/services/flow-check";
 
-import { DEFAULT_FLOW_INTERVAL_SECONDS } from "~/app/lib/pricing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
+import { DEFAULT_FLOW_INTERVAL_SECONDS } from "~/config/pricing";
 import { flowMonitorResults, flowMonitors } from "~/database/schema";
 
 /** A spec source the model stores verbatim; no run reads it here. */

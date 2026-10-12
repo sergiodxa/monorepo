@@ -14,8 +14,8 @@ import { describe, expect, test } from "vitest";
 
 import type { InsertStatusPage } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { flowMonitors, statusPages } from "~/database/schema";
 
 /** Seeds a flow monitor whose source is the thing a public page must never publish. */

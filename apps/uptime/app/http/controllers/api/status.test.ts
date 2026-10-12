@@ -17,16 +17,16 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { checkConformance } from "~/app/lib/test/openapi";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { checkConformance } from "~/app/test/openapi";
 import { monitorResults, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /** Checks every exchange against the API document; see `checkConformance`. */
 const CONFORMANCE = checkConformance({ statusShow: null });
 
-/** `~/app/lib/queue`, imported through the models, reads `env` from `cloudflare:workers` at module load, so the mock must resolve. */
+/** `~/app/initializers/queue`, imported through the models, reads `env` from `cloudflare:workers` at module load, so the mock must resolve. */
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ QUEUE: createQueue() }),
 	waitUntil: (promise: Promise<unknown>) => promise,
@@ -34,7 +34,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { statusShow } = await import("./status");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

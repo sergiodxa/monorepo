@@ -1,0 +1,5926 @@
+/**
+ * English translation dictionary for the Uptime app, and the canonical source of truth
+ * for every translatable string: landing page, marketing/comparison and SEO meta, the
+ * dashboard, monitors, alerts, teams, domains, status pages, and toast/error copy. Other
+ * locale files mirror this shape so the UI can render in the user's chosen language.
+ *
+ * @author [Sergio Xalambrí](https://sergiodxa.com)
+ * @copyright Sergio Xalambrí 2026
+ */
+
+import type { ApiKeyScope } from "~/database/schema";
+
+export default {
+	landing: {
+		meta: {
+			title: "Uptime by Sergio Xalambrí",
+			description: "Simple & reliable uptime monitoring for developers",
+		},
+
+		header: {
+			title: "Uptime",
+
+			nav: {
+				features: "Features",
+				compare: "Compare",
+				pricing: "Pricing",
+				docs: "Docs",
+
+				cta: {
+					in: "Open Dashboard",
+					out: "Start Monitoring",
+				},
+			},
+		},
+
+		try: {
+			title: "Check any URL, free",
+			description:
+				"No account needed. We'll run one check and show you exactly what a monitor would report.",
+			label: "Check a URL",
+			placeholder: "https://example.com",
+			submit: "Run a check",
+		},
+
+		hero: {
+			pill: "Uptime Monitoring",
+			title: "Monitor your services {#strong}with confidence{/strong}",
+			description:
+				"Get instant alerts when your websites and APIs go down. Monitor your websites and APIs with ease.",
+
+			cta: {
+				in: "Open Dashboard",
+				out: "Start Monitoring",
+				pricing: "View Pricing",
+				try: "Monitor a site free for {$days} days",
+			},
+
+			try: {
+				label: "Check a URL",
+				placeholder: "https://example.com",
+				submit: "Run a check",
+			},
+			screenshot: {
+				alt: "Screenshot of the Uptime dashboard: a sidebar listing HTTP, DNS, and TCP monitors, cron jobs, alerts, maintenance, and status pages; summary cards for monthly ping usage, overall uptime percentage, and the slowest endpoint; per-type counts of monitors up and down; and a table of HTTP monitors with latency trend sparklines and status badges",
+			},
+
+			trustIndicators: {
+				freeToStart: "Free to start",
+				payForAutomation: "Pay for automation",
+				cancelAnytime: "Cancel anytime",
+			},
+		},
+
+		trustIndicators: {
+			monitorTypes: "Monitor Types",
+			globalRegions: "Global Regions",
+			daysDataRetention: "Days Data Retention",
+			minCheckInterval: "Min Check Interval",
+		},
+
+		/**
+		 * The three things that stay true no matter how much someone ends up monitoring.
+		 * Price and allowance are interpolated from `~/config/pricing.ts`, so a stale
+		 * literal here would fail the `app/services/public-claims.ts` build check.
+		 */
+		benefits: {
+			badge: "Why Uptime",
+			title: "One plan, every check, no counting",
+			description: "Three things that stay true however much you end up monitoring.",
+
+			list: {
+				everythingIncluded: {
+					title: "Everything included",
+					description:
+						"HTTP, DNS, TCP and SSL checks, cron job heartbeats, alerts and status pages. One plan, nothing sold as an add-on.",
+				},
+				noMonitorMath: {
+					title: "No monitor math",
+					description:
+						"Unlimited monitors and unlimited team members. Add everything you want watched, and everyone who needs to see it.",
+				},
+				payForUsage: {
+					title: "Pay for actual usage",
+					description:
+						"{$price} a month includes {$included} checks. Past that you pay for the checks you actually run, and nothing else.",
+				},
+			},
+		},
+
+		features: {
+			title: "Powerful Monitoring Made Simple",
+			description:
+				"Everything you need to keep your services running smoothly, with no unnecessary complexity.",
+			badge: "Features",
+			learnMore: "Learn more",
+
+			list: {
+				first: {
+					title: "Monitor your uptime",
+					description:
+						"Track your services around the clock, from nine regions, at intervals from one minute. Get detailed metrics and performance insights at a glance.",
+				},
+				second: {
+					title: "Receive alerts anywhere",
+					description:
+						"Get instant notifications via email, Slack, Discord, or webhooks when your services experience downtime or performance issues.",
+				},
+				third: {
+					title: "Pay for what you use",
+					description:
+						"Transparent pricing with no hidden fees. Scale up or down as needed, with plans that grow with your monitoring needs.",
+				},
+				fourth: {
+					title: "Status Pages",
+					description:
+						"Create beautiful public status pages to keep your users informed about service availability and incidents.",
+				},
+				fifth: {
+					title: "SSL Monitoring",
+					description:
+						"Track certificate expiry dates and get alerts before your SSL certificates expire to prevent security warnings.",
+				},
+				sixth: {
+					title: "DNS Monitoring",
+					description:
+						"Detect DNS record changes and propagation issues before they impact your users or get hijacked.",
+				},
+				seventh: {
+					title: "Native Integrations",
+					description:
+						"Direct Slack and Discord integrations with rich notifications, not just basic webhooks.",
+				},
+				eighth: {
+					title: "Monitor entire flows",
+					description:
+						"Run several requests in order and check what comes back \u2014 sign in, read the token, call the endpoint it authorises. The question a single check cannot ask.",
+				},
+			},
+		},
+
+		completeFeatureSet: {
+			badge: "Complete Feature Set",
+			title: "Everything you need for reliable monitoring",
+			description: "Advanced capabilities that make monitoring effortless and comprehensive.",
+
+			list: {
+				maintenanceWindows: {
+					title: "Maintenance Windows",
+					description: "Schedule downtime and suppress alerts during planned maintenance",
+				},
+				contentMonitoring: {
+					title: "Content Monitoring",
+					description: "Verify specific keywords or content appear on your pages",
+				},
+				recoveryAlerts: {
+					title: "Recovery Alerts",
+					description: "Get notified when services come back up after an incident",
+				},
+				apiAccess: {
+					title: "API Access",
+					description: "Full REST API with key management for automation",
+				},
+				alertCooldowns: {
+					title: "Alert Cooldowns",
+					description: "Prevent alert fatigue with configurable cooldown periods",
+				},
+				customHeaders: {
+					title: "Custom Headers",
+					description: "Add authentication headers and custom request parameters",
+				},
+				cronMonitoring: {
+					title: "Cron Job Monitoring",
+					description: "Monitor scheduled jobs and background tasks with heartbeat checks",
+				},
+			},
+		},
+
+		useCases: {
+			badge: "Use Cases",
+			title: "Built for every monitoring need",
+			description:
+				"From simple health checks to complex distributed systems, we've got you covered.",
+			learnMore: "Learn more",
+			tailoredFor: "Tailored solutions for:",
+
+			websiteMonitoring: {
+				meta: {
+					title: "Website Monitoring | Uptime",
+					description:
+						"Monitor website uptime and performance from 9 global regions. Track response times, SSL certificates, and get instant downtime alerts.",
+				},
+			},
+
+			apiMonitoring: {
+				meta: {
+					title: "API Monitoring | Uptime",
+					description:
+						"Monitor REST APIs and endpoints with detailed status checks. Track response codes, measure latency, and verify API health.",
+				},
+			},
+
+			cronJobs: {
+				meta: {
+					title: "Cron Job Monitoring | Uptime",
+					description:
+						"Monitor scheduled tasks and cron jobs. Get alerts when jobs are late, miss their window, or fail to complete.",
+				},
+			},
+
+			healthcheck: {
+				meta: {
+					title: "Health Check Monitoring | Uptime",
+					description:
+						"Automated health checks for your services. Monitor endpoints, databases, and internal services with customizable intervals.",
+				},
+			},
+
+			ecommerce: {
+				meta: {
+					title: "E-commerce Monitoring | Uptime",
+					description:
+						"Protect your online store with uptime monitoring. Track checkout, payments, and product pages to prevent lost sales.",
+				},
+			},
+
+			saas: {
+				meta: {
+					title: "SaaS Application Monitoring | Uptime",
+					description:
+						"Keep your SaaS product reliable with comprehensive monitoring. Track APIs, dashboards, and background jobs in one platform.",
+				},
+			},
+
+			microservices: {
+				meta: {
+					title: "Microservices Monitoring | Uptime",
+					description:
+						"Monitor distributed systems and microservices architecture. Catch failures before they cascade across your infrastructure.",
+				},
+			},
+
+			list: {
+				websiteMonitoring: {
+					title: "Website Monitoring",
+					description:
+						"Track uptime and performance for landing pages, blogs, and web applications.",
+				},
+				apiMonitoring: {
+					title: "API Monitoring",
+					description: "Monitor REST APIs, GraphQL endpoints, and webhooks for availability.",
+				},
+				saas: {
+					title: "SaaS Applications",
+					description:
+						"Keep your SaaS product reliable with proactive monitoring and instant alerts.",
+				},
+				microservices: {
+					title: "Microservices",
+					description: "Monitor distributed systems and catch failures before they cascade.",
+				},
+				healthChecks: {
+					title: "Health Checks",
+					description: "Verify service health and database connections with scheduled pings.",
+				},
+				ecommerce: {
+					title: "E-commerce",
+					description:
+						"Monitor checkout flows, payment APIs, and product pages to protect revenue.",
+				},
+			},
+
+			audiences: {
+				indieHackers: "Indie Hackers",
+				soloDevelopers: "Solo Developers",
+				startups: "Startups",
+				agencies: "Agencies",
+				enterprises: "Enterprises",
+				devops: "DevOps",
+			},
+		},
+
+		pricing: {
+			badge: "Pricing",
+			title: "Simple, Transparent Pricing",
+			description:
+				"One subscription, no tiers. Pay only for what you use with our straightforward pricing model",
+
+			howItWorks: {
+				title: "How pricing works",
+
+				list: {
+					first: {
+						title: "Base subscription",
+						description: "{$price}/month includes your first {$included} pings",
+					},
+
+					second: {
+						title: "Additional pings",
+						description: "{$blockPrice} per {$blockSize} pings after that, billed in whole blocks",
+					},
+
+					third: {
+						title: "No hidden fees",
+						description:
+							"No extra charges for features or integrations. Pay for the pings you use.",
+					},
+				},
+			},
+
+			calculator: {
+				title: "Pricing Calculator",
+				description: "Calculate your monthly cost based on your monitoring needs",
+
+				add: "Add Monitor",
+
+				monitor: {
+					label: "Monitor frequency",
+					delete: "Remove",
+					frequency: {
+						lower: "1m",
+						upper: "60m",
+					},
+				},
+
+				stats: {
+					pingsPerMonth: "Pings per month:",
+					baseSubscription: "Base subscription",
+					includes: "Includes first {$amount} pings",
+					additionalPings: "Additional pings:",
+					additionalPingsCost: "{$blocks} × {$blockPrice} per {$blockSize} pings ({$pings} over)",
+					totalCost: "Total monthly cost:",
+				},
+			},
+		},
+
+		faq: {
+			badge: "FAQ",
+			title: "Frequently Asked Questions",
+			description: "Find answers to common questions about Uptime",
+
+			list: {
+				first: {
+					q: "How does Uptime monitor my services?",
+					a: "Uptime sends regular HTTP or HTTPS requests to your endpoints. We check response codes and response times to determine if your service is available and responsive.",
+				},
+
+				second: {
+					q: "What happens when an outage is detected?",
+					a: "When Uptime detects an outage, it immediately sends an alert through your configured channels.",
+				},
+
+				third: {
+					q: "Can I monitor internal services?",
+					a: "Yes, as long as your internal services are accessible from the internet. You can also configure custom headers to authenticate requests.",
+				},
+
+				fourth: {
+					q: "How do I get started?",
+					a: "Just sign up, create your first monitor, and configure your alert preferences. You’ll be up and running in under a minute.",
+				},
+
+				fifth: {
+					q: "Is there a free tier?",
+					a: "Yes! You can create unlimited monitors and trigger pings manually for free, forever. Scheduled automatic monitoring requires a subscription.",
+				},
+
+				sixth: {
+					q: "How long is ping data stored?",
+					a: "We store your ping results for 365 days. After that, they are automatically deleted.",
+				},
+
+				seventh: {
+					q: "Can I monitor services that require authentication?",
+					a: "Yes. You can set custom headers with tokens or credentials to authenticate your requests.",
+				},
+
+				eighth: {
+					q: "Can I monitor multiple URLs?",
+					a: "Yes. Just create a separate monitor for each URL. Each monitor can have its own check frequency, HTTP method, expected status code, and more.",
+				},
+
+				ninth: {
+					q: "Can I monitor APIs?",
+					a: "Absolutely. Uptime is designed to monitor both websites and APIs. You can set the endpoint, method, headers, and expected responses to monitor your API effectively.",
+				},
+
+				tenth: {
+					q: "Can I set a timeout for each ping?",
+					a: "Yes. You can configure a timeout for each monitor. If the response takes longer than expected, it’s considered a failure. This helps detect slow services.",
+				},
+
+				eleventh: {
+					q: "Can I pause or disable a monitor temporarily?",
+					a: "Yes. You can pause any monitor at any time, individually.",
+				},
+
+				twelfth: {
+					q: "Can I test a monitor immediately after creating it?",
+					a: "Yes. A ping is automatically triggered right after you create a monitor.",
+				},
+
+				thirteenth: {
+					q: "Do you support status pages?",
+					a: "Yes! Create customizable public status pages to share your service health with users. Include any monitors you want and add your branding.",
+				},
+
+				fourteenth: {
+					q: "Can I view historical performance trends?",
+					a: "We store all past results so you get a full history. Performance trend charts are planned for a future release.",
+				},
+
+				fifteenth: {
+					q: "Which alert channels are supported?",
+					a: "Email, Slack, Discord, and webhooks. Native integrations make it easy to get alerts where your team already works. Webhooks let you connect to any other service.",
+				},
+
+				sixteenth: {
+					q: "Do you support teams or shared monitors?",
+					a: "Yes! Each user starts with a team. Invite team members with different roles (Owner, Admin, Member). Domain auto-provisioning automatically adds users with verified company email domains.",
+				},
+
+				seventeenth: {
+					q: "What happens if I exceed my plan’s limits?",
+					a: "Usage above the {$included} pings included in your subscription is billed in whole blocks of {$blockSize} at {$blockPrice} each — a single ping over starts a new block.",
+				},
+
+				eighteenth: {
+					q: "Do you store request or response bodies?",
+					a: "No. We never store body data. For extra privacy and efficiency, we recommend using the `HEAD` method.",
+				},
+
+				nineteenth: {
+					q: "From which regions can I monitor my services?",
+					a: "Uptime supports monitoring from multiple regions: Africa, Asia-Pacific, Eastern and Western Europe, Eastern and Western North America, Middle East, Oceania, and South America.\n\nYou can choose one region per monitor. The region is treated as a hint, the actual ping will originate from a server in or near that region.",
+				},
+
+				twentieth: {
+					q: "Can I monitor a login or a checkout flow?",
+					a: "Yes. A flow monitor runs several requests in order with assertions between them, so it can sign in, read the token back, and call the endpoint that token authorises. A flow runs at the HTTP level rather than in a browser, and only against domains your team has verified.",
+				},
+			},
+		},
+
+		footer: {
+			name: "Uptime",
+			description: "Simple, reliable monitoring for your websites and APIs.",
+			copyright: "© {$year :string} Uptime by Sergio Xalambrí. All rights reserved.",
+			sections: {
+				product: {
+					title: "Product",
+					features: "Features",
+					pricing: "Pricing",
+					faq: "FAQ",
+				},
+				features: {
+					title: "Features",
+					monitors: "Monitors",
+					alerts: "Alerts",
+					statusPages: "Status Pages",
+					ssl: "SSL Monitoring",
+					dns: "DNS Monitoring",
+					cronJobs: "Cron Job Monitoring",
+					contentMonitoring: "Content Monitoring",
+					maintenance: "Maintenance Windows",
+					integrations: "Integrations",
+					teams: "Teams",
+					analytics: "Analytics",
+					api: "API Access",
+					flowMonitors: "Flow Monitors",
+				},
+				useCases: {
+					title: "Use Cases",
+					websiteMonitoring: "Website Monitoring",
+					apiMonitoring: "API Monitoring",
+					saas: "SaaS Applications",
+					ecommerce: "E-commerce",
+					cronJobs: "Cron Job Monitoring",
+					microservices: "Microservices",
+					healthChecks: "Health Checks",
+					loginFlows: "Login Flow Monitoring",
+				},
+				solutions: {
+					title: "Solutions",
+					indieHackers: "For Indie Hackers",
+					soloDevs: "For Solo Developers",
+					startups: "For Startups",
+					agencies: "For Agencies",
+					enterprises: "For Enterprises",
+					devops: "For DevOps",
+				},
+				compare: {
+					title: "Compare",
+					uptimerobot: "vs UptimeRobot",
+					pingdom: "vs Pingdom",
+					betterUptime: "vs Better Uptime",
+					healthchecks: "vs Healthchecks.io",
+					cronitor: "vs Cronitor",
+					checkly: "vs Checkly",
+					statuscake: "vs StatusCake",
+					datadog: "vs Datadog",
+					site24x7: "vs Site24x7",
+					ohdear: "vs Oh Dear",
+				},
+				docs: {
+					title: "Documentation",
+					overview: "Overview",
+					quickstart: "Quick Start",
+					apiReference: "API Reference",
+				},
+				legal: {
+					title: "Legal",
+					terms: "Terms of Service",
+					privacy: "Privacy Policy",
+				},
+			},
+		},
+
+		finalCta: {
+			body: "Create your first monitor in under 2 minutes. No credit card required to start.",
+		},
+
+		marketingPage: {
+			everythingBadge: "Deep Dive",
+			everythingTitle: "Everything you need",
+			everythingDescription:
+				"A closer look at what you get, from the first check to the alert that reaches you.",
+			howItWorksBadge: "Get started",
+			howItWorksTitle: "How it works",
+			howItWorksDescription: "Three steps from an empty dashboard to checks that run on their own.",
+			faqBadge: "FAQ",
+			faqTitle: "Frequently asked questions",
+			faqDescription: "The questions people ask most before they start monitoring.",
+			finalCtaTitle: "Start monitoring your services",
+		},
+
+		comparison: {
+			tableLabel: "Uptime vs {$competitor}",
+			tableCategoryHeader: "Category",
+			tableProductHeader: "Uptime",
+			whyTeamsSwitchTitle: "Why teams switch to Uptime",
+			gettingStartedTitle: "Getting started",
+			finalCtaTitle: "Switch to Uptime",
+
+			honestTake: {
+				badge: "Honest take",
+				title: "When {$competitor} might be better",
+				description:
+					"We believe in being transparent. Here's when {$competitor} could be the right choice.",
+			},
+
+			pricing: {
+				badge: "Pricing",
+				title: "Real cost comparison",
+				description: "See how much you could save for a typical monitoring setup.",
+				tableLabel: "Cost comparison: Uptime vs {$competitor}",
+				scenarioHeader: "Use case",
+				savingsHeader: "Savings",
+				savingsPerYear: "~{$amount}/year",
+				footnote:
+					"Estimates based on typical usage patterns. {$competitor} pricing can change and your actual cost depends on your setup.",
+			},
+		},
+	},
+
+	/**
+	 * `/trust` — how the monitoring works and who runs it. Only populated here for now,
+	 * falling back to English in every other locale until translated, the same way the
+	 * legal pages' body prose does.
+	 */
+	trust: {
+		meta: {
+			title: "Trust | Uptime",
+			description:
+				"How Uptime works: who operates it, where checks run from, how an incident is confirmed, and exactly what is and is not stored.",
+		},
+		footerLink: "Trust",
+		heading: "Trust",
+		intro:
+			"A monitor is only worth what you believe it. This page describes how the service actually works — who runs it, where your checks come from, how a failure becomes a notification, and what we keep — in enough detail for you to decide whether to rely on it. Everything here describes the system as it is built today, not as it is planned.",
+		regions: {
+			afr: "Africa",
+			apac: "Asia-Pacific",
+			eeur: "Eastern Europe",
+			enam: "Eastern North America",
+			me: "Middle East",
+			oc: "Oceania",
+			sam: "South America",
+			weur: "Western Europe",
+			wnam: "Western North America",
+		},
+		sections: {
+			whoRuns: {
+				title: "Who runs it",
+				bodyPrefix: "Uptime is built and operated by ",
+				founderName: "Sergio Xalambrí",
+				bodySuffix:
+					", independently. There is no support rotation and no on-call team behind that name: one person writes the code, deploys it, and answers the email.",
+				second:
+					"That is worth knowing in both directions. A question about how a check behaves reaches the person who wrote it. A problem that starts while that person is asleep waits until they wake up.",
+			},
+
+			/**
+			 * Code-available, not open source: the repository carries its own license with
+			 * conditions, so the claim is only that a reader can check the code.
+			 */
+			source: {
+				title: "You can read the code",
+				bodyPrefix:
+					"The code that runs this service is public, so the claims on this page can be checked rather than taken on faith — how a check is classified, what a stored result holds, when a notification goes out: ",
+				linkText: "apps/uptime on GitHub",
+				bodySuffix: "{|.|}",
+				caveat:
+					"That shows you the code, not the deployment running right now. It is one more thing you can verify for yourself, not a guarantee on its own.",
+			},
+			ownStatus: {
+				title: "Our own status page",
+				bodyPrefix:
+					"The service publishes a status page about itself, built with the same cron-job monitoring the product offers: ",
+				linkText: "uptime.sergiodxa.com/status/uptime",
+				bodySuffix: "{|.|}",
+				scope:
+					"What that page covers is narrower than it might sound, so here is the precise claim. Each of the service's scheduled internal jobs — the monitor sweeps, the nightly roll-up of daily statistics, the retention cleanups — reports in when it finishes, so the page shows whether that scheduled work is running on time. It is not an independent probe of the whole service, and it runs on the same platform as the app itself, so trouble broad enough to stop the app can stop the page reporting too.",
+			},
+			whereChecksRun: {
+				title: "Where checks run from",
+				intro: "Each monitor is checked from a region you choose. Nine are available:",
+				hint: "A region is a hint, not a promise. The check runs on infrastructure placed near the region you picked, and the platform may place it elsewhere when it has to. The two European regions are the exception: they are pinned to the EU, which is a hard constraint rather than a preference.",
+				timing:
+					"The response time recorded for a check measures only the request to your endpoint, not our own work around it, so the number stays comparable to what somebody in that region would experience.",
+			},
+			incidents: {
+				title: "How an incident is confirmed",
+				classification:
+					"Every check ends in one of three outcomes. Down means the endpoint could not be reached at all, answered with a status other than the one you expect, or failed a content check you configured. Degraded means it answered correctly but slower than the threshold you set. Up means everything matched.",
+				noConfirmation:
+					"There is no second confirming check before the first notification: one failing check is enough to mark a monitor down and send the alert. That is a deliberate trade — a confirmation pass would delay every real alert by a full interval — but it does mean a single unlucky network moment can reach your inbox.",
+				falsePositivesIntro: "What keeps the noise down instead:",
+				infraFault: {
+					label: "Our failures are not yours.",
+					body: "When our own probing infrastructure fails, the check is retried rather than recorded. A fault on our side never becomes a down result in your history or an alert in your inbox.",
+				},
+				yourThresholds: {
+					label: "Your timeout, your thresholds.",
+					body: "The timeout, the expected status, and the degraded threshold are all yours to set, so a check is only slow or failed by the definition you gave it.",
+				},
+				cooldown: {
+					label: "Repeats are spaced, and a recovery always arrives.",
+					body: "The first alert of an incident goes out immediately. While a monitor stays down, repeats are spaced by the cooldown on that alert — an hour by default — so a lasting outage keeps reminding you instead of going quiet. When it recovers, you get one more message saying so.",
+				},
+				recovery: {
+					label: "Recovery notices only after a real failure.",
+					body: "A recovery message is only sent when the monitor was previously in a failing state. A monitor's first ever check never announces itself as recovered.",
+				},
+				maintenance: {
+					label: "Maintenance windows suppress alerts.",
+					body: "While a maintenance window covers a monitor, its notifications are skipped entirely, so planned work does not wake anyone.",
+				},
+				accounting: {
+					label: "Held-back notifications are accounted for.",
+					body: "When an incident ends, the recovery message reports how many notifications went out and how many were held back, so a quiet incident can be told apart from lost alerts.",
+				},
+			},
+			storage: {
+				title: "What is stored, and what is not",
+				noBodies:
+					"Response bodies are never stored. Not truncated, not hashed, not sampled — there is no column for one anywhere in the database.",
+				contentChecks:
+					"A response body is only downloaded at all when you configure a content check for that monitor. When you do, it is matched against your rules in memory during the check and then discarded along with the rest of the request. A monitor without content checks never reads a body.",
+				storedIntro: "What is kept, and for how long:",
+				httpResults: {
+					label: "Individual HTTP check records:",
+					body: "the status code returned, how long the request took, and when it finished. Kept for one week, which is all the recent views and the usage counting read.",
+				},
+				dailyStats: {
+					label: "Daily statistics:",
+					body: "each night the previous day's checks are rolled up into one row per monitor. That roll-up is the long-term history behind every uptime chart in the app, and it is retained for 365 days.",
+				},
+				otherResults: {
+					label: "DNS and TCP check records:",
+					body: "kept for 90 days, because those are the history a monitor's detail page and a post-mortem read directly.",
+				},
+				alertHistory: {
+					label: "Alert history:",
+					body: "every notification we sent, failed to send, or deliberately held back, kept for 90 days, so you can audit what you were and were not told.",
+				},
+				cronPings: {
+					label: "Cron job check-ins:",
+					body: "kept for 365 days. The requesting address and user agent recorded alongside one are cleared after 30 days; the check-in itself stays.",
+				},
+			},
+			customerData: {
+				title: "Your account data",
+				bodyPrefix:
+					"Account details, payment handling, cookies, and your rights over all of it are covered by the ",
+				privacyLinkText: "Privacy Policy",
+				bodySuffix:
+					", which is the authoritative document rather than a summary written twice. The short version: your data is not sold, and your monitoring data belongs to your team.",
+			},
+			ourIncidents: {
+				title: "When Uptime itself has an incident",
+				retries:
+					"Checks are queued rather than run inline, and a check that could not finish because of a fault on our side is retried instead of recorded. None of our own trouble is written into your monitor's history as a failure of your service.",
+				gaps: "If the trouble lasts, checks are delayed or skipped. A skipped check writes nothing, so the period shows up in your history as a gap with no data rather than as downtime you never had, and your figures are calculated from the checks that actually ran.",
+				missedAlerts:
+					"The failure mode worth understanding is the one that follows: if your endpoint goes down during our outage, your alert can arrive late or not at all. A monitoring service cannot alert you while it is down, and this one is no exception.",
+				noSlaPrefix:
+					"We do not offer a service level agreement, and we publish no availability figure to hold ourselves to. The ",
+				termsLinkText: "Terms of Service",
+				noSlaSuffix:
+					"{| |}say as much, and this page will not quietly say otherwise. What there is instead: the status page above, and a person who answers email.",
+			},
+		},
+	},
+
+	legal: {
+		terms: {
+			meta: {
+				title: "Terms of Service | Uptime",
+				description:
+					"Terms of Service for Uptime, the uptime monitoring service by Sergio Xalambrí.",
+			},
+
+			lastUpdated: "Last updated: February 11, 2026",
+			title: "Terms of Service",
+
+			sections: {
+				introduction: {
+					title: "1. Introduction",
+					body: "Welcome to Uptime. These Terms of Service govern your use of our uptime monitoring service operated by Sergio Xalambrí. By accessing or using Uptime, you agree to be bound by these terms.",
+				},
+				serviceDescription: {
+					title: "2. Service Description",
+					body: "Uptime provides uptime and scheduled task monitoring services, including HTTP endpoint monitoring, DNS monitoring, TCP port monitoring, SSL certificate monitoring, and cron job monitoring. These services help you track the health of your services and scheduled tasks. We monitor your endpoints from multiple global regions and notify you when issues are detected.",
+				},
+				accountTerms: {
+					title: "3. Account Terms",
+					first: "You must provide accurate and complete information when creating an account.",
+					second:
+						"You are responsible for maintaining the security of your account credentials and for all activities that occur under your account.",
+					third:
+						"You must be at least 18 years old or have the legal authority to enter into this agreement on behalf of an organization.",
+					fourth: "You must notify us immediately of any unauthorized use of your account.",
+				},
+				acceptableUse: {
+					title: "4. Acceptable Use",
+					intro: "When using Uptime, you agree not to:",
+					first:
+						"Abuse, overload, or interfere with our service or attempt to circumvent any usage limits.",
+					second: "Monitor URLs or endpoints that you do not own or have authorization to monitor.",
+					third:
+						"Monitor cron jobs or scheduled tasks that you do not own or have authorization to monitor.",
+					fourth:
+						"Use cron job ping endpoints for purposes other than legitimate scheduled task monitoring.",
+					fifth: "Use the service for any illegal or unauthorized purpose.",
+					sixth: "Attempt to gain unauthorized access to our systems or other users' accounts.",
+					seventh: "Resell or redistribute the service without our written consent.",
+				},
+				paymentTerms: {
+					title: "5. Payment Terms",
+					first:
+						"Uptime operates on a usage-based billing model. You pay based on the number of monitors and check frequency you configure.",
+					second: "Subscriptions are managed and processed through Polar.",
+					third:
+						"Refunds are provided on a prorated basis for the unused portion of your subscription if you cancel.",
+					fourth:
+						"We reserve the right to change pricing with 30 days notice. Continued use after price changes constitutes acceptance.",
+				},
+				dataAndPrivacy: {
+					title: "6. Data and Privacy",
+					firstPrefix: "Your use of Uptime is also governed by our ",
+					firstLinkText: "Privacy Policy",
+					firstSuffix: ", which describes how we collect, use, and protect your data.",
+					second:
+						"Monitoring data is retained for 365 days. After this period, historical data is automatically deleted.",
+					third:
+						"You may request deletion of your data at any time by contacting us. Upon account termination, your data will be deleted within 30 days.",
+				},
+				serviceAvailability: {
+					title: "7. Service Availability",
+					first:
+						"We target 99.9% service availability, but this is a goal, not a guarantee. We do not offer service level agreements (SLAs) with financial remedies.",
+					second:
+						"We may perform scheduled maintenance with reasonable advance notice when possible. Emergency maintenance may occur without notice.",
+					third:
+						"We are not liable for any downtime, data loss, or damages resulting from service interruptions, whether planned or unplanned.",
+				},
+				limitationOfLiability: {
+					title: "8. Limitation of Liability",
+					first:
+						'Uptime is provided "as is" and "as available" without warranties of any kind, either express or implied.',
+					second:
+						"We do not guarantee that our service will detect all downtime events affecting your monitored endpoints. Monitoring is subject to network conditions and other factors outside our control.",
+					third:
+						"Our total liability to you for any claims arising from your use of the service is limited to the amount you paid us in the 12 months preceding the claim.",
+					fourth:
+						"We are not liable for any indirect, incidental, special, consequential, or punitive damages.",
+				},
+				termination: {
+					title: "9. Termination",
+					first:
+						"You may terminate your account at any time through your account settings or by contacting us.",
+					second:
+						"We may suspend or terminate your account if you violate these terms or for any other reason with reasonable notice.",
+					third:
+						"Upon termination, your access to the service will end and your data will be deleted within 30 days.",
+				},
+				changesToTerms: {
+					title: "10. Changes to Terms",
+					body: "We may update these Terms of Service from time to time. We will notify you of significant changes by email or through the service. Your continued use of Uptime after changes take effect constitutes acceptance of the revised terms.",
+				},
+				contact: {
+					title: "11. Contact",
+					prefix: "If you have questions about these Terms of Service, please contact us at ",
+					email: "hello@sergiodxa.com",
+				},
+			},
+		},
+		privacy: {
+			meta: {
+				title: "Privacy Policy | Uptime",
+				description:
+					"Privacy Policy for Uptime. Learn how we collect, use, and protect your data when using our uptime monitoring service.",
+			},
+
+			lastUpdated: "Last updated: August 2, 2026",
+			title: "Privacy Policy",
+
+			sections: {
+				introduction: {
+					title: "1. Introduction",
+					first:
+						'This Privacy Policy describes how Uptime, operated by Sergio Xalambrí ("we", "us", or "our"), collects, uses, and protects your personal information when you use our uptime monitoring service.',
+					second:
+						"This policy applies to all users of our service and covers data collected through our website and monitoring platform.",
+				},
+				dataCollected: {
+					title: "2. Data We Collect",
+					accountData: {
+						title: "Account Data",
+						body: "When you sign up using GitHub authentication, we collect your email address and display name from your GitHub profile.",
+					},
+					monitoringData: {
+						title: "Monitoring Data",
+						body: "We collect data related to the monitors you create, including URLs you choose to monitor, response times, HTTP status codes, and uptime/downtime events.",
+					},
+					cronJobData: {
+						title: "Cron Job Monitoring Data",
+						intro: "For cron job (scheduled task) monitoring, we collect:",
+						first: "Ping timestamps (when your scheduled tasks report completion)",
+						second: "Source IP addresses of ping requests",
+						third: "User agent strings from ping requests",
+						fourth: "Schedule configuration (cron expressions, timezones, grace periods)",
+						outro:
+							"This data helps you track whether your scheduled tasks are running on time and enables us to alert you when expected pings are missed.",
+					},
+					usageData: {
+						title: "Usage Data",
+						body: "We collect analytics and log data about how you interact with our service, including page views, feature usage, and error logs.",
+					},
+					paymentData: {
+						title: "Payment Data",
+						body: "Payment processing is handled by Polar. We do not store your credit card information. We only receive confirmation of your subscription status and billing history from Polar.",
+					},
+				},
+				dataUsage: {
+					title: "3. How We Use Your Data",
+					first: {
+						label: "To provide the monitoring service:",
+						body: "We use your data to monitor your specified URLs and track their availability.",
+					},
+					second: {
+						label: "To send alerts and notifications:",
+						body: "We use your email to send you downtime alerts and status notifications.",
+					},
+					third: {
+						label: "To improve the service:",
+						body: "We analyze usage patterns to enhance features and fix issues.",
+					},
+					fourth: {
+						label: "To communicate with you:",
+						body: "We may send you service updates, security notices, and support messages.",
+					},
+				},
+				dataSharing: {
+					title: "4. Data Sharing",
+					noSell: "We do not sell your personal data.",
+					intro:
+						"We share data with the following third-party services that help us operate Uptime:",
+					first: {
+						label: "Cloudflare:",
+						body: "Infrastructure, hosting, content delivery, and email delivery",
+					},
+					second: { label: "Polar:", body: "Payment processing and subscription management" },
+					third: { label: "GitHub:", body: "Authentication services" },
+					outro:
+						"We may also disclose your data if required by law or to protect our rights and the safety of our users.",
+				},
+				dataRetention: {
+					title: "5. Data Retention",
+					first: { label: "Monitoring data:", body: "Retained for 365 days from collection" },
+					second: { label: "Account data:", body: "Retained until you delete your account" },
+					third: { label: "Logs:", body: "Retained for 30 days" },
+				},
+				rights: {
+					title: "6. Your Rights (GDPR)",
+					intro: "Under the General Data Protection Regulation (GDPR), you have the right to:",
+					first: {
+						label: "Access your data:",
+						body: "Request a copy of the personal data we hold about you",
+					},
+					second: {
+						label: "Correct your data:",
+						body: "Request correction of inaccurate personal data",
+					},
+					third: { label: "Delete your data:", body: "Request deletion of your personal data" },
+					fourth: { label: "Export your data:", body: "Receive your data in a portable format" },
+					fifth: {
+						label: "Object to processing:",
+						body: "Object to certain types of data processing",
+					},
+					outro:
+						"To exercise any of these rights, please contact us at the email address provided below.",
+				},
+				security: {
+					title: "7. Security",
+					intro: "We implement appropriate security measures to protect your data:",
+					first: {
+						label: "Encryption in transit:",
+						body: "All data is transmitted over HTTPS/TLS",
+					},
+					second: { label: "Encryption at rest:", body: "Stored data is encrypted" },
+					third: {
+						label: "Access controls:",
+						body: "Strict access controls limit who can access your data",
+					},
+					fourth: {
+						label: "Regular security reviews:",
+						body: "We regularly review our security practices",
+					},
+				},
+				cookies: {
+					title: "8. Cookies",
+					intro: "We use minimal cookies necessary for the service to function:",
+					first: {
+						label: "Session cookies:",
+						body: "Used for authentication and maintaining your logged-in state",
+					},
+					outro:
+						"We do not use tracking cookies, third-party advertising cookies, or any cookies for marketing purposes.",
+				},
+				turnstile: {
+					title: "9. Bot Protection",
+					first:
+						"The public page where anyone can check a URL without an account is protected by Cloudflare Turnstile. It is there to tell a person from a bot, so the free checker is not drained by automated traffic.",
+					second:
+						"To do that, Cloudflare receives your IP address and information about your browser, and may set a token in your browser to remember that the check passed.",
+					third:
+						"Turnstile runs only on that public page. It is not used anywhere in the signed-in app.",
+					referencePrefix: "For what Cloudflare does with that data, see their ",
+					referenceLinkText: "Turnstile Privacy Addendum",
+					referenceSuffix: "{|.|}",
+				},
+				childrensPrivacy: {
+					title: "10. Children's Privacy",
+					body: "Uptime is not intended for use by individuals under 18 years of age. We do not knowingly collect personal information from children under 18.",
+				},
+				internationalTransfers: {
+					title: "11. International Data Transfers",
+					first:
+						"Your data may be processed via Cloudflare's global network. If you are located in the European Union, your data may be transferred to and processed in the United States.",
+					second:
+						"We rely on Cloudflare's Standard Contractual Clauses and other appropriate safeguards to ensure your data is protected in accordance with GDPR requirements.",
+				},
+				changesToPolicy: {
+					title: "12. Changes to This Policy",
+					first:
+						'We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last updated" date.',
+					second:
+						"For significant changes, we will also send you an email notification if you have an account with us.",
+				},
+				contact: {
+					title: "13. Contact Us",
+					body: "If you have any questions about this Privacy Policy or wish to exercise your data rights, please contact us at:",
+					email: "hello+privacy@sergiodxa.com",
+				},
+			},
+		},
+	},
+
+	notFound: {
+		title: "Page Not Found",
+		description: "The page you're looking for doesn't exist or may have moved.",
+		goBackHome: "Go back home",
+	},
+
+	errors: {
+		backHome: "Back home",
+	},
+
+	app: {
+		meta: {
+			title: "Uptime by Sergio Xalambrí",
+			description: "Simple & reliable uptime monitoring for developers",
+		},
+
+		layout: {
+			sidebar: {
+				teamPicker: { label: "Select Team" },
+				userMenu: { label: "User Menu" },
+				toggle: "Toggle navigation",
+
+				navigation: {
+					items: {
+						reports: "Reports",
+						dashboard: "Dashboard",
+						alerts: "Alerts",
+						maintenance: "Maintenance",
+						monitors: "Monitors",
+						httpMonitors: "HTTP Monitors",
+						statusPages: "Status Pages",
+						tcpMonitors: "TCP Monitors",
+						dnsMonitors: "DNS Monitors",
+						flowMonitors: "Flow Monitors",
+						cronJobs: "Cron Jobs",
+						settings: "Settings",
+						billing: "Billing",
+						domains: "Domains",
+						members: "Members",
+						team: "Team",
+						docs: "Documentation",
+						apiKeys: "API Keys",
+					},
+				},
+
+				account: {
+					title: "Account",
+					overview: "Overview",
+					teams: "Your Teams",
+					signOut: "Sign out",
+				},
+			},
+			breadcrumbs: { label: "Breadcrumb" },
+			toasts: {
+				region: "Notifications",
+				dismiss: "Dismiss",
+			},
+		},
+
+		errors: {
+			notFound: {
+				title: "404 Not Found",
+				description: "The team you are looking for does not exist.",
+			},
+		},
+	},
+
+	monitorDetail: {
+		header: {
+			region: "{$emoji} {$code}",
+		},
+		stats: {
+			title: "Stats",
+			uptime: "Uptime",
+			totalChecks: "Total Checks",
+			lastCheck: "Last Check",
+			neverRan: "N/A",
+		},
+
+		actions: {
+			refresh: "Refresh",
+			delete: {
+				confirm: "Are you sure you want to delete this monitor?",
+				cta: "Delete Monitor",
+			},
+		},
+	},
+
+	monitorList: {
+		header: {
+			title: "Uptime Monitors",
+			cta: "Create Monitor",
+			subscribe: "Your monitors are paused. Subscribe to continue monitoring",
+		},
+	},
+
+	statusPage: {
+		banner: {
+			operational: "All Systems Operational",
+			degraded: "Partial System Outage",
+			down: "Major System Outage",
+		},
+		status: {
+			operational: "Operational",
+			degraded: "Degraded",
+			down: "Down",
+			unknown: "Unknown",
+		},
+		uptimeBar: {
+			daysAgo: "90 days ago",
+			today: "Today",
+			legend: {
+				full: "100%",
+				partial: "Partial",
+				down: "Down",
+				noData: "No data",
+			},
+			tooltip: {
+				uptime: "{$percentage}% uptime",
+				noData: "No data",
+			},
+		},
+		cronJobs: {
+			title: "Scheduled Jobs",
+			lastPing: "Last ping",
+			never: "Never",
+			schedule: "Schedule",
+		},
+		empty: {
+			description: "No services are configured for this status page.",
+		},
+		footer: {
+			lastUpdated: "Last updated {$date}",
+			poweredBy: "Powered by Uptime",
+		},
+		error: {
+			title: "Status Page Not Found",
+			description: "The status page you're looking for doesn't exist or is not public.",
+			goHome: "Go to homepage",
+		},
+		dns: {
+			coverage: "All tracked DNS records for this domain",
+		},
+		maintenance: {
+			title: "Scheduled maintenance",
+			none: "No maintenance is scheduled.",
+			inProgress: "In progress",
+			when: "{$range} UTC",
+			affects: "Affects: {$services}",
+			addToCalendar: "Add to calendar",
+			subscribe: "Get maintenance in your calendar:",
+			subscribeCalendar: "Subscribe",
+			subscribeGoogle: "Add to Google Calendar",
+			feedUrl: "Calendar feed URL",
+			calendarName: "{$title} maintenance",
+		},
+	},
+
+	contentMonitoring: {
+		title: "Content Monitoring",
+		description:
+			"Check response content for specific keywords or patterns. The monitor will fail if any check does not pass.",
+		empty:
+			"No content checks configured. Add a check to monitor for specific keywords or patterns in the response.",
+		addButton: "Add Content Check",
+
+		form: {
+			title: "Add a check",
+			description: "Each check runs against the response body on every ping.",
+			checkType: {
+				label: "Check Type",
+				description: "Choose how to match the response content",
+				options: {
+					contains: "Contains",
+					notContains: "Does Not Contain",
+					regex: "Regex Pattern",
+				},
+			},
+			value: {
+				label: "Value",
+				placeholder: "Enter keyword or pattern",
+				description: "The text or regex pattern to check for",
+			},
+			caseSensitive: "Case sensitive matching",
+			cancel: "Cancel",
+			add: "Add Check",
+		},
+
+		item: {
+			type: "Type",
+			status: "Status",
+			caseSensitive: "Case sensitive",
+			enabled: "Enabled",
+			disabled: "Disabled",
+			yes: "Yes",
+			no: "No",
+			delete: "Delete",
+			deleteConfirmTitle: "Delete this content check?",
+		},
+
+		types: {
+			contains: "Contains",
+			notContains: "Does Not Contain",
+			regex: "Regex",
+		},
+	},
+
+	auth: {
+		error: {
+			title: "Authentication Error",
+			errorCode: "Error Code: {$code}",
+			description: "Description: {$description}",
+			uri: "URI:",
+			tryAgain: "Please try again or contact support if the issue persists.",
+
+			signInFailedTitle: "Sign-in failed",
+			signInFailedGeneric: "The sign-in attempt could not be completed. Please try again.",
+			missingIdToken: "The identity provider did not return an ID token.",
+		},
+	},
+
+	dashboard: {
+		header: {
+			title: "Uptime Monitors",
+			cta: "Create Monitor",
+			subscribe: "Your monitors are paused. Subscribe to continue monitoring",
+		},
+
+		monitor: {
+			stats: {
+				title: "Stats",
+				uptime: "Uptime",
+				totalChecks: "Total Checks",
+				lastCheck: "Last Check",
+				neverRan: "N/A",
+			},
+
+			actions: {
+				refresh: "Refresh",
+				delete: {
+					confirm: "Are you sure you want to delete this monitor?",
+					cta: "Delete Monitor",
+				},
+			},
+		},
+	},
+
+	createMonitor: {
+		title: "Create a New Monitor",
+		fields: {
+			name: {
+				label: "Monitor Name",
+				placeholder: "Landing Page",
+				description: "A descriptive name for your monitor.",
+			},
+			url: {
+				label: "URL to Monitor",
+				placeholder: "https://example.com/healthcheck",
+				description: "The URL of the service you want to monitor.",
+			},
+			method: {
+				label: "Request Method",
+				placeholder: "HEAD",
+				description: "The HTTP method to use for the request.",
+			},
+			status: {
+				label: "Expected Status Code",
+				placeholder: "200",
+				description: "The HTTP status code you expect to receive.",
+			},
+			interval: {
+				label: "Check Interval",
+				placeholder: "60",
+				description: "Interval in seconds. Minimum is 60 seconds.",
+			},
+			visibility: {
+				label: "Visibility",
+				description: "Public monitors can be shared with anyone.",
+				options: { public: "Public", private: "Private" },
+			},
+			region: {
+				label: "Region",
+				description: "The region from which the ping will run.",
+				placeholder: "wnam",
+				options: {
+					afr: "{$emoji} Africa",
+					apac: "{$emoji} Asia-Pacific",
+					eeur: "{$emoji} Eastern Europe",
+					enam: "{$emoji} Eastern North America",
+					me: "{$emoji} Middle East",
+					oc: "{$emoji} Oceania",
+					sam: "{$emoji} South America",
+					weur: "{$emoji} Western Europe",
+					wnam: "{$emoji} Western North America",
+				},
+			},
+		},
+		cta: "Create Monitor",
+	},
+
+	emails: {
+		accountDeleted: {
+			subject: "Your Uptime account has been deleted",
+			preview: "Your account and its data have been deleted.",
+			heading: "Your account has been deleted",
+			body: "You asked us to delete your Uptime account, and we have. Your teams, monitors, alerts, status pages and preferences are gone, any team you owned was deleted along with them, and your subscription has been cancelled.",
+			retained: {
+				intro: "A few things we could not delete, so you know exactly where you stand:",
+				billing:
+					"Invoices and payment records held by our billing provider. Tax law requires us to keep them, and data-protection law allows it for that reason.",
+				analytics:
+					"Monitoring check results in our analytics store. It is append-only — there is no way to delete a record from it, only to let it expire on its retention schedule.",
+				logs: "Server request logs, for the same reason: they expire on a retention schedule and cannot be deleted early.",
+				identity:
+					"Your sign-in identity itself, which is held by the identity provider you signed in with rather than by us.",
+			},
+			address:
+				"This email address was stored only so we could send you this message. It has now been deleted too.",
+			footer:
+				"You received this email because you asked us to delete your Uptime account. No further email will be sent to this address.",
+		},
+
+		teamDeleted: {
+			subject: "{$team} has been deleted on Uptime",
+			preview: "{$team} and everything it was monitoring no longer exist.",
+			heading: "{$team} has been deleted",
+			body: "The owner of {$team} deleted their Uptime account, and the team was deleted along with it. You no longer have access to it.",
+			lost: "Everything that belonged to the team is gone: its monitors, alerts and status pages no longer exist, and none of it can be recovered.",
+			next: "If you still need this monitoring, you can create a team of your own on Uptime and set it up again.",
+			footer:
+				"You received this email because you were a member of {$team} on Uptime. There is nothing you need to do.",
+		},
+
+		teamInvite: {
+			subject: "You've been invited to join {$team} on Uptime",
+			preview: "Join {$team} on Uptime",
+			heading: "You've been invited to join {$team}",
+			body: "{$team} uses Uptime to keep an eye on its services. Accept the invite to join the team.",
+			action: "Accept invite",
+			footer:
+				"You received this email because someone invited you to their team on Uptime. If you weren't expecting it, you can ignore this message.",
+		},
+
+		alert: {
+			subject: "[Uptime Alert] {$monitor} is {$status}",
+			preview: "{$monitor} is {$status}",
+			heading: "{$monitor} is {$status}",
+			action: "Open the dashboard",
+			incidentCooldown:
+				"Notifications for this incident: {$sent} sent, {$suppressed} held back by the alert's cooldown.",
+			footer: "You received this email because one of your team's alerts matched this event.",
+
+			status: {
+				up: "RECOVERED",
+				down: "DOWN",
+				degraded: "DEGRADED",
+			},
+
+			fields: {
+				monitor: "Monitor",
+				status: "Status",
+				time: "Time",
+				url: "URL",
+				responseStatus: "Response status",
+				responseTime: "Response time",
+				domain: "Domain",
+				endpoint: "Endpoint",
+				schedule: "Schedule",
+				lastPing: "Last ping",
+				nextExpected: "Next expected",
+				hostname: "Hostname",
+				expiresAt: "Expires at",
+				records: "Records",
+				findings: "What changed",
+				tests: "Tests",
+				failedTest: "Failed test",
+				failureDetail: "What failed",
+				duration: "Duration",
+				registrar: "Registrar",
+				eppStatuses: "Registry statuses",
+			},
+
+			values: {
+				none: "—",
+				never: "never",
+				monitor: "{$name} ({$type})",
+				responseStatus: "{$actual} (expected {$expected})",
+				milliseconds: "{$value}ms",
+				endpoint: "{$host}:{$port :string}",
+				schedule: "{$expression} ({$timezone})",
+				dnsRecordCounts: "{$missing} missing, {$changed} changed, {$new} newly seen",
+
+				/** One finding, written out per outcome so each reads as its own sentence. */
+				dnsFinding: {
+					missing: "No longer resolving: {$name} {$type} {$value}",
+					changed: "Now resolves to: {$name} {$type} {$value}",
+					new: "Newly seen: {$name} {$type} {$value}",
+				},
+
+				dnsMoreFindings: "…and {$count} more",
+				flowTests: "{$passed} of {$total} passed",
+				flowFailedTest: "{$title} (line {$line :string})",
+			},
+
+			/** Explains what a DNS diff means, shown only where that meaning is needed. */
+			dns: {
+				recordSetEditNote:
+					"A record set holding several values has no per-record identity in DNS, so a value edited inside one is reported as one record no longer resolving plus one new record.",
+				newRecordsNote:
+					"Newly seen records are not being watched yet. Open the monitor to accept the ones you expected, or fix your DNS.",
+			},
+		},
+
+		teamDigest: {
+			action: "Open the dashboard",
+			footer: "You received this email because you are a member of {$team} on Uptime.",
+			manageAction: "Choose which emails you get",
+
+			status: {
+				up: "Up",
+				degraded: "Degraded",
+				down: "Down",
+				noData: "Not checked",
+			},
+
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+				flow: "Flow",
+			},
+
+			columns: {
+				monitor: "Monitor",
+				status: "Status",
+				uptime: "Uptime",
+			},
+
+			values: {
+				none: "—",
+				percentage: "{$value}%",
+			},
+
+			bar: {
+				uptime: "{$value}% uptime",
+				legend: {
+					up: "Up",
+					degraded: "Degraded",
+					down: "Down",
+					noData: "No data",
+				},
+			},
+
+			daily: {
+				subject:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor needs a look}}\n* {{{$team}: {$up} of {$count} monitors up yesterday}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor was up yesterday}}\n* {{{$team}: all {$count} monitors up yesterday}}",
+				preview: "The last full day of checks on {$team}",
+				heading: "Yesterday on {$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\none {{The team's monitor was up on {$date}.}}\n* {{All {$count} monitors were up on {$date}.}}",
+				summary:
+					".input {$count :number}\n.match $count\none {{The team's monitor was not up on {$date}.}}\n* {{{$up} of {$count} monitors were up on {$date}.}}",
+			},
+
+			weekly: {
+				subject:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor had a bad day this week}}\n* {{{$team}: {$up} of {$count} monitors up all week}}",
+				subjectAll:
+					".input {$count :number}\n.match $count\none {{{$team}: the monitor was up all week}}\n* {{{$team}: all {$count} monitors up all week}}",
+				preview: "The last seven days of checks on {$team}",
+				heading: "The last seven days on {$team}",
+				summaryAll:
+					".input {$count :number}\n.match $count\none {{The team's monitor was up every day.}}\n* {{All {$count} monitors were up every day.}}",
+				summary:
+					".input {$count :number}\n.match $count\none {{The team's monitor was not up every day.}}\n* {{{$up} of {$count} monitors were up every day.}}",
+			},
+		},
+
+		trial: {
+			stopAction: "Stop these emails",
+
+			/**
+			 * The report page every per-target trial report links, shared because the wrap-up and the
+			 * repeat-submission answer point at the same page with the same sentence.
+			 */
+			reportLink: {
+				body: "This report also lives at a link you can reopen or share:",
+				action: "View it online",
+			},
+			stop: "One click ends every URL you asked us to watch and deletes your address and its data. You can start again any time from our website.",
+
+			status: {
+				up: "UP",
+				degraded: "DEGRADED",
+				down: "DOWN",
+			},
+
+			fields: {
+				url: "URL",
+				status: "Status",
+				previousStatus: "Previous status",
+				responseStatus: "Response status",
+				responseTime: "Response time",
+				checkedAt: "Checked at",
+				changedAt: "Changed at",
+				checks: "Checks run",
+				uptime: "Uptime",
+				slowest: "Slowest response",
+			},
+
+			values: {
+				none: "—",
+				milliseconds: "{$value}ms",
+				percentage: "{$value}%",
+			},
+
+			bar: {
+				uptime: "{$value}% uptime",
+				legend: {
+					up: "Up",
+					degraded: "Degraded",
+					down: "Down",
+					noData: "No data",
+				},
+			},
+
+			confirmation: {
+				subject: "We are now checking {$url} every hour",
+				preview: "Hourly checks on {$url} have started",
+				heading: "We are now checking {$url} every hour",
+				body: "This is the check you just ran. We will run the same one every hour until {$until} and email you whenever the result changes. You will also get a summary once a day.",
+				footer: "You received this email because you asked us to check this URL from our website.",
+			},
+
+			change: {
+				subject: "{$url} is {$status}",
+				preview: "{$url} is {$status}",
+				heading: "{$url} is {$status}",
+				body: "The hourly check at {$time} returned a different result from the one before it.",
+				footer: "You received this email because you asked us to watch this URL for a week.",
+			},
+
+			daily: {
+				subject: "Daily report: {$url}",
+				subjectMany: "Daily report: {$total} URLs",
+				preview: "The last 24 hours of checks on {$url}",
+				previewMany: "The last 24 hours of checks on {$total} URLs",
+				heading: "{$url} over the last 24 hours",
+				headingMany: "Your {$total} URLs over the last 24 hours",
+				summaryAll: "All {$total} were up at the last check.",
+				summary: "{$up} of {$total} were up at the last check.",
+				target: "{$url} — {$status}",
+				rangeStart: "24 hours ago",
+				rangeEnd: "Now",
+				footer:
+					"You received this email because you asked us to run these checks from our website.",
+			},
+
+			weekly: {
+				subject: "Seven-day report: {$url}",
+				preview: "The full week of checks on {$url}",
+				heading: "{$url} over the last seven days",
+				rangeStart: "7 days ago",
+				rangeEnd: "Today",
+				closing: "That was the seventh day, so the free checks on {$url} stop here.",
+				action: "Keep checking this URL",
+				footer:
+					"You received this email because you asked us to watch this URL for a week. This is the last one.",
+			},
+
+			repeat: {
+				subject: "What we have found on {$url} so far",
+				preview: "The checks we already have on {$url}",
+				heading: "{$url} has already been checked",
+				intro: "You asked us to watch {$url} on {$since}. Here is everything those checks found.",
+				rangeStart: "Day 1",
+				rangeEnd: "Day 7",
+				closing:
+					"Each URL gets one free week every 30 days, so this request did not start a second one. To keep checking {$url} — as often as you like, with an alert the moment it changes — use Uptime.",
+				action: "Keep checking this URL",
+				footer:
+					"You received this email because you submitted this URL on our website and we already had a report for it.",
+			},
+		},
+	},
+
+	components: {
+		copyButton: {
+			label: "Copy",
+			copied: "Copied!",
+		},
+
+		selectAll: {
+			select: "Select all",
+			clear: "Clear all",
+		},
+
+		/**
+		 * The scope picker, shared by the alert and maintenance-window forms. A monitor type
+		 * is named the same wherever it is offered, so the option copy lives here once; the
+		 * sentence describing what narrowing does to a given form stays on that form's page.
+		 */
+		monitorScope: {
+			label: "Scope",
+			teamWide: "Team-wide (every monitor)",
+			unknownMonitor: "A monitor that no longer exists",
+			types: {
+				http: "HTTP Monitors",
+				dns: "DNS Monitors",
+				tcp: "TCP Monitors",
+				cron: "Cron Jobs",
+				flow: "Flow Monitors",
+			},
+			allOfType: {
+				http: "Every HTTP monitor",
+				dns: "Every DNS monitor",
+				tcp: "Every TCP monitor",
+				cron: "Every cron job",
+				flow: "Every flow monitor",
+			},
+		},
+	},
+
+	cron: {
+		error: {
+			empty: "Enter a cron expression.",
+			"field-count":
+				"A cron expression needs exactly five fields: minute, hour, day of month, month, and day of week.",
+			"seconds-not-supported":
+				"Seconds are not supported. Use the five-field format, starting with the minute.",
+			"unknown-macro":
+				"That shorthand is not supported. Use @hourly, @daily, @weekly, @monthly, or @yearly.",
+			syntax: "One of the fields is not a value, a range, a list, or a step.",
+			"unknown-name":
+				"One of the month or weekday names is not recognized. Use three-letter abbreviations such as JAN or MON.",
+			"out-of-range": "One of the values is outside the range its field allows.",
+			"reversed-range": "One of the ranges starts after it ends.",
+			"invalid-step": "A step must be a whole number greater than zero.",
+			"impossible-date": "That day of the month never happens in the month it is paired with.",
+		},
+	},
+
+	schedule: {
+		interval: {
+			minute:
+				".input {$count :number}\n.match $count\none {{Every minute}}\n* {{Every {$count} minutes}}",
+			hour: ".input {$count :number}\n.match $count\none {{Every hour}}\n* {{Every {$count} hours}}",
+		},
+		hourly: {
+			onTheHour: "Every hour",
+			atMinutes: "Every hour at minute {$minutes}",
+		},
+		daily: "Every day at {$times}",
+		weekly: "Every {$days} at {$times}",
+		monthly: "Every month on day {$days} at {$times}",
+		yearly: "Every year on {$months} {$days} at {$times}",
+		expression: "Custom schedule ({$expression})",
+	},
+
+	actions: {
+		/**
+		 * Shared by every on-demand check action (HTTP, DNS, TCP): the three refuse for the
+		 * same reason and flash the same toast, so one key keeps them from drifting apart.
+		 */
+		checks: {
+			queued: 'Check queued for "{$name}".',
+			subscriptionRequired: "An active subscription is required to run a check.",
+		},
+
+		/** Shared by every action that sends to an address its form accepted. */
+		emailAddress: {
+			noMailServer: "{$domain} does not accept email. Check the address and try again.",
+		},
+
+		addDomain: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to add domains to this team.",
+				alreadyExists: "{$hostname} was added on {$verifiedAt}.",
+			},
+
+			success: {
+				accepted: "{$hostname} is still pending verification.",
+				created: "{$hostname} was added to {$team}. Verification is pending.",
+			},
+		},
+
+		changeRole: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to change roles in this team.",
+				cannotChangeOwner: "You cannot change the role of the team owner.",
+			},
+
+			success: "{$name}'s role was changed to {$role} in {$team}.",
+		},
+
+		createAlert: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to create alerts in this team.",
+				limitExceeded: "You have reached the limit of {$limit} alerts in this team.",
+			},
+			success: { created: "{$name} alert was created." },
+		},
+
+		createInvite: {
+			email: {
+				subject: "You've been invited to join {$team} on Uptime",
+			},
+
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to invite members to this team.",
+				alreadyAccepted: "There's already a member of {$team} with this email.",
+			},
+
+			success: "{$email} was invited to join {$team}.",
+		},
+
+		createMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+			},
+
+			success: "{$name} monitor was created.",
+		},
+
+		/**
+		 * A bulk import reports two numbers, and `partial` is the one that matters: a
+		 * submission where some lines landed counts as a success with a to-do list, so
+		 * it names how many monitors exist before it names what needs fixing.
+		 */
+		importMonitors: {
+			errors: {
+				generic: "Oops! Something went wrong. Please check the list and try again.",
+				none: "Nothing in that list could be imported. Check the reasons below and try again.",
+			},
+
+			success:
+				".input {$count :number}\n.match $count\none {{1 monitor was created.}}\n* {{{$count} monitors were created.}}",
+			partial:
+				".input {$count :number}\n.match $count\none {{1 monitor was created. {$rejected} more could not be — see below.}}\n* {{{$count} monitors were created. {$rejected} more could not be — see below.}}",
+		},
+
+		updateMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This monitor does not exist.",
+			},
+
+			success: "{$name} monitor was updated.",
+		},
+
+		updateSsl: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This monitor does not exist.",
+			},
+
+			success: "SSL settings for {$name} were updated.",
+		},
+
+		deleteMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to delete monitors in this team.",
+				notFound: "This monitor does not exist.",
+			},
+			success: "{$name} monitor was deleted.",
+		},
+
+		removeAlert: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				forbidden: "You are not allowed to remove alerts in this team.",
+				notFound: "{$name} does not exist.",
+			},
+			success: "{$name} alert was removed.",
+		},
+
+		removeDomain: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to remove domains from this team.",
+				notFound: "{$hostname} does not exist.",
+			},
+
+			success: "{$hostname} was removed from {$team}.",
+		},
+
+		removeMember: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to remove members from this team.",
+				cannotRemoveOwner: "You cannot remove the team owner.",
+			},
+
+			success: "{$name} was removed from {$team}.",
+		},
+
+		retryDomainVerification: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to retry domain verification in this team.",
+				notFound: "{$hostname} does not exist.",
+				workflowFailed:
+					"The verification process failed to start for {$hostname}. Try again later.",
+			},
+
+			success: {
+				alreadyVerified: "{$hostname} is already verified.",
+				requested: "{$hostname} verification retry was requested.",
+			},
+		},
+
+		revokeInvite: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notAllowed: "You are not allowed to revoke invites in this team.",
+				notFound: "This invite does not exist.",
+				alreadyAccepted: "This invite has already been accepted by the invitee.",
+			},
+
+			success: "{$email}'s invite was revoked from {$team}.",
+		},
+
+		updateTeam: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				forbidden: "You are not allowed to update team settings.",
+			},
+
+			success: {
+				updated: "Team settings were updated successfully.",
+			},
+		},
+
+		deleteTeam: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the team.",
+				forbidden: "Only the team owner can delete the team.",
+				confirmationRequired: "Please type DELETE to confirm.",
+			},
+
+			success: "{$team} has been deleted.",
+		},
+
+		leaveTeam: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notMember: "You are not a member of this team.",
+				ownerCannotLeave: "Team owners cannot leave their team. Transfer ownership first.",
+				adminCannotLeave: "Admins cannot leave the team. Ask the owner to demote you first.",
+			},
+
+			success: "You have left {$team}.",
+		},
+
+		createStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				slugTaken: "This slug is already in use.",
+			},
+		},
+
+		updateStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This status page does not exist.",
+				slugTaken: "This slug is already in use.",
+			},
+		},
+
+		deleteStatusPage: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This status page does not exist.",
+			},
+
+			success: "Status page was deleted.",
+		},
+
+		createMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				invalidDates: "End time must be after start time.",
+			},
+
+			success: {
+				created: "Maintenance window '{$name}' was created.",
+			},
+		},
+
+		deleteMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This maintenance window does not exist.",
+				forbidden: "You are not allowed to delete this maintenance window.",
+			},
+
+			success: "Maintenance window '{$name}' was deleted.",
+		},
+
+		endMaintenance: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This maintenance window does not exist.",
+				forbidden: "You are not allowed to end this maintenance window.",
+			},
+
+			success: "Maintenance window '{$name}' was ended early.",
+		},
+
+		createTeam: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the team.",
+			},
+
+			success: {
+				created: "{$name} team was created successfully.",
+			},
+		},
+
+		createDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				limitExceeded: "You have reached the limit of {$limit} DNS monitors in this team.",
+			},
+
+			success: {
+				created: "{$name} DNS monitor was created.",
+			},
+		},
+
+		updateDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This DNS monitor does not exist.",
+				forbidden: "You are not allowed to update this DNS monitor.",
+			},
+
+			success: "{$name} DNS monitor was updated.",
+		},
+
+		deleteDnsMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong.",
+				notFound: "This DNS monitor does not exist.",
+				forbidden: "You are not allowed to delete this DNS monitor.",
+			},
+
+			success: "{$name} DNS monitor was deleted.",
+		},
+
+		checkDnsMonitor: {
+			success: { checked: 'Checked "{$name}".' },
+		},
+
+		reviewDnsMonitor: {
+			errors: { generic: "We could not save which records to watch. Please try again." },
+			success: {
+				saved:
+					".input {$count :number}\n.match $count\none {{Watching {$count} record.}}\n* {{Watching {$count} records.}}",
+			},
+		},
+
+		toggleDnsMonitorRecord: {
+			errors: { generic: "We could not change that record. Please try again." },
+			success: { enabled: "Now watching {$name}.", disabled: "No longer watching {$name}." },
+		},
+
+		importDnsMonitorZoneFile: {
+			errors: {
+				generic: "We could not read that zone file. Please try again.",
+				tooLarge: "A zone file must be {$limit} or smaller.",
+				tooManyNames:
+					"That zone has more than {$limit} names, which is more than one monitor can sweep.",
+			},
+			success: {
+				imported:
+					".input {$count :number}\n.match $count\none {{Imported {$count} name from your zone file.}}\n* {{Imported {$count} names from your zone file.}}",
+			},
+		},
+
+		createTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the TCP monitor.",
+			},
+			success: "{$name} TCP monitor was created.",
+		},
+
+		updateTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while updating the TCP monitor.",
+				notFound: "This TCP monitor does not exist.",
+			},
+			success: "{$name} TCP monitor was updated.",
+		},
+
+		deleteTcpMonitor: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the TCP monitor.",
+				notAllowed: "You are not allowed to delete TCP monitors in this team.",
+				notFound: "This TCP monitor does not exist.",
+			},
+			success: "{$name} TCP monitor was deleted.",
+		},
+
+		createApiKey: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the API key.",
+				limitExceeded: "You have reached the limit of {$limit} API keys in this team.",
+			},
+			success: {
+				created: "API key '{$name}' was created.",
+			},
+		},
+
+		deleteApiKey: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the API key.",
+				notFound: "This API key does not exist.",
+			},
+			success: "API key '{$name}' was deleted.",
+		},
+
+		updateLanguage: {
+			errors: {
+				generic: "Oops! Something went wrong while updating your language preference.",
+			},
+			success: "Language preference updated successfully.",
+		},
+
+		createCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while creating the cron job.",
+				limitExceeded: "You have reached the limit of {$limit} cron job monitors in this team.",
+			},
+			success: "{$name} cron job was created.",
+		},
+
+		updateCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while updating the cron job.",
+				notFound: "This cron job does not exist.",
+			},
+			success: "{$name} cron job was updated.",
+		},
+
+		deleteCronJob: {
+			errors: {
+				generic: "Oops! Something went wrong while deleting the cron job.",
+				notFound: "This cron job does not exist.",
+				forbidden: "You are not allowed to delete this cron job.",
+			},
+			success: "{$name} cron job was deleted.",
+		},
+	},
+
+	page: {
+		dashboard: {
+			header: {
+				title: "Dashboard",
+			},
+
+			quickPing: {
+				title: "Quick check",
+				description: "Check a URL once. Nothing saved, no alerts — costs one ping.",
+				field: {
+					label: "URL to check",
+					placeholder: "https://example.com/healthcheck",
+				},
+				action: {
+					submit: "Check once",
+					/** Names the icon button that opens the bar as a sheet, below the width it is a row at. */
+					open: "Open quick check",
+				},
+				result: {
+					/** Names the toast region a finished check is reported in. */
+					label: "Check result",
+					noResponse: "No response",
+					status: {
+						up: "Up",
+						degraded: "Degraded",
+						down: "Down",
+					},
+				},
+				error: {
+					invalidUrl: "Enter a full http:// or https:// URL.",
+					subscriptionRequired: "An active subscription is required to run a check.",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No monitors yet",
+				description: "Create your first monitor to start tracking your services.",
+				cta: "Create Monitor",
+			},
+
+			stats: {
+				monitors: {
+					label: "Monthly Pings Usage",
+					value: "{$consumed}{#small} used{/small}",
+					description: "Out of {$estimated} estimated",
+					unavailable: "Estimate unavailable",
+				},
+
+				uptime: {
+					label: "Uptime percentage",
+					description: "Overall system uptime",
+				},
+
+				slowestEndpoint: {
+					label: {
+						default: 'Slowest Endpoint "{#em}{$name}{/em}"',
+						noData: "Slowest Endpoint",
+					},
+					value: { noData: "N/A" },
+					description: "In the last 24 hours",
+				},
+
+				httpMonitors: {
+					label: "HTTP Monitors",
+					create: "New HTTP monitor",
+					breakdown: {
+						up: "{$up} up",
+						down: "{$down} down",
+					},
+				},
+
+				dnsMonitors: {
+					label: "DNS Monitors",
+					create: "New DNS monitor",
+					/** One monitor is one domain, so this count is smaller than the work behind it. */
+					hint: "One monitor covers a whole domain and every record tracked on it.",
+					breakdown: {
+						ok: "{$ok} ok",
+						changed: "{$changed} changed",
+						error: "{$error} error",
+					},
+				},
+
+				flowMonitors: {
+					label: "Flow Monitors",
+					create: "New flow monitor",
+					breakdown: {
+						up: "{$up} passing",
+						down: "{$down} failing",
+						error: "{$error} cannot run",
+					},
+				},
+
+				tcpMonitors: {
+					label: "TCP Monitors",
+					create: "New TCP monitor",
+					breakdown: {
+						up: "{$up} up",
+						down: "{$down} down",
+					},
+				},
+
+				cronJobs: {
+					label: "Cron Jobs",
+					create: "New cron job",
+					breakdown: {
+						healthy: "{$healthy} healthy",
+						late: "{$late} late",
+						missed: "{$missed} missed",
+					},
+				},
+			},
+
+			tabs: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cronJobs: "Cron Jobs",
+			},
+
+			loading: "Loading…",
+
+			panel: {
+				tabsLabel: "Monitor type",
+				tabPanelLabel: "{$tab} monitors",
+				refresh: "Refresh",
+			},
+
+			error: {
+				card: {
+					label: "Error",
+					value: "-",
+					description: "Failed to load data",
+				},
+				table: {
+					message: "Failed to load monitors. Please try again.",
+				},
+				analytics: {
+					message: "Analytics data temporarily unavailable. Please retry later.",
+				},
+			},
+
+			table: {
+				label: "Monitors",
+
+				columns: {
+					name: "Name",
+					latencyChart: "Latency Trend",
+					status: "Status",
+					lastIncident: "Last Incident",
+					responseTime: "Avg. Latency",
+					actions: "Actions",
+				},
+
+				status: {
+					up: "Up & Running",
+					down: "Down",
+					degraded: "Degraded",
+					unknown: "No Data",
+				},
+
+				lastIncident: { never: "-" },
+				responseTime: "~{$value}",
+
+				actions: {
+					menu: "Actions Menu",
+					edit: "Edit Monitor",
+					delete: "Delete Monitor",
+					play: "Run Monitor",
+				},
+
+				confirmation: {
+					deleteMonitor:
+						"Are you sure you want to delete the monitor {$name}? This action cannot be undone.",
+				},
+			},
+		},
+
+		monitors: {
+			header: {
+				title: "Uptime Monitors",
+				cta: "Create Monitor",
+				subscribe: "Your monitors are paused. Subscribe to continue monitoring",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+		},
+
+		createMonitor: {
+			header: {
+				title: "Create Monitor",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Landing Page",
+						description: "A descriptive name for your monitor.",
+					},
+					url: {
+						label: "URL to Monitor",
+						placeholder: "https://example.com/healthcheck",
+						description: "The URL of the service you want to monitor.",
+					},
+					method: {
+						label: "Request Method",
+						placeholder: "HEAD",
+						description: "The HTTP method to use for the request.",
+					},
+					status: {
+						label: "Expected Status Code",
+						placeholder: "200",
+						description: "The HTTP status code you expect to receive.",
+					},
+					interval: {
+						label: "Check Interval",
+						placeholder: "60",
+						description: "Interval in seconds. Minimum is 60 seconds.",
+					},
+					visibility: {
+						label: "Visibility",
+						description: "Public monitors can be shared with anyone.",
+						options: { public: "Public", private: "Private" },
+					},
+					region: {
+						label: "Region",
+						description: "The region from which the ping will run.",
+						placeholder: "Select a region",
+						options: {
+							afr: "{$emoji} Africa",
+							apac: "{$emoji} Asia-Pacific",
+							eeur: "{$emoji} Eastern Europe",
+							enam: "{$emoji} Eastern North America",
+							me: "{$emoji} Middle East",
+							oc: "{$emoji} Oceania",
+							sam: "{$emoji} South America",
+							weur: "{$emoji} Western Europe",
+							wnam: "{$emoji} Western North America",
+						},
+					},
+				},
+
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description:
+							"How often the monitor runs, what it expects back, and where it runs from.",
+					},
+				},
+
+				cta: "Create Monitor",
+			},
+		},
+
+		editMonitor: {
+			header: {
+				title: "Edit Monitor",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Landing Page",
+						description: "A descriptive name for your monitor.",
+					},
+					url: {
+						label: "URL to Monitor",
+						placeholder: "https://example.com/healthcheck",
+						description: "The URL of the service you want to monitor.",
+					},
+					method: {
+						label: "Request Method",
+						placeholder: "HEAD",
+						description: "The HTTP method to use for the request.",
+					},
+					status: {
+						label: "Expected Status Code",
+						placeholder: "200",
+						description: "The HTTP status code you expect to receive.",
+					},
+					interval: {
+						label: "Check Interval",
+						placeholder: "60",
+						description: "Interval in seconds. Minimum is 60 seconds.",
+					},
+					visibility: {
+						label: "Visibility",
+						description: "Public monitors can be shared with anyone.",
+						options: { public: "Public", private: "Private" },
+					},
+					region: {
+						label: "Region",
+						description: "The region from which the ping will run.",
+						placeholder: "wnam",
+						options: {
+							afr: "{$emoji} Africa",
+							apac: "{$emoji} Asia-Pacific",
+							eeur: "{$emoji} Eastern Europe",
+							enam: "{$emoji} Eastern North America",
+							me: "{$emoji} Middle East",
+							oc: "{$emoji} Oceania",
+							sam: "{$emoji} South America",
+							weur: "{$emoji} Western Europe",
+							wnam: "{$emoji} Western North America",
+						},
+					},
+					ssl: {
+						enabled: {
+							label: "Enable SSL Monitoring",
+							description: "Monitor SSL certificate expiry and receive alerts before it expires.",
+						},
+						expiresAt: {
+							label: "Certificate Expiry Date",
+							placeholder: "Select expiry date",
+							description:
+								"Enter the expiry date of your SSL certificate. You can find this in your hosting provider's dashboard or by checking the certificate details in your browser.",
+						},
+						issuer: {
+							label: "Certificate Issuer",
+							placeholder: "Let's Encrypt, DigiCert, etc.",
+							description: "The Certificate Authority that issued your SSL certificate (optional).",
+						},
+						warningDays: {
+							label: "Alert Before Expiry",
+							description: "Receive alerts this many days before the certificate expires.",
+						},
+					},
+				},
+
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description:
+							"How often the monitor runs, what it expects back, and where it runs from.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+
+			ssl: {
+				title: "SSL certificate monitoring",
+				description:
+					"Track your certificate's expiry so you hear about it before your visitors do.",
+				cta: "Save SSL settings",
+			},
+
+			dangerZone: {
+				title: "Danger zone",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its checks, history and alerts for good.",
+				delete: "Delete monitor",
+			},
+		},
+
+		monitor: {
+			header: {
+				title: 'Monitor "{$name}"',
+
+				action: {
+					play: "Run Monitor",
+					running: "Running…",
+					edit: "Edit Monitor",
+					refresh: "Refresh",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			stats: {
+				monitors: {
+					label: "Monthly Pings Usage",
+					value: "{$consumed}{#small} used{/small}",
+					description: "Out of {$estimated} estimated",
+					estimateUnavailable: "Estimate unavailable",
+				},
+
+				uptime: {
+					label: "Uptime percentage",
+					description: "Last 90 days",
+				},
+
+				slowestResult: {
+					label: "Slowest Result",
+					description: "In the last 24 hours",
+				},
+
+				p99ResponseTime: {
+					label: "P99 Response Time",
+					value: "{$value} ms",
+					description: "p99, last 24h",
+				},
+			},
+
+			ssl: {
+				title: "SSL Certificate",
+				status: {
+					valid: "Valid",
+					expiring: "Expiring Soon",
+					expired: "Expired",
+					error: "Error",
+					unknown: "Not Configured",
+				},
+				expiresAt: "Expires",
+				expiresIn: "{$days} days",
+				issuer: "Issuer",
+				lastChecked: "Last Checked",
+				notConfigured: "SSL monitoring is not enabled for this monitor.",
+				configure: "Configure SSL Monitoring",
+			},
+			run: {
+				toast: {
+					up: "{$name} is up",
+					down: "{$name} is down",
+					degraded: "{$name} is degraded",
+					changed: "The check you just ran changed this monitor's status.",
+					notQueued: {
+						title: "Check not run",
+						description: "An active subscription is required to run a check.",
+					},
+				},
+			},
+		},
+
+		billing: {
+			header: {
+				title: "Billing",
+			},
+			ownerOnly: "Only the team owner can view and manage billing for this team.",
+			unavailable: "Billing is temporarily unavailable. Please try again in a few minutes.",
+		},
+
+		members: {
+			header: {
+				title: "Team Members",
+
+				action: {
+					invite: "Invite Member",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			sections: {
+				members: {
+					title: "Members",
+					description: "Manage your team members and their roles.",
+				},
+			},
+
+			membersTable: {
+				label: "Current Members",
+				description: "People who have access to this team.",
+
+				columns: {
+					name: "Name",
+					role: "Team Role",
+					actions: "Actions",
+				},
+
+				role: {
+					member: "Member",
+					admin: "Admin",
+					owner: "Owner",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					remove: "Remove from Team",
+					transfer: "Transfer Ownership",
+					changeRole: {
+						member: "Convert to Admin",
+						admin: "Convert to Member",
+						owner: "Can't change owner",
+					},
+				},
+
+				confirmation: {
+					removeMember: "Are you sure you want to remove {$name} from the team?",
+				},
+			},
+
+			invitedMembersTable: {
+				label: "Pending Invitations",
+				description: "People who have been invited but haven't joined yet.",
+
+				columns: {
+					email: "Email",
+					actions: "Actions",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					copy: "Copy Invite Link",
+					revoke: "Revoke Invite",
+				},
+
+				confirmation: {
+					revokeInvite: "Are you sure you want to revoke {$email}'s invite?",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
+			},
+		},
+
+		invite: {
+			header: {
+				title: "Invite Team Member",
+				description: "Send an invitation to join your team.",
+			},
+
+			dialog: {
+				close: "Close dialog",
+			},
+
+			form: {
+				fields: {
+					email: {
+						label: "Email Address",
+						placeholder: "john.doe@example.com",
+						description: "The email address of the person you want to invite to {$team}.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Invite Member",
+			},
+		},
+
+		acceptInvite: {
+			errors: {
+				pageTitle: "Invite unavailable",
+				notFound: "This invite does not exist.",
+				gone: "This invite has already been accepted.",
+				forbidden: "This invite was not meant for you.",
+				badRequest: "Somehow you don't have an email address. Try to login again.",
+				wrongEmail: "This invite was sent to {$email}. Sign in with that email to accept it.",
+			},
+		},
+
+		domains: {
+			header: {
+				title: "Team Domains",
+				action: { addDomain: "Add Domain" },
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			sections: {
+				domains: {
+					title: "Domains",
+					description: "Manage verified domains for your team.",
+				},
+			},
+
+			form: {
+				fields: {
+					hostname: {
+						label: "Domain",
+						placeholder: "example.com",
+						description: "The domain you want to add to {$team}.",
+					},
+				},
+
+				cta: "Add Domain",
+			},
+
+			table: {
+				label: "Verified Domains",
+				description: "Domains that can be used for auto-provisioning team members.",
+
+				columns: {
+					hostname: "Hostname",
+					id: "Verification ID",
+					verifiedAt: "Verified At",
+					actions: "Actions",
+				},
+
+				verifiedAt: {
+					pending: "Awaiting verification",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					copy: "Copy Verification ID",
+					remove: "Remove Domain",
+					retryVerification: "Retry Verification",
+				},
+
+				confirmation: {
+					removeDomain: "Are you sure you want to remove {$hostname} from the team?",
+				},
+			},
+
+			instructions: {
+				title: "How to verify your domain",
+
+				description: "To verify your domain, add the following `TXT` record to your DNS settings:",
+
+				record: {
+					name: {
+						label: "Name",
+						value: "_ping-verification",
+					},
+					content: {
+						label: "Content",
+						value: "VERIFICATION_ID",
+					},
+				},
+
+				note: "Make sure to replace {#code}VERIFICATION_ID{/code} with the actual verification ID shown above.",
+
+				disclaimer:
+					"DNS changes may take some time to propagate, so verification might be delayed.",
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
+			},
+		},
+
+		alerts: {
+			header: {
+				title: "Alerts",
+
+				action: {
+					create: "Create Alert",
+					history: "View History",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No alerts configured",
+				description: "Create an alert to get notified when your monitors go down.",
+				cta: "Create Alert",
+			},
+
+			limitReached: "This team has reached the limit of {$limit} alerts.",
+
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "CTO Alert",
+						description: "A name to identify the alert.",
+					},
+
+					/**
+					 * Shared with the maintenance-window scope picker; this description covers
+					 * just the alerts-specific sentence. See `components.monitorScope` for the
+					 * rest of the picker's copy.
+					 */
+					scope: {
+						description:
+							"What this alert watches. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
+					},
+
+					channel: {
+						label: "Channel",
+						description: "The channel to use for the alert.",
+						options: {
+							webhook: "Webhook",
+							email: "Email",
+							slack: "Slack",
+							discord: "Discord",
+							pagerduty: "PagerDuty",
+						},
+					},
+
+					config: {
+						webhook: {
+							url: {
+								label: "URL",
+								placeholder: "https://example.com/webhook",
+								description: "The URL to send the alert payload to.",
+							},
+							secret: {
+								label: "Signing secret (optional)",
+								placeholder: "optional-secret",
+								description:
+									"An optional secret to include in the request headers. A `Webhook-Signature` header will be added with a HMAC SHA256 signature of the payload using this secret.",
+							},
+							signatureNote:
+								"When set, requests carry a {#code}Webhook-Signature: sha256=<hex>{/code} header — an HMAC-SHA256 of the raw JSON body using this secret.",
+						},
+						email: {
+							to: {
+								label: "Recipient",
+								placeholder: "cto@example.com",
+								description: "The email address to send the alert to.",
+							},
+
+							subjectPrefix: {
+								label: "Subject prefix (optional)",
+								placeholder: "[Uptime Alert]",
+								description:
+									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
+							},
+						},
+						slack: {
+							webhookUrl: {
+								label: "Webhook URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"The Slack Incoming Webhook URL. Create one at api.slack.com/apps > Incoming Webhooks.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Webhook URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"The Discord Webhook URL. Create one in Server Settings > Integrations > Webhooks.",
+							},
+						},
+						pagerduty: {
+							routingKey: {
+								label: "Integration key",
+								placeholder: "0123456789abcdef0123456789abcdef",
+								description:
+									"The integration key of a PagerDuty service's Events API v2 integration. Find it under Service > Integrations > Events API V2.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Notify on recovery",
+						description:
+							"Send an alert when the monitor recovers from a down state. Includes recovery time and downtime duration.",
+					},
+
+					cooldown: {
+						label: "Alert Cooldown",
+						description:
+							"Minimum time between alerts of the same type. Prevents alert fatigue during ongoing outages.",
+						options: {
+							none: "No cooldown",
+							"5min": "5 minutes",
+							"15min": "15 minutes",
+							"30min": "30 minutes",
+							"1hour": "1 hour",
+							"2hours": "2 hours",
+							custom: "Custom",
+						},
+						custom: {
+							label: "Custom Cooldown (minutes)",
+							placeholder: "Enter minutes",
+							description: "Enter the number of minutes between alerts.",
+						},
+					},
+
+					cooldownMinutes: {
+						label: "Cooldown (minutes)",
+						description:
+							"How long to wait before repeating an alert while a monitor is still down. The first alert of an incident is always sent immediately, and a recovery is always sent. Repeats are never spaced closer than {$floor} minutes, whatever you set here.",
+					},
+
+					legends: {
+						email: "Email settings",
+						webhook: "Webhook settings",
+						slack: "Slack settings",
+						discord: "Discord settings",
+						pagerduty: "PagerDuty settings",
+					},
+				},
+
+				cta: "Create Alert",
+			},
+
+			table: {
+				label: "Alerts",
+
+				columns: {
+					name: "Name",
+					scope: "Scope",
+					strategy: "Type",
+					notifyOnRecovery: "Recovery",
+					cooldown: "Cooldown",
+					actions: "Actions",
+				},
+
+				scope: {
+					unknownMonitor: "Unknown monitor",
+					teamWide: "Team-wide",
+					allOfType: {
+						http: "All HTTP monitors",
+						dns: "All DNS monitors",
+						tcp: "All TCP monitors",
+						cron: "All cron jobs",
+						flow: "All flow monitors",
+					},
+				},
+
+				cooldown: {
+					/**
+					 * A team can configure a cooldown of zero, but repeats are still spaced
+					 * apart by a floor interval — this label names that guaranteed minimum.
+					 */
+					none: "Fastest allowed",
+					minutes: "{$count} min",
+					hours: "{$count} hr",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					edit: "Edit Alert",
+					remove: "Remove Alert",
+				},
+
+				types: {
+					webhook: "Webhook",
+					email: "Email",
+					slack: "Slack",
+					discord: "Discord",
+					pagerduty: "PagerDuty",
+				},
+
+				broken: {
+					label: "Broken",
+					description:
+						"The destination answered that it no longer exists: {$reason}. Save the channel again to clear this.",
+				},
+
+				notifyOnRecovery: {
+					enabled: "Yes",
+					disabled: "No",
+				},
+
+				confirmation: {
+					deleteAlert: "Are you sure you want to delete the alert {$name}?",
+				},
+			},
+		},
+
+		statusPages: {
+			header: {
+				title: "Status Pages",
+
+				action: {
+					create: "Create Status Page",
+				},
+			},
+
+			empty: {
+				title: "No status pages yet",
+				description: "Create a status page to share your system status with your users.",
+				cta: "Create Status Page",
+			},
+
+			table: {
+				label: "Status Pages",
+
+				columns: {
+					name: "Name",
+					slug: "URL",
+					services: "Services",
+					monitors: "Monitors",
+					visibility: "Visibility",
+					actions: "Actions",
+				},
+
+				visibility: {
+					public: "Public",
+					private: "Private",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					view: "View Page",
+					edit: "Edit Page",
+					delete: "Delete Page",
+				},
+
+				confirmation: {
+					delete: "Are you sure you want to delete the status page {$name}?",
+				},
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Internal Name",
+						placeholder: "Production Status",
+						description: "A name to identify the status page internally.",
+					},
+					slug: {
+						label: "URL Slug",
+						placeholder: "production",
+						description: "The URL path for the public status page (e.g., /status/production).",
+					},
+					title: {
+						label: "Public Title",
+						placeholder: "Acme Inc. Status",
+						description: "The title displayed on the public status page.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Current status of Acme Inc. services",
+						description: "An optional description for the status page.",
+					},
+					logoUrl: {
+						label: "Logo URL",
+						placeholder: "https://example.com/logo.png",
+						description: "An optional logo to display on the status page.",
+					},
+					isPublic: {
+						label: "Public",
+						description: "Make this status page accessible to anyone with the link.",
+					},
+					showOverallStatus: {
+						label: "Show Overall Status",
+						description: "Display an overall system status banner at the top of the page.",
+					},
+					monitors: {
+						label: "Monitors to Include",
+						description: "Select which monitors to display on this status page.",
+					},
+					cronJobs: {
+						label: "Cron Jobs to Include",
+						description: "Select which cron jobs to display on this status page.",
+					},
+				},
+
+				cta: "Create Status Page",
+				ctaUpdate: "Save Changes",
+			},
+		},
+
+		createStatusPage: {
+			header: {
+				title: "Create Status Page",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description:
+							"How the page identifies itself, internally and to the people who visit it.",
+					},
+					visibility: {
+						title: "Visibility",
+						description: "Who can reach this page, and how much it says at a glance.",
+					},
+					services: {
+						title: "Services",
+						description: "Pick the monitors and cron jobs this page reports on.",
+						empty:
+							"You have no monitors or cron jobs yet. Create one and you can add it to this page later.",
+					},
+				},
+			},
+		},
+
+		editStatusPage: {
+			header: {
+				title: "Edit Status Page",
+			},
+			form: {
+				sections: {
+					branding: {
+						title: "Branding",
+						description: "How the page identifies itself, to you and to your visitors.",
+					},
+					visibility: {
+						title: "Visibility",
+						description: "Who can reach this page, and what it shows at the top.",
+					},
+					services: {
+						title: "Services",
+						description: "Pick the monitors and cron jobs this page reports on.",
+						empty: "You have no monitors or cron jobs to add yet.",
+					},
+				},
+			},
+			dangerZone: {
+				title: "Danger zone",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this status page takes its public URL offline for good.",
+				deleteDescription: "This can't be undone.",
+			},
+		},
+
+		monitorsImport: {
+			meta: { title: "Import monitors" },
+			header: { title: "Import Monitors" },
+
+			form: {
+				sections: {
+					urls: {
+						title: "What to import",
+						description: "Paste the addresses you want watched, one per line.",
+					},
+					schedule: {
+						title: "How often to check",
+						description:
+							"Applied to every monitor this import creates. You can change any of them afterwards.",
+					},
+				},
+
+				fields: {
+					urls: {
+						label: "URLs to monitor",
+						description:
+							"One URL per line, up to {$limit}. A bare host like example.com becomes https://example.com. Blank lines and repeats of the same address are skipped.",
+						placeholder: "example.com\nhttps://www.example.org/health\nstatus.example.net",
+					},
+					interval: {
+						label: "Check Interval",
+						description:
+							"Applied to every monitor in this list. You can change any of them afterwards.",
+					},
+				},
+				cta: "Import Monitors",
+			},
+
+			/**
+			 * The rejected lines, shown above the box they get re-pasted into. Leading
+			 * with what was created keeps a partial import reading as a success.
+			 */
+			report: {
+				section: { title: "Last import" },
+				title:
+					".input {$count :number}\n.match $count\none {{1 monitor was created. These lines weren't:}}\n* {{{$count} monitors were created. These lines weren't:}}",
+				overflow:
+					".input {$count :number}\n.match $count\none {{1 more line was left out: an import takes {$limit} lines at a time. Paste the rest to import them.}}\n* {{{$count} more lines were left out: an import takes {$limit} lines at a time. Paste the rest to import them.}}",
+				table: {
+					label: "Lines that were not imported",
+					columns: { line: "Line", input: "What you pasted", reason: "Why" },
+				},
+				reasons: {
+					invalidUrl: "Not a URL we can check.",
+					duplicate: "Same address as an earlier line.",
+					tooLong: "Too long to be a URL.",
+				},
+			},
+		},
+
+		httpMonitors: {
+			header: {
+				title: "HTTP Monitors",
+				action: {
+					create: "Create Monitor",
+					import: "Import",
+				},
+			},
+			empty: {
+				title: "No HTTP monitors yet",
+				description: "Create an HTTP monitor to start tracking your endpoints.",
+				cta: "Create Monitor",
+			},
+			table: {
+				label: "HTTP Monitors",
+				columns: {
+					name: "Name",
+					url: "URL",
+					status: "Status",
+					responseTime: "Response Time",
+					lastChecked: "Last Checked",
+					actions: "Actions",
+				},
+				neverChecked: "Never",
+				disabled: "Disabled",
+				actions: {
+					menu: "Actions Menu",
+					view: "View",
+					edit: "Edit",
+					delete: "Delete",
+				},
+				status: {
+					up: "Up",
+					down: "Down",
+					degraded: "Degraded",
+					unknown: "Unknown",
+				},
+				confirmation: {
+					delete: "Are you sure you want to delete the monitor {$name}?",
+					deleteDescription:
+						"This also deletes its content checks and check-result history. This can't be undone.",
+				},
+			},
+		},
+
+		dnsMonitors: {
+			header: {
+				title: "DNS Monitors",
+
+				action: {
+					create: "Create DNS Monitor",
+				},
+			},
+
+			empty: {
+				title: "No DNS monitors yet",
+				description: "Create a DNS monitor to track DNS record changes.",
+				cta: "Create DNS Monitor",
+			},
+
+			table: {
+				label: "DNS Monitors",
+
+				columns: {
+					name: "Name",
+					domain: "Domain",
+					records: "Records",
+					status: "Status",
+					registration: "Registration",
+					lastChecked: "Last Checked",
+					actions: "Actions",
+				},
+
+				records: "{$enabled} of {$total} watched",
+				noRecords: "None yet",
+				disabled: "Disabled",
+				neverChecked: "Never",
+				notChecked: "Not checked",
+
+				actions: {
+					menu: "Actions Menu",
+					check: "Check Now",
+					edit: "Edit",
+					delete: "Delete",
+				},
+
+				confirmation: {
+					delete: "Are you sure you want to delete the DNS monitor {$name}?",
+				},
+			},
+		},
+
+		createDnsMonitor: {
+			header: {
+				title: "Create DNS Monitor",
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches.",
+					},
+					checks: {
+						title: "Check settings",
+						description: "How often every tracked name is resolved.",
+					},
+					zoneFile: {
+						title: "Zone file",
+						description:
+							"Paste your zone to monitor subdomains. Without it we can only see your domain's apex.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Production DNS",
+						description: "A descriptive name for this DNS monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "example.com",
+						description: "The domain to monitor DNS records for.",
+					},
+
+					zoneFile: {
+						label: "Zone File",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
+						description:
+							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
+						limits: "Up to {$size} of text, and {$limit} names per monitor.",
+					},
+
+					interval: {
+						label: "Check Interval",
+						description: "How often every tracked name is resolved.",
+						options: {
+							"5m": "5 minutes",
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"6h": "6 hours",
+							"12h": "12 hours",
+							"24h": "24 hours",
+						},
+					},
+
+					isEnabled: {
+						label: "Enable monitoring",
+						description: "Start monitoring this domain immediately.",
+					},
+				},
+
+				/** ADR-026 §14 requires this notice on the setup screen as well as in the docs. */
+				apexOnlyNotice:
+					"DNS does not let anyone list a zone's records. Without a zone file we can only watch your domain's apex — never a subdomain.",
+
+				cta: "Create DNS Monitor",
+			},
+		},
+
+		editDnsMonitor: {
+			header: {
+				title: "Edit DNS Monitor",
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches and how often it checks.",
+					},
+				},
+
+				fields: {
+					registrationWarningDays: {
+						label: "Registration warning (days)",
+						description:
+							"How many days before the domain's registration lapses to start alerting. Reminders repeat at 30, 14, 7 and 1 days.",
+						decrement: "Fewer days",
+						increment: "More days",
+					},
+
+					name: {
+						label: "Monitor Name",
+						placeholder: "Production DNS",
+						description: "A descriptive name for this DNS monitor.",
+					},
+
+					domain: {
+						label: "Domain",
+						placeholder: "example.com",
+						description: "The domain to monitor DNS records for.",
+					},
+
+					zoneFile: {
+						label: "Zone File",
+						placeholder: "example.com.\t1\tIN\tA\t192.0.2.1",
+						description:
+							"Optional. Paste a BIND zone file exported from your DNS provider. It is read once and never stored, and it is the only way we can learn the names in your zone.",
+					},
+
+					interval: {
+						label: "Check Interval",
+						description: "How often every tracked name is resolved.",
+						options: {
+							"5m": "5 minutes",
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"6h": "6 hours",
+							"12h": "12 hours",
+							"24h": "24 hours",
+						},
+					},
+
+					isEnabled: {
+						label: "Enable monitoring",
+						description: "Whether to actively monitor this domain.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+
+			zoneFileImport: {
+				title: "Zone file",
+				description:
+					"Re-paste your zone to pick up names added since the last import. The text is read once and never stored, which is why refreshing it means asking for the file again.",
+				lastImported: "Last imported {$date}.",
+				neverImported: "No zone file has been imported. This monitor covers the apex only.",
+				cta: "Import Zone File",
+			},
+
+			dangerZone: {
+				title: "Danger zone",
+				deleteMonitor: "Delete monitor",
+				deleteDescription: "This also deletes its records and check history. This can't be undone.",
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its DNS checks, history and alerts for good.",
+			},
+		},
+
+		dnsMonitorDetail: {
+			header: {
+				title: 'DNS Monitor "{$name}"',
+
+				action: {
+					check: "Check Now",
+					refresh: "Refresh",
+					edit: "Edit",
+				},
+			},
+
+			uptimeHistory: "Uptime history",
+			notChecked: "Not checked",
+
+			info: {
+				domain: "Domain",
+				status: "Status",
+				recordsWatched: "Records Watched",
+				recordsWatchedValue: "{$enabled} of {$total}",
+				zoneFileImported: "Zone File Imported",
+				zoneFileNeverImported: "Never — apex only",
+			},
+
+			/** The domain's registration as its registry publishes it (ADR-035). */
+			registration: {
+				title: "Registration",
+				description:
+					"Read from the domain's registry once a day. You are alerted from {$days} days before the registration lapses.",
+				status: "Registration",
+				expiresAt: "Expires",
+				registrar: "Registrar",
+				checkedAt: "Last looked up",
+				eppStatuses: "Registry statuses",
+				never: "Never",
+				notPublished: "Not published",
+
+				statuses: {
+					unknown: "Not looked up yet",
+					valid: "Valid",
+					expiring: "Expiring",
+					expired: "Expired",
+					unavailable: "Unavailable",
+					error: "Lookup failing",
+				},
+
+				/** Why there is no current registration data, one sentence per fix. */
+				reasons: {
+					notFound:
+						"The registry has no record of this domain. Check that it is the registered name rather than a subdomain.",
+					unsupportedTld:
+						"This domain's registry does not publish registration data over RDAP, so its expiry cannot be read.",
+					failing:
+						"The last lookup failed ({$code}). It is retried automatically, and the last known expiry date keeps alerting meanwhile.",
+				},
+			},
+
+			stats: {
+				totalChecks: {
+					label: "Total Checks",
+					description: "Number of DNS checks performed",
+				},
+
+				successRate: {
+					label: "Success Rate",
+					description: "Percentage of successful checks",
+				},
+			},
+
+			results: {
+				title: "Check History",
+				empty: "No checks have been performed yet.",
+
+				table: {
+					columns: {
+						checkedAt: "Checked At",
+						status: "Status",
+						findings: "Findings",
+						responseTime: "Slowest Query",
+					},
+				},
+
+				findings: "{$changed} changed · {$missing} missing · {$new} new",
+				noFindings: "No changes",
+				/** Only successfully answered queries enter the diff, so a partial sweep reads as partial. */
+				queriesFailed:
+					".input {$count :number}\n.match $count\none {{{$count} query did not answer}}\n* {{{$count} queries did not answer}}",
+			},
+
+			records: {
+				title: "Tracked Records",
+				description:
+					"Every record we have ever seen for this domain. Unwatched records are kept so they are never rediscovered as new.",
+				empty: "No records are tracked yet.",
+
+				table: {
+					columns: {
+						name: "Name",
+						type: "Type",
+						value: "Value",
+						source: "Source",
+						state: "State",
+						watched: "Watched",
+					},
+				},
+
+				source: {
+					resolver: "Resolved",
+					zone_file: "Zone file",
+				},
+
+				state: {
+					ok: "OK",
+					changed: "Changed",
+					missing: "Missing",
+					new: "New",
+					error: "Error",
+				},
+
+				actions: {
+					enable: "Watch",
+					disable: "Stop watching",
+				},
+			},
+		},
+
+		/**
+		 * The review step between creating a domain monitor and monitoring anything
+		 * with it. Its own page keeps a reload landing back on this decision point.
+		 */
+		dnsMonitorReview: {
+			header: {
+				title: 'Review records for "{$name}"',
+				description:
+					"Every record we found is watched by default. Uncheck anything you do not want to be alerted about — it is kept either way, so nothing you decline comes back as a new record later.",
+			},
+
+			/** Every line the parser could not use is still surfaced to the user. */
+			unparsed: {
+				title:
+					".input {$count :number}\n.match $count\none {{{$count} line was not imported}}\n* {{{$count} lines were not imported}}",
+				description:
+					"These lines are not part of the subset we read. Anything they declare is not monitored.",
+				line: "Line {$line :string}: {$reason}",
+
+				/** One sentence per parser outcome, so each names the fix it points at. */
+				reasons: {
+					includeDirective: "Names a file we do not have and will not fetch",
+					generateDirective: "Expands into many names at once",
+					unsupportedDirective: "Not a directive we read",
+					nonInternetClass: "Not an internet-class record",
+					unsupportedType: "Not one of the seven record types we watch",
+					outOfZone: "Belongs to a different domain",
+					malformed: "We could not read this as a record",
+				},
+			},
+
+			groups: {
+				resolving: {
+					title: "Resolving now",
+					description: "Found by resolving every supported record type at every known name.",
+				},
+				discovered: {
+					title: "Newly discovered",
+					description:
+						"Resolving now, but not there at the last review. Left unwatched until you accept them, so a record that appeared without you is never turned into an expectation on your behalf.",
+				},
+				declared: {
+					title: "Declared but not resolving",
+					description:
+						"In your zone file, but nothing answers for them today. Left unwatched unless you say otherwise — a pasted zone is a snapshot, and it only gets older.",
+					proxiedNote:
+						"A proxied record does not appear in its own zone export, and answers as the proxy's address instead. On a proxied zone this is normal and expected — it is not a sign that anything is broken.",
+				},
+			},
+
+			/**
+			 * A line repeating a record an earlier line already declared. Kept apart
+			 * from the rejections, since nothing was lost — the record was imported
+			 * from whichever line named it first.
+			 */
+			duplicates: {
+				title:
+					".input {$count :number}\n.match $count\none {{{$count} line declared a record another line already declared}}\n* {{{$count} lines declared records other lines already declared}}",
+				description:
+					"Nothing was lost. DNS answers a repeated record once, so it was imported from the first line that declared it.",
+				line: "Line {$line :string}: {$name} {$type} was already declared on line {$firstLine :string}.",
+			},
+
+			/** The cap is enforced at review time, so this notice appears there too. */
+			namesCap: {
+				title: "More names than one monitor can watch",
+				description:
+					"This monitor now covers {$count} names, and one check can sweep {$limit}. Split the zone across more than one monitor so every name keeps being checked.",
+			},
+
+			/** Column headings match the monitor's own record list, so both screens read alike. */
+			table: {
+				columns: {
+					watched: "Watched",
+					name: "Name",
+					type: "Type",
+					value: "Value",
+				},
+
+				/** Each box names the record it decides, so a row makes sense read on its own. */
+				watchRecord: "Watch {$name} {$type}",
+			},
+
+			empty: "Nothing was found for this domain.",
+			cancel: "Cancel",
+			cta: "Save Records",
+		},
+
+		maintenance: {
+			header: {
+				title: "Maintenance Windows",
+
+				action: {
+					create: "Schedule Maintenance",
+				},
+			},
+
+			empty: {
+				title: "No maintenance windows",
+				description: "Schedule maintenance windows to suppress alerts during planned downtime.",
+				cta: "Schedule Maintenance",
+			},
+
+			tabs: {
+				label: "Maintenance Status",
+				active: "Active",
+				upcoming: "Upcoming",
+				past: "Past",
+			},
+
+			noActive: "No active maintenance windows",
+			noUpcoming: "No upcoming maintenance windows",
+			noPast: "No past maintenance windows",
+
+			table: {
+				columns: {
+					name: "Name",
+					schedule: "Schedule",
+					monitor: "Monitor",
+					status: "Status",
+					actions: "Actions",
+					scope: "Scope",
+					starts: "Starts",
+					ends: "Ends",
+				},
+
+				allMonitors: "All Monitors",
+				recurring: "Recurring",
+				unknownMonitor: "Unknown monitor",
+				endedEarly: "Ended early",
+				edit: "Edit",
+
+				status: {
+					active: "Active",
+					upcoming: "Scheduled",
+					past: "Completed",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					end: "End Now",
+					delete: "Delete",
+				},
+
+				confirmation: {
+					endMaintenance: "Are you sure you want to end '{$name}' maintenance early?",
+					deleteMaintenance: "Are you sure you want to delete '{$name}'?",
+				},
+			},
+		},
+
+		createMaintenance: {
+			header: {
+				title: "Schedule Maintenance",
+			},
+
+			form: {
+				sections: {
+					coverage: {
+						title: "Coverage",
+						description: "Name this window and choose which monitors it applies to.",
+					},
+					schedule: {
+						title: "Schedule",
+						description: "When the maintenance window starts and ends.",
+					},
+					behavior: {
+						title: "Behavior",
+						description: "What happens while the window is active, and whether it repeats.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Database upgrade",
+						description: "A description of the maintenance work.",
+					},
+
+					monitor: {
+						label: "Monitor",
+						description: "Select a specific monitor or leave empty for all monitors.",
+						all: "All Monitors",
+					},
+
+					startsAt: {
+						label: "Start Time",
+						description: "When the maintenance window begins.",
+					},
+
+					duration: {
+						label: "Duration",
+						description: "How long the maintenance window lasts.",
+						options: {
+							"15m": "15 minutes",
+							"30m": "30 minutes",
+							"1h": "1 hour",
+							"2h": "2 hours",
+							"4h": "4 hours",
+							"8h": "8 hours",
+						},
+					},
+
+					suppressAlerts: {
+						label: "Suppress alerts",
+						description: "Don't send alerts during this maintenance window.",
+					},
+
+					showOnStatusPage: {
+						label: "Show on status page",
+						description: "Display a maintenance notice on public status pages.",
+					},
+
+					isRecurring: {
+						label: "Recurring",
+						description: "Repeat this maintenance window on a schedule.",
+					},
+
+					recurringPattern: {
+						label: "Recurring Pattern",
+						placeholder: "weekly:monday:02:00-04:00",
+						description:
+							"Pattern format: 'daily:HH:MM-HH:MM', 'weekly:dayOfWeek:HH:MM-HH:MM', or 'monthly:dayOfMonth:HH:MM-HH:MM'",
+					},
+				},
+
+				preview: {
+					label: "Maintenance window",
+				},
+
+				cta: "Schedule Maintenance",
+			},
+		},
+
+		editMaintenance: {
+			header: {
+				title: "Edit {$name}",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+				sections: {
+					coverage: {
+						title: "What it covers",
+						description: "Name this window and choose which monitors it applies to.",
+					},
+					schedule: {
+						title: "Schedule",
+						description: "When the maintenance window starts and ends.",
+					},
+					behavior: {
+						title: "During maintenance",
+						description: "How alerts and your status page behave while the window is running.",
+					},
+					recurrence: {
+						title: "Recurrence",
+						description: "Repeat this window on a schedule instead of running it once.",
+					},
+				},
+			},
+
+			endNow: {
+				cta: "End maintenance now",
+				title: "End this window",
+				description: "This window is running right now.",
+				warning:
+					"Ending it now restores alerting and removes the maintenance notice from your status page. The window itself is kept.",
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				description: "Irreversible actions for this maintenance window.",
+				warning: "Deleting this maintenance window can't be undone.",
+				delete: {
+					trigger: "Delete maintenance window",
+					confirmTitle: "Delete this maintenance window?",
+					confirmDescription: "This can't be undone.",
+					confirm: "Delete",
+				},
+			},
+		},
+
+		maintenanceWindows: {
+			form: {
+				fields: {
+					name: {
+						label: "Name",
+					},
+
+					scope: {
+						description:
+							"What this window covers. Leave it team-wide, narrow it to one kind of monitor, or point it at a single one.",
+					},
+
+					startsAt: {
+						label: "Starts at",
+					},
+
+					endsAt: {
+						label: "Ends at",
+					},
+
+					suppressAlerts: {
+						label: "Suppress alerts during this window",
+					},
+
+					showOnStatusPage: {
+						label: "Show on status page",
+					},
+
+					recurring: {
+						label: "Recurring",
+					},
+
+					recurringPattern: {
+						label: "Recurrence pattern (when recurring)",
+						placeholder: "weekly:monday:02:00-04:00",
+						description:
+							"daily:HH:MM-HH:MM, weekly:<day>:HH:MM-HH:MM, or monthly:<day-of-month>:HH:MM-HH:MM, in UTC.",
+					},
+				},
+			},
+		},
+
+		reports: {
+			header: {
+				title: "Reports",
+				description:
+					"Download uptime reports as CSV for a month, a quarter or any range of days, to keep or to send to a client.",
+			},
+			form: {
+				range: {
+					legend: "Date range (UTC days)",
+					from: "From",
+					to: "To",
+					presets: "Quick ranges",
+				},
+				presets: {
+					lastMonth: "Last month",
+					last30Days: "Last 30 days",
+					lastQuarter: "Last quarter",
+					yearToDate: "Year to date",
+				},
+				monitors: {
+					label: "Monitors",
+					all: "All monitors",
+					statusPages: "Monitors on a status page",
+					types: "Monitors of one type",
+				},
+				dialect: {
+					legend: "Format",
+					spreadsheet: {
+						label: "Spreadsheet",
+						description:
+							"Opens in Excel, Numbers or Google Sheets with column names and number format in your language.",
+					},
+					standard: {
+						label: "Standard CSV",
+						description:
+							"Comma-separated, with fixed column names and dot decimals, for scripts and imports.",
+					},
+				},
+				submit: {
+					summary: "Download uptime summary",
+					summaryDescription: "One row per monitor for the whole range.",
+					daily: "Download daily uptime",
+					dailyDescription: "One row per monitor for each day.",
+					archive: "Download both as ZIP",
+					archiveDescription: "The summary and the daily report as two CSV files in one ZIP.",
+				},
+			},
+			errors: {
+				invalid: "Enter both dates as real calendar days.",
+				reversed: "The start date must be on or before the end date.",
+				future: "Reports end yesterday at the latest, since today's checks are still coming in.",
+				tooLong: "A report covers at most 366 days.",
+				scope: "Choose one of this team's status pages or a monitor type.",
+			},
+			about: {
+				title: "How the figures are calculated",
+				uptime:
+					"Uptime is successful checks divided by all checks in the range, the same figure the dashboard and digests show. For HTTP monitors, a degraded check counts as failed.",
+				days: "Days are UTC. A day without recorded checks is left out instead of being counted as up.",
+				maintenance:
+					"Maintenance minutes are listed for each monitor. Checks during maintenance still count toward uptime.",
+			},
+			columns: {
+				monitor: "Monitor",
+				type: "Type",
+				target: "Target",
+				days_with_data: "Days with data",
+				total_checks: "Total checks",
+				successful_checks: "Successful checks",
+				failed_checks: "Failed checks",
+				uptime_percent: "Uptime %",
+				avg_response_time_ms: "Avg response time (ms)",
+				max_response_time_ms: "Max response time (ms)",
+				days_down: "Days down",
+				days_degraded: "Days degraded",
+				maintenance_minutes: "Maintenance (minutes)",
+				date: "Date (UTC)",
+				status: "Status",
+			},
+			types: {
+				http: "HTTP",
+				dns: "DNS",
+				tcp: "TCP",
+				cron: "Cron job",
+				flow: "Flow",
+			},
+			statuses: {
+				up: "Up",
+				degraded: "Degraded",
+				down: "Down",
+			},
+		},
+		alertHistory: {
+			header: {
+				title: "Alert History",
+			},
+
+			breadcrumbs: {
+				alerts: "Alerts",
+			},
+
+			empty: {
+				title: "No alert events yet",
+				description:
+					"Alert events will appear here when monitors trigger alerts. Configure alerts to get started.",
+				cta: "View Alerts",
+			},
+
+			table: {
+				label: "Alert Events",
+
+				columns: {
+					alert: "Alert",
+					monitor: "Monitor",
+					eventType: "Event",
+					status: "Status",
+					sentAt: "Time",
+				},
+
+				unknownAlert: "Unknown Alert",
+				unknownMonitor: "Unknown Monitor",
+
+				eventType: {
+					down: "Down",
+					up: "Recovered",
+					degraded: "Degraded",
+				},
+
+				status: {
+					pending: "Pending",
+					sent: "Sent",
+					skipped_cooldown: "Skipped (Cooldown)",
+					skipped_cap: "Skipped (Repeat Limit)",
+					/**
+					 * Generic label covering any suppression reason before it gets a
+					 * specific translation of its own.
+					 */
+					skipped: "Skipped",
+					failed: "Failed",
+				},
+			},
+		},
+
+		createAlert: {
+			header: {
+				title: "Create Alert",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this alert is called and which monitors it watches.",
+					},
+					channel: {
+						title: "Notification channel",
+						description:
+							"Where the notification is sent. Only the fields of the channel you pick are required.",
+					},
+					delivery: {
+						title: "Delivery rules",
+						description:
+							"Whether recoveries are announced, and how often a repeat is sent while a monitor is still down.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "CTO Alert",
+						description: "A name to identify the alert.",
+					},
+
+					strategy: {
+						label: "Strategy",
+						description: "The strategy to use for the alert.",
+						options: {
+							webhook: "Webhook",
+							email: "Email",
+							slack: "Slack",
+							discord: "Discord",
+							pagerduty: "PagerDuty",
+						},
+					},
+
+					config: {
+						webhook: {
+							url: {
+								label: "Webhook URL",
+								placeholder: "https://example.com/webhook",
+								description: "The URL to send the alert payload to.",
+							},
+							secret: {
+								label: "Secret",
+								placeholder: "optional-secret",
+								description:
+									"An optional secret to include in the request headers. A `Webhook-Signature` header will be added with a HMAC SHA256 signature of the payload using this secret.",
+							},
+						},
+						email: {
+							to: {
+								label: "Email Address",
+								placeholder: "cto@example.com",
+								description: "The email address to send the alert to.",
+							},
+
+							subjectPrefix: {
+								label: "Subject Prefix",
+								placeholder: "[Uptime Alert]",
+								description:
+									"An optional prefix to add to the email subject. Useful to filter alerts in your inbox.",
+							},
+						},
+						slack: {
+							webhookUrl: {
+								label: "Slack Webhook URL",
+								placeholder: "https://hooks.slack.com/services/...",
+								description:
+									"The Slack Incoming Webhook URL. Create one at api.slack.com/apps > Incoming Webhooks.",
+							},
+						},
+						discord: {
+							webhookUrl: {
+								label: "Discord Webhook URL",
+								placeholder: "https://discord.com/api/webhooks/...",
+								description:
+									"The Discord Webhook URL. Create one in Server Settings > Integrations > Webhooks.",
+							},
+						},
+					},
+
+					notifyOnRecovery: {
+						label: "Notify on recovery",
+						description:
+							"Send an alert when the monitor recovers from a down state. Includes recovery time and downtime duration.",
+					},
+
+					cooldown: {
+						label: "Alert Cooldown",
+						description:
+							"Minimum time between alerts of the same type. Prevents alert fatigue during ongoing outages.",
+						options: {
+							none: "No cooldown",
+							"5min": "5 minutes",
+							"15min": "15 minutes",
+							"30min": "30 minutes",
+							"1hour": "1 hour",
+							"2hours": "2 hours",
+							custom: "Custom",
+						},
+						custom: {
+							label: "Custom Cooldown (minutes)",
+							placeholder: "Enter minutes",
+							description: "Enter the number of minutes between alerts.",
+						},
+					},
+				},
+
+				cta: "Create Alert",
+			},
+		},
+
+		editAlert: {
+			header: {
+				title: "Edit Alert",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+				sections: {
+					basics: {
+						title: "What it watches",
+						description: "Name this alert and choose whether it covers every monitor or just one.",
+					},
+					channel: {
+						title: "How it notifies",
+						description: "Pick a channel and fill in the destination it should send to.",
+					},
+					delivery: {
+						title: "Delivery rules",
+						description:
+							"Control recovery notices and how often an alert may repeat during an outage.",
+					},
+				},
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				description: "Irreversible actions for this alert.",
+				warning: "Deleting this alert stops all notifications it sends. This can't be undone.",
+				delete: {
+					trigger: "Delete alert",
+					confirmTitle: "Delete this alert?",
+					confirmDescription: "This can't be undone.",
+					confirm: "Delete",
+				},
+			},
+		},
+
+		logout: {
+			title: "Are you sure you want to logout?",
+			cta: "Logout",
+		},
+
+		trial: {
+			/**
+			 * The report as its own page, reachable by the watch's token. Every figure is
+			 * computed from stored checks, so a watch with no completed check shows an em
+			 * dash next to a "nothing to report yet" explanation, since nothing has run.
+			 */
+			report: {
+				meta: {
+					title: "Your {$days}-day site health report — Uptime",
+					description:
+						"The uptime, checks and incidents we recorded for your site over its free week of monitoring.",
+				},
+				eyebrow: "{$days}-day health report",
+				period: "Monitored {$start} to {$end} ({$zone})",
+				bar: {
+					caption: "One block per day over {$days} days, oldest first.",
+					status: {
+						up: "Up all day",
+						degraded: "Slow at least once",
+						down: "Down at least once",
+						noData: "No checks this day",
+					},
+				},
+				summary: {
+					title: "What we recorded",
+					uptime: "Uptime",
+					checks: "Checks completed",
+					healthy: "Fully healthy checks",
+					noChecks:
+						"No check has completed yet, so there is nothing to report on this URL. The first hourly check runs an hour after the watch started.",
+				},
+				incidents: {
+					title: "Incidents",
+					unknown: "No check has completed yet, so we cannot say whether this URL had an incident.",
+					none: ".input {$count :number}\n.match $count\none {{No incident: the one completed check answered as expected.}}\n* {{No incidents: all {$count} completed checks answered as expected.}}",
+					summary:
+						".input {$count :number}\n.match $count\none {{One incident.}}\n* {{{$count} incidents.}}",
+					entry:
+						".input {$count :number}\n.match $count\none {{First failure seen {$started} — one check failed.}}\n* {{First failure seen {$started} — {$count} checks in a row failed.}}",
+				},
+				timing: {
+					title: "Response times",
+					fastest: "Fastest",
+					average: "Average",
+					slowest: "Slowest",
+					basis:
+						".input {$count :number}\n.match $count\none {{Measured over the one check that answered.}}\n* {{Measured over the {$count} checks that answered.}}",
+				},
+				cta: {
+					title: "Keep monitoring this site for {$price}/month",
+					action: "Start monitoring",
+					convertible: {
+						body: "Sign in and we will turn this URL into a real monitor, with the history above carried over.",
+					},
+					expired: {
+						body: "This free week is past its claim window, so the history above stays here — but you can start monitoring this URL properly any time.",
+					},
+					converted: {
+						title: "This URL is already being monitored",
+						body: "You turned this target into a monitor, so it is being checked on your own schedule now.",
+						action: "Open your dashboard",
+					},
+				},
+			},
+
+			meta: {
+				title: "Free {$days}-day website health report — Uptime",
+				description:
+					"We check your site now, then every hour for {$days} days, and email you what we found. No account, no card.",
+			},
+
+			heading: "A free {$days}-day health report for your site",
+			intro:
+				"Give us a URL and we check it right now from our network — the same check a paid monitor runs. Leave an email after that and we keep checking every hour for {$days} days, then send you the report.",
+
+			form: {
+				url: {
+					label: "URL to check",
+					description: "An http:// or https:// address on the public internet.",
+					placeholder: "https://example.com",
+				},
+				submit: "Run the first check",
+			},
+
+			expired: {
+				title: "This form expired before it was sent",
+				description:
+					"It was opened before our last update, so we could not accept it. What you entered is still here: send it again.",
+			},
+
+			refusal: {
+				title: "The check did not run",
+				blockedTarget:
+					"That is not an address we will check on your behalf. It has to be a public http:// or https:// URL on port 80 or 443, carry no username or password, and resolve to somewhere on the open internet.",
+				challengeIncomplete: "Complete the verification and we can run the check.",
+				failedChallenge:
+					"We could not confirm the request came from a browser. Reload the page and try again.",
+				rateLimited: "You can run another check in a minute.",
+				rateLimitedFor: "You can run another check in {$seconds} seconds.",
+				budgetExhausted:
+					"We have already run every free check we run in a day. That is about us, not about your URL — come back tomorrow, or start monitoring and we will check it every minute.",
+				unavailable:
+					"Something on our side stopped the check before it ran, so we learned nothing about your URL. That is us and not you. Try again in a moment.",
+			},
+
+			result: {
+				checkAnother: "Check another URL",
+				noResponse: "No response",
+				httpStatus: "HTTP {$status}",
+				milliseconds: "{$value} ms",
+				checkedAt: "Checked {$time}",
+
+				redirect: {
+					badge: "Redirects",
+					title: "This URL redirects somewhere else",
+					description:
+						"It answered, and it answered by pointing us at another address. We did not go there: we only check the URL you gave us, which is what keeps this box from being used to reach places it should not. Check the destination instead and you will get a real result for it.",
+					destination: "It points at {$url}",
+					action: "Check that instead",
+					unknownDestination:
+						"We did not read where it points. Open the URL in a browser, see where you land, and check that address here.",
+				},
+
+				status: {
+					up: "Up",
+					degraded: "Slow",
+					down: "Down",
+				},
+			},
+
+			lead: {
+				title: "Get the free {$days}-day report",
+				description:
+					"The check you just watched was the first one. Leave an email and we keep going, then tell you what {$days} days of checking found.",
+				consent: "Also email me occasionally about Uptime itself.",
+				consentNote: "Either way you get the checks.",
+				promise: "Every email carries a one-click link that stops them and deletes your address.",
+				submit: "Start the free {$days}-day report",
+
+				/**
+				 * What a visitor is agreeing to, placed beside the field. Each line states a
+				 * guarantee the system already keeps — the probed address, the watch's own
+				 * cadence and length, and the three emails that exist.
+				 */
+				expectations: {
+					target: "We keep checking {$url} — the exact address we just checked, and nothing else.",
+					cadence: "Once an hour, every hour, for {$days} days.",
+					emails:
+						"One summary a day, a note when the status changes, and the full report at the end.",
+					noAccount: "No card, no password, no account to create.",
+				},
+
+				email: {
+					label: "Email",
+					placeholder: "you@example.com",
+					error: "That does not look like an email address.",
+					disposable: "Use an address you keep: this one is from a disposable email service.",
+					noMailServer: "{$domain} does not accept email. Check the address.",
+					typo: "Did you mean {$suggestion}? Send {$email} again to keep it.",
+				},
+			},
+
+			monitor: {
+				title: "Keep watching this URL",
+				description:
+					"Turn this one check into a monitor: the same check on your schedule, with an alert the moment it changes.",
+				subscribeDescription:
+					"Turn this one check into a monitor: the same check on your schedule, with an alert the moment it changes. It starts running once your subscription is active.",
+				create: "Create a monitor for this URL",
+				subscribe: "Start your subscription",
+			},
+
+			watching: {
+				title: "We are on it",
+				description:
+					"The first hourly check on {$url} runs in an hour, and we keep checking for {$days} days. A copy of the check you just ran is already in your inbox.",
+			},
+
+			repeated: {
+				title: "We have already checked this one",
+				description:
+					"{$url} already had its free report from an earlier request — each URL gets one every 30 days. We have emailed you everything those checks found, so nothing new was started.",
+			},
+
+			benefits: {
+				title: "What the report covers",
+				description:
+					"Everything a paid monitor would tell you about this URL, free, for {$days} days.",
+
+				list: {
+					hourly: {
+						title: "A check every hour",
+						description: "For {$days} days, from the same network a paid monitor runs on.",
+					},
+					changes: {
+						title: "An email when it changes",
+						description:
+							"Up or down, you hear about it. At most one a day, so a flapping site cannot flood you.",
+					},
+					digest: {
+						title: "One summary a day",
+						description:
+							"How your URL held up, at a glance — and the whole {$days} days in one report at the end.",
+					},
+					noAccount: {
+						title: "No account, no card",
+						description: "Nothing to sign up for, and one click stops it for good.",
+					},
+				},
+			},
+
+			more: {
+				title: "Not just websites",
+				description:
+					"The free report covers HTTP. A paid account keeps an eye on three more things for you.",
+
+				list: {
+					tcp: {
+						title: "TCP",
+						description:
+							"Know a port is still answering, for the things that are not websites: databases, mail servers, game servers.",
+					},
+					dns: {
+						title: "DNS",
+						description:
+							"Know a record still points where it should, so a hijack or a botched change does not go unnoticed.",
+					},
+					cron: {
+						title: "Cron jobs",
+						description:
+							"Know your nightly backup finished, and hear about it on the night it does not.",
+					},
+				},
+			},
+
+			cta: {
+				badge: "When the report ends",
+				title: "Keep monitoring this site for {$price} a month",
+				description:
+					"Signing up turns this URL into a real monitor and carries its check history across, so nothing starts over. A check every minute instead of every hour, as many URLs as you like, alerts wherever you already work, status pages, and a year of history.",
+				action: "Keep monitoring this site",
+				pricing: "See pricing",
+			},
+		},
+
+		unsubscribe: {
+			confirm: {
+				title: "Stop these emails?",
+				body: "This ends every check that address asked for and deletes the address along with everything recorded against it. Nothing is kept, so there is nothing to undo — but you can start again from our website whenever you like.",
+				cta: "Yes, stop and delete",
+			},
+
+			done: {
+				title: "You are unsubscribed",
+				body: "That address is no longer on our list and any checks it asked for have stopped. Nothing further will be sent to it. You can start again from our website whenever you like.",
+				cta: "Back to the site",
+			},
+		},
+		digestUnsubscribe: {
+			confirm: {
+				title: "Stop this digest?",
+				body: "You will stop receiving this digest for every team you belong to. Alerts and invitations keep arriving, and you can turn the digest back on from your account settings.",
+				cta: "Yes, stop this digest",
+			},
+
+			done: {
+				title: "Digest turned off",
+				body: "You will not receive this digest again. Alerts and invitations keep arriving, and you can turn the digest back on from your account settings.",
+				cta: "Back to the site",
+			},
+
+			invalid: {
+				title: "This link is not valid",
+				body: "This unsubscribe link is incomplete or has been changed. Use the link from the latest digest, or sign in and choose which digests you receive from your account settings.",
+				cta: "Back to the site",
+			},
+		},
+		splat: {
+			notFound: {
+				title: "Not Found",
+				description: "The page you are looking for does not exist.",
+			},
+		},
+
+		account: {
+			meta: {
+				title: "Account - Uptime",
+				description: "Manage your account settings and teams.",
+			},
+
+			header: {
+				title: "Account",
+			},
+
+			form: {
+				actions: {
+					cancel: "Cancel",
+				},
+			},
+
+			profile: {
+				title: "Profile",
+				description: "Your personal information.",
+
+				card: {
+					title: "Profile Details",
+					description: "Your name, email address, and avatar.",
+				},
+			},
+
+			language: {
+				title: "Language Preference",
+				description: "Choose your preferred language for the interface.",
+
+				card: {
+					title: "Language",
+					description: "Applies across the dashboard and email notifications.",
+				},
+
+				form: {
+					fields: {
+						language: {
+							label: "Preferred Language",
+							description:
+								"Select your preferred language. Auto-detect uses your browser settings.",
+							options: {
+								auto: "Auto-detect",
+								en: "English",
+								es: "Espanol",
+								de: "Deutsch",
+								ja: "Japanese",
+								fr: "Francais",
+								it: "Italiano",
+							},
+						},
+					},
+
+					cta: "Save Language",
+				},
+			},
+
+			emails: {
+				title: "Emails",
+				description: "Choose which emails we send you.",
+
+				card: {
+					title: "Email Notifications",
+					description:
+						"These apply to every team you belong to. Alerts and invites are not affected.",
+				},
+
+				list: {
+					teamDailyDigest: {
+						name: "Daily monitor digest",
+						description:
+							"Every morning, one email per team with the state of each of its monitors over the previous day.",
+					},
+					teamWeeklyDigest: {
+						name: "Weekly monitor digest",
+						description:
+							"On Mondays, the same report over the last seven days, with the week's uptime day by day.",
+					},
+				},
+
+				form: {
+					cta: "Save Emails",
+				},
+			},
+
+			teams: {
+				title: "Your Teams",
+				description: "Teams you are a member of.",
+
+				actions: {
+					createTeam: "Create Team",
+				},
+
+				empty: {
+					title: "No teams yet",
+					description: "Create a team to start monitoring your services.",
+					cta: "Create Team",
+				},
+
+				table: {
+					label: "Teams",
+					description: "All teams you belong to.",
+
+					columns: {
+						team: "Team",
+						role: "Role",
+						actions: "Actions",
+					},
+
+					role: {
+						member: "Member",
+						admin: "Admin",
+						owner: "Owner",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						leave: "Leave Team",
+					},
+
+					confirmation: {
+						leaveTeam: "Are you sure you want to leave {$name}?",
+					},
+				},
+			},
+
+			dataExport: {
+				title: "Your Data",
+				description: "Download everything this app holds about you.",
+
+				card: {
+					title: "Export Your Data",
+					description: "One JSON file, generated when you ask for it. We keep no copy.",
+					includes:
+						"Includes your profile and preferences, every team you belong to and your role in it, and — for teams you own — their monitors, alerts, maintenance windows, status pages and verified domains.",
+					excludes:
+						"Excludes anything that is not yours to take: other members' details, invitee addresses, API key hashes, webhook secrets and Slack or Discord webhook URLs. Check history is left out too — it is produced by the configuration above, and the file says so.",
+				},
+
+				form: {
+					cta: "Download JSON",
+				},
+			},
+
+			deleteAccount: {
+				title: "Delete Account",
+				description: "Close your account and delete the data behind it.",
+
+				queued: {
+					title: "Deletion Requested",
+					description:
+						"Your account is queued for deletion and nothing has been deleted yet. It runs within a day, and we will email you once it has. You can still stop it — cancel below any time before it runs.",
+					requestedAt: "Requested {$date}.",
+					cta: "Cancel Deletion",
+				},
+
+				card: {
+					title: "Delete Your Account",
+					description:
+						"Queues your account for deletion. Nothing is deleted when you submit this form.",
+
+					whatHappens:
+						"Your request is queued and you are signed out. Within a day we cancel your subscription, delete your data, and email you to confirm it is done. Until then nothing has gone, and signing back in lets you cancel.",
+
+					noOwnedTeams:
+						"You own no teams, so only your own memberships and preferences will be removed. The teams you belong to carry on without you.",
+
+					ownedTeamsIntro:
+						"There is no way to hand a team over to somebody else in this app, so every team you own is deleted with your account, along with its monitors, alerts, status pages, API keys and members:",
+					ownedTeam:
+						".input {$count :number}\n.match $count\none {{{$name} — 1 other member loses access.}}\n* {{{$name} — {$count} other members lose access.}}",
+					ownedTeamAlone: "{$name} — no other members.",
+
+					othersWarning:
+						".input {$count :number}\n.match $count\none {{1 other person will lose access to a team when this runs. They will not be asked and will not be warned.}}\n* {{{$count} other people will lose access to their teams when this runs. They will not be asked and will not be warned.}}",
+
+					retained: {
+						intro: "Some things cannot be deleted, and we would rather say so:",
+						billing:
+							"Invoices and payment records held by our billing provider — tax law requires keeping them.",
+						analytics:
+							"Monitoring check results in our analytics store, which is append-only: records expire on a retention schedule and cannot be deleted early.",
+						logs: "Server request logs, which expire on the same kind of schedule.",
+						identity:
+							"Your sign-in identity, which belongs to the identity provider you sign in with rather than to us.",
+					},
+
+					confirmation: {
+						label: 'Type "DELETE" to confirm',
+						placeholder: "DELETE",
+					},
+
+					cta: "Queue Account Deletion",
+				},
+			},
+		},
+
+		createTeam: {
+			header: {
+				title: "Create Team",
+				description: "Create a new team to monitor your services.",
+			},
+
+			dialog: {
+				close: "Close dialog",
+			},
+
+			form: {
+				fields: {
+					name: {
+						label: "Team Name",
+						placeholder: "My Awesome Team",
+						description: "Choose a name for your new team.",
+					},
+				},
+
+				cancel: "Cancel",
+				cta: "Create Team",
+			},
+		},
+
+		settings: {
+			header: {
+				title: "Team Settings",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			sections: {
+				general: {
+					title: "General",
+					description: "Manage your team's basic information.",
+				},
+			},
+
+			form: {
+				card: {
+					title: "Team Profile",
+					description: "Update your team's name and logo.",
+				},
+
+				fields: {
+					logo: {
+						label: "Logo URL",
+						placeholder: "https://example.com/logo.png",
+						description: "A URL to your team's logo image.",
+						error: "Enter a full https:// URL, or leave it empty to remove the logo.",
+					},
+					name: {
+						label: "Team Name",
+						placeholder: "My Team",
+						description: "The name of your team.",
+					},
+				},
+
+				actions: {
+					cancel: "Cancel",
+					save: "Save Changes",
+				},
+			},
+
+			members: {
+				title: "Members",
+				description: "Manage your team members and their roles.",
+
+				actions: {
+					invite: "Invite Member",
+				},
+
+				table: {
+					label: "Current Members",
+					description: "People who have access to this team.",
+
+					columns: {
+						name: "Name",
+						role: "Role",
+						actions: "Actions",
+					},
+
+					role: {
+						member: "Member",
+						admin: "Admin",
+						owner: "Owner",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						remove: "Remove from Team",
+						transfer: "Transfer Ownership",
+						changeRole: {
+							member: "Convert to Admin",
+							admin: "Convert to Member",
+							owner: "Can't change owner",
+						},
+					},
+
+					confirmation: {
+						removeMember: "Are you sure you want to remove {$name} from the team?",
+					},
+				},
+
+				invitedTable: {
+					label: "Pending Invitations",
+					description: "People who have been invited but haven't joined yet.",
+
+					columns: {
+						email: "Email",
+						expires: "Expires",
+						actions: "Actions",
+					},
+
+					expires: {
+						expired: "Expired",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						copy: "Copy Invite Link",
+						revoke: "Revoke Invite",
+					},
+
+					confirmation: {
+						revokeInvite: "Are you sure you want to revoke {$email}'s invite?",
+					},
+
+					empty: {
+						description: "No pending invitations.",
+					},
+				},
+			},
+
+			domains: {
+				title: "Domains",
+				description: "Manage verified domains for your team.",
+
+				actions: {
+					addDomain: "Add Domain",
+				},
+
+				table: {
+					label: "Verified Domains",
+					description: "Domains that can be used for auto-provisioning team members.",
+
+					columns: {
+						hostname: "Hostname",
+						id: "Verification ID",
+						verifiedAt: "Verified At",
+						actions: "Actions",
+					},
+
+					verifiedAt: {
+						pending: "Awaiting verification",
+					},
+
+					actions: {
+						menu: "Actions Menu",
+						copy: "Copy Verification ID",
+						remove: "Remove Domain",
+						retryVerification: "Retry Verification",
+					},
+
+					confirmation: {
+						removeDomain: "Are you sure you want to remove {$hostname} from the team?",
+					},
+
+					empty: {
+						description: "No verified domains yet.",
+					},
+				},
+
+				form: {
+					title: "Add Domain",
+
+					fields: {
+						hostname: {
+							label: "Domain",
+							placeholder: "example.com",
+							description: "The domain you want to add to {$team}.",
+						},
+					},
+
+					cta: "Add Domain",
+				},
+
+				instructions: {
+					title: "How to verify your domain",
+					description: "To verify your domain, add the following TXT record to your DNS settings:",
+
+					record: {
+						name: {
+							label: "Name",
+							value: "_ping-verification",
+						},
+						content: {
+							label: "Content",
+							value: "VERIFICATION_ID",
+						},
+					},
+
+					note: "Make sure to replace {#code}VERIFICATION_ID{/code} with the actual verification ID shown above.",
+					disclaimer:
+						"DNS changes may take some time to propagate, so verification might be delayed.",
+				},
+			},
+
+			billing: {
+				title: "Billing",
+				description: "Manage your subscription and payment details.",
+
+				card: {
+					title: "Subscription & Payments",
+					description: "View invoices, update payment methods, and manage your subscription.",
+					notice:
+						"You will be redirected to Polar's customer portal to manage your billing settings.",
+					cta: "Open Billing Portal",
+				},
+			},
+
+			danger: {
+				title: "Danger Zone",
+				description: "Irreversible actions that affect your team.",
+
+				card: {
+					title: "Delete Team",
+					description:
+						"Permanently delete this team and all of its data. This action cannot be undone.",
+					warning:
+						"This will cancel your subscription and delete all monitors, alerts, domains, members, and invites.",
+					confirmation: {
+						label: "Type DELETE to confirm",
+						placeholder: "DELETE",
+					},
+					cta: "Delete Team",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
+			},
+		},
+
+		flowMonitorDetail: {
+			header: {
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+				action: { edit: "Edit" },
+			},
+
+			info: {
+				status: "Status",
+				interval: "Runs every",
+				lastChecked: "Last checked",
+				enabled: "Enabled",
+			},
+
+			stats: {
+				passRate: { label: "Pass rate" },
+				avgDuration: { label: "Avg. Duration" },
+				totalRuns: { label: "Total Runs" },
+			},
+
+			failure: {
+				title: "Last failure",
+				failedTest: "{$test} failed on line {$line :string}.",
+			},
+
+			source: { title: "Flow" },
+
+			results: {
+				title: "Runs",
+				empty: "No runs yet.",
+				label: "Flow runs",
+				columns: {
+					time: "Time",
+					status: "Status",
+					tests: "Tests",
+					requests: "Requests",
+					duration: "Duration",
+				},
+			},
+		},
+
+		flowMonitors: {
+			header: {
+				title: "Flow Monitors",
+				action: { create: "Create" },
+			},
+
+			empty: {
+				title: "No flow monitors yet",
+				description:
+					"A flow monitor runs several requests in order and checks what comes back — sign in, read the token, call the endpoint it authorises. It answers the question a single request cannot.",
+				cta: "Create your first flow monitor",
+			},
+
+			table: {
+				label: "Flow monitors",
+				columns: {
+					name: "Name",
+					interval: "Every",
+					status: "Status",
+					lastChecked: "Last checked",
+					actions: "Actions",
+				},
+				status: {
+					pending: "Not checked yet",
+					up: "Passing",
+					down: "Failing",
+					error: "Cannot run",
+					disabled: "Disabled",
+				},
+				actions: {
+					menu: "Actions menu",
+					view: "View",
+					edit: "Edit",
+					delete: "Delete",
+					confirmation: {
+						delete:
+							"Are you sure you want to delete the flow monitor {$name}? This action cannot be undone.",
+					},
+				},
+			},
+
+			run: {
+				cta: "Run now",
+				toast: {
+					up: "{$name} passed",
+					down: "{$name} failed",
+					error: "{$name} could not run",
+					refused: "{$name} was not run",
+					summary: "{$passed} of {$total} tests passed, {$requests} requests, {$duration}ms.",
+					failedTest: "Failed: {$test} (line {$line :string}).",
+				},
+			},
+		},
+
+		createFlowMonitor: {
+			header: {
+				title: "Create Flow Monitor",
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+			},
+
+			form: {
+				cta: "Create flow monitor",
+				sections: {
+					basics: {
+						title: "Flow",
+						description: "What this flow does, and how often it runs.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor name",
+						placeholder: "Sign in and load the dashboard",
+						description: "A descriptive name for this flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "a member can sign in" \\{ when \\{ … \\} then \\{ … \\} \\}',
+						description:
+							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
+						verifiedDomains: "This flow may reach: {$domains} — and their subdomains.",
+						noVerifiedDomains:
+							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
+					},
+					interval: {
+						label: "Run every",
+						description:
+							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 hour",
+							"10800": "3 hours",
+							"21600": "6 hours",
+							"43200": "12 hours",
+							"86400": "1 day",
+						},
+					},
+					isEnabled: { label: "Enabled" },
+				},
+			},
+		},
+
+		editFlowMonitor: {
+			header: {
+				title: "Edit Flow Monitor",
+				breadcrumb: { flowMonitors: "Flow Monitors" },
+			},
+
+			lastRun: {
+				title: "Last run",
+				description: "What this flow concluded the last time it ran.",
+				summary: "{$passed} of {$total} tests passed, {$requests} requests, {$duration}ms.",
+				failedTest: "Failed: {$test} (line {$line :string}).",
+			},
+
+			form: {
+				cta: "Save changes",
+				cancel: "Cancel",
+				sections: {
+					settings: {
+						title: "Flow",
+						description: "What this flow does, and how often it runs.",
+					},
+				},
+				fields: {
+					name: {
+						label: "Monitor name",
+						placeholder: "Sign in and load the dashboard",
+						description: "A descriptive name for this flow.",
+					},
+					source: {
+						label: "Flow",
+						placeholder: 'test "a member can sign in" \\{ when \\{ … \\} then \\{ … \\} \\}',
+						description:
+							"Requests and the assertions between them. Every URL has to be written here so it can be checked against your verified domains.",
+						verifiedDomains: "This flow may reach: {$domains} — and their subdomains.",
+						noVerifiedDomains:
+							"This team has no verified domains, so no flow can run yet. Verify a domain in team settings first.",
+					},
+					interval: {
+						label: "Run every",
+						description:
+							"How often this flow runs. Each run bills one check per request it makes, so a shorter interval costs more.",
+						options: {
+							"900": "15 minutes",
+							"1800": "30 minutes",
+							"3600": "1 hour",
+							"10800": "3 hours",
+							"21600": "6 hours",
+							"43200": "12 hours",
+							"86400": "1 day",
+						},
+					},
+					isEnabled: { label: "Enabled" },
+				},
+			},
+
+			danger: {
+				title: "Danger zone",
+				sectionDescription: "Irreversible actions for this flow monitor.",
+				warning: "Deleting this flow monitor also deletes every result it has recorded.",
+				description: "This action cannot be undone.",
+				cta: "Delete flow monitor",
+			},
+		},
+		tcpMonitors: {
+			header: {
+				title: "TCP Monitors",
+				action: {
+					create: "Create TCP Monitor",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+				limitation: {
+					title: "TCP Monitoring Limitation",
+					description:
+						"TCP port monitoring requires Cloudflare Workers paid plan with socket support. On the free plan, TCP checks will show as unavailable. Consider using HTTP monitoring as an alternative.",
+				},
+			},
+
+			empty: {
+				title: "No TCP monitors yet",
+				description: "Create a TCP monitor to check if ports are open and responsive.",
+				cta: "Create TCP Monitor",
+			},
+
+			table: {
+				label: "TCP Monitors",
+				columns: {
+					name: "Name",
+					endpoint: "Host:Port",
+					status: "Status",
+					lastChecked: "Last Checked",
+					responseTime: "Response Time",
+					actions: "Actions",
+				},
+				status: {
+					up: "Up",
+					down: "Down",
+					timeout: "Timeout",
+					disabled: "Disabled",
+					pending: "Pending",
+				},
+				actions: {
+					edit: "Edit",
+					delete: "Delete",
+					confirmation: {
+						delete: "Are you sure you want to delete {$name}?",
+					},
+				},
+			},
+		},
+
+		createTcpMonitor: {
+			header: {
+				title: "Create TCP Monitor",
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this monitor watches, and how often it checks it.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Database Server",
+						description: "A descriptive name for this TCP monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.example.com",
+						description: "The hostname or IP address to monitor.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "The TCP port to check (1-65535).",
+						decrement: "Decrease port",
+						increment: "Increase port",
+					},
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the port.",
+						decrement: "Decrease check interval",
+						increment: "Increase check interval",
+					},
+					timeout: {
+						label: "Connection Timeout",
+						description: "How long to wait for a connection before timing out.",
+						decrement: "Decrease connection timeout",
+						increment: "Increase connection timeout",
+					},
+				},
+				cta: "Create Monitor",
+			},
+		},
+
+		editTcpMonitor: {
+			header: {
+				title: "Edit TCP Monitor",
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				sections: {
+					settings: {
+						title: "Monitor settings",
+						description: "What this monitor connects to, and how often it checks.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Monitor Name",
+						placeholder: "Database Server",
+						description: "A descriptive name for this TCP monitor.",
+					},
+					host: {
+						label: "Host",
+						placeholder: "db.example.com",
+						description: "The hostname or IP address to monitor.",
+					},
+					port: {
+						label: "Port",
+						placeholder: "5432",
+						description: "The TCP port to check (1-65535).",
+						decrement: "Decrease port",
+						increment: "Increase port",
+					},
+					interval: {
+						label: "Check Interval",
+						description: "How often to check the port.",
+						decrement: "Decrease check interval",
+						increment: "Increase check interval",
+					},
+					timeout: {
+						label: "Connection Timeout",
+						description: "How long to wait for a connection before timing out.",
+						decrement: "Decrease connection timeout",
+						increment: "Increase connection timeout",
+					},
+					isEnabled: {
+						label: "Enable monitoring",
+					},
+				},
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+
+			danger: {
+				title: "Danger zone",
+				cta: "Delete monitor",
+				description: "This also deletes its check-result history. This can't be undone.",
+				sectionDescription: "Actions here cannot be undone.",
+				warning: "Deleting this monitor removes its checks, history and alerts for good.",
+			},
+		},
+
+		tcpMonitorDetail: {
+			header: {
+				breadcrumb: {
+					tcpMonitors: "TCP Monitors",
+				},
+				action: {
+					edit: "Edit",
+					checkNow: "Check now",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			info: {
+				title: "Monitor Configuration",
+				endpoint: "Endpoint",
+				status: "Status",
+				interval: "Check Interval",
+				timeout: "Timeout",
+			},
+
+			stats: {
+				uptime: {
+					label: "Uptime",
+					description: "Based on recent checks",
+				},
+				avgResponseTime: {
+					label: "Avg Response Time",
+					description: "Average connection time",
+				},
+				totalChecks: {
+					label: "Total Checks",
+					description: "Number of checks performed",
+				},
+			},
+
+			history: {
+				title: "Uptime history",
+			},
+
+			results: {
+				title: "Check History",
+				description: "Recent TCP connection check results",
+				label: "Results",
+				empty: "No check results yet. Results will appear after the first check runs.",
+				columns: {
+					time: "Time",
+					status: "Status",
+					responseTime: "Response Time",
+					error: "Error",
+				},
+			},
+		},
+
+		apiKeys: {
+			header: {
+				title: "API Keys",
+				action: {
+					create: "Create API Key",
+				},
+			},
+
+			docsLink: {
+				text: "Learn how to use API keys in our",
+				link: "documentation",
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No API keys yet",
+				description: "Create an API key to access the Uptime API programmatically.",
+				cta: "Create API Key",
+			},
+
+			newKey: {
+				title: "API Key '{$name}' created!",
+				description: "Copy this key now. For security reasons, you won't be able to see it again.",
+				dismiss: "I've copied my key",
+				copyLabel: "Copy key",
+			},
+
+			form: {
+				title: "Create New API Key",
+				description:
+					"Create an API key to access the Uptime API. See the {#link}documentation{/link} for usage examples.",
+
+				sections: {
+					details: {
+						title: "Key details",
+						description:
+							"Name the key so you can recognize it later, and decide when it should stop working.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Key Name",
+						placeholder: "Production API Key",
+						description: "A name to identify this API key.",
+					},
+					scopes: {
+						label: "Permissions",
+						description: "Select what this API key can access.",
+						descriptions: {
+							"teams:read": "Read the team's name and logo, and list its members and their roles.",
+							"teams:write":
+								"Change the team's name and logo. It cannot add or remove members, or delete the team.",
+							"invites:read":
+								"List the team's invites, pending and accepted, including the email address each one was sent to.",
+							"invites:write":
+								"Invite an email address to the team and revoke an existing invite. Whoever accepts an invite becomes a member.",
+							"team-domains:read":
+								"List the domains claimed by the team and whether each one is verified.",
+							"team-domains:write":
+								"Claim a domain for the team, or remove one. Once a domain is verified, anyone signing up with an email at it joins the team automatically.",
+							"monitors:read":
+								"List and read HTTP monitors, their check results, their uptime stats and the team's overall status.",
+							"monitors:write":
+								"Create, update and delete HTTP monitors and their content checks. It can also queue a rebuild of the daily stats.",
+							"maintenance:read": "List and read the team's maintenance windows.",
+							"maintenance:write":
+								"Create, update, end early and delete maintenance windows. A running window can suppress alerts for the monitors it covers.",
+							"dns-monitors:read":
+								"List and read DNS monitors and the resolution results they recorded.",
+							"dns-monitors:write": "Create, update and delete DNS monitors.",
+							"tcp-monitors:read":
+								"List and read TCP monitors and the connection results they recorded.",
+							"tcp-monitors:write": "Create, update and delete TCP monitors.",
+							"flow-monitors:read":
+								"List and read flow monitors and the results of their runs. The spec source is never returned, since it carries the credentials the flow signs in with.",
+							"flow-monitors:write": "Create, update and delete flow monitors.",
+							"alerts:read":
+								"List and read alerts and the events they fired. Webhook URLs and other channel secrets are never returned.",
+							"alerts:write":
+								"Create, update and delete alerts, including their webhook and chat destinations. Deleting an alert stops every notification it was sending.",
+							"status-pages:read":
+								"List and read the team's status pages and the monitors attached to each one.",
+							"status-pages:write":
+								"Create, update and delete status pages, and replace the set of monitors and cron jobs a page shows publicly.",
+							"cron-jobs:read": "List and read the team's cron jobs and their schedules.",
+							"cron-jobs:write":
+								"Create, update and delete cron jobs. Deleting one stops its ping URL from being accepted.",
+							"cron-jobs:ping":
+								"Listed for the cron job ping URL, which is public and checks no scope. Granting it gives a key no access it doesn't already have.",
+							"api-keys:read":
+								"List the team's API keys with their names, prefixes, scopes and expiry. The secret key itself is never returned.",
+							"api-keys:write":
+								"Create and delete the team's API keys. A new key can be given any scope, so this one can grant every other permission.",
+							"ping:trigger":
+								"Run one-off HTTP, DNS and TCP checks without creating a monitor. Each check is billed as one ping and needs an active subscription.",
+							"reports:read":
+								"Download the team's uptime reports: a summary per monitor and daily uptime, over any range of days.",
+						} satisfies Record<ApiKeyScope, string>,
+					},
+					expiresAt: {
+						label: "Expiration Date (Optional)",
+						description: "Leave empty for a key that never expires.",
+					},
+				},
+
+				actions: {
+					cancel: "Cancel",
+					create: "Create API Key",
+				},
+			},
+
+			table: {
+				label: "API Keys",
+
+				columns: {
+					name: "Name",
+					prefix: "Key",
+					scopes: "Permissions",
+					lastUsed: "Last Used",
+					expires: "Expires",
+					actions: "Actions",
+				},
+
+				lastUsed: {
+					never: "Never",
+				},
+
+				expires: {
+					never: "Never",
+				},
+
+				actions: {
+					menu: "Actions Menu",
+					delete: "Delete Key",
+				},
+
+				confirmation: {
+					delete:
+						"Are you sure you want to delete the API key '{$name}'? This action cannot be undone.",
+				},
+			},
+
+			error: {
+				forbidden: {
+					title: "You do not have permission to access this page.",
+					description: "Please contact your team administrator for assistance.",
+				},
+
+				unknown: {
+					title: "An unexpected error occurred.",
+					description: "Please try again later or contact support.",
+				},
+			},
+		},
+
+		cronJobs: {
+			header: {
+				title: "Cron Jobs",
+				action: {
+					create: "Create Cron Job",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			empty: {
+				title: "No cron jobs yet",
+				description: "Create a cron job monitor to track your scheduled tasks.",
+				cta: "Create Cron Job",
+			},
+
+			table: {
+				label: "Cron Job Monitors",
+				columns: {
+					name: "Name",
+					schedule: "Schedule",
+					status: "Status",
+					lastPing: "Last Ping",
+					nextExpected: "Next Expected",
+					actions: "Actions",
+				},
+				status: {
+					healthy: "Healthy",
+					late: "Late",
+					missed: "Missed",
+					new: "New",
+				},
+				disabled: "Disabled",
+				actions: {
+					edit: "Edit",
+					delete: "Delete",
+					confirmation: {
+						delete: "Are you sure you want to delete {$name}?",
+					},
+				},
+			},
+		},
+
+		createCronJob: {
+			header: {
+				title: "Create Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this job is called and what it does.",
+					},
+					schedule: {
+						title: "Schedule",
+						description:
+							"When the job is expected to run, and how late it may be before it counts as missed.",
+					},
+					alerting: {
+						title: "Alerting",
+						description: "What happens when an expected run doesn't arrive.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Daily Backup Job",
+						description: "A descriptive name for this cron job monitor.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Optional description of what this job does",
+						description: "An optional description to help identify this cron job.",
+					},
+					cronExpression: {
+						label: "Cron Expression",
+						placeholder: "0 * * * *",
+						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
+					},
+					gracePeriod: {
+						label: "Grace Period",
+						description: "How long to wait after the expected time before marking as late.",
+						decrement: "Decrease grace period",
+						increment: "Increase grace period",
+						unit: {
+							minutes: "minutes",
+							seconds: "seconds",
+						},
+					},
+					timezone: {
+						label: "Timezone",
+						description: "The timezone for the cron schedule.",
+					},
+					alertOnLate: {
+						label: "Alert on Late",
+						description: "Send an alert when the job misses its expected time.",
+					},
+					enabled: {
+						label: "Enabled",
+						description: "Start monitoring this cron job immediately.",
+					},
+				},
+				cta: "Create Cron Job",
+			},
+		},
+
+		editCronJob: {
+			header: {
+				title: "Edit Cron Job",
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			form: {
+				sections: {
+					basics: {
+						title: "Basics",
+						description: "What this job is called and what it does.",
+					},
+					schedule: {
+						title: "Schedule",
+						description:
+							"When the job is expected to run, and how late it may be before it counts as missed.",
+					},
+					alerting: {
+						title: "Alerting",
+						description: "What happens when an expected run doesn't arrive.",
+					},
+				},
+
+				fields: {
+					name: {
+						label: "Name",
+						placeholder: "Daily Backup Job",
+						description: "A descriptive name for this cron job monitor.",
+					},
+					description: {
+						label: "Description",
+						placeholder: "Optional description of what this job does",
+						description: "An optional description to help identify this cron job.",
+					},
+					cronExpression: {
+						label: "Cron Expression",
+						placeholder: "0 * * * *",
+						description: "The cron schedule expression (e.g., '0 * * * *' for every hour).",
+					},
+					gracePeriod: {
+						label: "Grace Period",
+						description: "How long to wait after the expected time before marking as late.",
+						decrement: "Decrease grace period",
+						increment: "Increase grace period",
+						unit: {
+							minutes: "minutes",
+							seconds: "seconds",
+						},
+					},
+					timezone: {
+						label: "Timezone",
+						description: "The timezone for the cron schedule.",
+					},
+					alertOnLate: {
+						label: "Alert on Late",
+						description: "Send an alert when the job misses its expected time.",
+					},
+					enabled: {
+						label: "Enabled",
+						description: "Whether to actively monitor this cron job.",
+					},
+				},
+				cancel: "Cancel",
+				cta: "Save Changes",
+			},
+
+			danger: {
+				title: "Danger zone",
+
+				description: "Actions here cannot be undone.",
+				warning: "Deleting this cron job removes its ping history and alerts for good.",
+				delete: {
+					trigger: "Delete monitor",
+					confirmTitle: "Delete this cron job monitor?",
+					confirmDescription: "This also deletes its ping history. This can't be undone.",
+					confirm: "Delete",
+				},
+			},
+		},
+
+		cronJobDetail: {
+			header: {
+				breadcrumb: {
+					cronJobs: "Cron Jobs",
+				},
+				action: {
+					edit: "Edit",
+					delete: "Delete",
+				},
+			},
+
+			alert: {
+				subscription: {
+					title: "Your monitors are paused!",
+					description: "A subscription is required to continue monitoring automatically.",
+					cta: "Start Monitoring",
+				},
+			},
+
+			info: {
+				title: "Cron Job Configuration",
+				schedule: "Schedule",
+				timezone: "Timezone",
+				status: "Status",
+				gracePeriod: "Grace Period",
+				gracePeriodValue: "{$duration} grace",
+				description: "Description",
+			},
+
+			stats: {
+				totalPings: {
+					label: "Total Pings",
+					description: "Number of pings received",
+				},
+				onTimeRate: {
+					label: "On-Time Rate",
+					description: "Percentage of on-time pings",
+				},
+				lastPing: {
+					label: "Last Ping",
+					description: "When the last ping was received",
+					never: "Never",
+				},
+				nextExpected: {
+					label: "Next Expected",
+					description: "When the next ping is expected",
+				},
+			},
+
+			ping: {
+				title: "Ping this monitor",
+				description:
+					"Have your job send a POST request here after it finishes, with an API key carrying the `cron-jobs:ping` scope.",
+				snippet: {
+					curl: "From a script",
+					copyCurl: "Copy command",
+					crontab: "From crontab",
+					copyCrontab: "Copy crontab line",
+				},
+				apiKey: {
+					text: "Without a key carrying that scope the ping is rejected with a 401, and the run still counts as missed.",
+					cta: "Create an API key",
+				},
+			},
+
+			uptimeHistory: "Uptime history",
+
+			pings: {
+				title: "Ping History",
+				description: "Recent pings received from this cron job",
+				empty: "No pings received yet. Pings will appear here after your job sends its first ping.",
+				label: "Pings",
+				columns: {
+					time: "Time",
+					status: "Status",
+					sourceIp: "Source IP",
+				},
+				status: {
+					onTime: "On Time",
+					late: "Late",
+				},
+			},
+
+			integration: {
+				title: "Integration Instructions",
+				description: "Send a POST request to this endpoint when your cron job completes.",
+				endpoint: "Ping Endpoint",
+				curlExample: "cURL Example",
+				codeExamples: {
+					title: "Code Examples",
+					bash: "Bash / Cron",
+					python: "Python",
+					nodejs: "Node.js",
+				},
+				apiKeyNote:
+					"You need an API key with the 'cron-jobs:ping' scope. Create one in API Keys settings.",
+			},
+
+			delete: {
+				confirmation: "Are you sure you want to delete {$name}? This action cannot be undone.",
+			},
+		},
+	},
+
+	docs: {
+		meta: {
+			title: "Documentation - Uptime",
+			description:
+				"Documentation for Uptime monitoring service. Learn how to use monitors, alerts, status pages, and more.",
+		},
+
+		header: {
+			cta: {
+				in: "Open Dashboard",
+				out: "Start Monitoring",
+			},
+		},
+
+		sidebar: {
+			title: "Documentation",
+			description: "Guides and reference",
+			searchPlaceholder: "Search...",
+			openMenu: "Open menu",
+			closeMenu: "Close menu",
+		},
+
+		nav: {
+			gettingStarted: "Getting Started",
+			overview: "Overview",
+			quickstart: "Quickstart",
+
+			api: "API Reference",
+			apiOverview: "API Overview",
+			authentication: "Authentication",
+			errors: "Errors",
+
+			resources: "Resources",
+			monitors: "Monitors",
+			dnsMonitors: "DNS Monitors",
+			tcpMonitors: "TCP Monitors",
+			cronJobs: "Cron Jobs",
+			alerts: "Alerts",
+			statusPages: "Status Pages",
+		},
+
+		error: {
+			title: "Documentation Error",
+			description: "There was an error loading this documentation page.",
+			notFoundTitle: "Page Not Found",
+			notFoundDescription: "The documentation page you're looking for doesn't exist.",
+		},
+
+		lastUpdated: "Last updated: {$date}",
+	},
+};

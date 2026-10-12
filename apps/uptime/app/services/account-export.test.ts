@@ -15,14 +15,14 @@ import { describe, expect, test } from "vitest";
 
 import type { AlertConfig, SelectTeam } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import {
 	accountExportFilename,
 	ACCOUNT_EXPORT_FORMAT,
 	buildAccountExport,
 	MAX_EXPORTED_DNS_RECORDS_PER_TEAM,
 } from "~/app/services/account-export";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import {
 	alerts,
 	apiKeys,

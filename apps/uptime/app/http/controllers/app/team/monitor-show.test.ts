@@ -1,6 +1,6 @@
 /**
  * Tests for the HTTP monitor detail page controller. `cloudflare:workers` is mocked
- * because `~/app/lib/queue` reads `env` at module load, and `ctx.team`/
+ * because `~/app/initializers/queue` reads `env` at module load, and `ctx.team`/
  * `ctx.membership`/`ctx.teams`/auth state are seeded by a fake middleware standing in
  * for `requireUser`/`requireTeam`.
  *
@@ -26,8 +26,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -35,7 +35,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let { handler } = (await import("./monitor-show")).default as { handler: RequestHandler<any> };
 

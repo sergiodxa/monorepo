@@ -16,7 +16,7 @@ import { Select, TextField } from "@sdxc/ui";
 
 import type { SelectMonitor } from "~/database/schema";
 
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
 import { RangeSlider } from "~/resources/components/range-slider";
 

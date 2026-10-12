@@ -13,12 +13,8 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { SECURITY_POLICY } from "~/app/http/security-policy";
-import {
-	CHUNK_SPECIFIER,
-	CLIENT_ENTRY_HREF,
-	STYLESHEET_HREF,
-} from "~/app/lib/test/assets-manifest";
+import { CHUNK_SPECIFIER, CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { SECURITY_POLICY } from "~/config/security-policy";
 import DocumentLayout from "~/resources/layouts/document";
 
 import { htmlRendering } from "./render";

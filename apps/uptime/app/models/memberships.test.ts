@@ -14,8 +14,8 @@ import { describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 
 /** Models over a fresh database, enqueuing into a recorder so no write reaches a queue. */
 function setup() {

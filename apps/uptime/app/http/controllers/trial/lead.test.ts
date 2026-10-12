@@ -39,22 +39,22 @@ import {
 } from "~/app/http/controllers/trial/session";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/lib/test/honeypot";
-import { useMailServerDns } from "~/app/lib/test/mail-servers";
 import { hasMarketingConsent } from "~/app/models/leads";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
+import { honeypotFields, TEST_HONEYPOT, testHoneypot } from "~/app/test/honeypot";
+import { useMailServerDns } from "~/app/test/mail-servers";
 import routes from "~/routes/web";
 
 /**
- * Re-rendering on a rejected address pulls in `HttpCheck` and `~/app/do/geo-fetch`, whose
- * `DurableObject` base class only exists inside the Workers runtime, so a bare class and a
- * strict, binding-free environment are enough to load the module graph without probing anything.
+ * Re-rendering on a rejected address pulls in `HttpCheck`, which reads the Workers runtime's
+ * bindings, so a strict, binding-free environment is enough to load the module graph without
+ * probing anything.
  */
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
-	DurableObject: class {},
 }));
 
 vi.doMock("~/app/services/trial-guard", () => ({
@@ -65,7 +65,7 @@ vi.doMock("~/app/services/trial-guard", () => ({
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: trialLead } = await import("./lead");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */

@@ -14,7 +14,7 @@ import { formatDateTime } from "@sdxc/dates";
 import { Email } from "@sdxc/mail";
 
 import { UptimeBar } from "~/app/emails/shared/uptime-bar";
-import { APP_ORIGIN } from "~/app/lib/origin";
+import { APP_ORIGIN } from "~/config/origin";
 import routes from "~/routes/web";
 
 /**

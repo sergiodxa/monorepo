@@ -16,10 +16,10 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { checkConformance } from "~/app/test/openapi";
+import { expectProblem } from "~/app/test/problem";
 import { monitors, statusPageMonitors, statusPages, teams } from "~/database/schema";
 import { statusPageRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
@@ -28,7 +28,7 @@ import routes from "~/routes/web";
 const CONFORMANCE = checkConformance(statusPageRoutes);
 
 /**
- * `~/app/lib/queue`, imported through the models, reads `env` from `cloudflare:workers`
+ * `~/app/initializers/queue`, imported through the models, reads `env` from `cloudflare:workers`
  * at module load, so the mock must resolve regardless of which handlers run.
  */
 vi.doMock("cloudflare:workers", () => ({
@@ -38,7 +38,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: statusPageController } = await import("./status-page");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];
 

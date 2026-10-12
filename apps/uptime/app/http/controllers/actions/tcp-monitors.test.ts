@@ -27,8 +27,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { database } from "~/app/http/middleware/database";
-import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, tcpMonitorResults, tcpMonitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 

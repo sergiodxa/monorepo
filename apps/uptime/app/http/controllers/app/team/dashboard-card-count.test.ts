@@ -36,9 +36,9 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors, memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -60,7 +60,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardCount = (await import("./dashboard-card-count")).default as {
 	handler: RequestHandler<any>;

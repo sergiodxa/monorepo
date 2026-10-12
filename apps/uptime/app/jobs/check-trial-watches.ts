@@ -23,17 +23,15 @@ import type { MonitorStatus, SelectLead } from "~/database/schema";
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialChangeEmail } from "~/app/emails/trial-change";
 import { TrialWeeklyDigestEmail } from "~/app/emails/trial-weekly-digest";
+import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { features } from "~/app/lib/flags";
-import { trialProbeOptions } from "~/app/lib/trial-probe";
-import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import {
 	TRIAL_WATCH_DURATION_DAYS,
 	isHealthyTrialStatus,
 	shouldNotifyChange,
 	shouldSendSummary,
 } from "~/app/models/trial-watches";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { recordCost } from "~/app/services/cost";
 import {
 	hostnameOf,
@@ -41,6 +39,8 @@ import {
 	trackFirstTrialCheckCompleted,
 } from "~/app/services/funnel-events";
 import { HttpCheck } from "~/app/services/http-check";
+import { trialProbeOptions } from "~/app/services/trial-probe";
+import { segmentsOver, watchStats } from "~/app/services/trial-report";
 import routes from "~/routes/web";
 
 /**

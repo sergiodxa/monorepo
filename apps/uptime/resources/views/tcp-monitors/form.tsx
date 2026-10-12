@@ -16,7 +16,7 @@ import { Switch, TextField } from "@sdxc/ui";
 
 import type { SelectTcpMonitor } from "~/database/schema";
 
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import StepperField from "~/resources/components/stepper-field";
 
 namespace TcpMonitorFormFields {

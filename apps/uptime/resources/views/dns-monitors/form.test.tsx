@@ -16,7 +16,7 @@ import { describe, expect, test } from "vitest";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
-import en from "~/app/locales/en";
+import en from "~/resources/locales/en";
 
 import DnsMonitorFormFields from "./form";
 

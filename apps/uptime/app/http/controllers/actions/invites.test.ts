@@ -25,10 +25,10 @@ import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamInviteEmail } from "~/app/emails/team-invite";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { useMailServerDns } from "~/app/lib/test/mail-servers";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
+import { useMailServerDns } from "~/app/test/mail-servers";
 import { invites, memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**

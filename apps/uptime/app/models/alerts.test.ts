@@ -15,10 +15,10 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AlertConfig } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { NEWEST_FIRST } from "~/app/services/pagination";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { alerts } from "~/database/schema";
 
 let db: Database;

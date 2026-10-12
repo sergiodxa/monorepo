@@ -13,9 +13,9 @@ import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
 import jobs from "~/app/jobs";
-import { deleteOlderThan, redactOlderThan } from "~/app/lib/retention";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
 import { apportionCost } from "~/app/services/cost";
+import { deleteOlderThan, redactOlderThan } from "~/app/services/retention";
 
 /**
  * How long a ping keeps the request details it was recorded with, before they are nulled

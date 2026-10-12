@@ -17,7 +17,7 @@ import { Email } from "@sdxc/mail";
 
 import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
 
-import { hasRecordSetEdit } from "~/app/lib/dns-findings";
+import { hasRecordSetEdit } from "~/app/services/dns-findings";
 
 /**
  * Locale key holding the shouty word a transition is announced with, written out per

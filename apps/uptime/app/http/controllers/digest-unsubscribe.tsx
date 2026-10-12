@@ -19,7 +19,7 @@ import * as s from "remix/data-schema";
 import { getContext } from "remix/middleware/async-context";
 import { createController } from "remix/router";
 
-import { verifyDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
+import { verifyDigestUnsubscribeToken } from "~/app/services/unsubscribe-token";
 import { optionalEmails } from "~/database/schema";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";

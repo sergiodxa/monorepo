@@ -11,9 +11,9 @@ import type { WebhookDelivery } from "@sdxc/billing";
 
 import { describe, expect, test } from "vitest";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { webhookStore } from "~/app/models/billing-webhook-deliveries";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { billingWebhookDeliveries } from "~/database/schema";
 
 /** Models over a fresh database, with the database itself for backdating rows. */

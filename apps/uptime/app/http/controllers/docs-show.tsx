@@ -21,7 +21,7 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { expandReference } from "~/app/http/openapi/reference";
-import { SEO } from "~/app/lib/seo";
+import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api-problems";
 import { getDocLoader, listDocs, MARKDOWN_OPTIONS } from "~/app/services/docs";
 import DocsLayout from "~/resources/layouts/docs";

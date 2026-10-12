@@ -17,11 +17,11 @@ import type { getContext } from "remix/middleware/async-context";
 
 import { Select } from "@sdxc/ui";
 
-import type { MonitorScope } from "~/app/lib/monitor-scope";
+import type { MonitorScope } from "~/app/services/monitor-scope";
 import type { ScopeMonitorGroup } from "~/app/services/scope-monitors";
 
-import { encodeMonitorScope } from "~/app/lib/monitor-scope";
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { encodeMonitorScope } from "~/app/services/monitor-scope";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
 
 namespace MonitorScopeField {

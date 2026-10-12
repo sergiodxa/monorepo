@@ -14,7 +14,7 @@ import { describe, expect, test } from "vitest";
 import healthcheck from "~/app/http/controllers/healthcheck";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

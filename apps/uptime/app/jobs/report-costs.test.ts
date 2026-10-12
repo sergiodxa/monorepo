@@ -19,9 +19,9 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { RATE_CARD_VERSION } from "~/app/lib/cost-rates";
-import { createActiveSubscription, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { RATE_CARD_VERSION } from "~/app/services/cost-rates";
+import { createActiveSubscription, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { monitorResults, monitors, teams } from "~/database/schema";
 
 const ANALYTICS_URL =
@@ -50,15 +50,15 @@ let billing = createTestBilling();
 let realIngest = billing.usage.ingest.bind(billing.usage);
 let ingestMock = vi.spyOn(billing.usage, "ingest");
 
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let { Job, createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let reportCosts = (await import("./report-costs")).default;
-let { publishModels } = await import("~/app/lib/test/models");
+let { publishModels } = await import("~/app/test/models");
 
 let server = setupServer();
 /** The SQL the job asked Analytics Engine for, in order. */

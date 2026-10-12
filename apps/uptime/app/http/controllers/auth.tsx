@@ -30,8 +30,8 @@ import { createController } from "remix/router";
 import type { UptimeModels } from "~/app/models";
 import type { TrialSignupAttribution } from "~/app/models/trial-conversions";
 
-import { relyingParty } from "~/app/auth/relying-party";
-import { language as languageCookie, returnTo } from "~/app/http/cookies";
+import { language as languageCookie, returnTo } from "~/app/initializers/cookies";
+import { relyingParty } from "~/app/initializers/relying-party";
 import { provisionCustomer } from "~/app/services/customer";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
 import { convertTrialWatches } from "~/app/services/trial-conversion";

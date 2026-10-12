@@ -10,20 +10,20 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { UptimeModels } from "~/app/models";
 import type { ClaimedTcpMonitor } from "~/app/models/tcp-monitors";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { BillablePing } from "~/app/services/ping-meter";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 
+import { polar } from "~/app/initializers/billing";
+import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { features } from "~/app/lib/flags";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyTcpResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";
 import { checkTcpConnection } from "~/app/services/tcp-check";
 

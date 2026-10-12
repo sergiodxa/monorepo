@@ -44,7 +44,7 @@ import { Heading, LinkButton } from "@sdxc/ui";
 
 import type { MarketingContent } from "~/resources/content/marketing";
 
-import { FREE_TRIAL_DAYS } from "~/app/lib/pricing";
+import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";

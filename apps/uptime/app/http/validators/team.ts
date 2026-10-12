@@ -11,7 +11,7 @@ import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 import * as f from "remix/data-schema/form-data";
 
-import { isHttpsUrl } from "~/app/lib/team-logo";
+import { isHttpsUrl } from "~/app/services/team-logo";
 
 const TEAM_ROLES = ["member", "admin"] as const;
 

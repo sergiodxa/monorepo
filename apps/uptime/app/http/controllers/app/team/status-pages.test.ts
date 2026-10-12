@@ -27,10 +27,10 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { memberships, statusPages, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 let { default: statusPagesAction } = await import("./status-pages");
@@ -42,7 +42,7 @@ let { default: statusPagesAction } = await import("./status-pages");
  */
 let statusPagesModule = statusPagesAction as unknown as { handler: RequestHandler<any> };
 
-/** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
+/** Stand-in for app/initializers/router.tsx's `renderWith(createHtmlRenderer)`. Nested `<Frame>` resolution is never exercised by a single-request page test, so `resolveFrame` is a harmless no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(await withDocumentAssets(node), {

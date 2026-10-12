@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor detail page "Slowest Result" stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/lib/queue` and
+ * `cloudflare:workers` is mocked because `~/app/initializers/queue` and
  * `~/app/services/analytics` both read `env` at module load; the bindings behind it are
  * in-memory implementations. `queryAnalytics`'s Analytics Engine SQL API call is
  * intercepted by MSW, so it never hits the network.
@@ -37,9 +37,9 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -57,7 +57,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardSlowestResult = (await import("./monitor-card-slowest-result")).default as {
 	handler: RequestHandler<any>;

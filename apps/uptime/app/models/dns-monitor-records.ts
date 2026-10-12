@@ -16,7 +16,7 @@ import { and, eq, getTableName, inList } from "remix/data-table";
 
 import type { DnsRecordState, SelectDnsMonitorRecord } from "~/database/schema";
 
-import { chunk } from "~/app/lib/concurrency";
+import { chunk } from "~/app/services/concurrency";
 import { dnsMonitorRecords } from "~/database/schema";
 
 /**

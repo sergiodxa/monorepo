@@ -16,7 +16,7 @@ import { Select, Switch, TextField } from "@sdxc/ui";
 
 import type { SelectDnsMonitor } from "~/database/schema";
 
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
 
 /**

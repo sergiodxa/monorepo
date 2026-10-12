@@ -18,12 +18,12 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { markInFlight } from "~/app/lib/test/idempotency";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { parseLink } from "~/app/lib/test/paging";
-import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { markInFlight } from "~/app/test/idempotency";
+import { checkConformance } from "~/app/test/openapi";
+import { parseLink } from "~/app/test/paging";
+import { expectProblem } from "~/app/test/problem";
 import { monitorContentChecks, monitors, teams } from "~/database/schema";
 import { monitorContentChecksRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";
@@ -32,14 +32,14 @@ import routes from "~/routes/web";
 const CONFORMANCE = checkConformance(monitorContentChecksRoutes);
 
 /**
- * `~/app/lib/queue`, imported through the models, reads `env` from `cloudflare:workers` at
+ * `~/app/initializers/queue`, imported through the models, reads `env` from `cloudflare:workers` at
  * module load, so it must resolve under the test runner. An empty strict env proves these endpoints touch no
  * binding: any read throws by the binding's name instead of returning `undefined`.
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: monitorContentChecksController } =
 	await import("~/app/http/controllers/api/monitor-content-checks");
 

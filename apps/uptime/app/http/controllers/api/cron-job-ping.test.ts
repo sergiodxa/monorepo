@@ -26,11 +26,11 @@ import type { ApiKeyScope } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { database } from "~/app/http/middleware/database";
-import { billedEvents, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
+import { billedEvents, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { checkConformance } from "~/app/test/openapi";
+import { expectProblem } from "~/app/test/problem";
 import { cronJobMonitors, cronJobPings, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -69,7 +69,7 @@ vi.doMock("cloudflare:workers", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: cronJobPing } = await import("~/app/http/controllers/api/cron-job-ping");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /**
  * The platform the endpoint bills against, replaced per test so one request's meter events

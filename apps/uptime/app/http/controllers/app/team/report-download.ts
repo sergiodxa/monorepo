@@ -15,10 +15,10 @@ import { createAction } from "remix/router";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { dailyCsv, REPORT_KINDS, reportFilename, summaryCsv } from "~/app/lib/report-csv";
-import { reportDialect } from "~/app/lib/report-dialect";
-import { resolveReportRequest } from "~/app/lib/report-request";
-import { dailyRows, summaryRows } from "~/app/repositories/reports";
+import { dailyRows, summaryRows } from "~/app/models/reports";
+import { dailyCsv, REPORT_KINDS, reportFilename, summaryCsv } from "~/app/services/report-csv";
+import { reportDialect } from "~/app/services/report-dialect";
+import { resolveReportRequest } from "~/app/services/report-request";
 import routes from "~/routes/web";
 
 /**

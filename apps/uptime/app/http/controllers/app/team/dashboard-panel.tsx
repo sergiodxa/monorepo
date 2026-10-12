@@ -34,8 +34,8 @@ import type { BadgeTone } from "~/resources/components/badge";
 
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { describeSchedule } from "~/app/lib/cron-text";
 import { getTeamHttpSparklines, getTeamHttpSummaries } from "~/app/services/analytics";
+import { describeSchedule } from "~/app/services/cron-text";
 import { badgeVariant } from "~/resources/components/badge";
 import RefreshFrameButton from "~/resources/components/refresh-frame-button";
 import Sparkline from "~/resources/views/monitors/sparkline";

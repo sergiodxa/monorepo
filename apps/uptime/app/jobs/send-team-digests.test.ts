@@ -21,7 +21,7 @@ import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
-import type { DigestPeriod } from "~/app/repositories/team-digests";
+import type { DigestPeriod } from "~/app/models/team-digests";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
@@ -33,10 +33,10 @@ import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTeamDailyDigests from "~/app/jobs/send-team-daily-digests";
 import sendTeamWeeklyDigests from "~/app/jobs/send-team-weekly-digests";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { installFlags } from "~/app/lib/test/flags";
-import { bindModels, publishModels } from "~/app/lib/test/models";
-import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/lib/test/unsubscribe-secret";
+import { createTestDatabase } from "~/app/test/db";
+import { installFlags } from "~/app/test/flags";
+import { bindModels, publishModels } from "~/app/test/models";
+import { UNSUBSCRIBE_SECRET_VALUE } from "~/app/test/unsubscribe-secret";
 import {
 	flowMonitors,
 	memberships,
@@ -50,7 +50,7 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 vi.mock("cloudflare:workers", async (importOriginal) => {
 	let original = await importOriginal<typeof import("cloudflare:workers")>();
-	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	let { withUnsubscribeSecret } = await import("~/app/test/unsubscribe-secret");
 	return { ...original, env: withUnsubscribeSecret(original.env) };
 });
 

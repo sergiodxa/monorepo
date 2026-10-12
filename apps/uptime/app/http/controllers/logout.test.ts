@@ -24,8 +24,8 @@ import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({

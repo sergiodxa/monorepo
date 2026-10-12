@@ -17,11 +17,11 @@ import { failure, success } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName } from "remix/data-table";
 
-import type { BatchedSweepResult } from "~/app/lib/retention";
+import type { BatchedSweepResult } from "~/app/services/retention";
 import type { SelectLead, SupportedLanguage } from "~/database/schema";
 
-import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/lib/retention";
-import { normalizeLeadEmail } from "~/app/lib/trial-identity";
+import { RETENTION_BATCH_SIZE, RETENTION_MAX_BATCHES } from "~/app/services/retention";
+import { normalizeLeadEmail } from "~/app/services/trial-identity";
 import { leads, trialWatchResults, trialWatches } from "~/database/schema";
 
 /**

@@ -16,8 +16,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 import jobs from "~/app/jobs";
 import clean from "~/app/jobs/clean";
 import { Database } from "~/app/jobs/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, publishModels } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, publishModels } from "~/app/test/models";
 import {
 	alertEvents,
 	dnsMonitorResults,

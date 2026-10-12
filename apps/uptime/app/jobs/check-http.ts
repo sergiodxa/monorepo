@@ -19,8 +19,8 @@ import type { CheckHttpInput } from "~/app/jobs";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
+import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
 import { notifyHttpResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";

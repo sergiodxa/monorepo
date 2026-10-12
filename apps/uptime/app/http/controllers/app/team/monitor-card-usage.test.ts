@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor detail page "Monthly Pings Usage" stat-card fragment
- * controller. `cloudflare:workers` is mocked because `~/app/lib/queue` reads
+ * controller. `cloudflare:workers` is mocked because `~/app/initializers/queue` reads
  * `env` at module load, and both figures come from local check history rather
  * than billing state. `ctx.team`/`ctx.membership`/auth/intl are seeded
  * directly, standing in for the real middleware chain. The three figures the
@@ -37,17 +37,17 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectMonitor, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createActiveSubscription } from "~/app/lib/test/billing";
-import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createActiveSubscription } from "~/app/test/billing";
+import { createSqliteDatabaseAdapter, createTestDatabase } from "~/app/test/db";
 import { memberships, monitorResults, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardUsage = (await import("./monitor-card-usage")).default as {
 	handler: RequestHandler<any>;

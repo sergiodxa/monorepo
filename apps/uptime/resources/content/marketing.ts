@@ -16,7 +16,7 @@
 
 import type { IconName } from "@sdxc/icons";
 
-import type { Usage } from "~/app/lib/pricing";
+import type { Usage } from "~/config/pricing";
 
 import {
 	BASE_PRICE_USD,
@@ -27,7 +27,7 @@ import {
 	monthlyPings,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
-} from "~/app/lib/pricing";
+} from "~/config/pricing";
 
 export namespace MarketingContent {
 	/** One bullet in a feature grid. */
@@ -68,7 +68,7 @@ export namespace MarketingContent {
 
 	/**
 	 * One cost scenario on a `/vs/:slug` page. `usage` prices our side through
-	 * `app/lib/pricing.ts` so a price change can't leave a stale comparison
+	 * `config/pricing.ts` so a price change can't leave a stale comparison
 	 * figure; the competitor's side stays quoted copy, hedges and all.
 	 */
 	export interface PricingScenario {

@@ -15,8 +15,8 @@ import { SlackWebhook } from "@sdxc/messaging/slack";
 
 import type { MessagingAlertConfig } from "~/database/schema";
 
-import { APP_ORIGIN } from "~/app/lib/origin";
 import { UptimeWebhook } from "~/app/services/uptime-webhook";
+import { APP_ORIGIN } from "~/config/origin";
 
 /**
  * Turns a channel into its destination. The delivery job reads one from its context, so a

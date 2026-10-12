@@ -24,7 +24,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { FunnelReportEmail } from "~/app/emails/funnel-report";
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -54,7 +54,7 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let sendFunnelReport = (await import("~/app/jobs/send-funnel-report")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 
 let db: Database;
 let models: ReturnType<typeof bindModels>;

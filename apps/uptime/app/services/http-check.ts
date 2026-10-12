@@ -13,9 +13,13 @@ import { env } from "cloudflare:workers";
 import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
-import { DO_WALL_TIME_HEADER, NO_REDIRECT_HEADER, PROBE_OUTCOME_HEADER } from "~/app/do/geo-fetch";
 import { evaluateContentChecks } from "~/app/models/content-checks";
 import { recordCost } from "~/app/services/cost";
+import {
+	DO_WALL_TIME_HEADER,
+	NO_REDIRECT_HEADER,
+	PROBE_OUTCOME_HEADER,
+} from "~/app/services/geo-fetch";
 
 const MS_PER_SECOND = 1000;
 

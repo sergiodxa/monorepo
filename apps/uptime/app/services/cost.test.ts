@@ -28,7 +28,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { COST_RESOURCES, priceCostQuantities, MODELLED_CPU_MS, RATES } =
-	await import("~/app/lib/cost-rates");
+	await import("~/app/services/cost-rates");
 let {
 	apportionCost,
 	apportionCostByTeam,

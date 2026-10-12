@@ -64,8 +64,8 @@ vi.doMock("cloudflare:workers", () => ({
 	),
 }));
 
-let { createTestDatabase } = await import("~/app/lib/test/db");
-let { bindModels } = await import("~/app/lib/test/models");
+let { createTestDatabase } = await import("~/app/test/db");
+let { bindModels } = await import("~/app/test/models");
 let { alertEvents, alerts, teams, monitors, maintenanceWindows } =
 	await import("~/database/schema");
 let {

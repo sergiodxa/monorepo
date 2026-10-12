@@ -28,15 +28,15 @@ import { asyncContext } from "remix/middleware/async-context";
 import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { FLAG_SET, flags } from "~/app/lib/flags";
-import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { expectProblem } from "~/app/lib/test/problem";
+import { FLAG_SET, flags } from "~/app/initializers/flags";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { checkConformance } from "~/app/test/openapi";
+import { expectProblem } from "~/app/test/problem";
 import {
 	alertEvents,
 	alerts,
@@ -85,6 +85,7 @@ let rateLimiter = createRateLimit({ limit: CALLER_LIMIT, now: () => 0 });
 let deferred: Promise<unknown>[] = [];
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -94,8 +95,6 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
-	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
-	DurableObject: class {},
 }));
 
 /**
@@ -111,7 +110,7 @@ vi.doMock("cloudflare:sockets", () => ({
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: pingCreate } = await import("./ping");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /** Silences whatever a refused request writes, so the assertions read the response bodies. */
 vi.spyOn(console, "log").mockImplementation(() => {});

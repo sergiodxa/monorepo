@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor run-status probe controller. `cloudflare:workers` is
- * mocked because `~/app/lib/queue` reads `env` at module load. The route
+ * mocked because `~/app/initializers/queue` reads `env` at module load. The route
  * lets a hydrated page tell a freshly committed check apart from the one that
  * was already there, so what's pinned here is that both the status and the
  * instant come back verbatim, including for a monitor that has never been
@@ -24,7 +24,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -32,7 +32,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorRunStatus = (await import("./monitor-run-status")).default as {
 	handler: RequestHandler<any>;

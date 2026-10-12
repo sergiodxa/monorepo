@@ -15,15 +15,15 @@ import i18nMiddleware from "@sdxc/i18n/middleware";
 import { getContext } from "remix/middleware/async-context";
 import { Auth } from "remix/middleware/auth";
 
-import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
-import de from "~/app/locales/de";
-import en from "~/app/locales/en";
-import es from "~/app/locales/es";
-import fr from "~/app/locales/fr";
-import it from "~/app/locales/it";
-import ja from "~/app/locales/ja";
+import { language as languageCookie } from "~/app/initializers/cookies";
 import { supportedLanguages } from "~/database/schema";
+import de from "~/resources/locales/de";
+import en from "~/resources/locales/en";
+import es from "~/resources/locales/es";
+import fr from "~/resources/locales/fr";
+import it from "~/resources/locales/it";
+import ja from "~/resources/locales/ja";
 
 const DEFAULT_LANGUAGE = "en";
 

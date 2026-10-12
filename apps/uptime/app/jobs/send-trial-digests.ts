@@ -19,14 +19,14 @@ import type { SelectLead, SelectTrialWatchResult } from "~/database/schema";
 
 import { emailTranslator } from "~/app/emails/locale";
 import { TrialDailyDigestEmail } from "~/app/emails/trial-daily-digest";
+import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { features } from "~/app/lib/flags";
-import { segmentsOver } from "~/app/lib/trial-report";
-import { formatUptime } from "~/app/lib/uptime-report";
 import { isHealthyTrialStatus } from "~/app/models/trial-watches";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { recordCost } from "~/app/services/cost";
 import { trackTrialProgressEmailSent } from "~/app/services/funnel-events";
+import { segmentsOver } from "~/app/services/trial-report";
+import { formatUptime } from "~/app/services/uptime-report";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 

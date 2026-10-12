@@ -19,7 +19,7 @@ import type { Viewer } from "~/app/http/middleware/auth";
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 

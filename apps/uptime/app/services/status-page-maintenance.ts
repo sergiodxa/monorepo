@@ -17,8 +17,8 @@ import type { UptimeModels } from "~/app/models";
 import type { StatusPageService } from "~/app/models/maintenance-windows";
 import type { SelectMaintenanceWindow, SelectStatusPage } from "~/database/schema";
 
-import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
 import { oneOffEvent, recurringEvent } from "~/app/models/maintenance-windows";
+import { monitorScopeMatches, storedMonitorScope } from "~/app/services/monitor-scope";
 
 /** The `PRODID` of every calendar the status pages publish. */
 const PRODUCT_ID = "-//sergiodxa//uptime//EN";

@@ -14,7 +14,7 @@ import { Jobs } from "@sdxc/jobs/router";
 
 import type { UptimeModels } from "~/app/models";
 
-import { enqueuer } from "~/app/lib/queue";
+import { enqueuer } from "~/app/initializers/queue";
 import { models } from "~/app/models";
 
 declare module "remix/router" {

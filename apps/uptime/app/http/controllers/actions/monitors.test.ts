@@ -32,8 +32,8 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -44,7 +44,7 @@ interface CheckHttpMessage {
 }
 
 /**
- * The queue on-demand checks land on. Module scope because `~/app/lib/queue` captures
+ * The queue on-demand checks land on. Module scope because `~/app/initializers/queue` captures
  * `env` on import, so `beforeEach` empties it rather than re-creating it.
  */
 let queue: QueueMock<CheckHttpMessage> = createQueue<CheckHttpMessage>();
@@ -60,8 +60,8 @@ vi.doMock("cloudflare:workers", () => ({
  * forwards the form data unflattened so these tests exercise real branching.
  */
 let { default: models } = await import("~/app/http/middleware/models");
-let { jobQueue } = await import("~/app/lib/queue");
-let { bindModels } = await import("~/app/lib/test/models");
+let { jobQueue } = await import("~/app/initializers/queue");
+let { bindModels } = await import("~/app/test/models");
 let { createMonitor, deleteMonitor, playMonitor, updateMonitor } = await import("./monitors");
 
 /**

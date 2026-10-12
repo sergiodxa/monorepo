@@ -15,9 +15,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { UptimeModels } from "~/app/models";
 import type { DnsQueryAnswer, DnsRecordImport } from "~/app/models/dns-monitor-records";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { summarizeDnsRecordDiff } from "~/app/models/dns-monitor-records";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 
 let db: Database;
 let models: UptimeModels;

@@ -18,7 +18,7 @@ import type { Log } from "@sdxc/logger";
 import { currentLog } from "@sdxc/logger";
 import { env } from "cloudflare:workers";
 
-import type { CostQuantities, CostResource, WorkerHandler } from "~/app/lib/cost-rates";
+import type { CostQuantities, CostResource, WorkerHandler } from "~/app/services/cost-rates";
 
 import {
 	COST_RESOURCES,
@@ -26,7 +26,7 @@ import {
 	MODELLED_CPU_MS,
 	priceCostQuantities,
 	RATE_CARD_VERSION,
-} from "~/app/lib/cost-rates";
+} from "~/app/services/cost-rates";
 
 /** The dataset recorded points land in, and the one the reporting job reads back. */
 const COSTS_DATASET = "uptime_costs";

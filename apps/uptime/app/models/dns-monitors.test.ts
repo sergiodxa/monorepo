@@ -15,9 +15,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { UptimeModels } from "~/app/models";
 import type { InsertDnsMonitor } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { dnsMonitorResults, dnsMonitors } from "~/database/schema";
 
 let db: Database;

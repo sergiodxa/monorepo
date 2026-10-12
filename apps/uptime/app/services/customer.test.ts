@@ -26,14 +26,14 @@ import { BillingError } from "@sdxc/billing";
 import { failure, isFailure, success, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
-import { createTestBilling } from "~/app/lib/test/billing";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import {
 	cancelSubscriptions,
 	openCheckout,
 	openPortal,
 	provisionCustomer,
 } from "~/app/services/customer";
+import { createTestBilling } from "~/app/test/billing";
 import routes from "~/routes/web";
 
 /** The team every hosted page below is opened for. */

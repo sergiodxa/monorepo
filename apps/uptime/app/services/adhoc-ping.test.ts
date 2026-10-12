@@ -16,7 +16,7 @@ import { createAnalyticsEngine, createEnv } from "@sdxc/cloudflare-mocks";
 import { failure } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import { createTestBilling } from "~/app/lib/test/billing";
+import { createTestBilling } from "~/app/test/billing";
 
 import type { AdhocPing } from "./adhoc-ping";
 

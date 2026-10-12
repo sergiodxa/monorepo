@@ -16,10 +16,10 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test } from "vitest";
 
-import { returnTo } from "~/app/http/cookies";
 import { auth, type Viewer } from "~/app/http/middleware/auth";
 import requireUser from "~/app/http/middleware/require-user";
-import { signIn } from "~/app/lib/test/auth";
+import { returnTo } from "~/app/initializers/cookies";
+import { signIn } from "~/app/test/auth";
 
 let viewer: Viewer = {
 	id: "user_1",

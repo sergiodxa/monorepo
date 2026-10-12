@@ -21,8 +21,8 @@ import { inList, notNull } from "remix/data-table";
 import type { HttpP99Scope } from "~/app/services/analytics";
 import type { MonitorStatus } from "~/database/schema";
 
-import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
 import { getHttpP99ResponseTime } from "~/app/services/analytics";
+import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/services/scheduling";
 import { monitors } from "~/database/schema";
 
 /** The bucket size for a scheduled check's job id. */

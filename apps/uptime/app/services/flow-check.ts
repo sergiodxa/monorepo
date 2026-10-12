@@ -50,7 +50,7 @@ import {
 	FLOW_RUN_MAX_REQUESTS,
 	FLOW_RUN_MAX_RESPONSE_BYTES,
 	FLOW_RUN_TIMEOUT_MS,
-} from "~/app/lib/pricing";
+} from "~/config/pricing";
 
 /** The path a flow's single source is reported under. Shown in failure detail. */
 const SOURCE_PATH = "flow.spec";

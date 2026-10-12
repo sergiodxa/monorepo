@@ -18,7 +18,7 @@ import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
 import i18n from "~/app/http/middleware/i18n";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { withDocumentAssets } from "~/app/test/document-assets";
 
 import defaultHandler from "./default-handler";
 
@@ -44,7 +44,7 @@ describe("default handler", () => {
 	test("renders the not-found page with a 404 status for any unmatched route", async () => {
 		/**
 		 * The real `i18n` middleware runs here because `defaultHandler` renders its
-		 * copy through `ctx.intl.t()`, and the global middleware (`bootstrap/app.tsx`)
+		 * copy through `ctx.intl.t()`, and the global middleware (`app/initializers/router.tsx`)
 		 * wraps the whole router, `defaultHandler` included.
 		 */
 		let router = createRouter({

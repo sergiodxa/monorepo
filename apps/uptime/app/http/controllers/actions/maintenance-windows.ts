@@ -13,15 +13,15 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { MonitorScope } from "~/app/lib/monitor-scope";
 import type { UptimeModels } from "~/app/models";
+import type { MonitorScope } from "~/app/services/monitor-scope";
 
 import {
 	CreateMaintenanceWindowSchema,
 	MaintenanceWindowIdSchema,
 	UpdateMaintenanceWindowSchema,
 } from "~/app/http/validators/maintenance-window";
-import { parseMonitorScope } from "~/app/lib/monitor-scope";
+import { parseMonitorScope } from "~/app/services/monitor-scope";
 import { isResolvableScope } from "~/app/services/scope-monitors";
 import routes from "~/routes/web";
 

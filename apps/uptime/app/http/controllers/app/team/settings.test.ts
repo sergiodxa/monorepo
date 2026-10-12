@@ -34,11 +34,11 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { admin } from "~/app/http/middleware/admin";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 import * as settingsModule from "./settings";

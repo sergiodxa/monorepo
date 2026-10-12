@@ -31,16 +31,15 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({}),
 	waitUntil: () => {},
-	/** Never instantiated here; `~/app/do/geo-fetch` extends it at module load. */
-	DurableObject: class {},
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");
@@ -58,7 +57,7 @@ let { intl } = createTranslator({
 let sessionCookie = createCookie("uptime-test-session", { secrets: ["test-secret"] });
 let sessionStorage = createMemorySessionStorage();
 
-/** Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s own. */
+/** Minimal request-scoped HTML renderer standing in for `app/initializers/router.tsx`'s own. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });

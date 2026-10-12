@@ -19,12 +19,12 @@ import { describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, monitorContentChecks, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
 /**
- * `~/app/lib/queue`, which the models middleware reaches, reads `env` from
+ * `~/app/initializers/queue`, which the models middleware reaches, reads `env` from
  * `cloudflare:workers` at module load, so the test installs one here. No binding
  * is supplied, so any path that reaches it fails by name, not as `undefined`.
  */
@@ -32,7 +32,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { createContentCheck, deleteContentCheck } = await import("./content-checks");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /** Installs `ctx.team`/`ctx.membership` directly, standing in for `requireTeam`/`requireRole`. */
 function teamContextMiddleware(team: SelectTeam, membership: SelectMembership): Middleware {

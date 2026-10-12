@@ -18,21 +18,12 @@ import { isFailure } from "@sdxc/result";
 import { underscore } from "@sdxc/strings";
 import { inList } from "remix/data-table";
 
-import type { CostQuantities } from "~/app/lib/cost-rates";
 import type { UptimeModels } from "~/app/models";
 import type { DailyTeamCost } from "~/app/services/cost";
+import type { CostQuantities } from "~/app/services/cost-rates";
 
+import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
-import {
-	BYTES_PER_GB,
-	COST_RESOURCES,
-	createCostQuantities,
-	D1_MEAN_ROW_BYTES,
-	KV_MEAN_BYTES_PER_TEAM,
-	priceCostQuantities,
-	RATE_CARD_VERSION,
-} from "~/app/lib/cost-rates";
 import { getYesterdayDateUtc, utcDayBounds } from "~/app/models/monitor-daily-stats";
 import { queryAnalytics } from "~/app/services/analytics";
 import {
@@ -43,6 +34,15 @@ import {
 	recordCost,
 	toDailyTeamCost,
 } from "~/app/services/cost";
+import {
+	BYTES_PER_GB,
+	COST_RESOURCES,
+	createCostQuantities,
+	D1_MEAN_ROW_BYTES,
+	KV_MEAN_BYTES_PER_TEAM,
+	priceCostQuantities,
+	RATE_CARD_VERSION,
+} from "~/app/services/cost-rates";
 
 /** The event name cost rides on — a name reserved for cost, apart from revenue events. */
 const EVENT_NAME = "infra.cost.daily";

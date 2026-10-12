@@ -19,12 +19,12 @@ import {
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
-import type { CostResource } from "~/app/lib/cost-rates";
 import type { ContentCheckRule } from "~/app/models/content-checks";
+import type { CostResource } from "~/app/services/cost-rates";
 import type { HttpCheckOptions, HttpProbeOutcome } from "~/app/services/http-check";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 
 /** The `GeoFetchDO` stub `probe` calls through `env.GEO_FETCH.get(id).fetch(...)`. */
 let doFetchMock = vi.fn(
@@ -43,19 +43,18 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetchM
 let costs: AnalyticsEngineMock = createAnalyticsEngine();
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		COSTS: costs,
 	}),
 	waitUntil: (promise: Promise<unknown>) => promise,
-	/** Exists only as the base class `~/app/do/geo-fetch` extends at module load. */
-	DurableObject: class {},
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
-let { COST_RESOURCES } = await import("~/app/lib/cost-rates");
+let { bindModels } = await import("~/app/test/models");
+let { COST_RESOURCES } = await import("~/app/services/cost-rates");
 let { CostLedger, trackCost } = await import("~/app/services/cost");
-let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
+let { NO_REDIRECT_HEADER } = await import("~/app/services/geo-fetch");
 let { HttpCheck } = await import("./http-check");
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

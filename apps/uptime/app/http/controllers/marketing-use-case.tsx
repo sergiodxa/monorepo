@@ -17,7 +17,7 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { SEO } from "~/app/lib/seo";
+import { SEO } from "~/app/initializers/seo";
 import { useCases } from "~/resources/content/marketing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";

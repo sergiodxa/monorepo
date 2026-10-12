@@ -18,13 +18,13 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { FlowCheckResult } from "~/app/services/flow-check";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { InsertFlowMonitor } from "~/database/schema";
 
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { installFlags } from "~/app/lib/test/flags";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { installFlags } from "~/app/test/flags";
 
 /** A run whose every test passed, which is the neutral result each case narrows from. */
 function passing(overrides: Partial<FlowCheckResult> = {}): FlowCheckResult {
@@ -84,9 +84,9 @@ let billing = createTestBilling();
 let realIngest = billing.usage.ingest.bind(billing.usage);
 let ingestMock = vi.spyOn(billing.usage, "ingest");
 
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let realFlowCheckModule = await import("~/app/services/flow-check");
 
@@ -97,7 +97,7 @@ vi.doMock("~/app/services/flow-check", () => ({
 
 let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let checkFlows = (await import("./check-flows")).default;
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */

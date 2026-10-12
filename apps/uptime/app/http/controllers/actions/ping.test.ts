@@ -27,17 +27,17 @@ import { Session } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { QuickPingOutcome, QuickPingResult } from "~/app/http/controllers/actions/ping";
 import type { Viewer } from "~/app/http/middleware/auth";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectTeam } from "~/database/schema";
 
 import { auth } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { signIn } from "~/app/lib/test/auth";
-import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { signIn } from "~/app/test/auth";
+import { billedEvents, createRevokedSubscription, createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -63,6 +63,7 @@ let pingResults: AnalyticsEngineMock = createAnalyticsEngine();
 let deferred: Promise<unknown>[] = [];
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -70,8 +71,6 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
-	/** `~/app/do/geo-fetch` extends this at module load; that's the only use it needs. */
-	DurableObject: class {},
 }));
 
 let { default: models } = await import("~/app/http/middleware/models");

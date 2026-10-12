@@ -16,8 +16,8 @@ import { describe, expect, test } from "vitest";
 import type { TcpMonitors } from "~/app/models/tcp-monitors";
 import type { TcpCheckResult } from "~/app/services/tcp-check";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { tcpMonitorResults, tcpMonitors } from "~/database/schema";
 
 /** What `tcpMonitors.create` takes besides the team. */

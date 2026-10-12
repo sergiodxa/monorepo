@@ -21,13 +21,13 @@ import type { ApiKeyScope, InsertFlowMonitorResult, SelectTeam } from "~/databas
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { markInFlight } from "~/app/lib/test/idempotency";
-import { bindModels } from "~/app/lib/test/models";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { parseLink } from "~/app/lib/test/paging";
-import { expectProblem } from "~/app/lib/test/problem";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { markInFlight } from "~/app/test/idempotency";
+import { bindModels } from "~/app/test/models";
+import { checkConformance } from "~/app/test/openapi";
+import { parseLink } from "~/app/test/paging";
+import { expectProblem } from "~/app/test/problem";
 import { flowMonitorResults, flowMonitors, teamDomains, teams } from "~/database/schema";
 import { flowMonitorsRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";

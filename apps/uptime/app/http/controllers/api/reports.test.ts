@@ -20,12 +20,12 @@ import type { ApiKeyScope, MonitorStatus } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { parseLink } from "~/app/lib/test/paging";
-import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
+import { checkConformance } from "~/app/test/openapi";
+import { parseLink } from "~/app/test/paging";
+import { expectProblem, problemMessages } from "~/app/test/problem";
 import {
 	cronJobMonitors,
 	dnsMonitors,

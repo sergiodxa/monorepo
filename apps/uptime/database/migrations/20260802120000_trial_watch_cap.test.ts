@@ -14,7 +14,7 @@ import type { SqliteDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { openDatabase } from "@sdxc/cloudflare-mocks/sqlite";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import { applyMigration, applyMigrations } from "~/app/lib/test/db";
+import { applyMigration, applyMigrations } from "~/app/test/db";
 
 /** The migration under test, and the point every seed is written before. */
 const MIGRATION = "20260802120000_trial_watch_cap.sql";

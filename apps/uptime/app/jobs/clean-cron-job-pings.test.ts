@@ -18,9 +18,9 @@ import type { UptimeModels } from "~/app/models";
 import jobs from "~/app/jobs";
 import cleanCronJobPings from "~/app/jobs/clean-cron-job-pings";
 import { Database } from "~/app/jobs/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, publishModels } from "~/app/lib/test/models";
 import { PING_RETENTION_DAYS } from "~/app/models/cron-job-pings";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, publishModels } from "~/app/test/models";
 import { cronJobPings } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

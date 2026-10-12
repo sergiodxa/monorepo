@@ -78,14 +78,14 @@ import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
+import { SEO } from "~/app/initializers/seo";
+import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
 import {
 	BASE_PRICE_USD,
 	INCLUDED_PINGS,
 	PINGS_PER_BLOCK,
 	PRICE_PER_BLOCK_USD,
-} from "~/app/lib/pricing";
-import { SEO } from "~/app/lib/seo";
-import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
+} from "~/config/pricing";
 import AuthCta from "~/resources/components/marketing/auth-cta";
 import MarketingCard from "~/resources/components/marketing/card";
 import FaqAccordion from "~/resources/components/marketing/faq-accordion";
@@ -300,7 +300,7 @@ export default createAction(routes.home, async (ctx) => {
 
 	/**
 	 * The pricing model's own figures, formatted for the request's locale, for the
-	 * copy that quotes them. Interpolating these into the copy keeps `app/lib/pricing.ts`
+	 * copy that quotes them. Interpolating these into the copy keeps `config/pricing.ts`
 	 * the only place a price is stated.
 	 */
 	let pricingCopyValues = {
@@ -313,7 +313,7 @@ export default createAction(routes.home, async (ctx) => {
 	/**
 	 * The three reasons to keep reading, stated as checkable product facts: coverage,
 	 * usage accounting, and cost. The cost line interpolates {@link pricingCopyValues},
-	 * keeping `app/lib/pricing.ts` the only place a price is stated.
+	 * keeping `config/pricing.ts` the only place a price is stated.
 	 */
 	let BENEFITS = [
 		{

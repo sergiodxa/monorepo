@@ -19,7 +19,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { NotifyInput } from "~/app/jobs";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 
 interface NotifyCall {
 	helper: "tcp" | "dns" | "cron" | "flow" | "ssl" | "registration";
@@ -57,7 +57,7 @@ let notifySslResultMock = vi.fn(recordCall("ssl"));
 let notifyRegistrationResultMock = vi.fn(recordCall("registration"));
 
 /**
- * The models reach `~/app/lib/queue`, which reads `env` from `cloudflare:workers` at module
+ * The models reach `~/app/initializers/queue`, which reads `env` from `cloudflare:workers` at module
  * load, and this package's preload only supplies placeholder strings, so it's stubbed here
  * too. Nothing on this file's routing path reaches a binding, so none is supplied.
  */
@@ -80,7 +80,7 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let notify = (await import("./notify")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 
 /**
  * The wide event the run under test emitted. It lives out here because a run that asks for

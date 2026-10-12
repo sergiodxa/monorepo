@@ -14,14 +14,14 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { InsertMaintenanceWindow, SelectMaintenanceWindow } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import {
 	isActiveAt,
 	oneOffEvent,
 	parseRecurringPattern,
 	recurringEvent,
 } from "~/app/models/maintenance-windows";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 
 /** Creates a window for `teamId`, failing the test when the write is refused. */
 async function createWindowFor(

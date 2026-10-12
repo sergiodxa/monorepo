@@ -33,9 +33,9 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { dnsMonitors, memberships, monitors, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -60,7 +60,7 @@ vi.doMock("cloudflare:workers", () => ({
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardPanelModule = await import("./dashboard-panel");
 
-/** Stand-in for bootstrap/app.tsx's `renderWith(createHtmlRenderer)`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
+/** Stand-in for app/initializers/router.tsx's `renderWith(createHtmlRenderer)`. Frame resolution isn't exercised by a single-request page test, so `resolveFrame` is a no-op. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(node, { frameSrc: ctx.request.url, resolveFrame: async () => "" });

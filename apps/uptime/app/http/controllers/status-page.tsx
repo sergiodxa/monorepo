@@ -40,7 +40,7 @@ import { createAction } from "remix/router";
 import type { ServiceStatus } from "~/app/services/status-page";
 import type { BadgeTone } from "~/resources/components/badge";
 
-import { SEO } from "~/app/lib/seo";
+import { SEO } from "~/app/initializers/seo";
 import { getTeamHttpSummaries } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
 import {

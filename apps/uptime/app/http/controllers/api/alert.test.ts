@@ -17,13 +17,13 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { useMailServerDns } from "~/app/lib/test/mail-servers";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { parseLink } from "~/app/lib/test/paging";
-import { expectProblem } from "~/app/lib/test/problem";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { useMailServerDns } from "~/app/test/mail-servers";
+import { checkConformance } from "~/app/test/openapi";
+import { parseLink } from "~/app/test/paging";
+import { expectProblem } from "~/app/test/problem";
 import { alertEvents, alerts, teams } from "~/database/schema";
 import { alertRoutes } from "~/routes/api-groups";
 
@@ -31,7 +31,7 @@ import { alertRoutes } from "~/routes/api-groups";
 const CONFORMANCE = checkConformance(alertRoutes);
 
 /**
- * `~/app/lib/queue`, imported transitively through the models, reads `env` from
+ * `~/app/initializers/queue`, imported transitively through the models, reads `env` from
  * `cloudflare:workers` at module load, so this mock must resolve here too. The
  * endpoints touch no binding — the empty strict env would throw by name if they did.
  */
@@ -39,7 +39,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: alertController } = await import("./alert");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
 let dns = useMailServerDns();

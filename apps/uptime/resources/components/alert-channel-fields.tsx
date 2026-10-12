@@ -23,7 +23,7 @@ import { Select, TextField } from "@sdxc/ui";
 import type { AlertConfig } from "~/database/schema";
 
 import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import Field from "~/resources/components/field";
 import { SETTINGS_FIELD_GAP } from "~/resources/components/settings-section";
 

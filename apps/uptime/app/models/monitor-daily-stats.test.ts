@@ -12,14 +12,14 @@ import { describe, expect, test } from "vitest";
 
 import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import {
 	calculateDailyStatus,
 	getYesterdayDateUtc,
 	UPTIME_WINDOW_DAYS,
 	utcDayBounds,
 } from "~/app/models/monitor-daily-stats";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { monitorDailyStats } from "~/database/schema";
 
 /** Models over a fresh database, with the raw handle for assertions that bypass them. */

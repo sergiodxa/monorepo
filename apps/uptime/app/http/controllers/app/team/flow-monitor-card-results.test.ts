@@ -25,8 +25,8 @@ import type { SelectMembership, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -71,7 +71,7 @@ function seedTeam(team: SelectTeam, membership: SelectMembership): Middleware {
 }
 
 /**
- * Minimal request-scoped HTML renderer standing in for `bootstrap/app.tsx`'s renderer.
+ * Minimal request-scoped HTML renderer standing in for `app/initializers/router.tsx`'s renderer.
  * This test exercises only the page request, so `resolveFrame` stays a no-op — the
  * results fragment this page frames is covered by its own test.
  */

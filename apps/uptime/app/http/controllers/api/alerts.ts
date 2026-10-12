@@ -16,18 +16,18 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import type { MonitorScope, MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { MonitorScope, MonitorScopeType } from "~/app/services/monitor-scope";
 import type { AlertConfig, SelectAlert } from "~/database/schema";
 
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_ALERT_BODY } from "~/app/http/openapi/alerts";
-import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { apiProblems, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
+import { storedMonitorScope } from "~/app/services/monitor-scope";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { isResolvableScope } from "~/app/services/scope-monitors";
 import { decodeMonitorId, encodeId, encodeMonitorId } from "~/app/services/typed-id";

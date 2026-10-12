@@ -30,11 +30,11 @@ import {
 	takeTrialState,
 } from "~/app/http/controllers/trial/session";
 import { TRIAL_EMAIL_CONFIRMED_FIELD, TrialLeadSchema } from "~/app/http/validators/trial";
-import { segmentsOver, watchStats } from "~/app/lib/trial-report";
 import { TRIAL_WATCH_DURATION_DAYS } from "~/app/models/trial-watches";
 import { recordCost } from "~/app/services/cost";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { hostnameOf, trackTrialMonitorStarted } from "~/app/services/funnel-events";
+import { segmentsOver, watchStats } from "~/app/services/trial-report";
 import { supportedLanguages } from "~/database/schema";
 import routes from "~/routes/web";
 

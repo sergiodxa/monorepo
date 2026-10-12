@@ -191,8 +191,8 @@
 
 	// Platform-native email sending. Every message the app puts in an inbox goes through
 	// this binding: `CloudflareTransport` is the transport both mailers are built with, the
-	// request-scoped one in `bootstrap/app.tsx` and the background one in
-	// `app/lib/container.ts`. Nothing sends over an HTTP API any more, so the binding has to
+	// request-scoped one in `app/initializers/router.tsx` and the background one in
+	// `app/initializers/mailer.ts`. Nothing sends over an HTTP API any more, so the binding has to
 	// resolve for the worker to mail at all.
 	//
 	// The account's daily send quota starts conservative and is raised over time from

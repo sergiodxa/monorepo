@@ -26,9 +26,9 @@ let jobs = (await import("~/app/jobs")).default;
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Destinations } = await import("~/app/jobs/middleware/destinations");
 let { default: deliverAlert, MAX_ATTEMPTS } = await import("./deliver-alert");
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { alertMessage } = await import("~/app/services/alert-message");
-let { createTestDatabase } = await import("~/app/lib/test/db");
+let { createTestDatabase } = await import("~/app/test/db");
 let { alertEvents } = await import("~/database/schema");
 
 const SLACK: AlertConfig = {

@@ -20,8 +20,8 @@ import { auth, type Viewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import requireTeam from "~/app/http/middleware/require-team";
-import { signIn } from "~/app/lib/test/auth";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { signIn } from "~/app/test/auth";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

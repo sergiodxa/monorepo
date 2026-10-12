@@ -21,12 +21,12 @@ import { success, unwrap } from "@sdxc/result";
 import { getTableName } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
+import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
 import { Database } from "~/app/jobs/middleware/database";
-import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, publishModels } from "~/app/lib/test/models";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, publishModels } from "~/app/test/models";
 import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 
 /** Days after which a handled delivery is dropped, as the job is configured. */
@@ -54,7 +54,7 @@ let provider: Billing = billing.with({
 	},
 });
 
-vi.doMock("~/app/lib/billing", () => ({
+vi.doMock("~/app/initializers/billing", () => ({
 	polar: provider,
 	MONITORING_PRODUCT,
 	PING_METER,

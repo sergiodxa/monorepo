@@ -49,7 +49,7 @@ function maintenanceWindowFields(timeZone: TimeZone) {
 		name: f.field(s.string().pipe(checks.minLength(1), checks.maxLength(255))),
 		/**
 		 * The `(monitor_type, monitor_id)` pair encoded as one control value; see
-		 * `~/app/lib/monitor-scope`. Validated for shape here — resolving whether
+		 * `~/app/services/monitor-scope`. Validated for shape here — resolving whether
 		 * the named monitor exists and belongs to the team happens in the action.
 		 */
 		scope: f.field(s.defaulted(s.string(), "")),

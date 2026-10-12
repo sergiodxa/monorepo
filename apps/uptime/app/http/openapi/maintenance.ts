@@ -12,7 +12,7 @@ import { defineOperation } from "@sdxc/openapi";
 
 import { envelope, PAGE_QUERY, pageResponse } from "~/app/http/openapi/envelope";
 import { epochMs, resourceId } from "~/app/http/openapi/fields";
-import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
+import { MONITOR_SCOPE_TYPES } from "~/app/services/monitor-scope";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 

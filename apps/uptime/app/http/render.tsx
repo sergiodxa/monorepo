@@ -8,14 +8,14 @@
  */
 
 import type { RemixNode } from "remix/component";
-import type { Middleware, RequestContext } from "remix/router";
+import type { RequestContext } from "remix/router";
 
 import { currentLog } from "@sdxc/logger";
 import { SecurityHeadersKey } from "@sdxc/security-headers/middleware";
 import { render, renderWith } from "remix/middleware/render";
 
 import { frameFailures } from "~/app/http/middleware/frame-failures";
-import { assets, documentAssets } from "~/app/lib/assets";
+import { assets, documentAssets } from "~/app/initializers/assets";
 import { CspNonce } from "~/resources/components/csp-nonce";
 import { DocumentAssets } from "~/resources/layouts/document";
 
@@ -24,17 +24,17 @@ import { DocumentAssets } from "~/resources/layouts/document";
  * through the router rendering the document, so a fragment shares the request's cookies and
  * middleware; render failures go to the request's log, since a Worker discards the console.
  */
-export function htmlRendering(): Middleware[] {
+export function htmlRendering() {
 	return [
 		render({
 			assets,
 			onError(error) {
 				currentLog()?.fail(error, { render: { failed: true } });
 			},
-		}) as Middleware,
-		renderWith(withDocument) as Middleware,
+		}),
+		renderWith(withDocument),
 		frameFailures(),
-	];
+	] as const;
 }
 
 /**

@@ -16,8 +16,6 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TrialWatches } from "~/app/models/trial-watches";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
@@ -27,6 +25,8 @@ import {
 	shouldNotifyChange,
 	shouldSendSummary,
 } from "~/app/models/trial-watches";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { trialWatchResults, trialWatches } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;

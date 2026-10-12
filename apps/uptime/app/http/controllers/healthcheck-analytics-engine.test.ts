@@ -17,7 +17,7 @@ import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}, { strict: false }) }));

@@ -8,8 +8,8 @@
 
 import { models as publishModels } from "@sdxc/data-model/jobs";
 
+import { enqueuer } from "~/app/initializers/queue";
 import { Database } from "~/app/jobs/middleware/database";
-import { enqueuer } from "~/app/lib/queue";
 import { models as registry } from "~/app/models";
 
 /**

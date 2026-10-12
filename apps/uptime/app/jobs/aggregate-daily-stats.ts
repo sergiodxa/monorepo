@@ -21,13 +21,13 @@ import { isFailure, unwrap } from "@sdxc/result";
 import type { DailyStatsInput } from "~/app/models/monitor-daily-stats";
 
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
 import {
 	calculateDailyStatus,
 	getYesterdayDateUtc,
 	utcDayBounds,
 } from "~/app/models/monitor-daily-stats";
 import { getHttpDailyAggregate } from "~/app/services/analytics";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCost } from "~/app/services/cost";
 
 /** One D1 result table, and how a day of its rows becomes a `monitor_daily_stats` row. */

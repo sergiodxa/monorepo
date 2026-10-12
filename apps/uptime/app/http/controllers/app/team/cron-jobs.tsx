@@ -17,7 +17,7 @@ import type { BadgeTone } from "~/resources/components/badge";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { describeSchedule } from "~/app/lib/cron-text";
+import { describeSchedule } from "~/app/services/cron-text";
 import { badgeVariant } from "~/resources/components/badge";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";

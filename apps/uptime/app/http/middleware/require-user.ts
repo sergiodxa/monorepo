@@ -13,8 +13,8 @@ import type { Middleware } from "remix/router";
 
 import { redirect } from "@sdxc/http/response";
 
-import { returnTo } from "~/app/http/cookies";
 import { isAuthenticated } from "~/app/http/middleware/auth";
+import { returnTo } from "~/app/initializers/cookies";
 import routes from "~/routes/web";
 
 /**

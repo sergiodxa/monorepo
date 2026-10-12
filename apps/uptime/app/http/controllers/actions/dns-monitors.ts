@@ -31,7 +31,6 @@ import {
 	ToggleDnsMonitorRecordSchema,
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
 import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
@@ -42,6 +41,7 @@ import {
 	runDnsCheck,
 } from "~/app/services/dns-discovery";
 import { checkRegistration } from "~/app/services/domain-registration";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";
 import routes from "~/routes/web";

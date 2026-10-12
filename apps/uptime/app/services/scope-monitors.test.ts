@@ -10,9 +10,9 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { isResolvableScope, listScopeMonitors } from "~/app/services/scope-monitors";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { monitors } from "~/database/schema";
 
 /** A database holding two HTTP monitors and a DNS monitor for team-1, and one for team-2. */

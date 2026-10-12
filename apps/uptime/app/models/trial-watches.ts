@@ -18,18 +18,18 @@ import { unwrap } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 import { getTableName, gte, inList } from "remix/data-table";
 
-import type { BatchedSweepResult } from "~/app/lib/retention";
+import type { BatchedSweepResult } from "~/app/services/retention";
 import type { MonitorStatus, SelectTrialWatch, SelectTrialWatchResult } from "~/database/schema";
 
-import { FREE_TRIAL_DAYS } from "~/app/lib/pricing";
-import { deleteOlderThan } from "~/app/lib/retention";
-import { claimDue } from "~/app/lib/scheduling";
-import { normalizeTrialUrl } from "~/app/lib/trial-identity";
+import { deleteOlderThan } from "~/app/services/retention";
+import { claimDue } from "~/app/services/scheduling";
+import { normalizeTrialUrl } from "~/app/services/trial-identity";
+import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import { trialWatches } from "~/database/schema";
 
 /**
  * How long a target is re-checked for before the wrap-up goes out and checking stops, under
- * the name the scheduling reads it by; `~/app/lib/pricing` holds the one definition marketing
+ * the name the scheduling reads it by; `~/config/pricing` holds the one definition marketing
  * copy quotes.
  */
 export const TRIAL_WATCH_DURATION_DAYS = FREE_TRIAL_DAYS;

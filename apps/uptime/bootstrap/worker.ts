@@ -13,11 +13,9 @@
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
-import { GeoFetchDO } from "~/app/do/geo-fetch";
-import { dispatcher } from "~/app/jobs/dispatcher";
+import { dispatcher } from "~/app/initializers/dispatcher";
+import { createWebRouter } from "~/app/initializers/router";
 import { CostLedger, countedKv, trackCost } from "~/app/services/cost";
-
-import application from "./app";
 
 /**
  * Both job handlers, bound to the dispatcher they delegate to. This worker consumes its own
@@ -30,7 +28,7 @@ const handlers = cloudflare.worker(dispatcher, {
 	deadLetter: () => env.DLQ,
 });
 
-export { GeoFetchDO };
+export { GeoFetchDO } from "~/app/services/geo-fetch";
 
 /** Whether the request arrived on a non-production host (local dev or workers.dev). */
 function isSecureHost(request: Request): boolean {
@@ -44,7 +42,7 @@ function isSecureHost(request: Request): boolean {
 export default {
 	/** Handles incoming Worker requests by forwarding them to the app router. */
 	async fetch(request: Request) {
-		let app = application({
+		let router = createWebRouter({
 			kv: countedKv(env.KV),
 			cookieSecret: env.COOKIE_SESSION_SECRET,
 			secure: isSecureHost(request),
@@ -54,7 +52,7 @@ export default {
 		 * the status-page controller for a public one — so the ledger opens unattributed and
 		 * is told once resolved. One that never resolves (a marketing page, a 404) is platform cost.
 		 */
-		return await trackCost(new CostLedger({ handler: "fetch" }), () => app.fetch(request));
+		return await trackCost(new CostLedger({ handler: "fetch" }), () => router.fetch(request));
 	},
 
 	/**

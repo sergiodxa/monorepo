@@ -22,11 +22,11 @@ import { setupServer } from "msw/node";
 import { Database } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { InsertDnsMonitor } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 
 /** One `notify` message as it travels: the job it names, and the transition under `body`. */
 interface NotifyEnvelope {
@@ -47,7 +47,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let jobs = (await import("~/app/jobs")).default;
-let { bindModels, publishModels } = await import("~/app/lib/test/models");
+let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDomainRegistrations = (await import("./check-domain-registrations")).default;

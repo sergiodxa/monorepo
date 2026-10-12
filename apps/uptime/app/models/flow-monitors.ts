@@ -17,8 +17,8 @@ import { fail } from "remix/data-table";
 import type { FlowCheckResult } from "~/app/services/flow-check";
 import type { SelectFlowMonitor } from "~/database/schema";
 
-import { DEFAULT_FLOW_INTERVAL_SECONDS, isFlowIntervalSeconds } from "~/app/lib/pricing";
-import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/lib/scheduling";
+import { claimDue, nextDueAtOnEnable, nextDueAtPatch } from "~/app/services/scheduling";
+import { DEFAULT_FLOW_INTERVAL_SECONDS, isFlowIntervalSeconds } from "~/config/pricing";
 import { flowMonitors } from "~/database/schema";
 
 /**

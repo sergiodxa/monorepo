@@ -13,9 +13,9 @@ import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
 import { createAction } from "remix/router";
 
-import { dashboardTab } from "~/app/http/cookies";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { dashboardTab } from "~/app/initializers/cookies";
 import routes from "~/routes/web";
 
 const DASHBOARD_TABS = ["http", "dns", "tcp", "cron-jobs"] as const;

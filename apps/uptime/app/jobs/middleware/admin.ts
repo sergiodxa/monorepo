@@ -12,7 +12,7 @@ import type { JobMiddleware } from "@sdxc/jobs";
 
 import { createContextKey } from "remix/router";
 
-import { createManagementClient } from "~/app/lib/management-client";
+import { createManagementClient } from "~/app/initializers/management-client";
 
 /** Where a job's management client lives on the context, installed as `ctx.admin`. */
 export const Admin = createContextKey<ManagementClient>();

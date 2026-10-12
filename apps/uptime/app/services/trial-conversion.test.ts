@@ -18,14 +18,14 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { UptimeModels } from "~/app/models";
 import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { trialConversionUrls } from "~/app/models/trial-conversions";
 import {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
 } from "~/app/models/trial-watches";
 import { convertTrialWatches } from "~/app/services/trial-conversion";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { monitorDailyStats, monitors, trialWatches, trialWatchResults } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;

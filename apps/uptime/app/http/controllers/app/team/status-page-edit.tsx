@@ -33,7 +33,7 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { withPrefix } from "~/app/lib/prefixed-translate";
+import { withPrefix } from "~/app/services/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection, { SETTINGS_SWITCH_GAP } from "~/resources/components/settings-section";

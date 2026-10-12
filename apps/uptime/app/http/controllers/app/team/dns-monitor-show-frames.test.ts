@@ -23,8 +23,7 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { htmlRendering } from "~/app/http/render";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import {
 	dnsMonitorRecords,
 	dnsMonitorResults,
@@ -33,6 +32,7 @@ import {
 	monitorDailyStats,
 	teams,
 } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**

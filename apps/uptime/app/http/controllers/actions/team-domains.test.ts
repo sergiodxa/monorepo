@@ -23,7 +23,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -55,7 +55,7 @@ beforeEach(() => {
  */
 let { default: models } = await import("~/app/http/middleware/models");
 let { addDomain, removeDomain, retryDomainVerification } = await import("./team-domains");
-let { jobQueue } = await import("~/app/lib/queue");
+let { jobQueue } = await import("~/app/initializers/queue");
 
 /** Creates an in-memory database seeded with one team and an admin membership. */
 async function createFixture() {

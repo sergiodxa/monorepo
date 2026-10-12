@@ -18,14 +18,14 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { markInFlight } from "~/app/lib/test/idempotency";
-import { useMailServerDns } from "~/app/lib/test/mail-servers";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { parseLink } from "~/app/lib/test/paging";
-import { expectProblem } from "~/app/lib/test/problem";
 import { MAX_ALERTS_PER_TEAM } from "~/app/models/alerts";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { markInFlight } from "~/app/test/idempotency";
+import { useMailServerDns } from "~/app/test/mail-servers";
+import { checkConformance } from "~/app/test/openapi";
+import { parseLink } from "~/app/test/paging";
+import { expectProblem } from "~/app/test/problem";
 import { alerts, dnsMonitors, monitors, teams } from "~/database/schema";
 import { alertsRoutes } from "~/routes/api-groups";
 
@@ -33,7 +33,7 @@ import { alertsRoutes } from "~/routes/api-groups";
 const CONFORMANCE = checkConformance(alertsRoutes);
 
 /**
- * `~/app/lib/queue`, imported transitively through the models,
+ * `~/app/initializers/queue`, imported transitively through the models,
  * reads `env` from `cloudflare:workers` at module load, so this mock must
  * also resolve here, alongside the repo-root `bunfig.toml` preload.
  */
@@ -41,7 +41,7 @@ vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
 let { default: models } = await import("~/app/http/middleware/models");
 let { default: alertsController } = await import("./alerts");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 
 /** Answers every mail-server lookup the email checks make; each domain receives mail by default. */
 let dns = useMailServerDns();

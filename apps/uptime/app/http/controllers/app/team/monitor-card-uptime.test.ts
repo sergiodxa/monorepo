@@ -1,6 +1,6 @@
 /**
  * Tests for the monitor detail page "Uptime percentage" stat-card fragment
- * controller. `cloudflare:workers` is mocked because `~/app/lib/queue` reads `env`
+ * controller. `cloudflare:workers` is mocked because `~/app/initializers/queue` reads `env`
  * at module load. `ctx.team`/`ctx.membership`/auth/intl state is seeded directly,
  * standing in for the real `requireUser`/`requireTeam`/i18n middleware chain.
  *
@@ -26,16 +26,16 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ CLOUDFLARE_ACCOUNT_ID: "acct-1", CLOUDFLARE_ANALYTICS_TOKEN: "token-1" }),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let monitorCardUptime = (await import("./monitor-card-uptime")).default as {
 	handler: RequestHandler<any>;

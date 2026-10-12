@@ -17,7 +17,7 @@ import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 
 import { BORDER_COLOR, MUTED_COLOR, TEXT_COLOR } from "~/app/emails/shared/palette";
 import { statusClass, statusFill } from "~/app/emails/shared/uptime-bar";
-import { absoluteUrl, APP_ORIGIN } from "~/app/lib/origin";
+import { absoluteUrl, APP_ORIGIN } from "~/config/origin";
 import routes from "~/routes/web";
 
 /** Column header and caption style, matching the uptime bar's own captions. */

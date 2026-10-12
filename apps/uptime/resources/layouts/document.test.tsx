@@ -11,7 +11,7 @@
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { withDocumentAssets } from "~/app/test/document-assets";
 
 import DocumentLayout from "./document";
 

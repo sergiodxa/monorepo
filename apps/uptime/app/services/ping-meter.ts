@@ -15,7 +15,7 @@ import { isFailure } from "@sdxc/result";
 
 import type { PingType } from "~/app/services/analytics";
 
-import { PING_METER } from "~/app/lib/billing";
+import { PING_METER } from "~/app/initializers/billing";
 
 /** One performed ping, as the thing to bill a team for. */
 export interface BillablePing {

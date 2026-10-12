@@ -25,13 +25,13 @@ import * as s from "remix/data-schema";
 import { createAction } from "remix/router";
 
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
-import type { TrialIncident } from "~/app/lib/trial-report";
+import type { TrialIncident } from "~/app/services/trial-report";
 import type { SelectTrialWatch, SelectTrialWatchResult } from "~/database/schema";
 
-import { BASE_PRICE_USD, formatUsd } from "~/app/lib/pricing";
-import { SEO } from "~/app/lib/seo";
-import { incidentsFrom, segmentsOver, watchStats } from "~/app/lib/trial-report";
+import { SEO } from "~/app/initializers/seo";
 import { TRIAL_WATCH_DURATION_DAYS, isConvertible } from "~/app/models/trial-watches";
+import { incidentsFrom, segmentsOver, watchStats } from "~/app/services/trial-report";
+import { BASE_PRICE_USD, formatUsd } from "~/config/pricing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";

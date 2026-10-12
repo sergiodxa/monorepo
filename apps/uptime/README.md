@@ -34,8 +34,17 @@ is `@sdxc/outbound`'s `checkUrl` (ports 80 and 443 only) and `resolveHost`, so a
 
 Every table is read and written through an `@sdxc/data-model` model in `app/models/`, bound per
 request and per job as `ctx.models`. Services that read data take those bound models from their
-caller, and the two queries that join several tables into one report shape live in
-`app/repositories/`.
+caller, and the two queries that join several tables into one report shape live beside them
+as `app/models/reports.ts` and `app/models/team-digests.ts`.
+
+## Layout
+
+The app follows the repo's one-home-per-kind layout: `bootstrap/` holds only the Worker and
+browser entry points, re-exporting the `GeoFetchDO` class from `app/services/geo-fetch.ts`; the router, logger, job
+dispatcher and queue, database, billing, flags, mailer, assets and SEO instances are built in
+`app/initializers/`; app logic is in `app/services/`, test helpers in `app/test/`,
+translations in `resources/locales/`, and static configuration (pricing, origin, security.txt,
+security headers policy) in `config/`.
 
 ## Development
 

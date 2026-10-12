@@ -21,8 +21,8 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 import jobs from "~/app/jobs";
 import { Database } from "~/app/jobs/middleware/database";
 import verifyDomainOwnership from "~/app/jobs/verify-domain-ownership";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, publishModels, recordJobs } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, publishModels, recordJobs } from "~/app/test/models";
 
 /** The DNS-over-HTTPS resolver the job queries for the TXT record. */
 let DNS_URL = CLOUDFLARE.url;

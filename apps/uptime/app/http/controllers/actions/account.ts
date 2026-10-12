@@ -19,12 +19,12 @@ import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import { language as languageCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import { RequestAccountDeletionSchema } from "~/app/http/validators/account";
 import { UpdateEmailsSchema } from "~/app/http/validators/email-preferences";
 import { UpdateLanguageSchema } from "~/app/http/validators/language";
 import { CreateTeamSchema, LeaveTeamSchema } from "~/app/http/validators/team";
+import { language as languageCookie } from "~/app/initializers/cookies";
 import { accountExportFilename, buildAccountExport } from "~/app/services/account-export";
 import { optionalEmails } from "~/database/schema";
 import routes from "~/routes/web";

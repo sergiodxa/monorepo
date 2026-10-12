@@ -21,8 +21,8 @@ import {
 	CronJobIdSchema,
 	UpdateCronJobSchema,
 } from "~/app/http/validators/cron-job";
-import { invalidCronMessage } from "~/app/lib/cron-text";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
+import { invalidCronMessage } from "~/app/services/cron-text";
 import routes from "~/routes/web";
 
 /**

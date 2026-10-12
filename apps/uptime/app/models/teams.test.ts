@@ -18,9 +18,9 @@ import { describe, expect, test } from "vitest";
 import type { UptimeModels } from "~/app/models";
 import type { AlertConfig, ApiKeyScope } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { generateTeamSlug } from "~/app/models/teams";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import {
 	alertEvents,
 	alerts,

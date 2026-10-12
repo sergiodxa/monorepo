@@ -10,8 +10,8 @@
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { teamDomains } from "~/database/schema";
 
 /** Models over a fresh database, enqueuing into `sent` so a test reads what a write queued. */

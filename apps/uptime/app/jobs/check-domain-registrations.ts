@@ -10,14 +10,14 @@
 import { createJobHandler } from "@sdxc/jobs";
 import { isSuccess } from "@sdxc/result";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { ClaimedRegistration } from "~/app/models/dns-monitors";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { checkRegistration, rdapClient } from "~/app/services/domain-registration";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 
 /**
  * The most monitors one delivery looks up. Each costs one or two registry requests and a D1

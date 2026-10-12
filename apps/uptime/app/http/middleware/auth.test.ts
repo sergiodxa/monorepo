@@ -18,7 +18,7 @@ import { describe, expect, test } from "vitest";
 import type { Viewer } from "~/app/http/middleware/auth";
 
 import { auth, getViewer, isAuthenticated } from "~/app/http/middleware/auth";
-import { signIn, signInWithLapsedTokens } from "~/app/lib/test/auth";
+import { signIn, signInWithLapsedTokens } from "~/app/test/auth";
 
 let viewer: Viewer = {
 	id: "user_1",

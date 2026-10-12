@@ -18,7 +18,7 @@ import { isFailure, success } from "@sdxc/result";
 
 import type { UptimeModels } from "~/app/models";
 
-import { polar } from "~/app/lib/billing";
+import { polar } from "~/app/initializers/billing";
 
 /** What one sync did, for the caller's own log line. */
 export interface EntitlementSync {

@@ -15,9 +15,9 @@ import type { UptimeModels } from "~/app/models";
 import type { ContentCheckRule } from "~/app/models/content-checks";
 import type { SelectMonitorContentCheck } from "~/database/schema";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { evaluateContentChecks } from "~/app/models/content-checks";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { monitorContentChecks } from "~/database/schema";
 
 let db: Database;

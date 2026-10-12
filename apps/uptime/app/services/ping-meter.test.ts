@@ -15,9 +15,9 @@ import { describe, expect, test, vi } from "vitest";
 
 import type { BillablePing } from "~/app/services/ping-meter";
 
-import { PING_METER } from "~/app/lib/billing";
-import { createTestBilling } from "~/app/lib/test/billing";
+import { PING_METER } from "~/app/initializers/billing";
 import { ingestPings } from "~/app/services/ping-meter";
+import { createTestBilling } from "~/app/test/billing";
 
 /** Silences the failure path's console noise so assertions can check the returned boolean. */
 vi.spyOn(console, "error").mockImplementation(() => {});

@@ -22,8 +22,8 @@ import protectedResource from "~/app/http/controllers/api/protected-resource";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { apiKeys, apiKeyScopes, teams } from "~/database/schema";
 import routes from "~/routes/web";
 

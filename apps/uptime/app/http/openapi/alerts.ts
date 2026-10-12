@@ -17,8 +17,8 @@ import { ALERT_EVENT } from "~/app/http/openapi/monitors";
 import { MAX_ROUTING_KEY_LENGTH } from "~/app/http/validators/alert";
 import { deliverableAddress, emailAddress } from "~/app/http/validators/email-address";
 import { discordWebhookUrl, slackWebhookUrl } from "~/app/http/validators/webhook-url";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
-import { MONITOR_SCOPE_TYPES } from "~/app/lib/monitor-scope";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
+import { MONITOR_SCOPE_TYPES } from "~/app/services/monitor-scope";
 import { typedId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 

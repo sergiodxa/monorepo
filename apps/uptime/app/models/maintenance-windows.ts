@@ -18,10 +18,10 @@ import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
 import { generateUUID } from "@sdxc/uuid/v4";
 
-import type { MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SelectMaintenanceWindow } from "~/database/schema";
 
-import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
+import { monitorScopeMatches, storedMonitorScope } from "~/app/services/monitor-scope";
 import { maintenanceWindows } from "~/database/schema";
 
 const WEEKDAYS = [

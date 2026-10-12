@@ -15,8 +15,8 @@ import { createI18n } from "@sdxc/i18n";
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import de from "~/app/locales/de";
-import en from "~/app/locales/en";
+import de from "~/resources/locales/de";
+import en from "~/resources/locales/en";
 
 import AppShell from "./app-shell";
 

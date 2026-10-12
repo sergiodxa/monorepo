@@ -13,11 +13,11 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
 
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
-import { claimDue } from "~/app/lib/scheduling";
-import { emptyEntitlementState, entitlementState } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
+import { claimDue } from "~/app/services/scheduling";
+import { emptyEntitlementState, entitlementState } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { dnsMonitors, monitors, tcpMonitors, teams } from "~/database/schema";
 
 type Db = ReturnType<typeof createTestDatabase>["db"];

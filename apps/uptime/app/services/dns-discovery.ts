@@ -23,10 +23,10 @@ import type {
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { normalizeDnsName } from "~/app/lib/dns-record-value";
 import { summarizeDnsRecordDiff } from "~/app/models/dns-monitor-records";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { QUERIES_PER_NAME, sweepDnsName } from "~/app/services/dns-check";
+import { normalizeDnsName } from "~/app/services/dns-record-value";
 
 /**
  * Outbound subrequests one Worker invocation may make on the paid plan. Every limit below is

@@ -17,7 +17,7 @@ import { toMetadata } from "@sdxc/attribution";
 import { BillingError as BillingFailure, supports } from "@sdxc/billing";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import routes from "~/routes/web";
 
 /** What a hosted page needs to know about the team it was opened for. */

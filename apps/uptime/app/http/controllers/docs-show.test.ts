@@ -22,10 +22,10 @@ import { describe, expect, test } from "vitest";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { SEO } from "~/app/lib/seo";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { SEO } from "~/app/initializers/seo";
 import { apiProblems } from "~/app/services/api-problems";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 import docsShow from "./docs-show";

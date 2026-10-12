@@ -29,14 +29,14 @@ import type { SelectTeam } from "~/database/schema";
 
 import { MAIL_FROM } from "~/app/emails/sender";
 import { TeamDeletedEmail } from "~/app/emails/team-deleted";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
 import { Admin as JobAdmin } from "~/app/jobs/middleware/admin";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, publishModels } from "~/app/lib/test/models";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, publishModels } from "~/app/test/models";
 import { memberships, monitors, teams } from "~/database/schema";
 
 let transport = new MemoryTransport();
@@ -129,9 +129,9 @@ let listMock = vi.spyOn(billing.subscriptions, "list");
 let cancelMock = vi.spyOn(billing.subscriptions, "cancel");
 
 /** The job runs with no request behind it, so it reads the platform from this module. */
-let realBillingModule = await import("~/app/lib/billing");
+let realBillingModule = await import("~/app/initializers/billing");
 
-vi.doMock("~/app/lib/billing", () => ({ ...realBillingModule, polar: billing }));
+vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
 let { default: deleteAccounts } = await import("~/app/jobs/delete-accounts");
 

@@ -30,9 +30,9 @@ import jobs from "~/app/jobs";
 import { Database as JobDatabase } from "~/app/jobs/middleware/database";
 import { Mailer as JobMailer } from "~/app/jobs/middleware/mailer";
 import sendTrialDigests from "~/app/jobs/send-trial-digests";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { installFlags } from "~/app/lib/test/flags";
-import { bindModels, publishModels } from "~/app/lib/test/models";
+import { createTestDatabase } from "~/app/test/db";
+import { installFlags } from "~/app/test/flags";
+import { bindModels, publishModels } from "~/app/test/models";
 import { leads, trialWatches } from "~/database/schema";
 
 const MS_PER_HOUR = 60 * 60 * 1000;

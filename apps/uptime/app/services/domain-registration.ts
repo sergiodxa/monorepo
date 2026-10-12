@@ -17,12 +17,12 @@ import { RDAP } from "@sdxc/rdap";
 import { isSuccess, unwrap } from "@sdxc/result";
 import { env } from "cloudflare:workers";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { UptimeModels } from "~/app/models";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { RegistrationStatus, SelectDnsMonitor } from "~/database/schema";
 
-import { absoluteUrl } from "~/app/lib/origin";
 import { classifyExpiry, shouldRemindOfExpiry } from "~/app/services/expiry";
+import { absoluteUrl } from "~/config/origin";
 
 /** How long a successful lookup is trusted before the next one. */
 const LOOKUP_INTERVAL_MS = DAY_MS;

@@ -16,10 +16,10 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { LeadInput } from "~/app/models/leads";
 import type { TrialWatches } from "~/app/models/trial-watches";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { ORPHANED_LEAD_GRACE_MS, hasMarketingConsent, shouldSendDigest } from "~/app/models/leads";
 import { isConvertible } from "~/app/models/trial-watches";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { leads, trialWatchResults, trialWatches } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

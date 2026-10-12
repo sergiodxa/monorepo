@@ -22,10 +22,10 @@ import { Session } from "remix/session";
 
 import type { DashboardTab } from "~/app/http/controllers/app/team/dashboard-panel";
 
-import { dashboardTab as dashboardTabCookie } from "~/app/http/cookies";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
+import { dashboardTab as dashboardTabCookie } from "~/app/initializers/cookies";
 import StatCardSkeleton from "~/resources/components/stat-card-skeleton";
 import AppShell from "~/resources/layouts/app-shell";
 import DocumentLayout from "~/resources/layouts/document";

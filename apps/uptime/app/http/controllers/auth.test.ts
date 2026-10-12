@@ -29,11 +29,11 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { language as languageCookie, returnTo } from "~/app/http/cookies";
 import { database } from "~/app/http/middleware/database";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { language as languageCookie, returnTo } from "~/app/initializers/cookies";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { monitors, teamDomains, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -110,7 +110,7 @@ vi.doMock("cloudflare:workers", () => ({
  * issuer, which reads the KV binding the moment it is built.
  */
 let { default: models } = await import("~/app/http/middleware/models");
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: auth } = await import("~/app/http/middleware/auth");
 let { default: i18n } = await import("~/app/http/middleware/i18n");
 let { default: authController } = await import("./auth");

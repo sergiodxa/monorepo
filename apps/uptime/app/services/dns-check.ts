@@ -14,14 +14,14 @@ import type { DoH } from "@sdxc/doh";
 import { NameNotFoundError, resolve } from "@sdxc/doh";
 import { isFailure } from "@sdxc/result";
 
-import type { DnsRecordType } from "~/app/lib/dns-record-value";
+import type { DnsRecordType } from "~/app/services/dns-record-value";
 
 import {
 	DNS_RECORD_TYPES,
 	normalizeDnsName,
 	normalizeDnsRecordValue,
 	storedRecordValue,
-} from "~/app/lib/dns-record-value";
+} from "~/app/services/dns-record-value";
 
 export type DnsCheckStatus = "ok" | "changed" | "error";
 

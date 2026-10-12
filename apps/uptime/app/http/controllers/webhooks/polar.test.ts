@@ -22,10 +22,10 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { MONITORING_PRODUCT, PING_METER } from "~/app/lib/billing";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
+import { MONITORING_PRODUCT, PING_METER } from "~/app/initializers/billing";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { billingWebhookDeliveries, monitors, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -41,7 +41,7 @@ let billing = createTestBilling();
 
 billing.seed({ [OTHER_PRODUCT]: { amount: 1900, currency: "usd", interval: "year" } });
 
-vi.doMock("~/app/lib/billing", () => ({
+vi.doMock("~/app/initializers/billing", () => ({
 	polar: billing,
 	MONITORING_PRODUCT,
 	PING_METER,

@@ -14,18 +14,17 @@ import type { CurrentJobContext } from "@sdxc/jobs";
 import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { ClaimedDnsMonitor } from "~/app/models/dns-monitors";
 import type { DnsCheckStatus } from "~/app/services/dns-check";
 import type { DnsCheckPlan } from "~/app/services/dns-discovery";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { BillablePing } from "~/app/services/ping-meter";
 
+import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyDnsResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { QUERIES_PER_NAME } from "~/app/services/dns-check";
 import {
@@ -33,6 +32,7 @@ import {
 	planDnsCheck,
 	recordDnsCheck,
 } from "~/app/services/dns-discovery";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";
 
 /**

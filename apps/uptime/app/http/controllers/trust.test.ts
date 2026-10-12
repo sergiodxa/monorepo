@@ -31,10 +31,10 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { findClaimViolations } from "~/app/lib/public-claims";
-import { SEO } from "~/app/lib/seo";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+import { SEO } from "~/app/initializers/seo";
+import { findClaimViolations } from "~/app/services/public-claims";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";
 
 import trust from "./trust";

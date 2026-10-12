@@ -27,11 +27,11 @@ import { describe, expect, test, vi } from "vitest";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { bindModels } from "~/app/lib/test/models";
-import { signDigestUnsubscribeToken } from "~/app/lib/unsubscribe-token";
 import { wantsEmail } from "~/app/models/user-preferences";
+import { signDigestUnsubscribeToken } from "~/app/services/unsubscribe-token";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
+import { bindModels } from "~/app/test/models";
 import routes from "~/routes/web";
 
 import digestUnsubscribe from "./digest-unsubscribe";
@@ -50,7 +50,7 @@ function createTestRenderer(): Renderer<RemixNode> {
 
 vi.mock("cloudflare:workers", async (importOriginal) => {
 	let original = await importOriginal<typeof import("cloudflare:workers")>();
-	let { withUnsubscribeSecret } = await import("~/app/lib/test/unsubscribe-secret");
+	let { withUnsubscribeSecret } = await import("~/app/test/unsubscribe-secret");
 	return { ...original, env: withUnsubscribeSecret(original.env) };
 });
 

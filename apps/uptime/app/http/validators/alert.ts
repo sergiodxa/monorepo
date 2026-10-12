@@ -15,7 +15,7 @@ import * as f from "remix/data-schema/form-data";
 
 import { deliverableAddress, isEmailAddress } from "~/app/http/validators/email-address";
 import { isDiscordWebhookUrl, isSlackWebhookUrl } from "~/app/http/validators/webhook-url";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/lib/alert-policy";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
 
 /**
  * PagerDuty issues 32-character integration keys; the ceiling leaves room for other key
@@ -38,7 +38,7 @@ const alertFields = {
 	strategy: f.field(s.enum_(ALERT_STRATEGIES)),
 	/**
 	 * The `(monitor_type, monitor_id)` pair encoded as one control value (see
-	 * `~/app/lib/monitor-scope`). Resolved in the action, the only place that can
+	 * `~/app/services/monitor-scope`). Resolved in the action, the only place that can
 	 * confirm the monitor still exists and belongs to the team.
 	 */
 	scope: f.field(s.defaulted(s.string(), "")),

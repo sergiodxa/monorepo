@@ -30,10 +30,10 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { flowMonitors, memberships, monitors, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The bindings the import chain captures on load, so they live at module scope. */
@@ -62,7 +62,7 @@ let { default: statusPageNewAction } = await import("./status-page-new");
 let statusPageNewModule = statusPageNewAction as unknown as { handler: RequestHandler<any> };
 
 /**
- * Stand-in for `bootstrap/app.tsx`'s `renderWith(createHtmlRenderer)`, sized
+ * Stand-in for `app/initializers/router.tsx`'s `renderWith(createHtmlRenderer)`, sized
  * for a single-request page test where `resolveFrame` only ever returns a
  * harmless no-op.
  */

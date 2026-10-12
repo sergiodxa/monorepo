@@ -31,16 +31,16 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { Viewer } from "~/app/http/middleware/auth";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestBilling } from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import en from "~/app/locales/en";
+import { createTestBilling } from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The `GeoFetchDO` stub every probe goes through: one healthy answer, in 12 ms. */
@@ -58,6 +58,7 @@ let deferred: Promise<unknown>[] = [];
 let pingResults = createAnalyticsEngine();
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -65,8 +66,6 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
-	/** A type-only stand-in that `~/app/do/geo-fetch` extends at module load. */
-	DurableObject: class {},
 }));
 
 /**
@@ -99,7 +98,7 @@ let sessionStorage = createMemorySessionStorage();
 
 /**
  * Fetches a frame's HTML through the router the document is rendered by —
- * the same shape as `bootstrap/app.tsx`'s `resolveFrame`, minus the redirect
+ * the same shape as `app/initializers/router.tsx`'s `resolveFrame`, minus the redirect
  * chasing no route here needs. Stubbing this out hid the flash bug, so it has to stay real.
  */
 async function resolveFrame(
@@ -122,7 +121,7 @@ async function resolveFrame(
 	return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`;
 }
 
-/** Request-scoped HTML renderer mirroring `bootstrap/app.tsx`'s, frame resolution and all. */
+/** Request-scoped HTML renderer mirroring `app/initializers/router.tsx`'s, frame resolution and all. */
 function createHtmlRenderer(ctx: RequestContext) {
 	return async function render(node: RemixNode, init?: ResponseInit) {
 		let stream = renderToStream(await withDocumentAssets(node), {

@@ -33,7 +33,6 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { GeoFetchDO } from "~/app/do/geo-fetch";
 import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { Viewer } from "~/app/http/middleware/auth";
 import type {
@@ -42,19 +41,20 @@ import type {
 	TrialRefusal,
 	TrialRefusalReason,
 } from "~/app/services/trial-guard";
+import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
-import { BASE_PRICE_USD } from "~/app/lib/pricing";
 import {
 	createActiveSubscription,
 	createRevokedSubscription,
 	createTestBilling,
-} from "~/app/lib/test/billing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
-import { honeypotFields, testHoneypot } from "~/app/lib/test/honeypot";
+} from "~/app/test/billing";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
+import { honeypotFields, testHoneypot } from "~/app/test/honeypot";
+import { BASE_PRICE_USD } from "~/config/pricing";
 import { memberships, teams } from "~/database/schema";
 import routes from "~/routes/web";
 
@@ -77,6 +77,7 @@ let geoFetch = createDurableObjectNamespace<GeoFetchDO>(() => ({ fetch: doFetch 
 let deferred: Promise<unknown>[] = [];
 
 vi.doMock("cloudflare:workers", () => ({
+	DurableObject: class {},
 	env: createEnv<Env>({
 		GEO_FETCH: geoFetch,
 		PING_RESULTS: pingResults,
@@ -84,7 +85,6 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: (promise: Promise<unknown>) => {
 		deferred.push(promise);
 	},
-	DurableObject: class {},
 }));
 
 /**
@@ -118,7 +118,7 @@ vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstile
 let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
 	await import("~/app/http/controllers/trial/session");
 let { default: models } = await import("~/app/http/middleware/models");
-let { NO_REDIRECT_HEADER } = await import("~/app/do/geo-fetch");
+let { NO_REDIRECT_HEADER } = await import("~/app/services/geo-fetch");
 let { default: trialCheck } = await import("./index");
 
 /** Renders through `renderToString`, sufficient for a page that outputs plain HTML. */
@@ -238,7 +238,7 @@ async function dispatch(request: Request, session: Session, actor?: Actor) {
 }
 
 /**
- * The subscription price as the page states it, computed from `~/app/lib/pricing`
+ * The subscription price as the page states it, computed from `~/config/pricing`
  * so a price change moves the assertion together with the product.
  */
 const PRICE = BASE_PRICE_USD.toLocaleString("en", {

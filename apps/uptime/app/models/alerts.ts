@@ -1,6 +1,6 @@
 /**
  * A team's alerts: where a check result is announced and how often. Scoping is the
- * `(monitor_type, monitor_id)` pair from `~/app/lib/monitor-scope`, so an alert watches
+ * `(monitor_type, monitor_id)` pair from `~/app/services/monitor-scope`, so an alert watches
  * everything, one monitor type, or one monitor of one type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -12,10 +12,10 @@ import type { ModelRow } from "@sdxc/data-model";
 import { createModel } from "@sdxc/data-model";
 import { generateUUID } from "@sdxc/uuid/v4";
 
-import type { MonitorScopeType } from "~/app/lib/monitor-scope";
+import type { MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SelectAlert } from "~/database/schema";
 
-import { monitorScopeMatches, storedMonitorScope } from "~/app/lib/monitor-scope";
+import { monitorScopeMatches, storedMonitorScope } from "~/app/services/monitor-scope";
 import { alerts } from "~/database/schema";
 
 /** Per-team limit from `docs/alerts.md`. */

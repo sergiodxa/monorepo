@@ -19,9 +19,9 @@ import type { Database } from "remix/data-table";
 import { unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { wantsEmail } from "~/app/models/user-preferences";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { userPreferences } from "~/database/schema";
 
 /**

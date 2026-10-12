@@ -12,12 +12,12 @@
 import { DAY_MS } from "@sdxc/dates/zone";
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { BatchedSweepResult } from "~/app/lib/retention";
 import type { UptimeModels } from "~/app/models";
+import type { BatchedSweepResult } from "~/app/services/retention";
 
 import jobs from "~/app/jobs";
-import { deleteOlderThan } from "~/app/lib/retention";
 import { apportionCost } from "~/app/services/cost";
+import { deleteOlderThan } from "~/app/services/retention";
 
 /**
  * Retention windows, in days, one named constant per table so each is tunable without

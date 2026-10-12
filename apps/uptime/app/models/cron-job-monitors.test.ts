@@ -14,9 +14,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { UptimeModels } from "~/app/models";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels, recordJobs } from "~/app/lib/test/models";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels, recordJobs } from "~/app/test/models";
 import { cronJobPings } from "~/database/schema";
 
 let db: Database;

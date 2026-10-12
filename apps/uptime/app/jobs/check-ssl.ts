@@ -12,14 +12,14 @@
 import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { UptimeModels } from "~/app/models";
 import type { Monitor } from "~/app/models/monitors";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 
 import jobs from "~/app/jobs";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 import { calculateSslStatus, shouldAlertOnSslStatus } from "~/app/services/ssl-info";
 
 export default createJobHandler(jobs.checkSsl, async (ctx) => {

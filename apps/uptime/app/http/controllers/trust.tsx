@@ -19,7 +19,7 @@ import { Typeset } from "@sdxc/ui";
 import { createAction } from "remix/router";
 
 import { getViewer } from "~/app/http/middleware/auth";
-import { SEO } from "~/app/lib/seo";
+import { SEO } from "~/app/initializers/seo";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";
 import routes from "~/routes/web";

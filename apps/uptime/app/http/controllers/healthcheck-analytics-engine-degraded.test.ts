@@ -18,7 +18,7 @@ import { createRouter } from "remix/router";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
+import { createTestDatabase } from "~/app/test/db";
 import routes from "~/routes/web";
 
 /** The write binding the controller probes; module-scoped because `env` is captured on import. */

@@ -15,7 +15,7 @@
 import { renderToString } from "remix/component/server";
 import { describe, expect, test } from "vitest";
 
-import { assets } from "~/app/lib/assets";
+import { assets } from "~/app/initializers/assets";
 
 import { RangeSlider } from "./range-slider";
 

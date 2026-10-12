@@ -12,7 +12,7 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
-import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/app/lib/timezones";
+import { DEFAULT_TIMEZONE, UNKNOWN_TIMEZONE_MESSAGE } from "~/config/timezones";
 
 /** Field shape shared by the create and update cron-job monitor forms. */
 const cronJobFields = {

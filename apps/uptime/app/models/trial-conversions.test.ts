@@ -13,9 +13,9 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { TrialSignup } from "~/app/models/trial-conversions";
 
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
 import { trialConversionUrls } from "~/app/models/trial-conversions";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
 import { trialConversions } from "~/database/schema";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;

@@ -19,8 +19,8 @@ import { Select, Switch, TextArea, TextField } from "@sdxc/ui";
 
 import type { SelectFlowMonitor } from "~/database/schema";
 
-import { withPrefix } from "~/app/lib/prefixed-translate";
-import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/app/lib/pricing";
+import { withPrefix } from "~/app/services/prefixed-translate";
+import { DEFAULT_FLOW_INTERVAL_SECONDS, FLOW_INTERVALS_SECONDS } from "~/config/pricing";
 import Field from "~/resources/components/field";
 
 namespace FlowMonitorFormFields {

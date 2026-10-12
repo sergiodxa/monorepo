@@ -18,8 +18,8 @@ import { getTableName } from "remix/data-table";
 
 import type { SelectSubscription } from "~/database/schema";
 
-import { MONITORING_PRODUCT } from "~/app/lib/billing";
-import { nextDueAtOnEnable } from "~/app/lib/scheduling";
+import { MONITORING_PRODUCT } from "~/app/initializers/billing";
+import { nextDueAtOnEnable } from "~/app/services/scheduling";
 import { dnsMonitors, monitors, subscriptions, tcpMonitors, teams } from "~/database/schema";
 
 /**

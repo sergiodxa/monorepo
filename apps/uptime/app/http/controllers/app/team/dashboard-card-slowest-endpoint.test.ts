@@ -1,6 +1,6 @@
 /**
  * Tests for the dashboard "Slowest Endpoint" stat-card fragment controller.
- * `cloudflare:workers` is mocked because `~/app/lib/queue` and
+ * `cloudflare:workers` is mocked because `~/app/initializers/queue` and
  * `~/app/services/analytics` both read `env` at module load, and `queryAnalytics`'s
  * Analytics Engine SQL API call is intercepted by MSW, so it never hits the
  * network. `ctx.team`/`ctx.membership`/auth/intl state is seeded directly,
@@ -36,9 +36,9 @@ import type { Viewer } from "~/app/http/middleware/auth";
 import type { SelectMembership, SelectTeam } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { createTestDatabase } from "~/app/lib/test/db";
-import en from "~/app/locales/en";
+import { createTestDatabase } from "~/app/test/db";
 import { memberships, teams } from "~/database/schema";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /**
@@ -60,7 +60,7 @@ vi.doMock("cloudflare:workers", () => ({
 	}),
 }));
 
-let { bindModels } = await import("~/app/lib/test/models");
+let { bindModels } = await import("~/app/test/models");
 let { default: models } = await import("~/app/http/middleware/models");
 let dashboardCardSlowestEndpoint = (await import("./dashboard-card-slowest-endpoint")).default as {
 	handler: RequestHandler<any>;

@@ -11,21 +11,21 @@
 
 import { createJobHandler } from "@sdxc/jobs";
 
-import type { NotifyMessage } from "~/app/lib/notify-queue";
 import type { UptimeModels } from "~/app/models";
 import type { ClaimedFlowMonitor } from "~/app/models/flow-monitors";
+import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { BillablePing } from "~/app/services/ping-meter";
 import type { FlowStatus } from "~/database/schema";
 
+import { polar } from "~/app/initializers/billing";
+import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
-import { polar } from "~/app/lib/billing";
-import { mapWithConcurrency } from "~/app/lib/concurrency";
-import { features } from "~/app/lib/flags";
-import { enqueueNotifications } from "~/app/lib/notify-queue";
 import { shouldNotifyFlowResult } from "~/app/services/alerts";
 import { writePingResult } from "~/app/services/analytics";
+import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { runFlowCheck } from "~/app/services/flow-check";
+import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";
 
 /** What one completed run produced, beyond the row it wrote. */

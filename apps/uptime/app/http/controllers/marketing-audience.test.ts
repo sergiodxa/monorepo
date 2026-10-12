@@ -22,15 +22,15 @@ import { describe, expect, test } from "vitest";
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
+import { createTestDatabase } from "~/app/test/db";
+import { withDocumentAssets } from "~/app/test/document-assets";
 import {
 	BASE_PRICE_USD,
 	formatPings,
 	formatUsd,
 	FREE_TRIAL_DAYS,
 	INCLUDED_PINGS,
-} from "~/app/lib/pricing";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { withDocumentAssets } from "~/app/lib/test/document-assets";
+} from "~/config/pricing";
 import { audiences } from "~/resources/content/marketing";
 import routes from "~/routes/web";
 

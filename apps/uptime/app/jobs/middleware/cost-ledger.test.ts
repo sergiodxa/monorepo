@@ -20,7 +20,7 @@ vi.doMock("cloudflare:workers", () => ({
 	env: createEnv<Env>({ COSTS: costs }),
 }));
 
-let { COST_RESOURCES } = await import("~/app/lib/cost-rates");
+let { COST_RESOURCES } = await import("~/app/services/cost-rates");
 let { default: jobs } = await import("~/app/jobs");
 let { costLedger } = await import("./cost-ledger");
 

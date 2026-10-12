@@ -16,8 +16,8 @@ import { HttpResponse, delay, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { FLOW_RUN_MAX_RESPONSE_BYTES } from "~/app/lib/pricing";
 import { resolveAllowedHosts, runFlowCheck, specHosts } from "~/app/services/flow-check";
+import { FLOW_RUN_MAX_RESPONSE_BYTES } from "~/config/pricing";
 
 const DOMAIN = "example.test";
 const HOST = `app.${DOMAIN}`;

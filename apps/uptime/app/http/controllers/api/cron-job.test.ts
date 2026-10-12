@@ -18,12 +18,12 @@ import type { ApiKeyScope, SelectCronJobMonitor, SelectTeam } from "~/database/s
 
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
-import { createTestDatabase } from "~/app/lib/test/db";
-import { bindModels } from "~/app/lib/test/models";
-import { checkConformance } from "~/app/lib/test/openapi";
-import { expectProblem, problemMessages } from "~/app/lib/test/problem";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
 import { encodeId } from "~/app/services/typed-id";
+import { createTestDatabase } from "~/app/test/db";
+import { bindModels } from "~/app/test/models";
+import { checkConformance } from "~/app/test/openapi";
+import { expectProblem, problemMessages } from "~/app/test/problem";
 import { teams } from "~/database/schema";
 import { cronJobRoutes } from "~/routes/api-groups";
 import routes from "~/routes/web";

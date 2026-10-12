@@ -26,10 +26,10 @@ import {
 	UPDATE_MAINTENANCE_BODY,
 	WRITABLE_MAINTENANCE,
 } from "~/app/http/openapi/maintenance";
-import { storedMonitorScope } from "~/app/lib/monitor-scope";
 import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
 import { apiSuccess } from "~/app/services/api-response";
 import { readApiUpdate } from "~/app/services/api-update";
+import { storedMonitorScope } from "~/app/services/monitor-scope";
 import { isResolvableScope } from "~/app/services/scope-monitors";
 import { encodeMonitorId } from "~/app/services/typed-id";
 import { maintenanceWindowRoutes } from "~/routes/api-groups";
