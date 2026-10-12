@@ -1,7 +1,7 @@
 /**
  * The footer every public blog page ends on: labeled columns of the places a reader reaches
- * once — every section to read, every feed and the Fediverse handle to follow, the sponsors
- * page, the author elsewhere — and, last and quietest, the author's CMS dashboard.
+ * once — every kind's topic to read, every topic, every feed and the Fediverse handle to
+ * follow, the sponsors page, the author elsewhere — and, last and quietest, the CMS dashboard.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -16,6 +16,7 @@ import { m, mbs, p, pbs } from "@sdxc/u/size";
 import { text, textTransform, tracking } from "@sdxc/u/typography";
 import { NavLink } from "@sdxc/ui";
 
+import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import { ACTOR_ID } from "~/config/activitypub";
 import { PROFILE } from "~/config/profile";
 import routes from "~/routes/web";
@@ -49,19 +50,20 @@ export namespace BlogFooter {
 export const FEDIVERSE_HANDLE = `@${PROFILE.canonical.resource.replace(/^acct:/, "")}`;
 
 /**
- * The footer's columns in reading order. A new section or destination is one entry in its
- * column's `links`, and a new column one entry here; the grid makes room for either.
+ * The footer's columns in reading order. "Read" lists every kind's topic from the registry; any
+ * other destination is one entry in its column's `links`, and a new column one entry here.
  */
 export const FOOTER_COLUMNS: Array<BlogFooter.Column> = [
 	{
 		title: "Read",
-		links: [
-			{ label: "Articles", href: routes.articles.href() },
-			{ label: "Tutorials", href: routes.tutorials.href() },
-			{ label: "Bookmarks", href: routes.bookmarks.href() },
-			{ label: "Glossary", href: routes.glossary.href() },
-			{ label: "Releases", href: routes.releases.href() },
-		],
+		links: KINDS.map((kind) => ({
+			label: POST_KINDS[kind].plural,
+			href: `/${POST_KINDS[kind].topic}`,
+		})),
+	},
+	{
+		title: "Topics",
+		links: [{ label: "All topics", href: routes.topics.href() }],
 	},
 	{
 		title: "Follow",

@@ -25,6 +25,7 @@ import { font, text, textDecoration, textTransform, tracking } from "@sdxc/u/typ
 import { Dialog } from "@sdxc/ui";
 import { Frame } from "remix/component";
 
+import { KINDS, POST_KINDS } from "~/app/models/kinds";
 import { PROFILE } from "~/config/profile";
 import { BlogFooter } from "~/resources/components/blog-footer";
 import { NavPill, WIDE_SCREEN } from "~/resources/components/nav-pill";
@@ -86,12 +87,10 @@ export namespace BlogLayout {
 	}
 }
 
-let navigationItems: Array<BlogLayout.NavigationItem> = [
+/** Home, then every kind's topic page in registry order, so a new kind joins the bar. */
+const NAVIGATION_ITEMS: Array<BlogLayout.NavigationItem> = [
 	{ href: routes.feed.href(), label: "Home" },
-	{ href: routes.articles.href(), label: "Articles" },
-	{ href: routes.tutorials.href(), label: "Tutorials" },
-	{ href: routes.bookmarks.href(), label: "Bookmarks" },
-	{ href: routes.glossary.href(), label: "Glossary" },
+	...KINDS.map((kind) => ({ href: `/${POST_KINDS[kind].topic}`, label: POST_KINDS[kind].plural })),
 ];
 
 /**
@@ -180,7 +179,7 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							<data mix={[mf("p-note")]} value={PROFILE.summary} />
 						</p>
 						<nav aria-label="Main" mix={[gridArea("nav"), hstack({ gap: 2 }), flexWrap("wrap")]}>
-							{navigationItems.map((item) => {
+							{NAVIGATION_ITEMS.map((item) => {
 								let isActive = activePath === item.href;
 
 								return (
