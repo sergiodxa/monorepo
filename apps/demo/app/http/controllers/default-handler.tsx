@@ -18,9 +18,11 @@ import routes from "~/routes/web";
  * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
  * router derives `AppContext` from the very options this handler is passed in.
  */
-export default function defaultHandler(ctx: Pick<RequestContext, "render" | "intl" | "locale">) {
+export default function defaultHandler(
+	ctx: Pick<RequestContext, "assets" | "render" | "intl" | "locale">,
+) {
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("notFound.title")} locale={ctx.locale}>
+		<DocumentLayout assets={ctx.assets} title={ctx.intl.t("notFound.title")} locale={ctx.locale}>
 			<Empty color="neutral">
 				<Empty.Title>{ctx.intl.t("notFound.title")}</Empty.Title>
 				<Empty.Description>{ctx.intl.t("notFound.description")}</Empty.Description>

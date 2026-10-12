@@ -1,7 +1,7 @@
 /**
  * The board's fetch-router: the global middleware stack, every route mapped onto its
- * controller, and the renderer controllers reach through `ctx.render`. The worker builds it
- * per request and the router tests build the same one over their own database and captcha.
+ * controller, and the document assets and renderer controllers reach through `ctx`. The
+ * worker builds it per request; the router tests build it over their own database and captcha.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -11,6 +11,7 @@ import type { Captcha } from "@sdxc/captcha";
 import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RouterContext } from "remix/router";
 
+import { assets } from "@sdxc/assets-middleware";
 import { captcha } from "@sdxc/captcha/middleware";
 import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
@@ -20,15 +21,14 @@ import { log } from "@sdxc/logger/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
 import jobs from "~/app/http/middleware/jobs";
 import models from "~/app/http/middleware/models";
 import callerBudget from "~/app/http/middleware/rate-limit";
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { captchaProvider } from "~/app/initializers/captcha";
 import { openDatabase } from "~/app/initializers/database";
 import { FALLBACK_LANGUAGE, resources, SUPPORTED_LANGUAGES } from "~/app/initializers/i18n";
@@ -79,8 +79,11 @@ export function createWebRouter(
 			database(openDb()),
 			models(),
 			jobs(openDb),
-			render({ assets }),
-			renderWith(withDocumentAssets),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
 		],
 		defaultHandler,
 	});

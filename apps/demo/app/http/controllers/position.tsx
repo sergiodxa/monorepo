@@ -48,7 +48,7 @@ export default createAction(routes.position, async (ctx) => {
 		if (isFrameRequest(ctx.request)) return ctx.render(missing, { status: 404 });
 
 		return ctx.render(
-			<DocumentLayout title={ctx.intl.t("notFound.title")} locale={ctx.locale}>
+			<DocumentLayout assets={ctx.assets} title={ctx.intl.t("notFound.title")} locale={ctx.locale}>
 				<HeadingScope level={1}>{missing}</HeadingScope>
 			</DocumentLayout>,
 			{ status: 404 },
@@ -76,7 +76,11 @@ export default createAction(routes.position, async (ctx) => {
 	if (isFrameRequest(ctx.request)) return ctx.render(detail);
 
 	return ctx.render(
-		<DocumentLayout title={`${posting.title} — ${posting.company}`} locale={ctx.locale}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={`${posting.title} — ${posting.company}`}
+			locale={ctx.locale}
+		>
 			<div mix={[vstack({ gap: 8 })]}>
 				<header mix={[vstack({ gap: 4 })]}>
 					<div mix={[vstack({ gap: 2 })]}>

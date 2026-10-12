@@ -40,8 +40,7 @@ shortest correct version of a thing wins over the clever one.
 | MCP server                    | `app/initializers/mcp.ts`        |
 | Job dispatcher and its queue  | `app/initializers/dispatcher.ts` |
 | In-memory adapters            | `app/initializers/`              |
-| Built asset URLs (manifest)   | `app/initializers/assets.ts`     |
-| Document assets on each page  | `app/http/render.tsx`            |
+| Asset resolver (manifest)     | `app/initializers/assets.ts`     |
 | Models and their registry     | `app/models/`                    |
 | Test factories                | `database/factories/`            |
 | Palette the theme derives     | `resources/css/colors.css`       |

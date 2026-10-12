@@ -16,6 +16,7 @@
 	},
 	"dependencies": {
 		"@pitlane/assets": "0.1.0",
+		"@sdxc/assets-middleware": "workspace:*",
 		"@sdxc/cache": "workspace:*",
 		"@sdxc/captcha": "workspace:*",
 		"@sdxc/data-model": "workspace:*",

@@ -44,7 +44,12 @@ async function renderBoard(ctx: AppContext, error?: string): Promise<Response> {
 	let postings = await openPostings(ctx);
 
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("board.title")} locale={ctx.locale} hydrates>
+		<DocumentLayout
+			assets={ctx.assets}
+			title={ctx.intl.t("board.title")}
+			locale={ctx.locale}
+			hydrates
+		>
 			<BoardView intl={ctx.intl} postings={postings} siteKey={turnstileSiteKey()} error={error} />
 		</DocumentLayout>,
 		{ status: error ? 400 : 200 },

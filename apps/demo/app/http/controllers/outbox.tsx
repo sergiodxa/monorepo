@@ -21,7 +21,7 @@ export default createAction(routes.outbox, (ctx) => {
 	let messages = [...outbox.messages].reverse();
 
 	return ctx.render(
-		<DocumentLayout title={ctx.intl.t("outbox.title")} locale={ctx.locale}>
+		<DocumentLayout assets={ctx.assets} title={ctx.intl.t("outbox.title")} locale={ctx.locale}>
 			<div mix={[vstack({ gap: 8 })]}>
 				<header mix={[vstack({ gap: 4 })]}>
 					<div mix={[vstack({ gap: 2 })]}>
