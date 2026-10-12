@@ -23,7 +23,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { tenant } from "~/app/http/middleware/tenant";
 import { interactiveCredentialRateLimit } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
 
@@ -52,7 +52,7 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 		let limiter = countingLimiter(10);
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			...(htmlRenderer() as readonly Middleware[]),
+			...hostedDocumentMiddleware(),
 			formData() as Middleware,
 			i18n as Middleware,
 			turnstileProvider(harness.turnstile),
@@ -95,7 +95,7 @@ describe("signInSubmit under interactiveCredentialRateLimit", () => {
 		let limiter = countingLimiter(10);
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			...(htmlRenderer() as readonly Middleware[]),
+			...hostedDocumentMiddleware(),
 			formData() as Middleware,
 			i18n as Middleware,
 			turnstileProvider(harness.turnstile),

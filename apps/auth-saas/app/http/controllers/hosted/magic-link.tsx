@@ -103,7 +103,11 @@ function renderRequestForm(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedMagicLink.requestTitle")} locale={ctx.locale}>
+		<HostedDocument
+			assets={ctx.assets}
+			title={t("hostedMagicLink.requestTitle")}
+			locale={ctx.locale}
+		>
 			<MagicLinkPage
 				t={t}
 				state="request"
@@ -123,7 +127,11 @@ function renderInvalid(ctx: RequestContext): Promise<Response> {
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedMagicLink.invalid.heading")} locale={ctx.locale}>
+		<HostedDocument
+			assets={ctx.assets}
+			title={t("hostedMagicLink.invalid.heading")}
+			locale={ctx.locale}
+		>
 			<MagicLinkPage t={t} state="invalid" requestHref={freshRequestHref(ctx)} />
 		</HostedDocument>,
 		{ status: 400 },
@@ -138,7 +146,11 @@ function renderConfirmation(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedMagicLink.confirmation.heading")} locale={ctx.locale}>
+		<HostedDocument
+			assets={ctx.assets}
+			title={t("hostedMagicLink.confirmation.heading")}
+			locale={ctx.locale}
+		>
 			<MagicLinkPage
 				t={t}
 				state="confirmation"
@@ -278,7 +290,11 @@ export const magicLinkCompleteShow = createAction(
 		let t = ctx.intl.t;
 
 		return ctx.render(
-			<HostedDocument title={t("hostedMagicLink.tokenLanding.heading")} locale={ctx.locale}>
+			<HostedDocument
+				assets={ctx.assets}
+				title={t("hostedMagicLink.tokenLanding.heading")}
+				locale={ctx.locale}
+			>
 				<MagicLinkPage
 					t={t}
 					state="tokenLanding"
@@ -334,7 +350,11 @@ export const magicLinkCompleteSubmit = createAction(
 
 		if (completed.outcome === "wrong_browser") {
 			return ctx.render(
-				<HostedDocument title={t("hostedMagicLink.wrongBrowser.heading")} locale={ctx.locale}>
+				<HostedDocument
+					assets={ctx.assets}
+					title={t("hostedMagicLink.wrongBrowser.heading")}
+					locale={ctx.locale}
+				>
 					<MagicLinkPage t={t} state="wrongBrowser" requestHref={freshRequestHref(ctx)} />
 				</HostedDocument>,
 				{ status: 400 },
@@ -351,7 +371,11 @@ export const magicLinkCompleteSubmit = createAction(
 
 		if (completed.outcome === "dau_cap_reached") {
 			return ctx.render(
-				<HostedDocument title={t("hostedMagicLink.requestTitle")} locale={ctx.locale}>
+				<HostedDocument
+					assets={ctx.assets}
+					title={t("hostedMagicLink.requestTitle")}
+					locale={ctx.locale}
+				>
 					<MagicLinkPage t={t} state="dauCapReached" />
 				</HostedDocument>,
 				{ status: 400 },

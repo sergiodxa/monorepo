@@ -81,7 +81,7 @@ function renderRequestForm(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedReset.requestTitle")} locale={ctx.locale}>
 			<ResetPage
 				t={t}
 				state="request"
@@ -106,7 +106,7 @@ function renderCompleteForm(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedReset.completeTitle")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedReset.completeTitle")} locale={ctx.locale}>
 			<ResetPage
 				t={t}
 				state="complete"
@@ -195,7 +195,11 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, {
 			}
 
 			return ctx.render(
-				<HostedDocument title={t("hostedReset.requestTitle")} locale={ctx.locale}>
+				<HostedDocument
+					assets={ctx.assets}
+					title={t("hostedReset.requestTitle")}
+					locale={ctx.locale}
+				>
 					<ResetPage t={t} state="requested" />
 				</HostedDocument>,
 			);
@@ -213,7 +217,11 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, {
 		if (!completed.ok) {
 			if (completed.reason === "invalid-ticket") {
 				return ctx.render(
-					<HostedDocument title={t("hostedReset.invalidTicket.heading")} locale={ctx.locale}>
+					<HostedDocument
+						assets={ctx.assets}
+						title={t("hostedReset.invalidTicket.heading")}
+						locale={ctx.locale}
+					>
 						<ResetPage t={t} state="invalidTicket" requestHref={freshRequestHref(ctx)} />
 					</HostedDocument>,
 					{ status: 400 },
@@ -226,7 +234,11 @@ export const resetSubmit = createAction(routes.hostedResetSubmit, {
 		}
 
 		return ctx.render(
-			<HostedDocument title={t("hostedReset.completeSuccess.heading")} locale={ctx.locale}>
+			<HostedDocument
+				assets={ctx.assets}
+				title={t("hostedReset.completeSuccess.heading")}
+				locale={ctx.locale}
+			>
 				<ResetPage t={t} state="completed" signInHref={signInHref(ctx)} />
 			</HostedDocument>,
 		);

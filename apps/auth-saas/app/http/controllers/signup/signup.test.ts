@@ -102,7 +102,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
 let { Mail } = await import("~/app/http/middleware/mail");
-let { htmlRenderer } = await import("~/app/http/render");
+let { hostedDocumentMiddleware } = await import("~/app/test/document-middleware");
 let { signupShow, signupSubmit } = await import("~/app/http/controllers/signup/show");
 let { turnstileProvider } = await import("~/app/http/middleware/turnstile-verification");
 let signupPending = (await import("~/app/http/controllers/signup/pending")).default;
@@ -180,7 +180,7 @@ function buildRouter() {
 			ctx.set(Mail, mailer, { property: "mail" });
 			return next();
 		},
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 		turnstileProvider(turnstile),
 	];

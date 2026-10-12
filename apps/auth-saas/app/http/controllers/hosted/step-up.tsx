@@ -62,7 +62,7 @@ export const stepUpShow = createAction(routes.hostedStepUpShow, async (ctx) => {
 		if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 		return ctx.render(
-			<HostedDocument title={t("hostedStepUp.enrol.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedStepUp.enrol.title")} locale={ctx.locale}>
 				<EnrolTotpFactorPage
 					t={t}
 					title={t("hostedStepUp.enrol.title")}
@@ -169,7 +169,11 @@ export const stepUpEnrolSubmit = createAction(routes.hostedStepUpEnrolSubmit, as
 	}
 
 	return ctx.render(
-		<HostedDocument title={t("hostedStepUp.recoveryCodes.title")} locale={ctx.locale}>
+		<HostedDocument
+			assets={ctx.assets}
+			title={t("hostedStepUp.recoveryCodes.title")}
+			locale={ctx.locale}
+		>
 			<RecoveryCodesPage
 				t={t}
 				title={t("hostedStepUp.recoveryCodes.title")}

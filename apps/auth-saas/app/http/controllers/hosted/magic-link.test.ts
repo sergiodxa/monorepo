@@ -33,7 +33,7 @@ import { platformSender } from "~/app/http/middleware/mail-sender";
 import { tenant } from "~/app/http/middleware/tenant";
 import { magicLinkRateLimit } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import {
 	buildHarness,
 	cookieFrom,
@@ -397,7 +397,7 @@ describe("magicLinkSubmit under magicLinkRateLimit", () => {
 		let testSender = { email: "no-reply@example.com", name: "Test Sender" };
 		let middleware: Middleware[] = [
 			tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-			...(htmlRenderer() as readonly Middleware[]),
+			...hostedDocumentMiddleware(),
 			formData() as Middleware,
 			i18n as Middleware,
 			platformSender(testSender),

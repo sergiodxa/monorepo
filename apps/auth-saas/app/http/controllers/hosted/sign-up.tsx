@@ -75,7 +75,7 @@ async function renderSignUpPage(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedSignUp.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedSignUp.title")} locale={ctx.locale}>
 			<SignUpPage
 				t={t}
 				action={actionUrl(ctx, routes.hostedSignUpSubmit.href())}

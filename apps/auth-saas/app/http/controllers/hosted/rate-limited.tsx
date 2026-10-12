@@ -27,7 +27,7 @@ export async function renderRateLimitedPage(ctx: RequestContext): Promise<Respon
 	let correlationId = crypto.randomUUID();
 
 	return ctx.render(
-		<HostedDocument title={t("hostedError.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedError.title")} locale={ctx.locale}>
 			<ErrorPage
 				t={t}
 				description={t("hostedError.tooManyAttempts")}

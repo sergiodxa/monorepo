@@ -54,7 +54,7 @@ export const hostedDeviceShow = createAction(routes.hostedDeviceShow, async (ctx
 
 	if (!userCode) {
 		return ctx.render(
-			<HostedDocument title={t("hostedDevice.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedDevice.title")} locale={ctx.locale}>
 				<DeviceCodePage
 					t={t}
 					action={routes.hostedDeviceShow.href()}
@@ -78,7 +78,7 @@ export const hostedDeviceShow = createAction(routes.hostedDeviceShow, async (ctx
 				: t("hostedDevice.errors.unknown");
 
 		return ctx.render(
-			<HostedDocument title={t("hostedDevice.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedDevice.title")} locale={ctx.locale}>
 				<DeviceCodePage
 					t={t}
 					action={routes.hostedDeviceShow.href()}
@@ -130,6 +130,7 @@ export const hostedDeviceSubmit = createAction(routes.hostedDeviceSubmit, async 
 
 	return ctx.render(
 		<HostedDocument
+			assets={ctx.assets}
 			title={
 				decided.approved ? t("hostedDevice.done.approvedTitle") : t("hostedDevice.done.deniedTitle")
 			}

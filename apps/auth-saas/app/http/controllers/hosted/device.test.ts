@@ -27,7 +27,7 @@ import { serializeSessionCookie } from "~/app/http/middleware/hosted-session";
 import i18n from "~/app/http/middleware/i18n";
 import { tenant } from "~/app/http/middleware/tenant";
 import { deviceApprovalRateLimit } from "~/app/http/middleware/tenant-rate-limit";
-import { htmlRenderer } from "~/app/http/render";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { buildHarness, cookieFrom, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import routes from "~/routes/tenant";
 
@@ -275,7 +275,7 @@ function memoryKv(): RateLimitKVNamespace {
 function buildRateLimitedRouter(sessionKv: RateLimitKVNamespace, addressKv: RateLimitKVNamespace) {
 	let middleware: Middleware[] = [
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 		i18n as Middleware,
 	];

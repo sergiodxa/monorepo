@@ -41,7 +41,7 @@ function renderPending(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedVerify.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedVerify.title")} locale={ctx.locale}>
 			<VerifyPage
 				t={t}
 				state="pending"
@@ -70,7 +70,7 @@ export const verifyShow = createAction(routes.hostedVerifyShow, async (ctx) => {
 		let verified = await ctx.tenantStub.verifyIdentifier({ ticket });
 
 		return ctx.render(
-			<HostedDocument title={t("hostedVerify.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedVerify.title")} locale={ctx.locale}>
 				<VerifyPage t={t} state={verified.ok ? "verified" : "invalid"} />
 			</HostedDocument>,
 			verified.ok ? undefined : { status: 400 },

@@ -23,7 +23,7 @@ import i18n from "~/app/http/middleware/i18n";
 import { tenant } from "~/app/http/middleware/tenant";
 import { TurnstileChallengeContext } from "~/app/http/middleware/turnstile-challenge";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { buildHarness, createTestSubjectWithPassword } from "~/app/test/harness/hosted";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
@@ -56,7 +56,7 @@ async function buildChallengeRouter(challenged: boolean) {
 	let middleware: Middleware[] = [
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => harness.tenantDO as unknown as DurableObjectStub<Tenant>),
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 		i18n as Middleware,
 		turnstileProvider(turnstile),

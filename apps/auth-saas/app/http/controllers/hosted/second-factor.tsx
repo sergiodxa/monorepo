@@ -106,7 +106,11 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 		if (isFailure(encoded)) ctx.log.warn("totp.qr_failed", { code: encoded.error.code });
 
 		return ctx.render(
-			<HostedDocument title={t("hostedSecondFactor.enrol.title")} locale={ctx.locale}>
+			<HostedDocument
+				assets={ctx.assets}
+				title={t("hostedSecondFactor.enrol.title")}
+				locale={ctx.locale}
+			>
 				<EnrolTotpFactorPage
 					t={t}
 					title={t("hostedSecondFactor.enrol.title")}
@@ -125,7 +129,7 @@ export const secondFactorShow = createAction(routes.hostedSecondFactorShow, asyn
 	}
 
 	return ctx.render(
-		<HostedDocument title={t("hostedSecondFactor.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedSecondFactor.title")} locale={ctx.locale}>
 			<SecondFactorPage
 				t={t}
 				action={actionUrl(ctx, routes.hostedSecondFactorSubmit.href(), value)}
@@ -161,7 +165,7 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 
 	if (typeof submission !== "string" || !submission) {
 		return ctx.render(
-			<HostedDocument title={t("hostedSecondFactor.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedSecondFactor.title")} locale={ctx.locale}>
 				<SecondFactorPage t={t} action={action} error={t("hostedSecondFactor.errors.invalid")} />
 			</HostedDocument>,
 			{ status: 400 },
@@ -194,7 +198,7 @@ export const secondFactorSubmit = createAction(routes.hostedSecondFactorSubmit, 
 				: t("hostedSecondFactor.errors.invalid");
 
 		return ctx.render(
-			<HostedDocument title={t("hostedSecondFactor.title")} locale={ctx.locale}>
+			<HostedDocument assets={ctx.assets} title={t("hostedSecondFactor.title")} locale={ctx.locale}>
 				<SecondFactorPage t={t} action={action} error={error} />
 			</HostedDocument>,
 			{ status: 400 },
@@ -270,7 +274,11 @@ export const secondFactorEnrolSubmit = createAction(
 		});
 
 		return ctx.render(
-			<HostedDocument title={t("hostedSecondFactor.recoveryCodes.title")} locale={ctx.locale}>
+			<HostedDocument
+				assets={ctx.assets}
+				title={t("hostedSecondFactor.recoveryCodes.title")}
+				locale={ctx.locale}
+			>
 				<RecoveryCodesPage
 					t={t}
 					title={t("hostedSecondFactor.recoveryCodes.title")}

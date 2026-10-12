@@ -7,18 +7,20 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { assets } from "@sdxc/assets-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
 import { CloudflareTransport } from "@sdxc/mail/cloudflare";
 import mail from "@sdxc/mail/middleware";
-import { securityHeaders } from "@sdxc/security-headers/middleware";
+import { SecurityHeadersKey, securityHeaders } from "@sdxc/security-headers/middleware";
 import { trace } from "@sdxc/trace-context/middleware";
 import { redirect } from "@sdxc/well-known/change-password";
 import { wellKnown } from "@sdxc/well-known/middleware";
 import { env } from "cloudflare:workers";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { parseSenderAddress } from "~/app/emails/sender";
@@ -38,7 +40,7 @@ import {
 } from "~/app/http/middleware/tenant-rate-limit";
 import { turnstileChallenge } from "~/app/http/middleware/turnstile-challenge";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
+import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import { turnstile } from "~/app/initializers/turnstile";
 import { userinfoMetadataEntry } from "~/app/initializers/userinfo-resource";
@@ -74,7 +76,17 @@ export const tenantRouter = createRouter({
 			"oauth-protected-resource": userinfoMetadataEntry,
 		}),
 		tenant((tenantId) => env.TENANT.getByName(tenantId)),
-		...htmlRenderer(),
+		/**
+		 * Every hosted page links the hosted document's stylesheets and the island entry under
+		 * the nonce `securityHeaders()` above publishes, so the policy allows the inline import map.
+		 */
+		assets(assetResolver, {
+			stylesheets: "resources/views/hosted/document.tsx",
+			script: "bootstrap/browser.ts",
+			nonce: (ctx) =>
+				ctx.has(SecurityHeadersKey) ? ctx.get(SecurityHeadersKey)?.nonce : undefined,
+		}),
+		render({ assets: assetResolver }),
 		formData(),
 		i18n,
 		platformSender(platformFrom),

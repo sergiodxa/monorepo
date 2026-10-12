@@ -117,7 +117,7 @@ export async function renderErrorPage(ctx: RequestContext, description: string):
 	let correlationId = crypto.randomUUID();
 
 	return ctx.render(
-		<HostedDocument title={t("hostedError.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedError.title")} locale={ctx.locale}>
 			<ErrorPage t={t} description={description} correlationId={correlationId} />
 		</HostedDocument>,
 		{ status: 400 },
@@ -162,6 +162,7 @@ export async function renderConsentPage(
 
 	return ctx.render(
 		<HostedDocument
+			assets={ctx.assets}
 			title={t("hostedConsent.title", { clientName: screen.client.name })}
 			locale={ctx.locale}
 		>
@@ -188,7 +189,7 @@ export async function renderStepUpPage(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedStepUp.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedStepUp.title")} locale={ctx.locale}>
 			<StepUpPage t={t} action={action} error={error} />
 		</HostedDocument>,
 		error ? { status: 400 } : undefined,

@@ -59,7 +59,7 @@ async function renderSignInPage(
 	let t = ctx.intl.t;
 
 	return ctx.render(
-		<HostedDocument title={t("hostedSignIn.title")} locale={ctx.locale}>
+		<HostedDocument assets={ctx.assets} title={t("hostedSignIn.title")} locale={ctx.locale}>
 			<SignInPage
 				t={t}
 				action={actionUrl(ctx, routes.hostedSignInSubmit.href())}

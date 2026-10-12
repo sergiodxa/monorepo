@@ -18,7 +18,7 @@ import { formData } from "remix/middleware/form-data";
 import { createRouter } from "remix/router";
 import { describe, expect, test, vi } from "vitest";
 
-import { htmlRenderer } from "~/app/http/render";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import en from "~/resources/locales/en";
 
 import { TENANT_ID_HEADER, TENANT_ISSUER_HEADER, TENANT_REGION_HEADER, tenant } from "./tenant";
@@ -79,7 +79,7 @@ function brokenKv(): RateLimitKVNamespace {
 /** Builds a small router with the hosted-rendering middleware every `onLimit` page needs. */
 function buildRouter() {
 	let middleware: Middleware[] = [
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 		i18n({
 			detection: { supportedLanguages: ["en"], fallbackLanguage: "en", order: ["header"] },
@@ -434,7 +434,7 @@ describe("attack-signal recording", () => {
 	function buildTenantAwareRouter() {
 		let middleware: Middleware[] = [
 			tenant(() => ({}) as never),
-			...(htmlRenderer() as readonly Middleware[]),
+			...hostedDocumentMiddleware(),
 			formData() as Middleware,
 			i18n({
 				detection: { supportedLanguages: ["en"], fallbackLanguage: "en", order: ["header"] },

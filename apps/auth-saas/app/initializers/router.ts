@@ -19,13 +19,14 @@ import { wellKnown } from "@sdxc/well-known/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import { platformTenantForward } from "~/app/http/controllers/platform-tenant-forward";
 import { mail } from "~/app/http/middleware/mail";
 import { models } from "~/app/http/middleware/models";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
+import { assetResolver } from "~/app/initializers/assets";
 import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import { turnstile } from "~/app/initializers/turnstile";
@@ -54,7 +55,7 @@ export const webRouter = createRouter({
 		database(createDatabase()),
 		models(),
 		mail(),
-		...htmlRenderer(),
+		render({ assets: assetResolver }),
 		formData(),
 		methodOverride(),
 		turnstileProvider(turnstile),

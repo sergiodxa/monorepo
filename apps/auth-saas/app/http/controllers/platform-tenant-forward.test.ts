@@ -113,7 +113,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
-let { htmlRenderer } = await import("~/app/http/render");
+let { hostedDocumentMiddleware } = await import("~/app/test/document-middleware");
 let { platformTenantForward } = await import("~/app/http/controllers/platform-tenant-forward");
 let { createTestDatabase } = await import("~/app/test/db");
 let TenantObject = (await import("~/app/models/tenant/object")).default;
@@ -126,7 +126,7 @@ function buildRouter() {
 	let middleware: Middleware[] = [
 		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 	];
 

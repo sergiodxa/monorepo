@@ -8,6 +8,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { DocumentAssets } from "@sdxc/assets-middleware";
 import type { Handle, RemixNode } from "remix/component";
 
 import { bg, fg } from "@sdxc/u/color";
@@ -15,35 +16,18 @@ import { flex, flexCol, items, justify } from "@sdxc/u/layout";
 import { minBs, p } from "@sdxc/u/size";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/initializers/assets";
-
 import "@sdxc/ui/reset.css";
 import "@sdxc/ui/theme.css";
 import "~/resources/views/hosted/palette.css";
 
-/** What the renderer hands the document: the asset manifest's lookups and the CSP nonce. */
-export interface DocumentContext extends Assets {
-	/**
-	 * The response's CSP nonce for the import map and module tags, or `undefined` where no
-	 * policy restricts scripts. Reading it advertises it in the response's policy.
-	 */
-	readonly nonce: string | undefined;
-}
-
-/**
- * Hands the document the assets the renderer looked up, which it reads where a component
- * cannot await them itself.
- */
-export function DocumentAssets(
-	handle: Handle<{ value: DocumentContext; children: RemixNode }, DocumentContext>,
-) {
-	handle.context.set(handle.props.value);
-	return () => handle.props.children;
-}
-
 export namespace HostedDocument {
 	export interface Props {
 		title: string;
+		/**
+		 * The request's `ctx.assets`: the stylesheets and client entry to link, and the CSP nonce
+		 * the import map and module tags carry where the policy restricts scripts.
+		 */
+		assets: DocumentAssets;
 		/** The resolved request language, set as `<html lang>`. */
 		locale: string;
 		children: RemixNode;
@@ -57,12 +41,12 @@ export namespace HostedDocument {
  * @param handle - Component handle exposing the shell props.
  * @returns A render function producing the hosted document markup.
  * @example
- * return ctx.render(<HostedDocument title={t("hostedSignIn.title")} locale={ctx.locale}><SignInPage {...} /></HostedDocument>);
+ * return ctx.render(<HostedDocument title={t("hostedSignIn.title")} assets={ctx.assets} locale={ctx.locale}><SignInPage {...} /></HostedDocument>);
  */
 export function HostedDocument(handle: Handle<HostedDocument.Props>) {
 	return () => {
-		let { title, locale, children } = handle.props;
-		let { script, stylesheets, nonce } = handle.context.get(DocumentAssets);
+		let { title, assets, locale, children } = handle.props;
+		let { script, stylesheets, nonce } = assets;
 
 		return (
 			<html lang={locale} class="system">

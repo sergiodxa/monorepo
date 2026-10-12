@@ -63,8 +63,8 @@ import {
 	tenant,
 } from "~/app/http/middleware/tenant";
 import { turnstileProvider } from "~/app/http/middleware/turnstile-verification";
-import { htmlRenderer } from "~/app/http/render";
 import Tenant from "~/app/models/tenant/object";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import routes from "~/routes/tenant";
 
@@ -83,7 +83,7 @@ function buildRouter(tenantDO: Tenant, transport: Transport, turnstile: MemoryCa
 	let middleware: Middleware[] = [
 		securityHeaders(TENANT_SECURITY_POLICY) as Middleware,
 		tenant(() => tenantDO as unknown as DurableObjectStub<Tenant>),
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 		i18n as Middleware,
 		platformSender(TEST_MAIL_FROM),

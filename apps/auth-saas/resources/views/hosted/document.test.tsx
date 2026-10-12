@@ -1,7 +1,6 @@
 /**
- * Covers the asset tags the hosted document writes through the app's real renderer: every
- * page links the files the asset manifest names, since a build renames them with every
- * change, and the import map and module tags carry the nonce the response's CSP allows.
+ * Covers the asset tags the hosted document writes from `ctx.assets`: every page links the
+ * files the asset manifest names, since a build renames them with every change, and the import map and module tags carry the nonce the response's CSP allows.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -13,8 +12,8 @@ import { securityHeaders } from "@sdxc/security-headers/middleware";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { htmlRenderer } from "~/app/http/render";
 import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
+import { hostedDocumentMiddleware } from "~/app/test/document-middleware";
 import { TENANT_SECURITY_POLICY } from "~/config/security-policy";
 import { HostedDocument } from "~/resources/views/hosted/document";
 import { PasskeySignInButton } from "~/resources/views/hosted/passkey-button";
@@ -22,12 +21,12 @@ import { PasskeySignInButton } from "~/resources/views/hosted/passkey-button";
 /** Renders a hosted page under the tenant policy, answering its HTML and the CSP's nonce. */
 async function renderPage(content: RemixNode = <p>Hosted screen</p>) {
 	let router = createRouter({
-		middleware: [securityHeaders(TENANT_SECURITY_POLICY), ...htmlRenderer()],
+		middleware: [securityHeaders(TENANT_SECURITY_POLICY), ...hostedDocumentMiddleware()],
 	});
 
 	router.get("/", (ctx) =>
 		ctx.render(
-			<HostedDocument title="Sign in" locale="en">
+			<HostedDocument title="Sign in" assets={ctx.assets} locale="en">
 				{content}
 			</HostedDocument>,
 		),

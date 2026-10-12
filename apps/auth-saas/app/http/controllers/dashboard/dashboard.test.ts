@@ -93,7 +93,7 @@ vi.doMock("cloudflare:workers", async (importOriginal) => {
 
 let { database } = await import("@sdxc/database-middleware");
 let { models: modelsMiddleware } = await import("~/app/http/middleware/models");
-let { htmlRenderer } = await import("~/app/http/render");
+let { hostedDocumentMiddleware } = await import("~/app/test/document-middleware");
 let { dashboardShow, dashboardCreateTenant } =
 	await import("~/app/http/controllers/dashboard/show");
 let { dashboardAgentClientsShow, dashboardAgentClientsRegister } =
@@ -123,7 +123,7 @@ function buildDashboardRouter() {
 	let middleware: Middleware[] = [
 		database(db) as Middleware,
 		modelsMiddleware() as Middleware,
-		...(htmlRenderer() as readonly Middleware[]),
+		...hostedDocumentMiddleware(),
 		formData() as Middleware,
 	];
 	let router = createRouter({ middleware });
