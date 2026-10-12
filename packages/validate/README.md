@@ -1,18 +1,14 @@
 # @sdxc/validate
 
-Validate a form submission, a request body, or a plain object against any Standard Schema, and get a `Result` back instead of a thrown error.
+Standard Schema validation for form submissions, request bodies and plain objects, answering a `Result` instead of throwing.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/validate
 ```
 
-The schema itself comes from any library implementing [Standard Schema](https://standardschema.dev) — [`remix`](https://www.npmjs.com/package/remix), [Valibot](https://valibot.dev), [ArkType](https://arktype.io) — installed alongside this package. [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) installs with it and supplies `isSuccess`, `isFailure` and `unwrap`.
-
-```bash
-npm add valibot
-```
+Bring a schema library that implements [Standard Schema](https://standardschema.dev), such as [`remix`](https://www.npmjs.com/package/remix)'s `remix/data-schema`, [Valibot](https://valibot.dev) or [ArkType](https://arktype.io). [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) installs with this package and supplies `isFailure`, `success` and `failure`.
 
 ## Usage
 
@@ -32,7 +28,7 @@ let schema = s.object({
 let result = await validate({ email: "ada@example.com", name: "Ada" }, schema);
 
 if (isFailure(result)) console.error(result.error.issues);
-else console.log(result.data.email); // typed `string` from the schema
+else console.log(result.data.email); // typed from the schema
 ```
 
 ### Validate a form submission
@@ -46,11 +42,12 @@ form.append("tags", "typescript");
 form.append("tags", "validation");
 
 let result = await validate(form, s.object({ email: s.string(), tags: s.array(s.string()) }));
+// result.data: { email: "ada@example.com", tags: ["typescript", "validation"] }
 ```
 
 ### Validate a request
 
-A `Request` is read according to its `Content-Type`, so one call covers every kind of submission a route accepts:
+A `Request` is read by its `Content-Type`, so one call covers JSON, multipart and URL-encoded submissions:
 
 ```typescript
 async function handler(request: Request) {
@@ -66,7 +63,7 @@ async function handler(request: Request) {
 
 ### Read the failure
 
-Every issue carries the path it failed at, so a refusal can be reported field by field:
+Every issue carries the `path` it failed at, so a refusal reports field by field:
 
 ```typescript
 if (isFailure(result)) {
@@ -78,92 +75,73 @@ if (isFailure(result)) {
 
 ## API
 
-### `validate<Schema>(input, schema): Promise<Result<InferOutput<Schema>, ValidationError>>`
+### `validate<Schema>(input, schema): Promise<Result<StandardSchemaV1.InferOutput<Schema>, ValidationError>>`
 
-Normalizes `input`, runs it through `schema`, and resolves to a `Result` carrying either the schema's own output type or a `ValidationError`. A rejected submission is a value, not an exception.
+Runs `input` through any Standard Schema V1 `schema` and resolves to the schema's output type or a `ValidationError`; the success type is inferred from the schema. `input` is one of:
 
-`input` is any of:
-
-- `FormData` or `URLSearchParams` — entries flatten to an object, a repeated name becoming an array.
-- `Request` — the body is read by content type: `application/json` or any `+json` media type (`application/merge-patch+json`, `application/problem+json`), `multipart/form-data`, or `application/x-www-form-urlencoded`. Any other type refuses with `Unsupported content-type: …`, and a body that is not valid JSON refuses with `Invalid JSON in request body`.
-- A plain object, or any JSON value — handed to the schema as it stands.
-
-Some schemas validate the raw source rather than a flattened object — `remix/data-schema/form-data`'s `object()` is one, and it rejects the flattened object with `Expected FormData or URLSearchParams`. That rejection is retried against the original `FormData` or `URLSearchParams`, so those schemas pass through the same call as any other.
-
-`schema` is any Standard Schema V1 value, and the success type is inferred from it, so nothing restates the shape the schema already describes.
+- `FormData` or `URLSearchParams`: flattened to an object, a repeated name becoming an array. A schema that validates the raw source (one that reports `Expected FormData or URLSearchParams`, such as `remix/data-schema/form-data`'s `object()`) receives the original `FormData` or `URLSearchParams` instead.
+- `Request`: the body is read as JSON for `application/json` and any `+json` media type, as `FormData` for `multipart/form-data`, and as `URLSearchParams` for `application/x-www-form-urlencoded`. A malformed JSON body refuses with `Invalid JSON in request body`, and any other content type refuses with `Unsupported content-type: …`.
+- A plain object or any JSON value, handed to the schema as it is.
 
 ### `ValidationError`
 
-What a refused submission carries. `message` is always `"Validation Error"`, and `issues` is the schema's own `StandardSchemaV1.Issue[]` — each a `message` plus the `path` it failed at, in whatever vocabulary the schema library produced.
+The `Error` a refusal carries. `message` is `"Validation Error"` and `issues` is the schema's own `StandardSchemaV1.Issue[]`, each a `message` plus an optional `path`.
 
-## Pattern: One Schema Behind Several Entry Points
+#### `new ValidationError(issues: readonly StandardSchemaV1.Issue[])`
 
-A schema is a value, so the rule a form enforces in the browser and the rule an API enforces on the wire can be the same object rather than two that drift:
+Builds a refusal from your own issues, so a rule checked outside the schema fails the same way the schema does.
 
-```typescript
-// schemas.ts
-import * as s from "remix/data-schema";
-import { email, min, minLength } from "remix/data-schema/checks";
+## Pattern: One Schema Behind Every Entry Point
 
-export let signup = s.object({
-	email: s.string().pipe(email()),
-	name: s.string().pipe(minLength(2)),
-	age: s.optional(s.number().pipe(min(18))),
-});
-```
+A schema is a value, so a JSON API, an HTML form and a query string can share it. Validate a query string by passing the URL's `searchParams`:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
+import * as coerce from "remix/data-schema/coerce";
 
-import { signup } from "./schemas.js";
+let signup = s.object({
+	email: s.string().pipe(email()),
+	name: s.string().pipe(minLength(2)),
+});
 
-async function handler(request: Request) {
-	let result = await validate(request, signup);
+let search = s.object({
+	q: s.defaulted(s.string(), ""),
+	page: s.defaulted(coerce.number(), 1),
+});
+
+async function create(request: Request) {
+	let result = await validate(request, signup); // JSON or form body
 	if (isFailure(result)) return Response.json({ errors: result.error.issues }, { status: 400 });
-	return Response.json({ user: await createUser(result.data) });
+	return Response.json({ user: result.data }, { status: 201 });
 }
-```
 
-There is no `.partial()` helper, so a variant where every field is optional wraps each one in `s.optional()`.
-
-## Pattern: Rendering A Refused Submission
-
-`ValidationError.issues` already matches the issue shape [`@sdxc/ui`](https://www.npmjs.com/package/@sdxc/ui)'s `Form` takes, so a refusal re-renders the same page with the array passed straight through. Each field looks its own messages up by `name`, renders them, marks itself `aria-invalid`, and the first invalid field of the render takes focus — so nothing else is threaded down:
-
-```tsx
-import type { Handle } from "remix/component";
-
-import { Button, Form, TextField } from "@sdxc/ui";
-
-function SignupForm(handle: Handle<{ issues?: ReadonlyArray<Form.Issue> }>) {
-	return () => (
-		<Form method="post" issues={handle.props.issues}>
-			<TextField label="Email" name="email" type="email" required />
-			<TextField label="Password" name="password" type="password" required />
-			<Button type="submit">Sign up</Button>
-		</Form>
-	);
+async function list(request: Request) {
+	let result = await validate(new URL(request.url).searchParams, search);
+	if (isFailure(result)) return Response.json({ errors: result.error.issues }, { status: 400 });
+	return Response.json({ query: result.data.q, page: result.data.page });
 }
-```
-
-```tsx
-let result = await validate(submission, schema);
-
-if (isFailure(result)) return <SignupForm issues={result.error.issues} />;
 ```
 
 ## Pattern: Normalizing While Validating
 
-A schema transforms as it validates, so the handler receives values in the shape it wants rather than the shape the wire delivered. Everything arriving from a form is a string, which is where this earns the most:
+Everything a form submits is a string. Coerce and transform in the schema so the handler receives the shape it wants:
 
 ```typescript
+import { validate } from "@sdxc/validate";
+import * as s from "remix/data-schema";
+import { email } from "remix/data-schema/checks";
+import * as coerce from "remix/data-schema/coerce";
+
 let schema = s.object({
 	email: s
 		.string()
 		.pipe(email())
 		.transform((value) => value.toLowerCase()),
-	age: s.string().transform(Number),
+	age: coerce.number(),
+	newsletter: s.defaulted(coerce.boolean(), false),
 	tags: s.string().transform((value) => value.split(",")),
 });
 
@@ -173,14 +151,90 @@ form.append("age", "25");
 form.append("tags", "typescript,validation");
 
 let result = await validate(form, schema);
-// { email: "ada@example.com", age: 25, tags: ["typescript", "validation"] }
+// result.data: { email: "ada@example.com", age: 25, newsletter: false, tags: ["typescript", "validation"] }
+```
+
+## Pattern: Uploads With a Form-Data Schema
+
+Schemas from `remix/data-schema/form-data` read the `FormData` itself, which is what file fields need. `validate` hands them the original submission:
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
+
+let upload = f.object({
+	title: f.field(s.string()),
+	attachments: f.files(s.array(s.instanceof_(File))),
+});
+
+async function handler(request: Request) {
+	let result = await validate(request, upload);
+	if (isFailure(result)) return Response.json({ errors: result.error.issues }, { status: 400 });
+
+	for (let file of result.data.attachments) console.log(file.name, file.size);
+	return new Response(null, { status: 204 });
+}
+```
+
+## Pattern: Refusing On a Business Rule
+
+Some rules need a database or another service. Fail them with your own `ValidationError` so callers handle one error type:
+
+```typescript
+import type { Result } from "@sdxc/result";
+
+import { failure, isFailure, success } from "@sdxc/result";
+import { ValidationError, validate } from "@sdxc/validate";
+
+async function register(request: Request): Promise<Result<{ email: string }, ValidationError>> {
+	let result = await validate(request, signup);
+	if (isFailure(result)) return result;
+
+	if (await emailTaken(result.data.email)) {
+		return failure(new ValidationError([{ message: "That email is taken", path: ["email"] }]));
+	}
+
+	return success({ email: result.data.email });
+}
+```
+
+Leave `path` out for a refusal that belongs to no single field.
+
+## Pattern: Rendering a Refused Submission
+
+`ValidationError.issues` matches the issue shape of the `Form` in [`@sdxc/ui`](https://www.npmjs.com/package/@sdxc/ui). Pass it straight through: each field shows its own messages by `name`, marks itself invalid, and the first invalid field takes focus. Issues without a `path` render at the top of the form.
+
+```tsx
+import type { Handle } from "remix/component";
+
+import { isFailure } from "@sdxc/result";
+import { Button, Form, TextField } from "@sdxc/ui";
+import { validate } from "@sdxc/validate";
+
+function SignupForm(handle: Handle<{ issues?: ReadonlyArray<Form.Issue> }>) {
+	return () => (
+		<Form method="post" issues={handle.props.issues}>
+			<TextField label="Email" name="email" type="email" required />
+			<TextField label="Name" name="name" required />
+			<Button type="submit">Sign up</Button>
+		</Form>
+	);
+}
+
+let result = await validate(request, signup);
+if (isFailure(result)) return <SignupForm issues={result.error.issues} />;
 ```
 
 ## Pattern: Custom Messages
 
-Checks are plain objects, so a custom message spreads the check and overrides its `message`. There is no regex check, so a pattern rule goes through `.refine()`, which takes its message as a second argument:
+The messages in `issues` are the schema's. With `remix/data-schema`, a check is a plain object, so spread it and override `message`; `.refine()` takes its message as the second argument:
 
 ```typescript
+import * as s from "remix/data-schema";
+import { email, minLength } from "remix/data-schema/checks";
+
 let schema = s.object({
 	email: s.string().pipe({ ...email(), message: "Please enter a valid email address" }),
 	password: s
