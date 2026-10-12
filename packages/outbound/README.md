@@ -2,123 +2,139 @@
 
 Check, follow and read URLs a stranger chose: public hosts on every redirect, one deadline, bounded bodies.
 
-A Worker that fetches a feed someone subscribed to, a page someone saved or an image a post embeds has to decide where it is willing to go, re-decide on every redirect, stop waiting at some point, and stop reading at some size. This package answers those four questions with plain functions that call the global `fetch` and answer a `Result`. Checking and following matter only for the public internet; reading within a cap works on any `Request` or `Response`, including one from a Durable Object stub, a service binding or an incoming request.
+A Worker fetching a feed someone subscribed to, a page someone saved or an image a post embeds has
+to decide where it will go, re-decide on every redirect, stop waiting at some point and stop reading
+at some size. These functions answer those four questions over the global `fetch`, and every one
+answers a `Result` instead of throwing. The body readers work on any `Request` or `Response`.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/outbound
 ```
 
-Every function answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this package.
+Results come from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), installed with this
+package.
 
 ## Usage
 
-### Checking A URL
+### Check a URL
 
 ```typescript
 import { checkUrl } from "@sdxc/outbound";
 
 checkUrl("https://example.com/feed.xml"); // success: URL
-checkUrl("http://169.254.169.254/latest"); // failure: OutboundError { code: "refused-address" }
-checkUrl("https://printer.local/"); // failure: OutboundError { code: "refused-host" }
-checkUrl("https://user:pass@example.com/"); // failure: OutboundError { code: "refused-credentials" }
+checkUrl("http://169.254.169.254/latest"); // failure: refused-address
+checkUrl("https://printer.local/"); // failure: refused-host
+checkUrl("https://user:pass@example.com/"); // failure: refused-credentials
+checkUrl("https://example.com:8080/", { ports: "default" }); // failure: refused-port
 ```
 
-### Following A URL And Reading The Body
+No request or lookup is made: the scheme, credentials, port and host are judged from the URL alone.
+
+### Follow it and read the body
 
 ```typescript
 import { follow, readText } from "@sdxc/outbound";
 import { isFailure } from "@sdxc/result";
 
-let followed = await follow(url, {
+let followed = await follow("https://example.com/feed.xml", {
 	headers: { accept: "application/atom+xml", "user-agent": "ExampleReader/1.0" },
 	timeout: "8 seconds",
-	maxRedirects: 5,
 });
 if (isFailure(followed)) return followed;
 
-let body = await readText(followed.data.response, { maxBytes: 2 * 1024 * 1024 });
-if (isFailure(body)) return body; // too-large, timeout or network
+let { response, url, redirects } = followed.data;
+let body = await readText(response, { maxBytes: 2 * 1024 * 1024 });
+if (isFailure(body)) return body;
+
+body.data.text; // the feed, at most 2 MB
 ```
 
-The `timeout` covers the whole chain **and** the body read afterwards.
+Every redirect passes the same check as the first URL, and `timeout` covers the whole chain plus the
+body read afterwards. The final response comes back whatever its status.
 
-### Capping A Body That Did Not Come From `fetch`
+### Handle the failure
 
 ```typescript
-import { readBytes } from "@sdxc/outbound";
+import { follow } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
 
-let body = await readBytes(request, { maxBytes: 1024 * 1024 });
-if (isFailure(body)) return new Response(null, { status: 413 });
-verifySignature(body.data.data);
+let followed = await follow(input, { timeout: "8 seconds" });
+if (isFailure(followed)) {
+	let { code, url, retryable } = followed.error;
+	if (retryable) return scheduleRetry(url); // timeout or network
+	return rejectUrl(code); // refused-host, too-many-redirects, …
+}
 ```
 
-### Streaming A Capped Body Through
-
-```typescript
-import { follow, limitBody } from "@sdxc/outbound";
-
-let followed = await follow(imageUrl, { timeout: "10 seconds", ports: "default" });
-if (isFailure(followed)) return new Response(null, { status: 404 });
-
-return limitBody(followed.data.response, { maxBytes: 5 * 1024 * 1024 });
-```
+Every failure is one `OutboundError`; its `code` says why and `retryable` says whether a later
+attempt can succeed.
 
 ## API
 
-### `checkUrl(input, options?): Result<URL, OutboundError>`
+### `checkUrl(input: string | URL, options?: CheckOptions): Result<URL, OutboundError>`
 
-Parses a URL and refuses it unless every rule passes. No request or lookup is made.
+Parses a URL and answers it when every rule passes. Only `http:` and `https:` pass, and a URL with a
+username or password is refused. An address literal passes when it is public, as judged by
+[`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip); a name passes when it has a dot and ends in
+none of `localhost`, `local`, `internal`, `intranet`, `lan`, `corp`, `private`, `home.arpa`,
+`test`, `invalid` or `example`. The rules run on the parsed URL, so hex, octal and trailing-dot
+spellings are judged by what they normalize to.
 
-- Only `http:` and `https:` pass, and a URL carrying a username or password is refused.
-- An address literal passes when it is on the public internet, judged by [`@sdxc/ip`](https://www.npmjs.com/package/@sdxc/ip). IPv4-mapped and NAT64 addresses are judged by the IPv4 inside.
-- A name passes when it has a dot and does not end in a reserved suffix: `localhost`, `local`, `internal`, `intranet`, `lan`, `corp`, `private`, `home.arpa`, `test`, `invalid` or `example`.
+- `hosts`: `"public"` (default) applies the host rules; `"any"` keeps only the scheme and
+  credential rules, for a caller reaching its own network on purpose.
+- `literals`: `"public"` (default) allows a public address literal; `"refuse"` refuses every one.
+- `ports`: `"any"` (default), `"default"` for only the scheme's own port, or a list such as
+  `[80, 443]`, where an omitted port counts as the scheme's own.
 
-Options:
+### `follow(input: string | URL, options?: FollowOptions): Promise<Result<Followed, OutboundError>>`
 
-- `hosts` — `"public"` (default) applies the host rules; `"any"` keeps only the scheme and credential rules, for a caller that reaches its own network on purpose.
-- `literals` — `"public"` (default) allows a public address literal; `"refuse"` refuses every literal.
-- `ports` — `"any"` (default), `"default"` for only the scheme's own port, or a list such as `[80, 443]`, where an omitted port counts as the scheme's own.
+Requests a URL anonymously (`credentials: "omit"`, only the headers given) and walks redirects
+itself, checking every hop with the same `checkUrl` options and releasing each redirect's body.
+Answers the final response whatever its status. Beside every `checkUrl` option:
 
-### `follow(input, options?): Promise<Result<Followed, OutboundError>>`
+- `method`: `"GET"` (default) or `"HEAD"`.
+- `headers`: sent on every hop.
+- `timeout`: milliseconds or a duration string such as `"8 seconds"`, covering the chain and the
+  body read after it.
+- `signal`: the caller's own abort, combined with `timeout`.
+- `maxRedirects`: default `5`.
+- `resolve`: when `true`, resolves every hop's name with `resolveHost` and refuses it unless every
+  address is public. Default `false`; skipped with `hosts: "any"`.
 
-Requests a URL with `redirect: "manual"` and `credentials: "omit"`, and walks the redirect chain itself. Every hop passes `checkUrl` with the same options, so a redirect cannot reach somewhere the first URL could not, and the same headers are sent on every hop. A redirect's body is released before the next hop. The final response is answered whatever its status: mapping a status to an error is the caller's.
+### `resolveHost(url: URL, options?: { signal?: AbortSignal }): Promise<Result<string[], OutboundError>>`
 
-Options, beside every `checkUrl` option:
+Resolves the host's `A` and `AAAA` records over DNS-over-HTTPS (through
+[`@sdxc/doh`](https://www.npmjs.com/package/@sdxc/doh)) and answers every address when all are
+public; an address literal answers itself. Fails `refused-host` for a name that does not exist or
+has no address, `refused-address` for any non-public or unreadable address, and `network` when the
+resolver fails.
 
-- `method` — `"GET"` (default) or `"HEAD"`. A request with a body is a single `fetch` to a URL `checkUrl` passed.
-- `headers` — sent on every hop.
-- `timeout` — a number of milliseconds or a duration string such as `"8 seconds"`.
-- `signal` — the caller's own abort, combined with `timeout` through `AbortSignal.any`.
-- `maxRedirects` — default `5`.
-- `resolve` — resolves every hop's name over DNS-over-HTTPS (Cloudflare's resolver, through [`@sdxc/doh`](https://www.npmjs.com/package/@sdxc/doh)) and refuses it when any address is not public. Default `false`.
+### `readText(message: Request | Response, options: { maxBytes: number }): Promise<Result<ReadText, OutboundError>>`
 
-`Followed` is `{ response, url, redirects }`, where `url` is where the chain ended. The response's body carries the deadline, so reading it after the deadline fails with `timeout`.
+Reads a body as UTF-8 text within a cap. A `Content-Length` over the cap fails before reading;
+otherwise the byte count over the stream enforces it and cancels the stream at the first byte past.
+Fails `too-large`, `timeout` (past a `follow` deadline) or `network`.
 
-### `resolveHost(url, options?): Promise<Result<string[], OutboundError>>`
+### `readBytes(message: Request | Response, options: { maxBytes: number }): Promise<Result<ReadBytes, OutboundError>>`
 
-Resolves the `A` and `AAAA` records of a URL's host and answers every address when all are public. An address literal answers itself. `refused-host` for a name that does not exist or has no address, `refused-address` for any address that is not public or cannot be read, and `network` when the resolver fails. `options.signal` aborts both lookups.
+The same read, answering the exact bytes in a `Uint8Array`.
 
-### `readText(message, { maxBytes }): Promise<Result<{ text, bytes }, OutboundError>>`
+### `limitBody(response: Response, options: { maxBytes: number }): Response`
 
-Reads a `Request` or `Response` body as UTF-8 text. A `Content-Length` over the cap fails before any of the body is read; the count over the stream is what enforces the cap, so a body that lies about its length fails at the same byte and the stream is cancelled.
+Answers a response with the same status and headers whose body errors with a `too-large`
+`OutboundError` at the first chunk past the cap, or immediately when `Content-Length` is over it.
+For a body passed through rather than read.
 
-### `readBytes(message, { maxBytes }): Promise<Result<{ data, bytes }, OutboundError>>`
-
-The same read, keeping the bytes exactly as they arrived in a `Uint8Array`.
-
-### `limitBody(response, { maxBytes }): Response`
-
-The same status and headers, with a body that errors with a `too-large` `OutboundError` at the first chunk past the cap. For a body passed through rather than read.
-
-### `release(body)`
+### `release(body: { cancel(): Promise<void> } | null): void`
 
 Cancels an unread body, or a reader of one, without waiting on the origin. `null` is ignored.
 
 ### `OutboundError`
 
-Carries `code`, the `url` it concerns, and `retryable`.
+The error inside every `Failure`: `code`, the `url` it concerns (the hop that failed, the input text
+for `invalid-url`, or `""` for a body with no URL), and `retryable`.
 
 | `code`                | `retryable` | When                                              |
 | --------------------- | ----------- | ------------------------------------------------- |
@@ -133,15 +149,22 @@ Carries `code`, the `url` it concerns, and `retryable`.
 | `timeout`             | Yes         | The deadline passed                               |
 | `network`             | Yes         | `fetch` rejected, a body broke off, or DNS failed |
 
-## Pattern: Mapping To Your Own Errors
+### Types
 
-Keep your package's or app's error type and translate at the boundary.
+`CheckOptions`, `FollowOptions`, `ReadOptions` and `ResolveHostOptions` are the options above.
+`Followed` is `{ response, url, redirects }`, where `url` is where the chain ended and the
+response's body carries the deadline. `ReadText` is `{ text, bytes }` and `ReadBytes` is
+`{ data, bytes }`, `bytes` counting what came off the wire. `OutboundErrorCode` is the union of codes.
+
+## Pattern: Fetching A Subscribed Feed
+
+Map statuses and codes to your own error, and resolve relative links against where the chain ended.
 
 ```typescript
-import { follow } from "@sdxc/outbound";
+import { follow, readText, release } from "@sdxc/outbound";
 import { failure, isFailure, success } from "@sdxc/result";
 
-class FetchFeedError extends Error {
+class FeedError extends Error {
 	constructor(
 		message: string,
 		readonly retryable: boolean,
@@ -150,19 +173,143 @@ class FetchFeedError extends Error {
 	}
 }
 
-async function fetchFeed(url: string) {
-	let followed = await follow(url, { timeout: "10 seconds" });
+async function fetchFeed(input: string, etag: string | null) {
+	let followed = await follow(input, {
+		headers: { accept: "application/atom+xml", ...(etag ? { "if-none-match": etag } : {}) },
+		timeout: "10 seconds",
+	});
 	if (isFailure(followed)) {
-		return failure(new FetchFeedError(followed.error.message, followed.error.retryable));
+		return failure(new FeedError(followed.error.message, followed.error.retryable));
 	}
-	if (followed.data.response.status === 304) return success(null);
-	return success(followed.data.response);
+
+	let { response, url } = followed.data;
+	if (response.status === 304) {
+		release(response.body);
+		return success(null);
+	}
+	if (!response.ok) {
+		release(response.body);
+		return failure(new FeedError(`Feed answered ${response.status}`, response.status >= 500));
+	}
+
+	let body = await readText(response, { maxBytes: 2 * 1024 * 1024 });
+	if (isFailure(body)) return failure(new FeedError(body.error.message, body.error.retryable));
+
+	return success({ xml: body.data.text, base: url, etag: response.headers.get("etag") });
 }
 ```
 
-## Pattern: DNS Rebinding
+## Pattern: Proxying An Embedded Image
 
-`resolve: true` and `resolveHost` catch a public name whose records point inside a network. A Worker cannot pin its connection to the addresses that were checked, so a name that answers with a public address to the check and a private one to the connection still gets through. This narrows DNS rebinding and leaves it open. What holds regardless is architectural: a Worker that reaches its own storage through bindings rather than URLs has nothing private for an escaped request to reach.
+Stream a stranger's image through without buffering it, on standard ports only, with a size cap.
+
+```typescript
+import { follow, limitBody, release } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
+
+async function proxyImage(src: string) {
+	let followed = await follow(src, {
+		ports: "default",
+		timeout: "10 seconds",
+		headers: { accept: "image/*" },
+	});
+	if (isFailure(followed)) return new Response(null, { status: 404 });
+
+	let { response } = followed.data;
+	if (!response.ok || !response.headers.get("content-type")?.startsWith("image/")) {
+		release(response.body);
+		return new Response(null, { status: 404 });
+	}
+
+	return limitBody(response, { maxBytes: 5 * 1024 * 1024 });
+}
+```
+
+## Pattern: Capping An Incoming Body
+
+The readers take any `Request` or `Response`, so a webhook handler reads its own request within a
+cap and verifies a signature over the exact bytes.
+
+```typescript
+import { readBytes } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
+
+async function handleWebhook(request: Request) {
+	let body = await readBytes(request, { maxBytes: 1024 * 1024 });
+	if (isFailure(body)) {
+		return new Response(null, { status: body.error.code === "too-large" ? 413 : 400 });
+	}
+
+	if (!(await verifySignature(request.headers, body.data.data))) {
+		return new Response(null, { status: 401 });
+	}
+	return processEvent(new TextDecoder().decode(body.data.data));
+}
+```
+
+## Pattern: Posting To A URL A Stranger Chose
+
+`follow` sends `GET` or `HEAD`. For a request with a body, such as a webhook delivery, check the URL
+yourself, send one `fetch` with `redirect: "manual"`, and treat a redirect as a failure.
+
+```typescript
+import { checkUrl, readText, resolveHost } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
+
+async function deliver(endpoint: string, payload: unknown) {
+	let checked = checkUrl(endpoint, { ports: "default" });
+	if (isFailure(checked)) return checked;
+
+	let resolved = await resolveHost(checked.data);
+	if (isFailure(resolved)) return resolved;
+
+	let response = await fetch(checked.data, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(payload),
+		redirect: "manual",
+		credentials: "omit",
+		signal: AbortSignal.timeout(5_000),
+	});
+
+	let reply = await readText(response, { maxBytes: 64 * 1024 });
+	return { status: response.status, reply };
+}
+```
+
+## Pattern: Checking DNS Answers
+
+`resolve: true` refuses a public name whose records point inside a network, on every hop.
+
+```typescript
+import { follow } from "@sdxc/outbound";
+
+let followed = await follow(input, { resolve: true, literals: "refuse", timeout: "8 seconds" });
+```
+
+A Worker cannot pin its connection to the addresses that were checked, so a name answering one
+address to the check and another to the connection still gets through: this narrows DNS rebinding
+without closing it. What holds regardless is reaching your own storage through bindings rather than
+URLs, so an escaped request has nothing private to reach.
+
+## Pattern: Reaching Your Own Network On Purpose
+
+`hosts: "any"` keeps the scheme and credential rules, the redirect limit, the deadline and the caps,
+for an internal URL an operator configured.
+
+```typescript
+import { follow, readText } from "@sdxc/outbound";
+import { isFailure } from "@sdxc/result";
+
+let followed = await follow("http://metrics.internal/health", {
+	hosts: "any",
+	maxRedirects: 0,
+	timeout: 2_000,
+});
+if (isFailure(followed)) return followed;
+
+let body = await readText(followed.data.response, { maxBytes: 16 * 1024 });
+```
 
 ## Versioning
 
