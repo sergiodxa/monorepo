@@ -12,7 +12,9 @@ It renders through [`remix`](https://www.npmjs.com/package/remix) 3, which the a
 
 ## Usage
 
-`LazyFrame` renders its `children` on the server and keeps them until the reader reaches it; then it mounts a [`Frame`](https://www.npmjs.com/package/remix) for `src`. A browser running no script keeps the children for good, so make them the plain link that reaches the same content.
+### Load a page as the reader scrolls near it
+
+`LazyFrame` renders its `children` on the server and keeps them until the frame nears the viewport; then it mounts a `Frame` for `src`. A browser running no script keeps the children, so make them the plain link to the same content.
 
 ```tsx
 import { LazyFrame } from "@sdxc/lazy-frame/ui";
@@ -22,9 +24,13 @@ import { LazyFrame } from "@sdxc/lazy-frame/ui";
 </LazyFrame>;
 ```
 
-Load it when the `<dialog>`, `<details>` or `[popover]` around it opens instead, and turn the link that leads to the same content into that dialog's control:
+### Load a page when its dialog opens
+
+With `loadOn="open"`, the frame loads the first time the closest `<dialog>`, `<details>` or `[popover]` around it opens. `opener` turns the link to the same content into that dialog's control once script runs.
 
 ```tsx
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
+
 <a id="job-1" href="/jobs/1">
 	Read more
 </a>
@@ -36,7 +42,9 @@ Load it when the `<dialog>`, `<details>` or `[popover]` around it opens instead,
 </dialog>;
 ```
 
-It is a client entry named `@sdxc/lazy-frame/ui#LazyFrame`, so the browser entry's `loadModule` resolves that specifier:
+### Register the client entry
+
+`LazyFrame` is a client entry named `@sdxc/lazy-frame/ui#LazyFrame`, so the browser entry's `loadModule` resolves that specifier:
 
 ```typescript
 import { run } from "remix/component";
@@ -58,14 +66,14 @@ run({
 
 ### `<LazyFrame src loadOn? rootMargin? fallback? url? parentUrl? sitsAbove? opener?>`
 
-From `@sdxc/lazy-frame/ui`, also its default export. Renders `children` inside a `<div>` until the reader reaches it, then a `Frame` for `src` with `fallback` (or `children`) covering the request. The swap latches: a loaded frame keeps its content when it scrolls away or its container closes.
+From `@sdxc/lazy-frame/ui`, also its default export. Renders `children` inside a `<div>` until the reader reaches it, then a `Frame` for `src` with `fallback` (or `children`) covering the request. A loaded frame keeps its content when it scrolls away or its container closes.
 
 - `src`: where the content is fetched from.
 - `loadOn`: `"approach"` (the default) loads once the frame nears the viewport, through an [`IntersectionObserver`](https://developer.mozilla.org/docs/Web/API/IntersectionObserver); `"open"` loads the first time the closest `<dialog>`, `<details>` or `[popover]` around it opens, or at once when it is already open.
 - `rootMargin`: how far around the viewport an approaching frame starts its fetch, in `rootMargin` syntax. Defaults to `"320px 0px"`.
 - `fallback`: what stands in while the request is in the air. Defaults to `children`.
-- `url` and `parentUrl`: the address of the page the frame holds, and of the page it sits in. Given both, the frame replaces the address bar's entry with `url` once its top passes the top tenth of the viewport and with `parentUrl` when the reader scrolls back above it, so a reload resumes where they had read to. Nested frames settle on the deepest one reached.
-- `sitsAbove`: marks a frame placed above content the reader already sees. It loads only once the reader has scrolled past it and come back, and scrolls the page by what it adds so the content under their eyes stays put.
+- `url` and `parentUrl`: the address of the page the frame holds, and of the page it sits in. Given both, the address bar's entry is replaced with `url` once the frame's top passes the top tenth of the viewport, and with `parentUrl` when the reader scrolls back above it, so a reload resumes where they had read to. Nested frames settle on the deepest one reached.
+- `sitsAbove`: marks a frame placed above content the reader already sees. It loads once the reader has scrolled past it and come back, and scrolls the page by what it adds so the content under their eyes stays put.
 - `opener`: with `loadOn="open"`, the `id` of a link that, once script runs, opens the frame's container and stays on the page.
 
 ### Types
@@ -117,6 +125,52 @@ function PostsPage() {
 				</LazyFrame>
 			)}
 		</div>
+	);
+}
+```
+
+## Pattern: Details behind a disclosure or popover
+
+A `<details>` or a `[popover]` loads its body the first time it opens, so a page of collapsed sections fetches only the ones the reader expands. The `fallback` covers the request; the `children` stay the scriptless link.
+
+```tsx
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
+
+<details>
+	<summary>Changelog</summary>
+	<LazyFrame src="/changelog?frame" loadOn="open" fallback="Loading changelog…">
+		<a href="/changelog">Read the changelog</a>
+	</LazyFrame>
+</details>
+
+<button popovertarget="profile">Profile</button>
+<div id="profile" popover>
+	<LazyFrame src="/users/1/card?frame" loadOn="open" fallback="Loading…">
+		<a href="/users/1">View profile</a>
+	</LazyFrame>
+</div>;
+```
+
+## Pattern: Below-the-fold sections fetched early
+
+A long page renders its first screen on the server and leaves heavier sections to frames. A wider `rootMargin` starts each fetch further ahead, so the content is in place by the time the reader scrolls to it.
+
+```tsx
+import { LazyFrame } from "@sdxc/lazy-frame/ui";
+
+function ProductPage() {
+	return ({ id }: { id: string }) => (
+		<main>
+			<h1>Product</h1>
+
+			<LazyFrame src={`/products/${id}/reviews?frame`} rootMargin="800px 0px">
+				<a href={`/products/${id}/reviews`}>Read the reviews</a>
+			</LazyFrame>
+
+			<LazyFrame src={`/products/${id}/related?frame`} rootMargin="800px 0px">
+				<a href={`/products/${id}/related`}>See related products</a>
+			</LazyFrame>
+		</main>
 	);
 }
 ```
