@@ -38,7 +38,6 @@ import { formData } from "remix/middleware/form-data";
 import { methodOverride } from "remix/middleware/method-override";
 import { createRouter } from "remix/router";
 
-import type { AppContext } from "~/app/http/context";
 import type { Syndication } from "~/app/http/view-models/syndication";
 
 import activityPub from "~/app/http/middleware/activitypub";
@@ -104,14 +103,16 @@ function isMachineRequest(ctx: RequestContext): boolean {
  * exist for a person's page view and would spend a KV read against a cookieless MCP
  * request; the renderer stays exempt, since a closure costs the same regardless.
  *
+ * @template M The wrapped middleware, whose published context the router keeps deriving.
  * @param middleware Middleware that only applies to pages.
  * @returns Middleware that passes machine requests straight through.
  */
-function htmlOnly(middleware: Middleware<any>): Middleware<any> {
-	return (ctx, next) => {
+function htmlOnly<M extends Middleware<any>>(middleware: M): M {
+	let scoped: Middleware = (ctx, next) => {
 		if (isMachineRequest(ctx)) return next();
 		return middleware(ctx, next);
 	};
+	return scoped as M;
 }
 
 /**
@@ -194,7 +195,7 @@ export interface ApplicationOptions {
  * @returns Configured router instance for the worker fetch entrypoint.
  */
 export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) {
-	let router = createRouter<AppContext>({
+	let router = createRouter({
 		middleware: [
 			headRequests(),
 			log(logger),

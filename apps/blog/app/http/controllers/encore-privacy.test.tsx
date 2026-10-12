@@ -10,6 +10,8 @@
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
+import type { AppContext } from "~/app/http/context";
+
 import { htmlRenderer } from "~/app/http/render";
 import { blankSearchFrame } from "~/app/test/frames";
 import routes from "~/routes/web";
@@ -18,7 +20,7 @@ import privacyPage, { markdownPage } from "./encore-privacy";
 
 /** Fetches a page through a router carrying only what the controllers need. */
 async function fetchPage(path: string, headers: Record<string, string> = {}): Promise<Response> {
-	let router = createRouter({ middleware: htmlRenderer() });
+	let router = createRouter<AppContext>({ middleware: htmlRenderer() });
 	router.map(routes.searchFrame, blankSearchFrame);
 	router.map(routes.encorePrivacy, privacyPage);
 	router.map(routes.encorePrivacyMarkdown, markdownPage);

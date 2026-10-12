@@ -8,7 +8,6 @@
  */
 
 import type { Result } from "@sdxc/result";
-import type { Middleware } from "remix/router";
 
 import { text } from "@sdxc/http/response";
 import { currentLog } from "@sdxc/logger";
@@ -55,7 +54,7 @@ let cachedSessionMiddleware: {
  * 500, so no cookie is ever signed or trusted under a key anyone could know. The
  * middleware is rebuilt whenever the secret changes and reused while it holds.
  */
-let sessionMiddleware: Middleware = async (ctx, next) => {
+let sessionMiddleware: ReturnType<typeof session> = async (ctx, next) => {
 	let secret = await readSecret();
 
 	if (isFailure(secret)) {

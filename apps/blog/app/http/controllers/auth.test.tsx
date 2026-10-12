@@ -16,6 +16,7 @@ import { createRouter } from "remix/router";
 import { Session } from "remix/session";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 
+import type { AppContext } from "~/app/http/context";
 import type * as schema from "~/database/schema";
 
 import createEnvMiddleware from "~/app/http/middleware/env";
@@ -99,7 +100,7 @@ function signedInSession(): Session {
  * @returns The router the request is fetched through.
  */
 function createTestRouter(session: Session, viewer: schema.SelectUser | null) {
-	let router = createRouter({
+	let router = createRouter<AppContext>({
 		middleware: [
 			createEnvMiddleware(createEnv()),
 			asyncContext(),

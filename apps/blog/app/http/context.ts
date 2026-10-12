@@ -1,18 +1,16 @@
 /**
- * Request-context types for the blog HTTP layer. Defines the `BlogRenderer`
- * and render-option shapes and the `AppContext` produced after global middleware
- * (form data, session, auth, renderer), and sets it as the router default type.
+ * Request-context types for the blog HTTP layer: the `BlogRenderer` and render-option
+ * shapes, and the `AppContext` the router's global middleware produces, set as the
+ * router default type.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import type { RemixNode } from "remix/component";
-import type { ContextWithEntries, RequestContext } from "remix/router";
+import type { RouterContext } from "remix/router";
 
-import { Auth } from "remix/middleware/auth";
-import { Renderer } from "remix/middleware/render";
-import { Session } from "remix/session";
+import type { createWebRouter } from "~/app/initializers/router";
 
 /** Optional HTTP metadata for rendered HTML responses. */
 export interface RenderOptions {
@@ -29,16 +27,11 @@ export interface BlogRenderer {
 	): Promise<Response>;
 }
 
-/** Request context available after the app's global middleware stack runs. */
-export type AppContext = ContextWithEntries<
-	RequestContext<Record<string, string>>,
-	[
-		{ key: typeof FormData; value: FormData },
-		{ key: typeof Session; value: Session },
-		{ key: typeof Auth; value: unknown },
-		{ key: typeof Renderer; value: BlogRenderer; property: "render" },
-	]
->;
+/**
+ * Request context available after the app's global middleware stack runs, read off the
+ * router itself so every value a global middleware publishes reaches the handlers.
+ */
+export type AppContext = RouterContext<ReturnType<typeof createWebRouter>>;
 
 declare module "remix/router" {
 	/** Uses the app middleware context as the default for route helpers. */

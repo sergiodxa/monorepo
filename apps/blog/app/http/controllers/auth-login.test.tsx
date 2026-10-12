@@ -23,6 +23,8 @@ import { createRouter } from "remix/router";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
+import type { AppContext } from "~/app/http/context";
+
 import auth from "~/app/http/middleware/auth";
 import database from "~/app/http/middleware/database";
 import createEnvMiddleware from "~/app/http/middleware/env";
@@ -147,7 +149,7 @@ interface Browser {
  */
 function openBrowser(db: Database): Browser {
 	let jar: string | null = null;
-	let router = createRouter({
+	let router = createRouter<AppContext>({
 		middleware: [
 			createEnvMiddleware(createEnv()),
 			log(createLogger({ service: "blog", sink: () => undefined })),

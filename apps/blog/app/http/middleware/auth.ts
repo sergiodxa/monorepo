@@ -7,6 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import type { AuthState } from "remix/middleware/auth";
 import type { Middleware, RequestContext } from "remix/router";
 
 import { sessionScheme } from "@sdxc/auth/remix/schemes";
@@ -31,7 +32,11 @@ let authUserKey = createContextKey<schema.SelectUser | null>();
  * stored tokens when they lapse. Built per request because the client credentials and
  * the cache it reads the provider's keys through come from request-scoped bindings.
  */
-export let auth: Middleware = (ctx, next) => {
+export let auth: Middleware<{
+	key: typeof Auth;
+	value: AuthState<schema.SelectUser>;
+	property: "auth";
+}> = (ctx, next) => {
 	let middleware = createAuthMiddleware({
 		schemes: [sessionScheme(relyingParty(ctx.url), { verify: () => readSessionUser(ctx.models) })],
 	});
