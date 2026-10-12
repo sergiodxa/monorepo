@@ -12,6 +12,7 @@ import type { Database as DataTable } from "remix/data-table";
 import type { Middleware, RouterContext } from "remix/router";
 
 import { captcha } from "@sdxc/captcha/middleware";
+import { database } from "@sdxc/database-middleware";
 import getClientIP from "@sdxc/get-client-ip/middleware";
 import i18n from "@sdxc/i18n/middleware";
 import { lazy } from "@sdxc/lazy-route";
@@ -23,7 +24,6 @@ import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import database from "~/app/http/middleware/database";
 import jobs from "~/app/http/middleware/jobs";
 import models from "~/app/http/middleware/models";
 import callerBudget from "~/app/http/middleware/rate-limit";
@@ -76,7 +76,7 @@ export function createWebRouter(
 				detection: { supportedLanguages: SUPPORTED_LANGUAGES, fallbackLanguage: FALLBACK_LANGUAGE },
 				resources,
 			}),
-			database(openDb),
+			database(openDb()),
 			models(),
 			jobs(openDb),
 			render({ assets }),

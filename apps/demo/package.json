@@ -20,6 +20,7 @@
 		"@sdxc/captcha": "workspace:*",
 		"@sdxc/data-model": "workspace:*",
 		"@sdxc/data-table-d1": "workspace:*",
+		"@sdxc/database-middleware": "workspace:*",
 		"@sdxc/get-client-ip": "workspace:*",
 		"@sdxc/http": "workspace:*",
 		"@sdxc/i18n": "workspace:*",
