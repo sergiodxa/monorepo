@@ -11,7 +11,7 @@ import type { DocumentAssets } from "@sdxc/assets-middleware";
 
 import { fg } from "@sdxc/u/color";
 import { flexWrap, gap, grid, hstack } from "@sdxc/u/layout";
-import { m, p } from "@sdxc/u/size";
+import { m, mis, p } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import {
 	Badge,
@@ -113,7 +113,7 @@ export function CMSTopicsIndexView() {
 												<Table.Cell>
 													{item.title}
 													{item.builtIn ? (
-														<Badge color="neutral" variant="secondary" mix={[text("xs")]}>
+														<Badge color="neutral" variant="secondary" mix={[mis(2), text("xs")]}>
 															Kind
 														</Badge>
 													) : null}
