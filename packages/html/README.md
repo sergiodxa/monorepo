@@ -2,64 +2,50 @@
 
 Read a served page: fetch or parse HTML, then query it by role and accessible name.
 
-A response body is already in hand after an HTTP call, and the questions asked of it —
-does a heading with this name exist, what is the `og:title`, what does this table cell
-say — are answerable from the markup alone. This package requests the page, or takes a
-body you already hold, and answers them in the same process, so its answers describe
-the page exactly as the server sent it.
-
-Addressing an element by role and accessible name is what keeps a query stable: it
-survives a renamed class and fails when a button is relabelled, which is the change a
-person reading the page would notice too. Roles follow
-[HTML-AAM](https://www.w3.org/TR/html-aam-1.0/) and names follow
-[AccName](https://www.w3.org/TR/accname-1.2/), so `aria-labelledby`, a `<label>`
-associated by `for` or by containment, and an `alt` all resolve the way a browser
-resolves them.
-
-Every read a live page supports works here: find by role and name, read a value or an
-attribute, count matches, pair a term with its definition. Every match is a scope in
-turn, so a lookup narrows to a section and then reads what is inside it. A question
-whose answer comes from layout — what is scrolled into view — belongs to a browser.
+The answers describe the markup exactly as the server sent it, before any script runs. Roles
+follow [HTML-AAM](https://www.w3.org/TR/html-aam-1.0/) and names follow
+[AccName](https://www.w3.org/TR/accname-1.2/), so `aria-labelledby`, a `<label>` and an `alt`
+resolve the way a browser resolves them, and a query keeps working when a class is renamed.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/html
 ```
 
-Every lookup reports its outcome as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside
-this package and is where `isFailure` and `isSuccess` come from.
+Every lookup answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+which installs alongside and provides `isFailure` and `isSuccess`.
 
 ## Usage
 
-### Get A Page
+### Get a page
 
 ```typescript
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 
-let page = await HTML.fetch("https://example.com/portfolios");
+let page = await HTML.fetch("https://example.com/pricing");
 if (isFailure(page)) throw page.error;
 
 let doc = page.data;
+
+let fragment = HTML.parse("<p>Hello <strong>world</strong>!</p>"); // markup already in hand
 ```
 
-`HTML.fetch` asks for `text/html` and reads the response when that is what arrived, so
-a login redirect or a JSON error page comes back as an `HTMLFetchError` naming what the
-server sent. Markup you already hold goes through `HTML.parse(source)` instead, and
-both answer with the same document.
+`HTML.fetch` asks for `text/html` and parses the body only when that is what arrived, so a
+JSON error page served in its place comes back as an `HTMLFetchError`. A fragment parses like a full page.
 
-### Read The Head
+### Read the head and the text
 
 ```typescript
-doc.title; // "Invest your money"
-doc.meta("description"); // success("A page about investing")
-doc.meta("og:title"); // success("Invest your money")
-doc.link("canonical"); // success("https://example.com/portfolios")
+doc.title; // "Pricing"
+doc.text; // "Pricing Plans Starter $9 ..."
+doc.meta("description"); // success("Plans for every team")
+doc.meta("og:title"); // success("Pricing"), name or property
+doc.link("canonical"); // success("https://example.com/pricing")
 ```
 
-### Address An Element
+### Address an element by role and name
 
 ```typescript
 let signIn = doc.query({ role: "button", name: "Sign in" });
@@ -69,310 +55,183 @@ signIn.data.tag; // "button"
 signIn.data.disabled; // false
 signIn.data.attributes; // { type: "submit" }
 
+doc.query({ role: "heading", nameContaining: "Plan" });
 doc.queryAll({ role: "link" }).length; // 7
-doc.query({ role: "heading", nameContaining: "Portfolio" });
+
+doc.query({ role: "link", name: "Profile" }); // failure when two links share the name
+doc.query({ role: "link", name: "Profile", at: "last" }); // "first", "last" or a 1-based ordinal
 ```
 
-### Read A Form, A Table And A Definition List
+Names match the whole whitespace-normalized accessible name, case-sensitively. Several matches
+are a failure listing every candidate, until `at` picks one.
+
+### Read forms, tables and definition lists
 
 ```typescript
-doc.field("tip"); // the input named "tip"
-doc.field("cadence", { value: "annual" }); // one radio of the group
-doc.field("intent", { value: "save" }); // the submit-intent button
+doc.field("email"); // the control with name="email"
+doc.field("plan", { value: "annual" }); // one radio of the group
+doc.field("intent", { value: "cancel" }); // one submit button of several
 doc.cell({ row: 1, column: 2 }); // second cell of the first body row
+doc.cell({ row: 1, column: 1, includeHeader: true }); // the header row counts too
 doc.definition("Total"); // the <dd> paired with the <dt> "Total"
 ```
 
-### Narrow To A Section
+### Narrow to a section
 
-Every match is a scope: the five lookups run again over the element's own descendants,
-so a name only has to be unique inside the section you narrowed to.
+Every match is a scope: the same five lookups run over its descendants, so a name only has to be
+unique inside the section.
 
 ```typescript
-let form = doc.query({ role: "form", name: "Donate" });
+let form = doc.query({ role: "form", name: "Checkout" });
 if (isFailure(form)) throw form.error;
 
-form.data.field("tip"); // the input named "tip", inside this form
-form.data.query({ role: "button", name: "Save" });
+form.data.field("email");
+form.data.query({ role: "button", name: "Pay" });
 form.data.queryAll({ role: "checkbox" }).length; // 3
-form.data.definition("Total"); // the <dd> of a <dl> this form carries
 ```
-
-### Choose Among Several Matches
-
-```typescript
-doc.query({ role: "link", name: "Profile" });
-// failure: 2 matches for a link named "Profile": #1 <a> "Profile", #2 <a> "Profile"
-
-doc.query({ role: "link", name: "Profile", at: "first" });
-doc.query({ role: "link", name: "Profile", at: 2 });
-doc.query({ role: "link", name: "Profile", at: "last" });
-```
-
-## Matching Rules
-
-These semantics belong to the package, so every caller's lookup answers the same way.
-
-1. **Names match exactly**, on the whitespace-normalized accessible name: runs of
-   whitespace — U+00A0 and the other Unicode spaces included — collapse to one ASCII
-   space and the ends are trimmed. Comparison is case-sensitive; `nameContaining` asks
-   for a substring.
-2. **Several matches is a failure**, carrying every candidate with its position.
-   `at: "first"`, `at: "last"` and an ordinal choose one; ordinals count from 1.
-3. **Visibility is markup-level.** `hidden`, `aria-hidden="true"`, a `<template>`, an
-   `<input type="hidden">`, and `display: none` or `visibility: hidden` in an inline
-   `style` attribute hide an element. Visibility comes from the markup alone, so a
-   class-based `.sr-only` remains visible here; `includeHidden: true` reaches the rest.
-4. **`field` addresses any element carrying a `name` attribute** — input, textarea,
-   select, button — and `value` narrows a group sharing one name, which is how a radio
-   group and a submit-intent button are addressed.
-5. **Rows and columns count from 1 over body rows**, header rows joining the count
-   only under `includeHeader: true`. Columns count the cells the row carries.
-6. **`meta` matches `name` or `property`**, so `description` and `og:title` are one
-   lookup, and **`link` matches one token of `rel`**, since `rel` is a token list.
 
 ## API
 
 ### `HTML.parse(source: string): Result<HTML, HTMLParseError>`
 
-Parses a full page or a fragment of one. A fragment is given the document skeleton it
-lacks, so a partial response is queried the same way a full page is. A source carrying
-no markup and no text is the failure.
+Parses a full page or a fragment. A source with no markup and no text is the failure.
 
-### `HTML.fetch(input, init?): Promise<Result<HTML, HTMLFetchError | HTMLParseError>>`
+### `HTML.fetch(input: URL | RequestInfo, init?: RequestInit): Promise<Result<HTML, HTMLFetchError | HTMLParseError>>`
 
-Requests a page and parses it. `input` and `init` are what
-[`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch) takes — a URL,
-a string, or a `Request` — and an `Accept` header of your own is kept, `text/html`
-standing in otherwise.
+Requests a page with the arguments
+[`fetch`](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch) takes, sending
+`Accept: text/html` unless `init` sets its own. A rejected request, a non-`ok` status and a
+content type other than `text/html` each answer an `HTMLFetchError` naming what arrived.
 
-The body is parsed when the response arrives `ok` and its content type is `text/html`.
-A rejected request, an error status, and a body served under another content type each
-come back as an `HTMLFetchError` naming what arrived, so a caller holds a parsed page
-or the reason it could not be read.
+### `HTML.sanitize(source: string, policy?: HTML.SanitizePolicy): Result<string, HTMLParseError>`
 
-### `doc.title`
+Re-emits markup through an allow-list so it is safe to render inside your own origin:
 
-The `<title>` text, normalized, `undefined` when the page carries no title.
+- Article elements (paragraphs, headings, lists, quotes, code, inline text, links, images,
+  figures, `time` and tables) are kept. Scripts, styles, forms and their controls, embedded
+  objects, `svg` and `math` are dropped with their content. Every other element, such as `div`,
+  is unwrapped and its children kept.
+- Attributes are kept per element: `href` and `title` on `a`, `src`, `alt`, `width` and
+  `height` on `img`, `colspan`/`rowspan` (capped at 64) on cells, `datetime` on `time`, `cite`,
+  and list numbering. Everything else, `on*`, `style`, `class` and `id` included, is dropped.
+- URLs resolve against `policy.baseUrl` and survive only as `http:` or `https:` (plus `mailto:`
+  outside `src`); an unacceptable URL drops the attribute and keeps the element.
+- Links gain `target="_blank" rel="noopener noreferrer nofollow"`; images gain
+  `referrerpolicy="no-referrer" loading="lazy"`, and an image declaring a side of 2px or less is
+  removed.
+- A YouTube or Vimeo `iframe` becomes a link to the video (with its thumbnail for YouTube); any
+  other `iframe` is removed.
 
-### `doc.text`
+`policy.report` receives an `HTML.SanitizeReport` once the pass completes.
 
-The text a reader would see, drawn from the elements markup keeps visible. Block
-boundaries become a space and an inline element stays inside its sentence, so
-`<p>Hello <strong>world</strong>!</p>` reads as `Hello world!`.
+### `doc.title: string | undefined`
+
+The normalized `<title>` text.
+
+### `doc.text: string`
+
+The visible text, with block boundaries read as spaces and inline elements kept in their
+sentence.
 
 ### `doc.meta(name: string): Result<string, HTMLNotFoundError>`
 
-The `content` of the meta tag whose `name` or `property` is `name`.
+The `content` of the first meta tag whose `name` or `property` is `name`.
 
 ### `doc.link(rel: string): Result<string, HTMLNotFoundError>`
 
-The `href` of the first link carrying `rel` as one of its tokens.
+The `href` of the first `<link>` carrying `rel` as one of its tokens.
 
 ### `doc.query(selector?: HTML.Selector): Result<HTML.Element, HTMLQueryError>`
 
-One element addressed by role and name.
-
-- `selector.role`: The ARIA role, implicit or explicit — `button`, `link`, `textbox`,
-  `heading`, `row`, `cell`, `term`
-- `selector.name`: The whole accessible name
-- `selector.nameContaining`: A part of the accessible name
-- `selector.value`: The control's value, as the markup spells it
-- `selector.at`: `"first"`, `"last"` or a 1-based ordinal, where several match
-- `selector.includeHidden`: Reaches what markup hides
+The single element matching the selector: `role` (implicit or explicit), `name` (the whole
+accessible name), `nameContaining`, `value`, `at` and `includeHidden`.
 
 ### `doc.queryAll(selector?: HTML.Selector): HTML.Element[]`
 
-Every match, in document order, which is how a caller counts matches or reads a
-repeated element.
+Every match in document order.
 
-### `doc.field(name, options?): Result<HTML.Element, HTMLQueryError>`
+### `doc.field(name: string, options?: HTML.FieldOptions): Result<HTML.Element, HTMLQueryError>`
 
-The control carrying that `name` attribute, narrowed by `options.value` when a group
-shares one name. `options` also takes `at` and `includeHidden`.
+The input, textarea, select or button with that `name` attribute; `options.value` narrows a
+group sharing the name.
 
 ### `doc.cell(selector: HTML.CellSelector): Result<HTML.Element, HTMLQueryError>`
 
-The cell at `selector.row` and `selector.column`, both counted from 1.
-`includeHeader` counts header rows, and `at` chooses among several tables.
+The cell at `row` and `column`, both from 1 over body rows; `includeHeader` counts header rows
+(those in `<thead>` or made only of `<th>`), and `at` chooses among several tables.
 
-### `doc.definition(term, options?): Result<HTML.Element, HTMLQueryError>`
+### `doc.definition(term: string, options?: HTML.Options): Result<HTML.Element, HTMLQueryError>`
 
-The definition paired with the term whose text matches exactly.
+The `<dd>` paired with the `<dt>` whose normalized text is exactly `term`.
 
 ### `HTML.Element`
 
-```typescript
-interface Element {
-	tag: string;
-	role?: string;
-	name: string;
-	text: string;
-	value?: string;
-	attributes: Record<string, string>;
-	disabled: boolean;
-	position: number;
+A match: `tag`, `role`, `name` and `text` (normalized), `value`, `attributes` (as the markup
+spells them), `disabled` (including through a disabled `<fieldset>`) and `position`, its 1-based
+place among the matches. `value` is an input's `value` attribute, a textarea's text, or the
+selected option's value. It carries `query`, `queryAll`, `field`, `cell` and `definition`, scoped
+to its descendants.
 
-	query(selector?: HTML.Selector): Result<HTML.Element, HTMLQueryError>;
-	queryAll(selector?: HTML.Selector): HTML.Element[];
-	field(name: string, options?: HTML.FieldOptions): Result<HTML.Element, HTMLQueryError>;
-	cell(selector: HTML.CellSelector): Result<HTML.Element, HTMLQueryError>;
-	definition(term: string, options?: HTML.Options): Result<HTML.Element, HTMLQueryError>;
-}
-```
+### `parseDocument(source: string): Result<DOMDocument, HTMLParseError>` from `./document`
 
-`attributes` and `value` carry the markup's own spelling: the `value` attribute of an
-input, the text of a textarea, and the value of the option a select marks as selected.
-`name` and `text` are normalized, and `position` is the element's 1-based position
-among the matches the lookup considered.
-
-The five lookups are the document's own, run again over the element's descendants:
-every match is a scope. They take the same selectors, follow the same matching rules,
-and fail the same way, and a failure's `available` lists what the scope holds.
-
-### `HTML.sanitize(source, policy?): Result<string, HTMLParseError>`
-
-Rewrites markup into the subset that is safe to render beside content of your own,
-which is what rendering someone else's page inside your origin asks for. The source is
-parsed, walked and emitted again, so what comes back is markup the allow-list names and
-nothing else.
-
-```typescript
-let clean = HTML.sanitize(body, { baseUrl: "https://publisher.example/posts/one" });
-if (isFailure(clean)) throw clean.error;
-
-clean.data; // "<h1>Title</h1><p>A <a href=\"https://publisher.example/about\">link</a>.</p>"
-```
-
-- **Elements kept**: `p`, `h1`–`h6`, `ul`, `ol`, `li`, `dl`, `dt`, `dd`, `blockquote`,
-  `pre`, `code`, `em`, `strong`, `b`, `i`, `sup`, `sub`, `del`, `ins`, `abbr`, `a`,
-  `img`, `figure`, `figcaption`, `time`, `hr`, `br`, `table`, `thead`, `tbody`, `tr`,
-  `th`, `td`.
-- **Elements removed with their subtree**: `script`, `style`, `noscript`, `template`,
-  `iframe`, `object`, `embed`, `form`, `input`, `button`, `select`, `textarea`, `link`,
-  `meta`, `base`, `svg`, `math`. Their text leaves with them, so a script's source
-  never lands in the output as prose.
-- **Every other element is unwrapped**: a `<div>` or a `<span>` goes and its children
-  stay where they were, which keeps the text and drops the layout.
-- **Attributes kept**: `href` on `a`; `src`, `alt`, `width`, `height` on `img`;
-  `colspan` and `rowspan` on cells; `datetime` on `time`; `lang` and `dir` anywhere.
-  Everything else goes, which is what removes every `on*` handler, `style`, `class` and
-  `id` without naming them.
-- **URLs** may be `http:` or `https:`, plus `mailto:` on `href`. A relative URL
-  resolves against `policy.baseUrl`, so a relative `src` resolves against the page the
-  markup came from rather than against yours. An attribute left without an acceptable
-  value is dropped and its element kept: an `<a>` with a `javascript:` href comes back
-  as an `<a>` with no `href`.
-- **Images** gain `referrerpolicy="no-referrer"` and `loading="lazy"`, and an `<img>`
-  declaring a `width` or `height` of `1` is dropped, since a one-pixel image is never
-  content.
-
-An allow-list is what makes this hold for the element invented next year, and a
-Content-Security-Policy on the page that renders the result is the second line behind
-it.
-
-### `@sdxc/html/document`
-
-The parsed tree itself, for a package that needs to walk a document rather than ask it
-questions — a distiller, a rewriter, a link checker. Sharing one parser is what
-keeps two packages agreeing about what `<p>one<p>two` is.
-
-```typescript
-import { parseDocument } from "@sdxc/html/document";
-import type { DOMDocument, DOMElement } from "@sdxc/html/document";
-
-let document = parseDocument(source);
-```
-
-`parseDocument` answers with the same `Result` the rest of the package does, and
-`DOMAttribute`, `DOMNode`, `DOMParent`, `DOMElement` and `DOMDocument` are the
-vocabulary it is read through — declared by this package, so they describe the
-objects the parser produces under every set of globals a consumer compiles with.
+The parsed tree, for code that walks a document instead of querying it, sharing the parser the
+rest of the package uses. `DOMAttribute`, `DOMNode`, `DOMParent`, `DOMElement` and `DOMDocument`
+type it independently of the consumer's DOM globals.
 
 ### Errors
 
-`HTMLParseError` is a source carrying no markup.
+- `HTMLParseError`: the source carried no markup.
+- `HTMLFetchError`: the request failed, or answered an error status or another content type.
+- `HTMLQueryError`: a lookup produced no single answer. `available` lists what the scope holds
+  under the same lookup (names under the role, field names, meta keys, terms), and the message
+  names them.
+- `HTMLNotFoundError`: nothing matched, or `at` pointed past the last match.
+- `HTMLAmbiguousMatchError`: several matched; `candidates` holds each as an `HTML.Element`.
 
-`HTMLFetchError` is a page that arrived as something else: a rejected request, an error
-status, or a body served under another content type. Its message names what came back.
+### Types
 
-`HTMLQueryError` is a lookup that produced no single answer. Its `available` lists the
-identities the document does hold under the same lookup — the accessible names under a
-role, the field names, the meta tags, the terms — so a report can name them. Two
-subclasses say which case it was: `HTMLNotFoundError`, where nothing answered, an
-ordinal past the last match included, and `HTMLAmbiguousMatchError`, where several did,
-carrying each of them with its position in `candidates`.
+`HTML.Selector`, `HTML.FieldOptions`, `HTML.CellSelector` and `HTML.Options` are the lookup
+inputs; every one takes `at` (`HTML.Position`: `"first"`, `"last"` or an ordinal from 1) and
+`includeHidden`. Hidden means hidden in the markup: `hidden`, `aria-hidden="true"`,
+`<template>`, `<input type="hidden">`, or an inline `display: none` or `visibility: hidden`;
+class-based hiding stays visible. `HTML.SanitizePolicy` holds `baseUrl` and `report`;
+`HTML.SanitizeReport` counts `removedElements`, `removedAttributes`, `droppedUrls` and `pixels`,
+plus `durationMs`.
 
-## Pattern: Naming The Ambiguity In A Failure Report
+## Pattern: Checking A Page As Served
 
-`HTMLAmbiguousMatchError` carries what a person needs to fix the query, so a report
-prints the candidates with their positions.
-
-```typescript
-import { HTML, HTMLAmbiguousMatchError } from "@sdxc/html";
-import { isFailure } from "@sdxc/result";
-
-let page = await HTML.fetch("https://example.com/portfolios");
-if (isFailure(page)) throw page.error;
-
-let result = page.data.query({ role: "link", name: "Profile" });
-
-if (isFailure(result) && result.error instanceof HTMLAmbiguousMatchError) {
-	for (let candidate of result.error.candidates) {
-		console.log(candidate.position, candidate.tag, candidate.attributes.href);
-	}
-}
-```
-
-## Pattern: Asserting On The Page As Served
-
-Parsing the response body answers what an SEO or no-JavaScript requirement is actually
-about: the markup the server sent, before any hydration.
+An SEO or no-JavaScript requirement is about the markup the server sent, so assert on it
+directly.
 
 ```typescript
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 
-let page = await HTML.fetch("https://example.com/portfolios");
+let page = await HTML.fetch("https://example.com/pricing");
 if (isFailure(page)) throw page.error;
 
 let doc = page.data;
+let problems: string[] = [];
 
-let heading = doc.query({ role: "heading", name: "Portfolios" });
-let canonical = doc.link("canonical");
-let image = doc.meta("og:image");
-
-if (isFailure(image)) {
-	console.log(image.error.message);
+for (let key of ["description", "og:title", "og:image"]) {
+	let tag = doc.meta(key);
+	if (isFailure(tag)) problems.push(tag.error.message);
 	// No meta tag "og:image" in the document. Present: description, og:title.
 }
+
+if (isFailure(doc.link("canonical"))) problems.push("Missing canonical link");
+if (isFailure(doc.query({ role: "heading", name: "Pricing" }))) problems.push("Missing heading");
 ```
 
-## Pattern: Reading A Table From The Response Body
+## Pattern: Pulling Records Out Of A Section
 
-Row and column addressing counts the rows a reader counts, so a summary table is
-assertable straight from the response body.
-
-```typescript
-let share = doc.cell({ row: 2, column: 2 });
-if (isFailure(share)) throw share.error;
-share.data.text; // "60%"
-
-let header = doc.cell({ row: 1, column: 1, includeHeader: true });
-let total = doc.definition("Total");
-```
-
-## Pattern: Pulling Data Out Of A Section
-
-Narrowing first is how a page becomes records: address the section once, then read its
-rows and its figures against that scope, where a plain name like `Total` is already
-unique.
+Narrow to a region once, then read its rows and figures against that scope.
 
 ```typescript
 import { HTML } from "@sdxc/html";
 import { isFailure } from "@sdxc/result";
 
-let page = await HTML.fetch("https://example.com/portfolios");
+let page = await HTML.fetch("https://example.com/portfolio");
 if (isFailure(page)) throw page.error;
 
 let panel = page.data.query({ role: "region", name: "Holdings" });
@@ -385,16 +244,83 @@ for (let row of panel.data.queryAll({ role: "row" })) {
 	if (ticker && share) holdings.push({ ticker: ticker.text, share: share.text });
 }
 
-holdings; // [{ ticker: "VTI", share: "60%" }, { ticker: "BND", share: "40%" }]
-
 let total = panel.data.definition("Total");
-if (isFailure(total)) throw total.error;
+if (isFailure(total)) throw total.error; // the message lists the terms the panel carries
 
 total.data.text; // "$12,400"
 ```
 
-A scoped lookup reports its scope, so a miss on that last line names the terms the
-panel itself carries.
+A `<section>` takes the `region` role when it has an accessible name, such as one from
+`aria-labelledby`.
+
+## Pattern: Reporting A Lookup That Missed
+
+Both failures say what the page offered instead, so a report can suggest the fix.
+
+```typescript
+import { HTML, HTMLAmbiguousMatchError, HTMLNotFoundError } from "@sdxc/html";
+import { isFailure } from "@sdxc/result";
+
+let page = HTML.parse(source);
+if (isFailure(page)) throw page.error;
+
+let result = page.data.query({ role: "link", name: "Profile" });
+
+if (isFailure(result)) {
+	if (result.error instanceof HTMLAmbiguousMatchError) {
+		let options = result.error.candidates.map(
+			(candidate) => `at: ${candidate.position} → ${candidate.attributes.href}`,
+		);
+		throw new Error(`Pick one link: ${options.join(", ")}`);
+	}
+
+	if (result.error instanceof HTMLNotFoundError) {
+		throw new Error(`No "Profile" link. Links present: ${result.error.available.join(", ")}`);
+	}
+}
+```
+
+## Pattern: Rendering Someone Else's Article
+
+Sanitize fetched markup before rendering it beside your own content, resolving its relative URLs
+against the page it came from; `report` counts what the pass removed without exposing the document.
+
+```typescript
+import { HTML } from "@sdxc/html";
+import { isFailure } from "@sdxc/result";
+
+let url = "https://publisher.com/posts/one";
+let response = await fetch(url);
+
+let report: HTML.SanitizeReport | undefined;
+
+let clean = HTML.sanitize(await response.text(), {
+	baseUrl: response.url || url,
+	report: (counts) => (report = counts), // { removedElements, removedAttributes, droppedUrls, pixels, durationMs }
+});
+if (isFailure(clean)) throw clean.error;
+
+clean.data; // '<h1>Title</h1><p>A <a href="https://publisher.com/about" target="_blank" ...>link</a>.</p>'
+```
+
+Serve the page that renders it with a Content-Security-Policy as a second line of defense.
+
+## Pattern: Walking The Tree
+
+`./document` hands over the parsed tree for work that visits every node, such as collecting
+links.
+
+```typescript
+import { parseDocument } from "@sdxc/html/document";
+import { isFailure } from "@sdxc/result";
+
+let document = parseDocument(source);
+if (isFailure(document)) throw document.error;
+
+let hrefs = Array.from(document.data.body.querySelectorAll("a[href]")).map(
+	(anchor) => new URL(anchor.getAttribute("href") ?? "", "https://example.com/").href,
+);
+```
 
 ## Versioning
 
@@ -410,7 +336,7 @@ Depend on one exact date, and move it when you are ready to take the change:
 ```json
 {
 	"dependencies": {
-		"@sdxc/html": "2026.9.10"
+		"@sdxc/html": "2026.9.4"
 	}
 }
 ```
