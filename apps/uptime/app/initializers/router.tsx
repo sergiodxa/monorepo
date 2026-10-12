@@ -293,7 +293,7 @@ export function createWebRouter(options: WebRouterOptions) {
 
 	/**
 	 * Public try-it surface: outside every auth guard since using it needs no
-	 * account. Each leaf guards itself instead — the honeypot ahead of `trial-guard.ts`
+	 * account. Each leaf guards itself instead — the honeypot ahead of `trial/guard.ts`
 	 * for `trial.check`'s POST, so a filled trap never costs a challenge verification or a
 	 * probe, the honeypot for `trial.lead`, an unguessable URL token for `trial.unsubscribe`.
 	 */

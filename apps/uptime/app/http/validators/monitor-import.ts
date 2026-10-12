@@ -17,7 +17,7 @@ import * as checks from "remix/data-schema/checks";
 import * as coerce from "remix/data-schema/coerce";
 import * as f from "remix/data-schema/form-data";
 
-import { normalizeTrialUrl } from "~/app/services/trial-identity";
+import { normalizeTrialUrl } from "~/app/services/trial/identity";
 
 /**
  * How many non-blank lines one submission examines, and therefore the most

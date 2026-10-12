@@ -25,9 +25,9 @@ import {
 	UPDATE_TCP_MONITOR_BODY,
 	WRITABLE_TCP_MONITOR,
 } from "~/app/http/openapi/tcp-monitors";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { tcpMonitorRoutes } from "~/routes/api-groups";

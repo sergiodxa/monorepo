@@ -20,7 +20,7 @@ import {
 	MAX_DNS_INTERVAL_SECONDS,
 	MIN_DNS_INTERVAL_SECONDS,
 } from "~/app/http/validators/dns-monitor";
-import { DNS_RECORD_TYPES } from "~/app/services/dns-record-value";
+import { DNS_RECORD_TYPES } from "~/app/services/dns/record-value";
 import { typedId } from "~/app/services/typed-id";
 import { dnsRecordStates, registrationStatuses } from "~/database/schema";
 import routes from "~/routes/web";

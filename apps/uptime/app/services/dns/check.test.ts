@@ -19,7 +19,7 @@ import {
 	checkDns,
 	queryDnsRecords,
 	sweepDnsName,
-} from "~/app/services/dns-check";
+} from "~/app/services/dns/check";
 
 const DOH_URL = CLOUDFLARE.url;
 

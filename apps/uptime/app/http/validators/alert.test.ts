@@ -172,7 +172,7 @@ describe("CreateAlertSchema", () => {
 
 	/**
 	 * 0 stays accepted because the edit form posts back what the row already stores, and
-	 * rows storing 0 exist. It now means "as often as allowed"; `app/services/alerts.ts`
+	 * rows storing 0 exist. It now means "as often as allowed"; `app/services/alerts/dispatch.ts`
 	 * decides that.
 	 */
 	test("still accepts an explicit cooldown of 0", () => {

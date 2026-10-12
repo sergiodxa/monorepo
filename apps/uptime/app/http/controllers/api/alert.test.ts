@@ -17,7 +17,7 @@ import { describe, expect, test, vi } from "vitest";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { database } from "~/app/http/middleware/database";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
 import { encodeId } from "~/app/services/typed-id";
 import { createTestDatabase } from "~/app/test/db";
 import { useMailServerDns } from "~/app/test/mail-servers";

@@ -10,7 +10,7 @@ import { dayRangeLength } from "@sdxc/dates";
 import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { checkRange, presetRange } from "~/app/services/report-range";
+import { checkRange, presetRange } from "~/app/services/reports/range";
 
 /** 2026-09-29T10:00Z, the reference "now". */
 const NOW = Date.UTC(2026, 8, 29, 10);

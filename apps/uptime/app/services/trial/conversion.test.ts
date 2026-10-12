@@ -23,7 +23,7 @@ import {
 	TRIAL_WATCH_CONVERSION_WINDOW_DAYS,
 	TRIAL_WATCH_DURATION_DAYS,
 } from "~/app/models/trial-watches";
-import { convertTrialWatches } from "~/app/services/trial-conversion";
+import { convertTrialWatches } from "~/app/services/trial/conversion";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
 import { monitorDailyStats, monitors, trialWatches, trialWatchResults } from "~/database/schema";

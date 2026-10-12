@@ -17,7 +17,7 @@ import { Webhook } from "@sdxc/messaging/webhook";
 import { failure, isFailure, success } from "@sdxc/result";
 import * as s from "remix/data-schema";
 
-import { incidentNote, statusWord } from "~/app/services/alert-message";
+import { incidentNote, statusWord } from "~/app/services/alerts/message";
 
 /** The body every uptime webhook delivery has carried, field for field. */
 export interface UptimeWebhookBody {

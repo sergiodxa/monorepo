@@ -31,7 +31,7 @@ import type { InsertDnsMonitorRecord, SelectMembership, SelectTeam } from "~/dat
 import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
-import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
+import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
 import { dnsMonitorRecords, dnsMonitors, memberships, teams } from "~/database/schema";

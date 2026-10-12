@@ -13,8 +13,8 @@ import { createAction } from "remix/router";
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { API_KEY_ID_PARAMS } from "~/app/http/openapi/api-keys";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
 import routes from "~/routes/web";
 
 /** DELETE /api/v1/api-keys/:apiKeyId — revokes an API key for the team. */

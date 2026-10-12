@@ -23,7 +23,7 @@ import { database } from "~/app/http/middleware/database";
 import i18n from "~/app/http/middleware/i18n";
 import models from "~/app/http/middleware/models";
 import { SEO } from "~/app/initializers/seo";
-import { apiProblems } from "~/app/services/api-problems";
+import { apiProblems } from "~/app/services/api/problems";
 import { createTestDatabase } from "~/app/test/db";
 import { withDocumentAssets } from "~/app/test/document-assets";
 import routes from "~/routes/web";

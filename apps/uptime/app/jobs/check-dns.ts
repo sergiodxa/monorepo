@@ -1,6 +1,6 @@
 /**
  * Background job that claims the DNS monitors whose `interval_seconds` has come round,
- * sweeps each through the shared pipeline in `app/services/dns-discovery.ts` (ADR-006), and
+ * sweeps each through the shared pipeline in `app/services/dns/discovery.ts` (ADR-006), and
  * bounds its query budget against the platform's per-invocation ceiling (ADR-026 §9a),
  * deferring or partially reporting what a delivery can't cover. Each completed check bills
  * one ping however many queries it took (ADR-026 §9).
@@ -15,23 +15,23 @@ import { createJobHandler } from "@sdxc/jobs";
 import { unwrap } from "@sdxc/result";
 
 import type { ClaimedDnsMonitor } from "~/app/models/dns-monitors";
-import type { DnsCheckStatus } from "~/app/services/dns-check";
-import type { DnsCheckPlan } from "~/app/services/dns-discovery";
+import type { DnsCheckStatus } from "~/app/services/dns/check";
+import type { DnsCheckPlan } from "~/app/services/dns/discovery";
 import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { BillablePing } from "~/app/services/ping-meter";
 
 import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { shouldNotifyDnsResult } from "~/app/services/alerts";
+import { shouldNotifyDnsResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
-import { QUERIES_PER_NAME } from "~/app/services/dns-check";
+import { QUERIES_PER_NAME } from "~/app/services/dns/check";
 import {
 	INVOCATION_QUERY_BUDGET,
 	planDnsCheck,
 	recordDnsCheck,
-} from "~/app/services/dns-discovery";
+} from "~/app/services/dns/discovery";
 import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";
 

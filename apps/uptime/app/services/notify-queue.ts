@@ -12,7 +12,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type { DnsCheckStatus } from "~/app/services/dns-check";
+import type { DnsCheckStatus } from "~/app/services/dns/check";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckStatus } from "~/app/services/tcp-check";
 import type { CronJobStatus, FlowStatus, RegistrationStatus } from "~/database/schema";

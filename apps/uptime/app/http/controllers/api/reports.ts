@@ -21,19 +21,19 @@ import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
 import type { Report } from "~/app/models/reports";
-import type { ReportKind } from "~/app/services/report-csv";
-import type { ReportRangeProblem } from "~/app/services/report-range";
+import type { ReportKind } from "~/app/services/reports/csv";
+import type { ReportRangeProblem } from "~/app/services/reports/range";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { REPORT_QUERY } from "~/app/http/openapi/reports";
 import { dailyRows, summaryRows } from "~/app/models/reports";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, PAGING } from "~/app/services/pagination";
-import { dailyCsv, reportFilename, summaryCsv } from "~/app/services/report-csv";
-import { reportDialect } from "~/app/services/report-dialect";
-import { checkRange, MAX_REPORT_DAYS, presetRange } from "~/app/services/report-range";
-import { REPORT_MONITOR_TYPES } from "~/app/services/report-request";
+import { dailyCsv, reportFilename, summaryCsv } from "~/app/services/reports/csv";
+import { reportDialect } from "~/app/services/reports/dialect";
+import { checkRange, MAX_REPORT_DAYS, presetRange } from "~/app/services/reports/range";
+import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { encodeMonitorId } from "~/app/services/typed-id";
 import { reportsRoutes } from "~/routes/api-groups";
 

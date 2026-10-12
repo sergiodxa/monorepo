@@ -14,8 +14,8 @@ import { defineOperation } from "@sdxc/openapi";
 
 import { envelope, pageEnvelope, pageResponse } from "~/app/http/openapi/envelope";
 import { resourceId } from "~/app/http/openapi/fields";
-import { MAX_REPORT_DAYS } from "~/app/services/report-range";
-import { REPORT_MONITOR_TYPES } from "~/app/services/report-request";
+import { MAX_REPORT_DAYS } from "~/app/services/reports/range";
+import { REPORT_MONITOR_TYPES } from "~/app/services/reports/request";
 import { typedId } from "~/app/services/typed-id";
 import { monitorStatuses } from "~/database/schema";
 import routes from "~/routes/web";

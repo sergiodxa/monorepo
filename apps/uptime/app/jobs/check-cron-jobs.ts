@@ -22,7 +22,7 @@ import type { CronJobStatus, SelectCronJobMonitor } from "~/database/schema";
 
 import jobs from "~/app/jobs";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
-import { shouldNotifyCronJobResult } from "~/app/services/alerts";
+import { shouldNotifyCronJobResult } from "~/app/services/alerts/dispatch";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { enqueueNotifications } from "~/app/services/notify-queue";

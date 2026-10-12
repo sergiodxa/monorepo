@@ -22,7 +22,7 @@ import type { KeysetPage, OrderByTuple } from "@sdxc/pagination";
 import { Ok } from "@sdxc/http/status-code";
 import { createPaging } from "@sdxc/pagination";
 
-import { apiSuccess } from "~/app/services/api-response";
+import { apiSuccess } from "~/app/services/api/response";
 
 /**
  * Parsing and `Link` annotation with the API's parameter names and page sizes bound.

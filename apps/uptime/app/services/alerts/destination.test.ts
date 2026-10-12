@@ -12,8 +12,8 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import { destinationFor } from "~/app/services/alert-destination";
-import { alertMessage } from "~/app/services/alert-message";
+import { destinationFor } from "~/app/services/alerts/destination";
+import { alertMessage } from "~/app/services/alerts/message";
 
 /** Every event PagerDuty received, parsed. */
 let events: Record<string, unknown>[] = [];

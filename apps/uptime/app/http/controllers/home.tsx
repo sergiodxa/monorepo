@@ -79,7 +79,7 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import { TRIAL_URL_FIELD, TURNSTILE_FIELD } from "~/app/http/validators/trial";
 import { SEO } from "~/app/initializers/seo";
-import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
+import { trialTurnstileSiteKey } from "~/app/services/trial/guard";
 import {
 	BASE_PRICE_USD,
 	INCLUDED_PINGS,

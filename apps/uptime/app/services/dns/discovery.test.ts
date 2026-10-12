@@ -21,8 +21,8 @@ import { unwrap } from "@sdxc/result";
 import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
-import type { DnsRecordType } from "~/app/services/dns-record-value";
+import type { DnsCheckStatus, DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns/check";
+import type { DnsRecordType } from "~/app/services/dns/record-value";
 import type { NotifyMessage } from "~/app/services/notify-queue";
 
 import { MAIL_FROM } from "~/app/emails/sender";
@@ -91,9 +91,9 @@ vi.doMock("~/app/initializers/billing", () => ({
 	polar: createTestBilling(),
 }));
 
-let realDnsCheckModule = await import("~/app/services/dns-check");
+let realDnsCheckModule = await import("~/app/services/dns/check");
 
-vi.doMock("~/app/services/dns-check", () => ({
+vi.doMock("~/app/services/dns/check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));
@@ -108,7 +108,7 @@ let {
 	recordDnsCheck,
 	runDnsCheck,
 	sweepNames,
-} = await import("./dns-discovery");
+} = await import("~/app/services/dns/discovery");
 let jobs = (await import("~/app/jobs")).default;
 let { bindModels, publishModels } = await import("~/app/test/models");
 let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");

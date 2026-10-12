@@ -63,9 +63,9 @@ let notifyRegistrationResultMock = vi.fn(recordCall("registration"));
  */
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}) }));
 
-let realAlertsModule = await import("~/app/services/alerts");
+let realAlertsModule = await import("~/app/services/alerts/dispatch");
 
-vi.doMock("~/app/services/alerts", () => ({
+vi.doMock("~/app/services/alerts/dispatch", () => ({
 	...realAlertsModule,
 	notifyTcpResult: notifyTcpResultMock,
 	notifyDnsResult: notifyDnsResultMock,

@@ -27,9 +27,9 @@ import {
 	WRITABLE_CRON_JOB,
 } from "~/app/http/openapi/cron-jobs";
 import { calculateNextExpected } from "~/app/models/cron-job-monitors";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { encodeId } from "~/app/services/typed-id";
 import { cronJobRoutes } from "~/routes/api-groups";
 

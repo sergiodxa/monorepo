@@ -22,7 +22,7 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
+import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { MAX_ZONE_FILE_BYTES } from "~/app/services/zone-file";
 import Field from "~/resources/components/field";

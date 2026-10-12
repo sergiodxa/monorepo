@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { generateApiKey, hashApiKey } from "~/app/services/api-key";
+import { generateApiKey, hashApiKey } from "~/app/services/api/key";
 
 describe("generateApiKey", () => {
 	test("produces a key matching the uptime_<64 hex chars> format", async () => {

@@ -25,13 +25,13 @@ import idempotent from "~/app/http/middleware/idempotency";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CREATE_DNS_MONITOR_BODY } from "~/app/http/openapi/dns-monitors";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
 import {
 	MAX_TRACKED_NAMES_PER_MONITOR,
 	discoveryNames,
 	importDiscovery,
-} from "~/app/services/dns-discovery";
+} from "~/app/services/dns/discovery";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { MAX_ZONE_FILE_BYTES, parseZoneFile } from "~/app/services/zone-file";

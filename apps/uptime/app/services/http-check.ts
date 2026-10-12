@@ -95,7 +95,7 @@ export interface HttpCheckOptions {
 	contentChecks: ContentCheckRule[];
 	/**
 	 * Whether a 3xx is followed; defaults to true, right for a monitor since the team chose
-	 * the URL. The public trial passes false — `trial-guard.ts` vets the resolved address
+	 * the URL. The public trial passes false — `trial/guard.ts` vets the resolved address
 	 * only for this URL, and `fetch` would otherwise follow an unvetted redirect internally.
 	 */
 	followRedirects?: boolean;

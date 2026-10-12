@@ -11,7 +11,7 @@ import { protectedResourceMetadata } from "@sdxc/well-known/oauth-protected-reso
 import { respond } from "@sdxc/well-known/response";
 import { createAction } from "remix/router";
 
-import { apiMetadata } from "~/app/services/api-metadata";
+import { apiMetadata } from "~/app/services/api/metadata";
 import routes from "~/routes/web";
 
 /** GET /.well-known/oauth-protected-resource/api/v1 — cacheable for an hour, with an ETag. */

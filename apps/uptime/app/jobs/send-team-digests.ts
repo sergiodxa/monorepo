@@ -39,9 +39,9 @@ import {
 import { wantsEmail } from "~/app/models/user-preferences";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
+import { formatUptime, uptimeRatio, worstStatus } from "~/app/services/reports/uptime";
 import { resolveSubjects } from "~/app/services/subjects";
 import { signDigestUnsubscribeToken } from "~/app/services/unsubscribe-token";
-import { formatUptime, uptimeRatio, worstStatus } from "~/app/services/uptime-report";
 
 /** The zone every window and the once-a-day bound are counted in. */
 const BOUND_ZONE = "UTC";

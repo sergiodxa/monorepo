@@ -39,8 +39,8 @@ import {
 	trackFirstTrialCheckCompleted,
 } from "~/app/services/funnel-events";
 import { HttpCheck } from "~/app/services/http-check";
-import { trialProbeOptions } from "~/app/services/trial-probe";
-import { segmentsOver, watchStats } from "~/app/services/trial-report";
+import { trialProbeOptions } from "~/app/services/trial/probe";
+import { segmentsOver, watchStats } from "~/app/services/trial/report";
 import routes from "~/routes/web";
 
 /**
@@ -128,7 +128,7 @@ async function check(
 	if (now >= watch.expires_at) return await expire(ctx, mailer, watch, now);
 
 	/**
-	 * `trialProbeOptions` disables redirect-following; `app/services/trial-guard.ts` clears
+	 * `trialProbeOptions` disables redirect-following; `app/services/trial/guard.ts` clears
 	 * the URL by resolving its hostname, and following a redirect afterwards could still
 	 * land on an address the guard never saw. Keep it disabled here.
 	 */

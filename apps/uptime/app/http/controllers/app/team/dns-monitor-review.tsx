@@ -30,7 +30,7 @@ import type { SelectDnsMonitorRecord } from "~/database/schema";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
+import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import CheckboxGroupSelectAll from "~/resources/components/checkbox-group-select-all";
 import FormPage from "~/resources/components/form-page";

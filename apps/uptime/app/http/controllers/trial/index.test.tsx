@@ -40,7 +40,7 @@ import type {
 	TrialProbeRequest,
 	TrialRefusal,
 	TrialRefusalReason,
-} from "~/app/services/trial-guard";
+} from "~/app/services/trial/guard";
 import type { GeoFetchDO } from "~/app/test/geo-fetch";
 import type { SelectTeam } from "~/database/schema";
 
@@ -113,7 +113,7 @@ let guardTrialProbe = vi.fn(async (_probe: TrialProbeRequest) => guardResult);
 
 let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
-vi.doMock("~/app/services/trial-guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
+vi.doMock("~/app/services/trial/guard", () => ({ guardTrialProbe, trialTurnstileSiteKey }));
 
 let { TRIAL_PROBE, TRIAL_WATCH_REPEATED, TRIAL_WATCH_STARTED } =
 	await import("~/app/http/controllers/trial/session");

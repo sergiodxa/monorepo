@@ -19,13 +19,13 @@ import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { getYesterdayDateUtc } from "~/app/models/monitor-daily-stats";
 import { withPrefix } from "~/app/services/prefixed-translate";
-import { REPORT_DIALECTS } from "~/app/services/report-dialect";
-import { presetRange, REPORT_PRESETS } from "~/app/services/report-range";
+import { REPORT_DIALECTS } from "~/app/services/reports/dialect";
+import { presetRange, REPORT_PRESETS } from "~/app/services/reports/range";
 import {
 	isSubmitted,
 	REPORT_MONITOR_TYPES,
 	resolveReportRequest,
-} from "~/app/services/report-request";
+} from "~/app/services/reports/request";
 import Field from "~/resources/components/field";
 import FormPage from "~/resources/components/form-page";
 import SettingsSection from "~/resources/components/settings-section";

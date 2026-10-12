@@ -31,7 +31,7 @@ export default route({
 
 	/**
 	 * The public try-it surface, reachable with no account. Every leaf carries its own
-	 * protection: `trial.check.action` goes through `trial-guard.ts`, and
+	 * protection: `trial.check.action` goes through `trial/guard.ts`, and
 	 * `trial.unsubscribe` proves itself with its own URL token.
 	 */
 	trial: {

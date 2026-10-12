@@ -15,7 +15,7 @@ import type { UptimeModels } from "~/app/models";
 import type { Monitor } from "~/app/models/monitors";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiSuccess } from "~/app/services/api/response";
 import { encodeId } from "~/app/services/typed-id";
 import routes from "~/routes/web";
 

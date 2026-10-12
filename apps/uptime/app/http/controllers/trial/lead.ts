@@ -34,7 +34,7 @@ import { TRIAL_WATCH_DURATION_DAYS } from "~/app/models/trial-watches";
 import { recordCost } from "~/app/services/cost";
 import { checkEmailAddress } from "~/app/services/email-address";
 import { hostnameOf, trackTrialMonitorStarted } from "~/app/services/funnel-events";
-import { segmentsOver, watchStats } from "~/app/services/trial-report";
+import { segmentsOver, watchStats } from "~/app/services/trial/report";
 import { supportedLanguages } from "~/database/schema";
 import routes from "~/routes/web";
 

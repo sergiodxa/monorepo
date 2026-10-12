@@ -25,8 +25,8 @@ import {
 	CREATE_CONTENT_CHECK_BODY,
 	MONITOR_ID_PARAMS,
 } from "~/app/http/openapi/monitors";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, NEWEST_FIRST, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { monitorContentChecksRoutes } from "~/routes/api-groups";

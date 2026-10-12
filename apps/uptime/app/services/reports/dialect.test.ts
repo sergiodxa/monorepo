@@ -8,7 +8,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { numberCell, reportDialect } from "~/app/services/report-dialect";
+import { numberCell, reportDialect } from "~/app/services/reports/dialect";
 import { supportedLanguages } from "~/database/schema";
 
 describe("reportDialect", () => {

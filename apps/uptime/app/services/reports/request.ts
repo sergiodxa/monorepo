@@ -16,11 +16,11 @@ import { validate } from "@sdxc/validate";
 import type { UptimeModels } from "~/app/models";
 import type { DailyStatsMonitorType } from "~/app/models/monitor-daily-stats";
 import type { Report } from "~/app/models/reports";
-import type { ReportDialectName } from "~/app/services/report-dialect";
-import type { ReportRangeProblem } from "~/app/services/report-range";
+import type { ReportDialectName } from "~/app/services/reports/dialect";
+import type { ReportRangeProblem } from "~/app/services/reports/range";
 
 import { ReportQuerySchema } from "~/app/http/validators/report";
-import { checkRange, presetRange } from "~/app/services/report-range";
+import { checkRange, presetRange } from "~/app/services/reports/range";
 
 /**
  * The monitor types a report covers, in the order every report lists them; a monitor's

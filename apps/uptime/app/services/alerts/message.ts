@@ -11,7 +11,7 @@ import type { Message, MessageData } from "@sdxc/messaging";
 
 import type { AlertEventSnapshot, DnsFinding, SelectAlertEvent } from "~/database/schema";
 
-import { hasRecordSetEdit } from "~/app/services/dns-findings";
+import { hasRecordSetEdit } from "~/app/services/dns/findings";
 
 /** Which transition an alert reports. */
 export type AlertEventType = SelectAlertEvent["event_type"];

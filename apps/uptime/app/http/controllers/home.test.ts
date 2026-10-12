@@ -42,7 +42,7 @@ import routes from "~/routes/web";
  */
 let trialTurnstileSiteKey = vi.fn((): string | null => null);
 
-vi.doMock("~/app/services/trial-guard", () => ({ trialTurnstileSiteKey }));
+vi.doMock("~/app/services/trial/guard", () => ({ trialTurnstileSiteKey }));
 
 let { default: home } = await import("./home");
 

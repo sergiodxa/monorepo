@@ -13,7 +13,7 @@ import type { Middleware } from "remix/router";
 import { issuesFrom } from "@sdxc/problem";
 import * as s from "remix/data-schema";
 
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
 
 /**
  * Answers 400 when a controller's schema parse throws.

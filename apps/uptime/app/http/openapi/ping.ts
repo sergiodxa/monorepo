@@ -13,7 +13,7 @@ import { defineOperation } from "@sdxc/openapi";
 
 import { envelope } from "~/app/http/openapi/envelope";
 import { resourceId } from "~/app/http/openapi/fields";
-import { DNS_RECORD_TYPES } from "~/app/services/dns-record-value";
+import { DNS_RECORD_TYPES } from "~/app/services/dns/record-value";
 import routes from "~/routes/web";
 
 /**

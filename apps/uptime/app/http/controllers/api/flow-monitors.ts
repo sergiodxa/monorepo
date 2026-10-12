@@ -36,9 +36,9 @@ import {
 	UPDATE_FLOW_MONITOR_BODY,
 	WRITABLE_FLOW_MONITOR,
 } from "~/app/http/openapi/flow-monitors";
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { inspectFlowSource } from "~/app/services/flow-check";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";

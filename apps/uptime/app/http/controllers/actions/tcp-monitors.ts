@@ -23,7 +23,7 @@ import {
 	TcpMonitorIdSchema,
 	UpdateTcpMonitorSchema,
 } from "~/app/http/validators/tcp-monitor";
-import { notifyTcpResult } from "~/app/services/alerts";
+import { notifyTcpResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { ingestPings } from "~/app/services/ping-meter";
 import { checkTcpConnection } from "~/app/services/tcp-check";

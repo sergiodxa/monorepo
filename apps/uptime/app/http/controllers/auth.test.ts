@@ -611,7 +611,7 @@ describe("GET /auth", () => {
 
 /**
  * Pins the trial-conversion claim's placement relative to team creation — the
- * conversion rule lives in `~/app/services/trial-conversion.test.ts`. The claim
+ * conversion rule lives in `~/app/services/trial/conversion.test.ts`. The claim
  * lands in the team this request provisions, and sign-in still succeeds when it fails.
  */
 describe("GET /auth trial conversion", () => {

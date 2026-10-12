@@ -16,7 +16,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } fr
 
 import type { AlertEventSnapshot } from "~/database/schema";
 
-import { alertMessage } from "~/app/services/alert-message";
+import { alertMessage } from "~/app/services/alerts/message";
 import { UptimeWebhook } from "~/app/services/uptime-webhook";
 
 const WEBHOOK_URL = "https://hooks.acme-receiver.com/uptime";

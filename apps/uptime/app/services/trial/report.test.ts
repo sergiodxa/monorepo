@@ -11,9 +11,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { Segmentable } from "~/app/services/trial-report";
+import type { Segmentable } from "~/app/services/trial/report";
 
-import { incidentsFrom, segmentsOver } from "~/app/services/trial-report";
+import { incidentsFrom, segmentsOver } from "~/app/services/trial/report";
 
 const HOUR = 60 * 60 * 1000;
 

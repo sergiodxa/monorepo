@@ -20,7 +20,7 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest";
 
-import type { TrialProbeRequest } from "~/app/services/trial-guard";
+import type { TrialProbeRequest } from "~/app/services/trial/guard";
 
 /** Probes one caller may make in a minute, as the deployed binding is configured. */
 const TRIAL_PROBE_LIMIT = 3;
@@ -56,7 +56,7 @@ vi.doMock("cloudflare:workers", () => ({
 }));
 
 let { checkTarget, guardTrialProbe, TRIAL_DAILY_BUDGET, trialTurnstileSiteKey } =
-	await import("~/app/services/trial-guard");
+	await import("~/app/services/trial/guard");
 
 /** Records this test's DNS answers, keyed `name:type`. */
 let dnsRecords = new Map<string, string[]>();

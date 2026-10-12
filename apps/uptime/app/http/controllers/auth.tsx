@@ -34,7 +34,7 @@ import { language as languageCookie, returnTo } from "~/app/initializers/cookies
 import { relyingParty } from "~/app/initializers/relying-party";
 import { provisionCustomer } from "~/app/services/customer";
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
-import { convertTrialWatches } from "~/app/services/trial-conversion";
+import { convertTrialWatches } from "~/app/services/trial/conversion";
 import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 

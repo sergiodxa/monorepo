@@ -9,7 +9,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { formatUptime, uptimeRatio, worstStatus } from "~/app/services/uptime-report";
+import { formatUptime, uptimeRatio, worstStatus } from "~/app/services/reports/uptime";
 
 describe("worstStatus", () => {
 	test("keeps the worse of two measured statuses, either way round", () => {

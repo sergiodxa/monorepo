@@ -16,7 +16,10 @@ import { createAction } from "remix/router";
 import { getViewer } from "~/app/http/middleware/auth";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
-import { DEFAULT_COOLDOWN_MINUTES, MIN_REPEAT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
+import {
+	DEFAULT_COOLDOWN_MINUTES,
+	MIN_REPEAT_COOLDOWN_MINUTES,
+} from "~/app/services/alerts/policy";
 import { TEAM_WIDE_MONITOR_SCOPE } from "~/app/services/monitor-scope";
 import { withPrefix } from "~/app/services/prefixed-translate";
 import { listScopeMonitors } from "~/app/services/scope-monitors";

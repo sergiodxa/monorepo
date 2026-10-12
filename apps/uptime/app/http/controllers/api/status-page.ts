@@ -27,9 +27,9 @@ import {
 	UPDATE_STATUS_PAGE_BODY,
 	WRITABLE_STATUS_PAGE,
 } from "~/app/http/openapi/status-pages";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { encodeId } from "~/app/services/typed-id";
 import { statusPageRoutes } from "~/routes/api-groups";
 

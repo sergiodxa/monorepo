@@ -22,7 +22,7 @@ import { recurringEvent } from "~/app/models/maintenance-windows";
 import { utcDayBounds } from "~/app/models/monitor-daily-stats";
 import { chunk } from "~/app/services/concurrency";
 import { monitorScopeMatches, storedMonitorScope } from "~/app/services/monitor-scope";
-import { uptimeRatio } from "~/app/services/uptime-report";
+import { uptimeRatio } from "~/app/services/reports/uptime";
 import {
 	cronJobMonitors,
 	dnsMonitors,

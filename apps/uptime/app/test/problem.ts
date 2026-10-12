@@ -10,7 +10,7 @@
 import { isSuccess } from "@sdxc/result";
 import { expect } from "vitest";
 
-import { apiProblems } from "~/app/services/api-problems";
+import { apiProblems } from "~/app/services/api/problems";
 
 /** Any problem the API catalog can read back. */
 type ApiProblem = Parameters<typeof apiProblems.is>[0];

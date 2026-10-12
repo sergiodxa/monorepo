@@ -21,7 +21,7 @@ import type { MonitorStatus, SelectMonitor } from "~/database/schema";
 
 import { polar } from "~/app/initializers/billing";
 import jobs from "~/app/jobs";
-import { notifyHttpResult } from "~/app/services/alerts";
+import { notifyHttpResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { apportionCostByTeam } from "~/app/services/cost";
 import { HttpCheck } from "~/app/services/http-check";

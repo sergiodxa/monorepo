@@ -604,7 +604,7 @@ export const alerts = table({
 		/**
 		 * How long an outage stays quiet between notifications — without a floor, a
 		 * 1-minute monitor would alert once a minute for the whole outage. Legacy `0`
-		 * values stay legal and are floored at dispatch time (`app/services/alerts.ts`).
+		 * values stay legal and are floored at dispatch time (`app/services/alerts/dispatch.ts`).
 		 */
 		cooldown_minutes: c.integer().default(60),
 		config: c.json() as ColumnBuilder<AlertConfig>,
@@ -655,7 +655,7 @@ export type AlertEventSnapshot =
 			recordsChanged: number;
 			recordsMissing: number;
 			recordsNew: number;
-			/** A capped sample — see `MAX_SNAPSHOT_FINDINGS` in `app/services/alerts.ts`. */
+			/** A capped sample — see `MAX_SNAPSHOT_FINDINGS` in `app/services/alerts/dispatch.ts`. */
 			findings: DnsFinding[];
 	  }
 	| { type: "tcp"; status: string; responseTimeMs: number | null; host: string; port: number }

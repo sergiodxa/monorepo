@@ -21,9 +21,9 @@ import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { CRON_JOB_PING_PARAMS } from "~/app/http/openapi/cron-jobs";
-import { notifyCronJobResult } from "~/app/services/alerts";
+import { notifyCronJobResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
 import { ingestPings } from "~/app/services/ping-meter";
 import { decodeIdOrUUID } from "~/app/services/typed-id";
 import routes from "~/routes/web";

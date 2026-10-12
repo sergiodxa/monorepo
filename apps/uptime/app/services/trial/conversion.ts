@@ -17,7 +17,7 @@ import type { TrialSignupAttribution } from "~/app/models/trial-conversions";
 import type { SelectLead, SelectTrialWatch } from "~/database/schema";
 
 import { attributionProperties, trackAccountCreated } from "~/app/services/funnel-events";
-import { dailyStatsFromChecks } from "~/app/services/trial-history";
+import { dailyStatsFromChecks } from "~/app/services/trial/history";
 
 /**
  * The cadence a converted monitor runs at: `CreateMonitorSchema`'s default of ten minutes

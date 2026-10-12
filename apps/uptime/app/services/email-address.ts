@@ -17,7 +17,7 @@ import { suggestDomain } from "@sdxc/email-address/typo";
 import { currentLog } from "@sdxc/logger";
 import { failure, isFailure, success } from "@sdxc/result";
 
-import { invalidField } from "~/app/services/api-problems";
+import { invalidField } from "~/app/services/api/problems";
 
 /**
  * How long one mail-server lookup may take. A form waits on it, so it is kept short; a

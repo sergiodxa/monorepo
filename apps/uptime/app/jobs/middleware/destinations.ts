@@ -11,9 +11,9 @@ import type { JobMiddleware } from "@sdxc/jobs";
 
 import { createContextKey } from "remix/router";
 
-import type { DestinationFactory } from "~/app/services/alert-destination";
+import type { DestinationFactory } from "~/app/services/alerts/destination";
 
-import { destinationFor } from "~/app/services/alert-destination";
+import { destinationFor } from "~/app/services/alerts/destination";
 
 /** Where a job's destination factory lives on the context, installed as `ctx.destinations`. */
 export const Destinations = createContextKey<DestinationFactory>();

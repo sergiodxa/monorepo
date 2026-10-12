@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import type { AlertEventSnapshot } from "~/database/schema";
 
-import { alertMessage, snapshotLines } from "./alert-message";
+import { alertMessage, snapshotLines } from "~/app/services/alerts/message";
 
 /** A registration the registry has put on hold, with every detail published. */
 const ON_HOLD: AlertEventSnapshot = {

@@ -15,8 +15,8 @@ import { isFailure, unwrap, wrap } from "@sdxc/result";
 
 import type { UptimeModels } from "~/app/models";
 import type { DnsRecordDiff } from "~/app/models/dns-monitor-records";
-import type { AlertEventType, IncidentSummary } from "~/app/services/alert-message";
-import type { DnsCheckStatus } from "~/app/services/dns-check";
+import type { AlertEventType, IncidentSummary } from "~/app/services/alerts/message";
+import type { DnsCheckStatus } from "~/app/services/dns/check";
 import type { MonitorScopeType } from "~/app/services/monitor-scope";
 import type { SslStatus } from "~/app/services/ssl-info";
 import type { TcpCheckResult, TcpCheckStatus } from "~/app/services/tcp-check";
@@ -41,10 +41,10 @@ import { AlertEmail } from "~/app/emails/alert";
 import { emailTranslator } from "~/app/emails/locale";
 import { enqueue } from "~/app/initializers/queue";
 import jobs from "~/app/jobs";
-import { alertMessage } from "~/app/services/alert-message";
-import { repeatCooldownMinutes } from "~/app/services/alert-policy";
+import { alertMessage } from "~/app/services/alerts/message";
+import { repeatCooldownMinutes } from "~/app/services/alerts/policy";
 import { apportionCostByTeam, recordCost } from "~/app/services/cost";
-import { sortDnsFindings } from "~/app/services/dns-findings";
+import { sortDnsFindings } from "~/app/services/dns/findings";
 import { registrationIsDown, shouldAlertOnRegistration } from "~/app/services/domain-registration";
 import { classifyExpiry } from "~/app/services/expiry";
 import { shouldAlertOnSslStatus } from "~/app/services/ssl-info";
@@ -58,7 +58,7 @@ import routes from "~/routes/web";
  */
 /**
  * The cooldown a repeat notification for `alert` is actually spaced by. The numbers
- * live in `~/app/services/alert-policy`, which has no imports, so the alert form can quote
+ * live in `~/app/services/alerts/policy`, which has no imports, so the alert form can quote
  * the floor without pulling `~/app/services/cost` or `cloudflare:workers` into its bundle.
  */
 function repeatCooldown(alert: SelectAlert): number {

@@ -15,7 +15,7 @@ import type { ZoneFile } from "@sdxc/zone-file";
 
 import { describe, expect, test } from "vitest";
 
-import type { DnsRecordType } from "~/app/services/dns-record-value";
+import type { DnsRecordType } from "~/app/services/dns/record-value";
 
 import {
 	DNS_RECORD_TYPES,
@@ -23,7 +23,7 @@ import {
 	normalizeDnsName,
 	normalizeDnsRecordValue,
 	storedRecordValue,
-} from "~/app/services/dns-record-value";
+} from "~/app/services/dns/record-value";
 
 describe("DNS_RECORD_TYPES", () => {
 	test("covers the seven types a domain monitor sweeps, and no more", () => {

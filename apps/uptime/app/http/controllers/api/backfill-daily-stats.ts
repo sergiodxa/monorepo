@@ -14,7 +14,7 @@ import { createAction } from "remix/router";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import jobs from "~/app/jobs";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiSuccess } from "~/app/services/api/response";
 import routes from "~/routes/web";
 
 /** POST /api/v1/backfill-daily-stats — enqueues a daily-stats rollup. */

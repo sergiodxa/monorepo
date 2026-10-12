@@ -12,7 +12,7 @@ import type { IdempotencyOptions, IdempotencyProblems } from "@sdxc/idempotency/
 import { DataTableStore } from "@sdxc/idempotency/data-table";
 import { idempotency } from "@sdxc/idempotency/middleware";
 
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
 
 /**
  * The catalog's idempotency refusals, each with its own `instance` like every other API

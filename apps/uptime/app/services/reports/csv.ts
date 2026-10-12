@@ -15,9 +15,9 @@ import { streamify } from "@sdxc/csv";
 import { isWholeMonth } from "@sdxc/dates";
 
 import type { Report } from "~/app/models/reports";
-import type { ReportDialect } from "~/app/services/report-dialect";
+import type { ReportDialect } from "~/app/services/reports/dialect";
 
-import { numberCell } from "~/app/services/report-dialect";
+import { numberCell } from "~/app/services/reports/dialect";
 
 /** The reports a team can download, as they appear in the download URL and filename. */
 export const REPORT_KINDS = ["uptime-summary", "uptime-daily"] as const;

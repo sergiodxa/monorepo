@@ -20,7 +20,7 @@ import { waitUntil } from "cloudflare:workers";
 import { createAction } from "remix/router";
 import { Session } from "remix/session";
 
-import type { DnsCheckStatus } from "~/app/services/dns-check";
+import type { DnsCheckStatus } from "~/app/services/dns/check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 
 import {
@@ -32,14 +32,14 @@ import {
 	UpdateDnsMonitorSchema,
 } from "~/app/http/validators/dns-monitor";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
-import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts";
+import { dnsAlertResultFromDiff, notifyDnsResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import {
 	MAX_TRACKED_NAMES_PER_MONITOR,
 	discoveryNames,
 	importDiscovery,
 	runDnsCheck,
-} from "~/app/services/dns-discovery";
+} from "~/app/services/dns/discovery";
 import { checkRegistration } from "~/app/services/domain-registration";
 import { enqueueNotifications } from "~/app/services/notify-queue";
 import { ingestPings } from "~/app/services/ping-meter";

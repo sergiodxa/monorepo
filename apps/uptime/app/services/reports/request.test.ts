@@ -9,7 +9,7 @@
 import { isFailure, unwrap } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import { isSubmitted, resolveReportRequest } from "~/app/services/report-request";
+import { isSubmitted, resolveReportRequest } from "~/app/services/reports/request";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels } from "~/app/test/models";
 import { statusPages } from "~/database/schema";

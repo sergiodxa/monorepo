@@ -13,7 +13,7 @@
 
 import { describe, expect, test } from "vitest";
 
-import { normalizeLeadEmail, normalizeTrialUrl } from "~/app/services/trial-identity";
+import { normalizeLeadEmail, normalizeTrialUrl } from "~/app/services/trial/identity";
 
 describe("normalizeLeadEmail", () => {
 	test.each([

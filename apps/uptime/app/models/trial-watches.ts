@@ -23,7 +23,7 @@ import type { MonitorStatus, SelectTrialWatch, SelectTrialWatchResult } from "~/
 
 import { deleteOlderThan } from "~/app/services/retention";
 import { claimDue } from "~/app/services/scheduling";
-import { normalizeTrialUrl } from "~/app/services/trial-identity";
+import { normalizeTrialUrl } from "~/app/services/trial/identity";
 import { FREE_TRIAL_DAYS } from "~/config/pricing";
 import { trialWatches } from "~/database/schema";
 

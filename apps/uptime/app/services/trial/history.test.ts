@@ -9,9 +9,9 @@
 
 import { describe, expect, test } from "vitest";
 
-import type { HistoricCheck } from "~/app/services/trial-history";
+import type { HistoricCheck } from "~/app/services/trial/history";
 
-import { dailyStatsFromChecks } from "~/app/services/trial-history";
+import { dailyStatsFromChecks } from "~/app/services/trial/history";
 
 /** A check at a given UTC instant, so each case reads as the day it is about. */
 function check(iso: string, status: HistoricCheck["status"], ms: number | null): HistoricCheck {

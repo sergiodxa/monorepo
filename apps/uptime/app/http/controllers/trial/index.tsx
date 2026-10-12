@@ -77,7 +77,7 @@ import type { TrialProbeState } from "~/app/http/controllers/trial/session";
 import type { UptimeModels } from "~/app/models";
 import type { EmailAddressRefusalReason } from "~/app/services/email-address";
 import type { HttpProbeOutcome } from "~/app/services/http-check";
-import type { TrialRefusalReason } from "~/app/services/trial-guard";
+import type { TrialRefusalReason } from "~/app/services/trial/guard";
 import type { MonitorStatus, SelectTeam } from "~/database/schema";
 
 import {
@@ -103,9 +103,9 @@ import {
 	trackUrlCheckStarted,
 } from "~/app/services/funnel-events";
 import { HttpCheck } from "~/app/services/http-check";
-import { trialTurnstileSiteKey } from "~/app/services/trial-guard";
-import { guardTrialProbe } from "~/app/services/trial-guard";
-import { trialProbeOptions } from "~/app/services/trial-probe";
+import { trialTurnstileSiteKey } from "~/app/services/trial/guard";
+import { guardTrialProbe } from "~/app/services/trial/guard";
+import { trialProbeOptions } from "~/app/services/trial/probe";
 import { BASE_PRICE_USD, FREE_TRIAL_DAYS } from "~/config/pricing";
 import DocumentLayout from "~/resources/layouts/document";
 import MarketingLayout, { buildMarketingChrome } from "~/resources/layouts/marketing";

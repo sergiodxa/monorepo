@@ -16,7 +16,7 @@ import type { TrialStats } from "~/app/emails/shared/trial";
 import type { UptimeBar } from "~/app/emails/shared/uptime-bar";
 import type { MonitorStatus, SelectTrialWatch } from "~/database/schema";
 
-import { formatUptime, worstStatus } from "~/app/services/uptime-report";
+import { formatUptime, worstStatus } from "~/app/services/reports/uptime";
 
 /** One completed check, as the two facts a bar segment is built from. */
 export interface Segmentable {

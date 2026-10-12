@@ -15,7 +15,7 @@ import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { ApiKeyScope } from "~/database/schema";
 
-import { generateApiKey } from "~/app/services/api-key";
+import { generateApiKey } from "~/app/services/api/key";
 import { apiKeys } from "~/database/schema";
 
 /** Maximum number of API keys a team may have at once. */

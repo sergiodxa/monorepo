@@ -16,9 +16,9 @@ import { createAction } from "remix/router";
 import requireTeam from "~/app/http/middleware/require-team";
 import requireUser from "~/app/http/middleware/require-user";
 import { dailyRows, summaryRows } from "~/app/models/reports";
-import { dailyCsv, REPORT_KINDS, reportFilename, summaryCsv } from "~/app/services/report-csv";
-import { reportDialect } from "~/app/services/report-dialect";
-import { resolveReportRequest } from "~/app/services/report-request";
+import { dailyCsv, REPORT_KINDS, reportFilename, summaryCsv } from "~/app/services/reports/csv";
+import { reportDialect } from "~/app/services/reports/dialect";
+import { resolveReportRequest } from "~/app/services/reports/request";
 import routes from "~/routes/web";
 
 /**

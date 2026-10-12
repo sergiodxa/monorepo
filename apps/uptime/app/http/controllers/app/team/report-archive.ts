@@ -20,9 +20,9 @@ import {
 	reportArchiveFilename,
 	reportFilename,
 	summaryCsv,
-} from "~/app/services/report-csv";
-import { reportDialect } from "~/app/services/report-dialect";
-import { resolveReportRequest } from "~/app/services/report-request";
+} from "~/app/services/reports/csv";
+import { reportDialect } from "~/app/services/reports/dialect";
+import { resolveReportRequest } from "~/app/services/reports/request";
 import routes from "~/routes/web";
 
 /**

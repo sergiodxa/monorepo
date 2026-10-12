@@ -29,9 +29,9 @@ import {
 import catchValidationError from "~/app/http/middleware/catch-validation-error";
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { ALERT_ID_PARAMS, CREATE_ALERT_BODY, UPDATE_ALERT_BODY } from "~/app/http/openapi/alerts";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { refuseUndeliverableRecipient } from "~/app/services/email-address";
 import { storedMonitorScope } from "~/app/services/monitor-scope";
 import { apiPage, newestFirst, PAGING } from "~/app/services/pagination";

@@ -15,7 +15,7 @@ import * as f from "remix/data-schema/form-data";
 
 import { deliverableAddress, isEmailAddress } from "~/app/http/validators/email-address";
 import { isDiscordWebhookUrl, isSlackWebhookUrl } from "~/app/http/validators/webhook-url";
-import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alert-policy";
+import { DEFAULT_COOLDOWN_MINUTES } from "~/app/services/alerts/policy";
 
 /**
  * PagerDuty issues 32-character integration keys; the ceiling leaves room for other key
@@ -45,7 +45,7 @@ const alertFields = {
 	notify_on_recovery: f.field(s.defaulted(coerce.boolean(), false)),
 	/**
 	 * Minutes an outage stays quiet between notifications; 60 by default repeats
-	 * hourly. The 0 minimum keeps stored values editable — `app/services/alerts.ts`
+	 * hourly. The 0 minimum keeps stored values editable — `app/services/alerts/dispatch.ts`
 	 * enforces the real floor at dispatch.
 	 */
 	cooldown_minutes: f.field(

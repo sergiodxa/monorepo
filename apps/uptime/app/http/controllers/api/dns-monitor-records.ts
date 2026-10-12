@@ -27,8 +27,8 @@ import {
 	DNS_MONITOR_RECORD_PARAMS,
 	UPDATE_DNS_MONITOR_RECORD_BODY,
 } from "~/app/http/openapi/dns-monitors";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
 import { apiPage, PAGING } from "~/app/services/pagination";
 import { encodeId } from "~/app/services/typed-id";
 import { dnsMonitorRecordsRoutes } from "~/routes/api-groups";

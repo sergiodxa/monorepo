@@ -16,7 +16,7 @@ import type { UptimeModels } from "~/app/models";
 import type { ApiKeyScope } from "~/database/schema";
 
 import { MAX_API_KEYS_PER_TEAM } from "~/app/models/api-keys";
-import { hashApiKey } from "~/app/services/api-key";
+import { hashApiKey } from "~/app/services/api/key";
 import { createTestDatabase } from "~/app/test/db";
 import { bindModels, recordJobs } from "~/app/test/models";
 import { apiKeys } from "~/database/schema";

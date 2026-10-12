@@ -11,9 +11,8 @@ import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import { expandReference } from "~/app/http/openapi/reference";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 import errorsDoc from "~/resources/docs/api/errors.md?raw";
-
-import { apiProblems, invalidField, problemInstance } from "./api-problems";
 
 describe("apiProblems", () => {
 	test("puts every type under the public error reference", () => {

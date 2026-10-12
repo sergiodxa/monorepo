@@ -24,8 +24,8 @@ import { Database } from "remix/data-table";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { DnsRecordImport } from "~/app/models/dns-monitor-records";
-import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns-check";
-import type { DnsRecordType } from "~/app/services/dns-record-value";
+import type { DnsNameSweep, DnsQueryOutcome } from "~/app/services/dns/check";
+import type { DnsRecordType } from "~/app/services/dns/record-value";
 import type { NotifyMessage } from "~/app/services/notify-queue";
 import type { InsertDnsMonitor } from "~/database/schema";
 
@@ -114,9 +114,9 @@ let realBillingModule = await import("~/app/initializers/billing");
 
 vi.doMock("~/app/initializers/billing", () => ({ ...realBillingModule, polar: billing }));
 
-let realDnsCheckModule = await import("~/app/services/dns-check");
+let realDnsCheckModule = await import("~/app/services/dns/check");
 
-vi.doMock("~/app/services/dns-check", () => ({
+vi.doMock("~/app/services/dns/check", () => ({
 	...realDnsCheckModule,
 	sweepDnsName: sweepDnsNameMock,
 }));
@@ -127,7 +127,7 @@ let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
 let { Mailer: JobMailer } = await import("~/app/jobs/middleware/mailer");
 let checkDns = (await import("./check-dns")).default;
 let { QUERIES_PER_NAME } = realDnsCheckModule;
-let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns-discovery");
+let { MAX_NAMES_PER_CHECK } = await import("~/app/services/dns/discovery");
 
 /** Every message the sweep put on the queue, in order, each wrapping one transition. */
 function enqueued(): NotifyEnvelope[] {

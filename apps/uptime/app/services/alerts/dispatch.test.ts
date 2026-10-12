@@ -85,7 +85,7 @@ let {
 	shouldNotifyDnsResult,
 	shouldNotifyFlowResult,
 	shouldNotifyTcpResult,
-} = await import("~/app/services/alerts");
+} = await import("~/app/services/alerts/dispatch");
 
 type Db = Awaited<ReturnType<typeof createTestDatabase>>["db"];
 

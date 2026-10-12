@@ -13,7 +13,7 @@ import { toJSONSchema } from "@sdxc/json-schema";
 import { failure, isFailure, success, type Result } from "@sdxc/result";
 
 import { buildApiDocument } from "~/app/http/openapi/document";
-import { apiProblems } from "~/app/services/api-problems";
+import { apiProblems } from "~/app/services/api/problems";
 
 /**
  * A placeholder line a reference page writes where an endpoint's generated reference

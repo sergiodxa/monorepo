@@ -14,7 +14,7 @@ import { ACCEPT_PATCH_HEADER, readMergePatch } from "@sdxc/merge-patch/request";
 import { issuesFrom } from "@sdxc/problem";
 import { isFailure } from "@sdxc/result";
 
-import { apiProblems, invalidField, problemInstance } from "~/app/services/api-problems";
+import { apiProblems, invalidField, problemInstance } from "~/app/services/api/problems";
 
 /** A validated update: the resource after the patch, and the members the patch changed. */
 export interface ApiUpdate<Output> {

@@ -27,7 +27,7 @@ import {
 	notifyRegistrationResult,
 	notifySslResult,
 	notifyTcpResult,
-} from "~/app/services/alerts";
+} from "~/app/services/alerts/dispatch";
 import { calculateSslStatus } from "~/app/services/ssl-info";
 import { cronJobStatuses, flowStatuses, registrationStatuses } from "~/database/schema";
 

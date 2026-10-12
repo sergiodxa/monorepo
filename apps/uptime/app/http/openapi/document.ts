@@ -23,7 +23,7 @@ import { OPERATIONS as STATUS } from "~/app/http/openapi/status";
 import { OPERATIONS as STATUS_PAGES } from "~/app/http/openapi/status-pages";
 import { OPERATIONS as TCP_MONITORS } from "~/app/http/openapi/tcp-monitors";
 import { OPERATIONS as TEAM } from "~/app/http/openapi/team";
-import { apiProblems } from "~/app/services/api-problems";
+import { apiProblems } from "~/app/services/api/problems";
 
 /**
  * Starts the document builder. It assembles nothing until `build()`, so a caller at module

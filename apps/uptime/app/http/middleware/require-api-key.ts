@@ -1,6 +1,6 @@
 /**
  * Route guard factory for the `/api/v1/*` surface. Reads `Authorization: Bearer
- * <key>`, hashes it with the same SHA-256 scheme `app/services/api-key.ts` generates
+ * <key>`, hashes it with the same SHA-256 scheme `app/services/api/key.ts` generates
  * keys with, looks the hash up in `api_keys`, rejects missing/invalid/expired keys,
  * checks the scope the calling route requires, and exposes `ctx.apiKey`/`ctx.apiTeam`
  * for the handler. Every check runs per request, so a revoked or expired key
@@ -16,9 +16,9 @@ import { currentLog } from "@sdxc/logger";
 
 import type { ApiKeyScope, SelectApiKey, SelectTeam } from "~/database/schema";
 
-import { hashApiKey } from "~/app/services/api-key";
-import { apiChallenge } from "~/app/services/api-metadata";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
+import { hashApiKey } from "~/app/services/api/key";
+import { apiChallenge } from "~/app/services/api/metadata";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
 
 declare module "remix/router" {
 	interface RequestContext {

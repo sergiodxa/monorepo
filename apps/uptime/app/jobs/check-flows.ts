@@ -20,7 +20,7 @@ import type { FlowStatus } from "~/database/schema";
 import { polar } from "~/app/initializers/billing";
 import { features } from "~/app/initializers/flags";
 import jobs from "~/app/jobs";
-import { shouldNotifyFlowResult } from "~/app/services/alerts";
+import { shouldNotifyFlowResult } from "~/app/services/alerts/dispatch";
 import { writePingResult } from "~/app/services/analytics";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { apportionCostByTeam } from "~/app/services/cost";

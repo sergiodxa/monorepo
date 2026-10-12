@@ -25,8 +25,8 @@ import { isHealthyTrialStatus } from "~/app/models/trial-watches";
 import { mapWithConcurrency } from "~/app/services/concurrency";
 import { recordCost } from "~/app/services/cost";
 import { trackTrialProgressEmailSent } from "~/app/services/funnel-events";
-import { segmentsOver } from "~/app/services/trial-report";
-import { formatUptime } from "~/app/services/uptime-report";
+import { formatUptime } from "~/app/services/reports/uptime";
+import { segmentsOver } from "~/app/services/trial/report";
 
 const MS_PER_HOUR = 60 * 60 * 1000;
 

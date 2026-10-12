@@ -20,13 +20,13 @@ import type {
 	DnsRecordDiff,
 	DnsRecordImport,
 } from "~/app/models/dns-monitor-records";
-import type { DnsCheckStatus } from "~/app/services/dns-check";
+import type { DnsCheckStatus } from "~/app/services/dns/check";
 import type { ZoneFileRecord } from "~/app/services/zone-file";
 
 import { summarizeDnsRecordDiff } from "~/app/models/dns-monitor-records";
 import { mapWithConcurrency } from "~/app/services/concurrency";
-import { QUERIES_PER_NAME, sweepDnsName } from "~/app/services/dns-check";
-import { normalizeDnsName } from "~/app/services/dns-record-value";
+import { QUERIES_PER_NAME, sweepDnsName } from "~/app/services/dns/check";
+import { normalizeDnsName } from "~/app/services/dns/record-value";
 
 /**
  * Outbound subrequests one Worker invocation may make on the paid plan. Every limit below is

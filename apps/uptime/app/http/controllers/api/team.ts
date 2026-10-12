@@ -18,9 +18,9 @@ import type { InsertTeam, SelectTeam } from "~/database/schema";
 
 import requireApiKey from "~/app/http/middleware/require-api-key";
 import { UPDATE_TEAM_BODY, WRITABLE_TEAM } from "~/app/http/openapi/team";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { teamLogoUrl } from "~/app/services/team-logo";
 import { encodeId } from "~/app/services/typed-id";
 import { teamRoutes } from "~/routes/api-groups";

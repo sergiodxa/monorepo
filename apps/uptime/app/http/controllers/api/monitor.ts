@@ -26,9 +26,9 @@ import {
 	UPDATE_MONITOR_BODY,
 	WRITABLE_MONITOR,
 } from "~/app/http/openapi/monitors";
-import { apiProblems, problemInstance } from "~/app/services/api-problems";
-import { apiSuccess } from "~/app/services/api-response";
-import { readApiUpdate } from "~/app/services/api-update";
+import { apiProblems, problemInstance } from "~/app/services/api/problems";
+import { apiSuccess } from "~/app/services/api/response";
+import { readApiUpdate } from "~/app/services/api/update";
 import { apiPage, NEWEST_FIRST, newestFirst, PAGING } from "~/app/services/pagination";
 import { encodeId, encodeMonitorId } from "~/app/services/typed-id";
 import { monitorRoutes } from "~/routes/api-groups";

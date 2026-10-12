@@ -57,7 +57,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: () => {},
 }));
 
-vi.doMock("~/app/services/trial-guard", () => ({
+vi.doMock("~/app/services/trial/guard", () => ({
 	guardTrialProbe: async () => {
 		throw new Error("POST /try/lead must never run a probe");
 	},

@@ -9,7 +9,7 @@
 import { Forbidden, Ok } from "@sdxc/http/status-code";
 import { describe, expect, test } from "vitest";
 
-import { apiSuccess } from "~/app/services/api-response";
+import { apiSuccess } from "~/app/services/api/response";
 
 describe("apiSuccess", () => {
 	test("wraps the payload in a data/meta envelope with a 200 default", async () => {

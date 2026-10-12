@@ -21,7 +21,7 @@ import type { ApiKeyScope, SelectTeam } from "~/database/schema";
 import { database } from "~/app/http/middleware/database";
 import models from "~/app/http/middleware/models";
 import { MAX_DNS_MONITORS_PER_TEAM } from "~/app/models/dns-monitors";
-import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns-discovery";
+import { MAX_TRACKED_NAMES_PER_MONITOR } from "~/app/services/dns/discovery";
 import { createTestDatabase } from "~/app/test/db";
 import { markInFlight } from "~/app/test/idempotency";
 import { bindModels } from "~/app/test/models";
