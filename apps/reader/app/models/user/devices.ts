@@ -9,7 +9,7 @@
 
 import { unwrap } from "@sdxc/result";
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import type { SelectPushSubscription } from "~/database/schema";
 

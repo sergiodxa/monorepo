@@ -8,7 +8,7 @@
  */
 
 import { TypeID } from "@sdxc/typeid";
-import { generateUUID } from "@sdxc/uuid/v4";
+import { generateUUID } from "@sdxc/uuid/v7";
 
 import { createModel } from "~/app/models/user/context";
 import { tags } from "~/database/schema";
