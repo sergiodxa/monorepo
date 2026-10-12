@@ -10,6 +10,7 @@
 import type { Result } from "@sdxc/result";
 
 import { isSuccess, unwrap } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test, vi } from "vitest";
 
 import type { Cache, CacheError } from "../index.js";
@@ -46,7 +47,7 @@ export interface ConformanceOptions {
  */
 export function conformance({ name, create, expire }: ConformanceOptions): void {
 	/** A key no other test has used, so adapters sharing a store cannot collide. */
-	let key = (): string => `conformance:${crypto.randomUUID()}`;
+	let key = (): string => `conformance:${generateUUID()}`;
 
 	/** The error a call answered with, asserting that it answered with one. */
 	let errorOf = <T>(result: Result<T, CacheError>): CacheError => {
