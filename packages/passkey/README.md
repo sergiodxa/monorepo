@@ -1,47 +1,54 @@
 # @sdxc/passkey
 
-Passkeys on both sides: a one-call WebAuthn browser API, and a relying party that verifies the ceremonies.
+Passkeys end to end: a WebAuthn browser API and a verifying relying party.
+
+`@sdxc/passkey/client` runs a ceremony in the browser with one call and hands back JSON to post.
+`@sdxc/passkey/server` issues the options and challenge for each ceremony and verifies what comes
+back using only WebCrypto, so it runs on Workers, Node and Deno. `RegistrationResponseJSON`,
+`AuthenticationResponseJSON` and the options types are the DOM WebAuthn types.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/passkey
 ```
 
-Failures come back as [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) values, so install that too if you want to import its type guards.
+Every call answers a `Result`; install [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result)
+to import `isFailure` and `isSuccess`.
 
 ## Usage
 
-### Register a passkey
+### Create a relying party
 
-A passkey belongs to an account, so registration runs for somebody already signed in. The server issues options and a challenge: keep the challenge, send the options.
+The relying party is the site passkeys are bound to. It is stateless, so one instance at module
+scope serves every request.
 
 ```typescript
 import { RelyingParty } from "@sdxc/passkey/server";
 
-let rp = new RelyingParty({ id: "example.com", name: "Example" });
-
-let { challenge, options } = rp.register({
-	user: { id: "usr_8fk2p", name: "ana@example.com" },
-});
+export const RELYING_PARTY = new RelyingParty({ id: "example.com", name: "Example" });
 ```
 
-`user` describes the account to whoever is looking at the prompt, and only two fields are required:
+### Register a passkey
 
-- `id` is stored on the authenticator as the user handle and comes back on every assertion, which is how a usernameless sign-in finds the account. Use the opaque primary key you already have — it is readable on the device, so an email here leaks one.
-- `name` is what the browser lists the credential under. An email or username is the usual choice; it never has to be unique to the package.
-- `displayName` is an optional friendlier label shown beside `name`, such as the person's full name. It falls back to `name`.
-
-Pass `exclude` as well when the account already has passkeys, so enrolling the same device twice is refused by the browser rather than by you:
+Registration enrolls a passkey for an account that is already signed in. The server issues a
+challenge and options: keep the challenge until the browser answers, and send the options.
 
 ```typescript
-let { challenge, options } = rp.register({
+let { challenge, options } = RELYING_PARTY.register({
 	user: { id: account.id, name: account.email },
 	exclude: account.passkeys.map((passkey) => passkey.id),
 });
+
+session.set("passkeyChallenge", challenge);
+return Response.json(options);
 ```
 
-The browser runs the ceremony and hands back JSON to post:
+`user.id` is stored on the authenticator and comes back on every sign-in, so use an opaque
+account id; `name` is what the browser lists the credential under. `exclude` makes the browser
+refuse to enroll a device the account already has.
+
+The browser runs the ceremony and posts the response back as JSON:
 
 ```typescript
 import { Passkey } from "@sdxc/passkey/client";
@@ -50,458 +57,343 @@ import { isFailure } from "@sdxc/result";
 let result = await Passkey.register(options);
 if (isFailure(result)) return showMessage(result.error.message);
 
-await fetch("/passkeys", { method: "POST", body: JSON.stringify(result.data) });
+await fetch("/passkeys", {
+	method: "POST",
+	headers: { "content-type": "application/json" },
+	body: JSON.stringify(result.data),
+});
 ```
 
-The server verifies it and gets the row to store:
+The server verifies it against the challenge and stores the credential it returns:
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 
-let result = await rp.verifyRegistration(request, { challenge });
-if (isFailure(result)) return unauthorized(result.error.message);
+let challenge = session.get("passkeyChallenge");
+session.unset("passkeyChallenge");
+
+let result = await RELYING_PARTY.verifyRegistration(request, { challenge });
+if (isFailure(result)) return new Response(null, { status: 400 });
 
 await db.passkeys.insert({ accountId: account.id, ...result.data });
 ```
 
 ### Sign in with a passkey
 
-Leave `allow` out and the browser offers every passkey it holds for the site, so nobody has to type an identifier first:
+Leave `allow` out and the browser offers every passkey it holds for the site, so nobody types an
+identifier first.
 
 ```typescript
-let { challenge, options } = rp.authenticate();
+let { challenge, options } = RELYING_PARTY.authenticate();
 ```
 
 ```typescript
 let result = await Passkey.authenticate(options);
 ```
 
-Look the credential up by the id the assertion reports, then verify against it:
+Find the stored credential by the id the response carries, verify against it, and record the new
+signature counter:
 
 ```typescript
+let response = (await request.json()) as AuthenticationResponseJSON;
 let passkey = await db.passkeys.find(response.id);
 
-let result = await rp.verifyAuthentication(response, { challenge, passkey });
-if (isFailure(result)) return unauthorized(result.error.message);
+let result = await RELYING_PARTY.verifyAuthentication(response, { challenge, passkey });
+if (isFailure(result)) return new Response(null, { status: 401 });
 
 await db.passkeys.update(passkey.id, { counter: result.data.counter });
+let accountId = passkey.accountId;
 ```
 
 ### Offer passkeys in the sign-in field
 
-`autofill` waits inside the browser's autocomplete menu instead of opening a sheet, so it runs as the page loads and resolves only if somebody picks a credential:
+`autofill` places the passkeys in an input's autocomplete menu instead of opening a sheet. Start it
+as the page loads; it resolves once somebody picks a credential.
 
-```typescript
-if (await Passkey.isAutofillSupported()) {
-	let result = await Passkey.autofill(options);
-	if (isSuccess(result)) form.submit();
-}
+```html
+<input type="text" name="email" autocomplete="username webauthn" />
 ```
 
-Pair it with `<input autocomplete="username webauthn">`. A later `register` or `authenticate` call cancels it, because a browser keeps only one ceremony open at a time.
+```typescript
+import { Passkey } from "@sdxc/passkey/client";
+import { isSuccess } from "@sdxc/result";
+
+if (await Passkey.isAutofillSupported()) {
+	let result = await Passkey.autofill(options);
+	if (isSuccess(result)) await submitAssertion(result.data);
+}
+```
 
 ## API
 
 ### `@sdxc/passkey/client`
 
-#### `Passkey.register(options, ceremony?)`
+#### `Passkey.register(options, ceremony?): Promise<Result<RegistrationResponseJSON, PasskeyError>>`
 
-Runs `navigator.credentials.create()` against options the server issued, and returns the response as JSON. Resolves to `Result<RegistrationResponseJSON, PasskeyError>`.
+Runs `navigator.credentials.create()` with the options `rp.register()` issued and answers the
+response as JSON to post.
 
-#### `Passkey.authenticate(options, ceremony?)`
+#### `Passkey.authenticate(options, ceremony?): Promise<Result<AuthenticationResponseJSON, PasskeyError>>`
 
-Runs `navigator.credentials.get()` and prompts immediately. Resolves to `Result<AuthenticationResponseJSON, PasskeyError>`.
+Runs `navigator.credentials.get()` and prompts immediately.
 
-#### `Passkey.autofill(options, ceremony?)`
+#### `Passkey.autofill(options, ceremony?): Promise<Result<AuthenticationResponseJSON, PasskeyError>>`
 
-The same ceremony under conditional mediation: the browser offers credentials in an input's autofill menu and the promise stays pending until one is chosen.
+The same ceremony under conditional mediation: it stays pending until somebody picks a credential
+from an input marked `autocomplete="username webauthn"`.
 
-#### `Passkey.cancel()`
+A browser keeps one ceremony open at a time, so each of the three calls cancels the ceremony
+already open. `ceremony.signal` takes an `AbortSignal` that cancels this one as well.
 
-Aborts the ceremony currently open. Call it when the person leaves the sign-in step, so a pending autofill prompt releases the browser's one ceremony slot.
+#### `Passkey.cancel(): void`
 
-#### `Passkey.isSupported()`
+Cancels the open ceremony, which releases a pending `autofill` when the person leaves the sign-in
+step.
 
-Whether this page can run a ceremony at all — false on an insecure origin as well as on a browser without WebAuthn.
+#### `Passkey.isSupported(): boolean`
 
-#### `Passkey.isAutofillSupported()` · `Passkey.isPlatformSupported()`
+Whether this page can run a ceremony: false on an insecure origin and on a browser without
+WebAuthn.
 
-Whether the browser can offer passkeys through autofill, and whether the device holds one behind a biometric or PIN. Both resolve to `false` rather than rejecting.
+#### `Passkey.isAutofillSupported(): Promise<boolean>`
 
-Every ceremony call takes an optional `{ signal }` to cancel it alongside the package's own.
+Whether the browser can offer passkeys in an autofill menu.
+
+#### `Passkey.isPlatformSupported(): Promise<boolean>`
+
+Whether the device holds passkeys itself, behind a biometric or PIN.
 
 ### `@sdxc/passkey/server`
 
-#### `new RelyingParty(options)`
+#### `new RelyingParty(options: RelyingParty.Options)`
 
-- `id` — the registrable domain credentials are bound to, such as `"example.com"`. Use the parent domain when one credential must cover subdomains.
-- `name` — the name shown in the passkey prompt.
-- `origin` — origin, or origins, allowed to run ceremonies. Defaults to the `https` origin of `id`.
-- `userVerification` — `"required"` makes a missing biometric or PIN a verification failure. Defaults to `"preferred"`.
-- `algorithms` — COSE algorithms offered, in preference order. Defaults to ES256, RS256 and EdDSA.
-- `timeout` — milliseconds the browser keeps the prompt open. Defaults to `300000`.
-- `allowFramed` — whether a ceremony may run inside a cross-origin frame. Defaults to `false`, so an embedded frame cannot register or spend a credential for your domain.
+- `id`: the registrable domain credentials are bound to, such as `"example.com"`; a parent domain
+  covers its subdomains.
+- `name`: shown in the passkey prompt.
+- `origin`: origin or origins allowed to run ceremonies. Defaults to `https://<id>`.
+- `userVerification`: `"required"` makes a missing biometric or PIN a failure. Defaults to
+  `"preferred"`.
+- `algorithms`: COSE algorithms offered, in preference order. Defaults to `[ES256, RS256, EDDSA]`.
+- `timeout`: milliseconds the browser keeps the prompt open. Defaults to `300000`.
+- `allowFramed`: whether a ceremony may run inside a cross-origin frame. Defaults to `false`.
 
-The instance is stateless, so keep one at module scope.
+#### `rp.register(options: RelyingParty.RegisterOptions): RelyingParty.Ceremony<PublicKeyCredentialCreationOptionsJSON>`
 
-#### `rp.register(options)`
+Issues a fresh challenge and the options for `Passkey.register`. Takes `user` (`{ id, name,
+displayName? }`) and optionally `exclude`, `residentKey` (default `"preferred"`), `attachment` and
+`userVerification`. Throws `RangeError` when `user.id` encodes to more than 64 bytes.
 
-Returns `{ challenge, options }` synchronously. Takes `user` (`{ id, name, displayName? }`), and optionally `exclude`, `residentKey`, `attachment` and `userVerification`. Throws `RangeError` if `user.id` does not fit in a 64-byte user handle.
+#### `rp.verifyRegistration(response, { challenge, userVerification? }): Promise<Result<RegisteredPasskey, PasskeyError>>`
 
-#### `rp.verifyRegistration(response, { challenge, userVerification? })`
+Verifies a registration response, or a `Request` whose `application/json` body carries one, and
+answers the credential to store. A `none` or self-signed `packed` attestation is verified; a
+statement carrying a certificate chain is refused with `AttestationError`.
 
-Takes the response, or the `Request` carrying it as JSON. Resolves to `Result<RegisteredPasskey, PasskeyError>`, where the success value is the row to store:
+#### `rp.authenticate(options?: RelyingParty.AuthenticateOptions): RelyingParty.Ceremony<PublicKeyCredentialRequestOptionsJSON>`
 
-```typescript
-interface RegisteredPasskey {
-	id: string;
-	publicKey: string;
-	algorithm: number;
-	counter: number;
-	transports: string[];
-	aaguid: string;
-	attestation: string;
-	userVerified: boolean;
-	syncable: boolean;
-	backedUp: boolean;
-}
-```
+Issues a fresh challenge and the options for `Passkey.authenticate` or `Passkey.autofill`. Takes
+`allow` and `userVerification`; without `allow` the ceremony is usernameless.
 
-#### `rp.authenticate(options?)`
+#### `rp.verifyAuthentication(response, { challenge, passkey, userVerification? }): Promise<Result<AuthenticatedPasskey, PasskeyError>>`
 
-Returns `{ challenge, options }` synchronously. Takes `allow` and `userVerification`; leaving `allow` out starts a usernameless ceremony.
+Verifies an assertion, or a `Request` carrying one, against the stored `passkey`. Store the
+`counter` it answers: a non-zero counter that fails to advance past the stored one fails with
+`CounterError`.
 
-#### `rp.verifyAuthentication(response, { challenge, passkey, userVerification? })`
+#### `ES256`, `RS256`, `EDDSA`
 
-`passkey` is the stored `{ id, publicKey, counter }`. Resolves to `Result<AuthenticatedPasskey, PasskeyError>`:
-
-```typescript
-interface AuthenticatedPasskey {
-	id: string;
-	counter: number;
-	userHandle: string | null;
-	userVerified: boolean;
-	backedUp: boolean;
-}
-```
-
-Record `counter`: the next assertion has to exceed it.
+COSE algorithm identifiers (`-7`, `-257`, `-8`) for the `algorithms` option.
 
 ### Errors
 
-Every failure is an instance of `PasskeyError`, so one check covers them all. The subclasses say which step refused, and each one is exported from the entry point that can produce it.
+Every failure is a `PasskeyError`, exported from both entry points; a subclass names the step that
+refused.
 
-From the client: `UnsupportedError`, `CancelledError` (the prompt was dismissed — usually deserves silence), `AlreadyRegisteredError` (this device is already enrolled, so send them to sign in), `InvalidOptionsError`, `CeremonyError`.
+- Client: `UnsupportedError`, `CancelledError` (the person dismissed the prompt),
+  `AlreadyRegisteredError` (the device is in `exclude`), `InvalidOptionsError`, `CeremonyError`.
+- Server: `MalformedResponseError`, `ChallengeMismatchError`, `OriginMismatchError`,
+  `CrossOriginError`, `RelyingPartyMismatchError`, `AttestationError`, `UserPresenceError`,
+  `UserVerificationError`, `CredentialMismatchError`, `CounterError`, `UnsupportedAlgorithmError`.
 
-From the server: `MalformedResponseError`, `ChallengeMismatchError`, `OriginMismatchError`, `CrossOriginError`, `RelyingPartyMismatchError`, `AttestationError`, `UserPresenceError`, `UserVerificationError`, `CredentialMismatchError`, `SignatureError`, `CounterError`, `UnsupportedAlgorithmError`.
+### Types
 
-## Pattern: a Remix sign-in flow
+#### `RelyingParty.Descriptor`
 
-Four pieces: the routes, one relying party, two endpoints, and one client island. Registration is the same shape with `register` in place of `authenticate`.
+A known credential, as its id or as `{ id, transports }`. Passing stored transports lets the
+browser go straight to the right authenticator.
 
-### The routes
+#### `RelyingParty.Ceremony<T>`
 
-WebAuthn is a browser API, so the two ceremony steps are `POST` endpoints the island talks to rather than form submissions.
+`{ challenge, options }`: the challenge to keep until verification and the options to send.
 
-```typescript
-import { form, get, post, route } from "remix/routes";
+#### `RegisteredPasskey`
 
-export default route({
-	signIn: form("/sign-in"),
-	dashboard: get("/dashboard"),
+The row to store: `id`, `publicKey`, `algorithm`, `counter`, `transports`, `aaguid` (the
+authenticator model), `attestation`, `userVerified`, `syncable` and `backedUp`.
 
-	passkey: {
-		/** Issues a challenge and the options the browser prompts with. */
-		challenge: post("/passkey/challenge"),
-		/** Verifies the assertion and opens the session. */
-		verify: post("/passkey/verify"),
-	},
-});
-```
+#### `StoredPasskey`
 
-### The relying party
+What `verifyAuthentication` reads from that row: `{ id, publicKey, counter }`.
 
-The instance is stateless, so it lives at module scope. The challenge it issues has to outlive the request that issued it, and the session is the smallest place that holds one.
+#### `AuthenticatedPasskey`
+
+`id`, the `counter` to store, `userHandle` (the `user.id` given at registration, for a discoverable
+credential), `userVerified` and `backedUp`.
+
+#### `Passkey.CeremonyOptions`
+
+`{ signal?: AbortSignal }`.
+
+## Pattern: Two JSON Endpoints Per Ceremony
+
+A ceremony spans two requests, so the challenge has to outlive the first one. Spend it on read, so
+one challenge buys exactly one verification.
 
 ```typescript
 import { RelyingParty } from "@sdxc/passkey/server";
-import { env } from "cloudflare:workers";
-import { getContext } from "remix/middleware/async-context";
-import { Session } from "remix/session";
-
-export const RELYING_PARTY = new RelyingParty({
-	id: env.RP_ID,
-	name: "Example",
-	origin: env.APP_ORIGIN,
-});
-
-/** Session key the in-flight challenge is parked under. */
-const CHALLENGE_KEY = "passkey:challenge";
-
-/**
- * The current request's session.
- *
- * @throws When the session middleware did not run for this request.
- */
-function session(): Session {
-	let value = getContext().get(Session);
-	if (!value) throw new Error("No session in context: the session middleware did not run.");
-	return value;
-}
-
-/** Parks a challenge until the browser answers it. */
-export function keepChallenge(challenge: string): void {
-	session().set(CHALLENGE_KEY, challenge);
-}
-
-/**
- * Reads the in-flight challenge and drops it in the same call, so one challenge
- * buys exactly one ceremony and a replay of the same assertion finds nothing.
- */
-export function spendChallenge(): string | null {
-	let value = session();
-	let challenge = value.get(CHALLENGE_KEY);
-	value.unset(CHALLENGE_KEY);
-	return typeof challenge === "string" ? challenge : null;
-}
-```
-
-### The endpoints
-
-Issuing a challenge is the whole first endpoint. Leaving `allow` out is what makes the prompt usernameless: the browser offers every passkey it holds for the site, so nobody types an identifier.
-
-```tsx
-import { createAction } from "remix/router";
-
-import { keepChallenge, RELYING_PARTY } from "~/app/services/passkey";
-import routes from "~/routes/web";
-
-/** POST /passkey/challenge — starts a usernameless ceremony. */
-export default createAction(routes.passkey.challenge, () => {
-	let { challenge, options } = RELYING_PARTY.authenticate();
-	keepChallenge(challenge);
-	return Response.json(options);
-});
-```
-
-Verification reads the body itself, because the credential has to be found by the id the assertion carries before there is anything to verify against. Refusals are answered identically and logged by error name, so the response never tells a caller which check refused it.
-
-```tsx
 import { isFailure } from "@sdxc/result";
-import { createAction } from "remix/router";
 
-import Passkey from "~/app/data/passkey";
-import { RELYING_PARTY, spendChallenge } from "~/app/services/passkey";
-import { openSession } from "~/app/services/session";
-import routes from "~/routes/web";
+const RELYING_PARTY = new RelyingParty({
+	id: "example.com",
+	name: "Example",
+	origin: ["https://example.com", "https://www.example.com"],
+});
 
-/** POST /passkey/verify — accepts an assertion and signs the account in. */
-export default createAction(routes.passkey.verify, async (ctx) => {
-	let challenge = spendChallenge();
-	if (!challenge) return Response.json({ error: "rejected" }, { status: 400 });
+export async function issueChallenge(session: Session): Promise<Response> {
+	let { challenge, options } = RELYING_PARTY.authenticate();
+	session.set("passkeyChallenge", challenge);
+	return Response.json(options);
+}
 
-	let response = (await ctx.request.json()) as AuthenticationResponseJSON;
+export async function verifyAssertion(request: Request, session: Session): Promise<Response> {
+	let challenge = session.get("passkeyChallenge");
+	session.unset("passkeyChallenge");
+	if (typeof challenge !== "string") return Response.json({ error: "rejected" }, { status: 400 });
 
-	let passkey = await Passkey.findByCredentialId(ctx.db, response.id);
+	let response = (await request.json()) as AuthenticationResponseJSON;
+	let passkey = await db.passkeys.find(response.id);
 	if (!passkey) return Response.json({ error: "rejected" }, { status: 400 });
 
 	let result = await RELYING_PARTY.verifyAuthentication(response, { challenge, passkey });
 	if (isFailure(result)) {
-		ctx.log.warn("passkey.rejected", { reason: result.error.name });
+		logger.warn("passkey rejected", { reason: result.error.name });
 		return Response.json({ error: "rejected" }, { status: 400 });
 	}
 
-	await Passkey.recordUse(ctx.db, passkey.id, result.data.counter);
-	await openSession(passkey.accountId);
-
-	return Response.json({ redirect: routes.dashboard.href() });
-});
+	await db.passkeys.update(passkey.id, { counter: result.data.counter });
+	await signIn(session, passkey.accountId);
+	return Response.json({ redirect: "/dashboard" });
+}
 ```
 
-Register both in the router alongside every other route:
+Every refusal answers the same response and logs the error's `name`, so a caller learns nothing
+about which check failed.
+
+## Pattern: Autofill With A Button Fallback
+
+The page starts an autofill ceremony on load and keeps a button for browsers that skip the menu.
+Clicking the button cancels the pending autofill, and leaving the page releases it.
 
 ```typescript
-router.map(routes.passkey.challenge, challenge);
-router.map(routes.passkey.verify, verify);
-```
-
-### The island
-
-The one component on the page that ships JavaScript. Its body runs once at hydration, which is where the autofill ceremony starts; `handle.signal` aborts when the component is disconnected, so navigating away releases the browser's single ceremony slot.
-
-```tsx
-import type { Handle } from "remix/component";
-
 import { CancelledError, Passkey } from "@sdxc/passkey/client";
 import { isFailure } from "@sdxc/result";
-import { clientEntry, on } from "remix/component";
 
-/**
- * Declared as a `type` to satisfy the serializable-props constraint a client
- * entry's props are checked against.
- */
-type PasskeySignInProps = {
-	challengeUrl: string;
-	verifyUrl: string;
-	label: string;
-};
+async function signIn(autofill: boolean): Promise<void> {
+	let options = await fetch("/passkey/challenge", { method: "POST" }).then((r) => r.json());
 
-/**
- * Signs in with a passkey, offering one through autofill as the page loads and
- * through an explicit button for anyone whose browser skips the autofill menu.
- */
-export const PasskeySignIn = clientEntry(
-	"/resources/components/passkey-sign-in.tsx#PasskeySignIn",
-	function PasskeySignIn(handle: Handle<PasskeySignInProps>) {
-		let message: string | null = null;
-
-		/** Fetches options, runs one ceremony, and posts the assertion back. */
-		async function signIn(autofill: boolean) {
-			let { challengeUrl, verifyUrl } = handle.props;
-			let options = await fetch(challengeUrl, { method: "POST" }).then((body) => body.json());
-
-			let result = autofill
-				? await Passkey.autofill(options, { signal: handle.signal })
-				: await Passkey.authenticate(options);
-
-			if (isFailure(result)) {
-				if (result.error instanceof CancelledError) return;
-				message = result.error.message;
-				return void handle.update();
-			}
-
-			let verified = await fetch(verifyUrl, {
-				method: "POST",
-				headers: { "content-type": "application/json" },
-				body: JSON.stringify(result.data),
-			});
-
-			if (!verified.ok) {
-				message = "That passkey was not accepted.";
-				return void handle.update();
-			}
-
-			let { redirect } = (await verified.json()) as { redirect: string };
-			location.assign(redirect);
-		}
-
-		void signIn(true);
-
-		return () => (
-			<>
-				<button type="button" mix={[on("click", () => void signIn(false))]}>
-					{handle.props.label}
-				</button>
-				{message && <p role="alert">{message}</p>}
-			</>
-		);
-	},
-);
-
-export default PasskeySignIn;
-```
-
-The view renders it beside an identifier field marked for the autofill menu, so the browser knows where to offer the credential:
-
-```tsx
-<form method="post" action={routes.signIn.action.href()}>
-	<input type="text" name="email" autocomplete="username webauthn" />
-	<PasskeySignIn
-		challengeUrl={routes.passkey.challenge.href()}
-		verifyUrl={routes.passkey.verify.href()}
-		label="Sign in with a passkey"
-	/>
-</form>
-```
-
-Nothing above is required for the password path to keep working: the island is additive, and a browser without WebAuthn renders a button whose `Passkey.authenticate` returns `UnsupportedError` and shows the message.
-
-### Registering, in the same shape
-
-The challenge endpoint names the account instead of leaving it out, and the verify endpoint inserts rather than looks up. Because nothing has to be found by credential id first, this one can hand the request straight over:
-
-```tsx
-/** POST /passkey/register/challenge — enrolls a passkey for the signed-in account. */
-export default createAction(routes.passkey.register.challenge, async (ctx) => {
-	let account = await currentAccount(ctx);
-
-	let { challenge, options } = RELYING_PARTY.register({
-		user: { id: account.id, name: account.email },
-		exclude: await Passkey.listIds(ctx.db, account.id),
-	});
-
-	keepChallenge(challenge);
-	return Response.json(options);
-});
-```
-
-```tsx
-/** POST /passkey/register/verify — stores the new credential. */
-export default createAction(routes.passkey.register.verify, async (ctx) => {
-	let challenge = spendChallenge();
-	if (!challenge) return Response.json({ error: "rejected" }, { status: 400 });
-
-	let result = await RELYING_PARTY.verifyRegistration(ctx.request, { challenge });
+	let result = autofill ? await Passkey.autofill(options) : await Passkey.authenticate(options);
 	if (isFailure(result)) {
-		ctx.log.warn("passkey.registration_rejected", { reason: result.error.name });
-		return Response.json({ error: "rejected" }, { status: 400 });
+		if (result.error instanceof CancelledError) return;
+		return showMessage(result.error.message);
 	}
 
-	let account = await currentAccount(ctx);
-	await Passkey.create(ctx.db, { accountId: account.id, ...result.data });
+	let verified = await fetch("/passkey/verify", {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(result.data),
+	});
+	if (!verified.ok) return showMessage("That passkey was not accepted.");
 
-	return Response.json({ redirect: routes.dashboard.href() });
-});
+	let { redirect } = (await verified.json()) as { redirect: string };
+	location.assign(redirect);
+}
+
+if (Passkey.isSupported()) {
+	button.hidden = false;
+	button.addEventListener("click", () => void signIn(false));
+	if (await Passkey.isAutofillSupported()) void signIn(true);
+}
+
+window.addEventListener("pagehide", () => Passkey.cancel());
 ```
 
-## Pattern: keeping the challenge between the two calls
+## Pattern: Passkeys As A Second Factor
 
-A challenge is issued by one request and verified by the next, so it has to outlive the first. Anywhere you can read it back keyed to the pending ceremony works — a session, a short-lived row, a signed cookie:
-
-```typescript
-let { challenge, options } = rp.authenticate();
-session.set("passkeyChallenge", challenge);
-return Response.json(options);
-```
+After a password, ask for one of the account's own passkeys and require the biometric or PIN on
+both sides of the ceremony.
 
 ```typescript
-let challenge = session.get("passkeyChallenge");
-session.unset("passkeyChallenge");
+import { RelyingParty } from "@sdxc/passkey/server";
+import { isFailure } from "@sdxc/result";
 
-let result = await rp.verifyAuthentication(request, { challenge, passkey });
-```
-
-Clear it as soon as it is read: a challenge that survives its ceremony is one an attacker can replay against.
-
-## Pattern: passkeys as a second factor
-
-Register with `userVerification: "required"` and check the same on the way back, so the assertion proves the biometric and not just the device:
-
-```typescript
-let account = await db.accounts.find(session.get("accountId"));
+let rp = new RelyingParty({ id: "example.com", name: "Example" });
 
 let { challenge, options } = rp.authenticate({
 	allow: account.passkeys.map((passkey) => ({ id: passkey.id, transports: passkey.transports })),
 	userVerification: "required",
 });
-```
 
-```typescript
 let result = await rp.verifyAuthentication(request, {
 	challenge,
 	passkey,
 	userVerification: "required",
 });
+if (isFailure(result)) return new Response(null, { status: 401 });
 ```
 
-Passing the stored `transports` is what lets the browser skip straight to the right prompt instead of asking how to connect.
+## Pattern: Enrolling This Device
 
-## Pattern: telling the person what happened
-
-The error classes map to the four answers a sign-in form actually has:
+Restrict registration to a discoverable credential on the device itself, and offer it only where
+the device can hold one.
 
 ```typescript
-import { AlreadyRegisteredError, CancelledError, UnsupportedError } from "@sdxc/passkey/client";
+import { Passkey } from "@sdxc/passkey/client";
+
+let offerEnrollment = await Passkey.isPlatformSupported();
+```
+
+```typescript
+import { EDDSA, ES256, RelyingParty } from "@sdxc/passkey/server";
+
+let rp = new RelyingParty({
+	id: "example.com",
+	name: "Example",
+	algorithms: [ES256, EDDSA],
+	userVerification: "required",
+});
+
+let { challenge, options } = rp.register({
+	user: { id: account.id, name: account.email, displayName: account.fullName },
+	exclude: account.passkeys.map((passkey) => ({ id: passkey.id, transports: passkey.transports })),
+	residentKey: "required",
+	attachment: "platform",
+});
+```
+
+`syncable` and `backedUp` on the registered passkey tell whether it survives losing the device,
+which is worth showing beside it in the account's passkey list.
+
+## Pattern: Telling The Person What Happened
+
+The client errors map to the answers a form actually gives.
+
+```typescript
+import {
+	AlreadyRegisteredError,
+	CancelledError,
+	Passkey,
+	UnsupportedError,
+} from "@sdxc/passkey/client";
 import { isFailure } from "@sdxc/result";
 
 let result = await Passkey.register(options);
@@ -514,23 +406,27 @@ if (isFailure(result)) {
 }
 ```
 
-## Attestation
-
-Every statement that arrives is verified, and one that cannot be is refused. Registration fails closed.
-
-- `none` is what browsers substitute whenever a relying party asks for no attestation, which is what this package asks for. Its statement must be empty; a `none` carrying anything is an `AttestationError`.
-- `packed` self-attestation is signed by the credential's own key. It is verified, which proves possession of the private half at enrollment, and it needs nothing external.
-- Anything carrying a certificate chain — `packed` with `x5c`, `tpm`, `android-key`, `apple` — is refused with an `AttestationError`.
-
-That last one is a deliberate limit rather than an oversight. A chain is only worth checking against a set of roots you trust, which in practice means shipping the FIDO Metadata Service blob and refreshing it. Verifying a chain without anchors accepts any self-signed certificate an attacker cares to mint, so it reads as a check while proving nothing. Refusing is the honest default; if you need "only these authenticator models may enroll", that is a trust-anchor feature this package does not have yet.
-
-None of this is what secures a passkey. A registration is trustworthy because the account was already authenticated when it enrolled, the challenge was fresh, the origin matched and the relying party id matched — all verified here on every ceremony.
-
-The AAGUID is reported either way, so authenticator models can be recorded or displayed.
-
 ## Versioning
 
-Releases are dated (`2026.9.4`) and carry no compatibility promise between them. Pin an exact version.
+Releases are dated rather than semantic. A version is the UTC date it was published,
+written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one
+release goes out per day.
+
+Those numbers say when, not what: a later date means a later release and carries no
+compatibility promise. Any release may change or remove an export.
+
+Depend on one exact date, and move it when you are ready to take the change:
+
+```json
+{
+	"dependencies": {
+		"@sdxc/passkey": "2026.9.4"
+	}
+}
+```
+
+A caret or tilde range reads the date as major, minor and patch, so it accepts every
+later release in the same year. An exact version keeps the upgrade yours to schedule.
 
 ## License
 
