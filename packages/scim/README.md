@@ -2,131 +2,160 @@
 
 SCIM 2.0 resources, filters, PATCH operations and discovery documents.
 
+SCIM 2.0 is how an enterprise directory (Okta, Microsoft Entra ID, Google Workspace) pushes
+people and groups into a service; [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643) defines the
+resources and [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644) the protocol. This package is the
+standard's half of a SCIM endpoint: typed Users and Groups, the filter grammar, PATCH, list
+queries, attribute projection, errors and discovery. Routing, authentication and storage stay
+yours.
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/scim
 ```
 
-Every fallible call returns an [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result)
-value, and `@sdxc/scim/data-table` translates filters into
-[`remix`](https://www.npmjs.com/package/remix)'s `remix/data-table` predicates. Both install
-alongside this package.
-
-SCIM 2.0 is how an enterprise directory (Okta, Microsoft Entra ID, Google Workspace) pushes
-people and groups into a service. [RFC 7643](https://www.rfc-editor.org/rfc/rfc7643) defines
-the resources and [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644) the protocol. This package
-holds the standard's half of a SCIM endpoint: the User, Group and Enterprise User types, the
-complete filter grammar, PATCH, list queries and `ListResponse`, attribute projection, the SCIM
-error document and the discovery documents. Routing, authentication and storage stay yours.
-
-Every failure is a `ScimError`, which `errorResponse` turns into the RFC 7644 §3.12 document.
-One `Discovery.Definitions` value describes the attributes an endpoint serves: `/Schemas`
-advertises it, and filters, PATCH and projection evaluate against it, so what a client is told
-and what the server does agree.
+Fallible calls return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result),
+and `@sdxc/scim/data-table` builds predicates for `remix/data-table` from
+[`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Create A User
+### Read a User and answer
+
+Every failure is a `ScimError`; `errorResponse` turns it into the RFC 7644 error document.
 
 ```typescript
-import { errorResponse, parseUser, readBody, scimResponse, userResource } from "@sdxc/scim";
 import { isFailure } from "@sdxc/result";
+import {
+	errorResponse,
+	parseUser,
+	readBody,
+	ScimError,
+	scimResponse,
+	userResource,
+} from "@sdxc/scim";
 
 let body = await readBody(request);
 if (isFailure(body)) return errorResponse(body.error);
 
 let user = parseUser(body.data);
-if (isFailure(user)) return errorResponse(user.error); // 400 invalidValue
+if (isFailure(user)) return errorResponse(user.error);
 
 user.data.userName; // "bjensen@example.com"
-user.data.extensions.enterprise?.department; // typed Enterprise User extension
+user.data.extensions.enterprise?.department; // the typed Enterprise User extension
+
+if (await findUserByUserName(user.data.userName)) {
+	let taken = new ScimError(409, "userName is taken.", { scimType: "uniqueness" });
+	return errorResponse(taken);
+}
 
 let stored = await saveUser(user.data);
 return scimResponse(userResource(stored), { status: 201 });
 ```
 
-### List Users With A Filter
+### Describe the attributes you serve
+
+One `Discovery.Definitions` value drives filters, PATCH, projection and `/Schemas`, so what a
+client is told and what the server does agree. Put the core schema first: unqualified names
+resolve in insertion order.
 
 ```typescript
-import { errorResponse, listResponse, parseListQuery, project } from "@sdxc/scim";
-import { compileFilter } from "@sdxc/scim/filter";
+import { ENTERPRISE_USER_SCHEMA, USER_SCHEMA } from "@sdxc/scim";
+import type { Discovery } from "@sdxc/scim/discovery";
+import { ENTERPRISE_USER_DEFINITION, pickAttributes, USER_DEFINITION } from "@sdxc/scim/discovery";
+
+export const DEFINITIONS: Discovery.Definitions = {
+	[USER_SCHEMA]: pickAttributes(USER_DEFINITION, ["userName", "name", "emails", "active"]),
+	[ENTERPRISE_USER_SCHEMA]: ENTERPRISE_USER_DEFINITION,
+};
+```
+
+### List Users with a filter
+
+```typescript
 import { isFailure } from "@sdxc/result";
+import { errorResponse, listResponse, parseListQuery, project, userResource } from "@sdxc/scim";
+import { compileFilter } from "@sdxc/scim/filter";
 
 let query = parseListQuery(new URL(request.url), { maxCount: 200, attributes: DEFINITIONS });
 if (isFailure(query)) return errorResponse(query.error);
 
-let matches = query.data.filter
-	? compileFilter(query.data.filter, {
-			definitions: DEFINITIONS,
-			allow: ["userName", "emails.value"],
-		})
-	: null;
-if (matches && isFailure(matches)) return errorResponse(matches.error);
+let resources = (await loadUsers()).map((user) => userResource(user));
 
-let all = (await loadUsers()).map((user) => userResource(user));
-let found = matches ? all.filter(matches.data) : all;
+if (query.data.filter) {
+	let matches = compileFilter(query.data.filter, {
+		definitions: DEFINITIONS,
+		allow: ["userName", "emails.value"],
+	});
+	if (isFailure(matches)) return errorResponse(matches.error);
+	resources = resources.filter(matches.data);
+}
+
 let start = query.data.startIndex - 1;
-
 return listResponse(
 	{
-		resources: found.slice(start, start + query.data.count),
-		totalResults: found.length,
+		resources: resources.slice(start, start + query.data.count),
+		totalResults: resources.length,
 		startIndex: query.data.startIndex,
 	},
 	(resource) => project(resource, query.data, DEFINITIONS),
 );
 ```
 
-`userName eq "BJensen@Example.com"` matches `bjensen@example.com`, because the definition says
-`userName` is `caseExact: false`.
+`userName eq "BJensen@Example.com"` matches `bjensen@example.com`, because `userName` is
+`caseExact: false` in the definition; `allow` refuses filters on any other attribute. For
+`POST /Users/.search`, read the same query from the body with `parseSearchRequest(body.data)`.
 
-### Patch A User
+### Patch a User
+
+Apply the operations to the current wire representation, then store the result the way a `PUT`
+would.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
-import { errorResponse, parseUser, userResource } from "@sdxc/scim";
+import { errorResponse, parseUser, readBody, scimResponse, userResource } from "@sdxc/scim";
 import { applyPatch, parsePatch } from "@sdxc/scim/patch";
+
+let body = await readBody(request);
+if (isFailure(body)) return errorResponse(body.error);
 
 let operations = parsePatch(body.data);
 if (isFailure(operations)) return errorResponse(operations.error);
 
-let patched = applyPatch(userResource(current), operations.data, { definitions: DEFINITIONS });
+let patched = applyPatch(userResource(await loadUser(id)), operations.data, {
+	definitions: DEFINITIONS,
+});
 if (isFailure(patched)) return errorResponse(patched.error); // noTarget, mutability, invalidPath
 
-let next = parseUser(patched.data); // then store it the way a PUT would
+let next = parseUser(patched.data);
+if (isFailure(next)) return errorResponse(next.error);
+return scimResponse(userResource(await replaceUser(id, next.data)));
 ```
 
-### Serve Discovery
+### Serve discovery
 
 ```typescript
 import { ENTERPRISE_USER_SCHEMA, GROUP_SCHEMA, scimResponse, USER_SCHEMA } from "@sdxc/scim";
 import {
-	ENTERPRISE_USER_DEFINITION,
 	GROUP_DEFINITION,
-	pickAttributes,
 	resourceTypes,
 	schemas,
 	serviceProviderConfig,
-	USER_DEFINITION,
 } from "@sdxc/scim/discovery";
-
-export const DEFINITIONS = {
-	[USER_SCHEMA]: pickAttributes(USER_DEFINITION, ["userName", "name", "emails", "active"]),
-	[ENTERPRISE_USER_SCHEMA]: ENTERPRISE_USER_DEFINITION,
-};
 
 scimResponse(
 	serviceProviderConfig({
 		patch: true,
 		filter: { supported: true, maxResults: 200 },
 		sort: false,
-		etag: false,
+		etag: true,
 		authenticationSchemes: [
 			{ type: "oauthbearertoken", name: "Bearer Token", description: "A per-connection token." },
 		],
 	}),
 );
+
 scimResponse(
 	resourceTypes([
 		{
@@ -138,6 +167,7 @@ scimResponse(
 		{ id: "Group", endpoint: "/Groups", schema: GROUP_SCHEMA },
 	]),
 );
+
 scimResponse(schemas([...Object.values(DEFINITIONS), GROUP_DEFINITION]));
 ```
 
@@ -147,161 +177,190 @@ scimResponse(schemas([...Object.values(DEFINITIONS), GROUP_DEFINITION]));
 
 #### Constants
 
-`MEDIA_TYPE` (`application/scim+json`), `USER_SCHEMA`, `GROUP_SCHEMA`, `ENTERPRISE_USER_SCHEMA`,
-`LIST_RESPONSE_SCHEMA`, `PATCH_OP_SCHEMA`, `SEARCH_REQUEST_SCHEMA` and `ERROR_SCHEMA`.
+`MEDIA_TYPE` (`application/scim+json`), and the schema URNs `USER_SCHEMA`, `GROUP_SCHEMA`,
+`ENTERPRISE_USER_SCHEMA`, `LIST_RESPONSE_SCHEMA`, `PATCH_OP_SCHEMA`, `SEARCH_REQUEST_SCHEMA` and
+`ERROR_SCHEMA`.
 
-#### `ScimError`
+#### `new ScimError(status: number, detail: string, options?: ScimErrorOptions)`
 
-`new ScimError(status, detail, { scimType? })`. `status` is the HTTP status, `scimType` one of
-RFC 7644 Table 9's codes (`invalidFilter`, `invalidPath`, `noTarget`, `mutability`,
-`uniqueness`, `invalidValue`, `invalidSyntax`, `tooMany`, `invalidVers`, `sensitive`) or `null`,
-and `message` the `detail`. `ScimErrorOptions` types the options.
+The error every call fails with: `status` is the HTTP status, `message` the detail, and
+`scimType` an RFC 7644 detail code (`invalidFilter`, `uniqueness`, `mutability`, …) or `null`.
 
-#### `parseUser(body, options?): Result<Scim.User, ScimError>`
+#### `parseUser(body: unknown, options?: ParseUserOptions): Result<Scim.User, ScimError>`
 
-Reads a User. Attribute names match case-insensitively, `null` members count as unassigned, and
-each extension is read from its URN member and validated with its schema. Pass
-`options.extensions` as `{ key: { urn, schema } }` with any synchronous Standard Schema; the
-result's `extensions.key` is typed from the schema (`ParseUserOptions`, `ExtensionSchemas`,
-`InferExtensions`). The Enterprise User extension is read under
-`enterprise` by default. A complete `meta` is read with `Date`s; an incomplete one is dropped.
+Reads a User, matching attribute names in any case and reading `null` as unassigned. Each
+extension is read from its URN member and validated with a Standard Schema; `options.extensions`
+(`{ key: { urn, schema } }`) replaces the default, which reads the Enterprise User extension under
+`enterprise`.
 
-#### `parseGroup(body): Result<Scim.Group, ScimError>`
+#### `parseGroup(body: unknown): Result<Scim.Group, ScimError>`
 
-Reads a Group; member `$ref` becomes `ref`, and member `type` matches `User`/`Group` in any case.
+Reads a Group; a member's `$ref` becomes `ref`.
 
-#### `userResource(user, options?)` / `groupResource(group)`
+#### `userResource(user: Scim.User, options?: ResourceOptions): object`
 
-The wire objects: `schemas` filled from the extensions present, extensions under their URNs,
-`ref` written `$ref`, dates as RFC 3339, and unassigned members (empty arrays included)
-dropped. `password` is left out. Pass `options.extensions` (`ResourceOptions`) to name the
-URN of each custom extension key.
+The wire object: `schemas` filled from the extensions present, extensions under their URNs,
+`ref` written `$ref`, dates as RFC 3339, `password` and empty members dropped. Pass the same
+`extensions` as `parseUser` to name each custom extension's URN.
 
-#### `version(resource): Promise<string>`
+#### `groupResource(group: Scim.Group): object`
 
-A weak entity tag (`W/"…"`) over a key-order-independent serialization of the resource,
-leaving `meta` out so stamping the version into `meta.version` keeps it stable.
+The Group's wire object, with the same rules as `userResource`.
 
-#### `matchesVersion(request, current): boolean`
+#### `readBody(request: Request): Promise<Result<unknown, ScimError>>`
 
-Whether `If-Match` and `If-None-Match` let the request proceed, comparing tags weakly as
-RFC 7644 §3.14's examples require. Answer `412` for a failed write and `304` for a read that
-fails `If-None-Match`.
+Reads a JSON body sent as `application/scim+json`, `application/json` or with no `Content-Type`;
+another type fails `415`, and invalid JSON `400 invalidSyntax`.
 
-#### `readBody(request): Promise<Result<unknown, ScimError>>`
+#### `parseListQuery(url: URL, options?: ListQueryOptions): Result<Scim.ListQuery, ScimError>`
 
-Reads a JSON body sent as `application/scim+json`, `application/json` or with no
-`Content-Type`. Another type is `415`, invalid JSON is `400 invalidSyntax`.
+Reads `filter`, `startIndex`, `count`, `sortBy`, `sortOrder`, `attributes` and
+`excludedAttributes` from the query string. `count` defaults to `options.defaultCount` (100) and
+is capped at `options.maxCount`; with `options.attributes`, every path must resolve against those
+definitions.
 
-#### `parseListQuery(url, options?)` / `parseSearchRequest(body, options?)`
+#### `parseSearchRequest(body: unknown, options?: ListQueryOptions): Result<Scim.ListQuery, ScimError>`
 
-Read a list request from the query string or a `POST /.search` body into a `Scim.ListQuery`.
-`startIndex` below 1 reads as 1, `count` below 0 as 0 and above `maxCount` as `maxCount`, and a
-missing `count` is `defaultCount` (100). With `options.attributes`, the filter and every path
-must resolve against those definitions. `ListQueryOptions` types the options.
+The same query read from a `POST /.search` body.
 
-#### `scimResponse(body, init?)`, `errorResponse(error, init?)`, `listResponse(page, toResource, init?)`
+#### `scimResponse(body: object, init?: ResponseInit): Response`
 
-`Response` builders typed `application/scim+json`. `errorResponse` writes `status` as a string
-and leaves `scimType` out when the error has none; `listResponse` sets `itemsPerPage` to the
-page length.
+A JSON `Response` typed `application/scim+json`.
 
-#### `project(resource, query, definitions)`
+#### `errorResponse(error: ScimError, init?: ResponseInit): Response`
 
-Applies `returned` (`always`, `never`, `default`, `request`) and the query's `attributes` or
-`excludedAttributes`, including sub-attributes (`name.givenName`) and whole extensions (the URN).
+The RFC 7644 error document, answered with the error's status.
 
-#### `Scim` (types)
+#### `listResponse(page: Scim.Page, toResource: (resource) => object, init?: ResponseInit): Response`
+
+A `ListResponse` of the page's resources mapped through `toResource`, with `itemsPerPage` set to
+the page length.
+
+#### `project(resource: object, query: Scim.ListQuery, definitions: Discovery.Definitions): object`
+
+Keeps the members a response carries, applying each attribute's `returned` and the query's
+`attributes` or `excludedAttributes`, down to sub-attributes and whole extensions.
+
+#### `version(resource: object): Promise<string>`
+
+A weak entity tag (`W/"…"`) over the resource's content, independent of key order and of `meta`,
+so storing it in `meta.version` leaves it unchanged.
+
+#### `matchesVersion(request: Request, current: string): boolean`
+
+Whether the request's `If-Match` and `If-None-Match` let it proceed against the current tag,
+compared weakly. Answer `false` with `412`, or with `304` on a read that sent `If-None-Match`.
+
+### `@sdxc/scim/filter`
+
+#### `parseFilter(text: string): Result<Filter.Expression, ScimError>`
+
+Parses the full RFC 7644 filter grammar: every operator, `and`/`or`/`not`, grouping, value paths
+(`emails[type eq "work"]`) and schema-qualified paths. Errors are `400 invalidFilter` with the
+position.
+
+#### `parsePath(text: string): Result<Filter.AttributePath, ScimError>`
+
+Parses an attribute path such as `name.givenName`; a bad one fails `400 invalidPath`.
+
+#### `stringifyFilter(expression: Filter.Expression): string` / `stringifyPath(path: Filter.AttributePath): string`
+
+Write a tree back to text that parses to the same tree.
+
+#### `compileFilter(expression: Filter.Expression, options: Filter.CompileOptions): Result<(resource: object) => boolean, ScimError>`
+
+A predicate over wire resources, evaluated with the types and `caseExact` of
+`options.definitions`. A multi-valued attribute matches when any value does. A type mismatch,
+an unknown path, or a path outside `options.allow` fails `invalidFilter` at compile time.
+
+### `@sdxc/scim/data-table`
+
+#### `filterToWhere(expression: Filter.Expression, columns: ColumnMap): Result<Predicate, ScimError | UntranslatableFilterError>`
+
+A `remix/data-table` predicate selecting the rows the filter matches. `columns` maps each
+filterable path to a column name, compared case-sensitively, or to
+`{ column, caseExact: false }`, compared through `ilike`.
+
+#### `UntranslatableFilterError`
+
+The failure for a filter SQL cannot express exactly: value paths, unmapped paths, negated
+substring matches, case-folded ordering, and values holding `%`, `_` or `\`. Evaluate that filter
+in memory with `compileFilter`.
+
+### `@sdxc/scim/patch`
+
+#### `parsePatch(body: unknown): Result<Patch.Operation[], ScimError>`
+
+Reads a `PatchOp` body, `op` in any case.
+
+#### `applyPatch(resource: object, operations: Patch.Operation[], options: Patch.ApplyOptions): Result<object, ScimError>`
+
+Applies the operations to a copy, all or none, following RFC 7644 §3.5.2. Writes to a read-only
+attribute, or to an `immutable` one that has a value, fail `mutability`; a filter matching
+nothing fails `noTarget`.
+
+### `@sdxc/scim/discovery`
+
+#### `USER_DEFINITION`, `GROUP_DEFINITION`, `ENTERPRISE_USER_DEFINITION`
+
+The RFC 7643 schema definitions.
+
+#### `pickAttributes(definition: Discovery.SchemaDefinition, names: string[]): Discovery.SchemaDefinition`
+
+The definition narrowed to the named attributes and sub-attributes (`emails.value`).
+
+#### `serviceProviderConfig(options: Discovery.ServiceProviderConfigOptions)`, `resourceTypes(types: Discovery.ResourceType[])`, `schemas(definitions: Discovery.SchemaDefinition[])`
+
+The `/ServiceProviderConfig`, `/ResourceTypes` and `/Schemas` documents, ready for
+`scimResponse`.
+
+### Types
+
+#### `Scim`
 
 The resource model: `Scim.User<Extensions>`, `Scim.Group`, `Scim.Member`, `Scim.Name`,
 `Scim.Address`, `Scim.EnterpriseUser`, `Scim.GroupMembership`, `Scim.MultiValued`, `Scim.Meta`,
 plus `Scim.ListQuery`, `Scim.Page` and `Scim.ErrorType`.
 
-### `@sdxc/scim/filter`
+#### `Filter`
 
-#### `parseFilter(text): Result<Filter.Expression, ScimError>`
+The tree `parseFilter` returns: `Filter.Expression` is a `Compare`, `Present`, `Logical`, `Not` or
+`ValuePath` over `Filter.AttributePath`, `Filter.Operator` and `Filter.Value`;
+`Filter.CompileOptions` types `compileFilter`'s options.
 
-Parses anything the RFC 7644 §3.4.2.2 ABNF accepts: `eq ne co sw ew gt ge lt le pr`, `and`,
-`or`, `not (…)`, grouping, value paths (`emails[type eq "work"]`) and fully qualified paths.
-Keywords match in any case; precedence is `not` > `and` > `or`. Errors are
-`400 invalidFilter` with the position.
+#### `Patch`
 
-#### `parsePath(text)`, `stringifyFilter(expression)`, `stringifyPath(path)`
+`Patch.Operation`, `Patch.Path` and `Patch.ApplyOptions`.
 
-Attribute notation parsing (`400 invalidPath`), and writing trees back to text that parses to
-the same tree.
-
-#### `compileFilter(expression, { definitions, allow? })`
-
-A predicate over wire resources. String comparisons fold case unless `caseExact`, date-times
-compare as instants, a multi-valued attribute matches when any value does, and `emails co "x"`
-reads `emails.value`. Ordering a boolean or binary, a type mismatch, an undefined path, or a
-path outside `allow` fails `invalidFilter` at compile time. `Filter.CompileOptions` types the
-options.
-
-#### `Filter` (types)
-
-The tree `parseFilter` returns: `Filter.Expression` is a `Compare`, `Present`, `Logical`, `Not`
-or `ValuePath`, over `Filter.AttributePath`, `Filter.Operator` and `Filter.Value`.
-
-### `@sdxc/scim/data-table`
-
-#### `filterToWhere(expression, columns): Result<Predicate, ScimError | UntranslatableFilterError>`
-
-Translates a filter into a `remix/data-table` predicate selecting the same rows. `columns`
-maps paths to a column name (case-sensitive) or `{ column, caseExact: false }`, which folds
-case through `ilike`. `ne` also matches `NULL`, and `not` is pushed down to inverse operators.
-Value paths, unmapped paths, negated substring matches, case-folded ordering or `ne`, and
-values containing `%`, `_` or `\` fail with `UntranslatableFilterError`, the signal to evaluate
-that filter in memory with `compileFilter`. `ColumnMap` types `columns`. SQLite folds ASCII case
-in `like`, so a `co`/`sw`/`ew` on a `caseExact` column can return extra rows there; confirm with
-`compileFilter` when it matters.
-
-### `@sdxc/scim/patch`
-
-#### `parsePatch(body): Result<Patch.Operation[], ScimError>`
-
-Checks the `PatchOp` schema and reads each operation, `op` in any case. `remove` without a path
-is `noTarget`; a bad path is `invalidPath`.
-
-#### `applyPatch(resource, operations, { definitions }): Result<Resource, ScimError>`
-
-Applies RFC 7644 §3.5.2 to a copy, all operations or none. `add` appends new values to
-multi-valued attributes and merges into complex ones, `replace` swaps multi-valued attributes
-and merges complex ones, path-less `add`/`replace` apply each member (URN keys and dotted keys
-included), and a value filter matching nothing is `noTarget` for `remove`/`replace`. Read-only
-changes, and changes to an `immutable` attribute that has a value, are `mutability`. Where an
-attribute is boolean, `"True"`/`"False"` are read as booleans.
-
-`Patch.Operation`, `Patch.Path` and `Patch.ApplyOptions` type the operations and options.
-
-### `@sdxc/scim/discovery`
-
-- `USER_DEFINITION`, `GROUP_DEFINITION`, `ENTERPRISE_USER_DEFINITION`: RFC 7643 §8.7 definitions
-- `pickAttributes(definition, names)`: the definition narrowed to named attributes and
-  sub-attributes (`emails.value`)
-- `serviceProviderConfig(options)`, `resourceTypes(types)`, `schemas(definitions)`: the discovery
-  documents as plain objects, for `scimResponse`
-
-`id`, `externalId`, `schemas` and `meta` are resolved for every resource even though `/Schemas`
-omits them, as RFC 7643 §3 defines them in common. Unqualified names resolve against the
-definitions in insertion order, after a resource's own `schemas`, so put the core schema first.
+#### `Discovery`
 
 `Discovery.Definitions`, `Discovery.SchemaDefinition`, `Discovery.Attribute`,
 `Discovery.ServiceProviderConfigOptions`, `Discovery.AuthenticationScheme` and
-`Discovery.ResourceType` type the definitions and documents.
+`Discovery.ResourceType`.
+
+#### Options and extensions
+
+`ScimErrorOptions`, `ListQueryOptions`, `ParseUserOptions`, `ResourceOptions` and `ColumnMap` type
+the options above; `ExtensionSchemas` types an extensions map and `InferExtensions` the parsed
+`extensions` it produces.
 
 ## Pattern: Push A Filter Into SQL, Fall Back In Memory
 
+Translate what SQL can answer exactly, and evaluate the rest over the loaded rows.
+
 ```typescript
 import { isFailure, isSuccess } from "@sdxc/result";
-import { errorResponse, groupResource } from "@sdxc/scim";
+import { errorResponse, groupResource, parseListQuery } from "@sdxc/scim";
 import { filterToWhere } from "@sdxc/scim/data-table";
 import { compileFilter } from "@sdxc/scim/filter";
 import { and, eq } from "remix/data-table";
 
-let where = query.filter
-	? filterToWhere(query.filter, {
+let query = parseListQuery(new URL(request.url), { attributes: DEFINITIONS });
+if (isFailure(query)) return errorResponse(query.error);
+let filter = query.data.filter;
+
+let where = filter
+	? filterToWhere(filter, {
 			displayName: { column: "display_name", caseExact: false },
 			externalId: "external_id",
 		})
@@ -310,19 +369,21 @@ let where = query.filter
 let rows = await db.findMany(groups, {
 	where:
 		where && isSuccess(where)
-			? and(eq("tenant_id", tenant.id), where.data)
-			: eq("tenant_id", tenant.id),
+			? and(eq("tenant_id", tenantId), where.data)
+			: eq("tenant_id", tenantId),
 });
+let resources = rows.map((row) => groupResource(toGroup(row)));
 
-let resources = rows.map(toGroup).map(groupResource);
-if (query.filter && where && isFailure(where)) {
-	let matches = compileFilter(query.filter, { definitions: DEFINITIONS });
+if (filter && where && isFailure(where)) {
+	let matches = compileFilter(filter, { definitions: DEFINITIONS });
 	if (isFailure(matches)) return errorResponse(matches.error);
 	resources = resources.filter(matches.data);
 }
 ```
 
-## Pattern: Conditional Replace With Versions
+## Pattern: Conditional Writes With Entity Tags
+
+Stamp each response with its version, and refuse a write whose `If-Match` is stale.
 
 ```typescript
 import {
@@ -338,17 +399,62 @@ let current = userResource(await loadUser(id));
 if (!matchesVersion(request, await version(current))) {
 	return errorResponse(new ScimError(412, "The resource changed since it was read."));
 }
-let next = userResource(await replaceUser(id, user.data));
+
+let next = userResource(await replaceUser(id, user));
 let tag = await version(next);
 return scimResponse({ ...next, meta: { ...next.meta, version: tag } }, { headers: { ETag: tag } });
 ```
 
-## Pattern: One Definition For Everything
+On a `GET` that sent `If-None-Match`, the same `false` answers `304 Not Modified`.
 
-Build `/Schemas` from the same `Definitions` value that `compileFilter`, `applyPatch` and
-`project` receive, and restrict filters with `allow` to the attributes your store can filter by.
-PATCH as read, apply, replace: apply the operations to the current wire representation, then
-store the result through the same path a `PUT` takes.
+## Pattern: A Custom Schema Extension
+
+Give `parseUser` and `userResource` the same extensions map, and add the extension's definition so
+filters, PATCH and `/Schemas` know its attributes. The map replaces the default, so list
+`enterprise` in it too when you also accept the Enterprise User extension.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { errorResponse, parseUser, scimResponse, USER_SCHEMA, userResource } from "@sdxc/scim";
+import type { Discovery } from "@sdxc/scim/discovery";
+import { USER_DEFINITION } from "@sdxc/scim/discovery";
+import * as s from "remix/data-schema";
+
+let BADGE_URN = "urn:example:params:scim:schemas:extension:badge:2.0:User";
+
+let extensions = {
+	badge: { urn: BADGE_URN, schema: s.object({ number: s.string() }) },
+};
+
+let definitions: Discovery.Definitions = {
+	[USER_SCHEMA]: USER_DEFINITION,
+	[BADGE_URN]: {
+		id: BADGE_URN,
+		name: "Badge",
+		attributes: [
+			{
+				name: "number",
+				type: "string",
+				multiValued: false,
+				required: true,
+				caseExact: true,
+				mutability: "readWrite",
+				returned: "default",
+				uniqueness: "server",
+			},
+		],
+	},
+};
+
+let user = parseUser(body, { extensions });
+if (isFailure(user)) return errorResponse(user.error); // 400 invalidValue names the bad member
+
+user.data.extensions.badge?.number; // string | undefined
+return scimResponse(userResource(user.data, { extensions }));
+```
+
+`definitions` then feeds `compileFilter`, `applyPatch`, `project` and `schemas`, so a client can
+filter on `urn:example:params:scim:schemas:extension:badge:2.0:User:number`.
 
 ## Versioning
 
