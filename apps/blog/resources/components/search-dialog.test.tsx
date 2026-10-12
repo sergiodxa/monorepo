@@ -834,18 +834,6 @@ describe("following a link from the search dialog", () => {
 		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(false);
 		history.replaceState(null, "", "/");
 	});
-
-	test("closes a dialog the back/forward cache restored mid-follow", async () => {
-		let dialog = await openDialog();
-		clickWith(document.querySelector(`#${SEARCH_QUICK_LINKS_ID} a`) as Element);
-		expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(true);
-
-		let restored = new Event("pageshow");
-		Object.defineProperty(restored, "persisted", { value: true });
-		window.dispatchEvent(restored);
-		expect(dialog.open).toBe(false);
-		await vi.waitFor(() => expect(dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)).toBe(false));
-	});
 });
 
 describe("the search dialog's kind tabs", () => {

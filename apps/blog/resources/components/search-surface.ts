@@ -63,8 +63,8 @@ export function searchSurface() {
 
 /**
  * Moves a surface toward the reader as the dialog opens, after `enterDelay` milliseconds, and
- * away as it is dismissed; following a link lifts it on toward the reader instead, so leaving
- * through a result reads apart from closing. Under reduced motion only the opacity changes.
+ * away at once as it is dismissed; following a link lifts it on toward the reader instead, so
+ * leaving through a result reads apart from closing. Under reduced motion only opacity changes.
  *
  * @param enterDelay How long the surface waits after the dialog opens.
  */
@@ -74,7 +74,10 @@ export function searchSurfaceMotion(enterDelay = 0) {
 			duration: durations.normal,
 			easing: easings.decelerate,
 		}),
-		transitionDelay(`${enterDelay}ms`),
+		when(
+			`:is(dialog[open]:not([${SEARCH_FOLLOW_ATTRIBUTE}])) &`,
+			transitionDelay(`${enterDelay}ms`),
+		),
 		startingStyle(
 			when(":is(dialog[open]) &", [
 				opacity(0),
@@ -85,13 +88,11 @@ export function searchSurfaceMotion(enterDelay = 0) {
 		when(":is(dialog:not([open])) &", [
 			opacity(0),
 			scaleProperty(0.96),
-			transitionDelay("0ms"),
 			transitionDuration(`${SEARCH_EXIT_MS}ms`),
 		]),
 		when(`:is(dialog[${SEARCH_FOLLOW_ATTRIBUTE}]) &`, [
 			opacity(0),
 			scaleProperty(1.03),
-			transitionDelay("0ms"),
 			transitionDuration(`${durations.normal}ms`),
 		]),
 		media("(prefers-reduced-motion: reduce)", transitionProperty("opacity, visibility")),

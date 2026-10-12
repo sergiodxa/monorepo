@@ -235,7 +235,6 @@ export const SearchBox = clientEntry(
 			let dialog = document.getElementById(handle.props.dialogId);
 			dialog?.addEventListener("close", reset, { signal: handle.signal });
 			dialog?.addEventListener("click", onClick, { signal: handle.signal });
-			window.addEventListener("pageshow", restore, { signal: handle.signal });
 		});
 
 		/** Marks a search pending: busy at once, and the spinner after its delay. */
@@ -351,16 +350,6 @@ export const SearchBox = clientEntry(
 			} else if (link.target === "" || link.target === "_self") {
 				dialog?.setAttribute(SEARCH_FOLLOW_ATTRIBUTE, "");
 			}
-		}
-
-		/**
-		 * Closes a dialog the back/forward cache restored mid-follow, so returning to the page
-		 * shows the page itself instead of a dialog whose surfaces already lifted away.
-		 */
-		function restore(event: PageTransitionEvent): void {
-			let dialog = document.getElementById(handle.props.dialogId);
-			if (!event.persisted || !(dialog instanceof HTMLDialogElement)) return;
-			if (dialog.hasAttribute(SEARCH_FOLLOW_ATTRIBUTE)) dialog.close();
 		}
 
 		/**
