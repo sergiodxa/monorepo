@@ -148,7 +148,7 @@ describe("the 0006 migration", () => {
 				kind: "glossary",
 				title: "Full-text search",
 				slug: "fts",
-				url: "/glossary/fts",
+				url: "/glossary#fts",
 				excerpt: "An index of words",
 				tags: [],
 				publishedAt: "2026-01-02T00:00:00.000Z",
@@ -411,7 +411,7 @@ describe("keeping post_search current", () => {
 			kind: "glossary",
 			title: "Server rendering",
 			excerpt: "HTML built per request",
-			url: "/glossary/ssr",
+			url: "/glossary#ssr",
 		});
 
 		await bindModels(db).glossary.tombstone(entry!.id);

@@ -1,8 +1,8 @@
 /**
  * View for the public glossary page. Renders each term as a definition-list
  * entry with an anchor id, optional alias, and definition, and highlights the
- * entry matching the current URL fragment via `:target` styles. Exports a helper
- * to build a term's in-page href. Exists to publish the author's term glossary.
+ * entry matching the current URL fragment via `:target` styles. Exists to publish the
+ * author's term glossary.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -42,16 +42,6 @@ export namespace GlossaryView {
 	export interface Model {
 		entries: Array<Entry>;
 	}
-}
-
-/**
- * Builds the in-page URL path for a glossary term slug.
- *
- * @param slug Term identifier used in glossary links.
- * @returns Absolute glossary route for the provided slug.
- */
-export function glossaryPathFromSlug(slug: string): string {
-	return `/glossary/${slug}`;
 }
 
 /**

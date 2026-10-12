@@ -197,10 +197,7 @@ export class SearchViewModel {
 	/** Highlights one result's title and excerpt against the query it was found with. */
 	private static item(hit: PostSearch.Hit, parsed: ParsedQuery): SearchViewModel.Item {
 		return {
-			href:
-				hit.kind === "glossary"
-					? `${routes.glossary.href()}#${encodeURIComponent(hit.slug)}`
-					: hit.url,
+			href: hit.url,
 			kind: hit.kind,
 			kindLabel: POST_KINDS[hit.kind].label,
 			title: highlight(hit.title, parsed, { field: "title" }),

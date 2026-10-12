@@ -418,7 +418,7 @@ export class PostSearch {
 			excerpt = value("definition") ?? "";
 		}
 
-		let url = kind === "bookmark" ? "" : `/${POST_KINDS[kind].topic}/${slug}`;
+		let url = permalinkOf(kind, slug);
 		if (kind === "bookmark") {
 			let bookmark = { title, url: value("url") ?? "" };
 			let description = value("description")?.trim() ?? "";
@@ -486,6 +486,18 @@ export class PostSearch {
 
 		return null;
 	}
+}
+
+/**
+ * Where a post of `kind` is read: under its topic for a kind with its own page, and at its
+ * anchor on the topic page for a kind read as an entry there, the way the topic page ids them.
+ * A bookmark's is the page it saved, which the caller fills in.
+ */
+function permalinkOf(kind: Kind, slug: string): string {
+	let { permalink, topic } = POST_KINDS[kind];
+	if (permalink === "entry") return `/${topic}#${encodeURIComponent(slug)}`;
+	if (permalink === "page") return `/${topic}/${slug}`;
+	return "";
 }
 
 /**
