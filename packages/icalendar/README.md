@@ -2,119 +2,99 @@
 
 Read and write iCalendar documents, with recurrence rules and time zones.
 
+[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) iCalendar is the format every calendar client
+subscribes to and imports. Events, alarms and time zones are typed; every other component and
+property (`VTODO`, `VJOURNAL`, `X-` properties) is kept verbatim, so a calendar read and written
+back loses nothing. The reader is lenient: structural errors fail with their line, while a missing
+`UID` or an unreadable value becomes a warning and the property is kept as written. The writer
+folds lines at 75 octets, escapes TEXT and parameters, and always writes `VERSION:2.0`.
+
+| Import                     | What it holds                                                       |
+| -------------------------- | ------------------------------------------------------------------- |
+| `@sdxc/icalendar`          | parse and stringify, date helpers, the `text/calendar` response     |
+| `@sdxc/icalendar/rrule`    | `RRULE` parse and stringify, and expansion into occurrences         |
+| `@sdxc/icalendar/timezone` | a `VTIMEZONE` built from `Intl` for any IANA zone                   |
+| `@sdxc/icalendar/itip`     | [RFC 5546](https://www.rfc-editor.org/rfc/rfc5546) invites, replies |
+
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/icalendar
 ```
 
-Fallible functions return a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), and zone conversion comes from
-[`@sdxc/dates`](https://www.npmjs.com/package/@sdxc/dates); both install alongside this package.
-
-[RFC 5545](https://www.rfc-editor.org/rfc/rfc5545) iCalendar is the format every calendar
-client subscribes to and imports. Events, alarms and time zones are typed over a generic
-component and property layer, so `VTODO`, `VJOURNAL`, `VFREEBUSY` and `X-` properties survive a
-parse and stringify round trip untouched. The reader is lenient and the writer strict:
-structural errors fail with the line they start on, while a missing `UID` or a value that does
-not parse becomes a warning and the property is kept verbatim. The writer folds at 75 octets
-without splitting a UTF-8 character, escapes TEXT, caret-encodes parameters
-([RFC 6868](https://www.rfc-editor.org/rfc/rfc6868)), and always writes `VERSION:2.0`.
-
-| Import                     | What it holds                                                                                   |
-| -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `@sdxc/icalendar`          | `parse`, `parseAll`, `stringify`, `toInstant`, `utc`, `calendarResponse`, the `ICalendar` types |
-| `@sdxc/icalendar/rrule`    | `parseRecurrence`, `stringifyRecurrence`, `occurrences`                                         |
-| `@sdxc/icalendar/timezone` | `vtimezone`, a `VTIMEZONE` built from `Intl`                                                    |
-| `@sdxc/icalendar/itip`     | `request`, `cancel`, `reply`, `readReply`, `nextSequence`, `calendarPart` (RFC 5546)            |
-
-A repeated local hour resolves to its first instant and a skipped one is read with the offset
-before the gap, as RFC 5545 §3.3.5 prescribes.
+Fallible functions return a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result);
+it installs alongside this package.
 
 ## Usage
 
-### Write A Feed
+### Serve a feed
 
-UTC date-times need no `VTIMEZONE`, so a feed of one-off events is just events.
+A calendar of UTC date-times needs no `VTIMEZONE`. `utc()` turns an instant into one.
 
-```ts
+```typescript
 import { calendarResponse, utc } from "@sdxc/icalendar";
 
-return calendarResponse({
-	productId: "-//example//status//EN",
-	name: "Example status: maintenance",
-	url: "https://status.example.com/",
-	refreshInterval: { hours: 1 },
-	timeZones: [],
-	events: [
-		{
-			uid: "42@status.example.com",
-			dtstamp: new Date(row.updatedAt),
-			start: utc(row.startsAt),
-			end: utc(row.endsAt),
-			summary: "Database upgrade",
-			sequence: 3,
-			properties: [],
-		},
-	],
-	components: [],
-	properties: [],
-});
+export function feed(): Response {
+	return calendarResponse({
+		productId: "-//example//status//EN",
+		name: "Maintenance windows",
+		refreshInterval: { hours: 1 },
+		timeZones: [],
+		events: [
+			{
+				uid: "42@status.example.com",
+				dtstamp: new Date(),
+				start: utc(Date.UTC(2026, 8, 23, 10)),
+				end: utc(Date.UTC(2026, 8, 23, 12)),
+				summary: "Database upgrade",
+				sequence: 1,
+				properties: [],
+			},
+		],
+		components: [],
+		properties: [],
+	});
+}
 ```
 
-```text
-BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//example//status//EN
-NAME:Example status: maintenance
-X-WR-CALNAME:Example status: maintenance
-URL:https://status.example.com/
-REFRESH-INTERVAL;VALUE=DURATION:PT1H
-X-PUBLISHED-TTL:PT1H
-BEGIN:VEVENT
-UID:42@status.example.com
-DTSTAMP:20260920T081500Z
-DTSTART:20260923T100000Z
-DTEND:20260923T120000Z
-SUMMARY:Database upgrade
-SEQUENCE:3
-END:VEVENT
-END:VCALENDAR
-```
+The response is `text/calendar; charset=utf-8`, and `name` and `refreshInterval` are also written
+as `X-WR-CALNAME` and `X-PUBLISHED-TTL` for clients that read only those. Use `stringify(calendar)`
+for the text alone.
 
-### Read A Calendar
+### Read a calendar
 
-```ts
+```typescript
 import { parse, toInstant } from "@sdxc/icalendar";
 import { isFailure } from "@sdxc/result";
 
 let parsed = parse(await response.text());
-if (isFailure(parsed)) return parsed; // ICalendarParseError with .line
+if (isFailure(parsed)) throw parsed.error; // ICalendarParseError, with .line
 
 let { calendar, warnings } = parsed.data;
 for (let event of calendar.events) {
-	let start = toInstant(event.start, calendar); // null for DATE or floating values
+	let start = toInstant(event.start, calendar); // epoch ms, or null for a DATE or floating time
 }
 ```
 
-### Expand A Recurrence
+### Expand a recurrence
 
-```ts
+```typescript
 import { occurrences } from "@sdxc/icalendar/rrule";
+import { unwrap } from "@sdxc/result";
 
-let result = occurrences(event, {
-	from: Date.now(),
-	to: Date.now() + 30 * 86_400_000,
-	calendar, // resolves TZIDs through its VTIMEZONEs
-});
-// { status: "success", data: [{ start, end }, ...] }
+let now = Date.now();
+let upcoming = unwrap(occurrences(event, { from: now, to: now + 30 * 86_400_000, calendar }));
+// [{ start, end }, ...] in epoch ms, earliest first
 ```
 
-### Write A Zoned Recurring Event
+Passing `calendar` resolves the event's `TZID`s through its `VTIMEZONE`s before `Intl`.
 
-A rule whose wall clock follows a zone needs `TZID` plus a `VTIMEZONE`, or it drifts by an hour across DST.
+### Write a zoned recurring event
 
-```ts
+A rule that follows a zone's wall clock needs a `TZID` and its `VTIMEZONE`, or it drifts by an hour
+across DST. `vtimezone()` builds one covering the dates the calendar writes.
+
+```typescript
 import { stringify } from "@sdxc/icalendar";
 import { vtimezone } from "@sdxc/icalendar/timezone";
 import { unwrap } from "@sdxc/result";
@@ -123,7 +103,7 @@ let zone = unwrap(
 	vtimezone("Europe/Madrid", { from: Date.UTC(2026, 0, 1), to: Date.UTC(2028, 0, 1) }),
 );
 
-stringify({
+let text = stringify({
 	productId: "-//example//team//EN",
 	timeZones: [zone],
 	events: [
@@ -137,6 +117,7 @@ stringify({
 			},
 			duration: { minutes: 15 },
 			recurrence: { frequency: "WEEKLY", byDay: [{ weekday: "MO" }, { weekday: "WE" }] },
+			alarms: [{ action: "DISPLAY", trigger: { before: { minutes: 5 } }, description: "Standup" }],
 			properties: [],
 		},
 	],
@@ -151,25 +132,10 @@ stringify({
 
 #### `parse(source: string): Result<ICalendar.Parsed, ICalendarParseError>`
 
-Reads the first `VCALENDAR`. CRLF, LF and CR line endings are accepted and a byte order mark is skipped. Returns the typed `calendar` and `warnings`, each prefixed with its line (`"Line 2: VEVENT has no DTSTAMP"`).
-
-What the reader types, and what it keeps verbatim:
-
-| Input                                                                     | Result                                                                 |
-| ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `VEVENT` with a readable `DTSTART`                                        | `calendar.events`                                                      |
-| `VEVENT` without one                                                      | `calendar.components`, with a warning unless `METHOD` lets it go¹      |
-| `VTIMEZONE` with a `TZID` and readable observances                        | `calendar.timeZones`                                                   |
-| any other component                                                       | `calendar.components`                                                  |
-| a property the model does not name                                        | the owner's `properties`                                               |
-| a known property whose value does not parse (`STATUS:MAYBE`)              | the owner's `properties`, with a warning                               |
-| missing `UID` / `DTSTAMP`                                                 | `uid: ""` / an invalid `dtstamp`, with a warning; written back missing |
-| `ATTENDEE`/`ORGANIZER` parameters beyond `CN`, `ROLE`, `PARTSTAT`, `RSVP` | the user's `parameters`                                                |
-| `X-WR-CALNAME`, `X-WR-CALDESC`, `X-PUBLISHED-TTL`                         | `name`, `description`, `refreshInterval` when RFC 7986's are absent    |
-
-¹ RFC 5546 lets a `REPLY`, `CANCEL`, `REFRESH` or `DECLINECOUNTER` identify its event by `UID` alone; `readReply` reads such an event from `components`.
-
-Typed text properties keep only the parameters their field models; `SUMMARY;LANGUAGE=en` reads as its text.
+Reads the first `VCALENDAR` into a typed `calendar` and its `warnings`, each prefixed with its line.
+`VEVENT`s with a readable `DTSTART` land in `events`, readable `VTIMEZONE`s in `timeZones`, every
+other component in `components`, and properties the model does not name (or whose value does not
+parse) in the owner's `properties`.
 
 #### `parseAll(source: string): Result<ICalendar.Parsed[], ICalendarParseError>`
 
@@ -177,23 +143,26 @@ Every `VCALENDAR` in the text, for files that concatenate several.
 
 #### `stringify(calendar: ICalendar.Calendar): string`
 
-CRLF lines folded at 75 octets, `VERSION` and `PRODID` first, then the RFC 7986 fields each followed by its `X-WR-`/`X-PUBLISHED-TTL` alias, the calendar's untyped properties, the time zones, the events and the untyped components. Every `TZID` a date-time uses needs its `VTIMEZONE` in `timeZones`. An event with both `end` and `duration` writes `DTEND`. `RDATE`/`EXDATE` values sharing their parameters share a line.
+The calendar as CRLF lines. Every `TZID` a date-time uses needs its `VTIMEZONE` in `timeZones`; an
+event with both `end` and `duration` writes `DTEND`.
 
 #### `toInstant(value: ICalendar.DateValue, calendar?: ICalendar.Calendar): number | null`
 
-The instant a `DATE-TIME` names. A `TZID` resolves through the calendar's `VTIMEZONE` of that name first, expanding its observance rules, and through `Intl` second. A `DATE`, a floating time, or a `TZID` neither resolves gives `null`.
+The epoch milliseconds a `DATE-TIME` names. A `TZID` resolves through the calendar's `VTIMEZONE`
+first and `Intl` second; a `DATE`, a floating time or an unresolvable `TZID` gives `null`.
 
 #### `utc(instant: number | Date): ICalendar.DateValue`
 
-A UTC `DATE-TIME`, whole seconds.
+A UTC `DATE-TIME`, truncated to whole seconds.
 
-#### `calendarResponse(calendar, init?: ResponseInit & { filename?: string }): Response`
+#### `calendarResponse(calendar: ICalendar.Calendar, init?: ResponseInit & { filename?: string }): Response`
 
-`Content-Type: text/calendar; charset=utf-8`, plus `; method=REQUEST` (or whatever `calendar.method` is). `filename` adds `Content-Disposition: attachment`, with an RFC 8187 `filename*` for names outside ASCII. Headers in `init` are kept and win.
+A `text/calendar; charset=utf-8` response, with `; method=…` when `calendar.method` is set.
+`filename` makes it an attachment download. Headers in `init` win.
 
 #### `escapeText(text: string): string`, `unescapeText(value: string): string`
 
-TEXT escaping (`\\`, `\;`, `\,`, `\n`; `\N` accepted on read), for untyped `Property` values, which are stored as written.
+TEXT escaping (`\\`, `\;`, `\,`, `\n`), for untyped `Property` values, which are stored as written.
 
 #### `MEDIA_TYPE`
 
@@ -201,122 +170,164 @@ TEXT escaping (`\\`, `\;`, `\,`, `\n`; `\N` accepted on read), for untyped `Prop
 
 #### `ICalendarParseError`
 
-The structural failure (an unmatched `BEGIN`/`END`, a content line without `:`, no
-`VCALENDAR`), with the 1-based physical `line` it starts on.
-
-#### `ICalendar` types
-
-| Type                     | Shape                                                                                                                                                                                                                              |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Calendar`               | `productId`, `method?`, `name?`, `description?`, `url?`, `refreshInterval?`, `timeZones`, `events`, `components`, `properties`                                                                                                     |
-| `Event`                  | `uid`, `dtstamp`, `start`, `end?` or `duration?`, text fields, `status?`, `transparency?`, `sequence?`, `recurrence?`, `recurrenceDates?`, `exceptionDates?`, `recurrenceId?`, `organizer?`, `attendees?`, `alarms?`, `properties` |
-| `DateValue`              | `{ type: "date", year, month, day }` or `{ type: "date-time", wall, zone: "utc" \| "floating" \| { tzid } }`                                                                                                                       |
-| `Period`                 | `{ type: "period", start, end?, duration? }`, an `RDATE;VALUE=PERIOD`                                                                                                                                                              |
-| `Duration`               | `negative?`, `weeks?`, `days?` (nominal), `hours?`, `minutes?`, `seconds?` (exact)                                                                                                                                                 |
-| `RecurrenceRule`         | `frequency`, `interval?`, `count?` or `until?`, `bySecond?` … `bySetPosition?`, `weekStart?`                                                                                                                                       |
-| `Alarm`                  | `action`, `trigger: { before, related? } \| { at }`, `description?`, `summary?`, `attendees?`, `repeat?`, `properties?`                                                                                                            |
-| `TimeZone`, `Observance` | `tzid`, observances with `kind`, local `start`, `offsetFrom`/`offsetTo` in minutes, `name?`, `recurrence?`, `recurrenceDates?`                                                                                                     |
-| `Component`, `Property`  | the generic layer: `name`, `properties`, `components`; `name`, `parameters`, `value` as written                                                                                                                                    |
-
-An alarm's `trigger.before` is the time before the start (or end): `{ minutes: 15 }` is written `TRIGGER:-PT15M`, and a `negative` one fires after.
+A structural failure (an unmatched `BEGIN`/`END`, a line without `:`, no `VCALENDAR`), with the
+1-based `line` it starts on.
 
 ### `@sdxc/icalendar/rrule`
 
 #### `parseRecurrence(value: string): Result<ICalendar.RecurrenceRule, RecurrenceRuleError>`
 
-Reads an `RRULE` value, case-insensitively. An unknown or repeated part, an out-of-range number, or `COUNT` beside `UNTIL` fails.
+Reads an `RRULE` value, case-insensitively. An unknown or repeated part, an out-of-range number, or
+`COUNT` beside `UNTIL` fails.
+
+#### `stringifyRecurrence(rule: ICalendar.RecurrenceRule): string`
+
+The `RRULE` value for a rule.
+
+#### `occurrences(event: ICalendar.Event, options: OccurrenceOptions): Result<Occurrence[], RecurrenceRuleError>`
+
+The occurrences overlapping `[from, to)`, earliest first: `DTSTART`, the rule's instances and the
+`RDATE`s, minus every `EXDATE`. Each lasts as long as the event: `DTEND` gives an exact length,
+`DURATION` a nominal one (a day across DST keeps its local time), and an all-day event one day. It
+fails for a `TZID` nothing resolves or a rule with out-of-range parts.
+
+- `options.from`: epoch ms, inclusive; occurrences still running then are included
+- `options.to`: epoch ms, exclusive
+- `options.limit`: the most occurrences returned, `1_000` by default
+- `options.calendar`: resolves `TZID`s through its `VTIMEZONE`s before `Intl`
+- `options.timeZone`: the IANA zone floating times and `DATE`s are read in, `"UTC"` by default
 
 #### `RecurrenceRuleError`
 
 An `RRULE` that does not parse, carries out-of-range parts, or cannot be expanded.
 
-#### `stringifyRecurrence(rule: ICalendar.RecurrenceRule): string`
-
-`FREQ`, `INTERVAL`, `COUNT`/`UNTIL`, `BYSECOND` through `BYSETPOS`, `WKST`.
-
-#### `occurrences(event, options): Result<{ start: number; end: number }[], RecurrenceRuleError>`
-
-The occurrences overlapping `[from, to)`, earliest first, at most `limit` (default 1,000): `DTSTART`, which RFC 5545 counts as the first instance, the rule's instances, and the `RDATE`s, minus every `EXDATE`. Each occurrence lasts as long as the event: a `DTEND` gives an exact length, a `DURATION` a nominal one (a day across DST keeps its local time), and neither gives a `DATE` one day.
-
-`OccurrenceOptions` is the options type:
-
-| Option     | Meaning                                                                  |
-| ---------- | ------------------------------------------------------------------------ |
-| `from`     | epoch ms, inclusive; occurrences still running then are included         |
-| `to`       | epoch ms, exclusive                                                      |
-| `limit`    | most occurrences returned, `1_000` by default                            |
-| `calendar` | resolves `TZID`s through its `VTIMEZONE`s before `Intl`                  |
-| `timeZone` | the IANA zone floating times and `DATE`s are read in, `"UTC"` by default |
-
-Expansion jumps straight to the window for rules without `COUNT`, stops at `to`, `UNTIL`, `COUNT` or `limit`, and fails rather than walking more than 500,000 periods. It fails as well for a `TZID` nothing resolves and for a typed rule with out-of-range parts.
-
 ### `@sdxc/icalendar/timezone`
 
 #### `vtimezone(tzid: string, span: { from: number; to: number }): Result<ICalendar.TimeZone, TimeZoneError>`
 
-A `VTIMEZONE` for an IANA zone: the transition in force when the span starts, then one observance per offset change until it ends, each with an explicit onset and no rule. `DAYLIGHT` marks an offset above the year's standard one, in either hemisphere; names come from `Intl` (`EST`, `GMT+9`). Past the span the last observance's offset holds, so the span should cover every date-time the calendar writes in that zone.
+A `VTIMEZONE` for an IANA zone: the observance in force when the span starts, then one per offset
+change until it ends. Past the span the last offset holds, so the span should cover every date-time
+the calendar writes in that zone.
 
 #### `TimeZoneError`
 
-A zone `Intl` does not know, or an empty span.
+A zone `Intl` does not know, or a span that ends before it starts.
 
 ### `@sdxc/icalendar/itip`
 
-iTIP ([RFC 5546](https://www.rfc-editor.org/rfc/rfc5546)) scheduling messages for one event. Each builder returns a calendar with its `METHOD` set, ready for `stringify` or `calendarPart`, or an `ITipError` naming the constraint the event breaks.
+Each builder returns a calendar with its `METHOD` set, ready for `stringify` or `calendarPart`, or an
+`ITipError` naming the constraint the event breaks.
+
+#### `request(event: ICalendar.Event, options: ITip.Options): Result<ICalendar.Calendar, ITipError>`
+
+`METHOD:REQUEST`, inviting the attendees or sending a revision. The event needs a `UID`, an
+`organizer` and at least one attendee. Attendees without `participation` or `rsvp` are asked to
+reply; `SEQUENCE` is sent as given, so derive it with `nextSequence`.
+
+#### `cancel(event: ICalendar.Event, options: ITip.CancelOptions): Result<ICalendar.Calendar, ITipError>`
+
+`METHOD:CANCEL`, with `SEQUENCE` one past the event's. Without `options.attendees` it cancels the
+event for everyone; with them it uninvites just those addresses.
+
+#### `reply(event: ICalendar.Event, options: ITip.ReplyOptions): Result<ICalendar.Calendar, ITipError>`
+
+`METHOD:REPLY` from `options.attendee` with `options.participation` (and an optional `comment`),
+echoing the request's `UID`, `SEQUENCE` and `RECURRENCE-ID`.
+
+#### `readReply(source: string | ICalendar.Calendar): Result<ITip.Reply[], ITipError>`
+
+One entry per `VEVENT` of a `METHOD:REPLY`, so a reply to several instances lists each with its
+`recurrenceId`. Another method, or a `VEVENT` without a `UID` or exactly one `ATTENDEE`, fails.
+
+#### `nextSequence(previous: ICalendar.Event, next: ICalendar.Event): number`
+
+One more than `previous.sequence` when the start, end, duration, recurrence, `RDATE`, `EXDATE` or
+status changed, the same otherwise.
+
+#### `calendarPart(calendar: ICalendar.Calendar, options?: { filename?: string }): ITip.CalendarPart`
+
+`{ method, content, filename? }`: the calendar's method (`PUBLISH` when unset) and its text, the
+shape [`@sdxc/mail`](https://www.npmjs.com/package/@sdxc/mail)'s `calendar` option takes.
 
 #### `ITipError`
 
 An event that cannot carry the method asked of it, or a message that is not a `REPLY`.
 
-#### `request(event, options: ITip.Options): Result<ICalendar.Calendar, ITipError>`
+### Types
 
-`METHOD:REQUEST`, inviting the attendees or sending them a revision. The event needs a `UID`, an `organizer` and at least one attendee, and cannot be `CANCELLED`. An attendee with neither `participation` nor `rsvp` gets `PARTSTAT=NEEDS-ACTION` and `RSVP=TRUE` (`FALSE` for a `NON-PARTICIPANT`); a missing `SUMMARY` is written empty, as the method requires. `SEQUENCE` is sent as given; derive it with `nextSequence`.
+#### `ICalendar`
 
-#### `cancel(event, options: ITip.CancelOptions): Result<ICalendar.Calendar, ITipError>`
+A namespace of the model's types, exported from `@sdxc/icalendar`:
 
-`METHOD:CANCEL`, with `SEQUENCE` one past the event's. Without `options.attendees` it cancels the whole event for every attendee with `STATUS:CANCELLED`; with them it uninvites just those addresses (compared case-insensitively, `mailto:` optional) and writes no status. Attendees lose `PARTSTAT` and `RSVP`, and alarms are dropped.
+- `Calendar`: `productId`, `method?`, `name?`, `description?`, `url?`, `refreshInterval?`,
+  `timeZones`, `events`, `components`, `properties`
+- `Event`: `uid`, `dtstamp`, `start`, `end?` or `duration?`, `summary?`, `description?`,
+  `location?`, `url?`, `status?`, `transparency?`, `sequence?`, `created?`, `lastModified?`,
+  `categories?`, `recurrence?`, `recurrenceDates?`, `exceptionDates?`, `recurrenceId?`,
+  `organizer?`, `attendees?`, `alarms?`, `properties`
+- `DateValue`: `{ type: "date", year, month, day }` or `{ type: "date-time", wall, zone }`, where
+  `zone` is `"utc"`, `"floating"` or `{ tzid }`; `WallClock` holds the `wall` fields
+- `Period`: `{ type: "period", start, end?, duration? }`, an `RDATE` with its own length
+- `Duration`: `negative?`, `weeks?`, `days?` (nominal), `hours?`, `minutes?`, `seconds?` (exact)
+- `RecurrenceRule`: `frequency`, `interval?`, `count?` or `until?`, `bySecond?` through
+  `bySetPosition?`, `weekStart?`; `Weekday` is `"MO"` through `"SU"`
+- `Alarm`: `action`, `trigger` (`{ before, related? }` or `{ at }`), `description?`, `summary?`,
+  `attendees?`, `repeat?`, `properties?`; `before: { minutes: 15 }` fires 15 minutes early
+- `CalendarUser`, `Attendee`: `address` (a `mailto:` URI), `name?`, `parameters?`; an attendee adds
+  `role?`, `participation?`, `rsvp?`
+- `TimeZone`, `Observance`: `tzid` and its observances, each with `kind`, local `start`,
+  `offsetFrom`/`offsetTo` in minutes, `name?`, `recurrence?`, `recurrenceDates?`
+- `Component`, `Property`: the generic layer, `{ name, properties, components }` and
+  `{ name, parameters, value }` with the value as written
+- `Parsed`: `{ calendar, warnings }`
 
-#### `reply(event, options: ITip.ReplyOptions): Result<ICalendar.Calendar, ITipError>`
+#### `OccurrenceOptions`, `Occurrence`
 
-`METHOD:REPLY` from `options.attendee` with `options.participation`, echoing the request's `UID`, `SEQUENCE` and `RECURRENCE-ID` unchanged. The attendee keeps the name and parameters the request gave them; an address the request did not invite replies as itself. `options.comment` becomes `COMMENT`.
+The options of `occurrences()` and each `{ start, end }` it returns, from `@sdxc/icalendar/rrule`.
 
-#### `readReply(source: string | ICalendar.Calendar): Result<ITip.Reply[], ITipError>`
+#### `ITip`
 
-One `{ uid, sequence, dtstamp, recurrenceId?, organizer?, attendee }` per `VEVENT` of a `METHOD:REPLY`, typed or without `DTSTART`. A missing `SEQUENCE` reads as `0`. Text that does not parse (the `ICalendarParseError` is the `cause`), another method, no `VEVENT`, or a `VEVENT` without exactly one `ATTENDEE` or without a `UID` fail.
+From `@sdxc/icalendar/itip`: `Options` (`productId`, `dtstamp?`, `timeZones?`), `CancelOptions`
+(adds `attendees?`), `ReplyOptions` (adds `attendee`, `participation`, `comment?`), `Reply`
+(`uid`, `sequence`, `dtstamp`, `recurrenceId?`, `organizer?`, `attendee`) and `CalendarPart`.
 
-#### `nextSequence(previous: ICalendar.Event, next: ICalendar.Event): number`
+## Pattern: Invite, Reschedule and Cancel by Mail
 
-The §2.1.4 rule: one more than `previous.sequence` when `start`, `end`, `duration`, `recurrence`, `recurrenceDates`, `exceptionDates` or `status` changed by value, the same otherwise. A change the organizer judges significant too, like a new `location` far away, is theirs to bump.
+Each message is a `request` or `cancel` sent as a calendar part; the recipient's client matches
+them by `UID` and keeps the highest `SEQUENCE`.
 
-#### `calendarPart(calendar, options?: { filename?: string }): ITip.CalendarPart`
+```typescript
+import type { ICalendar } from "@sdxc/icalendar";
 
-`{ method, content, filename? }` for a mailer: the calendar's method (`PUBLISH` when unset) and its text. The shape is what [`@sdxc/mail`](https://www.npmjs.com/package/@sdxc/mail)'s `calendar` option takes, written as a `text/calendar; method=…` alternative part.
-
-| Type                 | Shape                                                                   |
-| -------------------- | ----------------------------------------------------------------------- |
-| `ITip.Options`       | `productId`, `dtstamp?` (now by default), `timeZones?`                  |
-| `ITip.CancelOptions` | `Options` plus `attendees?`, the addresses to uninvite                  |
-| `ITip.ReplyOptions`  | `Options` plus `attendee`, `participation`, `comment?`                  |
-| `ITip.Reply`         | `uid`, `sequence`, `dtstamp`, `recurrenceId?`, `organizer?`, `attendee` |
-| `ITip.CalendarPart`  | `method`, `content`, `filename?`                                        |
-
-## Pattern: Invite, Update And Cancel By Mail
-
-```ts
 import { utc } from "@sdxc/icalendar";
 import { calendarPart, cancel, nextSequence, request } from "@sdxc/icalendar/itip";
 import { unwrap } from "@sdxc/result";
 
-let productId = "-//example//ops//EN";
-let invitation = unwrap(request(event, { productId }));
+let productId = "-//example//meetings//EN";
+let event: ICalendar.Event = {
+	uid: "review-7@example.com",
+	dtstamp: new Date(),
+	start: utc(Date.UTC(2026, 9, 20, 15)),
+	end: utc(Date.UTC(2026, 9, 20, 16)),
+	summary: "Design review",
+	sequence: 0,
+	organizer: { address: "mailto:host@example.com", name: "Host" },
+	attendees: [{ address: "mailto:guest@example.com", role: "REQ-PARTICIPANT" }],
+	properties: [],
+};
+
 await mailer.send({
 	to,
 	subject,
 	html,
-	calendar: calendarPart(invitation, { filename: "invite.ics" }),
+	calendar: calendarPart(unwrap(request(event, { productId }))),
 });
 
-let moved = { ...event, start: utc(newStart), end: utc(newEnd) };
+let moved = {
+	...event,
+	start: utc(Date.UTC(2026, 9, 21, 15)),
+	end: utc(Date.UTC(2026, 9, 21, 16)),
+};
 moved.sequence = nextSequence(event, moved);
 await mailer.send({
 	to,
@@ -333,71 +344,161 @@ await mailer.send({
 });
 ```
 
-The recipient's client matches the three messages by `UID`, and the higher `SEQUENCE` of the move and the cancellation replaces what it holds.
+## Pattern: Answer an Invitation and Record the Answer
 
-## Pattern: Record An Attendee's Answer
+The attendee's side builds a `reply` from the event it received; the organizer's side reads it back.
 
-```ts
-import { readReply } from "@sdxc/icalendar/itip";
-import { isFailure } from "@sdxc/result";
+```typescript
+import { parse, stringify } from "@sdxc/icalendar";
+import { readReply, reply } from "@sdxc/icalendar/itip";
+import { isFailure, unwrap } from "@sdxc/result";
 
-let replies = readReply(await attachment.text());
-if (isFailure(replies)) return replies;
+let [invitation] = unwrap(parse(await attachment.text())).calendar.events;
+let answer = unwrap(
+	reply(invitation, {
+		productId: "-//example//client//EN",
+		attendee: "mailto:guest@example.com",
+		participation: "ACCEPTED",
+		comment: "See you there",
+	}),
+);
+let text = stringify(answer);
+
+let replies = readReply(text);
+if (isFailure(replies)) throw replies.error;
 for (let { uid, sequence, attendee } of replies.data) {
 	await saveAnswer(uid, attendee.address, attendee.participation, sequence);
 }
 ```
 
-A reply to an older `SEQUENCE` answers a revision the attendee has since been sent again; compare it with the current one before trusting it.
+A reply whose `sequence` is lower than the event's current one answers a revision the attendee has
+since been sent again; compare the two before trusting it.
 
-## Pattern: A Maintenance Feed With Stable Revisions
+## Pattern: A Feed and a Single-Event Download
 
-```ts
+Both serve the same events with the same `UID`s, so a client holding the feed and the download shows
+one event. A `SEQUENCE` that only grows makes clients replace their copy on every edit.
+
+```typescript
+import type { ICalendar } from "@sdxc/icalendar";
+
 import { calendarResponse, utc } from "@sdxc/icalendar";
 
-let events = windows.map((window) => ({
-	uid: `${window.id}@status`,
-	dtstamp: new Date(window.updatedAt),
-	lastModified: new Date(window.updatedAt),
-	sequence: Math.floor((window.updatedAt - window.createdAt) / 1000),
-	start: utc(window.startsAt),
-	end: utc(window.endedEarlyAt ?? window.endsAt),
-	summary: window.name,
-	properties: [],
-}));
+interface Window {
+	id: string;
+	name: string;
+	startsAt: number;
+	endsAt: number;
+	createdAt: number;
+	updatedAt: number;
+}
 
-return calendarResponse({
-	productId: "-//example//status//EN",
-	timeZones: [],
-	events,
-	components: [],
-	properties: [],
-});
+function toEvent(window: Window): ICalendar.Event {
+	return {
+		uid: `${window.id}@status.example.com`,
+		dtstamp: new Date(window.updatedAt),
+		lastModified: new Date(window.updatedAt),
+		sequence: Math.floor((window.updatedAt - window.createdAt) / 1000),
+		start: utc(window.startsAt),
+		end: utc(window.endsAt),
+		summary: window.name,
+		properties: [],
+	};
+}
+
+function calendarOf(events: ICalendar.Event[]): ICalendar.Calendar {
+	return {
+		productId: "-//example//status//EN",
+		timeZones: [],
+		events,
+		components: [],
+		properties: [],
+	};
+}
+
+export function feed(windows: Window[]): Response {
+	return calendarResponse(calendarOf(windows.map(toEvent)));
+}
+
+export function download(window: Window): Response {
+	return calendarResponse(calendarOf([toEvent(window)]), { filename: "maintenance.ics" });
+}
 ```
 
-`SEQUENCE` comes from something that only grows (seconds between creation and the last edit),
-so clients replace their copy on every change. A single-window download is the same calendar
-with one event and `{ filename: "maintenance.ics" }`; the shared `UID` makes a client holding
-both show one event. UTC needs no `VTIMEZONE`; reach for `TZID` only when a recurrence must
-follow a zone's wall clock.
+## Pattern: The Last Day of Every Month
 
-## Pattern: "Last Day Of The Month" Recurrences
+`BYMONTHDAY=31` skips short months; a set position over the candidate days picks each month's last.
 
-`BYMONTHDAY=31` skips short months. The clamp is a set position over the candidate days:
+```typescript
+import type { ICalendar } from "@sdxc/icalendar";
 
-```ts
-let rule = { frequency: "MONTHLY", byMonthDay: [28, 29, 30, 31], bySetPosition: [-1] } as const;
+import { occurrences, parseRecurrence, stringifyRecurrence } from "@sdxc/icalendar/rrule";
+import { unwrap } from "@sdxc/result";
+
+let rule: ICalendar.RecurrenceRule = {
+	frequency: "MONTHLY",
+	byMonthDay: [28, 29, 30, 31],
+	bySetPosition: [-1],
+};
+stringifyRecurrence(rule); // "FREQ=MONTHLY;BYMONTHDAY=28,29,30,31;BYSETPOS=-1"
+unwrap(parseRecurrence("freq=monthly;bymonthday=-1")); // the same days, written as one negative day
+
+let closing: ICalendar.Event = {
+	uid: "close-books@example.com",
+	dtstamp: new Date(),
+	start: { type: "date", year: 2026, month: 1, day: 31 },
+	recurrence: rule,
+	properties: [],
+};
+let dates = unwrap(
+	occurrences(closing, {
+		from: Date.UTC(2026, 0, 1),
+		to: Date.UTC(2027, 0, 1),
+		timeZone: "America/New_York",
+	}),
+);
 ```
+
+All-day dates are read in `timeZone`, so each occurrence runs from local midnight to the next.
 
 ## Pattern: Is Anything Active Now
 
-```ts
+A one-millisecond window with `limit: 1` answers whether any occurrence, recurring or not, is running.
+
+```typescript
+import type { ICalendar } from "@sdxc/icalendar";
+
 import { occurrences } from "@sdxc/icalendar/rrule";
 import { isSuccess } from "@sdxc/result";
 
-let now = Date.now();
-let result = occurrences(event, { from: now, to: now + 1, limit: 1 });
-let active = isSuccess(result) && result.data.length > 0;
+function isActive(event: ICalendar.Event, calendar: ICalendar.Calendar, now = Date.now()): boolean {
+	let result = occurrences(event, { from: now, to: now + 1, limit: 1, calendar });
+	return isSuccess(result) && result.data.length > 0;
+}
+```
+
+## Pattern: Edit a Calendar Without Losing What It Holds
+
+Components and properties outside the typed model ride along in `components` and `properties`, so a
+read, edit and write keeps them. Untyped values are stored as written; `unescapeText` reads them.
+
+```typescript
+import { escapeText, parse, stringify, unescapeText } from "@sdxc/icalendar";
+import { unwrap } from "@sdxc/result";
+
+let { calendar } = unwrap(parse(source));
+
+let todos = calendar.components.filter((component) => component.name === "VTODO");
+let timeZone = calendar.properties.find((property) => property.name === "X-WR-TIMEZONE");
+
+calendar.properties.push({ name: "X-EXAMPLE-NOTE", parameters: {}, value: escapeText("a, b; c") });
+calendar.events = calendar.events.map((event) => ({
+	...event,
+	sequence: (event.sequence ?? 0) + 1,
+}));
+
+let text = stringify(calendar); // VTODOs, X-WR-TIMEZONE and the note written back
+let note = unescapeText(calendar.properties.at(-1)?.value ?? ""); // "a, b; c"
 ```
 
 ## Versioning
