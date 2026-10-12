@@ -1,12 +1,13 @@
 /**
- * The site's fetch-router: the global middleware stack (head requests, async context, request
- * logging and tracing, form data, cross-origin protection, HTML rendering) and every route
- * mapped onto its controller. The worker builds it per request and the router tests drive it.
+ * The site's fetch-router: the global middleware stack (head requests, async context, logging
+ * and tracing, form data, cross-origin protection, document assets, HTML rendering) and every
+ * route mapped onto its controller. The worker builds it per request and the router tests drive it.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
+import { assets } from "@sdxc/assets-middleware";
 import { headRequests } from "@sdxc/http/middleware/head-requests";
 import { lazy } from "@sdxc/lazy-route";
 import { log } from "@sdxc/logger/middleware";
@@ -15,12 +16,11 @@ import { userAgent } from "@sdxc/user-agent/middleware";
 import { asyncContext } from "remix/middleware/async-context";
 import { cop } from "remix/middleware/cop";
 import { formData } from "remix/middleware/form-data";
-import { render, renderWith } from "remix/middleware/render";
+import { render } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 
 import defaultHandler from "~/app/http/controllers/default-handler";
-import { withDocumentAssets } from "~/app/http/render";
-import { assets } from "~/app/initializers/assets";
+import { assetResolver } from "~/app/initializers/assets";
 import { logger } from "~/app/initializers/logger";
 import routes from "~/routes/web";
 
@@ -40,8 +40,11 @@ export function createWebRouter() {
 			trace(),
 			formData(),
 			cop(),
-			render({ assets }),
-			renderWith(withDocumentAssets),
+			assets(assetResolver, {
+				stylesheets: "resources/layouts/document.tsx",
+				script: "bootstrap/browser.ts",
+			}),
+			render({ assets: assetResolver }),
 			userAgent(),
 		],
 		defaultHandler,

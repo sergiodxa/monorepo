@@ -72,6 +72,7 @@ export default createAction(routes.api.component, async (ctx) => {
 
 	let response = await ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${reference.name} — @sdxc/ui`}
 			description={reference.summary}
 			canonical={ctx.url.href}

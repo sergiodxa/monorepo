@@ -82,6 +82,7 @@ export default createAction(routes.api.uiExport, async (ctx) => {
 
 	let response = await ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${reference.name} — ${module}`}
 			description={reference.summary}
 			canonical={ctx.url.href}

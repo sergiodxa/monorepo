@@ -64,7 +64,12 @@ export default createAction(routes.docs.index, async (ctx) => {
 		]);
 
 	let response = await ctx.render(
-		<DocumentLayout title="Documentation — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Documentation — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<DocsLayout tree={tree} activePath={routes.docs.index.href()} breadcrumbs={[]}>
 				<PageTitle eyebrow="Guides" title="Documentation">
 					{DESCRIPTION}

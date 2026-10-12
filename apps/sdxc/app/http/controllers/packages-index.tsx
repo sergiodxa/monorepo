@@ -34,7 +34,12 @@ export default createAction(routes.api.index, async (ctx) => {
 	let groups = listPackageGroups();
 
 	let response = await ctx.render(
-		<DocumentLayout title="API — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="API — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<DocsLayout tree={tree} activePath={routes.api.index.href()} breadcrumbs={[]}>
 				<PageTitle eyebrow="API" title="Every package">
 					{DESCRIPTION}

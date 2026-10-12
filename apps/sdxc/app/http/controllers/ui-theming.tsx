@@ -54,6 +54,7 @@ export default async function themingPage(ctx: RequestContext, tree: NavTree) {
 
 	let response = await ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${THEMING_TITLE} — @sdxc/ui`}
 			description={THEMING_SUMMARY}
 			canonical={ctx.url.href}

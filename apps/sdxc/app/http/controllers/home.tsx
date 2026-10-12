@@ -40,6 +40,7 @@ export default createAction(routes.home, async (ctx) => {
 
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title="sdxc"
 			description={DESCRIPTION}
 			canonical={ctx.url.href}

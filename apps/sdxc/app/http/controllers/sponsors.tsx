@@ -47,7 +47,12 @@ export default createAction(routes.sponsors, async (ctx) => {
 	let roster = await readStoredSponsors(siteCache());
 
 	let response = await ctx.render(
-		<DocumentLayout title="Sponsors — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Sponsors — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<SiteHeader activePath={routes.sponsors.href()} />
 
 			<main mix={[vstack({ align: "center" }), is("100%")]}>

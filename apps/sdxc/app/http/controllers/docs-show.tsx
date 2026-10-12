@@ -68,6 +68,7 @@ export default createAction(routes.docs.show, async (ctx) => {
 
 	let response = await ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title={`${frontmatter.title} — sdxc`}
 			description={frontmatter.description}
 			canonical={ctx.url.href}

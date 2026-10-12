@@ -19,12 +19,16 @@ import DocumentLayout from "~/resources/layouts/document";
 import routes from "~/routes/web";
 
 /**
- * Renders the 404 document for unmatched routes. Takes only the member it reads, since the
+ * Renders the 404 document for unmatched routes. Takes only the members it reads, since the
  * router infers its context from the very options this handler is passed in.
  */
-export default function defaultHandler(ctx: Pick<RequestContext, "render">) {
+export default function defaultHandler(ctx: Pick<RequestContext, "render" | "assets">) {
 	return ctx.render(
-		<DocumentLayout title="Not found — sdxc" description="The requested page does not exist.">
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Not found — sdxc"
+			description="The requested page does not exist."
+		>
 			<main mix={[vstack({ gap: 5, align: "center", justify: "center" }), p(24, 5)]}>
 				<h1 mix={[m(0), text("3xl")]}>Not found</h1>
 				<p mix={[m(0), text("base"), fg("neutral")]}>The requested page does not exist.</p>

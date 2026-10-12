@@ -84,10 +84,12 @@ workspace manifests. Nothing here is behind a login and nothing here writes.
   entry and an MCP resource URI are identities rather than links, so they name one origin
   regardless of which host answered.
 
-- **Link assets through the manifest.** The document's stylesheets and client entry come
-  from `documentAssets()` in `app/initializers/assets.ts`, which reads the manifest
-  `@pitlane/vite-plugin-remix` writes; a build hashes every file, so a hand-written
-  `/assets/...` URL names a file the next build renames. A stylesheet joins by a side-effect
+- **Link assets through the manifest.** The router's `assets()` middleware resolves the
+  document's stylesheets and client entry through `assetResolver` in
+  `app/initializers/assets.ts`, which reads the manifest `@pitlane/vite-plugin-remix` writes,
+  and publishes them as `ctx.assets`; every page renders `<DocumentLayout assets={ctx.assets}>`.
+  A build hashes every file, so a hand-written `/assets/...` URL names a file the next build
+  renames. A stylesheet joins by a side-effect
   `import "….css"` in `resources/layouts/document.tsx`, in cascade order.
 - **Keep only islands in the browser entry.** `bootstrap/browser.ts` globs
   `resources/components/previews/` and names each other `clientEntry()` module; a new island

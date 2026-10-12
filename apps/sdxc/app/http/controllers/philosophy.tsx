@@ -42,7 +42,12 @@ export default createAction(routes.philosophy, async (ctx) => {
 	let roster = await readStoredSponsors(siteCache());
 
 	let response = await ctx.render(
-		<DocumentLayout title="Philosophy — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Philosophy — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<SiteHeader activePath={routes.philosophy.href()} />
 
 			{/* Each band tints the full width, so the cap belongs on the content inside one. */}

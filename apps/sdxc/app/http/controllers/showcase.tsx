@@ -42,7 +42,12 @@ export default createAction(routes.showcase, async (ctx) => {
 	let firstGuide = first ? routes.docs.show.href({ slug: first.slug }) : null;
 
 	let response = await ctx.render(
-		<DocumentLayout title="Showcase — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="Showcase — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<SiteHeader activePath={routes.showcase.href()} />
 
 			<main mix={[vstack({ align: "center" }), is("100%")]}>

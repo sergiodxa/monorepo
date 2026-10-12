@@ -47,7 +47,12 @@ export default createAction(routes.mcp, async (ctx) => {
 	}
 
 	let response = await ctx.render(
-		<DocumentLayout title="MCP endpoint — sdxc" description={DESCRIPTION} canonical={ctx.url.href}>
+		<DocumentLayout
+			assets={ctx.assets}
+			title="MCP endpoint — sdxc"
+			description={DESCRIPTION}
+			canonical={ctx.url.href}
+		>
 			<PageLayout
 				eyebrow="For agents"
 				title="The MCP endpoint"

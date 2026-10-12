@@ -30,6 +30,7 @@ import DocumentLayout from "~/resources/layouts/document";
 export default function docsNotFound(ctx: RequestContext, tree: NavTree) {
 	return ctx.render(
 		<DocumentLayout
+			assets={ctx.assets}
 			title="Not found — sdxc"
 			description="No documentation page answers to that address."
 		>
