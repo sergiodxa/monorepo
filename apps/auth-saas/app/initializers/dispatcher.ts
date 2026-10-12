@@ -8,13 +8,14 @@
  */
 import type { JobDispatcherContext } from "@sdxc/jobs";
 
+import { database } from "@sdxc/database-middleware/jobs";
 import { createJobDispatcher } from "@sdxc/jobs";
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
+import { createDatabase } from "~/app/initializers/database";
 import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
-import { database } from "~/app/jobs/middleware/database";
 import { hostnames } from "~/app/jobs/middleware/hostnames";
 import { mail } from "~/app/jobs/middleware/mail";
 import { models } from "~/app/jobs/middleware/models";
@@ -28,7 +29,7 @@ import { tenant } from "~/app/jobs/middleware/tenant";
  */
 export const dispatcher = createJobDispatcher({
 	logger,
-	middleware: [database(), models(), hostnames(), tenant(), mail()],
+	middleware: [database(createDatabase), models(), hostnames(), tenant(), mail()],
 	timeout: "5 minutes",
 
 	/**

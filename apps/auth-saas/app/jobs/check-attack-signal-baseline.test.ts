@@ -60,7 +60,7 @@ vi.doMock("~/app/services/attack-signals", async (importOriginal) => {
 
 let { createJobContext } = await import("@sdxc/jobs");
 let jobs = (await import("~/app/jobs")).default;
-let { Database: JobDatabase } = await import("~/app/jobs/middleware/database");
+let { Database: JobDatabase } = await import("@sdxc/database-middleware");
 let { Mail } = await import("~/app/jobs/middleware/mail");
 let { TenantNamespace } = await import("~/app/jobs/middleware/tenant");
 let { createTestDatabase } = await import("~/app/test/db");
@@ -133,7 +133,7 @@ function makeContext(namespace: ReturnType<typeof makePlatformNamespace>) {
 	let record: Record<string, unknown> = {};
 	let log = new Log({ kind: "job", sink: (emitted) => void (record = emitted) });
 	let ctx = createJobContext(jobs.checkAttackSignalBaseline, { id: "message-1", attempts: 1, log });
-	ctx.set(JobDatabase, db, { property: "database" });
+	ctx.set(JobDatabase, db, { property: "db" });
 	publishModels(ctx, db);
 	ctx.set(TenantNamespace, namespace, { property: "tenant" });
 	ctx.set(

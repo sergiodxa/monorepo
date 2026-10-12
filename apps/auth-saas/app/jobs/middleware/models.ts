@@ -7,15 +7,14 @@
  */
 
 import { models as publishModels } from "@sdxc/data-model/jobs";
+import { Database } from "@sdxc/database-middleware";
 
 import { models as registry } from "~/app/models";
-
-import { Database } from "./database";
 
 /**
  * Creates the middleware; list it after `database()`, whose database it binds to.
  *
- * @example createJobDispatcher({ middleware: [database(), models()] });
+ * @example createJobDispatcher({ middleware: [database(createDatabase), models()] });
  */
 export function models() {
 	return publishModels(registry, (ctx) => ({ db: ctx.require(Database) }));
