@@ -1,35 +1,34 @@
 # @sdxc/duration
 
-Compile-time-checked duration strings, and the conversions from them to milliseconds and seconds.
+Typed duration strings converted to milliseconds or seconds.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/duration
 ```
 
-`parse()` reports failures as a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
+`parse()` answers a `Result` from [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this package.
 
 ## Usage
 
-### Basic Example
+### Convert a duration
 
 ```typescript
 import { toMs, toSeconds } from "@sdxc/duration";
 
 toMs("5 minutes"); // 300000
 toMs("30s"); // 30000
-toMs(1500); // 1500 — a bare number is already milliseconds
+toMs(1500); // 1500, a bare number is already milliseconds
 
 toSeconds("1 hour"); // 3600
-toSeconds("30 days"); // 2592000
 
-toMs("5 minuts"); // Type error: "minuts" is not a unit
+toMs("5 minuts"); // type error: "minuts" is not a unit
 ```
 
-### Accepting A Duration In Your Own API
+### Accept a duration in your own API
 
-Declare the parameter as `DurationInput` and convert once, so callers may pass either form and your function states its own unit exactly once.
+Declare the parameter as `DurationInput` and convert once inside, so callers pass either form and your function names its own unit in one place.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
@@ -40,17 +39,17 @@ interface CacheOptions {
 	ttl: DurationInput;
 }
 
-function write(key: string, value: string, options: CacheOptions) {
-	return cache.set(key, value, { ttlSeconds: toSeconds(options.ttl) });
+async function write(cache: KVNamespace, key: string, value: string, options: CacheOptions) {
+	await cache.put(key, value, { expirationTtl: toSeconds(options.ttl) });
 }
 
-write("session", value, { ttl: "30 days" });
-write("session", value, { ttl: 2_592_000_000 }); // still valid
+await write(cache, "greeting", "hello", { ttl: "1 day" });
+await write(cache, "greeting", "hello", { ttl: 86_400_000 });
 ```
 
-### Parsing Text That Arrives At Runtime
+### Parse text that arrives at runtime
 
-Configuration values and form fields are plain strings, where the compile-time type cannot help. `parse()` checks them and reports a failure.
+Configuration values and form fields are plain strings, so the type cannot check them. `parse()` does, and reports the rejected text.
 
 ```typescript
 import { parse } from "@sdxc/duration";
@@ -58,10 +57,7 @@ import { isFailure } from "@sdxc/result";
 
 let result = parse(process.env.SESSION_LIFETIME ?? "");
 
-if (isFailure(result)) {
-	console.error(result.error.message); // Invalid duration: "7 dayz"
-	return;
-}
+if (isFailure(result)) throw result.error; // Invalid duration: "7 dayz"
 
 let lifetimeMs = result.data;
 ```
@@ -70,94 +66,60 @@ let lifetimeMs = result.data;
 
 ### `toMs(input: DurationInput): number`
 
-Convert a duration to milliseconds, the unit JavaScript time arithmetic and timers count in. A bare number passes through untouched. A value that reaches it behind a cast returns `NaN`; route runtime text through `parse()`, which reports why the text was rejected.
+Converts a duration to milliseconds; a number passes through unchanged. Text that reaches it behind a cast returns `NaN`, so send untrusted text through `parse()`.
 
 ```typescript
-let timeout = toMs("5 minutes");
-// same as
-let timeout = 5 * 60 * 1000;
-```
-
-```typescript
-let backoff = toMs("250ms"); // 250
-let expiresAt = new Date(Date.now() + toMs("1 hour"));
+toMs("5 minutes"); // same as 5 * 60 * 1000
 ```
 
 ### `toSeconds(input: DurationInput): number`
 
-Convert a duration to whole seconds, the unit HTTP cache headers and platform TTLs count in. Rounds to the nearest second with halves rounding up, so `1500` becomes `2` and `1400` becomes `1`. Anything under half a second rounds to `0`, which most seconds-based APIs read as "no caching", so pass at least `"1 second"` when a TTL must be non-zero.
+Converts a duration to whole seconds, rounding to the nearest second with halves rounding up (`1500` is `2`, `1400` is `1`). Anything under half a second is `0`, so pass at least `"1 second"` where a TTL must be non-zero.
 
 ```typescript
-let ttl = toSeconds("1 week");
-// same as
-let ttl = Math.round((7 * 24 * 60 * 60 * 1000) / 1000);
-```
-
-```typescript
-let maxAge = toSeconds("5 minutes"); // 300
-let ttl = toSeconds("1 week"); // 604800
+toSeconds("1 week"); // same as Math.round((7 * 24 * 60 * 60 * 1000) / 1000)
 ```
 
 ### `parse(text: string): Result<number, InvalidDurationError>`
 
-Parse duration text into milliseconds, returning a `Success<number>` or a `Failure<InvalidDurationError>` naming the rejected text. It accepts exactly the forms `DurationString` allows, plus a bare amount read as milliseconds, with surrounding whitespace trimmed. The grammar mirrors the type: a long spelling takes its single space and a short alias takes none, so `"5 m"` and `"5minutes"` are failures.
-
-```typescript
-parse("15 minutes"); // { status: "success", data: 900000 }
-parse("900000"); // { status: "success", data: 900000 }
-parse("15 minuts"); // { status: "failure", error: InvalidDurationError }
-```
+Parses text into milliseconds after trimming surrounding whitespace. It accepts exactly what `DurationString` accepts, plus a bare amount read as milliseconds (`"900000"`).
 
 ### `InvalidDurationError`
 
-Error describing text that fails the duration grammar. It arrives inside a `Failure` value.
-
-- `text`: `string` - The rejected text, kept verbatim and untrimmed for diagnostics
-- `name`: `string` - Always `"InvalidDurationError"`
-- `message`: `string` - `Invalid duration: "<text>"`, quoted so whitespace and empty strings stay visible in logs
+The error inside a failed `parse()`. `text` holds the rejected input verbatim, and `message` quotes it (`Invalid duration: "7 dayz"`) so empty or whitespace-only values stay visible in logs.
 
 ### Types
 
 #### `DurationString`
 
-```typescript
-type DurationString = `${bigint} ${DurationUnit}` | `${bigint}${DurationUnitShort}`;
-```
+A whole amount plus a unit: spelled out after one space (`"5 minutes"`) or abbreviated with none (`"5m"`).
 
-A duration written as text: a whole amount plus a unit, either spelled out after a single space or abbreviated with no space. The amount placeholder is `${bigint}` rather than `${number}` so only whole amounts type-check.
+| Unit        | Long forms                    | Short | Milliseconds |
+| ----------- | ----------------------------- | ----- | ------------ |
+| Millisecond | `millisecond`, `milliseconds` | `ms`  | 1            |
+| Second      | `second`, `seconds`           | `s`   | 1000         |
+| Minute      | `minute`, `minutes`           | `m`   | 60000        |
+| Hour        | `hour`, `hours`               | `h`   | 3600000      |
+| Day         | `day`, `days`                 | `d`   | 86400000     |
+| Week        | `week`, `weeks`               | `w`   | 604800000    |
+
+Amounts may be `0` or negative (`"-5 minutes"`). Both the type and `parse()` reject fractions and exponents (`"1.5h"`, `"5e3s"`), leading zeros and plus signs (`"05s"`, `"+5s"`), the other form's spacing (`"5 m"`, `"5minutes"`), uppercase units, compound durations (`"1 hour 30 minutes"`), and months and years, which have no fixed length.
 
 #### `DurationInput`
 
-```typescript
-type DurationInput = number | DurationString;
-```
-
-What a duration-taking API declares. A bare number is always milliseconds.
+`number | DurationString`, the type a duration-taking API declares. A number is always milliseconds.
 
 #### `DurationUnit`
 
-A unit spelled out after a single space: `millisecond`, `second`, `minute`, `hour`, `day`, `week`, and the plural of each.
+The long unit spellings, singular and plural.
 
 #### `DurationUnitShort`
 
-A unit abbreviated with no space: `ms`, `s`, `m`, `h`, `d`, `w`.
+The short aliases: `ms`, `s`, `m`, `h`, `d`, `w`.
 
-### Accepted Forms
+## Pattern: One Value, Several Units
 
-| Unit        | Singular          | Plural               | Short form | Milliseconds |
-| ----------- | ----------------- | -------------------- | ---------- | ------------ |
-| Millisecond | `"1 millisecond"` | `"250 milliseconds"` | `"250ms"`  | 1            |
-| Second      | `"1 second"`      | `"30 seconds"`       | `"30s"`    | 1000         |
-| Minute      | `"1 minute"`      | `"15 minutes"`       | `"15m"`    | 60000        |
-| Hour        | `"1 hour"`        | `"6 hours"`          | `"6h"`     | 3600000      |
-| Day         | `"1 day"`         | `"30 days"`          | `"30d"`    | 86400000     |
-| Week        | `"1 week"`        | `"2 weeks"`          | `"1w"`     | 604800000    |
-
-An amount may be `0` or negative (`"-5 minutes"` is `-300000`). Rejected at compile time, and by `parse()` at runtime: fractional and exponent amounts (`"1.5h"`, `"5e3s"`), unit-only text (`"hour"`), the other form's spacing (`"5 m"`, `"5minutes"`), uppercase units (`"30S"`), leading zeros and plus signs (`"05s"`, `"+5s"`), compound durations (`"1 hour 30 minutes"`), and months and years, which have no fixed length.
-
-## Pattern: One Unit Per Boundary
-
-Convert at the boundary that consumes the value, not at the call site that writes it. The caller writes the duration once, and each boundary converts to the unit it needs.
+Take the duration once and convert at each boundary that consumes it, in the unit that boundary counts in.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
@@ -168,21 +130,18 @@ interface SessionOptions {
 	lifetime: DurationInput;
 }
 
-function createSession(options: SessionOptions) {
-	return {
-		// a cookie's Max-Age counts seconds
-		maxAge: toSeconds(options.lifetime),
-		// Date arithmetic counts milliseconds
-		expiresAt: new Date(Date.now() + toMs(options.lifetime)),
-	};
+function sessionCookie(id: string, options: SessionOptions) {
+	let maxAge = toSeconds(options.lifetime);
+	let expires = new Date(Date.now() + toMs(options.lifetime));
+	return `session=${id}; Max-Age=${maxAge}; Expires=${expires.toUTCString()}; HttpOnly`;
 }
 
-createSession({ lifetime: "30 days" });
+sessionCookie("abc123", { lifetime: "30 days" });
 ```
 
-## Pattern: Validating Configuration Once At Startup
+## Pattern: Validate Configuration at Startup
 
-Parse duration configuration where it is read, so a typo in an environment variable is reported by name instead of becoming a `NaN` timer far away.
+Parse every duration setting where it is read, so a typo fails by name at boot instead of becoming a `NaN` timer later.
 
 ```typescript
 import type { Result } from "@sdxc/result";
@@ -190,30 +149,38 @@ import type { Result } from "@sdxc/result";
 import { parse } from "@sdxc/duration";
 import { failure, isFailure } from "@sdxc/result";
 
-function readDuration(name: string, value: string): Result<number, Error> {
+function readDuration(name: string, fallback: string): Result<number, Error> {
+	let value = process.env[name] ?? fallback;
 	let result = parse(value);
-	if (isFailure(result)) return failure(new Error(`${name} is not a duration: ${value}`));
+	if (isFailure(result))
+		return failure(new Error(`${name} is not a duration: ${result.error.text}`));
 	return result;
 }
 
-let lifetime = readDuration("SESSION_LIFETIME", process.env.SESSION_LIFETIME ?? "");
+let lifetime = readDuration("SESSION_LIFETIME", "30 days");
+let pollInterval = readDuration("POLL_INTERVAL", "15s");
 ```
 
-## Pattern: Strings In Code, Numbers In Storage
+## Pattern: Strings in Code, Numbers in Storage
 
-Duration strings are for code and configuration. Keep storage and wire formats numeric, so a stored value never depends on this package's grammar.
+Write durations as strings in code and configuration, and store or send the number, so persisted data reads the same whatever grammar this package accepts.
 
 ```typescript
 import type { DurationInput } from "@sdxc/duration";
 
 import { toMs } from "@sdxc/duration";
 
-async function schedule(job: string, delay: DurationInput) {
-	// the column stores milliseconds, not "5 minutes"
-	await db.jobs.insert({ job, runAfterMs: Date.now() + toMs(delay) });
+interface Reminder {
+	message: string;
+	dueAt: number;
 }
 
-await schedule("send-digest", "5 minutes");
+function remindIn(message: string, delay: DurationInput): Reminder {
+	return { message, dueAt: Date.now() + toMs(delay) };
+}
+
+let reminder = remindIn("Renew the certificate", "2 weeks");
+await storage.put("reminder", JSON.stringify(reminder));
 ```
 
 ## Versioning
