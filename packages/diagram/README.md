@@ -3,11 +3,10 @@
 Mermaid sequence, class, state and flowchart diagrams to SVG, with a markdown walk visitor and
 a component.
 
-Diagrams are written in [Mermaid](https://mermaid.js.org)'s text syntax, the one GitHub renders
-in a fenced block marked `mermaid`, and drawn as SVG on the server: no client script, no
-stylesheet and no web font. The SVG strokes and fills with `currentColor` and the `Canvas`
-system color, so a diagram takes the color of the text around it and follows the page into
-dark mode.
+Diagrams are written in [Mermaid](https://mermaid.js.org)'s text syntax and drawn as SVG on the
+server: no client script, no stylesheet and no web font. Lines and text draw in `currentColor`
+and fills fall back to the `Canvas` system color, so a diagram takes the color of the text
+around it and follows the page into dark mode.
 
 ## Installation
 
@@ -15,14 +14,14 @@ dark mode.
 npm add @sdxc/diagram
 ```
 
-The root entry depends only on [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
+The root entry uses [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result).
 `@sdxc/diagram/markdown` walks documents from
 [`@sdxc/markdown`](https://www.npmjs.com/package/@sdxc/markdown), and `@sdxc/diagram/ui`
-renders with `remix/component`; both install alongside this package.
+renders with `remix/component` from [`remix`](https://www.npmjs.com/package/remix).
 
 ## Usage
 
-### Draw A Diagram
+### Draw a diagram
 
 ```typescript
 import { toSVG } from "@sdxc/diagram";
@@ -36,40 +35,35 @@ if (isFailure(result)) throw result.error;
 result.data; // '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 …" role="img"><title>Sequence diagram</title>…'
 ```
 
-The string is safe to place in HTML or XHTML, or to save as an `.svg` file, as it is.
+The string goes into HTML or XHTML, or into an `.svg` file, as it is.
 
-### Render Diagrams In Markdown
+### Render diagrams in markdown
 
-````typescript
+```typescript
 import { diagram, renderDiagram } from "@sdxc/diagram/markdown";
 import { Markdown } from "@sdxc/markdown";
 import { toHTML } from "@sdxc/markdown/html";
 import { isFailure } from "@sdxc/result";
 
-let parsed = Markdown.parse("```mermaid\nflowchart LR\n  Parse --> Walk --> Render\n```\n");
+let fence = "`".repeat(3);
+let parsed = Markdown.parse(`${fence}mermaid
+flowchart LR
+  Parse --> Walk --> Render
+${fence}
+`);
 if (isFailure(parsed)) throw parsed.error;
 
 let walked = Markdown.walk(parsed.data.document, diagram);
 if (isFailure(walked)) throw walked.error;
 
 let html = toHTML(walked.data, { tags: { diagram: renderDiagram } });
-````
-
-The visitor turns every fenced block whose language is `mermaid` into a `diagram` tag node
-carrying `{ source }`, and leaves every other code block alone, so it composes with a
-highlighter through `Markdown.compose`.
-
-An `alt` annotation on the fence names the drawing for screen readers, in place of the name its
-source gives it, and the tag carries it as `{ source, alt }`:
-
-````markdown
-```mermaid {% alt="The checkout flow: cart, then payment, then confirmation" %}
-flowchart LR
-  Cart --> Payment --> Confirmation
 ```
-````
 
-### Render With Remix
+The visitor turns every fence marked `mermaid` into a `diagram` tag carrying `{ source }` and
+leaves every other code block to the next visitor, so it composes with a highlighter through
+`Markdown.compose`.
+
+### Render with Remix
 
 ```tsx
 import { Diagram, DiagramTag } from "@sdxc/diagram/ui";
@@ -84,28 +78,28 @@ import { toRemix } from "@sdxc/markdown/remix";
 
 ### `toSVG(source: string, options?: DiagramOptions): Result<string, DiagramError>`
 
-Draws the diagram as an SVG string, every value escaped. Every element has an explicit closing
-tag, so HTML and XML parsers read it the same way.
+Draws the diagram as an SVG string with every value escaped and every element explicitly
+closed, so HTML and XML parsers read it the same way.
 
 ### `parseDiagram(source: string, options?: DiagramOptions): Result<SvgElement, DiagramError>`
 
-Reads the diagram into the tree `toSVG` serializes, rooted at the `svg` element. The tree is
-plain JSON, so it caches and travels in a payload.
+Reads the diagram into the tree `toSVG` serializes, rooted at an `svg` element with `width`,
+`height`, a matching `viewBox` and `max-width: 100%`. The tree is plain JSON, so it caches and
+travels in a payload.
 
 ```typescript
 let tree = parseDiagram("flowchart LR\nA --> B");
 // { type: "element", name: "svg", attributes: { xmlns: "…", viewBox: "0 0 … …", … }, children: [ … ] }
 ```
 
-The root carries `width`, `height` and a matching `viewBox`, with `max-width: 100%` so it
-shrinks to a narrow column. Its first child is a `title` naming the diagram, read out as its
-accessible name, followed by a `desc` when the source has an `accDescr`. The `title` is
-`options.alt` when given, then the source's `title` or `accTitle`, then the diagram's kind.
+The first child is a `title`, the drawing's accessible name: `options.alt`, else the source's
+`title` or `accTitle`, else the diagram's kind. A `desc` follows when the source has an
+`accDescr`.
 
 ### `DiagramError`
 
-The first statement the parser refused. `reason` says what went wrong; `index` (0-based),
-`line` and `column` (1-based) locate it in the source, and the message ends with `line:column`.
+The first statement the parser refused: `reason` says what went wrong, `index` (0-based),
+`line` and `column` (1-based) locate it, and the message ends with `line:column`.
 
 ```typescript
 parseDiagram("sequenceDiagram\n  A->>B: hi\n  end"); // failure: '"end" without a block to close at 3:3'
@@ -127,58 +121,51 @@ values, or text, `{ type: "text", value }` holding the unescaped characters.
 
 #### `diagram`
 
-The `Markdown.walk` visitor. A diagram that does not parse fails the walk: the failure's
-`position` is the fence, and its `cause` is the `DiagramError` locating the statement inside
-the diagram. Its handler is synchronous, so the walk returns a `Result`, never a promise.
+The `Markdown.walk` visitor. It also copies a fence's `{% alt="…" %}` annotation onto the tag
+as `alt`. A diagram that does not parse fails the walk with a `MarkdownWalkError` whose
+`position` is the fence and whose `cause` is the `DiagramError`. Its handler is synchronous,
+so the walk returns a `Result`.
 
-#### `createDiagramVisitor(options?: DiagramVisitorOptions)`
+#### `createDiagramVisitor(options?: { invalid?: "fail" | "keep" }): Markdown.Visitor`
 
-Builds the visitor with options. `invalid: "keep"` leaves a diagram that does not parse as the
-code block it was written as; `invalid: "fail"` is the default.
+Builds the visitor. `invalid: "keep"` leaves a diagram that does not parse as the code block it
+was written as; `"fail"` is the default, the behavior of `diagram`.
 
 #### `renderDiagram`
 
-A tag renderer for `toHTML`'s `tags` option, naming the drawing by the tag's `alt` when it has
-one. A tag whose source does not parse renders as the
-escaped source in `<pre><code class="language-mermaid">`.
+A tag renderer for `toHTML`'s `tags` option, naming the drawing by the tag's `alt`. A tag whose
+source does not parse renders as the escaped source in `<pre><code class="language-mermaid">`.
 
 ### `@sdxc/diagram/ui`
 
 #### `Diagram`
 
-A `remix/component` component taking `source` and an optional `alt`. It builds the SVG as elements, and renders the
-source in a code block when it does not parse.
+A `remix/component` component taking `source` and an optional `alt`. It builds the SVG as
+elements, and renders the source in a `<pre><code>` block when it does not parse.
 
 #### `DiagramTag`
 
-`Diagram` shaped for `toRemix`'s `components` option, which hands every component its children
-alongside the tag's attributes.
+`Diagram` shaped for `toRemix`'s `components` option, taking the tag's `source` and `alt` as
+props.
 
-## Theming
+### Theming
 
-Lines and text draw in `currentColor`. Two custom properties set the fills, and each falls
-back to the page's background:
+Lines and text draw in `currentColor`. Two custom properties set the fills:
 
 - `--diagram-fill`: node bodies, and the boxes behind line labels. Defaults to `Canvas`.
-- `--diagram-tint`: notes, groups and block tabs. Defaults to `currentColor` mixed 8% into
+- `--diagram-tint`: notes, groups and block labels. Defaults to `currentColor` mixed 8% into
   `Canvas`.
 
-```css
-.prose svg {
-	color: var(--text-muted);
-	--diagram-fill: var(--surface);
-}
-```
+Labels are set in `ui-sans-serif, system-ui` and measured with room to spare, so every box
+holds its text in whichever system font the reader has.
 
-Labels are measured from a typical sans-serif face and set in `ui-sans-serif, system-ui`, with
-a little room to spare, so every box holds its text whichever system font the reader has.
-
-## Supported Syntax
+### Supported syntax
 
 Every kind accepts `%%` comment lines, a `title` statement, `accTitle:` and `accDescr:`, and a
-frontmatter block with a `title`. Labels break onto a new line at `<br>`.
+frontmatter block with a `title`. Labels break onto a new line at `<br>`. Anything else is a
+`DiagramError` naming the statement.
 
-### `sequenceDiagram`
+#### `sequenceDiagram`
 
 - `participant A`, `actor A`, and either `as` a display name
 - Messages `->>` `-->>` `->` `-->` `-x` `--x` `-)` `--)` `<<->>` `<<-->>`, with or without
@@ -189,7 +176,7 @@ frontmatter block with a `title`. Labels break onto a new line at `<br>`.
   closed with `end`
 - `autonumber`
 
-### `flowchart` and `graph`
+#### `flowchart` and `graph`
 
 - Directions `TB`, `TD`, `BT`, `LR` and `RL`, in the header or as `direction`
 - Shapes `A[ ]`, `A( )`, `A([ ])`, `A[[ ]]`, `A[( )]`, `A(( ))`, `A((( )))`, `A{ }`,
@@ -197,13 +184,13 @@ frontmatter block with a `title`. Labels break onto a new line at `<br>`.
   hold brackets
 - Links `-->` `---` `-.->` `-.-` `==>` `===` `~~~`, heads `>` `o` `x` at either end, extra
   dashes for a longer link, and text as `-->|text|` or `-- text -->`
-- Chains `A --> B --> C` and groups `A & B --> C`, and `;` between statements
-- `subgraph id [Title]` … `end`, nested, with a `direction` of its own; a node named inside a
+- Chains `A --> B --> C`, groups `A & B --> C`, and `;` between statements
+- `subgraph id [Title]` … `end`, nested, with its own `direction`; a node named inside a
   subgraph belongs to it, and a link may name the subgraph as an end
-- `classDef`, `class`, `style`, `linkStyle`, `click` and `:::class` are read and the diagram
-  draws in the page's colors
+- `classDef`, `class`, `style`, `linkStyle`, `click` and `:::class` are accepted, and the
+  diagram draws in the page's colors
 
-### `classDiagram`
+#### `classDiagram` and `classDiagram-v2`
 
 - `class A`, `class A~T~`, `class A["Label"]` and bodies in `{ }`
 - Members as `A : +member` or in the body; parentheses make a method, a trailing `$` static
@@ -213,20 +200,21 @@ frontmatter block with a `title`. Labels break onto a new line at `<br>`.
   ends, `"1"` cardinalities at either end and `: label`; a parent or whole sits above the
   class pointing at it
 - `note for A "text"`, `note "text"`, `namespace N { }` and `direction`
+- `style`, `cssClass`, `click`, `link` and `callback` are accepted, and the diagram draws in the
+  page's colors
 
-### `stateDiagram` and `stateDiagram-v2`
+#### `stateDiagram` and `stateDiagram-v2`
 
 - `A --> B : label`, with `[*]` as each scope's start or end
 - `state "Name" as A`, `A : description`, and `state A <<choice>>`, `<<fork>>`, `<<join>>`
-- Composite states `state A { … }`, nested, with a `direction` of their own
+- Composite states `state A { … }`, nested, with their own `direction`
 - `note left of A : text` and multi-line notes closed with `end note`
+- `classDef`, `class` and `style` are accepted, and the diagram draws in the page's colors
 
-Anything else is a `DiagramError` naming the statement.
-
-## Pattern: Keep Building When A Diagram Breaks
+## Pattern: Keep A Live Preview Rendering While A Diagram Is Half-Written
 
 A preview pane renders what it can while an author types. Walk with `invalid: "keep"` so a
-half-written diagram stays code instead of failing the page.
+half-written diagram shows as code and the rest of the page still renders.
 
 ```typescript
 import { createDiagramVisitor, renderDiagram } from "@sdxc/diagram/markdown";
@@ -242,6 +230,100 @@ function render(source: string): string {
 	let walked = Markdown.walk(parsed.data.document, preview);
 	if (isFailure(walked)) return "";
 	return toHTML(walked.data, { tags: { diagram: renderDiagram } });
+}
+```
+
+## Pattern: Fail A Build At The Broken Line
+
+A publish step walks with the default `diagram` visitor so a broken diagram stops the build.
+The walk failure locates the fence and its `cause` locates the statement inside it; together
+they give the line to open in the document.
+
+```typescript
+import { DiagramError } from "@sdxc/diagram";
+import { diagram } from "@sdxc/diagram/markdown";
+import { Markdown } from "@sdxc/markdown";
+import { isFailure } from "@sdxc/result";
+
+function check(file: string, source: string): string | null {
+	let parsed = Markdown.parse(source);
+	if (isFailure(parsed)) return `${file}: ${parsed.error.message}`;
+
+	let walked = Markdown.walk(parsed.data.document, diagram);
+	if (!isFailure(walked)) return null;
+
+	let fence = walked.error.position?.start.line ?? 0;
+	let cause = walked.error.cause;
+	if (cause instanceof DiagramError) {
+		return `${file}:${fence + cause.line}:${cause.column} ${cause.reason}`;
+	}
+	return `${file}:${fence} ${walked.error.message}`;
+}
+```
+
+## Pattern: Name A Diagram For Screen Readers
+
+The `title` a screen reader announces comes from the source's `title` or `accTitle` unless the
+caller supplies an `alt`, and `accDescr` adds a longer description. Each entry point takes the
+`alt` in its own place.
+
+```tsx
+import { toSVG } from "@sdxc/diagram";
+import { Diagram } from "@sdxc/diagram/ui";
+
+let svg = toSVG(
+	`flowchart LR
+  accDescr: An order moves from the cart to payment, then to confirmation
+  Cart --> Payment --> Confirmation`,
+	{ alt: "The checkout flow" },
+);
+
+<Diagram source={"flowchart LR\n  Cart --> Payment"} alt="The checkout flow" />;
+
+let fence = "`".repeat(3);
+let markdown = `${fence}mermaid {% alt="The checkout flow" %}
+flowchart LR
+  Cart --> Payment
+${fence}
+`;
+```
+
+The `diagram` visitor carries the fence's `alt` onto the tag, and both `renderDiagram` and
+`DiagramTag` pass it on.
+
+## Pattern: Match The Page's Colors
+
+A diagram inherits `color` from its container, so styling the container themes the drawing,
+in light and dark mode alike.
+
+```css
+.prose svg {
+	color: var(--text-muted);
+	--diagram-fill: var(--surface);
+	--diagram-tint: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+```
+
+## Pattern: Serve A Diagram As An SVG File
+
+The string `toSVG` returns is a complete SVG document, so a request handler can answer with it
+directly, for an `<img>` source, a feed or a download.
+
+```typescript
+import { toSVG } from "@sdxc/diagram";
+import { isFailure } from "@sdxc/result";
+
+async function handle(request: Request): Promise<Response> {
+	let result = toSVG(await request.text());
+	if (isFailure(result)) {
+		return Response.json(
+			{ reason: result.error.reason, line: result.error.line, column: result.error.column },
+			{ status: 422 },
+		);
+	}
+	return new Response(result.data, {
+		headers: { "Content-Type": "image/svg+xml" },
+	});
 }
 ```
 
