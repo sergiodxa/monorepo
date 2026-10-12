@@ -16,6 +16,7 @@
 		"@sdxc/logger": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"remix": "3.0.0"
 	}
 }

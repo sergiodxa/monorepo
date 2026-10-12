@@ -10,7 +10,7 @@ An `Adapter` counts attempts against a key and answers a decision; the middlewar
 npm add @sdxc/rate-limit
 ```
 
-The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) fetch router, which installs alongside this package, together with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result) and [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields).
+The middleware mounts on a [`remix`](https://www.npmjs.com/package/remix) (v3) fetch router, which installs alongside this package, together with [`@sdxc/duration`](https://www.npmjs.com/package/@sdxc/duration), [`@sdxc/logger`](https://www.npmjs.com/package/@sdxc/logger), [`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), [`@sdxc/structured-fields`](https://www.npmjs.com/package/@sdxc/structured-fields) and [`@sdxc/uuid`](https://www.npmjs.com/package/@sdxc/uuid).
 
 Two entry points:
 

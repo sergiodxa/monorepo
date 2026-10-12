@@ -12,6 +12,7 @@ import type { Result } from "@sdxc/result";
 import type { Database, TableRow } from "remix/data-table";
 
 import { failure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, column as c, eq, gte, lt, table } from "remix/data-table";
 
 import type { Adapter, RateLimitDecision } from "./types.js";
@@ -133,7 +134,7 @@ export class DataTableAdapter implements Adapter {
 		if (allowed) {
 			try {
 				await this.#db.create(rateLimitHits, {
-					id: crypto.randomUUID(),
+					id: generateUUID(),
 					bucket: key,
 					cost: spend,
 					created_at: now,
