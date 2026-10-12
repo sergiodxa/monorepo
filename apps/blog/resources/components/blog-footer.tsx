@@ -60,6 +60,7 @@ export const FOOTER_COLUMNS: Array<BlogFooter.Column> = [
 			{ label: "Tutorials", href: routes.tutorials.href() },
 			{ label: "Bookmarks", href: routes.bookmarks.href() },
 			{ label: "Glossary", href: routes.glossary.href() },
+			{ label: "Releases", href: routes.releases.href() },
 		],
 	},
 	{

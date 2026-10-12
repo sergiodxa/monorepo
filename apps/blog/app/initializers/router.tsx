@@ -354,6 +354,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 	router.map(routes.tutorials, kindTopic("tutorials"));
 	router.map(routes.bookmarks, kindTopic("bookmarks"));
 	router.map(routes.glossary, kindTopic("glossary"));
+	router.map(routes.releases, kindTopic("releases"));
 	router.map(
 		routes.topics,
 		lazy(() => import("~/app/http/controllers/topics")),
@@ -473,7 +474,7 @@ export function createWebRouter(env: App.Env, options: ApplicationOptions = {}) 
 		routes.cms.releases,
 		lazy(
 			() => import("~/app/http/controllers/cms/releases"),
-			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"))],
+			[...CMS_WRITE_GUARDS, pingHubFor(...feedsOf("feed"), ...feedsOf("releases"))],
 		),
 	);
 	router.map(

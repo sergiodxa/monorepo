@@ -51,9 +51,12 @@ export default createJobHandler(jobs.releases.weekly, async (ctx) => {
 		changedAt: new Date().toISOString(),
 	});
 
-	let feeds = [routes.rss.feed, routes.atom.feed, routes.jsonFeed.feed];
+	let feeds = [routes.rss.feed.href(), routes.atom.feed.href(), routes.jsonFeed.feed.href()];
+	for (let feed of [routes.rss.topic, routes.atom.topic, routes.jsonFeed.topic]) {
+		feeds.push(feed.href({ topic: "releases" }));
+	}
 	await pingHub(
-		feeds.map((feed) => new URL(feed.href(), PROFILE.canonical.origin).toString()),
+		feeds.map((feed) => new URL(feed, PROFILE.canonical.origin).toString()),
 		ctx.log,
 	);
 });

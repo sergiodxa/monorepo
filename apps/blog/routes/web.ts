@@ -98,6 +98,7 @@ export default route({
 	tutorials: get("/tutorials"),
 	bookmarks: get("/bookmarks"),
 	glossary: get("/glossary"),
+	releases: get("/releases"),
 
 	/** Every topic, kinds' and author's, by title. */
 	topics: get("/topics"),

@@ -118,6 +118,9 @@ describe("the weekly releases job", () => {
 				"https://sergiodxa.com/rss",
 				"https://sergiodxa.com/atom.xml",
 				"https://sergiodxa.com/feed.json",
+				"https://sergiodxa.com/releases.rss",
+				"https://sergiodxa.com/releases.atom",
+				"https://sergiodxa.com/releases.json",
 			],
 		]);
 	});
