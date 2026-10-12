@@ -1,3 +1,7 @@
+import type { Result } from "@sdxc/result";
+import type { Database, TableRow } from "remix/data-table";
+
+import { failure, success } from "@sdxc/result";
 /**
  * An `IdempotencyStore` over `remix/data-table`, for D1 and Durable Object SQLite alike.
  * The claim is one conditional upsert, so of two concurrent requests exactly one wins with
@@ -6,10 +10,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-import type { Database, TableRow } from "remix/data-table";
-
-import { failure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 import { and, column as c, eq, lte, sql, table } from "remix/data-table";
 
 import type { ClaimOutcome, ClaimRequest, IdempotencyStore, StoredResponse } from "./types.js";
@@ -81,7 +82,7 @@ export class DataTableStore implements IdempotencyStore {
 	 * @param request - The id, fingerprint and instants to judge the record by
 	 */
 	async claim(request: ClaimRequest): Promise<Result<ClaimOutcome, IdempotencyStoreError>> {
-		let lease = crypto.randomUUID();
+		let lease = generateUUID();
 		let row: IdempotencyKeyRow | null;
 		try {
 			await this.#db.exec(sql`insert into idempotency_keys

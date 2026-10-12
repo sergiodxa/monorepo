@@ -1,3 +1,6 @@
+import type { Result } from "@sdxc/result";
+
+import { isFailure, success } from "@sdxc/result";
 /**
  * Client helpers for APIs that honor the Idempotency-Key draft: mint a key once per logical
  * operation and put it on every attempt of it. A key minted per attempt protects nothing,
@@ -6,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-
-import { isFailure, success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { IdempotencyKeyError } from "./errors.js";
 
@@ -25,7 +26,7 @@ const KEYED_METHODS = new Set(["POST", "PATCH"]);
  * @returns A version 4 UUID
  */
 export function generateIdempotencyKey(): string {
-	return crypto.randomUUID();
+	return generateUUID();
 }
 
 /**

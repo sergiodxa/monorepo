@@ -21,7 +21,7 @@
 		"@sdxc/problem": "workspace:*",
 		"@sdxc/result": "workspace:*",
 		"@sdxc/structured-fields": "workspace:*",
-		"@sdxc/types": "workspace:*",
+		"@sdxc/uuid": "workspace:*",
 		"remix": "3.0.0"
 	},
 	"devDependencies": {

@@ -1,3 +1,6 @@
+import type { Result } from "@sdxc/result";
+
+import { success } from "@sdxc/result";
 /**
  * An in-process `IdempotencyStore` for tests and single-isolate development. Each call
  * runs to completion without awaiting, so claims are atomic within one isolate; records
@@ -6,9 +9,7 @@
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
-import type { Result } from "@sdxc/result";
-
-import { success } from "@sdxc/result";
+import { generateUUID } from "@sdxc/uuid/v4";
 
 import type { IdempotencyStoreError } from "./errors.js";
 import type { ClaimOutcome, ClaimRequest, IdempotencyStore, StoredResponse } from "./types.js";
@@ -54,7 +55,7 @@ export class MemoryStore implements IdempotencyStore {
 			}
 		}
 
-		let lease = crypto.randomUUID();
+		let lease = generateUUID();
 		this.#records.set(request.id, {
 			fingerprint: request.fingerprint,
 			lease,
