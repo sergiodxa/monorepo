@@ -5,6 +5,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
+import { generateUUID } from "@sdxc/uuid/v4";
 import { describe, expect, test } from "vitest";
 
 import type { Base32 } from "./base32.js";
@@ -30,7 +31,7 @@ describe("base32", () => {
 	});
 
 	test("encode and decode round-trip UUID strings", () => {
-		let input = crypto.randomUUID();
+		let input = generateUUID();
 		let encoded = encode(input);
 		let decoded = decode(encoded);
 

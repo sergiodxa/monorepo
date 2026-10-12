@@ -33,7 +33,7 @@ const SUFFIX_LENGTH = 26;
  *
  * @template prefix String literal type of the prefix, such as "user" or "post".
  * @example
- * let userId = TypeID.fromUUID("user", crypto.randomUUID());
+ * let userId = TypeID.fromUUID("user", generateUUID());
  * userId.toString();
  * // "user_01h455vb4pex5vsknk084sn02q"
  */
@@ -216,7 +216,7 @@ export class TypeID<const prefix extends string> {
  * @throws {InvalidUUIDTypeError} If the UUID passed to the returned function is not a string.
  * @example
  * let createInvoiceId = typeid("invoice");
- * let invoiceId = createInvoiceId(crypto.randomUUID());
+ * let invoiceId = createInvoiceId(generateUUID());
  */
 export function typeid<prefix extends string>(prefix: prefix) {
 	return (uuid: UUID) => TypeID.fromUUID(prefix, uuid);
