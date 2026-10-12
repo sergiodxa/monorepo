@@ -14,10 +14,10 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { createOidcProvider } from "~/app/auth/repository";
 import { TokenIntrospectionSchema } from "~/app/http/validators/oauth";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import { credentialsFromHeader } from "~/app/services/client-credentials";
+import { OIDC } from "~/app/services/oidc-provider";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import routes from "~/routes/web";
 

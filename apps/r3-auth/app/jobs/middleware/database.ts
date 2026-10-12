@@ -11,7 +11,7 @@ import type { Database as DataTable } from "remix/data-table";
 
 import { createContextKey } from "remix/router";
 
-import { createDatabase } from "~/app/lib/database";
+import { createDatabase } from "~/app/initializers/database";
 
 /** Where the database lives on a job context, and the key a test publishes its own under. */
 export const Database = createContextKey<DataTable>();

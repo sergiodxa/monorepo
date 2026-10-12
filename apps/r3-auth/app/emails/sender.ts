@@ -1,7 +1,7 @@
 /**
  * Sender identity every message this server puts in an inbox carries. It lives in one
  * module because two send paths configure a mailer — the request-scoped one at the mail
- * middleware and the background one at `app/lib/mail.ts` — and an identity provider is
+ * middleware and the background one at `app/initializers/mail.ts` — and an identity provider is
  * trusted only while its `From` reads the same on a sign-in alert and a password reset.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)

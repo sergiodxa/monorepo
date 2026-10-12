@@ -14,14 +14,14 @@ import { unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
-import { createTestApp } from "~/app/lib/test/http";
-import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
-import { authorizeUrl, EMAIL, ORIGIN, PASSWORD, seed } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/test/pwned-passwords";
+import { authorizeUrl, EMAIL, ORIGIN, PASSWORD, seed } from "~/app/test/seed";
 import { sessions } from "~/database/schema";
 import routes from "~/routes/web";
 

@@ -10,12 +10,12 @@
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { createTestApp, withUnreadableSigningKeys } from "~/app/lib/test/http";
-import { withLog } from "~/app/lib/test/logs";
-import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { createTestApp, withUnreadableSigningKeys } from "~/app/test/http";
+import { withLog } from "~/app/test/logs";
+import { ORIGIN, seed, signIn } from "~/app/test/seed";
 import routes from "~/routes/web";
 
 let app: TestApp;

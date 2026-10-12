@@ -30,9 +30,9 @@ vi.doMock("cloudflare:workers", () => ({
 	},
 }));
 
-let { createOidcRepository } = await import("~/app/auth/repository");
-let { AUTHZ_CODE_TTL } = await import("~/app/config");
-let { createTestModels } = await import("~/app/lib/test/models");
+let { createOidcRepository } = await import("~/app/models/oidc-storage");
+let { AUTHZ_CODE_TTL } = await import("~/config/oidc");
+let { createTestModels } = await import("~/app/test/models");
 let { clients } = await import("~/database/schema");
 
 let db: Database;

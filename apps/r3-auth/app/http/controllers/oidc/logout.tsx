@@ -17,8 +17,6 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { createOidcProvider } from "~/app/auth/repository";
 import {
 	destroySession,
 	getAccessToken,
@@ -26,7 +24,9 @@ import {
 	unsetTokens,
 } from "~/app/http/middleware/session";
 import { LogoutQuerySchema } from "~/app/http/validators/logout";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
+import { OIDC } from "~/app/services/oidc-provider";
 import LogoutView from "~/resources/views/logout";
 import LogoutFrontchannelView from "~/resources/views/logout-frontchannel";
 import routes from "~/routes/web";

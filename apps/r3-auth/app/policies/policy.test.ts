@@ -13,9 +13,9 @@ import { testAccess } from "@sdxc/authz/testing";
 import { isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import abilities from "~/app/authz/abilities";
-import policy from "~/app/authz/policy";
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 
 const SUBJECT_ID = "subject-1";
 const OTHER_SUBJECT_ID = "subject-2";

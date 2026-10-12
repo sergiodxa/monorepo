@@ -13,9 +13,9 @@ import type { Middleware, RequestContext } from "remix/router";
 import { access, requireAbility } from "@sdxc/authz/middleware/router";
 import { redirect } from "@sdxc/http/response";
 
-import abilities from "~/app/authz/abilities";
-import policy from "~/app/authz/policy";
 import defaultHandler from "~/app/http/controllers/default-handler";
+import abilities from "~/app/policies/abilities";
+import policy from "~/app/policies/policy";
 import routes from "~/routes/web";
 
 /**

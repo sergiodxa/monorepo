@@ -15,7 +15,7 @@ import { MAIL_FROM, MAIL_REPLY_TO } from "~/app/emails/sender";
 
 vi.doMock("cloudflare:workers", () => ({ env: createEnv<Env>({}), waitUntil: () => {} }));
 
-let { createMailer } = await import("~/app/lib/mail");
+let { createMailer } = await import("~/app/initializers/mail");
 
 describe("the background mailer", () => {
 	test("sends with the app's sender identity", async () => {

@@ -10,7 +10,7 @@
 import { toUnixSeconds } from "@sdxc/dates";
 import { describe, expect, test } from "vitest";
 
-import LogoutToken from "~/app/auth/values/logout-token";
+import LogoutToken from "~/app/services/tokens/logout-token";
 
 describe("LogoutToken.generate", () => {
 	/** RFC 7519 NumericDate claims are seconds, and the specification caps the lifetime at two minutes. */

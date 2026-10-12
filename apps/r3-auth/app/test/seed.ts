@@ -10,9 +10,9 @@
 import { password } from "@sdxc/crypto";
 import { unwrap } from "@sdxc/result";
 
-import type { TestApp } from "~/app/lib/test/http";
+import type { TestApp } from "~/app/test/http";
 
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /** Origin every test request is sent to. */

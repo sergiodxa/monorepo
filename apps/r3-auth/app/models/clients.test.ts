@@ -16,8 +16,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 import type { AuthModels } from "~/app/models";
 import type { Clients } from "~/app/models/clients";
 
-import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
-import { createTestModels } from "~/app/lib/test/models";
+import { createTestModels } from "~/app/test/models";
+import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/config/oidc";
 import { clients } from "~/database/schema";
 
 let db: Database;

@@ -13,10 +13,10 @@ import { isSuccess } from "@sdxc/result";
 import * as s from "remix/data-schema";
 import * as checks from "remix/data-schema/checks";
 
-import type { SupportedScope } from "~/app/config";
 import type { PromptValue } from "~/app/http/middleware/session";
+import type { SupportedScope } from "~/config/oidc";
 
-import { SCOPES_SUPPORTED } from "~/app/config";
+import { SCOPES_SUPPORTED } from "~/config/oidc";
 
 /** `prompt` values this server understands; anything else in the list is ignored. */
 const PROMPT_VALUES: readonly PromptValue[] = [

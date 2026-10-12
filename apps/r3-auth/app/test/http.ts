@@ -1,6 +1,6 @@
 /**
  * Test-only harness for driving the whole app over HTTP: in-memory Cloudflare bindings, a
- * migrated database, the services production runs on handed to the real composition root,
+ * migrated database, the services production runs on handed to the real router,
  * and a cookie-keeping client that exercises a multi-step flow the way a browser would. The
  * `cloudflare:workers` mock installs here, before the application import, so every module
  * capturing `env` at load time captures these bindings.
@@ -95,11 +95,11 @@ vi.doMock("cloudflare:workers", () => ({ env: bindings, waitUntil }));
  */
 async function loadModules() {
 	modules ??= Promise.all([
-		import("~/bootstrap/app"),
+		import("~/app/initializers/router"),
 		import("~/app/services/rate-limiters"),
-		import("~/app/lib/test/models"),
+		import("~/app/test/models"),
 	]).then(([app, rateLimiters, testModels]) => ({
-		application: app.default,
+		createWebRouter: app.createWebRouter,
 		RateLimiters: rateLimiters.default,
 		createTestModels: testModels.createTestModels,
 	}));
@@ -110,9 +110,9 @@ async function loadModules() {
 /** Cached result of {@link loadModules}, so every instance shares one module graph. */
 let modules:
 	| Promise<{
-			application: (typeof import("~/bootstrap/app"))["default"];
+			createWebRouter: (typeof import("~/app/initializers/router"))["createWebRouter"];
 			RateLimiters: (typeof import("~/app/services/rate-limiters"))["default"];
-			createTestModels: (typeof import("~/app/lib/test/models"))["createTestModels"];
+			createTestModels: (typeof import("~/app/test/models"))["createTestModels"];
 	  }>
 	| undefined;
 
@@ -123,7 +123,7 @@ export interface TestApp {
 	 * before the pages they protect exist: a stub action mapped here still passes through the
 	 * whole global middleware chain — the real session, logging and rendering path.
 	 */
-	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["application"]>;
+	router: ReturnType<Awaited<ReturnType<typeof loadModules>>["createWebRouter"]>;
 	/** The migrated in-memory database the app publishes as `ctx.db` and binds `ctx.models` to. */
 	db: Database;
 	/** The app's models bound to {@link TestApp.db}, for seeding and asserting through the model layer. */
@@ -190,11 +190,11 @@ export async function withUnreadableSigningKeys<T>(
 /**
  * Builds an app instance with fresh KV and R2 bindings, kept in a local reference so it
  * keeps its own storage once a later call points the shared bindings elsewhere, and hands
- * the composition root its database, limiters and transport so a test drives the real
+ * the router its database, limiters and transport so a test drives the real
  * middleware chain against storage it can read back.
  */
 export async function createTestApp(options: TestAppOptions = {}): Promise<TestApp> {
-	let { application, RateLimiters, createTestModels } = await loadModules();
+	let { createWebRouter, RateLimiters, createTestModels } = await loadModules();
 
 	let appKv = createKVNamespace();
 	let appR2 = createR2Bucket();
@@ -217,7 +217,7 @@ export async function createTestApp(options: TestAppOptions = {}): Promise<TestA
 
 	let billing = options.billing ?? new MemoryBilling();
 
-	let router = application({
+	let router = createWebRouter({
 		kv: appKv,
 		cookieSecret: COOKIE_SECRET,
 		secure: false,

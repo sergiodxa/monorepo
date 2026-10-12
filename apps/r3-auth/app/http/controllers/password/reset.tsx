@@ -20,12 +20,12 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import { checkNewPassword, passwordRefusalMessage } from "~/app/auth/password-policy";
-import { createOidcProvider } from "~/app/auth/repository";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { PasswordChangedEmail } from "~/app/emails/password-changed";
 import { unsetTokens } from "~/app/http/middleware/session";
 import { ResetPasswordSchema, ResetTokenQuerySchema } from "~/app/http/validators/password";
+import { createOidcProvider } from "~/app/models/oidc-storage";
+import { checkNewPassword, passwordRefusalMessage } from "~/app/services/password-policy";
 import { consumePasswordResetToken, peekPasswordResetToken } from "~/app/services/password-reset";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import DocumentLayout from "~/resources/layouts/document";

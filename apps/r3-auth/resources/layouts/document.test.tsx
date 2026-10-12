@@ -9,22 +9,21 @@
  */
 
 import type { RemixNode } from "remix/component";
-import type { Middleware } from "remix/router";
 
 import { render, renderWith } from "remix/middleware/render";
 import { createRouter } from "remix/router";
 import { describe, expect, test } from "vitest";
 
-import { assets } from "~/app/lib/assets";
-import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/lib/test/assets-manifest";
-import { withDocumentAssets } from "~/bootstrap/app";
+import { withDocumentAssets } from "~/app/http/render";
+import { assets } from "~/app/initializers/assets";
+import { CLIENT_ENTRY_HREF, STYLESHEET_HREF } from "~/app/test/assets-manifest";
 import { CopyButton } from "~/resources/components/copy-button";
 import DocumentLayout from "~/resources/layouts/document";
 
 /** Answers a page composed into the document through the renderer chain production uses. */
 async function fetchPage(clientRuntime: boolean, body: RemixNode = <p>Body</p>) {
 	let router = createRouter({
-		middleware: [render({ assets }) as Middleware, renderWith(withDocumentAssets) as Middleware],
+		middleware: [render({ assets }), renderWith(withDocumentAssets)],
 	});
 
 	router.get("/page", (ctx) =>

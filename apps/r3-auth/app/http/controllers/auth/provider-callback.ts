@@ -18,14 +18,14 @@ import { createAction } from "remix/router";
 
 import type { AuthzState } from "~/app/http/middleware/session";
 
-import { createOidcProvider } from "~/app/auth/repository";
-import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
 import { getAuthz, unsetAuthz } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { finishGitHubLogin, resolveGitHubSubject } from "~/app/services/github-login";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
+import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /**

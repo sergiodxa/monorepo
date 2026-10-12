@@ -13,7 +13,7 @@ import { parse } from "@sdxc/messageformat";
 import { isFailure } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
-import en from "./en";
+import en from "~/resources/locales/en";
 
 /** Flattens a bundle into `[dottedKey, message]` pairs, the form a lookup uses. */
 function entries(bundle: Messages, prefix = ""): [string, string][] {

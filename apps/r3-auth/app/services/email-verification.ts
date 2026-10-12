@@ -25,9 +25,9 @@ import * as s from "remix/data-schema";
 import type { AuthModels } from "~/app/models";
 import type { SelectSubject } from "~/database/schema";
 
-import { ISSUER_HOST } from "~/app/config";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { VerifyEmailEmail } from "~/app/emails/verify-email";
+import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /**

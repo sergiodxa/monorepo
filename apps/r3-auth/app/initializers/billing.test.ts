@@ -54,7 +54,7 @@ vi.doMock("cloudflare:workers", () => ({
 	waitUntil: () => {},
 }));
 
-let { polar, readPolarAccessToken } = await import("~/app/lib/billing");
+let { polar, readPolarAccessToken } = await import("~/app/initializers/billing");
 
 let server = setupServer();
 

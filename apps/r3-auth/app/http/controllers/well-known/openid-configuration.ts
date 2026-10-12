@@ -10,7 +10,7 @@
 import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { WELL_KNOWN } from "~/app/config";
+import { WELL_KNOWN } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /** GET /.well-known/openid-configuration — the discovery document. */

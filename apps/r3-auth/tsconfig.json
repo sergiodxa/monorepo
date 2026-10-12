@@ -3,9 +3,8 @@
 	"include": [
 		"app/**/*",
 		"bootstrap/**/*",
-		"config/**/*.d.ts",
+		"config/**/*",
 		"database/**/*",
-		"infrastructure/**/*",
 		"resources/**/*",
 		"routes/**/*",
 		".cloudflare/types/index.d.ts",
@@ -20,10 +19,8 @@
 		"types": ["@total-typescript/ts-reset", "vite/client", "bun", "node"],
 		"paths": {
 			"~/app/*": ["./app/*"],
-			"~/bootstrap/*": ["./bootstrap/*"],
 			"~/config/*": ["./config/*"],
 			"~/database/*": ["./database/*"],
-			"~/infrastructure/*": ["./infrastructure/*"],
 			"~/resources/*": ["./resources/*"],
 			"~/routes/*": ["./routes/*"]
 		}

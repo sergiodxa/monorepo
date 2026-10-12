@@ -24,10 +24,6 @@ import type { AuthzState, ResponseMode } from "~/app/http/middleware/session";
 import type { AuthorizeQuery } from "~/app/http/validators/authorize";
 import type { SelectClient } from "~/database/schema";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { passwordRefusalMessage } from "~/app/auth/password-policy";
-import { createOidcProvider } from "~/app/auth/repository";
-import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/app/config";
 import {
 	getAccessToken,
 	getAuthz,
@@ -37,11 +33,15 @@ import {
 } from "~/app/http/middleware/session";
 import { authorizationResponse } from "~/app/http/responses/authorization-response";
 import { AuthorizeFormSchema, AuthorizeQuerySchema } from "~/app/http/validators/authorize";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import { getSubjectFromAccessToken } from "~/app/services/access-token-claims";
 import { sendVerificationEmail } from "~/app/services/email-verification";
 import { startGitHubLogin } from "~/app/services/github-login";
+import { OIDC } from "~/app/services/oidc-provider";
+import { passwordRefusalMessage } from "~/app/services/password-policy";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import { notifyNewSignIn } from "~/app/services/sign-in-alert";
+import { AUTH_SERVER_CLIENT_ID, ISSUER } from "~/config/oidc";
 import DocumentLayout from "~/resources/layouts/document";
 import AuthorizeView from "~/resources/views/authorize";
 import routes from "~/routes/web";

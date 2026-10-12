@@ -14,10 +14,10 @@ import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { createUptimeReporter } from "@sdxc/jobs/uptime";
 import { env } from "cloudflare:workers";
 
+import { logger } from "~/app/initializers/logger";
 import jobs from "~/app/jobs";
 import { database } from "~/app/jobs/middleware/database";
 import { models } from "~/app/jobs/middleware/models";
-import { logger } from "~/bootstrap/logger";
 
 /** Reports a completed run to the monitor watching it. The token resolves per call. */
 const uptime = createUptimeReporter({ token: () => env.UPTIME_CRON_API_KEY });

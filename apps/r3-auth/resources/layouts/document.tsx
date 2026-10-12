@@ -12,7 +12,7 @@ import type { Handle, RemixNode } from "remix/component";
 import { container } from "@sdxc/u/layout";
 import { ImportMap } from "remix/component/server";
 
-import type { DocumentAssets as Assets } from "~/app/lib/assets";
+import type { DocumentAssets as Assets } from "~/app/initializers/assets";
 
 import { DOCUMENT, THEME } from "~/resources/styles";
 

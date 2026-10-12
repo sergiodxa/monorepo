@@ -12,7 +12,7 @@ import { fromUnixSeconds, toUnixSeconds } from "@sdxc/dates";
 import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
-import { ACCESS_TOKEN_TTL, ISSUER } from "~/app/config";
+import { ACCESS_TOKEN_TTL, ISSUER } from "~/config/oidc";
 
 /** An access token, read from or minted for the OAuth 2.0 endpoints. */
 export default class AccessToken extends JWT {

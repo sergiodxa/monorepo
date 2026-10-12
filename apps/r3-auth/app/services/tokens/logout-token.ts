@@ -13,7 +13,7 @@ import { toUnixSeconds } from "@sdxc/dates";
 import { toMs, toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
-import { ISSUER } from "~/app/config";
+import { ISSUER } from "~/config/oidc";
 
 /** How long a logout token stays acceptable: the two minutes the specification caps it at. */
 const LOGOUT_TOKEN_TTL = toMs("2 minutes");

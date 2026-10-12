@@ -1,5 +1,5 @@
 /**
- * Tests of the composition root itself: the cross-origin protection bypass list, the
+ * Tests of the router itself: the cross-origin protection bypass list, the
  * rate limiters each protected endpoint spends from, and the small routes that have no
  * controller test of their own.
  *
@@ -14,11 +14,11 @@
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { createTestApp } from "~/app/lib/test/http";
-import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/test/seed";
 import routes from "~/routes/web";
 
 /** The body a rate-limited request is refused with, frozen because clients parse it. */

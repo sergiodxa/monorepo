@@ -11,7 +11,7 @@
 import { createTranslator } from "@sdxc/i18n";
 import { currentLog } from "@sdxc/logger";
 
-import en from "~/app/locales/en";
+import en from "~/resources/locales/en";
 
 /**
  * Language mail is written in, and today the only one this server ships: the frozen

@@ -9,8 +9,8 @@
 
 import { allow, definePolicy, deny, fact } from "@sdxc/authz";
 
-import abilities from "~/app/authz/abilities";
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
+import abilities from "~/app/policies/abilities";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 
 /**
  * The policy. `actor` is the signed-in subject, always bound: the account area and the

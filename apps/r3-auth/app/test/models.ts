@@ -10,8 +10,8 @@ import type { Database } from "remix/data-table";
 
 import type { AuthModels } from "~/app/models";
 
-import { createTestDatabase } from "~/app/lib/test/db";
 import { models } from "~/app/models";
+import { createTestDatabase } from "~/app/test/db";
 
 /**
  * Binds every model to `db`.

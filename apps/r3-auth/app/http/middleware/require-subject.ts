@@ -14,18 +14,18 @@ import { redirect } from "@sdxc/http/response";
 
 import type { SelectSubject } from "~/database/schema";
 
-import { createOidcProvider } from "~/app/auth/repository";
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
 import {
 	getAccessToken,
 	getRefreshToken,
 	setTokens,
 	unsetTokens,
 } from "~/app/http/middleware/session";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import {
 	getSubjectFromAccessToken,
 	isAccessTokenExpiringSoon,
 } from "~/app/services/access-token-claims";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 import routes from "~/routes/web";
 
 declare module "remix/router" {

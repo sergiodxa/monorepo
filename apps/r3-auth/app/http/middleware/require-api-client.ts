@@ -19,9 +19,9 @@ import * as s from "remix/data-schema";
 
 import type { AuthModels } from "~/app/models";
 
-import AccessToken from "~/app/auth/values/access-token";
-import { ISSUER } from "~/app/config";
 import { getSigningKey } from "~/app/services/signing-keys";
+import AccessToken from "~/app/services/tokens/access-token";
+import { ISSUER } from "~/config/oidc";
 
 declare module "remix/router" {
 	interface RequestContext {

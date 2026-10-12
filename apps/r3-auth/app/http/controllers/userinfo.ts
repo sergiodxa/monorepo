@@ -10,9 +10,9 @@
 import { ok, unauthorized } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { createOidcProvider } from "~/app/auth/repository";
-import { ISSUER } from "~/app/config";
+import { createOidcProvider } from "~/app/models/oidc-storage";
+import { OIDC } from "~/app/services/oidc-provider";
+import { ISSUER } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /** The bearer realm every challenge names, so a client knows which server refused it. */

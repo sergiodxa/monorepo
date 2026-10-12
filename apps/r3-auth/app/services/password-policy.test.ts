@@ -10,8 +10,8 @@
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test } from "vitest";
 
-import { checkNewPassword } from "~/app/auth/password-policy";
-import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
+import { checkNewPassword } from "~/app/services/password-policy";
+import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/test/pwned-passwords";
 
 /** A password every rule accepts. */
 const GOOD_PASSWORD = "a-brand-new-password";

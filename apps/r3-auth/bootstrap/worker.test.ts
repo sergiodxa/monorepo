@@ -51,14 +51,14 @@ vi.doMock("cloudflare:workers", () => ({
  * Hands every job the database this file seeds, read at call time so each test's own
  * database is the one the sweep under test sweeps.
  */
-vi.doMock("~/app/lib/database", () => ({ createDatabase: () => db }));
+vi.doMock("~/app/initializers/database", () => ({ createDatabase: () => db }));
 
 /**
  * The worker under test, imported once here at module scope. It reaches the
  * whole application graph, so loading it up front keeps that cost off each
  * test's own time budget.
  */
-let { default: worker } = await import("~/bootstrap/worker");
+let { default: worker } = await import("./worker");
 
 let db: DataTableDatabase;
 let subjectId: string;
@@ -104,7 +104,7 @@ beforeEach(async () => {
 	dlq.reset();
 	context = createExecutionContext();
 
-	let { createTestModels } = await import("~/app/lib/test/models");
+	let { createTestModels } = await import("~/app/test/models");
 
 	let { db: database, models } = createTestModels();
 	db = database;

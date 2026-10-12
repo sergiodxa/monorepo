@@ -15,11 +15,11 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { createTestApp } from "~/app/lib/test/http";
-import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { authorizeUrl, ORIGIN, seed, signIn } from "~/app/test/seed";
 import routes from "~/routes/web";
 
 const OTHER_BACKCHANNEL = "https://other.example.com/backchannel-logout";

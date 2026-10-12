@@ -11,7 +11,7 @@ import type { RequestContext } from "remix/router";
 
 import type { AccountLayout } from "~/resources/layouts/account";
 
-import abilities from "~/app/authz/abilities";
+import abilities from "~/app/policies/abilities";
 
 /** What a page contributes to its own chrome; everything else is derived here. */
 export interface AccountChromeInput {

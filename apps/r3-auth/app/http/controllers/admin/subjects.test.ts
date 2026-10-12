@@ -11,11 +11,11 @@
 import { unwrap } from "@sdxc/result";
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN, seed, signIn } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { ORIGIN, seed, signIn } from "~/app/test/seed";
 import routes from "~/routes/web";
 
 /** A Chrome-on-macOS agent, so the device label has something recognizable to derive. */

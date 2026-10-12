@@ -18,7 +18,7 @@ import { generateUUID } from "@sdxc/uuid/v4";
 import type { PageWindow } from "~/app/models/subjects";
 import type { SelectClient } from "~/database/schema";
 
-import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/app/config";
+import { AUTH_SERVER_CLIENT_ID, AUTH_SERVER_NAME } from "~/config/oidc";
 import { clients } from "~/database/schema";
 
 /**

@@ -15,10 +15,10 @@ import { validate } from "@sdxc/validate";
 import { getContext } from "remix/middleware/async-context";
 import { createAction } from "remix/router";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { createOidcProvider } from "~/app/auth/repository";
 import { TokenRequestSchema } from "~/app/http/validators/oauth";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import { readClientCredentials } from "~/app/services/client-credentials";
+import { OIDC } from "~/app/services/oidc-provider";
 import { spendRateLimit } from "~/app/services/rate-limit";
 import routes from "~/routes/web";
 

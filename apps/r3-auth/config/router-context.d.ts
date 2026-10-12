@@ -1,7 +1,7 @@
 /**
  * Router context values installed by middleware applied globally to the
  * app, declared here as the one place they get typed. `render()` and `formData()`
- * are both configured in `bootstrap/app.tsx` and populate the context through
+ * are both configured in `app/initializers/router.tsx` and populate the context through
  * their own transforms, so route handlers see those values through this
  * augmentation.
  *

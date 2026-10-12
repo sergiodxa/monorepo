@@ -13,8 +13,8 @@ import type { Middleware } from "remix/router";
 import { requireAbility } from "@sdxc/authz/middleware/router";
 import { redirect } from "@sdxc/http/response";
 
-import abilities from "~/app/authz/abilities";
 import { answerRefusal } from "~/app/http/middleware/access";
+import abilities from "~/app/policies/abilities";
 import routes from "~/routes/web";
 
 /** Both client abilities, which check the same context. */

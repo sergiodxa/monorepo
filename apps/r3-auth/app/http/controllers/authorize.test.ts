@@ -14,13 +14,12 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
-import { createTestApp } from "~/app/lib/test/http";
-import { notesOf, withLog } from "~/app/lib/test/logs";
-import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/lib/test/pwned-passwords";
+import { createTestApp } from "~/app/test/http";
+import { notesOf, withLog } from "~/app/test/logs";
+import { pwnedPasswords, pwnedPasswordsUnavailable } from "~/app/test/pwned-passwords";
 import {
 	authorizeUrl,
 	exchangeCode,
@@ -30,8 +29,9 @@ import {
 	seed,
 	signIn,
 	submitSignIn,
-} from "~/app/lib/test/seed";
-import en from "~/app/locales/en";
+} from "~/app/test/seed";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
+import en from "~/resources/locales/en";
 import routes from "~/routes/web";
 
 /** The verifier a PKCE flow commits to, long enough to satisfy RFC 7636 §4.1. */

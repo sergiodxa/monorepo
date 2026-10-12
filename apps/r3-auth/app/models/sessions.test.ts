@@ -14,8 +14,8 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AuthModels } from "~/app/models";
 
-import { createTestModels } from "~/app/lib/test/models";
 import { SESSION_TTL } from "~/app/models/sessions";
+import { createTestModels } from "~/app/test/models";
 import { sessions } from "~/database/schema";
 
 let db: Database;

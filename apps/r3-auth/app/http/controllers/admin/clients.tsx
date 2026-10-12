@@ -14,7 +14,6 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { ClientsIntentSchema } from "~/app/http/validators/admin";
@@ -25,6 +24,7 @@ import {
 	toClientRow,
 	toPagination,
 } from "~/app/http/view-models/admin";
+import abilities from "~/app/policies/abilities";
 import ClientsView from "~/resources/views/admin/clients";
 import routes from "~/routes/web";
 

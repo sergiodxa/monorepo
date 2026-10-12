@@ -16,11 +16,11 @@ import { elapsed, subtract, toUnixSeconds } from "@sdxc/dates";
 import { JWK, JWT } from "@sdxc/jwt";
 import { failure, isFailure, success, wrap } from "@sdxc/result";
 
-import { checkNewPassword } from "~/app/auth/password-policy";
-import AccessToken from "~/app/auth/values/access-token";
-import IdToken from "~/app/auth/values/id-token";
-import LogoutToken from "~/app/auth/values/logout-token";
 import { SESSION_TTL } from "~/app/models/sessions";
+import { checkNewPassword } from "~/app/services/password-policy";
+import AccessToken from "~/app/services/tokens/access-token";
+import IdToken from "~/app/services/tokens/id-token";
+import LogoutToken from "~/app/services/tokens/logout-token";
 
 /**
  * Bytes of entropy behind the session-state salt, matching the length this

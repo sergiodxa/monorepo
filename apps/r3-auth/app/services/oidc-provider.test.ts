@@ -18,10 +18,10 @@ import { http, HttpResponse } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import LogoutToken from "~/app/auth/values/logout-token";
-import { ISSUER } from "~/app/config";
-import { pwnedPasswords } from "~/app/lib/test/pwned-passwords";
+import { OIDC } from "~/app/services/oidc-provider";
+import LogoutToken from "~/app/services/tokens/logout-token";
+import { pwnedPasswords } from "~/app/test/pwned-passwords";
+import { ISSUER } from "~/config/oidc";
 
 let AccessToken = OIDC.AccessToken;
 let IdToken = OIDC.IdToken;

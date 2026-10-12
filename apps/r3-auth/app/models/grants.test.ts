@@ -14,7 +14,7 @@ import { beforeEach, describe, expect, test } from "vitest";
 
 import type { AuthModels } from "~/app/models";
 
-import { createTestModels } from "~/app/lib/test/models";
+import { createTestModels } from "~/app/test/models";
 import { grants } from "~/database/schema";
 
 let db: Database;

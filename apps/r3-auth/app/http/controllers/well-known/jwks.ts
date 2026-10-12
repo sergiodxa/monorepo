@@ -10,7 +10,7 @@
 import { ok } from "@sdxc/http/response/json";
 import { createAction } from "remix/router";
 
-import { createOidcProvider } from "~/app/auth/repository";
+import { createOidcProvider } from "~/app/models/oidc-storage";
 import routes from "~/routes/web";
 
 /**

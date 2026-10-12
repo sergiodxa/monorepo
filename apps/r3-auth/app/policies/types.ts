@@ -7,7 +7,7 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import type policy from "~/app/authz/policy";
+import type policy from "~/app/policies/policy";
 
 declare module "@sdxc/authz" {
 	interface AuthzTypes {

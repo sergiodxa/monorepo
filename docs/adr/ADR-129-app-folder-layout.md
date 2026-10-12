@@ -53,37 +53,37 @@ Before settling on a layout we compared the apps against the common ones:
 Apps keep the Laravel shape, organised by kind of code, with one home per kind. The question
 "where does this file go?" has one answer, read from this table:
 
-| If the code…                                                                                                            | It goes in              |
-| ----------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| is the Worker or browser entry point                                                                                    | `bootstrap/`            |
-| is a Durable Object class the runtime instantiates                                                                      | `bootstrap/do/`         |
-| builds the one instance of something: logger, router, dispatcher, MCP handler, database, billing, flags, mailer, assets | `app/initializers/`     |
-| handles an HTTP request                                                                                                 | `app/http/controllers/` |
-| is HTTP middleware                                                                                                      | `app/http/middleware/`  |
-| validates request input                                                                                                 | `app/http/validators/`  |
-| wraps the request's renderer                                                                                            | `app/http/render.tsx`   |
-| is a background job                                                                                                     | `app/jobs/`             |
-| is an MCP tool or resource                                                                                              | `app/mcp/`              |
-| is an email template                                                                                                    | `app/emails/`           |
-| reads or writes stored state, in any storage (D1, KV, R2, Durable Object)                                               | `app/models/`           |
-| is a rule about one model                                                                                               | a method on that model  |
-| is business logic across models or package instances, or a rule about none                                              | `app/services/`         |
-| is an authorization rule                                                                                                | `app/policies/`         |
-| is a view, component, layout or stylesheet                                                                              | `resources/`            |
-| is a translation                                                                                                        | `resources/locales/`    |
-| is a route contract                                                                                                     | `routes/`               |
-| is static app configuration (site profile, product catalog, security.txt)                                               | `config/`               |
-| is a migration or table schema                                                                                          | `database/`             |
-| is a test factory                                                                                                       | `database/factories/`   |
-| is any other test helper                                                                                                | `app/test/`             |
-| is generic, with no knowledge of the app                                                                                | a package               |
+| If the code…                                                                                                            | It goes in                                                         |
+| ----------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| is the Worker or browser entry point                                                                                    | `bootstrap/`                                                       |
+| is a Durable Object class the runtime instantiates                                                                      | `app/models/` when it owns stored state, `app/services/` otherwise |
+| builds the one instance of something: logger, router, dispatcher, MCP handler, database, billing, flags, mailer, assets | `app/initializers/`                                                |
+| handles an HTTP request                                                                                                 | `app/http/controllers/`                                            |
+| is HTTP middleware                                                                                                      | `app/http/middleware/`                                             |
+| validates request input                                                                                                 | `app/http/validators/`                                             |
+| wraps the request's renderer                                                                                            | `app/http/render.tsx`                                              |
+| is a background job                                                                                                     | `app/jobs/`                                                        |
+| is an MCP tool or resource                                                                                              | `app/mcp/`                                                         |
+| is an email template                                                                                                    | `app/emails/`                                                      |
+| reads or writes stored state, in any storage (D1, KV, R2, Durable Object)                                               | `app/models/`                                                      |
+| is a rule about one model                                                                                               | a method on that model                                             |
+| is business logic across models or package instances, or a rule about none                                              | `app/services/`                                                    |
+| is an authorization rule                                                                                                | `app/policies/`                                                    |
+| is a view, component, layout or stylesheet                                                                              | `resources/`                                                       |
+| is a translation                                                                                                        | `resources/locales/`                                               |
+| is a route contract                                                                                                     | `routes/`                                                          |
+| is static app configuration (site profile, product catalog, security.txt)                                               | `config/`                                                          |
+| is a migration or table schema                                                                                          | `database/`                                                        |
+| is a test factory                                                                                                       | `database/factories/`                                              |
+| is any other test helper                                                                                                | `app/test/`                                                        |
+| is generic, with no knowledge of the app                                                                                | a package                                                          |
 
 ### Rules
 
 1. **`bootstrap/` holds entry points only, and nothing outside it imports from it.** `worker.ts`
    and `browser.ts` read the runtime's inputs and hand them to initializers. A Durable Object
-   class lives in `bootstrap/do/` because the runtime instantiates it like an entry point; it
-   imports its logic from `app/`. The `~/bootstrap/*` alias is gone from every tsconfig.
+   class is placed by its role, like any other code: one that owns stored state is a model,
+   one that does not is a service, and `worker.ts` re-exports it under its binding's class name. The `~/bootstrap/*` alias is gone from every tsconfig.
 2. **An initializer exports a singleton, or a function when the instance needs per-request or
    async input** (secret-store reads, the request host). Bindings read from `cloudflare:workers`
    at module scope are fine; work and I/O at module scope are not.
@@ -96,8 +96,9 @@ Apps keep the Laravel shape, organised by kind of code, with one home per kind. 
    it; blog's KV-backed redirects become `app/models/redirects.ts`.
 5. **The router's global middleware is written inline** in `createRouter({ middleware: [...] })`,
    and `AppContext` is `RouterContext` of that router. A stored `Middleware[]` widens the tuple
-   and erases what each middleware publishes. The factory is a named export called after the
-   route contract it maps, `createWebRouter` for `routes/web.ts`, since it builds a router.
+   and erases what each middleware publishes. The router is a named export called after the
+   route contract it maps: a factory is `createWebRouter` for `routes/web.ts`, a module-level
+   singleton is `tenantRouter` for `routes/tenant.ts`, since it builds a router.
 6. **Every route is mapped through `lazy()` from `@sdxc/lazy-route`,** so a request imports only
    the controller it reaches. Guards the router owns go in `lazy()`'s second argument and answer
    before the module loads.
@@ -155,7 +156,7 @@ Per app:
 
 1. Move `bootstrap/app.tsx`, `logger.ts` and `mcp.ts` into `app/initializers/` (`app.tsx` becomes
    `router.tsx`), along with `app/jobs/dispatcher.ts` and every package instance from `app/lib/`.
-2. Move Durable Object classes into `bootstrap/do/`, re-exported from `worker.ts`.
+2. Place Durable Object classes by role (`app/models/` or `app/services/`), re-exported from `worker.ts`.
 3. Write the global middleware inline in `createRouter`, and move the document wrapper into
    `app/http/render.tsx` on top of `render({ assets })`.
 4. Sort the rest of `app/lib/`, `app/repositories/`, `app/data/` and stray folders by the table.
@@ -195,8 +196,8 @@ which in a monorepo is a package.
 - [x] books
 - [x] sdxc
 - [x] blog
-- [ ] r3-auth
-- [ ] reader
-- [ ] uptime
-- [ ] auth-saas
+- [x] r3-auth
+- [x] reader
+- [x] uptime
+- [x] auth-saas
 - [ ] Propose packages for the duplicated generic code (asset lookup, cost tracking, article extraction)

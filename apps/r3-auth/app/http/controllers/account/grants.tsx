@@ -15,13 +15,13 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
-import { AUTH_SERVER_CLIENT_ID } from "~/app/config";
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { GrantsIntentSchema } from "~/app/http/validators/account";
 import { accountChrome } from "~/app/http/view-models/account-chrome";
 import { toGrantRow } from "~/app/http/view-models/account-grant";
+import abilities from "~/app/policies/abilities";
+import { AUTH_SERVER_CLIENT_ID } from "~/config/oidc";
 import AccountLayout from "~/resources/layouts/account";
 import GrantsView from "~/resources/views/account/grants";
 import routes from "~/routes/web";

@@ -1,6 +1,6 @@
 /**
  * Test-only database helper: applies every migration in `database/migrations/` to a fresh
- * in-memory SQLite database and wraps it the way `app/lib/database.ts` wraps the real one.
+ * in-memory SQLite database and wraps it the way `app/initializers/database.ts` wraps the real one.
  * Models, jobs, middleware and controllers therefore run against the same SQL engine and
  * schema production uses.
  *
@@ -84,7 +84,7 @@ function openSqliteClient(): SqliteDatabaseClient {
 
 /** Absolute path of `database/migrations/`, resolved relative to this module's own location. */
 function migrationsDirectory(): string {
-	return join(dirname(fileURLToPath(import.meta.url)), "../../../database/migrations");
+	return join(dirname(fileURLToPath(import.meta.url)), "../../database/migrations");
 }
 
 /**

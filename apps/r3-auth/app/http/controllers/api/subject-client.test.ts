@@ -18,12 +18,12 @@ import { http, passthrough } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { ISSUER } from "~/app/config";
-import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN, seed } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { ORIGIN, seed } from "~/app/test/seed";
+import { ISSUER } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /**

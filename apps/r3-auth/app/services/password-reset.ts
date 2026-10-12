@@ -17,10 +17,10 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { env } from "cloudflare:workers";
 
-import { ISSUER_HOST } from "~/app/config";
 import { DEFAULT_EMAIL_LOCALE, emailTranslator } from "~/app/emails/locale";
 import { ResetPasswordEmail } from "~/app/emails/reset-password";
 import { PasswordResetRecordSchema } from "~/app/http/validators/password";
+import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
 
 /**

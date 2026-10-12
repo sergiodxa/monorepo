@@ -13,7 +13,16 @@ import { dirname, join, relative } from "node:path";
  * Apps already moved onto the layout. An app joins this list in the commit that converts it,
  * and from then on the guard keeps it there.
  */
-export const CONVERTED_APPS = ["demo", "books", "sdxc", "blog"];
+export const CONVERTED_APPS = [
+	"demo",
+	"books",
+	"sdxc",
+	"blog",
+	"r3-auth",
+	"uptime",
+	"reader",
+	"auth-saas",
+];
 
 /**
  * Folders an app's root may hold, besides dot-folders, installed dependencies and build output.
@@ -45,8 +54,8 @@ export const APP_FOLDERS = new Set([
 	"test",
 ]);
 
-/** What `bootstrap/` may hold: the two entry points and the Durable Object classes. */
-export const BOOTSTRAP_ENTRIES = new Set(["browser.ts", "do", "worker.ts"]);
+/** What `bootstrap/` may hold: the two entry points. */
+export const BOOTSTRAP_ENTRIES = new Set(["browser.ts", "worker.ts"]);
 
 /** Root-level folders the layout check skips: dependencies, build output, local state. */
 export function isIgnoredRootFolder(name: string): boolean {

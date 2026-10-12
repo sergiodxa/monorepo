@@ -11,8 +11,8 @@ import type { AnyJobDefinition } from "@sdxc/jobs";
 
 import { describe, expect, test } from "vitest";
 
+import { dispatcher } from "~/app/initializers/dispatcher";
 import jobs from "~/app/jobs";
-import { dispatcher } from "~/app/jobs/dispatcher";
 
 import config from "../../cloudflare.config";
 

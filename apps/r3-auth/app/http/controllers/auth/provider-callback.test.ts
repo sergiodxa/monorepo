@@ -16,12 +16,12 @@ import { setupServer } from "msw/node";
 import { rawSql } from "remix/data-table";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
-import type { Fixtures } from "~/app/lib/test/seed";
+import type { TestApp } from "~/app/test/http";
+import type { Fixtures } from "~/app/test/seed";
 
-import { createTestApp } from "~/app/lib/test/http";
-import { withLog } from "~/app/lib/test/logs";
-import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { withLog } from "~/app/test/logs";
+import { authorizeUrl, ORIGIN, REDIRECT_URI, seed } from "~/app/test/seed";
 import { connections, subjects } from "~/database/schema";
 import routes from "~/routes/web";
 

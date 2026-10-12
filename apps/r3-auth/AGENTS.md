@@ -3,8 +3,8 @@
 This app is the OAuth 2.0 / OpenID Connect authorization server every other app signs in
 against. A subtle regression in token issuance, redirect-URI validation or logout fan-out
 breaks every relying party at once, and usually silently. Read this file before changing
-anything under `app/auth/`, `app/http/controllers/{authorize,oauth,oidc,api}` or
-`app/config.ts`.
+anything in `app/services/oidc-provider.ts`, `app/models/oidc-storage.ts`,
+`app/services/tokens/`, `app/http/controllers/{authorize,oauth,oidc,api}` or `config/oidc.ts`.
 
 Rules follow RFC 2119: "MUST", "MUST NOT", "SHOULD", "SHOULD NOT", "MAY" in uppercase
 indicate requirement levels. The root `AGENTS.md` applies too; this file adds to it and
@@ -16,7 +16,7 @@ These are the things relying parties depend on. Breaking one is a coordinated re
 every client app, not a change to this app. `apps/blog` and `apps/uptime` pin them.
 
 - MUST keep the `iss` claim and the discovery `issuer` as the **scheme-less** string
-  `auth.sergiodxa.com` (`ISSUER` in `app/config.ts`). Clients compare that exact string when
+  `auth.sergiodxa.com` (`ISSUER` in `config/oidc.ts`). Clients compare that exact string when
   verifying an ID token; adding the scheme rejects every token they receive. The `iss`
   authorization-response parameter stays `https://auth.sergiodxa.com`, and the two
   deliberately disagree.
@@ -61,7 +61,9 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 - MUST use `remix/router` (`createAction` / `createController`) for HTTP actions, and
   MUST declare every URL in `routes/web.ts` and link through `routes.<name>.href(...)`
-  rather than writing a path string.
+  rather than writing a path string, and MUST map each route in
+  `app/initializers/router.tsx` through `lazy(() => import(...))` from `@sdxc/lazy-route`, so
+  a cold isolate imports only the controller a request reaches.
 - MUST render pages as `remix/component` JSX through `ctx.render(...)`, built from `@sdxc/ui`
   components with inline `css()` mixins from `@sdxc/u` for the gaps. No React, no Tailwind,
   no HTML strings. The one documented exception is `/oidc/check-session`, whose body is a
@@ -78,21 +80,22 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   missing row. Register a new model in `app/models/index.ts`, and type anything its
   callbacks read in `config/model-context.d.ts`.
 - MUST reach the models and the rate limiters off the request context — `ctx.models` and
-  `ctx.limiters`, published by the global middleware in `bootstrap/app.tsx` — and MUST keep
-  every other request-lifetime value (session, current subject, request log, locale) in
+  `ctx.limiters`, published by the global middleware in `app/initializers/router.tsx` — and
+  MUST keep every other request-lifetime value (session, current subject, request log, locale) in
   middleware and request context the same way. A job reads `ctx.models` too, bound by the
   dispatcher's `models()` middleware. Code outside a context (the OIDC engine's storage, the
   token-checking services) takes the bound registry as an `AuthModels` argument. A test binds
-  the registry with `createTestModels()` from `app/lib/test/models.ts`, or reads
+  the registry with `createTestModels()` from `app/test/models.ts`, or reads
   `app.models` off a test app. A service nothing substitutes is a module function under
-  `app/lib/` that the caller imports.
-- MUST bill through `@sdxc/billing`: the provider is constructed once in `app/lib/billing.ts`,
-  a route reaches it as `ctx.billing`, and anything outside a request imports the instance.
-  Every call answers a `@sdxc/result` `Result`, so a caller branches on `isFailure` and logs
-  the error's `code` and `providerCode`. A product is named by our own slug, never by a
-  platform id at the call site.
+  `app/services/` that the caller imports, and the one instance of a package (database,
+  mail transport, limiters, billing, assets, logger) is built in `app/initializers/`.
+- MUST bill through `@sdxc/billing`: the provider is constructed once in
+  `app/initializers/billing.ts`, a route reaches it as `ctx.billing`, and anything outside
+  a request imports the instance. Every call answers a `@sdxc/result` `Result`, so a caller
+  branches on `isFailure` and logs the error's `code` and `providerCode`. A product is named
+  by our own slug, never by a platform id at the call site.
 - MUST keep Cloudflare-specific code in `bootstrap/worker.ts` and the router wiring in
-  `bootstrap/app.tsx`; MUST import `env` from `cloudflare:workers`.
+  `app/initializers/router.tsx`; MUST import `env` from `cloudflare:workers`.
 - MUST prefer what Remix v3 ships (`remix/middleware/session`, `remix/middleware/cop`,
   `remix/middleware/form-data`, `remix/middleware/method-override`,
   `remix/middleware/render`, `remix/auth`) over hand-rolled equivalents, and MUST check
@@ -106,14 +109,14 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
   a reason the platform cannot cover. Islands live in `resources/components/`, the only
   directory `bootstrap/browser.ts` bundles: a layout or view in that glob ships the
   document's stylesheet a second time.
-- MUST link built assets through `app/lib/assets.ts`, which reads the manifest
+- MUST link built assets through `app/initializers/assets.ts`, which reads the manifest
   `@pitlane/vite-plugin-remix` writes, and import a stylesheet from the document layout as a
   side effect (`import "….css"`); MUST NOT link a path the build may rename by hand.
-- MUST route every user-facing string through `ctx.intl.t(...)` and `app/locales/en.ts`;
+- MUST route every user-facing string through `ctx.intl.t(...)` and `resources/locales/en.ts`;
   MUST NOT hardcode English copy in a view.
 - MUST NOT use `as any`, and MUST NOT call `getContext()` inside a controller when `ctx` is
   available.
-- MUST decide authorization through the policy in `app/authz/policy.ts`: `subjectAccess`
+- MUST decide authorization through the policy in `app/policies/policy.ts`: `subjectAccess`
   after `requireSubject`, then `requireAdminArea` or `requireAbility(...)` for a check whose
   context the route names, or `ctx.access.authorize(...)` in the handler once a body
   validates. MUST NOT compare `subject.role` or a client id to decide what someone may do.
@@ -148,7 +151,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - MUST generate every token, code, salt and secret from a cryptographically secure random
   source (`@sdxc/crypto`'s `randomBytes`), never `Math.random`.
 - MUST keep the token lifetimes: access token 1 hour, ID token 1 hour, authorization code 10
-  minutes, session/refresh token 30 days (`app/config.ts`, `database/schema.ts`).
+  minutes, session/refresh token 30 days (`config/oidc.ts`, `database/schema.ts`).
 - MUST treat an authorization code as single-use: consuming it deletes it, and a replay MUST
   fail.
 - MUST bind a refresh token to the client it was issued to: the refresh grant authenticates
@@ -179,7 +182,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 ### Cross-origin protection
 
-- MUST keep the `cop()` bypass list in `bootstrap/app.tsx` (`/oauth/{path...}`,
+- MUST keep the `cop()` bypass list in `app/initializers/router.tsx` (`/oauth/{path...}`,
   `/api/{path...}`, `/oidc/logout`) accurate. Those are cross-origin POSTs by design,
   carrying credentials stronger than an `Origin` header. Getting the list wrong does not
   fail loudly — it fails as every relying party's login breaking at once.
@@ -203,7 +206,7 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 - The worker is the `auth` queue's single consumer and owns the midnight cron that feeds
   it; `auth-dlq` catches a sweep that spends its three deliveries. Adding or renaming a cron
   means changing both `cloudflare.config.ts` and the job's schedule, which
-  `app/jobs/dispatcher.test.ts` keeps in step.
+  `app/initializers/dispatcher.test.ts` keeps in step.
 - Bindings and secrets live in `cloudflare.config.ts`. A secret declared there with
   `bindings.secret()` is what gives it a type on `env`, and only declared keys reach the
   worker from `.dev.vars`.
@@ -220,28 +223,31 @@ every client app, not a change to this app. `apps/blog` and `apps/uptime` pin th
 
 ## Reference Files
 
-- Bootstrap
+- Entry points and initializers
   - `bootstrap/worker.ts` <- Worker entry: the only place Cloudflare-specific APIs are used
-  - `bootstrap/app.tsx` <- Global middleware chain, `cop()` bypass list, route-to-controller map
+  - `app/initializers/router.tsx` <- `createWebRouter`: global middleware, `cop()` bypass list, lazy route map
+  - `app/http/render.tsx` <- `withDocumentAssets`, the `renderWith()` wrapper every page renders through
+  - `app/initializers/dispatcher.ts` <- The job dispatcher the cron and queue handlers delegate to
+  - `app/initializers/logger.ts` <- The one logger the router and the dispatcher share
 - Configuration
   - `routes/web.ts` <- Registry of every URL this server answers
-  - `app/config.ts` <- Issuer, token TTLs, scopes, and the discovery document
-  - `app/lib/database.ts` <- The D1 connection every request and job reads
-  - `app/lib/mail.ts` <- The transport both mailers deliver through
-  - `app/lib/rate-limiters.ts` <- The five limiter bindings, wrapped in their policies
-  - `app/lib/assets.ts` <- Built stylesheet and client-entry URLs the document links
+  - `config/oidc.ts` <- Issuer, token TTLs, scopes, and the discovery document
+  - `app/initializers/database.ts` <- The D1 connection every request and job reads
+  - `app/initializers/mail.ts` <- The transport both mailers deliver through
+  - `app/initializers/rate-limiters.ts` <- The five limiter bindings, wrapped in their policies
+  - `app/initializers/assets.ts` <- Built stylesheet and client-entry URLs the document links
 - Auth core
-  - `app/auth/oidc-provider.ts` <- The storage-agnostic OAuth/OIDC engine
-  - `app/auth/repository.ts` <- The engine's storage binding (data-table + KV)
-  - `app/auth/values/` <- Access, ID and logout token value objects
+  - `app/services/oidc-provider.ts` <- The storage-agnostic OAuth/OIDC engine
+  - `app/models/oidc-storage.ts` <- The engine's storage binding (data-table + KV)
+  - `app/services/tokens/` <- Access, ID and logout token value objects
   - `app/services/signing-keys.ts` <- ES256 keys loaded from R2
 - HTTP layer
   - `app/http/controllers/oauth/token.ts` <- Grant handling, client auth, error envelopes
   - `app/http/middleware/require-subject.ts` <- Session guard with silent token refresh
   - `app/http/middleware/access.ts` <- Binds the subject as `ctx.access`; the admin-area guard
 - Authorization
-  - `app/authz/abilities.ts` <- Every ability, with the context its check passes
-  - `app/authz/policy.ts` <- Roles from the `role` column, and the own-client guard
+  - `app/policies/abilities.ts` <- Every ability, with the context its check passes
+  - `app/policies/policy.ts` <- Roles from the `role` column, and the own-client guard
   - `app/http/middleware/require-api-client.ts` <- JWKS-verified machine API guard
   - `app/http/controllers/default-handler.tsx` <- 404 handler for unmapped routes
 - Data layer

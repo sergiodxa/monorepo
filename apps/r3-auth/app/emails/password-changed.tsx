@@ -17,8 +17,8 @@ import type { RemixElement } from "remix/component";
 
 import { Email } from "@sdxc/mail";
 
-import { ISSUER_HOST } from "~/app/config";
 import { ACTION_BACKGROUND, EmailLayout } from "~/app/emails/layout";
+import { ISSUER_HOST } from "~/config/oidc";
 import routes from "~/routes/web";
 
 export namespace PasswordChangedEmail {

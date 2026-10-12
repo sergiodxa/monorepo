@@ -11,10 +11,10 @@
 
 import { beforeEach, describe, expect, test } from "vitest";
 
-import type { TestApp } from "~/app/lib/test/http";
+import type { TestApp } from "~/app/test/http";
 
-import { createTestApp } from "~/app/lib/test/http";
-import { ORIGIN } from "~/app/lib/test/seed";
+import { createTestApp } from "~/app/test/http";
+import { ORIGIN } from "~/app/test/seed";
 import routes from "~/routes/web";
 
 /** The subset of the metadata document these tests read. */

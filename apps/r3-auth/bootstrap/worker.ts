@@ -11,9 +11,8 @@
 import * as cloudflare from "@sdxc/jobs/cloudflare";
 import { env } from "cloudflare:workers";
 
-import { dispatcher } from "~/app/jobs/dispatcher";
-
-import application from "./app";
+import { dispatcher } from "~/app/initializers/dispatcher";
+import { createWebRouter } from "~/app/initializers/router";
 
 /**
  * Domain the session cookie is scoped to in production, so one sign-in at this server
@@ -52,7 +51,7 @@ export default {
 	async fetch(request: Request) {
 		let production = isProductionHost(request);
 
-		let app = application({
+		let app = createWebRouter({
 			kv: env.KV,
 			cookieSecret: env.COOKIE_SESSION_SECRET,
 			secure: production,

@@ -12,7 +12,7 @@ import { toUnixSeconds } from "@sdxc/dates";
 import { toSeconds } from "@sdxc/duration";
 import { JWT } from "@sdxc/jwt";
 
-import { ID_TOKEN_TTL, ISSUER } from "~/app/config";
+import { ID_TOKEN_TTL, ISSUER } from "~/config/oidc";
 
 /** An ID token, read from or minted for a relying party. */
 export default class IdToken extends JWT {

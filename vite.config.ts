@@ -79,7 +79,7 @@ const UPTIME_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	resolve: {
 		tsconfigPaths: true,
 		alias: {
-			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/lib/test/assets-manifest.ts`,
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/test/assets-manifest.ts`,
 		},
 	},
 	test: {
@@ -136,7 +136,7 @@ const READER_WORKERS_PROJECT: TestProjectInlineConfiguration = {
 	resolve: {
 		tsconfigPaths: true,
 		alias: {
-			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/lib/test/assets-manifest.ts`,
+			"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/test/assets-manifest.ts`,
 		},
 	},
 	test: {
@@ -244,7 +244,7 @@ export default defineConfig({
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/lib/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/uptime/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {
@@ -300,7 +300,7 @@ export default defineConfig({
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/r3-auth/app/lib/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/r3-auth/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {
@@ -418,7 +418,7 @@ export default defineConfig({
 				resolve: {
 					tsconfigPaths: true,
 					alias: {
-						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/lib/test/assets-manifest.ts`,
+						"@pitlane/assets/manifest": `${import.meta.dirname}/apps/reader/app/test/assets-manifest.ts`,
 					},
 				},
 				test: {

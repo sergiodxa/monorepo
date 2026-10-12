@@ -52,10 +52,10 @@ describe("the scanner itself", () => {
 		expect(reachesBootstrap("../initializers/router", "app/http/render.tsx")).toBe(false);
 	});
 
-	test("allows the entry points, their tests and the Durable Object folder", () => {
+	test("allows the entry points and their tests", () => {
 		expect(isBootstrapEntry("worker.ts")).toBe(true);
 		expect(isBootstrapEntry("worker.workers.test.ts")).toBe(true);
-		expect(isBootstrapEntry("do")).toBe(true);
+		expect(isBootstrapEntry("do")).toBe(false);
 		expect(isBootstrapEntry("app.tsx")).toBe(false);
 		expect(isBootstrapEntry("logger.ts")).toBe(false);
 	});

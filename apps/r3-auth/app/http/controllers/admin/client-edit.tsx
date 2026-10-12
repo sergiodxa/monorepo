@@ -15,13 +15,13 @@ import { isFailure, unwrap } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
 import defaultHandler from "~/app/http/controllers/default-handler";
 import subjectAccess, { requireAdminArea } from "~/app/http/middleware/access";
 import requireClientAbility from "~/app/http/middleware/require-client-ability";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { UpdateClientSchema } from "~/app/http/validators/admin";
 import { toChrome, toClientDetail } from "~/app/http/view-models/admin";
+import abilities from "~/app/policies/abilities";
 import ClientEditView from "~/resources/views/admin/client-edit";
 import routes from "~/routes/web";
 

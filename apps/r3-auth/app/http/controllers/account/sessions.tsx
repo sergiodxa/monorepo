@@ -15,13 +15,13 @@ import { isFailure } from "@sdxc/result";
 import { validate } from "@sdxc/validate";
 import { createController } from "remix/router";
 
-import abilities from "~/app/authz/abilities";
 import subjectAccess from "~/app/http/middleware/access";
 import requireSubject from "~/app/http/middleware/require-subject";
 import { destroySession, getRefreshToken, unsetTokens } from "~/app/http/middleware/session";
 import { SessionsIntentSchema } from "~/app/http/validators/account";
 import { accountChrome } from "~/app/http/view-models/account-chrome";
 import { toSessionRow } from "~/app/http/view-models/account-session";
+import abilities from "~/app/policies/abilities";
 import AccountLayout from "~/resources/layouts/account";
 import SessionsView from "~/resources/views/account/sessions";
 import routes from "~/routes/web";

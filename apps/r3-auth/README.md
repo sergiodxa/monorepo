@@ -57,12 +57,13 @@ because every message goes to a subject's own address, so the recipient set is t
 each turn an ordinary send into a refusal at send time. `dev: { remote: true }` means a `bun dev`
 send is a **real** send, which bills and delivers like production.
 
-Mail is sent through two mailers over the same transport, opened once in `app/lib/mail.ts`:
+Mail is sent through two mailers over the same transport, opened once in
+`app/initializers/mail.ts`:
 
 - **request-scoped** — `ctx.email`, published by `@sdxc/mail`'s middleware in
-  `bootstrap/app.tsx`. Its `later()` queue is flushed after the response, so a failed send
-  is logged and cannot change what the person sees.
-- **background** — `createMailer()` from `app/lib/mail.ts`, for a queue message or a
+  `app/initializers/router.tsx`. Its `later()` queue is flushed after the response, so a
+  failed send is logged and cannot change what the person sees.
+- **background** — `createMailer()` from `app/initializers/mail.ts`, for a queue message or a
   scheduled sweep, where there is no request and therefore no `ctx.email`.
 
 The sender identity lives in `app/emails/sender.ts`:
@@ -72,7 +73,7 @@ wrong in production without anything failing — so there is no new var or secre
 domain has to stay a verified sender, with SPF, DKIM and DMARC in place, before the first
 real delivery.
 
-Copy is in `app/locales/en.ts` under `emails`, subject lines included, and every message is
+Copy is in `resources/locales/en.ts` under `emails`, subject lines included, and every message is
 written inside the shared card in `app/emails/layout.tsx`.
 
 ### Cron Triggers
@@ -108,8 +109,8 @@ written inside the shared card in `app/emails/layout.tsx`.
   rendered as hidden iframes.
 - **Admin area** for clients and subjects, with a one-time reveal of a newly generated
   client secret.
-- **Authorization** through `@sdxc/authz`: the catalog in `app/authz/abilities.ts` and the
-  policy in `app/authz/policy.ts`, whose roles are the subject's `role` column (`user`,
+- **Authorization** through `@sdxc/authz`: the catalog in `app/policies/abilities.ts` and the
+  policy in `app/policies/policy.ts`, whose roles are the subject's `role` column (`user`,
   and `admin`, which adds the admin area). A subject revokes only their own sessions, and
   this server's own client registration can be neither edited, deleted, nor withdrawn.
 - **Machine-to-machine API**: `client_credentials` token plus `GET /api/subjects/:id`,
@@ -124,7 +125,7 @@ written inside the shared card in `app/emails/layout.tsx`.
   on the client-create page; dialogs are native `<dialog>` elements driven by command
   invokers.
 - **Localized copy** through `@sdxc/i18n`; English is the only catalog today
-  (`app/locales/en.ts`), written as MessageFormat 2 messages.
+  (`resources/locales/en.ts`), written as MessageFormat 2 messages.
 
 ## Integrations
 
@@ -314,8 +315,7 @@ values, and a key it holds that the config does not declare never reaches the wo
 
 The Polar access token is not. It is the `POLAR_ACCESS_TOKEN` Secrets Store binding
 declared in `cloudflare.config.ts`, read as `await env.POLAR_ACCESS_TOKEN.get()` by
-`app/lib/billing.ts`, and there is
-nothing to set with `cf workers secrets` — rotating it is a Secrets Store operation and
+`app/initializers/billing.ts`, and there is nothing to set with `cf workers secrets` — rotating it is a Secrets Store operation and
 takes effect without redeploying.
 
 A store binding has no value outside Cloudflare's network, and the local simulation of it

@@ -10,7 +10,7 @@
 import i18nMiddleware from "@sdxc/i18n/middleware";
 import { createCookie } from "remix/cookie";
 
-import en from "~/app/locales/en";
+import en from "~/resources/locales/en";
 
 /** The only language this server currently serves. */
 const DEFAULT_LANGUAGE = "en";

@@ -17,9 +17,9 @@ import { getContext } from "remix/middleware/async-context";
 import type { AuthModels } from "~/app/models";
 import type { SelectClient, SelectSession } from "~/database/schema";
 
-import { OIDC } from "~/app/auth/oidc-provider";
-import { AUTHZ_CODE_TTL, ISSUER } from "~/app/config";
+import { OIDC } from "~/app/services/oidc-provider";
 import { getSigningKey } from "~/app/services/signing-keys";
+import { AUTHZ_CODE_TTL, ISSUER } from "~/config/oidc";
 
 /**
  * Key prefix authorization codes are stored under. Frozen: a code issued by one

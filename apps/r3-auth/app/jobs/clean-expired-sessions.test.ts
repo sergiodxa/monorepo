@@ -22,8 +22,8 @@ import type { AuthModels } from "~/app/models";
 import jobs from "~/app/jobs";
 import handler from "~/app/jobs/clean-expired-sessions";
 import { Database } from "~/app/jobs/middleware/database";
-import { createTestModels } from "~/app/lib/test/models";
 import { models as registry } from "~/app/models";
+import { createTestModels } from "~/app/test/models";
 import { sessions } from "~/database/schema";
 
 let db: DataTableDatabase;
