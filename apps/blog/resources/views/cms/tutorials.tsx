@@ -1,7 +1,7 @@
 /**
  * Views for managing tutorials in the CMS. `CMSTutorialsIndexView` renders a
- * table of tutorials with tag chips, publish-state badges, and edit plus
- * modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
+ * table of tutorials with tag chips, publish-state badges, and "Post on X",
+ * edit and modal-confirmed delete actions, and `CMSTutorialsActionView` renders the
  * create/edit form. Exist to power the admin CRUD screens for tutorials.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
@@ -29,6 +29,7 @@ import {
 	TextArea,
 } from "@sdxc/ui";
 
+import { TeaserField } from "~/resources/components/teaser-field";
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
 
@@ -43,6 +44,8 @@ export namespace CMSTutorialsIndexView {
 		id: string;
 		title: string;
 		publicHref: string;
+		/** The author's "Post on X" link, prefilled with the post's share text. */
+		shareHref: string;
 		preview: boolean;
 		tags: string;
 		href: string;
@@ -68,6 +71,8 @@ export namespace CMSTutorialsActionView {
 		title: string;
 		slug: string;
 		excerpt: string;
+		/** One line written for X; blank lets the excerpt stand in. */
+		teaser: string;
 		tags: string;
 		content: string;
 		published_at: string;
@@ -83,6 +88,10 @@ export namespace CMSTutorialsActionView {
 		action: string;
 		submitLabel: string;
 		deleteAction?: string;
+		/** The "Post on X" link of the saved post; absent until the post is saved. */
+		shareHref?: string;
+		/** Why the last save was refused, shown under the teaser. */
+		teaserError?: string;
 		values: FormValues;
 	}
 }
@@ -149,6 +158,16 @@ export function CMSTutorialsIndexView() {
 													<Table.Cell>
 														<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
 															<LinkButton
+																href={item.shareHref}
+																target="_blank"
+																rel="noopener"
+																color="neutral"
+																variant="outline"
+																size="sm"
+															>
+																Post on X
+															</LinkButton>
+															<LinkButton
 																href={item.href}
 																color="brand"
 																variant="outline"
@@ -213,7 +232,7 @@ export function CMSTutorialsIndexView() {
  */
 export function CMSTutorialsActionView() {
 	return ({ model, assets }: { model: CMSTutorialsActionView.Props; assets: DocumentAssets }) => {
-		let { action, description, mode, submitLabel, title, values } = model;
+		let { action, description, mode, shareHref, submitLabel, teaserError, title, values } = model;
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.tutorials.index.href()}>
@@ -227,7 +246,7 @@ export function CMSTutorialsActionView() {
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Title</span>
-								<Input name="title" value={values.title} required />
+								<Input id="title" name="title" value={values.title} required />
 							</Label>
 
 							<Label mix={[grid(), gap(1)]}>
@@ -239,6 +258,18 @@ export function CMSTutorialsActionView() {
 								<span>Excerpt</span>
 								<TextArea name="excerpt" rows={3} required defaultValue={values.excerpt} />
 							</Label>
+
+							<div mix={[grid(), gap(1)]}>
+								<Label htmlFor="teaser">Teaser for X</Label>
+								<TeaserField
+									id="teaser"
+									titleId="title"
+									kind="tutorial"
+									title={values.title}
+									teaser={values.teaser}
+									error={teaserError ?? ""}
+								/>
+							</div>
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Tags (comma separated)</span>
@@ -265,6 +296,17 @@ export function CMSTutorialsActionView() {
 								<Button type="submit" color="brand">
 									{submitLabel}
 								</Button>
+								{shareHref ? (
+									<LinkButton
+										href={shareHref}
+										target="_blank"
+										rel="noopener"
+										color="neutral"
+										variant="outline"
+									>
+										Post on X
+									</LinkButton>
+								) : null}
 								<LinkButton
 									href={routes.cms.tutorials.index.href()}
 									color="brand"

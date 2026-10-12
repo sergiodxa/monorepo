@@ -40,6 +40,8 @@ export const Tutorials = Posts.extend("tutorial", {
 		slug: field.text().required().default(""),
 		title: field.text().required().default(""),
 		excerpt: field.text().required().default(""),
+		/** One line written for X, which the share text carries; blank lets the excerpt stand in. */
+		teaser: field.text(),
 		content: field.text().required().default(""),
 		/** The tags as a JSON array; `tutorialTags()` reads it and `serializeTags()` writes it. */
 		tags: field.text(),

@@ -36,6 +36,8 @@ export const Articles = Posts.extend("article", {
 		locale: field.text().default("en"),
 		content: field.text().required().default(""),
 		excerpt: field.text(),
+		/** One line written for X, which the share text carries; blank lets the excerpt stand in. */
+		teaser: field.text(),
 		canonical_url: field.text(),
 	},
 

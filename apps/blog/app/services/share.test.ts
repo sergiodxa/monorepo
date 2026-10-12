@@ -11,6 +11,7 @@ import { isFailure, isSuccess } from "@sdxc/result";
 import { describe, expect, test } from "vitest";
 
 import {
+	checkTeaser,
 	discussIntent,
 	postIntent,
 	postShareText,
@@ -153,6 +154,27 @@ describe("postShareText", () => {
 	test("fails on the title when even the title alone is past the limit", () => {
 		let built = postShareText({ kind: "article", title: "a".repeat(260), permalink: PERMALINK });
 		expect(isFailure(built) && built.error.field).toBe("title");
+	});
+});
+
+describe("checkTeaser", () => {
+	test("passes a blank teaser and stores a fitting one on one line", () => {
+		expect(checkTeaser({ kind: "article", title: "Hi", teaser: "" })).toEqual({
+			status: "success",
+			data: "",
+		});
+		expect(checkTeaser({ kind: "article", title: "Hi", teaser: " One\nline " })).toEqual({
+			status: "success",
+			data: "One line",
+		});
+	});
+
+	test("re-runs against a changed title, so a longer title rejects the same teaser", () => {
+		let teaser = "a".repeat(240);
+		expect(isSuccess(checkTeaser({ kind: "article", title: "Short", teaser }))).toBe(true);
+
+		let checked = checkTeaser({ kind: "article", title: "A much longer title", teaser });
+		expect(isFailure(checked) && checked.error.over).toBe(9);
 	});
 });
 

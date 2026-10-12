@@ -19,6 +19,7 @@ import { TutorialViewModel } from "~/app/http/view-models/cms/tutorials";
 import { TAGS } from "~/app/initializers/cache";
 import jobs from "~/app/jobs";
 import { isPublishedAt, tutorialTags } from "~/app/models/post-values";
+import { checkTeaser } from "~/app/services/share";
 import { CMSTutorialsActionView, CMSTutorialsIndexView } from "~/resources/views/cms/tutorials";
 import routes from "~/routes/web";
 
@@ -48,6 +49,8 @@ export default createController(routes.cms.tutorials, {
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
 				preview: !isPublishedAt(tutorial.published_at),
+				teaser: tutorial.meta.teaser ?? undefined,
+				excerpt: tutorial.meta.excerpt ?? undefined,
 				tags: tutorialTags(tutorial.meta.tags),
 			}));
 			let items = TutorialViewModel.index({ items: sources });
@@ -56,8 +59,8 @@ export default createController(routes.cms.tutorials, {
 		},
 
 		/**
-		 * Unauthenticated callers go to login, and every exit is a See Other redirect so the
-		 * post/redirect/get flow holds and a reload only repeats a read.
+		 * Unauthenticated callers go to login, and saves answer See Other so a reload only
+		 * repeats a read. A teaser too long for X re-renders the form as submitted with 422.
 		 *
 		 * @param ctx Request context carrying the submitted form data and the database.
 		 * @returns Redirect response to login, tutorials index fallback, or newly created edit page.
@@ -70,11 +73,23 @@ export default createController(routes.cms.tutorials, {
 			let result = await validate(ctx.get(FormData), TutorialSchema);
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
+			let teaser = checkTeaser({
+				kind: "tutorial",
+				title: input.meta.title,
+				teaser: input.meta.teaser,
+			});
+			if (isFailure(teaser)) {
+				let rejected = TutorialViewModel.rejected({
+					data: result.data,
+					teaserError: teaser.error.message,
+				});
+				return ctx.render(CMSTutorialsActionView, rejected, { status: 422 });
+			}
 
 			let saved = await ctx.models.tutorials.create({
 				author_id: user.id,
 				published_at: input.published_at,
-				meta: input.meta,
+				meta: { ...input.meta, teaser: teaser.data },
 			});
 
 			if (isFailure(saved))
@@ -146,6 +161,7 @@ export default createController(routes.cms.tutorials, {
 				title: tutorial.meta.title,
 				slug: tutorial.meta.slug,
 				excerpt: tutorial.meta.excerpt,
+				teaser: tutorial.meta.teaser ?? undefined,
 				tags: tutorialTags(tutorial.meta.tags),
 				content: tutorial.meta.content,
 				published_at: tutorial.published_at,
@@ -168,8 +184,8 @@ export default createController(routes.cms.tutorials, {
 		},
 
 		/**
-		 * Missing auth or id ends in a redirect, and the 404 view appears once validation passes
-		 * and the referenced record turns out to be gone.
+		 * Missing auth or id ends in a redirect, a teaser too long for X re-renders the form as
+		 * submitted with 422, and the 404 view appears when the record turns out to be gone.
 		 *
 		 * @param ctx Request context with route params, form data, and database access.
 		 * @returns Redirect response on success/guard failures, or 404 CMS action view when missing.
@@ -183,6 +199,19 @@ export default createController(routes.cms.tutorials, {
 			let result = await validate(ctx.get(FormData), TutorialSchema);
 			succeeded(result, "Invalid tutorial form data");
 			let input = TutorialViewModel.input({ data: result.data });
+			let teaser = checkTeaser({
+				kind: "tutorial",
+				title: input.meta.title,
+				teaser: input.meta.teaser,
+			});
+			if (isFailure(teaser)) {
+				let rejected = TutorialViewModel.rejected({
+					id,
+					data: result.data,
+					teaserError: teaser.error.message,
+				});
+				return ctx.render(CMSTutorialsActionView, rejected, { status: 422 });
+			}
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
@@ -191,7 +220,7 @@ export default createController(routes.cms.tutorials, {
 			let updated = await ctx.models.tutorials.update(id, {
 				author_id: user.id,
 				published_at: input.published_at,
-				meta: input.meta,
+				meta: { ...input.meta, teaser: teaser.data },
 			});
 
 			if (isFailure(updated)) {

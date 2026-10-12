@@ -1,8 +1,8 @@
 /**
- * Views for managing articles in the CMS. `CMSArticlesIndexView` renders a table
- * of articles with publish-state badges plus edit and modal-confirmed delete
- * actions, and `CMSArticlesActionView` renders the create/edit form for an
- * article's fields. Exist to power the admin CRUD screens for articles.
+ * Views for managing articles in the CMS. `CMSArticlesIndexView` renders a table of
+ * articles with publish-state badges plus "Post on X", edit and modal-confirmed delete
+ * actions, and `CMSArticlesActionView` renders the create/edit form for an article's
+ * fields. Exist to power the admin CRUD screens for articles.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
@@ -29,6 +29,7 @@ import {
 	TextArea,
 } from "@sdxc/ui";
 
+import { TeaserField } from "~/resources/components/teaser-field";
 import { CMSLayout } from "~/resources/layouts/cms";
 import routes from "~/routes/web";
 
@@ -43,6 +44,8 @@ export namespace CMSArticlesIndexView {
 		id: string;
 		title: string;
 		publicHref: string;
+		/** The author's "Post on X" link, prefilled with the post's share text. */
+		shareHref: string;
 		preview: boolean;
 		href: string;
 		deleteAction: string;
@@ -68,6 +71,8 @@ export namespace CMSArticlesActionView {
 		slug: string;
 		locale: string;
 		excerpt: string;
+		/** One line written for X; blank lets the excerpt stand in. */
+		teaser: string;
 		canonical_url: string;
 		content: string;
 		published_at: string;
@@ -83,6 +88,10 @@ export namespace CMSArticlesActionView {
 		action: string;
 		submitLabel: string;
 		deleteAction?: string;
+		/** The "Post on X" link of the saved post; absent until the post is saved. */
+		shareHref?: string;
+		/** Why the last save was refused, shown under the teaser. */
+		teaserError?: string;
 		values: FormValues;
 	}
 }
@@ -133,6 +142,16 @@ export function CMSArticlesIndexView() {
 													</Table.Cell>
 													<Table.Cell>
 														<div mix={[hstack({ gap: 2, align: "center", justify: "end" })]}>
+															<LinkButton
+																href={item.shareHref}
+																target="_blank"
+																rel="noopener"
+																color="neutral"
+																variant="outline"
+																size="sm"
+															>
+																Post on X
+															</LinkButton>
 															<LinkButton
 																href={item.href}
 																color="brand"
@@ -200,7 +219,7 @@ export function CMSArticlesIndexView() {
  */
 export function CMSArticlesActionView() {
 	return ({ model, assets }: { model: CMSArticlesActionView.Props; assets: DocumentAssets }) => {
-		let { action, description, mode, submitLabel, title, values } = model;
+		let { action, description, mode, shareHref, submitLabel, teaserError, title, values } = model;
 
 		return (
 			<CMSLayout assets={assets} title={title} activePath={routes.cms.articles.index.href()}>
@@ -214,7 +233,7 @@ export function CMSArticlesActionView() {
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Title</span>
-								<Input name="title" aria-label="Title" value={values.title} required />
+								<Input id="title" name="title" aria-label="Title" value={values.title} required />
 							</Label>
 
 							<Label mix={[grid(), gap(1)]}>
@@ -237,6 +256,18 @@ export function CMSArticlesActionView() {
 								<span>Excerpt</span>
 								<TextArea name="excerpt" rows={3} defaultValue={values.excerpt} />
 							</Label>
+
+							<div mix={[grid(), gap(1)]}>
+								<Label htmlFor="teaser">Teaser for X</Label>
+								<TeaserField
+									id="teaser"
+									titleId="title"
+									kind="article"
+									title={values.title}
+									teaser={values.teaser}
+									error={teaserError ?? ""}
+								/>
+							</div>
 
 							<Label mix={[grid(), gap(1)]}>
 								<span>Canonical URL</span>
@@ -272,6 +303,17 @@ export function CMSArticlesActionView() {
 								<Button type="submit" color="brand">
 									{submitLabel}
 								</Button>
+								{shareHref ? (
+									<LinkButton
+										href={shareHref}
+										target="_blank"
+										rel="noopener"
+										color="neutral"
+										variant="outline"
+									>
+										Post on X
+									</LinkButton>
+								) : null}
 								<LinkButton href={routes.cms.articles.index.href()} color="brand" variant="outline">
 									Back to list
 								</LinkButton>

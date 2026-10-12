@@ -13,6 +13,8 @@ import { isFailure } from "@sdxc/result";
 import { slugify } from "@sdxc/strings";
 
 import { serializeTags } from "~/app/models/post-values";
+import { postIntent } from "~/app/services/share";
+import { permalink } from "~/app/services/webmention";
 import routes from "~/routes/web";
 
 /**
@@ -30,6 +32,8 @@ export namespace TutorialViewModel {
 		slug: string;
 		preview: boolean;
 		tags?: string | Array<string>;
+		teaser?: string;
+		excerpt?: string;
 	}
 
 	/**
@@ -41,6 +45,7 @@ export namespace TutorialViewModel {
 		title?: string;
 		slug?: string;
 		excerpt?: string;
+		teaser?: string;
 		tags?: string | Array<string>;
 		content?: string;
 		published_at: string | null;
@@ -54,6 +59,7 @@ export namespace TutorialViewModel {
 		title: string;
 		slug?: string;
 		excerpt: string;
+		teaser?: string;
 		tags?: string;
 		content: string;
 		published_at?: string;
@@ -84,6 +90,14 @@ export namespace TutorialViewModel {
 	export interface InputForm {
 		data: SourceFormData;
 	}
+
+	/** Input payload for `rejected`: the submission, and the tutorial it edits, if any. */
+	export interface InputRejected {
+		id?: string;
+		data: SourceFormData;
+		/** Why the save was refused, shown under the teaser. */
+		teaserError: string;
+	}
 }
 
 /**
@@ -94,8 +108,8 @@ export namespace TutorialViewModel {
  */
 export class TutorialViewModel {
 	/**
-	 * Rows carry stable links plus tags flattened into the comma-separated
-	 * string the table UI expects.
+	 * Rows carry stable links, the "Post on X" link, and tags flattened into the
+	 * comma-separated string the table UI expects.
 	 * @param input Tutorials to display in the index view.
 	 * @returns UI-ready rows with links and normalized tags.
 	 */
@@ -104,6 +118,7 @@ export class TutorialViewModel {
 			id: tutorial.id,
 			title: tutorial.title,
 			publicHref: routes.post.href({ postType: "tutorials", postSlug: tutorial.slug }),
+			shareHref: this.shareHref(tutorial),
 			preview: tutorial.preview,
 			tags: this.parseTags(tutorial.tags).join(", "),
 			href: routes.cms.tutorials.edit.href({ id: tutorial.id }),
@@ -128,6 +143,7 @@ export class TutorialViewModel {
 				title: "",
 				slug: "",
 				excerpt: "",
+				teaser: "",
 				tags: "",
 				content: "",
 				published_at: "",
@@ -152,6 +168,7 @@ export class TutorialViewModel {
 				title: "",
 				slug: "",
 				excerpt: "",
+				teaser: "",
 				tags: "",
 				content: "",
 				published_at: "",
@@ -175,10 +192,17 @@ export class TutorialViewModel {
 			action: routes.cms.tutorials.update.href({ id: tutorial.id }),
 			submitLabel: "Save Tutorial",
 			deleteAction: routes.cms.tutorials.destroy.href({ id: tutorial.id }),
+			shareHref: this.shareHref({
+				title: tutorial.title ?? "",
+				slug: tutorial.slug ?? "",
+				teaser: tutorial.teaser,
+				excerpt: tutorial.excerpt,
+			}),
 			values: {
 				title: tutorial.title ?? "",
 				slug: tutorial.slug ?? "",
 				excerpt: tutorial.excerpt ?? "",
+				teaser: tutorial.teaser ?? "",
 				tags: this.parseTags(tutorial.tags).join(", "),
 				content: tutorial.content ?? "",
 				published_at: this.toDateInputValue(tutorial.published_at),
@@ -201,10 +225,60 @@ export class TutorialViewModel {
 				title: data.title,
 				slug: data.slug || slugify(data.title),
 				excerpt: data.excerpt,
+				teaser: data.teaser,
 				tags: serializeTags(this.parseTags(data.tags)),
 				content: data.content,
 			},
 		};
+	}
+
+	/**
+	 * The form as submitted, with the reason the save was refused, so the editor fixes the
+	 * teaser without retyping anything. It edits `id` when given, else creates.
+	 * @param input The submitted values, the edited tutorial's id, and the error.
+	 * @returns Form state matching `edit` or `new`, without a "Post on X" link until a save.
+	 */
+	static rejected(input: TutorialViewModel.InputRejected) {
+		let { data, id } = input;
+		let action = id ? routes.cms.tutorials.update.href({ id }) : routes.cms.tutorials.index.href();
+
+		return {
+			title: id ? `Edit Tutorial ${data.title}` : "New Tutorial",
+			description: "The tutorial was not saved.",
+			mode: id ? ("edit" as const) : ("new" as const),
+			action,
+			submitLabel: id ? "Save Tutorial" : "Create Tutorial",
+			deleteAction: id ? routes.cms.tutorials.destroy.href({ id }) : undefined,
+			teaserError: input.teaserError,
+			values: {
+				title: data.title,
+				slug: data.slug ?? "",
+				excerpt: data.excerpt,
+				teaser: data.teaser ?? "",
+				tags: data.tags ?? "",
+				content: data.content,
+				published_at: data.published_at ?? "",
+			},
+		};
+	}
+
+	/**
+	 * The author's "Post on X" link for a saved tutorial, read at its canonical permalink.
+	 * @param tutorial The stored title, slug, teaser and excerpt.
+	 */
+	private static shareHref(tutorial: {
+		title: string;
+		slug: string;
+		teaser?: string;
+		excerpt?: string;
+	}): string {
+		return postIntent({
+			kind: "tutorial",
+			title: tutorial.title,
+			teaser: tutorial.teaser,
+			excerpt: tutorial.excerpt,
+			permalink: permalink({ postType: "tutorials", slug: tutorial.slug }).href,
+		});
 	}
 
 	/**

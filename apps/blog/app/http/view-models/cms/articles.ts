@@ -12,6 +12,8 @@ import { parseDate, toDayKey } from "@sdxc/dates";
 import { isFailure } from "@sdxc/result";
 import { slugify } from "@sdxc/strings";
 
+import { postIntent } from "~/app/services/share";
+import { permalink } from "~/app/services/webmention";
 import routes from "~/routes/web";
 
 /**
@@ -29,6 +31,8 @@ export namespace ArticleViewModel {
 		title: string;
 		slug: string;
 		preview: boolean;
+		teaser?: string;
+		excerpt?: string;
 	}
 
 	/**
@@ -42,6 +46,7 @@ export namespace ArticleViewModel {
 		slug?: string;
 		locale?: string;
 		excerpt?: string;
+		teaser?: string;
 		canonical_url?: string;
 		content?: string;
 		/** ISO timestamp, or `null` to mark the article as published. */
@@ -58,6 +63,7 @@ export namespace ArticleViewModel {
 		slug?: string;
 		locale: string;
 		excerpt?: string;
+		teaser?: string;
 		canonical_url?: string;
 		content: string;
 		/** Empty or invalid values are coerced to `null` by `input`. */
@@ -86,6 +92,14 @@ export namespace ArticleViewModel {
 	export interface InputForm {
 		data: SourceFormData;
 	}
+
+	/** Input payload for `rejected`: the submission, and the article it edits, if any. */
+	export interface InputRejected {
+		id?: string;
+		data: SourceFormData;
+		/** Why the save was refused, shown under the teaser. */
+		teaserError: string;
+	}
 }
 
 /**
@@ -96,8 +110,8 @@ export namespace ArticleViewModel {
  */
 export class ArticleViewModel {
 	/**
-	 * Each row carries the public article URL alongside the CMS edit and delete
-	 * actions.
+	 * Each row carries the public article URL and its "Post on X" link alongside
+	 * the CMS edit and delete actions.
 	 * @param input Source items used by the CMS listing screen.
 	 * @returns Index rows ready for CMS table rendering.
 	 */
@@ -106,6 +120,7 @@ export class ArticleViewModel {
 			id: article.id,
 			title: article.title,
 			publicHref: routes.post.href({ postType: "articles", postSlug: article.slug }),
+			shareHref: this.shareHref(article),
 			preview: article.preview,
 			href: routes.cms.articles.edit.href({ id: article.id }),
 			deleteAction: routes.cms.articles.destroy.href({ id: article.id }),
@@ -130,6 +145,7 @@ export class ArticleViewModel {
 				slug: "",
 				locale: "en",
 				excerpt: "",
+				teaser: "",
 				canonical_url: "",
 				content: "",
 				published_at: "",
@@ -155,6 +171,7 @@ export class ArticleViewModel {
 				slug: "",
 				locale: "en",
 				excerpt: "",
+				teaser: "",
 				canonical_url: "",
 				content: "",
 				published_at: "",
@@ -178,11 +195,18 @@ export class ArticleViewModel {
 			action: routes.cms.articles.update.href({ id: article.id }),
 			submitLabel: "Save Article",
 			deleteAction: routes.cms.articles.destroy.href({ id: article.id }),
+			shareHref: this.shareHref({
+				title: article.title ?? "",
+				slug: article.slug ?? "",
+				teaser: article.teaser,
+				excerpt: article.excerpt,
+			}),
 			values: {
 				title: article.title ?? "",
 				slug: article.slug ?? "",
 				locale: article.locale ?? "en",
 				excerpt: article.excerpt ?? "",
+				teaser: article.teaser ?? "",
 				canonical_url: article.canonical_url ?? "",
 				content: article.content ?? "",
 				published_at: this.toDateInputValue(article.published_at),
@@ -206,10 +230,61 @@ export class ArticleViewModel {
 				slug: data.slug || slugify(data.title),
 				locale: data.locale,
 				excerpt: data.excerpt,
+				teaser: data.teaser,
 				canonical_url: data.canonical_url,
 				content: data.content,
 			},
 		};
+	}
+
+	/**
+	 * The form as submitted, with the reason the save was refused, so the editor fixes the
+	 * teaser without retyping anything. It edits `id` when given, else creates.
+	 * @param input The submitted values, the edited article's id, and the error.
+	 * @returns Form state matching `edit` or `new`, without a "Post on X" link until a save.
+	 */
+	static rejected(input: ArticleViewModel.InputRejected) {
+		let { data, id } = input;
+		let action = id ? routes.cms.articles.update.href({ id }) : routes.cms.articles.index.href();
+
+		return {
+			title: id ? `Edit Article ${data.title}` : "New Article",
+			description: "The article was not saved.",
+			mode: id ? ("edit" as const) : ("new" as const),
+			action,
+			submitLabel: id ? "Save Article" : "Create Article",
+			deleteAction: id ? routes.cms.articles.destroy.href({ id }) : undefined,
+			teaserError: input.teaserError,
+			values: {
+				title: data.title,
+				slug: data.slug ?? "",
+				locale: data.locale,
+				excerpt: data.excerpt ?? "",
+				teaser: data.teaser ?? "",
+				canonical_url: data.canonical_url ?? "",
+				content: data.content,
+				published_at: data.published_at ?? "",
+			},
+		};
+	}
+
+	/**
+	 * The author's "Post on X" link for a saved article, read at its canonical permalink.
+	 * @param article The stored title, slug, teaser and excerpt.
+	 */
+	private static shareHref(article: {
+		title: string;
+		slug: string;
+		teaser?: string;
+		excerpt?: string;
+	}): string {
+		return postIntent({
+			kind: "article",
+			title: article.title,
+			teaser: article.teaser,
+			excerpt: article.excerpt,
+			permalink: permalink({ postType: "articles", slug: article.slug }).href,
+		});
 	}
 
 	/**

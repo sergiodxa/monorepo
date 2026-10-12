@@ -63,10 +63,7 @@ export namespace PostShare {
 	}
 }
 
-/**
- * A share text heavier than X allows, naming the field to shorten and by how much. `text` is
- * the text as built, which the composer still opens with so the author trims it there.
- */
+/** A share text heavier than X allows, naming the field to shorten and by how much. */
 export class ShareTextOverflow extends Error {
 	override name = "ShareTextOverflow";
 
@@ -76,19 +73,14 @@ export class ShareTextOverflow extends Error {
 	/** How much weight the text carries past the limit, which is how much to cut. */
 	readonly over: number;
 
-	/** The text as built, past the limit. */
-	readonly text: string;
-
 	/**
 	 * @param field The part to shorten.
 	 * @param over How much weight the text carries past the limit.
-	 * @param text The text as built.
 	 */
-	constructor(field: "teaser" | "title", over: number, text: string) {
+	constructor(field: "teaser" | "title", over: number) {
 		super(`The ${field} is ${String(over)} characters too long to share on X`);
 		this.field = field;
 		this.over = over;
-		this.text = text;
 	}
 }
 
@@ -173,24 +165,41 @@ function cutAt(text: string, budget: number, granularity: "word" | "grapheme"): 
 }
 
 /**
+ * The save-time check on a typed teaser: it fits beside the title, or fails naming how much to
+ * cut. Succeeds with the teaser on one line, as it is stored; a blank teaser always fits.
+ */
+export function checkTeaser(
+	post: Pick<PostShare.Post, "kind" | "title" | "teaser">,
+): Result<string, ShareTextOverflow> {
+	let teaser = oneLine(post.teaser);
+	if (teaser === "") return success(teaser);
+	let over = xLength(teaser) - teaserBudget(post);
+	return over > 0 ? failure(new ShareTextOverflow("teaser", over)) : success(teaser);
+}
+
+/**
+ * The share text as built, whether or not it fits: the typed teaser as written, else the
+ * excerpt shortened to the room the title leaves, else no line at all.
+ */
+function draft(post: PostShare.Post): string {
+	let teaser = oneLine(post.teaser);
+	if (teaser !== "") return titled(post, teaser);
+	let budget = teaserBudget(post);
+	let excerpt = budget > 0 ? shorten(oneLine(post.excerpt), budget) : "";
+	return excerpt === "" ? titleOnly(post) : titled(post, excerpt);
+}
+
+/**
  * The text the author shares an article or tutorial with: the kind's emoji and the title, a
  * blank line, the teaser, a blank line, and the permalink. A teaser that does not fit fails,
  * naming how much to cut; a standing-in excerpt is shortened instead and never fails.
  */
 export function postShareText(post: PostShare.Post): Result<string, ShareTextOverflow> {
-	let teaser = oneLine(post.teaser);
-	let budget = teaserBudget(post);
-
-	if (teaser !== "") {
-		let text = titled(post, teaser);
-		let over = xLength(teaser) - budget;
-		return over > 0 ? failure(new ShareTextOverflow("teaser", over, text)) : success(text);
-	}
-
-	let excerpt = budget > 0 ? shorten(oneLine(post.excerpt), budget) : "";
-	let text = excerpt === "" ? titleOnly(post) : titled(post, excerpt);
+	let checked = checkTeaser(post);
+	if (checked.status === "failure") return checked;
+	let text = draft(post);
 	let over = xLength(text) - X_LIMIT;
-	return over > 0 ? failure(new ShareTextOverflow("title", over, text)) : success(text);
+	return over > 0 ? failure(new ShareTextOverflow("title", over)) : success(text);
 }
 
 /** A link opening X's composer with `text` already typed, which the author can still edit. */
@@ -203,8 +212,7 @@ export function shareIntent(text: string): string {
  * X marks the excess for the author to trim.
  */
 export function postIntent(post: PostShare.Post): string {
-	let built = postShareText(post);
-	return shareIntent(built.status === "success" ? built.data : built.error.text);
+	return shareIntent(draft(post));
 }
 
 /** A reader's "Discuss on X" link: the post's title and permalink, for them to write around. */

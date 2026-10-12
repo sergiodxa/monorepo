@@ -19,6 +19,7 @@ import { ArticleViewModel } from "~/app/http/view-models/cms/articles";
 import { TAGS } from "~/app/initializers/cache";
 import jobs from "~/app/jobs";
 import { isPublishedAt } from "~/app/models/post-values";
+import { checkTeaser } from "~/app/services/share";
 import { CMSArticlesActionView, CMSArticlesIndexView } from "~/resources/views/cms/articles";
 import routes from "~/routes/web";
 
@@ -49,6 +50,8 @@ export default createController(routes.cms.articles, {
 				title: article.meta.title,
 				slug: article.meta.slug,
 				preview: !isPublishedAt(article.published_at),
+				teaser: article.meta.teaser ?? undefined,
+				excerpt: article.meta.excerpt ?? undefined,
 			}));
 			let items = ArticleViewModel.index({ items: sources });
 
@@ -56,8 +59,8 @@ export default createController(routes.cms.articles, {
 		},
 
 		/**
-		 * Unauthenticated callers go to login. Both the failure and success paths answer with
-		 * See Other so the browser leaves the mutating endpoint before any reload.
+		 * Unauthenticated callers go to login, and saves answer See Other so a reload never
+		 * repeats the write. A teaser too long for X re-renders the form as submitted with 422.
 		 *
 		 * @param ctx Request context carrying the submitted form data and the database.
 		 * @returns Redirect response to login, index, or the edit page for the created article.
@@ -70,11 +73,23 @@ export default createController(routes.cms.articles, {
 			let result = await validate(ctx.get(FormData), ArticleSchema);
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
+			let teaser = checkTeaser({
+				kind: "article",
+				title: input.meta.title,
+				teaser: input.meta.teaser,
+			});
+			if (isFailure(teaser)) {
+				let rejected = ArticleViewModel.rejected({
+					data: result.data,
+					teaserError: teaser.error.message,
+				});
+				return ctx.render(CMSArticlesActionView, rejected, { status: 422 });
+			}
 
 			let saved = await ctx.models.articles.create({
 				author_id: user.id,
 				published_at: input.published_at,
-				meta: input.meta,
+				meta: { ...input.meta, teaser: teaser.data },
 			});
 
 			if (isFailure(saved))
@@ -145,6 +160,7 @@ export default createController(routes.cms.articles, {
 				slug: article.meta.slug,
 				locale: article.meta.locale,
 				excerpt: article.meta.excerpt,
+				teaser: article.meta.teaser ?? undefined,
 				canonical_url: article.meta.canonical_url,
 				content: article.meta.content,
 				published_at: article.published_at,
@@ -164,8 +180,8 @@ export default createController(routes.cms.articles, {
 		},
 
 		/**
-		 * Requires an authenticated user and a route id; either one missing sends the editor back
-		 * to the index, while an unknown id renders the 404 CMS state in place.
+		 * A missing user or id sends the editor back to the index, an unknown id renders the 404
+		 * state in place, and a teaser too long for X re-renders the form as submitted with 422.
 		 *
 		 * @param ctx Request context carrying the route params, form data, and the database.
 		 * @returns Redirect response for success/guard paths or a 404 edit-state view.
@@ -179,6 +195,19 @@ export default createController(routes.cms.articles, {
 			let result = await validate(ctx.get(FormData), ArticleSchema);
 			succeeded(result, "Invalid article form data");
 			let input = ArticleViewModel.input({ data: result.data });
+			let teaser = checkTeaser({
+				kind: "article",
+				title: input.meta.title,
+				teaser: input.meta.teaser,
+			});
+			if (isFailure(teaser)) {
+				let rejected = ArticleViewModel.rejected({
+					id,
+					data: result.data,
+					teaserError: teaser.error.message,
+				});
+				return ctx.render(CMSArticlesActionView, rejected, { status: 422 });
+			}
 
 			// Read before writing: an edit that renames the slug leaves the old URL
 			// cached, and only the stored record still knows what it was.
@@ -187,7 +216,7 @@ export default createController(routes.cms.articles, {
 			let updated = await ctx.models.articles.update(id, {
 				author_id: user.id,
 				published_at: input.published_at,
-				meta: input.meta,
+				meta: { ...input.meta, teaser: teaser.data },
 			});
 
 			if (isFailure(updated)) {
