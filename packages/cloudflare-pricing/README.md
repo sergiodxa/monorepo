@@ -4,15 +4,15 @@ Cloudflare Developer Platform list prices, one module per service, with the arit
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/cloudflare-pricing
 ```
 
-The package has no dependencies and does no work at import time, so it is safe in a Worker's global scope.
-
 ## Usage
 
-### Price A Measured Quantity
+### Price a measured quantity
+
+Every billed dimension is a `Meter`, exported from its service's entry point. `centsPerUnit()` turns one into cents per unit.
 
 ```typescript
 import { centsPerUnit } from "@sdxc/cloudflare-pricing";
@@ -21,9 +21,9 @@ import * as D1 from "@sdxc/cloudflare-pricing/d1";
 let cents = 1_200 * centsPerUnit(D1.ROWS_READ) + 40 * centsPerUnit(D1.ROWS_WRITTEN);
 ```
 
-### Price A Day Of Storage
+### Price a day of storage
 
-Storage is published per GB-month. `centsPerGbDay()` spreads it over the 30-day billing month, and accepts storage meters only.
+Storage is published per GB-month; `centsPerGbDay()` spreads it over a 30-day billing month.
 
 ```typescript
 import { centsPerGbDay } from "@sdxc/cloudflare-pricing";
@@ -32,107 +32,93 @@ import * as KV from "@sdxc/cloudflare-pricing/kv";
 let cents = 0.4 * centsPerGbDay(KV.STORAGE); // 0.4 GB held for one day
 ```
 
-### Read What A Plan Includes
+### Read what a plan includes
+
+`included` is the Workers Paid allowance before the price applies; `freeLimit` is the Workers Free plan's limit.
 
 ```typescript
 import * as Queues from "@sdxc/cloudflare-pricing/queues";
 
-let operationsThisMonth = 3_000_000;
-let included = Queues.OPERATIONS.included?.quantity ?? 0; // 1,000,000 a month on Workers Paid
-let billable = Math.max(0, operationsThisMonth - included);
+Queues.OPERATIONS.included; // { quantity: 1_000_000, period: "month" }
+Queues.OPERATIONS.freeLimit; // { quantity: 10_000, period: "day" }
 ```
 
-### Price Quantities With A Rate Card
+### Price quantities with a rate card
 
-`defineRateCard()` takes cents per unit keyed by resource. Accumulate into `zero()`, then `price()` the total.
+`defineRateCard()` fixes cents per unit for each resource you meter. Accumulate into `zero()`, then `price()` the total.
 
 ```typescript
 import { centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
 import * as D1 from "@sdxc/cloudflare-pricing/d1";
 import * as Workers from "@sdxc/cloudflare-pricing/workers";
 
-const RATE_CARD = defineRateCard({
+let card = defineRateCard({
 	workerRequests: centsPerUnit(Workers.REQUESTS),
 	d1RowsRead: centsPerUnit(D1.ROWS_READ),
-	d1RowsWritten: centsPerUnit(D1.ROWS_WRITTEN),
 });
 
-let quantities = RATE_CARD.zero();
+let quantities = card.zero();
 quantities.workerRequests += 1;
 quantities.d1RowsRead += 1_200;
 
-let cents = RATE_CARD.price(quantities);
+let cents = card.price(quantities);
 ```
 
 ## API
 
-### `@sdxc/cloudflare-pricing`
+### `centsPerUnit(meter: Meter): number`
 
-#### `centsPerUnit(meter: Meter): number`
-
-The list price of one `meter.unit`, in cents, as though no allowance applied.
+The list price of one `meter.unit`, in cents, ignoring any allowance.
 
 ```typescript
-centsPerUnit(Workers.REQUESTS); // 0.00003
-// same as
-(0.3 * 100) / 1_000_000; // $0.30 per million requests
+centsPerUnit(Workers.REQUESTS); // 0.00003, the same as (0.3 * 100) / 1_000_000
 ```
 
-#### `centsPerGbDay(meter: Meter<"GB-month">): number`
+### `centsPerGbDay(meter: Meter<"GB-month">): number`
 
-The price of holding one GB for one day, in cents. Passing a meter whose unit is anything other than `"GB-month"` is a type error.
+The price of holding one GB for one day, in cents; only storage meters type-check.
 
 ```typescript
-centsPerGbDay(D1.STORAGE); // 2.5
-// same as
-(0.75 * 100) / 30; // $0.75 per GB-month over a 30-day month
+centsPerGbDay(D1.STORAGE); // 2.5, the same as (0.75 * 100) / 30
 ```
 
-#### `DAYS_PER_BILLING_MONTH`
+### `DAYS_PER_BILLING_MONTH`
 
-`30`, the billing period Cloudflare averages a GB-month over.
+`30`, the month Cloudflare averages a GB-month over.
 
-#### `defineRateCard(rates: Record<R, number>): RateCard<R>`
+### `defineRateCard(rates: Record<R, number>): RateCard<R>`
 
-Builds a frozen rate card from cents per unit keyed by resource name. The key order becomes `resources`, so a store that writes quantities by position stays readable as long as new resources are appended after the existing ones. Integer-like keys such as `"0"` sort ahead of every other key in JavaScript, so name resources with words.
+A frozen card of cents per unit keyed by resource. `resources` lists the keys in the order written, so append new resources at the end and name them with words (integer-like keys such as `"0"` sort first). `zero()` answers a fresh all-zero set of quantities; `price(quantities)` accepts a partial set and sums `max(0, units) × rate` per resource.
 
-```typescript
-let card = defineRateCard({ reads: centsPerUnit(KV.READS), writes: centsPerUnit(KV.WRITES) });
+### Service entry points
 
-card.resources; // ["reads", "writes"]
-card.rates.writes; // 0.0005
-card.zero(); // { reads: 0, writes: 0 }, a fresh object every call
-card.price({ writes: 10 }); // 0.005
-```
+Each exports its meters, `PRICING_DOCS_URL` (the Cloudflare page the prices come from) and `PRICES_VERIFIED_ON` (the ISO date they were last compared against it). Every price is the Workers Paid overage rate.
 
-`price()` accepts a partial set: a missing resource prices at zero, and so does a negative quantity, so every line is `max(0, units) × rate`.
+| Entry point                                 | Meters and helpers                                                                                                                                                                                     |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `@sdxc/cloudflare-pricing/workers`          | `REQUESTS`, `CPU_MS`, `LOG_EVENTS_WRITTEN`                                                                                                                                                             |
+| `@sdxc/cloudflare-pricing/durable-objects`  | `REQUESTS`, `DURATION` (GB-s), `SQLITE_ROWS_READ`, `SQLITE_ROWS_WRITTEN`, `SQLITE_STORAGE`, `BILLED_MEMORY_GB` (`0.128`), `centsPerActiveMs()`                                                         |
+| `@sdxc/cloudflare-pricing/d1`               | `ROWS_READ`, `ROWS_WRITTEN`, `STORAGE`                                                                                                                                                                 |
+| `@sdxc/cloudflare-pricing/kv`               | `READS`, `WRITES`, `DELETES`, `LISTS`, `STORAGE`                                                                                                                                                       |
+| `@sdxc/cloudflare-pricing/queues`           | `OPERATIONS`, one per 64 KB of each message written, read or deleted                                                                                                                                   |
+| `@sdxc/cloudflare-pricing/analytics-engine` | `DATA_POINTS_WRITTEN`, `READ_QUERIES`, `BILLING_ACTIVE`, `billedCentsPerUnit(meter)`                                                                                                                   |
+| `@sdxc/cloudflare-pricing/email-service`    | `EMAILS_SENT`, outbound sends through the `send_email` binding                                                                                                                                         |
+| `@sdxc/cloudflare-pricing/r2`               | `STORAGE`, `CLASS_A_OPERATIONS`, `CLASS_B_OPERATIONS`, `INFREQUENT_ACCESS_STORAGE`, `INFREQUENT_ACCESS_CLASS_A_OPERATIONS`, `INFREQUENT_ACCESS_CLASS_B_OPERATIONS`, `INFREQUENT_ACCESS_DATA_RETRIEVAL` |
 
-```typescript
-interface RateCard<R extends string> {
-	readonly resources: readonly R[];
-	readonly rates: Readonly<Record<R, number>>;
-	zero(): RateCardQuantities<R>;
-	price(quantities: Partial<RateCardQuantities<R>>): number;
-}
+`centsPerActiveMs()` is the price of one millisecond a Durable Object stays active: the `DURATION` rate at `BILLED_MEMORY_GB`. `billedCentsPerUnit(meter)` is `centsPerUnit(meter)` while `BILLING_ACTIVE` is `true` and zero while Cloudflare publishes Analytics Engine prices without invoicing them.
 
-type RateCardQuantities<R extends string> = Record<R, number>;
+The helpers return exact per-unit rates, while Cloudflare rounds billable usage up to its billing unit (R2 to the next million operations or whole GB-month, Durable Objects to the next million GB-s), so a small overage costs more on the invoice than the rate predicts.
 
-/** The resource names of a card: `RateCardResource<typeof card>` is `"reads" | "writes"`. */
-type RateCardResource<C> = C extends RateCard<infer R> ? R : never;
-```
+Prices are transcribed from Cloudflare's pricing docs, each service's page at its `PRICING_DOCS_URL`, published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 
-#### Types
-
-Every billed dimension is a `Meter`. Its `price` is transcribed exactly as the docs print it, so `$0.001 / million rows` is `{ usd: 0.001, per: 1_000_000 }`.
+### Types
 
 ```typescript
 interface Meter<U extends Unit = Unit> {
 	unit: U;
-	price: Price;
-	/** Usage the Workers Paid plan includes before `price` applies; `null` when every unit bills. */
-	included: Allowance | null;
-	/** The Workers Free plan's limit; `null` when the service is unavailable there or has none. */
-	freeLimit: Allowance | null;
+	price: Price; // as published: $0.001 per million rows is { usd: 0.001, per: 1_000_000 }
+	included: Allowance | null; // Workers Paid allowance, account-wide; null when every unit bills
+	freeLimit: Allowance | null; // Workers Free limit; null when unavailable there or unlimited
 }
 
 interface Price {
@@ -141,88 +127,26 @@ interface Price {
 }
 
 interface Allowance {
-	/** In the meter's unit; GB held at once when `period` is `"total"`. */
-	quantity: number;
-	period: AllowancePeriod;
+	quantity: number; // in the meter's unit; GB held at once when period is "total"
+	period: "day" | "month" | "invocation" | "total"; // AllowancePeriod
 }
 
-type AllowancePeriod = "day" | "month" | "invocation" | "total";
+interface RateCard<R extends string> {
+	readonly resources: readonly R[];
+	readonly rates: Readonly<Record<R, number>>;
+	zero(): RateCardQuantities<R>;
+	price(quantities: Partial<RateCardQuantities<R>>): number;
+}
+
+type RateCardQuantities<R extends string> = Record<R, number>;
+type RateCardResource<C> = C extends RateCard<infer R> ? R : never; // a card's resource names
 ```
 
-`Unit` is the union of every published unit: `"request"`, `"CPU ms"`, `"log event"`, `"GB-s"`, `"row read"`, `"row written"`, `"key read"`, `"key written"`, `"key deleted"`, `"list request"`, `"operation"`, `"data point"`, `"read query"`, `"email"`, `"Class A operation"`, `"Class B operation"`, `"GB retrieved"` and `"GB-month"`.
-
-### Service Modules
-
-Every service module exports `PRICING_DOCS_URL`, the page its prices are transcribed from, and `PRICES_VERIFIED_ON`, the ISO date they were last compared against it. Import one as a namespace:
-
-```typescript
-import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
-```
-
-The prices were transcribed on 2026-09-27 from Cloudflare's official pricing docs, published under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/):
-
-| Module             | Docs page                                                             |
-| ------------------ | --------------------------------------------------------------------- |
-| `workers`          | https://developers.cloudflare.com/workers/platform/pricing/           |
-| `durable-objects`  | https://developers.cloudflare.com/durable-objects/platform/pricing/   |
-| `d1`               | https://developers.cloudflare.com/d1/platform/pricing/                |
-| `kv`               | https://developers.cloudflare.com/kv/platform/pricing/                |
-| `queues`           | https://developers.cloudflare.com/queues/platform/pricing/            |
-| `analytics-engine` | https://developers.cloudflare.com/analytics/analytics-engine/pricing/ |
-| `email-service`    | https://developers.cloudflare.com/email-service/platform/pricing/     |
-| `r2`               | https://developers.cloudflare.com/r2/pricing/                         |
-
-Every price is the published Workers Paid overage rate; Enterprise contracts, discounts and taxes are outside it. The helpers return exact per-unit rates, while Cloudflare rounds billable usage up to the next billing unit (R2 to the next million operations or whole GB-month, Durable Objects to the next million GB-s), so a small overage costs more on the invoice than they predict. `included` resets each billing month across the whole account; `freeLimit` values reset daily at 00:00 UTC unless their `period` says otherwise.
-
-#### `@sdxc/cloudflare-pricing/workers`
-
-`REQUESTS`, `CPU_MS` and `LOG_EVENTS_WRITTEN` (Workers Logs), on the Standard usage model.
-
-#### `@sdxc/cloudflare-pricing/durable-objects`
-
-`REQUESTS`, `DURATION` (GB-s), `SQLITE_ROWS_READ`, `SQLITE_ROWS_WRITTEN` and `SQLITE_STORAGE`, for the SQLite storage backend. `BILLED_MEMORY_GB` is `0.128`: every object bills for 128 MB, which Cloudflare's own examples count as 0.128 GB. `centsPerActiveMs()` combines the two into the price of one millisecond an object stays active.
-
-```typescript
-DurableObjects.centsPerActiveMs(); // 0.00000016
-// same as
-(((12.5 * 100) / 1_000_000) * 0.128) / 1000;
-```
-
-#### `@sdxc/cloudflare-pricing/d1`
-
-`ROWS_READ`, `ROWS_WRITTEN` and `STORAGE`. A written row costs 1,000 times a read one, so meter them separately.
-
-#### `@sdxc/cloudflare-pricing/kv`
-
-`READS`, `WRITES`, `DELETES`, `LISTS` and `STORAGE`, each operation counted per key.
-
-#### `@sdxc/cloudflare-pricing/queues`
-
-`OPERATIONS`: one per 64 KB of each message written, read or deleted — usually three per delivered message, plus a read per retry.
-
-#### `@sdxc/cloudflare-pricing/analytics-engine`
-
-`DATA_POINTS_WRITTEN` and `READ_QUERIES`. `BILLING_ACTIVE` is `false`: Cloudflare publishes these prices ahead of invoicing them.
-
-`billedCentsPerUnit(meter)` is the rate a ledger should charge for either meter: `centsPerUnit(meter)` once `BILLING_ACTIVE` is `true`, zero until then. A rate card built with it keeps counting points and queries, and they start costing in the release that marks billing active.
-
-```typescript
-let card = defineRateCard({
-	analyticsPoints: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN),
-});
-```
-
-#### `@sdxc/cloudflare-pricing/email-service`
-
-`EMAILS_SENT`, outbound sends through the `send_email` binding. Sending to arbitrary recipients requires Workers Paid, so `freeLimit` is `null`; sends to verified destination addresses are free on every plan.
-
-#### `@sdxc/cloudflare-pricing/r2`
-
-`STORAGE`, `CLASS_A_OPERATIONS` and `CLASS_B_OPERATIONS` for Standard storage, whose `included` is R2's free tier on every account; and `INFREQUENT_ACCESS_STORAGE`, `INFREQUENT_ACCESS_CLASS_A_OPERATIONS`, `INFREQUENT_ACCESS_CLASS_B_OPERATIONS` and `INFREQUENT_ACCESS_DATA_RETRIEVAL`, which have no free tier.
+`Unit` is the union of every published unit, from `"request"` and `"CPU ms"` to `"Class A operation"` and `"GB-month"`.
 
 ## Pattern: A Rate Card For A Cost Ledger
 
-Derive every rate once, at the boundary where measured quantities meet money, and store quantities rather than cents so a corrected price can re-price history. Writing quantities by position in `resources` keeps each stored record compact, which is why the card's key order is append-only, and stamping each record with a dated version lets a price correction become a new card instead of rewriting history.
+Derive every rate once, store quantities rather than cents so a corrected price can re-price history, and stamp each record with the card's version. Writing quantities by position in `resources` keeps records compact, which is why the card's key order only grows at the end.
 
 ```typescript
 import type { RateCardQuantities, RateCardResource } from "@sdxc/cloudflare-pricing";
@@ -243,8 +167,7 @@ const COST_RATE_CARD = defineRateCard({
 	d1StorageGbDays: centsPerGbDay(D1.STORAGE),
 });
 
-type CostResource = RateCardResource<typeof COST_RATE_CARD>;
-type CostQuantities = RateCardQuantities<CostResource>;
+type CostQuantities = RateCardQuantities<RateCardResource<typeof COST_RATE_CARD>>;
 
 function toRecord(quantities: CostQuantities) {
 	return {
@@ -252,6 +175,14 @@ function toRecord(quantities: CostQuantities) {
 		cents: COST_RATE_CARD.price(quantities),
 		quantities: COST_RATE_CARD.resources.map((resource) => quantities[resource]),
 	};
+}
+
+function fromRecord(record: { quantities: number[] }): CostQuantities {
+	let quantities = COST_RATE_CARD.zero();
+	COST_RATE_CARD.resources.forEach((resource, index) => {
+		quantities[resource] = record.quantities[index] ?? 0;
+	});
+	return quantities;
 }
 ```
 
@@ -270,14 +201,95 @@ function overageCents(meter: Meter, monthlyUnits: number) {
 	return Math.max(0, monthlyUnits - included) * centsPerUnit(meter);
 }
 
-overageCents(KV.READS, 25_000_000); // 750 — 15 million reads past the 10 million included
+overageCents(KV.READS, 25_000_000); // 750: 15 million reads past the 10 million included
+```
+
+## Pattern: Checking Usage Against The Free Plan
+
+`freeLimit` is where the Workers Free plan stops serving. Daily limits reset at 00:00 UTC; `"invocation"` caps a single call and `"total"` caps GB held at once.
+
+```typescript
+import type { Meter } from "@sdxc/cloudflare-pricing";
+
+import * as D1 from "@sdxc/cloudflare-pricing/d1";
+import * as Workers from "@sdxc/cloudflare-pricing/workers";
+
+function freeHeadroom(meter: Meter, used: number) {
+	if (meter.freeLimit === null) return null;
+	return { remaining: Math.max(0, meter.freeLimit.quantity - used), per: meter.freeLimit.period };
+}
+
+freeHeadroom(D1.ROWS_WRITTEN, 80_000); // { remaining: 20_000, per: "day" }
+freeHeadroom(Workers.CPU_MS, 4); // { remaining: 6, per: "invocation" }
+```
+
+## Pattern: Metering Durable Object Time In Milliseconds
+
+Every object bills on 128 MB of memory, so `centsPerActiveMs()` lets a ledger price the active milliseconds it measures instead of converting to GB-s.
+
+```typescript
+import * as DurableObjects from "@sdxc/cloudflare-pricing/durable-objects";
+
+let activeMs = 45_000;
+let cents = activeMs * DurableObjects.centsPerActiveMs(); // 0.00000016 cents per ms
+// the same as seconds × BILLED_MEMORY_GB × the DURATION rate per GB-s
+```
+
+## Pattern: Metering Analytics Engine Before It Bills
+
+`billedCentsPerUnit()` prices Analytics Engine at zero while `BILLING_ACTIVE` is `false`, so a card built with it counts points and queries today and starts charging for them in the release that marks billing active.
+
+```typescript
+import { centsPerUnit, defineRateCard } from "@sdxc/cloudflare-pricing";
+import * as AnalyticsEngine from "@sdxc/cloudflare-pricing/analytics-engine";
+import * as Workers from "@sdxc/cloudflare-pricing/workers";
+
+let card = defineRateCard({
+	workerRequests: centsPerUnit(Workers.REQUESTS),
+	analyticsPoints: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.DATA_POINTS_WRITTEN),
+	analyticsQueries: AnalyticsEngine.billedCentsPerUnit(AnalyticsEngine.READ_QUERIES),
+});
+
+card.price({ workerRequests: 1, analyticsPoints: 10 }); // only the request costs, for now
+```
+
+## Pattern: Comparing R2 Storage Classes
+
+Standard storage includes R2's free tier on every account; Infrequent Access is cheaper to hold, has no free tier, and charges per GB retrieved.
+
+```typescript
+import { centsPerUnit } from "@sdxc/cloudflare-pricing";
+import * as R2 from "@sdxc/cloudflare-pricing/r2";
+
+interface Usage {
+	gbMonths: number;
+	reads: number;
+	gbRetrieved: number;
+}
+
+function standardCents(usage: Usage) {
+	let storage = Math.max(0, usage.gbMonths - (R2.STORAGE.included?.quantity ?? 0));
+	let reads = Math.max(0, usage.reads - (R2.CLASS_B_OPERATIONS.included?.quantity ?? 0));
+	return storage * centsPerUnit(R2.STORAGE) + reads * centsPerUnit(R2.CLASS_B_OPERATIONS);
+}
+
+function infrequentAccessCents(usage: Usage) {
+	return (
+		usage.gbMonths * centsPerUnit(R2.INFREQUENT_ACCESS_STORAGE) +
+		usage.reads * centsPerUnit(R2.INFREQUENT_ACCESS_CLASS_B_OPERATIONS) +
+		usage.gbRetrieved * centsPerUnit(R2.INFREQUENT_ACCESS_DATA_RETRIEVAL)
+	);
+}
+
+let archive = { gbMonths: 500, reads: 20_000, gbRetrieved: 2 };
+standardCents(archive) < infrequentAccessCents(archive); // false: rarely read data is cheaper in IA
 ```
 
 ## Versioning
 
 Releases are dated rather than semantic. A version is the UTC date it was published, written `YYYY.M.D`, so `2026.9.4` is the release from 4 September 2026. At most one release goes out per day.
 
-Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export, and any release may change a price.
+Those numbers say when, not what: a later date means a later release and carries no compatibility promise. Any release may change or remove an export.
 
 Depend on one exact date, and move it when you are ready to take the change:
 
