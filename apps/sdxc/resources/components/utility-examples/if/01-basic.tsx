@@ -19,7 +19,7 @@ import type { UtilityExampleModule } from "~/resources/components/utility-exampl
 export default {
 	title: "Basic example",
 	description:
-		"Use `u.if(condition, utility)` to apply a utility only when a condition holds; it is written `u.if` because `if` is a reserved word:",
+		"Use `u.if(condition, utility)` to apply a utility, or a list of them, only when a condition holds; it is written `u.if` because `if` is a reserved word:",
 	render: () => (
 		<nav mix={[hstack({ gap: 1 })]}>
 			{["Overview", "Activity", "Settings"].map((tab) => (
@@ -29,7 +29,7 @@ export default {
 						p(2, 3),
 						rounded("md"),
 						weight("medium"),
-						u.if(tab === "Activity", u.combine([bg("brand.solid"), fg("brand.onSolid")])),
+						u.if(tab === "Activity", [bg("brand.solid"), fg("brand.onSolid")]),
 					]}
 				>
 					{tab}

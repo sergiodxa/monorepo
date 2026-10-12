@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { colorScheme } from "@sdxc/u/color";
+import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
 import { p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
@@ -21,15 +20,7 @@ export default {
 	description:
 		"Call `colorScheme()` with no argument to declare both schemes, so native controls follow the reader's system setting; set it once on `<html>`:",
 	render: () => (
-		<div
-			mix={[
-				colorScheme(),
-				raw({ backgroundColor: "Canvas", color: "CanvasText" }),
-				rounded("lg"),
-				p(4),
-				demo.stack(),
-			]}
-		>
+		<div mix={[colorScheme(), bg("Canvas"), fg("CanvasText"), rounded("lg"), p(4), demo.stack()]}>
 			<input type="date" aria-label="Date" />
 			<input type="checkbox" checked aria-label="Checkbox" />
 		</div>

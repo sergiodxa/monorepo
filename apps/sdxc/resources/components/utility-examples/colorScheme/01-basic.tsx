@@ -6,9 +6,8 @@
  * @copyright Sergio Xalambrí 2026
  */
 
-import { colorScheme } from "@sdxc/u/color";
+import { bg, colorScheme, fg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
-import { raw } from "@sdxc/u/general";
 import { p } from "@sdxc/u/size";
 
 import type { UtilityExampleModule } from "~/resources/components/utility-example-registry.server";
@@ -25,7 +24,8 @@ export default {
 			<div
 				mix={[
 					colorScheme("light"),
-					raw({ backgroundColor: "Canvas", color: "CanvasText" }),
+					bg("Canvas"),
+					fg("CanvasText"),
 					rounded("lg"),
 					p(4),
 					demo.stack(),
@@ -39,7 +39,8 @@ export default {
 			<div
 				mix={[
 					colorScheme("dark"),
-					raw({ backgroundColor: "Canvas", color: "CanvasText" }),
+					bg("Canvas"),
+					fg("CanvasText"),
 					rounded("lg"),
 					p(4),
 					demo.stack(),
