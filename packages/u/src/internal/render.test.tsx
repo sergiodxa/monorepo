@@ -12,6 +12,7 @@ import { describe, expect, test } from "vitest";
 
 import { bg } from "../color/bg.js";
 import { border } from "../color/border.js";
+import { if as ifUtility } from "../general/if.js";
 import { var as varUtility } from "../general/var.js";
 import { at } from "../responsive/at.js";
 import { p } from "../size/p.js";
@@ -51,6 +52,16 @@ describe("rendering a real <div mix={...}>", () => {
 		expect(html).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 4);");
 		expect(html).toContain("&:hover");
 		expect(html).toContain("padding: calc(var(--ui-spacing, 0.25rem) * 6);");
+	});
+
+	test("u.if() with a list renders it as one class beside the other utilities in a mix array", async () => {
+		let html = await renderToString(
+			<div mix={[p(4), ifUtility(true, [bg("brand.tint"), border("brand")])]} />,
+		);
+
+		expect(html).toContain("background-color: var(--ui-brand-bg-tint);");
+		expect(html).toContain("border-color: var(--ui-brand-border);");
+		expect(html.match(/class="([^"]+)"/)?.[1]?.split(" ")).toHaveLength(2);
 	});
 
 	test("var() composes into another utility as a raw CSS value", async () => {

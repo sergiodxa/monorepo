@@ -26,6 +26,17 @@ describe("shadow", () => {
 		]);
 	});
 
+	test("none clears the elevation slot and a raw shadow fills it as written", async () => {
+		expect(await declarations(shadow("none"))).toEqual([
+			"--ui-box-shadow-elevation: 0 0 #0000",
+			`box-shadow: ${COMPOSITE_BOX_SHADOW}`,
+		]);
+		expect(await declarations(shadow("0 1px 2px red"))).toEqual([
+			"--ui-box-shadow-elevation: 0 1px 2px red",
+			`box-shadow: ${COMPOSITE_BOX_SHADOW}`,
+		]);
+	});
+
 	test("the base shadow", async () => {
 		expect(await declarations(shadow("base"))).toEqual([
 			"--ui-box-shadow-elevation: var(--ui-shadow-base, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1))",

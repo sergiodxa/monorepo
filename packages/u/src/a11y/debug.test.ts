@@ -51,6 +51,10 @@ describe("debug", () => {
 			expect(await serialize(debug())).not.toContain("& *");
 		});
 
+		test("false turns the outline off", async () => {
+			expect(await declarations(debug(false))).toEqual([]);
+		});
+
 		test('the "nested" form outlines the host plus every descendant through "& *"', async () => {
 			let css = await serialize(debug("nested"));
 

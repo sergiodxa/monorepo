@@ -30,22 +30,201 @@ const COLOR_PROPERTY_ALIASES: Record<string, string> = {
 };
 
 /**
+ * Lowercased CSS named colors, system colors and CSS-wide keywords: a bare word
+ * in this set is already a valid color value, so it passes through instead of
+ * resolving as a tone. A tone sharing one of these names is written with a suffix.
+ */
+const CSS_COLOR_KEYWORDS = new Set([
+	"transparent",
+	"inherit",
+	"aliceblue",
+	"antiquewhite",
+	"aqua",
+	"aquamarine",
+	"azure",
+	"beige",
+	"bisque",
+	"black",
+	"blanchedalmond",
+	"blue",
+	"blueviolet",
+	"brown",
+	"burlywood",
+	"cadetblue",
+	"chartreuse",
+	"chocolate",
+	"coral",
+	"cornflowerblue",
+	"cornsilk",
+	"crimson",
+	"cyan",
+	"darkblue",
+	"darkcyan",
+	"darkgoldenrod",
+	"darkgray",
+	"darkgreen",
+	"darkgrey",
+	"darkkhaki",
+	"darkmagenta",
+	"darkolivegreen",
+	"darkorange",
+	"darkorchid",
+	"darkred",
+	"darksalmon",
+	"darkseagreen",
+	"darkslateblue",
+	"darkslategray",
+	"darkslategrey",
+	"darkturquoise",
+	"darkviolet",
+	"deeppink",
+	"deepskyblue",
+	"dimgray",
+	"dimgrey",
+	"dodgerblue",
+	"firebrick",
+	"floralwhite",
+	"forestgreen",
+	"fuchsia",
+	"gainsboro",
+	"ghostwhite",
+	"gold",
+	"goldenrod",
+	"gray",
+	"green",
+	"greenyellow",
+	"grey",
+	"honeydew",
+	"hotpink",
+	"indianred",
+	"indigo",
+	"ivory",
+	"khaki",
+	"lavender",
+	"lavenderblush",
+	"lawngreen",
+	"lemonchiffon",
+	"lightblue",
+	"lightcoral",
+	"lightcyan",
+	"lightgoldenrodyellow",
+	"lightgray",
+	"lightgreen",
+	"lightgrey",
+	"lightpink",
+	"lightsalmon",
+	"lightseagreen",
+	"lightskyblue",
+	"lightslategray",
+	"lightslategrey",
+	"lightsteelblue",
+	"lightyellow",
+	"lime",
+	"limegreen",
+	"linen",
+	"magenta",
+	"maroon",
+	"mediumaquamarine",
+	"mediumblue",
+	"mediumorchid",
+	"mediumpurple",
+	"mediumseagreen",
+	"mediumslateblue",
+	"mediumspringgreen",
+	"mediumturquoise",
+	"mediumvioletred",
+	"midnightblue",
+	"mintcream",
+	"mistyrose",
+	"moccasin",
+	"navajowhite",
+	"navy",
+	"oldlace",
+	"olive",
+	"olivedrab",
+	"orange",
+	"orangered",
+	"orchid",
+	"palegoldenrod",
+	"palegreen",
+	"paleturquoise",
+	"palevioletred",
+	"papayawhip",
+	"peachpuff",
+	"peru",
+	"pink",
+	"plum",
+	"powderblue",
+	"purple",
+	"rebeccapurple",
+	"red",
+	"rosybrown",
+	"royalblue",
+	"saddlebrown",
+	"salmon",
+	"sandybrown",
+	"seagreen",
+	"seashell",
+	"sienna",
+	"silver",
+	"skyblue",
+	"slateblue",
+	"slategray",
+	"slategrey",
+	"snow",
+	"springgreen",
+	"steelblue",
+	"tan",
+	"teal",
+	"thistle",
+	"tomato",
+	"turquoise",
+	"violet",
+	"wheat",
+	"white",
+	"whitesmoke",
+	"yellow",
+	"yellowgreen",
+	"accentcolor",
+	"accentcolortext",
+	"activetext",
+	"buttonborder",
+	"buttonface",
+	"buttontext",
+	"canvas",
+	"canvastext",
+	"field",
+	"fieldtext",
+	"graytext",
+	"highlight",
+	"highlighttext",
+	"linktext",
+	"mark",
+	"marktext",
+	"selecteditem",
+	"selecteditemtext",
+	"visitedtext",
+	"initial",
+	"unset",
+	"revert",
+	"revert-layer",
+]);
+
+/**
  * Resolves a {@link ColorValue} to a `var(...)` reference, from a palette
- * path or a tone plus property suffix. Tone names are parenthesis-free, so
- * a value containing `(` is already a CSS color and passes through verbatim.
+ * path or a tone plus property suffix. Any CSS color — a hex value, a named or
+ * system color, or a function such as `oklch(...)` — passes through verbatim.
  *
  * @param defaultProperty Property segment used when `value` names a bare tone.
  * @example color("brand.tint") // "var(--ui-brand-bg-tint)"
  * @example color("color.neutral.50") // "var(--ui-color-neutral-50)"
  * @example color("brand", "border") // "var(--ui-brand-border)"
- * @example color("color-mix(in oklab, red 50%, blue)") // "color-mix(in oklab, red 50%, blue)"
+ * @example color("#fff") // "#fff"
  */
 export function color(value: ColorValue | (string & {}), defaultProperty?: string): string {
-	if (value === "transparent") return "transparent";
-	if (value === "inherit") return "inherit";
 	if (value.toLowerCase() === "currentcolor") return "currentColor";
-
-	if (value.includes("(")) return value;
+	if (value.startsWith("#") || value.includes("(")) return value;
+	if (CSS_COLOR_KEYWORDS.has(value.toLowerCase())) return value;
 
 	if (value.startsWith("color.")) {
 		let [, name, shade] = value.split(".");
@@ -216,13 +395,15 @@ const SHADOW_FALLBACKS: Record<ShadowName, string> = {
 };
 
 /**
- * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`. Every
- * name resolves through the variable, since a literal shadow value and an
- * app-extended token name share a shape; one-off shadows use `u.raw()`.
+ * Resolves a {@link ShadowName} to `var(--ui-shadow-{name}, fallback)`, so an
+ * app-extended name is themable too. A value with a space or a function, and
+ * the `none` keyword, is already a CSS shadow and passes through literally.
  *
  * @example shadow("md") // 'var(--ui-shadow-md, 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1))'
+ * @example shadow("0 1px 2px black") // "0 1px 2px black"
  */
 export function shadow(name: ShadowName | (string & {})): string {
+	if (name === "none" || /[\s(]/.test(name)) return name;
 	let fallback = SHADOW_FALLBACKS[name as ShadowName] ?? SHADOW_FALLBACKS.md;
 	return varUtility(`ui-shadow-${name}`, fallback);
 }

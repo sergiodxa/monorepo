@@ -13,6 +13,11 @@ describe("fg", () => {
 		expect(await declarations(fg())).toEqual(["color: var(--ui-fg, CanvasText)"]);
 	});
 
+	test("a named or hex color passes through instead of resolving as a tone", async () => {
+		expect(await declarations(fg("red"))).toEqual(["color: red"]);
+		expect(await declarations(fg("#333"))).toEqual(["color: #333"]);
+	});
+
 	test("a bare tone defaults to that tone's plain fg weight", async () => {
 		expect(await declarations(fg("brand"))).toEqual(["color: var(--ui-brand-fg)"]);
 	});

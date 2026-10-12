@@ -120,6 +120,16 @@ describe("color", () => {
 	test("passes a raw var() reference through unchanged", () => {
 		expect(color("var(--some-color)")).toBe("var(--some-color)");
 	});
+
+	test("passes hex, named and system colors through, even with a default property", () => {
+		expect(color("#fff")).toBe("#fff");
+		expect(color("#0a0a0a80", "fg")).toBe("#0a0a0a80");
+		expect(color("red")).toBe("red");
+		expect(color("red", "fg")).toBe("red");
+		expect(color("RebeccaPurple", "border")).toBe("RebeccaPurple");
+		expect(color("CanvasText")).toBe("CanvasText");
+		expect(color("transparent", "fg")).toBe("transparent");
+	});
 });
 
 describe("radius", () => {
@@ -202,6 +212,12 @@ describe("containerLength", () => {
 });
 
 describe("shadow", () => {
+	test("passes none and a raw CSS shadow through literally", () => {
+		expect(shadow("none")).toBe("none");
+		expect(shadow("0 1px 2px rgb(0 0 0 / 0.2)")).toBe("0 1px 2px rgb(0 0 0 / 0.2)");
+		expect(shadow("inset 0 0 0 1px red")).toBe("inset 0 0 0 1px red");
+	});
+
 	test("resolves a named shadow with its fallback", () => {
 		expect(shadow("sm")).toBe("var(--ui-shadow-sm, 0 1px 2px 0 rgb(0 0 0 / 0.05))");
 	});

@@ -19,9 +19,9 @@ export interface BackdropDropShadowOptions {
 }
 
 /**
- * Shadows the rendered shape of whatever shows through the host — a subtle
- * depth cue behind a translucent panel, where `u.shadow()` and `u.dropShadow()`
- * cover the element's own box. `u.transparencySafe()` gates it.
+ * Shadows the shapes showing through the host. The shadow shows only where the
+ * backdrop is transparent, so the shapes need their own backdrop root (a parent with
+ * `willChange("filter")`); over an opaque page it paints nothing. `u.transparencySafe()` gates it.
  *
  * @example u.backdropDropShadow()
  * @example css({ "--ui-backdrop-drop-shadow": "calc(var(--ui-spacing, 0.25rem) * 0) calc(var(--ui-spacing, 0.25rem) * 1) calc(var(--ui-spacing, 0.25rem) * 2) rgb(0 0 0 / 0.15)", backdropFilter: "... drop-shadow(var(--ui-backdrop-drop-shadow, 0 0 0 transparent))" })

@@ -172,9 +172,9 @@ Flattens `input` and merges the flattened utilities' style trees into one declar
 
 Resolves a CSS environment variable reference: `env({name})`, or `env({name}, {fallback})` when a fallback is given. Returns a plain string, usable anywhere a utility accepts a raw CSS value.
 
-#### `if(condition: unknown, input: UtilityInput): UtilityInput`
+#### `if(condition: unknown, input: UtilityInput): UtilityMixin | false`
 
-Conditionally returns `input`, or a falsy value when `condition` is falsy. `mix` already accepts falsy values directly (`mix={[cond && u.bg()]}`), so this serves call sites that prefer a utility-shaped conditional.
+Conditionally returns `input` as one mixin, or `false` when `condition` is falsy. A list (`u.if(active, [u.bg("brand.solid"), u.fg("brand.onSolid")])`) is merged through `u.combine()`, so it cascades as one unit.
 
 #### `listStyle(value: ListStyleValue = "none")`
 
@@ -748,7 +748,7 @@ Composes `u.bg()`, `u.fg()`, and `u.border()` so a surface's contrast holds by c
 
 #### `translucent(name: BlurName | string = "md")`
 
-A solid background plus backdrop blur, gated behind `prefers-reduced-transparency: no-preference` so a reduced-transparency preference keeps the plain solid background and stays legible.
+A see-through background plus backdrop blur, gated behind `prefers-reduced-transparency: no-preference`; a reduced-transparency preference gets the opaque `--ui-bg` background and stays legible.
 
 #### `vectorEffect(value: "none" | "non-scaling-stroke" | "non-scaling-size" | "non-rotation" | "fixed-position")`
 
@@ -866,7 +866,7 @@ Pushes the backdrop away from (above `1`) or toward (below `1`) mid-grey; flatte
 
 #### `backdropDropShadow(options: BackdropDropShadowOptions = {})`
 
-Shadows the rendered shape of whatever shows through the host — a subtle depth cue behind a translucent panel, where `u.shadow()` and `u.dropShadow()` cover the element's own box. `u.transparencySafe()` gates it.
+Shadows the shapes showing through the host. The shadow shows only where the backdrop is transparent, so the shapes need their own backdrop root (a parent with `willChange("filter")`); over an opaque page it paints nothing. `u.transparencySafe()` gates it.
 
 `BackdropDropShadowOptions` takes the same `x`, `y`, `blur` and `color` keys as `DropShadowOptions`.
 
@@ -968,7 +968,7 @@ Applies a `filter: sepia(...)`, shifting the element toward a warm brown monochr
 
 #### `shadow(name: ShadowName | string = "md")`
 
-Applies a box shadow from the shadow scale, written to the `elevation` slot of the shared composite `boxShadow` declaration. Claiming only that slot lets an elevation shadow and a `u.ringShadow()` render as two stacked layers.
+Applies a box shadow from the shadow scale, written to the `elevation` slot of the shared composite `boxShadow` declaration. Claiming only that slot lets an elevation shadow and a `u.ringShadow()` render as two stacked layers. `"none"` clears the slot and a raw CSS shadow passes through.
 
 #### `textShadow(options: TextShadowOptions = {})`
 
@@ -1100,9 +1100,9 @@ Sets the host element's `z-index` from a plain number. Named component layers su
 
 ### Accessibility
 
-#### `debug(mode: boolean | "nested" = false)`
+#### `debug(mode: boolean | "nested" = true)`
 
-Outlines the host in red while `import.meta.env.DEV` is true and emits nothing otherwise. `"nested"` extends the outline to every descendant to inspect a full box model.
+Outlines the host in red while `import.meta.env.DEV` is true and emits nothing otherwise. `false` turns it off from a flag; `"nested"` extends the outline to every descendant to inspect a full box model.
 
 #### `forcedColorAdjust(value: ForcedColorAdjustValue = "none")`
 
@@ -1396,7 +1396,7 @@ String resolvers from `@sdxc/u/tokens`, for a component that needs a token's CSS
 
 #### `color(value: ColorValue | string, defaultProperty?: string): string`
 
-Resolves a `ColorValue` to a `var(...)` reference, using `defaultProperty` for a bare tone (`color("brand", "border")`). A value containing `(` is a CSS color and passes through.
+Resolves a `ColorValue` to a `var(...)` reference, using `defaultProperty` for a bare tone (`color("brand", "border")`). A hex value, a named or system color, and a value containing `(` are CSS colors and pass through.
 
 #### `spacing(value: SpacingValue): string`
 
@@ -1432,7 +1432,7 @@ Resolves a `ContainerName` to a literal length, for an `@container` or `@media` 
 
 #### `shadow(name: ShadowName | string): string`
 
-Resolves a `ShadowName` to `var(--ui-shadow-{name}, fallback)`; every string is read as a name.
+Resolves a `ShadowName` to `var(--ui-shadow-{name}, fallback)`; `"none"` and a raw CSS shadow (any value with a space or a function) pass through.
 
 #### `blur(name: BlurName | string): string`
 

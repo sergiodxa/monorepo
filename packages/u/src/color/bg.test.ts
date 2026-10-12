@@ -25,6 +25,12 @@ describe("bg", () => {
 		]);
 	});
 
+	test("a hex, named or system color passes through", async () => {
+		expect(await declarations(bg("#fff"))).toEqual(["background-color: #fff"]);
+		expect(await declarations(bg("red"))).toEqual(["background-color: red"]);
+		expect(await declarations(bg("Canvas"))).toEqual(["background-color: Canvas"]);
+	});
+
 	test("a raw palette reference", async () => {
 		expect(await declarations(bg("color.neutral.50"))).toEqual([
 			"background-color: var(--ui-color-neutral-50)",

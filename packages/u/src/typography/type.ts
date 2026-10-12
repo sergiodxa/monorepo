@@ -15,7 +15,7 @@ import { text } from "./text.js";
  * an explicit `u.font()` when another family is needed.
  *
  * @example u.type("lg")
- * @example css({ fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)", fontSize: "var(--ui-text-lg, 1.125rem)", lineHeight: "var(--ui-leading-lg, 1.5)" })
+ * @example css({ fontFamily: "var(--ui-font-sans, ui-sans-serif, system-ui, sans-serif)", fontSize: "var(--ui-text-lg, 1.125rem)", lineHeight: "var(--ui-leading-lg, calc(1.75 / 1.125))" })
  */
 export function type<Node extends Element = Element>(name: TextSizeName | (string & {})) {
 	return compose<Node>([font<Node>("sans"), text<Node>(name)], (styles) => styles);
