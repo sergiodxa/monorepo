@@ -60,6 +60,8 @@ export namespace PostSearch {
 		query: ParsedQuery;
 		page: number;
 		perPage: number;
+		/** The match count when the caller already knows it, which saves counting again. */
+		total?: number;
 	}
 
 	/** One hit, shaped for a machine reader. */
@@ -266,6 +268,7 @@ export class PostSearch {
 		let page = await Pagination.byOffset(await this.matching(db, options.query, options), {
 			page: options.page,
 			perPage: options.perPage,
+			total: options.total,
 		});
 		if (isFailure(page)) return page;
 
@@ -273,6 +276,24 @@ export class PostSearch {
 			items: await this.hits(db, page.data.items),
 			pagination: page.data.pagination,
 		});
+	}
+
+	/**
+	 * How many published posts of each kind match a parsed query, its own filters applied, so
+	 * a reader can narrow to one kind knowing what it holds. Kinds never overlap, so the counts
+	 * add up to the query's total.
+	 *
+	 * @param db Database connection holding `post_search` and the posts it projects.
+	 * @param query The parsed query, as {@link PostSearch.page} takes it.
+	 */
+	static async counts(db: Database, query: ParsedQuery): Promise<Record<PostSearch.Kind, number>> {
+		let totals = await Promise.all(
+			KINDS.map(async (kind) => (await this.matching(db, query, { kind })).count()),
+		);
+		return Object.fromEntries(KINDS.map((kind, index) => [kind, totals[index]])) as Record<
+			PostSearch.Kind,
+			number
+		>;
 	}
 
 	/**

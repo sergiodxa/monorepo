@@ -27,6 +27,9 @@ const PAST = "2026-03-01T12:00:00.000Z";
 /** A word only the articles without a matching summary carry, in their bodies alone. */
 const BODY_WORD = `zb${generateUUID().replaceAll("-", "").slice(0, 10)}`;
 
+/** A word one article and two tutorials carry, so its matches span two kinds. */
+const KIND_WORD = `zk${generateUUID().replaceAll("-", "").slice(0, 10)}`;
+
 /** How many articles match {@link TOKEN}, more than the dialog lists. */
 const ARTICLE_COUNT = 8;
 
@@ -101,6 +104,34 @@ beforeAll(async () => {
 			},
 		}),
 	);
+
+	unwrap(
+		await bindModels(db).articles.create({
+			author_id: author,
+			published_at: PAST,
+			meta: {
+				slug: `${KIND_WORD}-article`,
+				title: `${KIND_WORD} article`,
+				locale: "en",
+				content: "Body",
+			},
+		}),
+	);
+
+	for (let index = 1; index <= 2; index++) {
+		unwrap(
+			await bindModels(db).tutorials.create({
+				author_id: author,
+				published_at: PAST,
+				meta: {
+					slug: `${KIND_WORD}-tutorial-${index}`,
+					title: `${KIND_WORD} tutorial ${index}`,
+					excerpt: "A tutorial.",
+					content: "Body",
+				},
+			}),
+		);
+	}
 });
 
 describe("GET /frames/search", () => {
@@ -172,6 +203,47 @@ describe("GET /frames/search", () => {
 			"public, max-age=0, s-maxage=60, must-revalidate",
 		);
 		expect(response.headers.get("x-robots-tag")).toBe("noindex");
+	});
+});
+
+describe("GET /frames/search kind tabs", () => {
+	/** The tab links the frame rendered, by the kind each narrows to. */
+	function tabs(html: string): Array<string> {
+		return Array.from(html.matchAll(/data-search-kind="([a-z]*)"/g), (found) => found[1] ?? "");
+	}
+
+	test("lists All then each kind with matches, each counted and linked to /search narrowed to it", async () => {
+		let html = await (await get(`/frames/search?q=${KIND_WORD}`)).text();
+
+		expect(tabs(html)).toEqual(["", "article", "tutorial"]);
+		expect(html).toMatch(/aria-current="true"[^>]*>All<span[^>]*>3<\/span>/);
+		expect(html).toMatch(/>Tutorials<span[^>]*>2<\/span>/);
+		expect(html).toContain(`href="/search?q=${KIND_WORD}+kind%3Atutorial"`);
+	});
+
+	test("narrows the rows, the total and See all to the kind asked for", async () => {
+		let html = await (await get(`/frames/search?q=${KIND_WORD}&kind=tutorial`)).text();
+
+		expect(count(html, `href="/tutorials/${KIND_WORD}-tutorial-`)).toBe(2);
+		expect(html).not.toContain(`href="/articles/${KIND_WORD}-article"`);
+		expect(html).toMatch(/aria-current="true"[^>]*>Tutorials/);
+		expect(html).toContain("See all 2 results →");
+		expect(html).toContain(`href="/search?q=${KIND_WORD}+kind%3Atutorial"`);
+	});
+
+	test("falls back to All for a kind with no matches or one it does not know", async () => {
+		for (let kind of ["glossary", "nonsense"]) {
+			let html = await (await get(`/frames/search?q=${KIND_WORD}&kind=${kind}`)).text();
+
+			expect(html).toMatch(/aria-current="true"[^>]*>All/);
+			expect(html).toContain("See all 3 results →");
+		}
+	});
+
+	test("shows no tabs while one kind holds every match", async () => {
+		let html = await (await get(`/frames/search?q=${TOKEN}`)).text();
+
+		expect(tabs(html)).toEqual([]);
 	});
 });
 

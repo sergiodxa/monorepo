@@ -8,8 +8,10 @@
  */
 
 import { isFailure, succeeded } from "@sdxc/result";
+import { validate } from "@sdxc/validate";
 import { createAction } from "remix/router";
 
+import { SearchFrameQuerySchema } from "~/app/http/validators/search";
 import { SearchViewModel } from "~/app/http/view-models/search";
 import { PUBLIC_PAGE, TAGS } from "~/app/initializers/cache";
 import { PostSearch } from "~/app/models/search";
@@ -41,13 +43,39 @@ export default createAction(routes.searchFrame, async (ctx) => {
 		return ctx.render(SearchFrameView, SearchViewModel.blank(), { headers });
 	}
 
+	let counts = await PostSearch.counts(ctx.db, parsed.data);
+	let kind = await requestedKind(ctx.url, counts);
+	let total =
+		kind === null ? Object.values(counts).reduce((all, count) => all + count, 0) : counts[kind];
+
 	let page = await PostSearch.page(ctx.db, {
 		query: parsed.data,
 		page: 1,
 		perPage: SUGGESTION_COUNT,
+		kind: kind ?? undefined,
+		total,
 	});
 	succeeded(page, "Searching posts failed");
 
-	let model = SearchViewModel.suggestions({ query: text, parsed: parsed.data, page: page.data });
+	let model = SearchViewModel.suggestions({
+		query: text,
+		parsed: parsed.data,
+		page: page.data,
+		kind,
+		counts,
+	});
 	return ctx.render(SearchFrameView, model, { headers });
 });
+
+/**
+ * The tab `?kind=` asks for, or `null` for "All" when it names no kind or one with nothing
+ * matching, so a tab that empties as the reader types falls back to every match.
+ */
+async function requestedKind(
+	url: URL,
+	counts: Record<PostSearch.Kind, number>,
+): Promise<PostSearch.Kind | null> {
+	let query = await validate(url.searchParams, SearchFrameQuerySchema);
+	if (isFailure(query) || query.data.kind === undefined) return null;
+	return counts[query.data.kind] > 0 ? query.data.kind : null;
+}

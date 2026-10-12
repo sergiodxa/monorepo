@@ -50,11 +50,15 @@ let requests: Array<FrameRequest> = [];
 let held = new Map<string, ReturnType<typeof Promise.withResolvers<void>>>();
 
 /** One match linking to `href`, titled after it. */
-function match(href: string, title: string): SearchViewModel.Item {
+function match(
+	href: string,
+	title: string,
+	kind: SearchViewModel.Item["kind"] = "article",
+): SearchViewModel.Item {
 	return {
 		href,
-		kind: "article",
-		kindLabel: "Article",
+		kind,
+		kindLabel: kind === "tutorial" ? "Tutorial" : "Article",
 		title: [
 			{ text: title, match: true },
 			{ text: " notes", match: false },
@@ -64,16 +68,57 @@ function match(href: string, title: string): SearchViewModel.Item {
 	};
 }
 
+/** The matches a query starting with `mix` finds: two articles and a tutorial. */
+const MIXED = [
+	match("/articles/mix-1", "mix"),
+	match("/articles/mix-2", "mix"),
+	match("/tutorials/mix-1", "mix", "tutorial"),
+];
+
 /**
  * The dialog model for a query, titled after the text so a test can tell answers apart: ten
- * matches for text starting with `ten`, one for anything else.
+ * matches for text starting with `ten`, two kinds behind tabs for text starting with `mix`
+ * (narrowed by `kind`), one match for anything else.
  */
-function suggestionsFor(query: string): SearchViewModel.Suggestions {
+function suggestionsFor(query: string, kind: string | null): SearchViewModel.Suggestions {
 	if (query === "") return { state: "blank", query: "" };
+	if (query.startsWith("mix")) {
+		let current: "article" | "tutorial" | null =
+			kind === "article" || kind === "tutorial" ? kind : null;
+		let items = MIXED.filter((item) => current === null || item.kind === current);
+		let tab = (
+			tabKind: "article" | "tutorial" | null,
+			label: string,
+			count: number,
+		): SearchViewModel.Tab => ({
+			kind: tabKind,
+			label,
+			count,
+			href: `/search?q=${query}${tabKind ? `+kind:${tabKind}` : ""}`,
+			current: tabKind === current,
+		});
+		return {
+			state: "results",
+			query,
+			total: items.length,
+			items,
+			seeAll: `/search?q=${query}`,
+			kind: current,
+			tabs: [tab(null, "All", 3), tab("article", "Articles", 2), tab("tutorial", "Tutorials", 1)],
+		};
+	}
 	let items = query.startsWith("ten")
 		? Array.from({ length: 10 }, (_, index) => match(`/articles/ten-${index + 1}`, query))
 		: [match(`/articles/${query}`, query)];
-	return { state: "results", query, total: 9, items, seeAll: `/search?q=${query}` };
+	return {
+		state: "results",
+		query,
+		total: 9,
+		items,
+		seeAll: `/search?q=${query}`,
+		kind: null,
+		tabs: [],
+	};
 }
 
 /** A page wearing the blog layout, with the dialog's frame served by the same router. */
@@ -112,7 +157,7 @@ function application() {
 	router.get(routes.searchFrame.href(), async (ctx) => {
 		let query = ctx.url.searchParams.get("q") ?? "";
 		await held.get(query)?.promise;
-		return ctx.render(SearchFrameView, suggestionsFor(query));
+		return ctx.render(SearchFrameView, suggestionsFor(query, ctx.url.searchParams.get("kind")));
 	});
 
 	return router;
@@ -638,6 +683,119 @@ describe("the search dialog's keyboard", () => {
 		await vi.waitFor(() => expect(requests.at(-1)?.src).toBe("/frames/search?q=ten+react+router"));
 		await vi.waitFor(() => expect(chosen()).toBeNull());
 		expect(selectedRows()).toEqual([]);
+	});
+});
+
+describe("the search dialog's kind tabs", () => {
+	/** Hydrates a page and types `text`, waiting for its results to land. */
+	async function searchFor(text: string): Promise<void> {
+		let router = application();
+		await loadPage(router);
+		await hydrate(router);
+		type(text);
+		await settle();
+		await vi.waitFor(() => expect(input().getAttribute("aria-expanded")).toBe("true"));
+	}
+
+	/** The label of the tab marked current. */
+	function currentTab(): string | null {
+		return (
+			document.querySelector('[data-search-kind][aria-current="true"]')?.firstChild?.textContent ??
+			null
+		);
+	}
+
+	/** The tab link narrowing to `kind`, empty for "All". */
+	function tab(kind: string): HTMLAnchorElement {
+		let link = document.querySelector(`a[data-search-kind="${kind}"]`);
+		if (!(link instanceof HTMLAnchorElement)) throw new Error(`No tab for "${kind}"`);
+		return link;
+	}
+
+	/** The links of every result row on screen. */
+	function rows(): Array<string> {
+		return Array.from(document.querySelectorAll('[role="option"] a')).map(
+			(link) => link.getAttribute("href") ?? "",
+		);
+	}
+
+	test("lists All then each kind with its count, each a link to /search narrowed to it", async () => {
+		await searchFor("mix");
+
+		expect(currentTab()).toBe("All");
+		expect(tab("").textContent).toBe("All3");
+		expect(tab("article").getAttribute("href")).toBe("/search?q=mix+kind:article");
+		expect(tab("tutorial").textContent).toBe("Tutorials1");
+	});
+
+	test("ArrowRight and ArrowLeft move the caret while no row is chosen", async () => {
+		await searchFor("mix");
+		let sent = requests.length;
+
+		expect(pressInBox("ArrowRight")).toEqual([false]);
+		expect(pressInBox("ArrowLeft")).toEqual([false]);
+		await settle();
+		expect(requests).toHaveLength(sent);
+	});
+
+	test("ArrowRight on a chosen row opens the next tab with its first row chosen, around from the last", async () => {
+		await searchFor("mix");
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
+
+		expect(pressInBox("ArrowRight")).toEqual([true]);
+		await vi.waitFor(() => expect(currentTab()).toBe("Articles"));
+		expect(requests.at(-1)?.src).toBe("/frames/search?q=mix&kind=article");
+		expect(rows()).toEqual(["/articles/mix-1", "/articles/mix-2"]);
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
+
+		pressInBox("ArrowRight");
+		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
+		await vi.waitFor(() => expect(chosen()).toBe("/tutorials/mix-1"));
+
+		pressInBox("ArrowRight");
+		await vi.waitFor(() => expect(currentTab()).toBe("All"));
+		expect(requests.at(-1)?.src).toBe("/frames/search?q=mix");
+	});
+
+	test("ArrowLeft on a chosen row in All opens the last tab", async () => {
+		await searchFor("mix");
+		pressInBox("ArrowDown");
+		await vi.waitFor(() => expect(chosen()).toBe("/articles/mix-1"));
+
+		expect(pressInBox("ArrowLeft")).toEqual([true]);
+		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
+		expect(rows()).toEqual(["/tutorials/mix-1"]);
+	});
+
+	test("a click on a tab narrows the results in place, keeping focus in the box", async () => {
+		await searchFor("mix");
+
+		expect(clickWith(tab("tutorial"))).toBe(true);
+		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
+		expect(rows()).toEqual(["/tutorials/mix-1"]);
+		expect(followed).toEqual([]);
+		expect(document.activeElement).toBe(input());
+	});
+
+	test("a modified or middle click on a tab is left to the link", async () => {
+		await searchFor("mix");
+
+		clickWith(tab("article"), { metaKey: true });
+		clickWith(tab("article"), { button: 1 });
+		expect(followed).toEqual(["/search?q=mix+kind:article", "/search?q=mix+kind:article"]);
+	});
+
+	test("typing keeps the open tab", async () => {
+		await searchFor("mix");
+		clickWith(tab("tutorial"));
+		await vi.waitFor(() => expect(currentTab()).toBe("Tutorials"));
+
+		type("mixed");
+		await settle();
+		await vi.waitFor(() =>
+			expect(requests.at(-1)?.src).toBe("/frames/search?q=mixed&kind=tutorial"),
+		);
 	});
 });
 

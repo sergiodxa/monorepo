@@ -9,7 +9,7 @@
 
 import type { Handle } from "remix/component";
 
-import { bg, borderEdge } from "@sdxc/u/color";
+import { bg } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { dark, light } from "@sdxc/u/responsive";
 import { p } from "@sdxc/u/size";
@@ -25,8 +25,8 @@ interface SearchResultProps {
 	item: SearchViewModel.Item;
 	size?: "sm" | "lg";
 	/**
-	 * Makes the row an `option` with this id, tinted while hovered or chosen and marked with a
-	 * brand bar on its leading edge while chosen, so a combobox can point at it.
+	 * Makes the row an `option` with this id, filled with a rounded tint while hovered or
+	 * chosen, so a combobox can point at it.
 	 */
 	optionId?: string;
 }
@@ -49,9 +49,8 @@ export function SearchResult(handle: Handle<SearchResultProps>) {
 				mix={
 					optionId
 						? [
-								p(2),
-								rounded("md"),
-								borderEdge("inline-start", { width: 2, color: "transparent" }),
+								p(3),
+								rounded("1.25rem"),
 								/**
 								 * The panel is the lightest neutral in light mode, so a neutral step is lost
 								 * on it; a brand wash reads at a glance and keeps the green title at 4.7:1.
@@ -60,7 +59,6 @@ export function SearchResult(handle: Handle<SearchResultProps>) {
 								when('&[aria-selected="true"]', [
 									light(bg("brand.bg-tint-hover")),
 									dark(bg("neutral.bg-tint-hover")),
-									borderEdge("inline-start", { color: "brand" }),
 								]),
 							]
 						: undefined

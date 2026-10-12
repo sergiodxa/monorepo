@@ -74,6 +74,19 @@ export namespace SearchViewModel {
 		  };
 
 	/**
+	 * One tab over the dialog's matches: "All" when `kind` is `null`, otherwise one kind with
+	 * matches. `href` is the `/search` page narrowed the same way, which a click without
+	 * script follows.
+	 */
+	export interface Tab {
+		kind: PostSearch.Kind | null;
+		label: string;
+		count: number;
+		href: string;
+		current: boolean;
+	}
+
+	/**
 	 * What the search dialog's frame renders under its box: nothing yet, why the text cannot
 	 * run, or the top matches with the total and a link to every one of them on `/search`.
 	 */
@@ -85,8 +98,12 @@ export namespace SearchViewModel {
 				query: string;
 				total: number;
 				items: Array<Item>;
-				/** The `/search` page for the same text, where every match is paged. */
+				/** The `/search` page for the same text and tab, where every match is paged. */
 				seeAll: string;
+				/** The tab the items belong to, `null` for every kind. */
+				kind: PostSearch.Kind | null;
+				/** "All" then each kind with matches; empty while one kind holds every match. */
+				tabs: Array<Tab>;
 		  };
 }
 
@@ -96,6 +113,14 @@ const KIND_LABELS: Record<PostSearch.Kind, string> = {
 	tutorial: "Tutorial",
 	glossary: "Glossary",
 	bookmark: "Bookmark",
+};
+
+/** Each kind's tab label, in the order the tabs list them. */
+const TAB_LABELS: Record<PostSearch.Kind, string> = {
+	article: "Articles",
+	tutorial: "Tutorials",
+	glossary: "Glossary",
+	bookmark: "Bookmarks",
 };
 
 /** Words of excerpt each result shows around its first match. */
@@ -149,23 +174,39 @@ export class SearchViewModel {
 
 	/**
 	 * The search dialog's state for a query. Its blank and invalid states mirror the page's,
-	 * so the box answers the same way in both places.
+	 * so the box answers the same way in both places. Tabs show only while matches span
+	 * more than one kind, since a lone kind's tab would repeat "All".
 	 *
-	 * @param input The typed text, its parsed query, and the first page of matches.
+	 * @param input The typed text, its parsed query, the first page of matches, the tab they
+	 * were narrowed to, and how many matches each kind holds.
 	 */
 	static suggestions(input: {
 		query: string;
 		parsed: ParsedQuery;
 		page: Page<PostSearch.Hit>;
+		kind: PostSearch.Kind | null;
+		counts: Record<PostSearch.Kind, number>;
 	}): SearchViewModel.Suggestions {
-		let seeAll = `${routes.search.href()}?${new URLSearchParams({ q: input.query })}`;
+		let kinds = (Object.keys(TAB_LABELS) as Array<PostSearch.Kind>).filter(
+			(kind) => input.counts[kind] > 0,
+		);
+		let all = kinds.reduce((sum, kind) => sum + input.counts[kind], 0);
+		let tab = (kind: PostSearch.Kind | null): SearchViewModel.Tab => ({
+			kind,
+			label: kind === null ? "All" : TAB_LABELS[kind],
+			count: kind === null ? all : input.counts[kind],
+			href: searchHref(input.query, kind),
+			current: kind === input.kind,
+		});
 
 		return {
 			state: "results",
 			query: input.query,
 			total: input.page.pagination.total,
 			items: input.page.items.map((result) => this.item(result, input.parsed)),
-			seeAll,
+			seeAll: searchHref(input.query, input.kind),
+			kind: input.kind,
+			tabs: kinds.length > 1 ? [tab(null), ...kinds.map(tab)] : [],
 		};
 	}
 
@@ -223,6 +264,15 @@ export class SearchViewModel {
 				),
 		};
 	}
+}
+
+/**
+ * The `/search` page for `query`, narrowed to `kind` with the search syntax's own `kind:`
+ * filter, so the page needs no parameter beyond `q`.
+ */
+function searchHref(query: string, kind: PostSearch.Kind | null): string {
+	let q = kind === null ? query : `${query.trim()} kind:${kind}`;
+	return `${routes.search.href()}?${new URLSearchParams({ q })}`;
 }
 
 /** Whether a window of text shows any of the words the query matched. */

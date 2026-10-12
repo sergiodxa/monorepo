@@ -1,17 +1,19 @@
 /**
- * View for the search dialog's frame, laid out as one panel: the live search box on top,
- * then, under a hairline, the top matches drawn as activity rows with their matched words
- * marked. Rendered as a fragment, inside whichever page's dialog requested it.
+ * View for the search dialog's frame, laid out as two floating surfaces: the live search box
+ * as a pill, then a card under it with a tab per kind and the top matches drawn as activity
+ * rows with their matched words marked. Rendered inside whichever page's dialog asked.
  *
  * @author [Sergio Xalambrí](https://sergiodxa.com)
  * @copyright Sergio Xalambrí 2026
  */
 
 import { visuallyHidden } from "@sdxc/u/a11y";
-import { borderEdge, colorMix, fg } from "@sdxc/u/color";
+import { fg } from "@sdxc/u/color";
+import { rounded } from "@sdxc/u/effects";
 import { listStyle } from "@sdxc/u/general";
-import { gap, grid } from "@sdxc/u/layout";
-import { m, p, pb, pbe, pi } from "@sdxc/u/size";
+import { gap, grid, shrink } from "@sdxc/u/layout";
+import { overflowY } from "@sdxc/u/overflow";
+import { m, minBs, p, pb, pi } from "@sdxc/u/size";
 import { text } from "@sdxc/u/typography";
 import { Link } from "@sdxc/ui";
 
@@ -24,18 +26,10 @@ import {
 	searchOptionId,
 } from "~/resources/components/search-box";
 import { SearchResult } from "~/resources/components/search-result";
+import { searchSurface } from "~/resources/components/search-surface";
+import { SearchTabs } from "~/resources/components/search-tabs";
 import { SEARCH_DIALOG_ID } from "~/resources/components/search-trigger";
 import routes from "~/routes/web";
-
-/**
- * The hairline between the box and the results: the panel's text color at low strength, so
- * it stays equally faint against the panel in light and dark themes.
- */
-const SEPARATOR_COLOR = colorMix(
-	"oklab",
-	{ color: "var(--ui-neutral-fg-emphasis)", weight: 10 },
-	"transparent",
-);
 
 /** The dialog's search box id, apart from the `/search` page's own box. */
 export const SEARCH_DIALOG_INPUT_ID = "site-search-q";
@@ -55,8 +49,9 @@ function statusOf(model: SearchViewModel.Suggestions): string {
 
 /**
  * Creates the dialog body renderer. The form is a plain `GET` to `/search`, so Enter reaches
- * the full results with or without script; the rows are the listbox the box points into, "See
- * all" outside it; the status line, present in every state, is the one live region.
+ * the full results with or without script; the rows are the listbox the box points into, the
+ * tabs and "See all" outside it; the status line, present in every state, is the one live
+ * region, and the card appears around it only once there is something to show.
  *
  * @returns A view function that renders from a dialog model.
  */
@@ -64,10 +59,11 @@ export function SearchFrameView() {
 	return ({ model }: { model: SearchViewModel.Suggestions }) => {
 		let hasRows = model.state === "results" && model.items.length > 0;
 		let status = statusOf(model);
+		let tabs = model.state === "results" ? model.tabs : [];
 
 		return (
 			<>
-				<search>
+				<search mix={[searchSurface(), rounded("full"), shrink(0)]}>
 					<form method="get" action={routes.search.href()}>
 						<SearchBox
 							id={SEARCH_DIALOG_INPUT_ID}
@@ -75,37 +71,40 @@ export function SearchFrameView() {
 							frameSrc={routes.searchFrame.href()}
 							dialogId={SEARCH_DIALOG_ID}
 							optionCount={model.state === "results" ? model.items.length : 0}
+							kind={model.state === "results" ? (model.kind ?? "") : ""}
+							kinds={tabs.map((tab) => tab.kind ?? "")}
 						/>
 					</form>
 				</search>
-				<div id={SEARCH_RESULTS_ID}>
+				<div
+					id={SEARCH_RESULTS_ID}
+					mix={
+						hasRows || status !== ""
+							? [
+									searchSurface(),
+									rounded("1.75rem"),
+									minBs(0),
+									overflowY("auto"),
+									grid(),
+									gap(2),
+									p(2),
+								]
+							: undefined
+					}
+				>
 					<p
 						role="status"
 						mix={
 							hasRows || status === ""
 								? [visuallyHidden()]
-								: [
-										m(0),
-										pi(4),
-										pb(4),
-										borderEdge("block-start", { color: SEPARATOR_COLOR, width: 1 }),
-										text("sm"),
-										fg("neutral.muted"),
-									]
+								: [m(0), pi(3), pb(2), text("sm"), fg("neutral.muted")]
 						}
 					>
 						{status}
 					</p>
+					{tabs.length > 0 ? <SearchTabs tabs={tabs} /> : null}
 					{model.state === "results" && model.items.length > 0 ? (
-						<div
-							mix={[
-								grid(),
-								gap(2),
-								p(2),
-								pbe(4),
-								borderEdge("block-start", { color: SEPARATOR_COLOR, width: 1 }),
-							]}
-						>
+						<>
 							<ol
 								id={SEARCH_LISTBOX_ID}
 								// oxlint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- HTML allows an ordered list to take the listbox role, which keeps the rows a list of links without script.
@@ -122,12 +121,12 @@ export function SearchFrameView() {
 									/>
 								))}
 							</ol>
-							<p mix={[m(0), pi(2), text("sm")]}>
+							<p mix={[m(0), pi(3), pb(2), text("sm")]}>
 								<Link href={model.seeAll}>
 									See all {model.total === 1 ? "1 result" : `${model.total} results`} →
 								</Link>
 							</p>
-						</div>
+						</>
 					) : null}
 				</div>
 			</>

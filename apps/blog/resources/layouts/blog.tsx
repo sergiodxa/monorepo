@@ -16,6 +16,7 @@ import { bg, fg, radialGradient } from "@sdxc/u/color";
 import { rounded } from "@sdxc/u/effects";
 import { raw } from "@sdxc/u/general";
 import { flexWrap, gap, grid, gridArea, gridTemplate, hstack, items, self } from "@sdxc/u/layout";
+import { overflow } from "@sdxc/u/overflow";
 import { media } from "@sdxc/u/responsive";
 import { is, m, maxBs, maxIs, mbe, mi, minBs, p, pbe, pbs, pi } from "@sdxc/u/size";
 import { color } from "@sdxc/u/tokens";
@@ -187,8 +188,11 @@ export function BlogLayout(handle: Handle<BlogLayout.Props>) {
 							closedby="any"
 							mix={[
 								p(0),
-								gap(0),
-								rounded("1.75rem"),
+								gap(2),
+								bg("transparent"),
+								rounded("none"),
+								overflow("visible"),
+								raw({ boxShadow: "none" }),
 								is("min(40rem, 100% - 2rem)"),
 								maxIs("none"),
 								maxBs("calc(100dvh - 2 * min(12vh, 6rem))"),
