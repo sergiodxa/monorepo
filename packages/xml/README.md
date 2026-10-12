@@ -2,29 +2,23 @@
 
 XML parser and serializer for RSS-style feeds.
 
-It reads XML text into an `XML` document instance and writes that instance back out. The
-target is the subset of XML feeds actually use: one root element, attributes, nested
-elements, text nodes, CDATA sections, namespace-prefixed names, and an XML declaration.
-
-Real feeds are written by tools that emit `&nbsp;` and `&mdash;` without declaring a DTD,
-so the parser resolves the five entities XML predefines, numeric character references such
-as `&#8217;`, and the 248 named entities the three XHTML 1.0 entity sets declare. A name
-outside those sets is reported as a parse error. Serialization escapes only the five
-predefines, so a document that arrives with `&nbsp;` round-trips as the character itself.
+It reads the XML feeds use — one root element, attributes, nested elements, text, CDATA,
+namespace-prefixed names and an XML declaration — into plain data you can query, and writes that
+data back out. Entities resolve to characters: the five XML predefines, numeric references such
+as `&#8217;`, and the XHTML named entities (`&nbsp;`, `&mdash;`) feeds use without a DTD.
 
 ## Installation
 
-```bash
+```sh
 npm add @sdxc/xml
 ```
 
-Parsing and serialization report failures as a `Result` from
-[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside this
-package and supplies `isFailure`, `isSuccess`, and `unwrap`.
+Parsing and serialization answer a `Result` from
+[`@sdxc/result`](https://www.npmjs.com/package/@sdxc/result), which installs alongside it.
 
 ## Usage
 
-### Parse A Document
+### Parse a document
 
 ```typescript
 import { isFailure } from "@sdxc/result";
@@ -33,111 +27,67 @@ import { XML } from "@sdxc/xml";
 let result = XML.parse(
 	`<?xml version="1.0"?><rss version="2.0"><channel><title>Feed</title></channel></rss>`,
 );
-
 if (isFailure(result)) throw result.error;
 
 let xml = result.data;
-xml.query("channel/title"); // { name: "title", children: ["Feed"] }
+xml.declaration; // { version: "1.0" }
+xml.root.name; // "rss"
 ```
 
-Whitespace-only text nodes are indentation rather than content, so by default the parser
-drops them and a traversal never has to step over them.
+Whitespace-only text between elements is dropped, so the tree holds elements and the text that
+carries meaning. Comments, processing instructions and a doctype are skipped.
 
-### Traverse A Document
+### Find elements
 
-`query` and `queryAll` take a `/`-delimited path rooted at the document's root element;
-`find` and `findAll` take a predicate and walk depth-first.
+`query` and `queryAll` follow a `/`-delimited path of child names from the root; the path may
+start with the root's own name. `find` and `findAll` walk the tree depth-first with a predicate.
 
 ```typescript
-let channel = xml.query("channel");
-let items = xml.queryAll("channel/item");
+xml.query("channel/title"); // { name: "title", children: ["Feed"] }
+xml.query("rss/channel/title"); // the same element
+xml.queryAll("channel/item"); // every item, in document order
 
-let firstLink = xml.find((element) => element.name === "link");
-let allLinks = xml.findAll((element) => element.name === "link");
+xml.find((element) => element.name === "link");
+xml.findAll((element) => element.attributes?.rel === "alternate");
 ```
 
-### Write A Document
+### Write a document
 
-`XML.stringify` takes a root element and returns the text for it:
+`XML.stringify` takes a root element, or a whole document to include a declaration.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
 let result = XML.stringify({
-	name: "rss",
-	attributes: { version: "2.0" },
-	children: [
-		{
-			name: "channel",
-			children: [{ name: "title", children: ["Feed"] }],
-		},
-	],
+	declaration: { version: "1.0", encoding: "UTF-8" },
+	root: {
+		name: "rss",
+		attributes: { version: "2.0" },
+		children: [{ name: "channel", children: [{ name: "title", children: ["Feed"] }] }],
+	},
 });
-
 if (isFailure(result)) throw result.error;
 
-let source = result.data; // <rss version="2.0"><channel><title>Feed</title></channel></rss>
-```
-
-A declaration belongs to a document rather than to an element, so pass the whole document to
-write one:
-
-```typescript
-let result = XML.stringify({
-	declaration: { version: "1.0", encoding: "UTF-8" },
-	root: { name: "rss", attributes: { version: "2.0" } },
-});
-
+result.data;
 // <?xml version="1.0" encoding="UTF-8"?>
-// <rss version="2.0"/>
+// <rss version="2.0"><channel><title>Feed</title></channel></rss>
 ```
 
-### Round-Trip A Document
-
-`toJSON` hands back plain data that both the `XML` constructor and `XML.stringify` accept,
-and `toString` serializes the instance in place.
-
-```typescript
-let json = xml.toJSON();
-
-let copy = new XML(json);
-let source = copy.toString();
-
-XML.stringify(json); // the same text, as a Result
-```
-
-### Keep The Source's Whitespace
-
-By default a run of character data holding nothing but whitespace is indentation, and stays
-out of the tree, so traversal sees elements and the text that carries meaning. A caller that
-hashes a document needs the opposite, because a byte of indentation changes the digest:
-
-```typescript
-let xml = XML.parse("<r>\n\t<t>x</t>\n</r>", { whitespace: "preserve" });
-
-// children: ["\n\t", { name: "t", children: ["x"] }, "\n"]
-```
-
-Both modes resolve references first, so `&#32;` counts as the space it decodes to, and both
-allow whitespace around the root element.
+A string child is always text: `<`, `&` and quotes are escaped, so markup belongs in child
+elements and the output parses back into the tree it came from.
 
 ## API
 
 ### `XML.parse(source: string, options?: XML.ParseOptions): Result<XML, XMLParseError>`
 
-Parses XML text into an `XML` instance. `options.whitespace` is `"collapse"` by default and
-`"preserve"` to keep whitespace-only text and CDATA in the tree.
+Parses XML text into an `XML` instance. `options.whitespace` is `"collapse"` (the default) to drop
+whitespace-only text and CDATA, or `"preserve"` to keep every run.
 
 ### `XML.stringify(input: XML | XML.Input): Result<string, XMLStringifyError>`
 
-Serializes an instance, whole document data, or a bare root element into XML text. An element
-carries no declaration; pass a document or an instance to write one.
-
-```typescript
-XML.stringify({ name: "rss", attributes: { version: "2.0" } });
-// success('<rss version="2.0"/>')
-```
+Serializes an instance, a document, or a bare root element. A declaration, when present, is
+written on its own line before the root.
 
 ### `new XML(document: XML.Document)`
 
@@ -145,11 +95,20 @@ Wraps a document that is already plain data, such as one from `toJSON`.
 
 ### `xml.declaration: XML.Declaration | undefined`
 
-The parsed XML declaration, when the document carried one.
+The XML declaration, when the document has one.
 
 ### `xml.root: XML.Element`
 
-The root element.
+The root element. Every element an instance hands out is a copy, so changing it leaves the
+instance untouched.
+
+### `xml.query(path: string): XML.Element | undefined`
+
+The first element at a `/`-delimited path such as `channel/item/title`.
+
+### `xml.queryAll(path: string): XML.Element[]`
+
+Every element at a `/`-delimited path, in document order.
 
 ### `xml.find(predicate: XML.Predicate): XML.Element | undefined`
 
@@ -159,86 +118,153 @@ The first element the predicate accepts, in depth-first order.
 
 Every element the predicate accepts, in depth-first order.
 
-### `xml.query(path: string): XML.Element | undefined`
-
-The first element at a `/`-delimited path such as `channel/item/title`.
-
-### `xml.queryAll(path: string): XML.Element[]`
-
-Every element at a `/`-delimited path such as `channel/item`.
-
 ### `xml.toJSON(): XML.Document`
 
-The document as plain serializable data.
+The document as plain data, which both `new XML` and `XML.stringify` accept.
 
 ### `xml.toString(): string`
 
-The document as XML text. This is the one entry point that throws an `XMLStringifyError`
-rather than returning it, because `toString` has no room for a `Result`; reach for
-`XML.stringify` where a failure is a value you want to handle.
+The document as XML text. It throws an `XMLStringifyError` on a tree that cannot be serialized;
+use `XML.stringify` to get the failure as a value.
 
 ### `XMLParseError`
 
-The source is malformed, carries no root element, or names an entity outside the resolved
-sets.
+The source is malformed, has no root element, or names an entity outside the resolved sets.
 
 ### `XMLStringifyError`
 
-The tree cannot be expressed as valid XML: a name that fails the XML `Name` production, or a
-prefix with no namespace declared in scope.
+The tree cannot be written as valid XML: an element or attribute name that is not a valid XML
+name, a namespace prefix with no `xmlns:*` declaration in scope, or an input with no root
+element.
 
 ### Types
 
-Every public type lives in the `XML` namespace: `XML.Declaration`, `XML.Element`,
-`XML.Node`, `XML.Document`, `XML.Input`, `XML.Predicate`, `XML.Whitespace`, and
-`XML.ParseOptions`. `XML.Input` is what `stringify` accepts: a whole `XML.Document` or the
-root `XML.Element` alone.
+All types live in the `XML` namespace.
 
-```typescript
-import type { XML } from "@sdxc/xml";
+- `XML.Document`: `{ declaration?: XML.Declaration; root: XML.Element }`.
+- `XML.Declaration`: `{ version?: string; encoding?: string; standalone?: "yes" | "no" }`.
+- `XML.Element`: `{ name: string; attributes?: Record<string, string>; children?: XML.Node[] }`.
+- `XML.Node`: an `XML.Element` or a string, which is always a text node.
+- `XML.Input`: what `stringify` accepts, an `XML.Document` or a root `XML.Element`.
+- `XML.Predicate`: `(element: XML.Element) => boolean`.
+- `XML.Whitespace`: `"collapse" | "preserve"`.
+- `XML.ParseOptions`: `{ whitespace?: XML.Whitespace }`.
 
-function titleOf(element: XML.Element): string | undefined {
-	let [text] = element.children ?? [];
-	return typeof text === "string" ? text : undefined;
-}
-```
+## Pattern: Reading a feed's items
 
-An `XML.Node` is either an `XML.Element` or a string, and a string is always a text node.
-Markup belongs in child elements: a string holding `<p>Hi</p>` serializes as escaped text,
-which is what makes the output parse back into the tree it was given.
-
-## Pattern: Reading A Feed's Channel
+Collect each item's fields, reading text whether it arrived plain or as CDATA.
 
 ```typescript
 import { isFailure } from "@sdxc/result";
 import { XML } from "@sdxc/xml";
 
-let result = XML.parse(source);
+function textOf(element: XML.Element | undefined, name: string): string | undefined {
+	let child = element?.children?.find(
+		(node): node is XML.Element => typeof node !== "string" && node.name === name,
+	);
+	let text = child?.children?.filter((node) => typeof node === "string").join("");
+	return text || undefined;
+}
+
+let response = await fetch("https://example.com/feed.xml");
+let result = XML.parse(await response.text());
 if (isFailure(result)) throw result.error;
 
-let xml = result.data;
-
-for (let item of xml.queryAll("channel/item")) {
-	let title = item.children?.find((child) => typeof child !== "string" && child.name === "title");
-}
+let items = result.data.queryAll("channel/item").map((item) => ({
+	title: textOf(item, "title"),
+	link: textOf(item, "link"),
+	html: textOf(item, "content:encoded"),
+}));
 ```
 
-## Pattern: Preserving Namespaces
+## Pattern: Writing a feed with a namespace
 
-A prefix is resolved against the `xmlns:*` attributes in scope, so declare one on the same
-element tree that uses it. Serialization fails on a prefix with no declaration rather than
-writing XML that will not parse.
+Declare each prefix with an `xmlns:*` attribute on the element that uses it or an ancestor;
+serialization fails on a prefix with nothing declared in scope.
 
 ```typescript
-XML.stringify({
-	name: "rss",
-	attributes: {
-		version: "2.0",
-		"xmlns:content": "http://purl.org/rss/1.0/modules/content/",
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
+
+let posts = [{ title: "Hello", url: "https://example.com/hello", html: "<p>Hi</p>" }];
+
+let result = XML.stringify({
+	declaration: { version: "1.0", encoding: "UTF-8" },
+	root: {
+		name: "rss",
+		attributes: { version: "2.0", "xmlns:content": "http://purl.org/rss/1.0/modules/content/" },
+		children: [
+			{
+				name: "channel",
+				children: [
+					{ name: "title", children: ["Example"] },
+					...posts.map((post) => ({
+						name: "item",
+						children: [
+							{ name: "title", children: [post.title] },
+							{ name: "link", children: [post.url] },
+							{ name: "content:encoded", children: [post.html] },
+						],
+					})),
+				],
+			},
+		],
 	},
-	children: [{ name: "content:encoded", children: ["<p>HTML</p>"] }],
+});
+if (isFailure(result)) throw result.error;
+
+let response = new Response(result.data, {
+	headers: { "Content-Type": "application/rss+xml; charset=utf-8" },
 });
 ```
+
+The HTML in `content:encoded` is written as escaped text, which feed readers decode back into
+markup.
+
+## Pattern: Editing a parsed document
+
+An instance is read-only; edit its plain data and wrap the result again.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
+
+let parsed = XML.parse(source);
+if (isFailure(parsed)) throw parsed.error;
+
+let document = parsed.data.toJSON();
+let channel = document.root.children?.find(
+	(node) => typeof node !== "string" && node.name === "channel",
+);
+if (channel && typeof channel !== "string") {
+	channel.children = channel.children?.filter(
+		(node) => typeof node === "string" || node.name !== "item",
+	);
+}
+
+let emptied = new XML(document);
+emptied.toString(); // the same feed with no items
+```
+
+## Pattern: Hashing a document byte for byte
+
+A digest changes with every byte of indentation, so keep whitespace in the tree before hashing a
+serialized copy.
+
+```typescript
+import { isFailure } from "@sdxc/result";
+import { XML } from "@sdxc/xml";
+
+let result = XML.parse("<r>\n\t<t>x</t>\n</r>", { whitespace: "preserve" });
+if (isFailure(result)) throw result.error;
+
+result.data.root.children; // ["\n\t", { name: "t", children: ["x"] }, "\n"]
+
+let bytes = new TextEncoder().encode(result.data.toString());
+let digest = await crypto.subtle.digest("SHA-256", bytes);
+```
+
+References resolve before whitespace is judged, so `&#32;` counts as the space it decodes to.
 
 ## Versioning
 
